@@ -219,13 +219,12 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
               <div className="dates">{job.startDate} – {job.endDate || 'Present'}</div>
             </div>
             <div className="experience-description">
-              {job.highlights?.map((highlight, idx) => (
+              {job.summary && (
                 <div 
-                  key={idx} 
                   className="bullet-point"
-                  dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
+                  dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
                 />
-              ))}
+              )}
             </div>
           </div>
         ))}

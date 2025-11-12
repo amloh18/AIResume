@@ -272,13 +272,12 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
             return cleaned;
           };
 
-          // Combine description, summary, achievements, and all related content into a single work summary field
+          // Keep summary and highlights SEPARATE - do not combine them
+          // Only combine description and summary if they're different
           const description = ('description' in exp ? exp.description : '') || '';
           const summary = ('summary' in exp ? exp.summary : '') || '';
-          const achievements = ('achievements' in exp && Array.isArray(exp.achievements) ? exp.achievements : []) || [];
-          const highlights = ('highlights' in exp && Array.isArray(exp.highlights) ? exp.highlights : []) || [];
           
-          // Build the complete summary
+          // Build summary from description and summary only (not highlights)
           let fullSummary = '';
           
           // Add description if it exists (clean it)
@@ -294,32 +293,16 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
             fullSummary += cleanTextForATS(summary);
           }
           
-          // Add achievements/highlights if they exist and aren't already in the summary
-          const allAchievements = [...achievements, ...highlights].filter(Boolean);
-          if (allAchievements.length > 0) {
-            // Check if achievements are already included in summary/description
-            const achievementsText = allAchievements.join('\n');
-            const summaryLower = fullSummary.toLowerCase();
-            const achievementsLower = achievementsText.toLowerCase();
-            
-            // Only add if not already present (to avoid duplication)
-            if (!summaryLower.includes(achievementsLower.substring(0, 50))) {
-              if (fullSummary) {
-                fullSummary += '\n\n';
-              }
-              // Add "Key achievements" heading if not present
-              if (!fullSummary.toLowerCase().includes('achievement')) {
-                fullSummary += 'Key achievements\n';
-              }
-              // Clean each achievement and add without bullet points
-              fullSummary += allAchievements.map(a => cleanTextForATS(String(a))).join('\n');
-            }
-          }
-          
-          // Final clean of the entire summary
+          // DO NOT add achievements/highlights to summary - they are kept separate in highlights array
+          // Final clean of the summary (without highlights)
           return cleanTextForATS(fullSummary || description || summary);
         })(),
         highlights: (() => {
+          // Combine achievements and highlights into highlights array (keep separate from summary)
+          const achievements = ('achievements' in exp && Array.isArray(exp.achievements) ? exp.achievements : []) || [];
+          const highlights = ('highlights' in exp && Array.isArray(exp.highlights) ? exp.highlights : []) || [];
+          const all = [...achievements, ...highlights].filter(Boolean);
+          
           // Clean highlights for ATS compatibility
           const cleanTextForATS = (text: string): string => {
             if (!text || typeof text !== 'string') return '';
@@ -334,10 +317,6 @@ export function adaptParsedCVToUnified(parsedData: ParsedCVData): UnifiedCVDataS
               .replace(/[^\w\s.,;:!?()\-'"]/g, ' ')
               .trim();
           };
-          
-          const achievements = ('achievements' in exp && Array.isArray(exp.achievements) ? exp.achievements : []) || [];
-          const highlights = ('highlights' in exp && Array.isArray(exp.highlights) ? exp.highlights : []) || [];
-          const all = [...achievements, ...highlights].filter(Boolean);
           
           // Clean each highlight item
           return all.map((item: any) => cleanTextForATS(String(item))).filter((item: string) => item.length > 0);
@@ -635,4 +614,96 @@ export function getAvailableSections(): Array<{
     isRequired: mapping.isRequired,
     isList: mapping.isList
   }));
+}
+
+/**
+ * Clean up CV data by removing highlights from summary fields
+ * This fixes existing CVs that have highlights incorrectly appended to summary
+ */
+export function cleanupSummaryFields(cvData: UnifiedCVDataStructure): UnifiedCVDataStructure {
+  if (!cvData) return cvData;
+  
+  const cleaned = { ...cvData };
+  
+  // Clean work experience summaries
+  if (cleaned.work && Array.isArray(cleaned.work)) {
+    cleaned.work = cleaned.work.map(job => {
+      if (!job.summary || !job.highlights || !Array.isArray(job.highlights) || job.highlights.length === 0) {
+        return job;
+      }
+      
+      // Check if summary contains highlights text
+      const summary = job.summary;
+      const highlightsText = job.highlights.join('\n');
+      
+      // Remove highlights from summary if they appear at the end
+      // Look for common patterns like "Key achievements", bullet points, or direct highlight text
+      let cleanedSummary = summary;
+      
+      // Remove "Key achievements" section and everything after it
+      const keyAchievementsRegex = /(?:\n\s*)?(?:Key\s+achievements?|Achievements?|Highlights?)[:\s]*\n/i;
+      const keyAchievementsMatch = cleanedSummary.match(keyAchievementsRegex);
+      if (keyAchievementsMatch) {
+        cleanedSummary = cleanedSummary.substring(0, keyAchievementsMatch.index).trim();
+      }
+      
+      // Remove individual highlights that appear at the end of summary
+      // Check each highlight and remove it if it appears in the summary
+      job.highlights.forEach(highlight => {
+        if (highlight && typeof highlight === 'string') {
+          const cleanHighlight = highlight.trim();
+          // Remove bullet points and common prefixes
+          const normalizedHighlight = cleanHighlight
+            .replace(/^[●•▪▫◦‣⁃⁌⁍∙◘◙◉○◯◐◑◒◓◔◕◖◗◗◘◙◚◛◜◝◞◟◠◡]/g, '')
+            .replace(/^[\s]*[-*→▶▸▹►▻▼▽▪▫]\s*/g, '')
+            .replace(/^[\s]*[•◦‣]\s*/g, '')
+            .trim();
+          
+          if (normalizedHighlight.length > 10) {
+            // Check if this highlight appears in the summary (case-insensitive, partial match)
+            const highlightLower = normalizedHighlight.toLowerCase();
+            const summaryLower = cleanedSummary.toLowerCase();
+            
+            // Find and remove the highlight text from summary
+            // Look for the highlight text, possibly with bullet points or formatting
+            const patterns = [
+              new RegExp(`\\n\\s*[-•*]?\\s*${escapeRegex(normalizedHighlight)}`, 'gi'),
+              new RegExp(`\\n\\s*${escapeRegex(normalizedHighlight)}`, 'gi'),
+              new RegExp(`${escapeRegex(normalizedHighlight)}`, 'gi')
+            ];
+            
+            for (const pattern of patterns) {
+              if (summaryLower.includes(highlightLower)) {
+                // Find the position and remove it
+                const match = cleanedSummary.match(pattern);
+                if (match) {
+                  const beforeMatch = cleanedSummary.substring(0, match.index || 0);
+                  const afterMatch = cleanedSummary.substring((match.index || 0) + match[0].length);
+                  cleanedSummary = (beforeMatch + afterMatch).trim();
+                  break;
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      // Clean up extra newlines
+      cleanedSummary = cleanedSummary.replace(/\n{3,}/g, '\n\n').trim();
+      
+      return {
+        ...job,
+        summary: cleanedSummary
+      };
+    });
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Helper function to escape special regex characters
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

@@ -7,7 +7,7 @@ import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/ap
 import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
-  Target, Building2, Star, Copy, Archive, ChevronDown, ChevronUp, User, Mail
+  Target, Building2, Star, Copy, Archive, ChevronDown, ChevronUp, User, Mail, Phone
 } from 'lucide-react';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import JobInfoContent from './JobInfoContent';
@@ -86,6 +86,11 @@ const JobModal: React.FC<JobModalProps> = ({
   
   // EditJobModal state for layered modal
   const [showEditJobModal, setShowEditJobModal] = useState(false);
+  
+  // Email sent confirmation state
+  const [showEmailSentDialog, setShowEmailSentDialog] = useState(false);
+  const [currentTimelineIndex, setCurrentTimelineIndex] = useState<number | null>(null);
+  const [emailSentStatus, setEmailSentStatus] = useState<Record<number, boolean>>({});
   
   // Dynamic data hooks
   const { insights, loading: insightsLoading } = useJobInsights(job.id);
@@ -250,6 +255,69 @@ const JobModal: React.FC<JobModalProps> = ({
       return user.name;
     }
     return '[Your Name]';
+  };
+
+  // Get user email from CV data or user object
+  const getUserEmail = () => {
+    if (cvData?.basics?.email) {
+      return cvData.basics.email;
+    }
+    if (user?.email) {
+      return user.email;
+    }
+    return '';
+  };
+
+  // Create mailto link with subject and body
+  const getMailtoLink = () => {
+    const userEmail = getUserEmail();
+    const recipientEmail = job.contactDetails?.email || '';
+    const subject = encodeURIComponent(getEmailSubject(job));
+    const body = encodeURIComponent(getEmailTemplate(job));
+    
+    // If we have a recipient email, use it; otherwise just open with subject and body
+    if (recipientEmail) {
+      return `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
+    }
+    return `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  // Handle opening email client
+  const handleOpenEmail = (timelineIndex?: number) => {
+    const mailtoLink = getMailtoLink();
+    if (mailtoLink) {
+      // Set the timeline index first
+      if (timelineIndex !== undefined) {
+        setCurrentTimelineIndex(timelineIndex);
+      }
+      
+      // Open email client
+      window.location.href = mailtoLink;
+      
+      // Show confirmation dialog after a short delay to ensure email client opens
+      setTimeout(() => {
+        if (timelineIndex !== undefined) {
+          setShowEmailSentDialog(true);
+        }
+      }, 500);
+    } else {
+      toast.error('Unable to create email. Please check your email settings.');
+    }
+  };
+
+  // Handle email sent confirmation
+  const handleEmailSentConfirmation = (sent: boolean) => {
+    if (currentTimelineIndex !== null) {
+      setEmailSentStatus(prev => ({
+        ...prev,
+        [currentTimelineIndex]: sent
+      }));
+      if (sent) {
+        toast.success('Email sent status recorded!');
+      }
+    }
+    setShowEmailSentDialog(false);
+    setCurrentTimelineIndex(null);
   };
 
   // Get contact name from job details
@@ -705,334 +773,445 @@ ${userName}`
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            {/* CV Journeys Section */}
-            <div className="px-6 py-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
-            
-            {journeys.length > 0 ? (
-              <div className="space-y-4">
-                {journeys
-                  .filter(cvJourney => cvJourney.id)
-                  .map((cvJourney, index) => {
-                  const journey = {
-                    id: cvJourney.id,
-                    jobId: cvJourney.jobId,
-                    jobTitle: cvJourney.jobTitle,
-                    company: cvJourney.company,
-                    status: cvJourney.status as 'in-progress' | 'completed',
-                    currentStep: cvJourney.currentStep,
-                    totalSteps: cvJourney.totalSteps,
-                    createdAt: cvJourney.metadata.createdAt instanceof Date 
-                      ? cvJourney.metadata.createdAt.toISOString()
-                      : new Date(cvJourney.metadata.createdAt).toISOString(),
-                    updatedAt: cvJourney.metadata.updatedAt instanceof Date 
-                      ? cvJourney.metadata.updatedAt.toISOString()
-                      : new Date(cvJourney.metadata.updatedAt).toISOString(),
-                    atsScore: cvJourney.atsScore,
-                    cvId: cvJourney.cvId,
-                    coverLetterId: cvJourney.coverLetterId
-                  };
-                  
-                  return (
-                    <JourneyTimelineCard
-                      key={journey.id || `journey-${index}`}
-                      journey={journey}
-                      onResume={handleContinueJourney}
-                      onDownload={handleApplyNow}
-                      onRefresh={onRefresh}
-                      onUpdateJourney={handleUpdateJourney}
-                    />
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Target size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No CV Journeys Started</h4>
-                <p className="text-gray-600 dark:text-white/70 text-xs mb-3">
-                  Create your first CV journey to start preparing for this job application.
-                </p>
-                <motion.button
-                  onClick={handleCreateJourney}
-                  disabled={isCreatingJourney}
-                  className="px-4 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
-                  whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
-                >
-                  {isCreatingJourney ? 'Creating Journey...' : 'Create New CV Journey'}
-                </motion.button>
-              </div>
-            )}
-          </div>
-
-          {/* Follow-up & Templates Section - Full Width */}
-          {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
-            <div className="px-6 py-4">
-              <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <Mail size={16} className="text-lime-600 dark:text-[#80FF00]" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
-                </div>
+            <div className="space-y-6 px-6 py-4">
+              {/* Row 1: CV Journeys Section */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
                 
-                <div className="space-y-4">
-                  {/* Follow-up Suggestion */}
-                  {isFollowUpNeeded(job) && (
-                    <div className="bg-lime-50 dark:bg-lime-500/10 border border-lime-200 dark:border-lime-500/30 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <AlertCircle size={16} className="text-lime-600 dark:text-lime-400 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="text-lime-700 dark:text-lime-200 text-sm">
-                            {getFollowUpSuggestion(job, getDaysSinceLastUpdate(job))}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Email Template */}
-                  {getEmailTemplate(job) && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="text-sm font-medium text-gray-700 dark:text-white/80">Email Template</h4>
-                        <button
-                          onClick={() => setShowEmailTemplate(!showEmailTemplate)}
-                          className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
-                        >
-                          {showEmailTemplate ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                          {showEmailTemplate ? 'Hide' : 'Show'}
-                        </button>
-                      </div>
-
-                      {showEmailTemplate && (
-                        <div className="space-y-3">
-                          {/* Subject Line */}
-                          <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-gray-600 dark:text-white/60">Subject</span>
-                              <motion.button
-                                onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
-                                className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                              >
-                                <Copy size={12} />
-                                {copiedField === 'subject' ? 'Copied!' : 'Copy'}
-                              </motion.button>
-                            </div>
-                            <p className="text-sm text-gray-900 dark:text-white font-medium">{getEmailSubject(job)}</p>
-                          </div>
-
-                          {/* Email Body */}
-                          <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-gray-600 dark:text-white/60">Email Body</span>
-                              <motion.button
-                                onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
-                                className="text-xs text-lime-600 dark:text-[#80FF00] hover:text-lime-700 dark:hover:text-[#80FF00]/80 transition-colors flex items-center gap-1"
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                              >
-                                <Copy size={12} />
-                                {copiedField === 'email' ? 'Copied!' : 'Copy'}
-                              </motion.button>
-                            </div>
-                            <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap max-h-60 overflow-y-auto">
-                              {getEmailTemplate(job)}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Follow-up Timeline */}
-                  <div className="bg-white dark:bg-[#1A201A] rounded-lg p-3 border border-gray-200 dark:border-white/10">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-white/80 mb-3">Follow-up Timeline</h4>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-white/60">1 Day</span>
-                        <span className="text-gray-900 dark:text-white">Initial Application</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-white/60">3-5 Days</span>
-                        <span className="text-gray-900 dark:text-white">Send initial follow-up</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-white/60">7-10 Days</span>
-                        <span className="text-gray-900 dark:text-white">Second follow-up if no response</span>
-                      </div>
-                    </div>
+                {journeys.length > 0 ? (
+                  <div className="space-y-4">
+                    {journeys
+                      .filter(cvJourney => cvJourney.id)
+                      .map((cvJourney, index) => {
+                      const journey = {
+                        id: cvJourney.id,
+                        jobId: cvJourney.jobId,
+                        jobTitle: cvJourney.jobTitle,
+                        company: cvJourney.company,
+                        status: cvJourney.status as 'in-progress' | 'completed',
+                        currentStep: cvJourney.currentStep,
+                        totalSteps: cvJourney.totalSteps,
+                        createdAt: cvJourney.metadata.createdAt instanceof Date 
+                          ? cvJourney.metadata.createdAt.toISOString()
+                          : new Date(cvJourney.metadata.createdAt).toISOString(),
+                        updatedAt: cvJourney.metadata.updatedAt instanceof Date 
+                          ? cvJourney.metadata.updatedAt.toISOString()
+                          : new Date(cvJourney.metadata.updatedAt).toISOString(),
+                        atsScore: cvJourney.atsScore,
+                        cvId: cvJourney.cvId,
+                        coverLetterId: cvJourney.coverLetterId
+                      };
+                      
+                      return (
+                        <JourneyTimelineCard
+                          key={journey.id || `journey-${index}`}
+                          journey={journey}
+                          onResume={handleContinueJourney}
+                          onDownload={handleApplyNow}
+                          onRefresh={onRefresh}
+                          onUpdateJourney={handleUpdateJourney}
+                        />
+                      );
+                    })}
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Target size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
+                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No CV Journeys Started</h4>
+                    <p className="text-gray-600 dark:text-white/70 text-xs mb-3">
+                      Create your first CV journey to start preparing for this job application.
+                    </p>
+                    <motion.button
+                      onClick={handleCreateJourney}
+                      disabled={isCreatingJourney}
+                      className="px-4 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
+                      whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
+                    >
+                      {isCreatingJourney ? 'Creating Journey...' : 'Create New CV Journey'}
+                    </motion.button>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
 
-          {/* Main Content - Two Column Layout */}
-          <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-            {/* Left Column - Main Content */}
-            <div className="flex-1 min-w-0 p-4 sm:p-6 overflow-y-auto min-h-0">
-              <div className="space-y-6">
-                {/* Job Description */}
+              {/* Row 2: Follow-up & Templates Section - Horizontal Ribbon */}
+              {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Description</h3>
                   <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                    <div className="text-gray-700 dark:text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                      {job.jobDescription ? (
-                        <div className="whitespace-pre-wrap font-mono text-xs">
-                          {job.jobDescription}
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <FileText size={48} className="text-gray-500 mx-auto mb-4" />
-                          <p className="text-gray-500 text-sm">
-                            No job description provided yet.
-                          </p>
-                          <p className="text-gray-600 text-xs mt-2">
-                            Add a job description in the job details to see it here.
-                          </p>
-                        </div>
-                      )}
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <Mail size={18} className="text-lime-600 dark:text-[#80FF00]" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
                     </div>
-                  </div>
-                </div>
 
-                {/* Notes Section */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                    {job.notes ? (
-                      <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">{job.notes}</p>
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-500 text-sm italic">No notes added yet</p>
+                    {/* Horizontal Timeline Ribbon */}
+                    {getFollowUpTimeline(job).length > 0 && (
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {getFollowUpTimeline(job).map((timeline, index) => {
+                          const isEmailSent = emailSentStatus[index] === true;
+                          return (
+                            <div
+                              key={index}
+                              className={`flex-1 rounded-lg p-4 border shadow-sm transition-colors ${
+                                isEmailSent
+                                  ? 'bg-lime-50 dark:bg-lime-500/10 border-lime-300 dark:border-lime-500/50'
+                                  : 'bg-white dark:bg-[#1A201A] border-lime-200 dark:border-lime-500/30'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3 mb-3">
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                                  isEmailSent
+                                    ? 'bg-lime-500 dark:bg-lime-500/30'
+                                    : 'bg-lime-100 dark:bg-lime-500/20'
+                                }`}>
+                                  <span className={`font-semibold text-xs ${
+                                    isEmailSent
+                                      ? 'text-white'
+                                      : 'text-lime-600 dark:text-[#80FF00]'
+                                  }`}>
+                                    {index + 1}
+                                  </span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`text-xs font-semibold mb-1 ${
+                                    isEmailSent
+                                      ? 'text-lime-700 dark:text-lime-300'
+                                      : 'text-lime-600 dark:text-[#80FF00]'
+                                  }`}>
+                                    {timeline.day}
+                                  </div>
+                                  <div className="text-sm text-gray-700 dark:text-gray-300">
+                                    {timeline.action}
+                                  </div>
+                                </div>
+                              </div>
+                              {getEmailTemplate(job) && (
+                                <motion.button
+                                  onClick={() => handleOpenEmail(index)}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-lime-500/80 dark:bg-[#80FF00]/60 hover:bg-lime-600/80 dark:hover:bg-[#80FF00]/70 text-white rounded-lg text-xs font-medium transition-colors"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  <Mail size={14} />
+                                  Send Email
+                                </motion.button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 </div>
+              )}
 
-              </div>
-            </div>
+              {/* Row 3: Two Column Layout */}
+              <div className="flex flex-col lg:flex-row gap-6 pb-6 min-w-0 w-full">
+                {/* Column 1: Job Description, Job Info, Notes */}
+                <div className="w-full lg:flex-[3] lg:flex-shrink min-w-0">
+                  <div className="space-y-6">
+                    {/* Job Description */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Description</h3>
+                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                        <div className="text-gray-700 dark:text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
+                          {job.jobDescription ? (
+                            <div className="whitespace-pre-wrap font-mono text-xs">
+                              {job.jobDescription}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8">
+                              <FileText size={48} className="text-gray-500 mx-auto mb-4" />
+                              <p className="text-gray-500 text-sm">
+                                No job description provided yet.
+                              </p>
+                              <p className="text-gray-600 text-xs mt-2">
+                                Add a job description in the job details to see it here.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-            {/* Right Column - Sidebar */}
-            <div className="w-full lg:w-72 xl:w-80 flex-shrink-0 p-4 sm:p-6 overflow-y-auto min-h-0 border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-white/10">
-              <div className="space-y-6">
-                {/* Application Insights */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Application Insights</h3>
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                    <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Status</span>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        job.status === 'applied' ? 'bg-lime-500 text-white' :
-                        job.status === 'interview' ? 'bg-blue-500 text-white' :
-                        job.status === 'offer' ? 'bg-purple-500 text-white' :
-                        job.status === 'rejected' ? 'bg-red-500 text-white' :
-                        'bg-gray-500 text-white'
-                      }`}>
-                        {job.status === 'applied' ? 'In Progress' : 
-                         job.status === 'interview' ? 'Interview' :
-                         job.status === 'offer' ? 'Offer' :
-                         job.status === 'rejected' ? 'Rejected' :
-                         'Created'}
-                      </span>
+                    {/* Job Info */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Info</h3>
+                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                        <div className="space-y-4">
+                          {job.location && (
+                            <div className="flex items-center gap-2">
+                              <MapPin size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Location</span>
+                                <p className="text-sm text-gray-900 dark:text-white">{job.location}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.jobUrl && (
+                            <div className="flex items-center gap-2">
+                              <ExternalLink size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Job URL</span>
+                                <div className="flex items-center gap-2">
+                                  <a
+                                    href={job.jobUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-lime-600 dark:text-[#80FF00] hover:underline truncate"
+                                  >
+                                    {job.jobUrl}
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.salary && (job.salary.min || job.salary.max) && (
+                            <div className="flex items-center gap-2">
+                              <DollarSign size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Salary</span>
+                                <p className="text-sm text-gray-900 dark:text-white">
+                                  {formatJobSalary(job.salary, fallbacks.defaultSalary)}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.applicationDate && (
+                            <div className="flex items-center gap-2">
+                              <Calendar size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Application Date</span>
+                                <p className="text-sm text-gray-900 dark:text-white">{formatDate(job.applicationDate)}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.deadline && (
+                            <div className="flex items-center gap-2">
+                              <Calendar size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Deadline</span>
+                                <p className="text-sm text-gray-900 dark:text-white">{formatDate(job.deadline)}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.jobType && (
+                            <div className="flex items-center gap-2">
+                              <Briefcase size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Job Type</span>
+                                <p className="text-sm text-gray-900 dark:text-white capitalize">{job.jobType}</p>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.source && (
+                            <div className="flex items-center gap-2">
+                              <Building2 size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                              <div className="flex-1">
+                                <span className="text-xs text-gray-600 dark:text-white/60">Source</span>
+                                <p className="text-sm text-gray-900 dark:text-white capitalize">{job.source}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Priority</span>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        job.priority === 'high' ? 'bg-red-500 text-white' :
-                        job.priority === 'medium' ? 'bg-yellow-500 text-white' :
-                        'bg-gray-500 text-white'
-                      }`}>
-                        {job.priority?.charAt(0).toUpperCase() + job.priority?.slice(1) || 'Medium'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Sponsorship</span>
-                      <span className="text-gray-900 dark:text-white/80">
-                        {job.sponsorship === 'yes' ? 'Required' : 
-                         job.sponsorship === 'no' ? 'Not Required' : 
-                         'Unknown'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600 dark:text-white/60">Salary</span>
-                      <span className="text-gray-900 dark:text-white/80 text-xs">
-                        {formatJobSalary(job.salary, fallbacks.defaultSalary)}
-                      </span>
-                    </div>
-                    
-                    {job.tags && job.tags.length > 0 && (
+
+                    {/* Contact Details Section */}
+                    {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
                       <div>
-                        <span className="text-gray-600 dark:text-white/60 block mb-2">Tags</span>
-                        <div className="flex flex-wrap gap-2">
-                          {job.tags.map((tag, index) => (
-                            <span key={index} className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white/80 rounded text-xs">
-                              {tag}
-                            </span>
-                          ))}
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Contact Details</h3>
+                        <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                          <div className="space-y-4">
+                            {job.contactDetails.name && (
+                              <div className="flex items-center gap-2">
+                                <User size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-xs text-gray-600 dark:text-white/60">Name</span>
+                                  <p className="text-sm text-gray-900 dark:text-white">{job.contactDetails.name}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {job.contactDetails.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <span className="text-xs text-gray-600 dark:text-white/60">Email</span>
+                                  <div className="flex items-center gap-2">
+                                    <a
+                                      href={`mailto:${job.contactDetails.email}`}
+                                      className="text-sm text-lime-600 dark:text-[#80FF00] hover:underline truncate"
+                                    >
+                                      {job.contactDetails.email}
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {job.contactDetails.phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-xs text-gray-600 dark:text-white/60">Phone</span>
+                                  <a
+                                    href={`tel:${job.contactDetails.phone}`}
+                                    className="text-sm text-gray-900 dark:text-white hover:text-lime-600 dark:hover:text-[#80FF00]"
+                                  >
+                                    {job.contactDetails.phone}
+                                  </a>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {job.contactDetails.role && (
+                              <div className="flex items-center gap-2">
+                                <Briefcase size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                                <div className="flex-1">
+                                  <span className="text-xs text-gray-600 dark:text-white/60">Role</span>
+                                  <p className="text-sm text-gray-900 dark:text-white">{job.contactDetails.role}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}
-                  </div>
-                  </div>
-                </div>
 
-                {/* Job Insights */}
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Insights</h3>
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                  
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-white/60">Keyword Match Score</span>
-                        <span className="text-lime-600 dark:text-[#80FF00] font-semibold">
-                          {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-white/60">Company Hiring Trend</span>
-                        <span className="text-gray-900 dark:text-white">
-                          {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600 dark:text-white/60">Skills Gap</span>
-                        <span className="text-gray-900 dark:text-white">
-                          {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-500 dark:text-gray-400">Market Competition</span>
-                        <span className="text-gray-900 dark:text-white">
-                          {insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown'}
-                        </span>
+                    {/* Notes Section */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
+                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                        {job.notes ? (
+                          <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">{job.notes}</p>
+                        ) : (
+                          <p className="text-gray-500 dark:text-gray-500 text-sm italic">No notes added yet</p>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Delete Application Button */}
-                <div className="flex justify-end">
-                  <motion.button
-                    onClick={handleDeleteJob}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Trash2 size={16} />
-                    Delete Application
-                  </motion.button>
-                </div>
+                {/* Column 2: Application Insights, Job Insights */}
+                <div className="w-full lg:w-[25%] lg:flex-[1] lg:flex-shrink-0 lg:flex-grow-0 lg:min-w-[250px] lg:max-w-[300px] border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-white/10 lg:pl-6 box-border overflow-hidden">
+                  <div className="space-y-6 pt-6 lg:pt-0 w-full overflow-hidden">
+                    {/* Application Insights */}
+                    <div className="min-w-0 w-full overflow-hidden">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 truncate">Application Insights</h3>
+                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-3 min-w-0 w-full overflow-hidden">
+                        <div className="space-y-3 min-w-0 w-full">
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Status</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                              job.status === 'applied' ? 'bg-lime-500 text-white' :
+                              job.status === 'interview' ? 'bg-blue-500 text-white' :
+                              job.status === 'offer' ? 'bg-purple-500 text-white' :
+                              job.status === 'rejected' ? 'bg-red-500 text-white' :
+                              'bg-gray-500 text-white'
+                            }`}>
+                              {job.status === 'applied' ? 'In Progress' : 
+                               job.status === 'interview' ? 'Interview' :
+                               job.status === 'offer' ? 'Offer' :
+                               job.status === 'rejected' ? 'Rejected' :
+                               'Created'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Priority</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                              job.priority === 'high' ? 'bg-red-500 text-white' :
+                              job.priority === 'medium' ? 'bg-yellow-500 text-white' :
+                              'bg-gray-500 text-white'
+                            }`}>
+                              {job.priority?.charAt(0).toUpperCase() + job.priority?.slice(1) || 'Medium'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Sponsorship</span>
+                            <span className="text-gray-900 dark:text-white/80 text-xs text-right flex-shrink-0 truncate">
+                              {job.sponsorship === 'yes' ? 'Required' : 
+                               job.sponsorship === 'no' ? 'Not Required' : 
+                               'Unknown'}
+                            </span>
+                          </div>
+                          
+                          {job.tags && job.tags.length > 0 && (
+                            <div>
+                              <span className="text-gray-600 dark:text-white/60 block mb-2">Tags</span>
+                              <div className="flex flex-wrap gap-2">
+                                {job.tags.map((tag, index) => (
+                                  <span key={index} className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white/80 rounded text-xs">
+                                    {tag}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
+                    {/* Job Insights */}
+                    <div className="min-w-0 w-full overflow-hidden">
+                      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 truncate">Job Insights</h3>
+                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-3 min-w-0 w-full overflow-hidden">
+                        <div className="space-y-3 min-w-0">
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Keyword Match</span>
+                            <span className="text-lime-600 dark:text-[#80FF00] font-semibold text-xs flex-shrink-0">
+                              {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Hiring Trend</span>
+                            <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
+                              {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Skills Gap</span>
+                            <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
+                              {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
+                            </span>
+                          </div>
+                          
+                          <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-500 dark:text-gray-400 text-xs truncate min-w-0">Market Comp.</span>
+                            <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
+                              {insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delete Application Button */}
+                    <div className="flex justify-end min-w-0">
+                      <motion.button
+                        onClick={handleDeleteJob}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs transition-colors whitespace-nowrap"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Trash2 size={14} />
+                        <span className="truncate">Delete</span>
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
           </div>
         </motion.div>
       </motion.div>
@@ -1136,6 +1315,57 @@ ${userName}`
           }}
           userId={user?.id}
         />
+      )}
+
+      {/* Email Sent Confirmation Dialog */}
+      {showEmailSentDialog && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-60 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setShowEmailSentDialog(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-6 max-w-md w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
+                <Mail size={20} className="text-lime-600 dark:text-[#80FF00]" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Email Sent?
+              </h3>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Did you send the email?
+            </p>
+            
+            <div className="flex gap-3 justify-end">
+              <motion.button
+                onClick={() => handleEmailSentConfirmation(false)}
+                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                No
+              </motion.button>
+              <motion.button
+                onClick={() => handleEmailSentConfirmation(true)}
+                className="px-4 py-2 bg-lime-600 dark:bg-[#80FF00] hover:bg-lime-700 dark:hover:bg-[#70e600] text-white rounded-lg font-medium transition-colors"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Yes
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

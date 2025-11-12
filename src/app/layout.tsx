@@ -19,10 +19,10 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
+    default: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer | CV Circle',
     template: '%s | CVCircle'
   },
-  description: 'Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes and land your dream job.',
+  description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes and land your dream job.',
   keywords: [
     'CV builder',
     'resume builder',
@@ -41,7 +41,17 @@ export const metadata: Metadata = {
     'CV analyzer',
     'ATS resume optimizer',
     'free resume builder',
-    'online CV builder'
+    'online CV builder',
+    'CV Circle',
+    'cv circle',
+    'CV Circle.io',
+    'cv circle io',
+    'CV Circle platform',
+    'CV Circle app',
+    'CVCircle',
+    'cvcircle',
+    'cv circle builder',
+    'CV Circle resume builder'
   ],
   authors: [{ name: 'CVCircle Team' }],
   creator: 'CVCircle',
@@ -59,9 +69,9 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://cvcircle.io',
-    title: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
-    description: 'Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes.',
-    siteName: 'CVCircle',
+    title: 'CVCircle (CV Circle) - AI-Powered CV Builder & ATS Resume Optimizer',
+    description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes.',
+    siteName: 'CVCircle (CV Circle)',
     images: [
       {
         url: '/images/og-image.png',
@@ -73,8 +83,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer',
-    description: 'Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, and resume analysis.',
+    title: 'CVCircle (CV Circle) - AI-Powered CV Builder & ATS Resume Optimizer',
+    description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, and resume analysis.',
     images: ['/images/twitter-image.png'],
     creator: '@cvcircle',
   },

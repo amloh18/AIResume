@@ -393,7 +393,7 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
     <>
       {/* Sliding Banner - Above header, hides on scroll */}
       <motion.div
-        className="sticky top-0 left-0 right-0 mb-4 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-40 backdrop-blur-sm overflow-hidden"
+        className="sticky top-0 left-0 right-0 bg-gradient-to-r from-lime-500/10 to-lime-600/10 border-b border-lime-500/20 z-40 backdrop-blur-sm overflow-hidden"
         initial={{ opacity: 1, y: 0 }}
         animate={{ 
           opacity: isVisible ? 1 : 0,
@@ -401,18 +401,17 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
         }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         style={{ 
-          pointerEvents: isVisible ? 'auto' : 'none',
-          marginBottom: isVisible ? '1rem' : 0
+          pointerEvents: isVisible ? 'auto' : 'none'
         }}
       >
         {/* Compact Banner */}
         <div className="px-6 py-2">
-          <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
             {/* Left: Journey Info */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-lime-400" />
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <Briefcase className="h-4 w-4 text-lime-400 flex-shrink-0" />
+                <div className="text-xs font-medium text-gray-900 dark:text-white truncate">
                   {displayJourney.jobTitle || jobData?.title || 'Active Journey'}
                   {displayJourney.company || jobData?.company ? (
                     <span className="text-gray-600 dark:text-white/60 font-normal">
@@ -423,19 +422,106 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
                 </div>
               </div>
 
-              {/* Current Step Info */}
-              {(isJourneyActive || journey) && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-lime-500/20 rounded-full">
-                  {getStepIcon(displayJourney.currentStep)}
-                  <span className="text-xs font-medium text-lime-600 dark:text-lime-400">
-                    {getStepLabel(displayJourney.currentStep)}
-                  </span>
-                </div>
-              )}
+              {/* Progress Info */}
+              {(isJourneyActive || journey) && (() => {
+                // Calculate completion percentage
+                const totalSteps = displayJourney.totalSteps || 5;
+                const completedSteps = [1, 2, 3, 4, 5].filter(step => getStepStatus(step) === 'completed').length;
+                const completionPercentage = Math.round((completedSteps / totalSteps) * 100);
+                
+                // Get next action needed
+                const getNextAction = () => {
+                  const currentStep = displayJourney.currentStep || 1;
+                  const currentStatus = getStepStatus(currentStep);
+                  
+                  if (currentStatus === 'completed' && currentStep < totalSteps) {
+                    const nextStep = currentStep + 1;
+                    return getStepLabel(nextStep);
+                  } else if (currentStatus === 'active') {
+                    return getStepLabel(currentStep);
+                  } else if (currentStatus === 'pending') {
+                    return getStepLabel(currentStep);
+                  }
+                  return 'Complete';
+                };
+
+                // Count completed items
+                const hasJob = getStepStatus(1) === 'completed';
+                const hasCV = getStepStatus(2) === 'completed';
+                const hasATS = getStepStatus(3) === 'completed';
+                const hasCL = getStepStatus(4) === 'completed';
+                const isReady = getStepStatus(5) === 'completed';
+
+                return (
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {/* Progress with completion percentage */}
+                    <div className="flex items-center gap-2 px-2 py-1 bg-lime-500/20 rounded-full">
+                      {getStepIcon(displayJourney.currentStep)}
+                      <span className="text-xs font-medium text-lime-600 dark:text-lime-400 whitespace-nowrap">
+                        {completionPercentage}%
+                      </span>
+                    </div>
+
+                    {/* ATS Score with quality indicator */}
+                    {(atsScoreState !== null && atsScoreState !== -1 && atsScoreState > 0) && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/20 rounded-full" title={`ATS Match Score: ${atsScoreState}%`}>
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                          ATS: {atsScoreState}%
+                        </span>
+                        {atsScoreState >= 80 ? (
+                          <span className="text-[10px] text-green-500">✓</span>
+                        ) : atsScoreState >= 60 ? (
+                          <span className="text-[10px] text-yellow-500">⚠</span>
+                        ) : (
+                          <span className="text-[10px] text-red-500">!</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Quick Status Overview */}
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-500/10 dark:bg-white/5 rounded-full">
+                      <div className="flex items-center gap-1">
+                        {hasJob ? (
+                          <CheckCircle className="h-3 w-3 text-green-500" title="Job Added" />
+                        ) : (
+                          <div className="h-3 w-3 rounded-full border-2 border-gray-400" title="Job Pending" />
+                        )}
+                        {hasCV ? (
+                          <FileText className="h-3 w-3 text-green-500 ml-0.5" title="CV Ready" />
+                        ) : (
+                          <FileText className="h-3 w-3 text-gray-400 ml-0.5" title="CV Pending" />
+                        )}
+                        {hasATS ? (
+                          <CheckCircle className="h-3 w-3 text-green-500 ml-0.5" title="ATS Scored" />
+                        ) : (
+                          <div className="h-3 w-3 rounded-full border-2 border-gray-400 ml-0.5" title="ATS Pending" />
+                        )}
+                        {hasCL ? (
+                          <Mail className="h-3 w-3 text-green-500 ml-0.5" title="Cover Letter Ready" />
+                        ) : (
+                          <Mail className="h-3 w-3 text-gray-400 ml-0.5" title="Cover Letter Pending" />
+                        )}
+                      </div>
+                      {isReady && (
+                        <span className="text-[10px] text-green-500 font-medium ml-1">Ready!</span>
+                      )}
+                    </div>
+
+                    {/* Next Action */}
+                    {!isReady && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-orange-500/20 rounded-full" title="Next Action">
+                        <span className="text-[10px] text-orange-600 dark:text-orange-400 font-medium whitespace-nowrap">
+                          Next: {getNextAction()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Right: Actions */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <motion.button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="px-3 py-1 text-xs text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded transition-colors flex items-center gap-1"
@@ -443,7 +529,7 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
                 whileTap={{ scale: 0.95 }}
               >
                 {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                Detailed Info
+                Details
               </motion.button>
               
               {isJourneyActive && (

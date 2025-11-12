@@ -43,15 +43,23 @@ const Projects: React.FC<ProjectsProps> = ({
   };
 
   return (
-    <section className="projects-section">
-      <h2 className="section-header">
+    <section 
+      className="projects-section section-content"
+      data-section-id="projects"
+      data-section-type="projects"
+    >
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Projects'}
       </h2>
       
       <div className="projects-list">
         {data.map((project, index) => (
-          <div key={index} className="project-item">
-            <div className="item-header">
+          <div 
+            key={index} 
+            className="project-item cv-entry-item"
+            data-entry-index={index}
+          >
+            <div className="item-header entry-header">
               <div className="item-title-group">
                 <h3 className="item-title">
                   {project.name || 'Project Name'}
@@ -71,7 +79,7 @@ const Projects: React.FC<ProjectsProps> = ({
             </div>
 
             {project.description && (
-              <div className="project-description">
+              <div className="project-description entry-content item-content">
                 <div 
                   dangerouslySetInnerHTML={{ __html: parseFormattedText(project.description) }}
                 />
@@ -83,14 +91,6 @@ const Projects: React.FC<ProjectsProps> = ({
                 <strong>Technologies: </strong>
                 {project.keywords.join(' • ')}
               </div>
-            )}
-
-            {project.highlights && project.highlights.length > 0 && (
-              <ul className="highlight-list">
-                {project.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
-                ))}
-              </ul>
             )}
           </div>
         ))}
@@ -207,18 +207,6 @@ const Projects: React.FC<ProjectsProps> = ({
         .project-keywords strong {
           font-weight: 600;
           color: ${template.globalStyles.primaryColor};
-        }
-        
-        .highlight-list {
-          margin: 8px 0 0 16px;
-          padding: 0;
-        }
-        
-        .highlight-list li {
-          margin-bottom: 4px;
-          line-height: ${template.globalStyles.lineHeight};
-          color: ${template.globalStyles.primaryColor};
-          font-size: ${template.globalStyles.fontSize};
         }
         
         @media (max-width: 768px) {

@@ -93,6 +93,7 @@ function SortableSectionItem({
   getSectionTitle,
   confirmingDelete,
   setConfirmingDelete,
+  isHovered,
 }: {
   section: CVSection;
   isActive: boolean;
@@ -103,6 +104,7 @@ function SortableSectionItem({
   getSectionTitle: (sectionId: string) => string;
   confirmingDelete: string | null;
   setConfirmingDelete: (sectionId: string | null) => void;
+  isHovered: boolean;
 }) {
   const {
     attributes,
@@ -144,21 +146,33 @@ function SortableSectionItem({
       <motion.button
         {...(!isPersonalHeader ? { ...attributes, ...listeners } : {})}
         onClick={() => onStructureSectionClick(section.id)}
-        className={`flex-1 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
+        className={`flex-1 flex items-center rounded-lg transition-all duration-200 text-sm ${
           isActive
+            ? isHovered
             ? 'bg-[#80FF00]/20 text-[#80FF00]'
+              : 'bg-[#80FF00]/30 text-[#80FF00]'
             : isPersonalHeader
             ? 'text-white/60 hover:text-white hover:bg-white/5'
             : 'text-white/60 hover:text-white hover:bg-blue-500/20 cursor-move'
-        }`}
+        } ${isHovered ? 'justify-start gap-2 md:gap-3 px-2 md:px-3 py-2' : 'justify-center px-0 py-2'}`}
         whileHover={!isPersonalHeader ? { scale: 1.02 } : {}}
         whileTap={{ scale: 0.98 }}
         title={getSectionTitle(section.id)}
       >
         {React.createElement(IconComponent, { size: 16 })}
-        <span className="font-medium text-xs hidden md:block">
+        <motion.span 
+          className="font-medium text-xs whitespace-nowrap"
+          initial={false}
+          animate={{
+            opacity: isHovered ? 1 : 0,
+            width: isHovered ? 'auto' : 0,
+            marginLeft: isHovered ? 0 : -8,
+          }}
+          transition={{ duration: 0.2, ease: 'easeInOut' }}
+          style={{ overflow: 'hidden' }}
+        >
           {isConfirming ? 'Confirm' : getSectionTitle(section.id)}
-        </span>
+        </motion.span>
       </motion.button>
       
       {/* Delete button - always visible, except for personal_header */}
@@ -342,15 +356,22 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
 
   return (
     <div className="flex h-full bg-[#1A201A]">
-      {/* Sticky Sidebar - Matching MasterCVBuilderStep theme */}
-      <div className="w-20 md:w-72 flex-shrink-0 p-2 md:p-4">
+      {/* Sticky Sidebar - Collapsible with hover expand */}
+      <motion.div 
+        className="flex-shrink-0 overflow-hidden ml-2 mt-2 mb-2 mr-2"
+        initial={false}
+        animate={{
+          width: isHovered ? 288 : 80, // 72 * 4 = 288px expanded, 80px collapsed
+        }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+      >
       <div
-          className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl overflow-hidden"
+          className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl overflow-hidden p-1.5 md:p-3"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         >
           {/* Main Sections Navigation */}
-          <div className="flex-1 p-2 md:p-4 space-y-2 overflow-y-auto min-h-0">
+          <div className="flex-1 p-1.5 md:p-3 space-y-2 overflow-y-auto min-h-0">
             {mainSections.map((section) => {
               const IconComponent = section.icon;
               const isActive = localActiveSection === section.id;
@@ -359,17 +380,32 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                 <motion.button
                   key={section.id}
                   onClick={() => handleSectionClick(section.id as any)}
-                  className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center rounded-xl transition-all duration-200 ${
                     isActive
+                      ? isHovered
                       ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
+                        : 'bg-[#80FF00] text-black shadow-lg'
                       : 'text-white/70 hover:text-white hover:bg-white/5'
-                  }`}
+                  } ${isHovered ? 'justify-start gap-2 md:gap-3 px-2 md:px-4 py-3' : 'justify-center px-0 py-3'}`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   title={section.title}
                 >
-                  {React.createElement(IconComponent, { size: 18 })}
-                  <span className="font-medium text-xs md:text-sm hidden md:block">{section.title}</span>
+                  <div className={`flex items-center ${isHovered ? '' : 'w-full justify-center'}`}>
+                    {React.createElement(IconComponent, { size: isHovered ? 18 : 20 })}
+                  </div>
+                  {isHovered && (
+                    <motion.span 
+                      className="font-medium text-xs md:text-sm whitespace-nowrap"
+                      initial={{ opacity: 0, width: 0, marginLeft: -8 }}
+                      animate={{ opacity: 1, width: 'auto', marginLeft: 0 }}
+                      exit={{ opacity: 0, width: 0, marginLeft: -8 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden' }}
+                    >
+                      {section.title}
+                    </motion.span>
+                  )}
                 </motion.button>
               );
             })}
@@ -418,6 +454,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                             getSectionTitle={getSectionTitle}
                             confirmingDelete={confirmingDelete}
                             setConfirmingDelete={setConfirmingDelete}
+                            isHovered={isHovered}
                           />
                         );
                       })}
@@ -426,9 +463,9 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                   <DragOverlay>
                     {activeId ? (
                       <div className="flex items-center gap-1 opacity-50">
-                        <div className="flex-1 flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg bg-[#80FF00]/20 text-[#80FF00]">
+                        <div className="flex-1 flex items-center justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg bg-[#80FF00]/20 text-[#80FF00]">
                           {React.createElement(getSectionIcon(activeId), { size: 16 })}
-                          <span className="font-medium text-xs hidden md:block">
+                          <span className="font-medium text-xs">
                             {getSectionTitle(activeId)}
                           </span>
                         </div>
@@ -442,22 +479,34 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
 
           {/* Add Section Button (only shown when Structure is active and documentType is cv) */}
           {localActiveSection === 'structure' && documentType === 'cv' && onAddSection && (
-            <div className="p-2 md:p-4 border-t border-white/10">
+            <div className="p-1.5 md:p-3 border-t border-white/10">
               <button 
                 onClick={onAddSection}
-                className="w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
+                className={`w-full flex items-center text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5 ${isHovered ? 'justify-start gap-2 md:gap-3 px-2 md:px-4 py-3' : 'justify-center px-0 py-3'}`}
                 title="Add New Section"
               >
                 <Plus size={18} />
-                <span className="font-medium text-xs md:text-sm hidden md:block">Add New Section</span>
+                <motion.span 
+                  className="font-medium text-xs md:text-sm whitespace-nowrap"
+                  initial={false}
+                  animate={{
+                    opacity: isHovered ? 1 : 0,
+                    width: isHovered ? 'auto' : 0,
+                    marginLeft: isHovered ? 0 : -8,
+                  }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  Add New Section
+                </motion.span>
               </button>
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Main Content Area - Matching MasterCVBuilderStep */}
-      <div className={`flex-1 overflow-y-auto h-full bg-[#1A201A] ${localActiveSection === 'structure' ? '-mt-2 -ml-4 -mb-4' : ''}`}>
+      <div className={`flex-1 overflow-y-auto h-full bg-[#1A201A] ${localActiveSection === 'structure' ? '-mt-2 -ml-2 -mb-2' : ''}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={`${localActiveSection}-${activeStructureSection || ''}`}

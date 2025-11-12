@@ -211,6 +211,44 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
   return cleaned.trim();
 }
 
+function calculateExperienceLevel(cvData: any): 'Senior' | 'Mid-Level' | 'Junior' {
+  if (!cvData?.work || cvData.work.length === 0) {
+    return 'Junior';
+  }
+
+  // Calculate total years of experience
+  let totalMonths = 0;
+  const currentDate = new Date();
+  
+  cvData.work.forEach((job: any) => {
+    if (job.startDate) {
+      try {
+        const startDate = new Date(job.startDate);
+        let endDate = currentDate;
+        
+        if (job.endDate && job.endDate !== 'Present' && job.endDate !== 'Current') {
+          endDate = new Date(job.endDate);
+        }
+        
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                          (endDate.getMonth() - startDate.getMonth());
+        
+        if (monthsDiff > 0) {
+          totalMonths += monthsDiff;
+        }
+      } catch (e) {
+        // Skip invalid dates
+      }
+    }
+  });
+
+  const totalYears = totalMonths / 12;
+
+  if (totalYears >= 7) return 'Senior';
+  if (totalYears >= 3) return 'Mid-Level';
+  return 'Junior';
+}
+
 function createCoverLetterPrompt({
   cvData,
   jobData,
@@ -222,73 +260,172 @@ function createCoverLetterPrompt({
   recipientName?: string;
   companyName?: string;
 }) {
-  const jobDescription = jobData?.jobDescription || '';
+  // Calculate experience level
+  const experienceLevel = calculateExperienceLevel(cvData);
+  
+  const jobDescription = jobData?.jobDescription || jobData?.description || '';
   const jobTitle = jobData?.title || jobData?.jobTitle || 'Position';
-  const userName = cvData?.basics?.name || 'Applicant';
+  const company = companyName || jobData?.company || 'Company';
+  const basics = cvData?.basics || {};
   
-  // Extract key experiences and achievements from CV
-  const workExperiences = cvData?.work || [];
-  const skills = cvData?.skills || [];
+  // Extract CV metadata (career report analysis)
+  const aiAnalysis = cvData?.metadata?.aiAnalysis || {};
+  const impactScore = aiAnalysis?.impactScore || {};
+  const skillsGap = aiAnalysis?.skillsGap || {};
+  const industrySpecialization = aiAnalysis?.industrySpecialization || {};
+  const cvOptimization = aiAnalysis?.cvOptimization || {};
+  
+  // Extract relevant CV sections
+  const workExperience = cvData?.work || [];
+  const projects = cvData?.projects || [];
   const education = cvData?.education || [];
+  const skills = cvData?.skills || [];
   
-  // Build experience summary
-  let experienceSummary = '';
-  if (workExperiences.length > 0) {
-    const recentExperience = workExperiences[0];
-    experienceSummary = `Most recent role: ${recentExperience.position || 'N/A'} at ${recentExperience.name || 'N/A'}`;
-    if (recentExperience.highlights && recentExperience.highlights.length > 0) {
-      experienceSummary += `\nKey achievements:\n${recentExperience.highlights.slice(0, 3).map((h: string) => `- ${h}`).join('\n')}`;
-    }
-  }
+  // Format work experience for prompt
+  const workExperienceText = workExperience.map((work: any, idx: number) => {
+    return `Work Experience ${idx + 1}:
+- Position: ${work.position || 'N/A'}
+- Company: ${work.name || 'N/A'}
+- Duration: ${work.startDate || 'N/A'} - ${work.endDate || 'Present'}
+- Summary: ${work.summary || 'N/A'}
+- Highlights: ${work.highlights?.join(', ') || 'N/A'}`;
+  }).join('\n\n');
   
-  return `You are an expert career writer crafting a compelling cover letter that will make the candidate stand out.
+  // Format projects for prompt
+  const projectsText = projects.map((project: any, idx: number) => {
+    return `Project ${idx + 1}:
+- Name: ${project.name || 'N/A'}
+- Description: ${project.description || 'N/A'}
+- Technologies: ${project.keywords?.join(', ') || 'N/A'}
+- URL: ${project.url || 'N/A'}`;
+  }).join('\n\n');
+  
+  // Format education for prompt
+  const educationText = education.map((edu: any, idx: number) => {
+    return `Education ${idx + 1}:
+- Institution: ${edu.institution || 'N/A'}
+- Area: ${edu.area || 'N/A'}
+- Study Type: ${edu.studyType || 'N/A'}
+- GPA: ${edu.gpa || 'N/A'}`;
+  }).join('\n\n');
+  
+  // Format skills for prompt
+  const skillsText = skills.map((skill: any) => {
+    if (typeof skill === 'string') return skill;
+    return skill.name || skill;
+  }).join(', ');
+
+  // Experience level-specific guidance
+  const experienceGuidance = experienceLevel === 'Senior' 
+    ? `CANDIDATE EXPERIENCE LEVEL: SENIOR (7+ years)
+- Emphasize strategic leadership, cross-functional collaboration, and business impact
+- Highlight experience managing teams, budgets, or large-scale projects
+- Focus on transformation, innovation, and measurable business outcomes
+- Use executive-level language: "spearheaded," "architected," "orchestrated," "drove"
+- Demonstrate ability to influence stakeholders and deliver at scale
+- Show depth of expertise and thought leadership`
+
+    : experienceLevel === 'Mid-Level'
+    ? `CANDIDATE EXPERIENCE LEVEL: MID-LEVEL (3-7 years)
+- Balance technical expertise with growing leadership responsibilities
+- Emphasize problem-solving, project ownership, and measurable contributions
+- Highlight ability to work independently and mentor others
+- Focus on specific achievements with quantifiable results
+- Use action verbs: "developed," "implemented," "optimized," "delivered"
+- Show progression and increasing responsibility over time`
+
+    : `CANDIDATE EXPERIENCE LEVEL: JUNIOR/ENTRY-LEVEL (0-3 years)
+- Emphasize learning agility, enthusiasm, and foundational skills
+- Highlight relevant projects, internships, or academic achievements
+- Focus on potential, growth mindset, and eagerness to contribute
+- Use verbs: "contributed," "assisted," "learned," "supported," "collaborated"
+- Connect education and projects to job requirements
+- Show passion and commitment to the field`;
+
+  return `You are an expert career marketing specialist and content strategist. Your primary goal is to draft the body (EXACTLY 3 paragraphs) of a highly personalized and persuasive cover letter designed to sell the candidate as the single best and most eligible fit for the specified job role.
+
+${experienceGuidance}
+
+CONSTRAINTS AND OUTPUT DIRECTIVES (STRICTLY ENFORCE):
+
+OUTPUT FOCUS: Generate EXACTLY 3 paragraphs - no more, no less. Do not include a salutation (e.g., "Dear Hiring Manager,"), a subject line, or a closing/sign-off (e.g., "Sincerely,").
+
+PARAGRAPH STRUCTURE: Each paragraph must be substantial (3-5 sentences) and serve a distinct purpose:
+- Paragraph 1: Hook and immediate value proposition
+- Paragraph 2: Concrete evidence and proof of capabilities
+- Paragraph 3: Forward-looking statement and fit
+
+FLUFF REMOVAL: Eliminate all generic, filler language, platitudes, and clichés (e.g., "I am writing to express my interest," "highly motivated," "excellent communication skills").
+
+ALIGNMENT MANDATE: Every sentence must directly link a specific piece of the candidate's Work Experience, Projects, or Education to a core duty, required skill, or objective listed in the Job Description. If a detail from the CV is not relevant to the JD, do not include it.
+
+TONE: Maintain a confident, professional, and results-oriented tone appropriate for ${experienceLevel} level. Use strong, measurable action verbs and focus on quantifiable achievements (metrics, scale, impact).
+
+--- JOB DESCRIPTION (JD) ---
+
+Job Title: ${jobTitle || 'Not specified'}
+Company: ${company || 'Not specified'}
+
+${jobDescription || 'No job description provided'}
+
+--- CANDIDATE CV/EXPERIENCE DATA ---
 
 CANDIDATE PROFILE:
-Name: ${userName}
-${experienceSummary}
-Skills: ${skills.map((s: any) => s.name || s).slice(0, 10).join(', ')}
+- Name: ${basics.name || 'Not specified'}
+- Summary: ${basics.summary || 'N/A'}
+- Location: ${basics.location ? (typeof basics.location === 'string' ? basics.location : `${basics.location.city || ''}, ${basics.location.state || ''}`) : 'N/A'}
 
-TARGET ROLE:
-Position: ${jobTitle}
-Company: ${companyName}
-Job Description: ${jobDescription.substring(0, 500)}...
+WORK EXPERIENCE:
+${workExperienceText || 'No work experience provided'}
 
-TASK: Write ONLY the body paragraphs of the cover letter (NO header, NO contact info, NO greeting, NO closing signature).
+PROJECTS:
+${projectsText || 'No projects provided'}
 
-STRUCTURE (3 paragraphs):
+EDUCATION:
+${educationText || 'No education provided'}
 
-Paragraph 1 - Opening Hook (80-100 words):
-- Express strong interest in the specific role at the specific company
-- Immediately state 1-2 key qualifications that make the candidate an ideal fit
-- Reference something specific about the company or role that excites them
+SKILLS:
+${skillsText || 'No skills provided'}
 
-Paragraph 2 - Career Highlights (120-150 words):
-- Analyze the candidate's work experience from the CV data above
-- Pick the 2-3 most relevant achievements that align with the job requirements
-- Use specific metrics, percentages, or outcomes from their CV highlights
-- Demonstrate how their experience directly translates to this role
-- Emphasize skills that match the job description
+--- AI CAREER ANALYSIS INSIGHTS (from CV metadata) ---
 
-Paragraph 3 - Value Proposition & Call-to-Action (60-80 words):
-- Summarize why they're uniquely qualified for this specific role
-- Express enthusiasm about contributing to the company's goals
-- Request an interview to discuss how they can add value
+${aiAnalysis ? `IMPACT SCORE ANALYSIS:
+- Quantifiable Statements: ${impactScore.quantifiableStatements || 0}
+- High Impact Verbs: ${impactScore.highImpactVerbs || 0}
+- Industry Keywords: ${impactScore.industryKeywords || 0}
+${impactScore.insights ? `- Insights: ${JSON.stringify(impactScore.insights)}` : ''}
 
-CRITICAL RULES:
-✗ DO NOT include name, contact information, or location at the top
-✗ DO NOT include "Dear Hiring Manager" or any greeting
-✗ DO NOT include "Sincerely" or closing signature
-✗ DO NOT use "[Your Name]", "[Company]", or any placeholders
-✗ DO NOT repeat the same information multiple times
-✓ START directly with: "I am writing to express my strong interest..."
-✓ Use actual metrics and achievements from the CV data
-✓ Reference specific skills and experiences from the CV
-✓ Keep it professional, confident, and specific to this role
+SKILLS GAP ANALYSIS:
+${skillsGap.skills ? skillsGap.skills.map((skill: any) => `- ${skill.name}: ${skill.gapInsight || 'N/A'}`).join('\n') : 'N/A'}
 
-FORMAT:
-- Use **bold** sparingly for 2-3 key achievements or skills
-- Separate paragraphs with double line breaks
-- Write in active voice with strong action verbs
+INDUSTRY SPECIALIZATION:
+- Specialization: ${industrySpecialization.specialization || 'N/A'}
+- Keywords: ${industrySpecialization.keywords?.join(', ') || 'N/A'}
+
+CV OPTIMIZATION:
+- Total Length: ${cvOptimization.totalLength || 'N/A'}
+- Bullet Point Length: ${cvOptimization.bulletPointLength || 'N/A'}` : 'No AI analysis available'}
+
+GENERATION TASK:
+
+Draft the cover letter body using EXACTLY 3 paragraphs tailored to ${experienceLevel} level:
+
+Paragraph 1 (The Hook - 3-5 sentences): ${experienceLevel === 'Senior' ? 'Lead with your most significant strategic achievement that demonstrates leadership and business impact. Connect it directly to the company\'s main objectives or challenges mentioned in the job description.' : experienceLevel === 'Mid-Level' ? 'Open with your most relevant professional achievement that showcases your ability to deliver measurable results. Connect it to the job\'s primary requirements.' : 'Start with your most relevant project, internship, or academic achievement that demonstrates your potential and alignment with the role.'} Use specific metrics and quantifiable results.
+
+Paragraph 2 (The Proof - 3-5 sentences): ${experienceLevel === 'Senior' ? 'Detail 1-2 major initiatives where you led cross-functional teams or managed significant resources. Highlight scale (budget, team size, impact scope) and reference specific technologies from the job description.' : experienceLevel === 'Mid-Level' ? 'Provide concrete examples from your work experience or projects that demonstrate mastery of the key skills required. Highlight the scale of your work (e.g., "improved performance by Y%," "supported Z users").' : 'Detail relevant projects, coursework, or internships that demonstrate your skills and eagerness to learn. Connect specific technologies or methodologies from your experience to the job requirements.'}
+
+Paragraph 3 (The Close - 3-5 sentences): ${experienceLevel === 'Senior' ? 'Position yourself as a strategic leader who can drive transformation. Conclude with a forward-looking statement about how you will deliver measurable business outcomes and exceed expectations.' : experienceLevel === 'Mid-Level' ? 'Connect your growing expertise and proven track record to the role. Express confidence in your ability to deliver immediate value and contribute to the team\'s success.' : 'Connect your educational background, passion for the field, and eagerness to learn to the role\'s requirements. Express enthusiasm about contributing and growing with the company.'}
+
+CRITICAL REQUIREMENTS:
+- EXACTLY 3 paragraphs (no more, no less)
+- Each paragraph must be 3-5 sentences
+- NO salutations, greetings, or closings
+- NO generic filler language
+- Every claim must be backed by specific examples from the CV data
+- Use quantifiable metrics wherever possible (adjust expectations for ${experienceLevel} level)
+- Reference specific technologies, tools, or methodologies from the job description
+- Maintain professional, confident tone appropriate for ${experienceLevel} level
+- Focus on what you will achieve for the company, not why you are applying
 
 Output ONLY the 3 body paragraphs. Nothing else.`;
 }

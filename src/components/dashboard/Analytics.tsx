@@ -171,6 +171,17 @@ const CVManagementSection: React.FC<{
       router.push('/studio?master=true');
     }
   };
+
+  // Function to navigate to edit Master CV
+  const handleEditMasterCV = () => {
+    if (masterCV) {
+      // Navigate to master CV mode for editing
+      router.push(`/studio?master=true`);
+    } else {
+      // If no master CV, navigate to studio (will prompt to create master CV)
+      router.push('/studio?master=true');
+    }
+  };
   
   const getStatus = (score: number) => {
     if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
@@ -334,9 +345,6 @@ const CVManagementSection: React.FC<{
             {cvs.length > 0 && (
               <div className="glass-card-premium rounded-lg p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 border border-purple-200 dark:border-purple-400/20">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-400 rounded-full flex items-center justify-center overflow-hidden">
-                    <User size={20} className="text-white" />
-                  </div>
                   <div className="flex-1">
                     <h4 className="text-gray-900 dark:text-white font-bold text-lg">
                       {profile.experienceLevel}
@@ -362,10 +370,10 @@ const CVManagementSection: React.FC<{
               </h3>
               <div className="space-y-2">
                 <motion.button 
-                  onClick={onCreateCV}
+                  onClick={handleEditMasterCV}
                   className="w-full p-3 bg-lime-400/20 text-lime-400 rounded-lg text-sm font-medium hover:bg-lime-400/30 transition-all duration-300 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Plus size={16} /> Create New CV
+                  <FileText size={16} /> Edit Master CV
                 </motion.button>
                 <motion.button 
                   onClick={handleShowATSAnalysis}

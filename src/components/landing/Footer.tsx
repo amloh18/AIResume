@@ -86,18 +86,160 @@ const Footer = () => {
       
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+          className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          {/* Column 1: Logo + Mission */}
+          {/* Column 1: Contact Details (Mobile: Column 1) */}
           <motion.div 
-            className="space-y-8"
+            className="space-y-4 sm:space-y-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Contact Us</h3>
+            
+            <div className="space-y-4 sm:space-y-6">
+              {/* Email */}
+              <motion.div 
+                className="flex items-center space-x-2 sm:space-x-4 group"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
+                  <Mail className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] text-black" />
+                </motion.div>
+                <div>
+                  <p className="text-white/60 text-xs sm:text-sm">Email</p>
+                  <a 
+                    href="mailto:support@cvcircle.io" 
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs sm:text-base break-all"
+                  >
+                    support@cvcircle.io
+                  </a>
+                </div>
+              </motion.div>
+
+              {/* Phone */}
+              <motion.div 
+                className="flex items-center space-x-2 sm:space-x-4 group"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
+                  <Phone className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] text-white" />
+                </motion.div>
+                <div>
+                  <p className="text-white/60 text-xs sm:text-sm">Phone</p>
+                  <a 
+                    href="tel:+447879768984" 
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs sm:text-base"
+                  >
+                    +44 7879768984
+                  </a>
+                </div>
+              </motion.div>
+
+              {/* Address */}
+              <motion.div 
+                className="flex items-center space-x-2 sm:space-x-4 group"
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.div 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  whileHover={{ 
+                    scale: 1.1,
+                    rotateY: 15,
+                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
+                  }}
+                  style={{
+                    transformStyle: 'preserve-3d',
+                    perspective: '1000px'
+                  }}
+                >
+                  <MapPin className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] text-white" />
+                </motion.div>
+                <div>
+                  <p className="text-white/60 text-xs sm:text-sm">Address</p>
+                  <p className="text-white font-medium text-xs sm:text-base">
+                    London, England
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Column 2: Quick Links (Mobile: Column 2) */}
+          <motion.div 
+            className="space-y-4 sm:space-y-8"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Quick Links</h3>
+            <ul className="space-y-3">
+              {quickLinks.map((link, index) => (
+                <motion.li 
+                  key={index}
+                  className="flex"
+                  whileHover={{ x: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <motion.a
+                    href={link.href}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollToSection(link.href);
+                    }}
+                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-sm font-medium group flex items-center gap-2"
+                    whileHover={{ x: -5 }}
+                  >
+                    <span>{link.name}</span>
+                    <motion.div
+                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                      whileHover={{ rotate: 45 }}
+                    >
+                      <ArrowRight size={14} />
+                    </motion.div>
+                  </motion.a>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+
+          {/* Column 3: Logo + Mission (Mobile: Full width below) */}
+          <motion.div 
+            className="space-y-8 col-span-2 md:col-span-1"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
             viewport={{ once: true }}
           >
             <motion.div
@@ -146,115 +288,12 @@ const Footer = () => {
             </div>
           </motion.div>
 
-          {/* Column 2: Contact Details */}
+          {/* Column 4: Newsletter */}
           <motion.div 
-            className="space-y-8"
+            className="space-y-8 col-span-2 md:col-span-1"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <h3 className="text-xl font-bold text-white mb-6">Contact Us</h3>
-            
-            <div className="space-y-6">
-              {/* Email */}
-              <motion.div 
-                className="flex items-center space-x-4 group"
-                whileHover={{ x: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <motion.div 
-                  className="w-10 h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg"
-                  whileHover={{ 
-                    scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <Mail size={18} className="text-black" />
-                </motion.div>
-                <div>
-                  <p className="text-white/60 text-sm">Email</p>
-                  <a 
-                    href="mailto:support@cvcircle.io" 
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium"
-                  >
-                    support@cvcircle.io
-                  </a>
-                </div>
-              </motion.div>
-
-              {/* Phone */}
-              <motion.div 
-                className="flex items-center space-x-4 group"
-                whileHover={{ x: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <motion.div 
-                  className="w-10 h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg"
-                  whileHover={{ 
-                    scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <Phone size={18} className="text-white" />
-                </motion.div>
-                <div>
-                  <p className="text-white/60 text-sm">Phone</p>
-                  <a 
-                    href="tel:+447879768984" 
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium"
-                  >
-                    +44 7879768984
-                  </a>
-                </div>
-              </motion.div>
-
-              {/* Address */}
-              <motion.div 
-                className="flex items-center space-x-4 group"
-                whileHover={{ x: 5 }}
-                transition={{ duration: 0.3 }}
-              >
-                <motion.div 
-                  className="w-10 h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg"
-                  whileHover={{ 
-                    scale: 1.1,
-                    rotateY: 15,
-                    boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
-                  }}
-                  style={{
-                    transformStyle: 'preserve-3d',
-                    perspective: '1000px'
-                  }}
-                >
-                  <MapPin size={18} className="text-white" />
-                </motion.div>
-                <div>
-                  <p className="text-white/60 text-sm">Address</p>
-                  <p className="text-white font-medium">
-                    London, England
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-
-          {/* Column 3: Newsletter */}
-          <motion.div 
-            className="space-y-8"
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
+            transition={{ duration: 0.8, delay: 0.6 }}
             viewport={{ once: true }}
           >
             <h3 className="text-2xl font-bold text-white">Stay Updated</h3>
@@ -342,44 +381,6 @@ const Footer = () => {
             </form>
           </motion.div>
 
-          {/* Column 4: Quick Links */}
-          <motion.div 
-            className="space-y-8"
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h3 className="text-2xl font-bold text-white text-right">Quick Links</h3>
-            <ul className="space-y-3">
-              {quickLinks.map((link, index) => (
-                <motion.li 
-                  key={index}
-                  className="flex justify-end"
-                  whileHover={{ x: -10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <motion.a
-                    href={link.href}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      scrollToSection(link.href);
-                    }}
-                    className="text-white/60 hover:text-lime-400 transition-colors duration-300 text-lg font-medium group flex items-center gap-2"
-                    whileHover={{ x: -5 }}
-                  >
-                    <span>{link.name}</span>
-                    <motion.div
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      whileHover={{ rotate: 45 }}
-                    >
-                      <ArrowRight size={16} />
-                    </motion.div>
-                  </motion.a>
-                </motion.li>
-              ))}
-            </ul>
-          </motion.div>
         </motion.div>
 
         {/* Enhanced Bottom Bar */}

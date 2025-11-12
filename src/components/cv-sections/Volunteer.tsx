@@ -40,15 +40,23 @@ const Volunteer: React.FC<VolunteerProps> = ({
   };
 
   return (
-    <section className="volunteer-section">
-      <h2 className="section-header">
+    <section 
+      className="volunteer-section section-content"
+      data-section-id="volunteer"
+      data-section-type="volunteer"
+    >
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Volunteer Experience'}
       </h2>
       
       <div className="volunteer-list">
         {volunteer.map((volunteerItem, index) => (
-          <div key={index} className="volunteer-item">
-            <div className="item-header">
+          <div 
+            key={index} 
+            className="volunteer-item cv-entry-item"
+            data-entry-index={index}
+          >
+            <div className="item-header entry-header">
               <div className="item-title-group">
                 <h3 className="item-title">
                   <Heart size={16} className="volunteer-icon" />
@@ -81,17 +89,9 @@ const Volunteer: React.FC<VolunteerProps> = ({
             </div>
 
             {volunteerItem.summary && (
-              <div className="volunteer-summary">
+              <div className="volunteer-summary entry-content item-content">
                 <p>{volunteerItem.summary}</p>
               </div>
-            )}
-
-            {volunteerItem.highlights && volunteerItem.highlights.length > 0 && (
-              <ul className="highlight-list">
-                {volunteerItem.highlights.map((highlight, highlightIndex) => (
-                  <li key={highlightIndex} dangerouslySetInnerHTML={{ __html: parseFormattedText(highlight) }} />
-                ))}
-              </ul>
             )}
           </div>
         ))}
@@ -190,18 +190,6 @@ const Volunteer: React.FC<VolunteerProps> = ({
         .volunteer-summary p {
           margin: 0;
           text-align: justify;
-        }
-        
-        .highlight-list {
-          margin: 8px 0 0 16px;
-          padding: 0;
-        }
-        
-        .highlight-list li {
-          margin-bottom: 4px;
-          line-height: ${template.globalStyles.lineHeight};
-          color: ${template.globalStyles.primaryColor};
-          font-size: ${template.globalStyles.fontSize};
         }
         
         @media (max-width: 768px) {

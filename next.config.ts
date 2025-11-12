@@ -256,7 +256,8 @@ const nextConfig: NextConfig = {
   experimental: {
     // Disable aggressive CSS optimization to prevent preload warnings
     optimizeCss: false,
-    optimizePackageImports: ['lucide-react', 'lottie-react'],
+    // Temporarily disable lucide-react optimization to fix HMR issues with Route icon
+    optimizePackageImports: ['lottie-react'],
   },
   // Turbopack configuration - use webpack for now due to custom webpack config
   turbopack: {},

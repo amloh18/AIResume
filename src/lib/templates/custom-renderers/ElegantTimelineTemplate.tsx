@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { stripHtmlTags } from '@/lib/utils/textFormatting';
 
 interface ElegantTimelineTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -24,9 +24,9 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           line-height: 1.5;
           color: #374151;
           background: #ffffff;
-          max-width: 8.5in;
-          margin: 0 auto;
-          padding: 40px;
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
         }
         
         .header-section {
@@ -39,7 +39,6 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           padding: 20px;
           margin: 0 auto 20px;
           display: inline-block;
-          max-width: 400px;
         }
         
         .name {
@@ -47,17 +46,23 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           font-weight: bold;
           color: #111827;
           margin: 0;
+          padding: 0;
           text-transform: uppercase;
           letter-spacing: 2px;
+          display: block;
+          line-height: 1.2;
         }
         
         .title {
           font-size: 16px;
           font-weight: 400;
           color: #6B7280;
-          margin: 10px 0 0 0;
+          margin: 4px 0 0 0;
+          padding: 0;
           text-transform: uppercase;
           letter-spacing: 1px;
+          display: block;
+          line-height: 1.2;
         }
         
         .profile-photo {
@@ -362,9 +367,9 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
       {/* Header Section */}
       <div className="header-section">
         <div className="name-box">
-          <h1 className="name">{basics?.name || 'CHLOE WINEHOUSE'}</h1>
+          <div className="name">{basics?.name || 'CHLOE WINEHOUSE'}</div>
+          <div className="title">{basics?.label || 'PROFESSIONAL TITLE'}</div>
         </div>
-        <p className="title">{basics?.label || 'PROFESSIONAL TITLE'}</p>
         <div className="profile-photo">
           {basics?.image ? (
             <img 
@@ -386,7 +391,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           {basics?.summary && (
             <div className="section">
               <div className="section-title">Profile</div>
-              <div className="profile-text">{basics.summary}</div>
+              <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
             </div>
           )}
 
@@ -415,7 +420,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
                 <div key={index} className="project-item">
                   <div className="project-title">{project.name}</div>
                   {project.description && (
-                    <div className="project-description">{project.description}</div>
+                    <div className="project-description">{stripHtmlTags(project.description)}</div>
                   )}
                   {project.keywords && (
                     <div className="project-technologies">
@@ -517,21 +522,8 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
                     </div>
                   </div>
                   {job.summary && (
-                    <div 
-                      className="job-description"
-                      dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
-                    />
-                  )}
-                  {job.highlights && job.highlights.length > 0 && (
                     <div className="job-description">
-                      <ul>
-                        {job.highlights.map((highlight, highlightIndex) => (
-                          <li 
-                            key={highlightIndex}
-                            dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
-                          />
-                        ))}
-                      </ul>
+                      {stripHtmlTags(job.summary)}
                     </div>
                   )}
                 </div>

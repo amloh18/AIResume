@@ -5,7 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronRight, 
   Sparkles,
-  Crown
+  Crown,
+  User
 } from 'lucide-react';
 import AIEnhancedFormField from './AIEnhancedFormField';
 // import ATSScoreGauge from '@/components/ui/ATSScoreGauge'; // TODO: Create component if needed
@@ -216,8 +217,6 @@ export const PersonalInfoSection: React.FC<{
   onJobSelection?: (jobId: string | null) => void;
   userId?: string;
 }> = ({ data, onUpdate, cvData, jobData, isExpanded, onToggle, atsScore, selectedJobId, onJobSelection, userId }) => {
-  const { User } = require('lucide-react');
-  
   const fields = [
     { key: 'name', label: 'Full Name', type: 'input' as const, required: true, maxLength: 100, placeholder: 'Enter your full name', rows: undefined },
     { key: 'label', label: 'Professional Title', type: 'input' as const, fieldType: 'position' as const, maxLength: 100, placeholder: 'e.g., Software Engineer', rows: undefined },

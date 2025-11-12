@@ -3,27 +3,100 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { FileText, User, Building, Calendar } from 'lucide-react';
+import { CoverLetterTemplate } from '@/lib/templates/cover-letter-templates';
 
 interface CoverLetterPreviewProps {
   content: string;
   cvData: any;
   jobData: any;
   selectedCVData: any;
+  template?: CoverLetterTemplate | null;
 }
 
 const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
   content,
   cvData,
   jobData,
-  selectedCVData
+  selectedCVData,
+  template
 }) => {
+  // A4 dimensions in pixels (210mm x 297mm at 96 DPI)
+  const A4_WIDTH = 794;
+  const A4_HEIGHT = 1123;
+  
+  // Get template settings or use defaults
+  const layout = template?.layout || {
+    headerAlignment: 'left' as const,
+    datePosition: 'right' as const,
+    spacing: {
+      paragraphSpacing: '16px',
+      lineHeight: '1.6',
+      margins: {
+        top: '40px',
+        bottom: '40px',
+        left: '40px',
+        right: '40px',
+      },
+    },
+    typography: {
+      fontFamily: 'Times New Roman, serif',
+      headerFontSize: '16px',
+      bodyFontSize: '12px',
+      dateFormat: 'MM/DD/YYYY',
+    },
+    styling: {
+      headerStyle: 'bold' as const,
+      useAccentColor: false,
+      primaryColor: '#000000',
+      secondaryColor: '#333333',
+    },
+  };
+  
+  // Convert margin strings to numbers (remove 'px' if present)
+  const margins = {
+    top: parseInt(layout.spacing.margins.top) || 40,
+    bottom: parseInt(layout.spacing.margins.bottom) || 40,
+    left: parseInt(layout.spacing.margins.left) || 40,
+    right: parseInt(layout.spacing.margins.right) || 40,
+  };
+  
+  const paragraphSpacing = parseInt(layout.spacing.paragraphSpacing) || 16;
+  const lineHeight = parseFloat(layout.spacing.lineHeight) || 1.6;
   const formatDate = () => {
     const today = new Date();
+    const format = layout.typography.dateFormat;
+    
+    if (format === 'MM/DD/YYYY') {
+      return today.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+    } else if (format === 'MMMM DD, YYYY') {
+      return today.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } else if (format === 'MMM DD, YYYY') {
+      return today.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } else if (format === 'DD MMM YYYY') {
+      return today.toLocaleDateString('en-GB', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } else {
     return today.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
+    }
   };
 
   // Parse content to extract body (removing greetings and closings)
@@ -127,40 +200,92 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
   const companyName = jobData?.company || 'Company Name';
   const companyLocation = jobData?.location || 'Company Address';
 
+  // Get header style classes
+  const getHeaderStyle = () => {
+    const style = layout.styling.headerStyle;
+    const color = layout.styling.useAccentColor ? layout.styling.primaryColor : layout.styling.primaryColor;
+    
+    switch (style) {
+      case 'bold':
+        return { fontWeight: 'bold', color };
+      case 'underline':
+        return { textDecoration: 'underline', color };
+      case 'border':
+        return { 
+          borderBottom: `2px solid ${color}`,
+          paddingBottom: '8px',
+          color 
+        };
+      case 'minimal':
+      default:
+        return { color };
+    }
+  };
+
   return (
-    <div className="bg-white w-full" style={{ padding: '0.75in', minHeight: '11in', color: '#000000' }}>
+    <div 
+      className="bg-white"
+      style={{ 
+        width: `${A4_WIDTH}px`,
+        minHeight: `${A4_HEIGHT}px`,
+        padding: `${margins.top}px ${margins.right}px ${margins.bottom}px ${margins.left}px`,
+        fontFamily: layout.typography.fontFamily,
+        color: layout.styling.primaryColor,
+        boxSizing: 'border-box',
+        wordWrap: 'break-word',
+        overflowWrap: 'break-word'
+      }}
+    >
         {/* Header - Sender Information */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+      <div style={{ 
+        textAlign: layout.headerAlignment,
+        marginBottom: '24px',
+        ...getHeaderStyle()
+      }}>
           <div style={{ 
-            fontSize: '18pt', 
-            fontWeight: 'bold', 
+          fontSize: layout.typography.headerFontSize,
             marginBottom: '8px',
-            color: '#000000'
+          ...getHeaderStyle()
           }}>
             {senderName}
           </div>
           <div style={{ 
-            fontSize: '10pt', 
-            color: '#000000'
+          fontSize: layout.typography.bodyFontSize,
+          color: layout.styling.secondaryColor
           }}>
             {senderInfo}
           </div>
         </div>
 
         {/* Date */}
-        <div style={{ marginBottom: '24px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
+      <div style={{ 
+        marginBottom: '24px',
+        textAlign: layout.datePosition,
+        fontSize: layout.typography.bodyFontSize,
+        color: layout.styling.secondaryColor
+      }}>
           {formatDate()}
         </div>
 
         {/* Recipient Information */}
-        <div style={{ marginBottom: '24px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
-          <div style={{ marginBottom: '4px', color: '#000000' }}>{recipientName}</div>
-          <div style={{ marginBottom: '4px', color: '#000000' }}>{companyName}</div>
-          <div style={{ color: '#000000' }}>{companyLocation}</div>
+      <div style={{ 
+        marginBottom: '24px',
+        textAlign: 'left',
+        fontSize: layout.typography.bodyFontSize,
+        color: layout.styling.primaryColor
+      }}>
+        <div style={{ marginBottom: '4px' }}>{recipientName}</div>
+        <div style={{ marginBottom: '4px' }}>{companyName}</div>
+        <div>{companyLocation}</div>
         </div>
 
         {/* Salutation */}
-        <div style={{ marginBottom: '16px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
+      <div style={{ 
+        marginBottom: `${paragraphSpacing}px`,
+        textAlign: 'left',
+        fontSize: layout.typography.bodyFontSize,
+        color: layout.styling.primaryColor
+      }}>
           Dear {recipientName === 'Hiring Manager' ? 'Hiring Manager' : recipientName.split(' ')[0]},
         </div>
 
@@ -168,35 +293,44 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
         {content && content.trim() ? (
           <>
             {/* Body Content */}
-            <div style={{ marginBottom: '24px', fontSize: '11pt', lineHeight: '1.6', color: '#000000' }}>
+          <div style={{ 
+            marginBottom: '24px',
+            fontSize: layout.typography.bodyFontSize,
+            lineHeight: lineHeight,
+            color: layout.styling.primaryColor,
+            wordWrap: 'break-word',
+            overflowWrap: 'break-word'
+          }}>
               {body && body.trim() ? (
                 body.split('\n\n').map((paragraph, index) => (
                   <div key={index} style={{ 
-                    marginBottom: '16px',
+                  marginBottom: `${paragraphSpacing}px`,
                     textAlign: 'left',
-                    color: '#000000'
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word'
                   }}>
                     {paragraph.trim().split('\n').map((line, lineIndex) => {
                       // Handle formatting
                       let formattedLine = line;
+                    const accentColor = layout.styling.useAccentColor ? layout.styling.primaryColor : layout.styling.primaryColor;
                       
                       // Handle bold text **text**
-                      formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, '<strong style="color: #000000;">$1</strong>');
+                    formattedLine = formattedLine.replace(/\*\*(.*?)\*\*/g, `<strong style="color: ${accentColor};">$1</strong>`);
                       
                       // Handle italic text *text*
-                      formattedLine = formattedLine.replace(/\*(.*?)\*/g, '<em style="color: #000000;">$1</em>');
+                    formattedLine = formattedLine.replace(/\*(.*?)\*/g, `<em style="color: ${layout.styling.primaryColor};">$1</em>`);
                       
                       // Handle bullet points
                       if (line.trim().startsWith('•')) {
                         return (
-                          <div key={lineIndex} style={{ marginLeft: '20px', marginBottom: '8px', color: '#000000' }}>
+                        <div key={lineIndex} style={{ marginLeft: '20px', marginBottom: '8px' }}>
                             <span dangerouslySetInnerHTML={{ __html: formattedLine }} />
                           </div>
                         );
                       }
                       
                       return (
-                        <div key={lineIndex} style={{ marginBottom: '4px', color: '#000000' }}>
+                      <div key={lineIndex} style={{ marginBottom: '4px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                           <span dangerouslySetInnerHTML={{ __html: formattedLine }} />
                         </div>
                       );
@@ -212,8 +346,13 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
 
             {/* Closing */}
             {closing && closing.trim() && (
-              <div style={{ marginTop: '24px', textAlign: 'left', fontSize: '11pt', color: '#000000' }}>
-                <div style={{ whiteSpace: 'pre-line', color: '#000000' }}>{closing}</div>
+            <div style={{ 
+              marginTop: '24px',
+              textAlign: 'left',
+              fontSize: layout.typography.bodyFontSize,
+              color: layout.styling.primaryColor
+            }}>
+              <div style={{ whiteSpace: 'pre-line' }}>{closing}</div>
               </div>
             )}
           </>

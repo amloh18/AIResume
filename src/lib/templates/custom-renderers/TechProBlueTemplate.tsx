@@ -23,7 +23,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           width: 100% !important;
           height: 100% !important;
           margin: 0 !important;
-          padding: 2rem 0 !important;
+          padding: 0 !important;
           background: white;
           color: #000;
           line-height: 1.4;
@@ -352,13 +352,12 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
                 <div className="dates">{job.startDate} – {job.endDate || 'Present'}</div>
               </div>
               <div className="experience-description">
-                {job.highlights?.map((highlight, idx) => (
+                {job.summary && (
                   <div 
-                    key={idx} 
                     className="bullet-point"
-                    dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
+                    dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
                   />
-                ))}
+                )}
               </div>
             </div>
           ))}
@@ -393,12 +392,11 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
                   </div>
                 </div>
                 <div className="project-description">
-                  <p style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#374151' }}>
-                    {project.description}
-                  </p>
-                  {project.highlights?.map((highlight, idx) => (
-                    <div key={idx} className="bullet-point">{highlight}</div>
-                  ))}
+                  {project.description && (
+                    <p style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#374151' }}>
+                      {project.description}
+                    </p>
+                  )}
                   {project.keywords && (
                     <div className="technologies">
                       Technologies: {project.keywords.join(', ')}

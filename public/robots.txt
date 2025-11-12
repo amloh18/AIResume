@@ -1,15 +1,24 @@
+# robots.txt for CVCircle.io
+# AI-Powered CV Builder and Job Application Management Platform
+
+# Allow all search engines
 User-agent: *
 Allow: /
 
-# Disallow admin and API routes
+# Disallow admin and API routes (security and privacy)
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
 Disallow: /studio/
 Disallow: /dashboard/
 Disallow: /profile/
+Disallow: /auth/
+Disallow: /custom-signin/
+Disallow: /force-logout/
+Disallow: /welcome/
+Disallow: /demo-master-cv/
 
-# Allow important pages (SEO-optimized cascade)
+# Allow important public pages (SEO-optimized)
 Allow: /
 Allow: /ai-career-report
 Allow: /features
@@ -19,6 +28,53 @@ Allow: /sign-up
 Allow: /privacy-policy
 Allow: /terms
 Allow: /cookie-policy
+
+# Allow static assets
+Allow: /images/
+Allow: /icons/
+Allow: /templates/
+Allow: /favicon.ico
+Allow: /robots.txt
+Allow: /sitemap.xml
+Allow: /llm.txt
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Specific rules for major search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /studio/
+Disallow: /dashboard/
+Disallow: /profile/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /studio/
+Disallow: /dashboard/
+Disallow: /profile/
+
+User-agent: Slurp
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /studio/
+Disallow: /dashboard/
+Disallow: /profile/
+
+# Block bad bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
 
 # Sitemap location
 Sitemap: https://cvcircle.io/sitemap.xml

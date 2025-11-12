@@ -2,27 +2,28 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, stripHtmlTags, formatDateRange } from '@/lib/utils/textFormatting';
 
 interface DataDrivenProTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  enabledSections?: string[];
 }
 
 export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({ 
   cvData, 
-  className = '' 
+  className = ''
 }) => {
-  const { basics, work, education, skills, projects } = cvData;
+  const { basics, work, education, skills, projects, volunteer, certificates, awards, publications, languages, interests, references } = cvData;
 
   return (
     <div className={`data-driven-pro-template ${className}`}>
       <style jsx>{`
         .data-driven-pro-template {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          max-width: 8.5in;
-          margin: 0 auto;
-          padding: 0.5in;
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
           background: white;
           color: #000;
           line-height: 1.4;
@@ -110,37 +111,38 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           position: absolute;
           left: 50%;
           transform: translateX(-50%);
-          width: 4px;
-          height: 4px;
-          background: #E5E7EB;
+          width: 3px;
+          height: 3px;
+          background: #000;
           border-radius: 50%;
         }
 
         .section-title {
           font-size: 0.8rem;
-          font-weight: 700;
+          font-weight: 500;
           text-transform: uppercase;
           color: #000;
           margin: 0 0 0.5rem 0;
-          letter-spacing: 1.5px;
+          letter-spacing: 2px;
         }
 
         .contact-item {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           gap: 0.5rem;
           margin-bottom: 0.5rem;
           font-size: 0.75rem;
           color: #374151;
-          word-wrap: break-word;
-          overflow-wrap: break-word;
-          max-width: 100%;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
         .contact-item span {
-          word-break: break-all;
-          overflow-wrap: anywhere;
-          max-width: calc(100% - 20px);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          flex: 1;
         }
 
         .contact-icon {
@@ -177,7 +179,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         }
 
         .skills-category-title {
-          font-weight: 600;
+          font-weight: 700;
           font-size: 0.8rem;
           color: #000;
           margin-bottom: 0.25rem;
@@ -192,11 +194,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
         .main-section-title {
           font-size: 0.8rem;
-          font-weight: 700;
+          font-weight: 500;
           text-transform: uppercase;
           color: #000;
           margin: 0 0 0.5rem 0;
-          letter-spacing: 1.5px;
+          letter-spacing: 2px;
         }
 
         .summary-text {
@@ -211,6 +213,16 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
         .experience-item, .project-item {
           margin-bottom: 1rem;
+        }
+        
+        .main-section-title {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+        
+        .main-section-title + * {
+          page-break-before: avoid;
+          break-before: avoid;
         }
 
         .experience-header, .project-header {
@@ -266,6 +278,39 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           color: #6B7280;
           margin-top: 0.5rem;
         }
+        
+        /* Allow natural page breaks - content flows across pages */
+        .data-driven-pro-template {
+          page-break-inside: auto;
+          break-inside: auto;
+        }
+        
+        /* Sections can break naturally, but try to keep section headers with content */
+        .right-column > div {
+          page-break-inside: auto;
+          break-inside: auto;
+        }
+        
+        /* Section headers should stay with first item */
+        .main-section-title {
+          page-break-after: avoid;
+          break-after: avoid;
+        }
+        
+        /* Experience items should stay together */
+        .experience-item, .project-item {
+          page-break-inside: avoid;
+          break-inside: avoid;
+        }
+        
+        /* Ensure main content can flow */
+        .main-content {
+          min-height: auto;
+        }
+        
+        .right-column {
+          min-height: auto;
+        }
 
         @media print {
           .data-driven-pro-template {
@@ -273,26 +318,48 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             print-color-adjust: exact;
             color-adjust: exact;
           }
+          
+          /* Allow natural page breaks */
+          .right-column > div {
+            page-break-inside: auto;
+            break-inside: auto;
+          }
+          
+          /* Section headers stay with content */
+          .main-section-title {
+            page-break-after: avoid;
+            break-after: avoid;
+          }
+          
+          /* Keep experience items together */
+          .experience-item, .project-item {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
         }
       `}</style>
 
       {/* Header */}
-      <div className="header">
-        <div className="header-left">
-          <h1 className="name">{basics?.name || 'CHLOE WINEHOUSE'}</h1>
-          <p className="title">{basics?.label || 'PROFESSIONAL TITLE'}</p>
+      {basics?.name && (
+        <div className="header">
+          <div className="header-left">
+            <h1 className="name">{basics.name}</h1>
+            {basics.label && <p className="title">{basics.label}</p>}
+          </div>
+          <div className="header-right">
+            {basics.image && (
+              <img 
+                src={basics.image} 
+                alt="Profile" 
+                className="profile-picture"
+              />
+            )}
+          </div>
         </div>
-        <div className="header-right">
-          <img 
-            src={basics?.image || '/images/default-avatar.png'} 
-            alt="Profile" 
-            className="profile-picture"
-          />
-        </div>
-      </div>
+      )}
 
       {/* Horizontal Separator */}
-      <div className="horizontal-separator"></div>
+      {basics?.name && <div className="horizontal-separator"></div>}
 
       {/* Main Content */}
       <div className="main-content">
@@ -302,31 +369,24 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           <div>
             <h3 className="section-title">Contact</h3>
             <div className="contact-item">
-              <svg className="contact-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
-              </svg>
-              <span>{basics?.phone || '+1 103 456 7890'}</span>
+              <span>{basics?.phone || '+919662345079'}</span>
             </div>
             <div className="contact-item">
-              <svg className="contact-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-              </svg>
-              <span>{basics?.email || 'youremail@email.com'}</span>
+              <span>{basics?.email || 'amarjotsinghl@outlook.com'}</span>
             </div>
             <div className="contact-item">
-              <svg className="contact-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-              </svg>
-              <span>{basics?.location?.address || 'Country, City, Zip'}</span>
-            </div>
-            <div className="contact-item">
-              <svg className="contact-icon" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-              </svg>
               <span>
-                {basics?.profiles?.[0]?.url 
-                  ? basics.profiles[0].url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '')
-                  : 'username'
+                {[basics?.location?.countryCode, basics?.location?.city, basics?.location?.postalCode]
+                  .filter(Boolean)
+                  .join(', ') || 'Country, City, Zip'}
+              </span>
+            </div>
+            <div className="contact-item">
+              <span>
+                {basics?.profiles?.[0]?.username || 
+                 (basics?.profiles?.[0]?.url 
+                   ? basics.profiles[0].url.replace(/^https?:\/\/(www\.)?(linkedin\.com\/in\/|github\.com\/|twitter\.com\/)/, '')
+                   : 'username')
                 }
               </span>
             </div>
@@ -339,7 +399,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
               <div key={index} className="education-item">
                 <div className="degree-title">{edu.studyType || 'ENTER YOUR MAJOR'}</div>
                 <div className="institution-info">{edu.institution || 'Name of University'}</div>
-                <div className="education-dates">{edu.startDate || '2005'} - {edu.endDate || '2007'}</div>
+                <div className="education-dates">{formatDateRange(edu.startDate || '2005', edu.endDate || '2007')}</div>
               </div>
             ))}
             {(!education || education.length === 0) && (
@@ -352,143 +412,109 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           </div>
 
           {/* Skills */}
-          <div style={{ marginTop: '1.5rem' }}>
-            <h3 className="section-title">Skills</h3>
-            <div className="skills-category">
-              <div className="skills-category-title">Professional</div>
-              <div className="skills-list">
-                {skills && skills.length > 0 ? (
-                  skills.map((skill, index) => (
-                    <div key={index}>
-                      {Array.isArray(skill.skills) 
-                        ? skill.skills.join('\n') 
-                        : skill.category || 'Problem Solving'
-                      }
-                    </div>
-                  ))
-                ) : (
-                  <div>
-                    Providing Discipline<br/>
-                    Problem Solving<br/>
-                    Planning Meetings<br/>
-                    Reliability<br/>
-                    Problem Solving<br/>
-                    Providing Discipline<br/>
-                    Planning Meetings<br/>
-                    Reliability<br/>
-                    Solving Problems
+          {skills && skills.length > 0 && (
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 className="section-title">Skills</h3>
+              {skills.map((skill, index) => (
+                <div key={index} className="skills-category">
+                  <div className="skills-category-title">{skill.category || 'Professional'}</div>
+                  <div className="skills-list">
+                    {Array.isArray(skill.skills) && skill.skills.length > 0 ? (
+                      skill.skills.map((s, i) => (
+                        <div key={i}>{stripHtmlTags(s)}</div>
+                      ))
+                    ) : (
+                      <div>{stripHtmlTags(skill.category || '')}</div>
+                    )}
                   </div>
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
 
         {/* Vertical Separator */}
         <div className="vertical-separator">
-          <div className="separator-dot"></div>
-          <div className="separator-dot"></div>
-          <div className="separator-dot"></div>
-          <div className="separator-dot"></div>
+          {/* Dots for right column section headings */}
+          {(() => {
+            const rightColumnSections = [];
+            if (basics?.summary) rightColumnSections.push('Profile');
+            if (work && work.length > 0) rightColumnSections.push('Work Experience');
+            if (projects && projects.length > 0) rightColumnSections.push('Projects');
+            if (volunteer && volunteer.length > 0) rightColumnSections.push('Volunteer');
+            if (certificates && certificates.length > 0) rightColumnSections.push('Certificates');
+            if (awards && awards.length > 0) rightColumnSections.push('Awards');
+            if (publications && publications.length > 0) rightColumnSections.push('Publications');
+            
+            // Count entries for each section
+            const entryCounts = [];
+            if (work && work.length > 0) entryCounts.push(...work.map((_, i) => ({ section: 'Work Experience', index: i })));
+            if (projects && projects.length > 0) entryCounts.push(...projects.map((_, i) => ({ section: 'Projects', index: i })));
+            if (volunteer && volunteer.length > 0) entryCounts.push(...volunteer.map((_, i) => ({ section: 'Volunteer', index: i })));
+            if (certificates && certificates.length > 0) entryCounts.push(...certificates.map((_, i) => ({ section: 'Certificates', index: i })));
+            if (awards && awards.length > 0) entryCounts.push(...awards.map((_, i) => ({ section: 'Awards', index: i })));
+            if (publications && publications.length > 0) entryCounts.push(...publications.map((_, i) => ({ section: 'Publications', index: i })));
+            
+            const totalDots = rightColumnSections.length + entryCounts.length;
+            const dotPositions = [];
+            
+            // Calculate positions for dots (evenly distributed)
+            for (let i = 0; i < totalDots; i++) {
+              const position = (i + 1) / (totalDots + 1) * 100;
+              dotPositions.push(position);
+            }
+            
+            return dotPositions.map((pos, index) => (
+              <div 
+                key={index} 
+                className="separator-dot"
+                style={{ top: `${pos}%` }}
+              ></div>
+            ));
+          })()}
         </div>
 
         {/* Right Column (75%) */}
         <div className="right-column">
           {/* Profile */}
-          <div>
-            <h2 className="main-section-title">Profile</h2>
-            <p className="summary-text">
-              {basics?.summary || 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.'}
-            </p>
-          </div>
+          {basics?.summary && (
+            <div>
+              <h2 className="main-section-title">Profile</h2>
+              <p className="summary-text">
+                {stripHtmlTags(basics.summary)}
+              </p>
+            </div>
+          )}
 
           {/* Work Experience */}
-          <div>
-            <h2 className="main-section-title">Work Experience</h2>
-            {work?.map((job, index) => (
-              <div key={index} className="experience-item">
-                <div className="experience-header">
-                  <div>
-                    <div className="job-title">{job.position || 'YOUR JOB TITLE GOES HERE'}</div>
-                    <div className="company-info">{job.name || 'Company Name'} | {job.startDate || '2008'} - {job.endDate || '2010'}</div>
-                  </div>
-                </div>
-                <div className="experience-description">
-                  <p style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                  </p>
-                  {job.highlights?.map((highlight, idx) => (
-                    <div 
-                      key={idx} 
-                      className="bullet-point"
-                      dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
-                    />
-                  ))}
-                  {(!job.highlights || job.highlights.length === 0) && (
-                    <>
-                      <div className="bullet-point">Lorem ipsum dolor sit amet, consectetur adipiscing elit</div>
-                      <div className="bullet-point">Sed do eiusmod tempor incididunt ut labore et dolore</div>
-                      <div className="bullet-point">Ut enim ad minim veniam, quis nostrud exercitation</div>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-            {(!work || work.length === 0) && (
-              <>
-                <div className="experience-item">
+          {work && work.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Work Experience</h2>
+              {work.map((job, index) => (
+                <div key={index} className="experience-item">
                   <div className="experience-header">
                     <div>
-                      <div className="job-title">YOUR JOB TITLE GOES HERE</div>
-                      <div className="company-info">Company Name | 2008 - 2010</div>
+                      <div className="job-title">{job.position || ''}</div>
+                      <div className="company-info">
+                        {job.name || ''}
+                        {(job.name && (job.startDate || job.endDate)) && ' | '}
+                        {formatDateRange(job.startDate || '', job.endDate || '')}
+                      </div>
                     </div>
                   </div>
                   <div className="experience-description">
-                    <p style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                    </p>
-                    <div className="bullet-point">Lorem ipsum dolor sit amet, consectetur adipiscing elit</div>
-                    <div className="bullet-point">Sed do eiusmod tempor incididunt ut labore et dolore</div>
-                    <div className="bullet-point">Ut enim ad minim veniam, quis nostrud exercitation</div>
+                    {job.summary && (
+                      <div 
+                        style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}
+                      >
+                        {stripHtmlTags(job.summary)}
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="experience-item">
-                  <div className="experience-header">
-                    <div>
-                      <div className="job-title">YOUR JOB TITLE GOES HERE</div>
-                      <div className="company-info">Company Name | 2008 - 2010</div>
-                    </div>
-                  </div>
-                  <div className="experience-description">
-                    <p style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                    </p>
-                    <div className="bullet-point">Lorem ipsum dolor sit amet, consectetur adipiscing elit</div>
-                    <div className="bullet-point">Sed do eiusmod tempor incididunt ut labore et dolore</div>
-                    <div className="bullet-point">Ut enim ad minim veniam, quis nostrud exercitation</div>
-                  </div>
-                </div>
-                <div className="experience-item">
-                  <div className="experience-header">
-                    <div>
-                      <div className="job-title">YOUR JOB TITLE GOES HERE</div>
-                      <div className="company-info">Company Name | 2008 - 2010</div>
-                    </div>
-                  </div>
-                  <div className="experience-description">
-                    <p style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-                    </p>
-                    <div className="bullet-point">Lorem ipsum dolor sit amet, consectetur adipiscing elit</div>
-                    <div className="bullet-point">Sed do eiusmod tempor incididunt ut labore et dolore</div>
-                    <div className="bullet-point">Ut enim ad minim veniam, quis nostrud exercitation</div>
-                    <div className="bullet-point">Duis aute irure dolor in reprehenderit in voluptate</div>
-                    <div className="bullet-point">Excepteur sint occaecat cupidatat non proident</div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Projects */}
           {projects && projects.length > 0 && (
@@ -502,17 +528,174 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                     </div>
                   </div>
                   <div className="project-description">
-                    <p style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
-                      {project.description}
-                    </p>
-                    {project.highlights?.map((highlight, idx) => (
-                      <div key={idx} className="bullet-point">{highlight}</div>
-                    ))}
-                    {project.keywords && (
+                    {project.description && (
+                      <p style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
+                        {stripHtmlTags(project.description)}
+                      </p>
+                    )}
+                    {project.keywords && project.keywords.length > 0 && (
                       <div className="technologies">
                         Technologies: {project.keywords.join(', ')}
                       </div>
                     )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Volunteer */}
+          {volunteer && volunteer.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Volunteer Experience</h2>
+              {volunteer.map((vol, index) => (
+                <div key={index} className="experience-item">
+                  <div className="experience-header">
+                    <div>
+                      <div className="job-title">{vol.position || ''}</div>
+                      <div className="company-info">
+                        {vol.organization || ''}
+                        {(vol.organization && (vol.startDate || vol.endDate)) && ' | '}
+                        {formatDateRange(vol.startDate || '', vol.endDate || '')}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="experience-description">
+                    {vol.summary && (
+                      <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
+                        {stripHtmlTags(vol.summary)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Certificates */}
+          {certificates && certificates.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Certificates</h2>
+              {certificates.map((cert, index) => (
+                <div key={index} className="experience-item">
+                  <div className="experience-header">
+                    <div>
+                      <div className="job-title">{cert.name || ''}</div>
+                      <div className="company-info">
+                        {cert.issuer || ''}
+                        {(cert.issuer && cert.date) && ' | '}
+                        {cert.date || ''}
+                      </div>
+                    </div>
+                  </div>
+                  {cert.description && (
+                    <div className="experience-description">
+                      <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                        {stripHtmlTags(cert.description)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Awards */}
+          {awards && awards.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Awards</h2>
+              {awards.map((award, index) => (
+                <div key={index} className="experience-item">
+                  <div className="experience-header">
+                    <div>
+                      <div className="job-title">{award.title || ''}</div>
+                      <div className="company-info">
+                        {award.awarder || ''}
+                        {(award.awarder && award.date) && ' | '}
+                        {award.date || ''}
+                      </div>
+                    </div>
+                  </div>
+                  {award.summary && (
+                    <div className="experience-description">
+                      <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                        {stripHtmlTags(award.summary)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Publications */}
+          {publications && publications.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Publications</h2>
+              {publications.map((pub, index) => (
+                <div key={index} className="experience-item">
+                  <div className="experience-header">
+                    <div>
+                      <div className="job-title">{pub.name || ''}</div>
+                      <div className="company-info">
+                        {pub.publisher || ''}
+                        {(pub.publisher && pub.releaseDate) && ' | '}
+                        {pub.releaseDate || ''}
+                      </div>
+                    </div>
+                  </div>
+                  {pub.summary && (
+                    <div className="experience-description">
+                      <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                        {stripHtmlTags(pub.summary)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Languages */}
+          {languages && languages.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Languages</h2>
+              <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                {languages.map((lang, index) => (
+                  <div key={index} style={{ marginBottom: '0.25rem' }}>
+                    <strong>{lang.language}</strong> - {lang.fluency}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Interests */}
+          {interests && interests.length > 0 && (
+            <div>
+              <h2 className="main-section-title">Interests</h2>
+              <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                {interests.map((interest, index) => (
+                  <div key={index} style={{ marginBottom: '0.25rem' }}>
+                    <strong>{interest.name}</strong>
+                    {interest.keywords && interest.keywords.length > 0 && (
+                      <span> - {interest.keywords.join(', ')}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* References */}
+          {references && references.length > 0 && (
+            <div>
+              <h2 className="main-section-title">References</h2>
+              {references && references.length > 0 && references.map((ref, index) => (
+                <div key={index} className="experience-item">
+                  <div className="job-title">{ref.name || ''}</div>
+                  <div style={{ fontSize: '0.75rem', color: '#374151', marginTop: '0.25rem' }}>
+                    {stripHtmlTags(ref.reference)}
                   </div>
                 </div>
               ))}

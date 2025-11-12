@@ -125,21 +125,19 @@ const CoverLetterDesignContent: React.FC<CoverLetterDesignContentProps> = ({
         </div>
       </div>
 
-      {/* Cards in 2-column grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Cards in single column layout */}
+      <div className="flex flex-col gap-6">
         {/* Typography Section */}
-        <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
+        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Type className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-base font-semibold text-white">Typography</h3>
-            </div>
           </div>
           
-          <div className="px-4 pb-4">
-            <div className="pt-2 space-y-4">
+          <div>
+            <div className="space-y-4">
               {/* Font Family */}
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Font Family</label>
@@ -189,18 +187,16 @@ const CoverLetterDesignContent: React.FC<CoverLetterDesignContentProps> = ({
         </div>
 
         {/* Layout Section */}
-        <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
+        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Layout className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-base font-semibold text-white">Layout</h3>
-            </div>
           </div>
           
-          <div className="px-4 pb-4">
-            <div className="pt-2 space-y-4">
+          <div>
+            <div className="space-y-4">
               {/* Header Alignment */}
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Header Alignment</label>
@@ -260,18 +256,16 @@ const CoverLetterDesignContent: React.FC<CoverLetterDesignContentProps> = ({
         </div>
 
         {/* Colors Section */}
-        <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
+        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Palette className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-base font-semibold text-white">Colors</h3>
-            </div>
           </div>
           
-          <div className="px-4 pb-4">
-            <div className="pt-2 space-y-4">
+          <div>
+            <div className="space-y-4">
               {/* Color Presets */}
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Color Presets</label>
@@ -328,18 +322,16 @@ const CoverLetterDesignContent: React.FC<CoverLetterDesignContentProps> = ({
         </div>
 
         {/* Margins Section */}
-        <div className="bg-white/5 rounded-xl border border-white/10 transition-all duration-300">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
+        <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
               <div className="w-8 h-8 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Ruler className="w-4 h-4 text-white" />
               </div>
               <h3 className="text-base font-semibold text-white">Page Margins</h3>
-            </div>
           </div>
           
-          <div className="px-4 pb-4">
-            <div className="pt-2 space-y-4">
+          <div>
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 {Object.entries(designSettings.margins).map(([key, value]) => (
                   <div key={key}>

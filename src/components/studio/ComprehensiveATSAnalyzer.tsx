@@ -76,7 +76,7 @@ interface ComprehensiveATSAnalyzerProps {
   onScoreUpdate?: (score: number) => void;
 }
 
-export default function ComprehensiveATSAnalyzer({ 
+function ComprehensiveATSAnalyzer({ 
   selectedJobId,
   onJobSelection,
   userId,
@@ -938,3 +938,7 @@ export default function ComprehensiveATSAnalyzer({
     </div>
   );
 }
+
+// Explicit default export to help with HMR/webpack module resolution
+export default ComprehensiveATSAnalyzer;
+export { ComprehensiveATSAnalyzer };

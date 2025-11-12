@@ -228,6 +228,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
           cvData={cvData}
           jobData={jobData}
           selectedCVData={null}
+          template={template as any}
         />
       </div>
     );
@@ -245,7 +246,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
           <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1">
             <button
               onClick={() => onDocumentTypeChange('cv')}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
                 documentType === 'cv'
                   ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
                   : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -272,7 +273,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
                 }
               }}
               disabled={isMasterCV}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+              className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
                 documentType === 'cover-letter'
                   ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
                   : isMasterCV
@@ -293,7 +294,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
             <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1">
               <button
                 onClick={() => setPaperSize('A4')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
                   paperSize === 'A4'
                     ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -303,7 +304,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
               </button>
               <button
                 onClick={() => setPaperSize('Letter')}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
                   paperSize === 'Letter'
                     ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
                     : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
@@ -354,15 +355,14 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
       {/* Preview Area */}
       <div 
         ref={containerRef}
-        className="flex-1 flex items-start justify-center overflow-auto scrollbar-hide p-4"
+        className="flex-1 overflow-auto scrollbar-hide"
         style={{ 
           minHeight: 0,
-          paddingTop: '0.5rem',
-          paddingBottom: '1rem'
+          width: '100%'
         }}
       >
         {isLoading ? (
-          <div className="flex items-center justify-center w-full h-full">
+          <div className="flex items-center justify-center w-full h-full p-4">
             <div className="bg-white dark:bg-[#1a230f] rounded-lg border border-gray-200 dark:border-white/10 p-6 animate-pulse w-full max-w-2xl">
               <div className="space-y-4">
                 <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-6"></div>
@@ -371,7 +371,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
             </div>
           </div>
         ) : (
-          <div ref={internalRef} className="flex items-start justify-center w-full">
+          <div ref={internalRef} className="w-full flex justify-center py-4">
             {documentType === 'cv' ? renderCVPreview() : renderCoverLetterPreview()}
           </div>
         )}

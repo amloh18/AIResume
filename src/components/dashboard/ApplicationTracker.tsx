@@ -8,7 +8,7 @@ import {
   CheckCircle, Clock, AlertCircle, Target, FileText,
   ArrowRight, ChevronDown, ChevronUp, Star, Zap,
   TrendingUp, Users, Building2, Globe, Bookmark,
-  Archive, Copy, Share2, Download, Upload, X
+  Archive, Copy, Share2, Download, Upload, X, Mail
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -168,6 +168,7 @@ const ApplicationTracker: React.FC = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
+  const [emailSentStatus, setEmailSentStatus] = useState<Record<string, Record<number, boolean>>>({});
 
   // Check for paywall trigger from URL (e.g., from extension)
   useEffect(() => {
@@ -423,6 +424,146 @@ const ApplicationTracker: React.FC = () => {
         return `It's been ${days} days since receiving the offer. Make sure to respond within their deadline.`;
       default:
         return '';
+    }
+  };
+
+  // Get email subject
+  const getEmailSubject = (job: JobApplication) => {
+    switch(job.status) {
+      case 'applied':
+        return `Following up on ${job.jobTitle} Application`;
+      case 'screening':
+        return `Re: ${job.jobTitle} Application - Screening Stage`;
+      case 'interview':
+        return `Thank you for the ${job.jobTitle} Interview`;
+      case 'offer':
+        return `Re: ${job.jobTitle} Offer`;
+      default:
+        return 'Follow-up';
+    }
+  };
+
+  // Get user name from userData
+  const getUserName = () => {
+    if (userData?.name) {
+      return userData.name;
+    }
+    if (user?.name) {
+      return user.name;
+    }
+    return '[Your Name]';
+  };
+
+  // Get user email
+  const getUserEmailAddress = () => {
+    if (userData?.email) {
+      return userData.email;
+    }
+    if (user?.email) {
+      return user.email;
+    }
+    return '';
+  };
+
+  // Get contact name
+  const getContactName = (job: JobApplication) => {
+    if (job.contactDetails?.name) {
+      return job.contactDetails.name;
+    }
+    return '[Hiring Manager]';
+  };
+
+  // Get interviewer name
+  const getInterviewerName = (job: JobApplication) => {
+    if (job.contactDetails?.name) {
+      return job.contactDetails.name;
+    }
+    if (job.contactDetails?.role) {
+      return job.contactDetails.role;
+    }
+    return '[Interviewer Name]';
+  };
+
+  // Get email template
+  const getEmailTemplate = (job: JobApplication) => {
+    const userName = getUserName();
+    const contactName = getContactName(job);
+    const interviewerName = getInterviewerName(job);
+    
+    const templates = {
+      applied: `Dear ${contactName},
+
+I hope this email finds you well. I recently applied for the ${job.jobTitle} position at ${job.company} and wanted to follow up on the status of my application.
+
+I remain very interested in this opportunity and believe my skills and experience would be a great fit for your team. I would welcome the chance to discuss how I can contribute to ${job.company}.
+
+Thank you for your time and consideration. I look forward to hearing from you.
+
+Best regards,
+${userName}`,
+      interview: `Dear ${interviewerName},
+
+Thank you for taking the time to interview me for the ${job.jobTitle} position at ${job.company}. I enjoyed our conversation and learning more about the role and your team.
+
+I'm very excited about the opportunity to contribute to ${job.company} and believe my skills align well with the position's requirements. 
+
+I wanted to follow up to see if there are any updates on next steps in the hiring process. Please let me know if you need any additional information from me.
+
+Thank you again for your consideration.
+
+Best regards,
+${userName}`
+    };
+    return templates[job.status as keyof typeof templates] || '';
+  };
+
+  // Get follow-up timeline
+  const getFollowUpTimeline = (job: JobApplication) => {
+    const timelines = {
+      applied: [
+        { day: 'Day 3-5', action: 'Send initial follow-up email' },
+        { day: 'Day 7-10', action: 'Connect with hiring manager on LinkedIn' },
+        { day: 'Day 14', action: 'Send second follow-up if no response' }
+      ],
+      interview: [
+        { day: 'Within 24 hours', action: 'Send thank-you email' },
+        { day: 'Day 5-7', action: 'Follow up on timeline if not provided' },
+        { day: 'Day 14', action: 'Send polite status inquiry if no update' }
+      ]
+    };
+    return timelines[job.status as keyof typeof timelines] || [];
+  };
+
+  // Create mailto link
+  const getMailtoLink = (job: JobApplication) => {
+    const recipientEmail = job.contactDetails?.email || '';
+    const subject = encodeURIComponent(getEmailSubject(job));
+    const body = encodeURIComponent(getEmailTemplate(job));
+    
+    if (recipientEmail) {
+      return `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
+    }
+    return `mailto:?subject=${subject}&body=${body}`;
+  };
+
+  // Handle opening email client
+  const handleOpenEmail = (job: JobApplication, timelineIndex: number) => {
+    const mailtoLink = getMailtoLink(job);
+    if (mailtoLink) {
+      window.location.href = mailtoLink;
+      
+      setTimeout(() => {
+        setEmailSentStatus(prev => ({
+          ...prev,
+          [job.id]: {
+            ...(prev[job.id] || {}),
+            [timelineIndex]: true
+          }
+        }));
+        toast.success('Email opened! Mark as sent if you\'ve sent it.');
+      }, 500);
+    } else {
+      toast.error('Unable to create email. Please check your email settings.');
     }
   };
 
@@ -1152,6 +1293,87 @@ const ApplicationTracker: React.FC = () => {
                 </span>
               </div>
             </div>
+
+            {/* Follow-up Section - Show when stage is zoomed for applied or interview */}
+            {zoomedStage && (stage.status === 'applied' || stage.status === 'interview') && jobsByStatus[stage.status as keyof typeof jobsByStatus].length > 0 && (
+              <div className="mb-6 bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Mail size={18} className="text-lime-600 dark:text-[#80FF00]" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  {jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
+                    const timeline = getFollowUpTimeline(job);
+                    if (timeline.length === 0) return null;
+                    
+                    return (
+                      <div key={job.id} className="bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-lime-500/30 rounded-lg p-4">
+                        <div className="mb-3">
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{job.jobTitle}</h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{job.company}</p>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row gap-4">
+                          {timeline.map((item, index) => {
+                            const isEmailSent = emailSentStatus[job.id]?.[index] === true;
+                            return (
+                              <div
+                                key={index}
+                                className={`flex-1 rounded-lg p-4 border shadow-sm transition-colors ${
+                                  isEmailSent
+                                    ? 'bg-lime-50 dark:bg-lime-500/10 border-lime-300 dark:border-lime-500/50'
+                                    : 'bg-gray-50 dark:bg-[#232f1c] border-lime-200 dark:border-lime-500/30'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3 mb-3">
+                                  <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                                    isEmailSent
+                                      ? 'bg-lime-500 dark:bg-lime-500/30'
+                                      : 'bg-lime-100 dark:bg-lime-500/20'
+                                  }`}>
+                                    <span className={`font-semibold text-xs ${
+                                      isEmailSent
+                                        ? 'text-white'
+                                        : 'text-lime-600 dark:text-[#80FF00]'
+                                    }`}>
+                                      {index + 1}
+                                    </span>
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`text-xs font-semibold mb-1 ${
+                                      isEmailSent
+                                        ? 'text-lime-700 dark:text-lime-300'
+                                        : 'text-lime-600 dark:text-[#80FF00]'
+                                    }`}>
+                                      {item.day}
+                                    </div>
+                                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                                      {item.action}
+                                    </div>
+                                  </div>
+                                </div>
+                                {getEmailTemplate(job) && (
+                                  <motion.button
+                                    onClick={() => handleOpenEmail(job, index)}
+                                    className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-lime-500/80 dark:bg-[#80FF00]/60 hover:bg-lime-600/80 dark:hover:bg-[#80FF00]/70 text-white rounded-lg text-xs font-medium transition-colors"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                  >
+                                    <Mail size={14} />
+                                    Send Email
+                                  </motion.button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Drop Zone */}
             <div 

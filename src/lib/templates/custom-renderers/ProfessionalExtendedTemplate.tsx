@@ -24,9 +24,9 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           line-height: 1.4;
           color: #000000;
           background: #E5E7EB;
-          max-width: 8.5in;
-          margin: 0 auto;
-          padding: 20px;
+          max-width: 100%;
+          margin: 0;
+          padding: 0;
         }
         
         .header {
@@ -400,18 +400,6 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                       className="job-description"
                       dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
                     />
-                  )}
-                  {job.highlights && job.highlights.length > 0 && (
-                    <div className="job-description">
-                      <ul>
-                        {job.highlights.map((highlight, highlightIndex) => (
-                          <li 
-                            key={highlightIndex}
-                            dangerouslySetInnerHTML={{ __html: renderFormattedText(highlight) }}
-                          />
-                        ))}
-                      </ul>
-                    </div>
                   )}
                 </div>
               ))}
