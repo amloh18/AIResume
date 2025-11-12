@@ -544,6 +544,66 @@ export function AICareerReportProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      
+      // Check if this is Flow 3: Master CV Edit
+      const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+      const editMaster = urlParams?.get('editMaster') === 'true';
+      const masterCVId = urlParams?.get('masterCVId');
+      
+      if (editMaster && typeof window !== 'undefined') {
+        // Flow 3: Load existing master CV for editing
+        try {
+          const masterCVResponse = await fetch(`/api/cv-draft/load-master-for-edit?masterCVId=${masterCVId || ''}`);
+          if (masterCVResponse.ok) {
+            const masterCVResult = await masterCVResponse.json();
+            if (masterCVResult.success && masterCVResult.data) {
+              const masterCVData = masterCVResult.data;
+              
+              // Load master CV data into context
+              if (masterCVData.cvData) {
+                dispatch({ type: 'SET_CV_DATA', payload: masterCVData.cvData });
+              }
+              
+              if (masterCVData.aiAnalysis) {
+                dispatch({ type: 'SET_AI_ANALYSIS', payload: masterCVData.aiAnalysis });
+              }
+              
+              // Set step to 2 (skip step 1) when editing master CV
+              if (masterCVData.currentStep) {
+                dispatch({ type: 'SET_CURRENT_STEP', payload: masterCVData.currentStep });
+              }
+              
+              if (masterCVData.completedSteps) {
+                masterCVData.completedSteps.forEach((step: number) => {
+                  dispatch({ type: 'SET_COMPLETED_STEP', payload: step });
+                });
+              }
+              
+              if (masterCVData.activeSection) {
+                dispatch({ type: 'SET_ACTIVE_SECTION', payload: masterCVData.activeSection });
+              }
+              
+              if (masterCVData.availableSections) {
+                dispatch({ type: 'SET_AVAILABLE_SECTIONS', payload: masterCVData.availableSections });
+              }
+              
+              // Store masterCVId for update operation
+              if (masterCVData.masterCVId && typeof window !== 'undefined') {
+                sessionStorage.setItem('masterCVId', masterCVData.masterCVId);
+              }
+              
+              console.log('✅ AICareerReportContext - Master CV loaded for editing (Flow 3)');
+              setIsLoading(false);
+              return; // Exit early, don't load regular draft
+            }
+          }
+        } catch (error) {
+          console.error('❌ AICareerReportContext - Failed to load master CV for editing:', error);
+          // Fall through to regular draft loading
+        }
+      }
+      
+      // Flow 1 or 2: Load regular draft
       const savedData = await loadFromStorage();
       
       if (savedData) {

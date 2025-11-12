@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import CVPreviewModal from './CVPreviewModal';
 import SignInModal from './SignInModal';
 import CareerTrajectoryGraph from '@/components/career-report/CareerTrajectoryGraph';
@@ -30,6 +31,7 @@ interface AICareerReportStepProps {
 export default function AICareerReportStep({ onComplete, onBack, session: propSession }: AICareerReportStepProps) {
   const { state, dispatch } = useAICareerReport();
   const { data: session, status: sessionStatus } = useSession();
+  const searchParams = useSearchParams();
   const [isGenerating, setIsGenerating] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +41,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
   // Use prop session if provided, otherwise use hook session
   const currentSession = propSession || session;
   const authStatus = propSession ? 'authenticated' : sessionStatus;
+  
+  // Flow Detection: Check if this is Flow 3 (Master CV Edit)
+  const editMaster = searchParams?.get('editMaster') === 'true';
+  const masterCVId = searchParams?.get('masterCVId') || (typeof window !== 'undefined' ? sessionStorage.getItem('masterCVId') : null);
+  const isEditingMasterCV = editMaster && masterCVId;
 
   // Wait for authentication to complete before initializing data
   useEffect(() => {
@@ -344,9 +351,17 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       }
 
       // Convert draft to Master CV
+      // Flow 3: Pass explicit masterCVId for guaranteed UPDATE operation
+      const requestBody: any = {};
+      if (isEditingMasterCV && masterCVId) {
+        requestBody.masterCVId = masterCVId;
+        console.log('🔄 Flow 3: Passing explicit masterCVId for update:', masterCVId);
+      }
+      
       const response = await fetch('/api/cv-draft/convert-to-master', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
       });
 
       console.log('📡 Master CV creation response status:', response.status);
@@ -375,12 +390,18 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       console.log('📥 Master CV creation result:', result);
 
       if (result.success) {
-        console.log('✅ Master CV created successfully:', result.cv?.id);
+        const actionVerb = isEditingMasterCV ? 'updated' : 'created';
+        console.log(`✅ Master CV ${actionVerb} successfully:`, result.cv?.id);
         
-        // Mark as created
+        // Mark as created/updated
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('masterCVCreated', 'true');
           sessionStorage.setItem('fromAICareerReport', 'true');
+          
+          // Clear masterCVId from sessionStorage after successful update
+          if (isEditingMasterCV) {
+            sessionStorage.removeItem('masterCVId');
+          }
           
           // Clear localStorage since data is now in database
           try {
@@ -1211,7 +1232,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             onClick={handleSaveMasterCV}
             className="bg-[#80FF00] text-black px-12 py-4 rounded-lg font-bold text-lg hover:bg-[#70e600] transition-colors flex items-center gap-3 mx-auto"
           >
-            Create Master CV
+            {isEditingMasterCV ? 'Update Master CV' : 'Create Master CV'}
             <ArrowRight size={20} />
           </button>
         </motion.div>

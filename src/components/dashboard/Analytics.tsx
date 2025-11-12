@@ -160,14 +160,15 @@ const CVManagementSection: React.FC<{
   jobs?: any[];
 }> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal, userId, jobs = [] }) => {
   
-  // Function to navigate to studio with master CV and ATS mode
+  // Function to navigate to studio with master CV (new architecture)
   const router = useRouter();
   const handleShowATSAnalysis = () => {
     if (masterCV) {
-      router.push(`/studio?cvId=${masterCV.id}&type=cv&mode=ats`);
+      // Navigate to master CV mode
+      router.push(`/studio?master=true`);
     } else {
-      // If no master CV, create one first
-      router.push('/studio?type=cv&mode=ats');
+      // If no master CV, navigate to studio (will prompt to create master CV)
+      router.push('/studio?master=true');
     }
   };
   
@@ -1287,7 +1288,7 @@ const Analytics: React.FC = () => {
             cvHealthScore={cvHealthScore}
             cvs={cvs}
             drafts={drafts}
-            onImproveScore={() => router.push('/studio')}
+            onImproveScore={() => router.push('/studio?master=true')}
             onCreateCV={async () => {
               try {
                 const currentUserId = userId;
@@ -1299,8 +1300,10 @@ const Analytics: React.FC = () => {
               }
             }}
             onAddJob={() => router.push('/dashboard/application-tracker')}
-            onWriteCoverLetter={() => router.push('/studio?type=cover_letter')}
-            onCreateCoverLetter={() => router.push('/studio?type=cover_letter')}
+            // For new cover letters, navigate to dashboard tracker to create a journey first
+            // Or create cover letter via API then navigate
+            onWriteCoverLetter={() => router.push('/dashboard/application-tracker')}
+            onCreateCoverLetter={() => router.push('/dashboard/application-tracker')}
             onCreateJob={() => router.push('/dashboard/application-tracker')}
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}

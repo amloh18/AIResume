@@ -69,3 +69,4 @@ When the user types "update guide", you must:
 - **State Management**: Use React Context for global state, local state for component-specific
 - **Performance**: Code split heavy components, use 'summary' projections for lists
 
+

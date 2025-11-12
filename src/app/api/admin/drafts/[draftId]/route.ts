@@ -14,9 +14,10 @@ import mongoose from 'mongoose';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   try {
+    const { draftId } = await params;
     // Verify admin authentication
     const cookieStore = await cookies();
     const adminToken = cookieStore.get('admin-token');
@@ -34,10 +35,10 @@ export async function GET(
 
     await getConnection();
 
-    const draft = await TemporaryCVDraft.findById(params.draftId)
+    const draft = await TemporaryCVDraft.findById(draftId)
       .populate('userId', 'email firstName lastName _id')
       .populate('convertedBy', 'email firstName lastName _id')
-      .lean();
+      .lean() as any;
 
     if (!draft) {
       return NextResponse.json(
@@ -95,9 +96,10 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   try {
+    const { draftId } = await params;
     // Verify admin authentication
     const cookieStore = await cookies();
     const adminToken = cookieStore.get('admin-token');
@@ -115,7 +117,7 @@ export async function POST(
 
     await getConnection();
 
-    const draft = await TemporaryCVDraft.findById(params.draftId);
+    const draft = await TemporaryCVDraft.findById(draftId);
 
     if (!draft) {
       return NextResponse.json(
@@ -219,9 +221,10 @@ export async function POST(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { draftId: string } }
+  { params }: { params: Promise<{ draftId: string }> }
 ) {
   try {
+    const { draftId } = await params;
     // Verify admin authentication
     const cookieStore = await cookies();
     const adminToken = cookieStore.get('admin-token');
@@ -238,7 +241,7 @@ export async function DELETE(
 
     await getConnection();
 
-    const result = await TemporaryCVDraft.deleteOne({ _id: params.draftId });
+    const result = await TemporaryCVDraft.deleteOne({ _id: draftId });
 
     if (result.deletedCount === 0) {
       return NextResponse.json(

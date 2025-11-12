@@ -183,6 +183,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
   // CV Journey state
   const [journeyInfo, setJourneyInfo] = useState<CVJourneyInfo | null>(null);
   const [journeyInitialized, setJourneyInitialized] = useState(false);
+  const [isJourneyDataLoaded, setIsJourneyDataLoaded] = useState(false);
 
   // CV Data state
   const [cvData, setCvData] = useState<UnifiedCVDataStructure | null>(null);
@@ -547,16 +548,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
               if (response.ok) {
                 
-                // Update URL to use existing cover letter
+                // Update URL to use standardized format
                 const urlParams = new URLSearchParams();
-                urlParams.set('type', 'cover_letter');
-                urlParams.set('coverLetterId', existingCoverLetterId);
-                const jobId = journeyInfo?.jobId || selectedJobId;
-                if (jobId) {
-                  urlParams.set('jobId', jobId);
-                }
-                if (journeyInfo?.journeyId) {
-                  urlParams.set('journeyId', journeyInfo.journeyId);
+                const primaryJourneyId = journeyId || journeyInfo?.journeyId;
+                if (primaryJourneyId) {
+                  urlParams.set('journeyId', primaryJourneyId);
+                  urlParams.set('documentType', 'cl');
+                  urlParams.set('mode', 'cledit');
+                } else {
+                  // Fallback for standalone mode
+                  urlParams.set('coverLetterId', existingCoverLetterId);
                 }
                 router.replace(`/studio?${urlParams.toString()}`);
                 
@@ -623,16 +624,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
               // Update journey with new cover letter ID
               await updateJourneyWithDocument(newCoverLetterId, 'cover-letter');
 
-              // Update URL to include the new cover letter ID and preserve journeyId
+              // Update URL to use standardized format
               const urlParams = new URLSearchParams();
-              urlParams.set('type', 'cover_letter');
-              urlParams.set('mode', 'cover-letter');
-              urlParams.set('coverLetterId', newCoverLetterId);
-              if (journeyInfo?.jobId || selectedJobId) {
-                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || '');
-              }
-              if (journeyInfo?.journeyId || journeyId) {
-                urlParams.set('journeyId', journeyInfo?.journeyId || journeyId || '');
+              const primaryJourneyId = journeyId || journeyInfo?.journeyId;
+              if (primaryJourneyId) {
+                urlParams.set('journeyId', primaryJourneyId);
+                urlParams.set('documentType', 'cl');
+                urlParams.set('mode', 'cledit');
+              } else {
+                // Fallback for standalone mode
+                urlParams.set('coverLetterId', newCoverLetterId);
               }
               router.replace(`/studio?${urlParams.toString()}`);
 
@@ -686,16 +687,17 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 }
               }, userId || undefined);
               
-              // Update URL to use existing CV
+              // Update URL to use standardized format
               const urlParams = new URLSearchParams();
-              urlParams.set('type', 'cv');
-              urlParams.set('cvId', existingCvId);
-              if (journeyInfo?.jobId || selectedJobId) {
-                urlParams.set('jobId', journeyInfo?.jobId || selectedJobId || '');
+              const primaryJourneyId = journeyId || journeyInfo?.journeyId;
+              if (primaryJourneyId) {
+                urlParams.set('journeyId', primaryJourneyId);
+                urlParams.set('documentType', 'cv');
+                urlParams.set('mode', 'cvedit');
+              } else {
+                // Fallback for standalone mode
+                urlParams.set('cvId', existingCvId);
               }
-            if (journeyInfo?.journeyId || journeyId) {
-              urlParams.set('cvJourneyId', (journeyInfo?.journeyId || journeyId || '').toString());
-            }
               router.replace(`/studio?${urlParams.toString()}`);
               
               clearTimeout(saveTimeout);
@@ -728,7 +730,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 
                 if (existingCV) {
                   console.log('✅ Studio - CV already exists for journey, using existing:', existingCV.id);
-                  setCvId(existingCV.id);
+                  setOriginalCvId(existingCV.id);
                   setJustCreated(true);
                   setTimeout(() => setJustCreated(false), 2000);
                   clearTimeout(saveTimeout);
@@ -765,21 +767,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
             // Update journey with new CV ID
             await updateJourneyWithDocument(newCvId, 'cv');
 
-            // Update URL using new structure with journeyId as primary context
+            // Update URL using standardized format
             const urlParams = new URLSearchParams();
-            urlParams.set('type', 'cv');
-            urlParams.set('cvId', newCvId);
-            
-            // Prioritize journeyId for reliable Application Package context
             const primaryJourneyId = journeyId || journeyInfo?.journeyId;
             if (primaryJourneyId) {
               urlParams.set('journeyId', primaryJourneyId);
-            }
-            
-            // Keep jobId for backwards compatibility
-            const jobId = journeyInfo?.jobId || selectedJobId;
-            if (jobId) {
-              urlParams.set('jobId', jobId);
+              urlParams.set('documentType', 'cv');
+              urlParams.set('mode', 'cvedit');
+            } else {
+              // Fallback for standalone mode
+              urlParams.set('cvId', newCvId);
             }
             
             router.replace(`/studio?${urlParams.toString()}`);
@@ -832,14 +829,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
       if (primaryJourneyId) {
         
         try {
-          // Fetch the complete journey data using jobId (since primaryJourneyId is now the jobId)
-          const response = await fetch(`/api/application-journey?userId=${userId}&jobId=${primaryJourneyId}`);
+          // Fetch the complete journey data using journeyId
+          const response = await fetch(`/api/application-journey/${primaryJourneyId}`);
           if (response.ok) {
             const result = await response.json();
-            if (result.success && result.data?.journeys && result.data.journeys.length > 0) {
-              const journeyData = result.data.journeys[0]; // Get the first journey
+            if (result.success && result.data?.journey) {
+              const journeyData = result.data.journey;
               journey = {
-                journeyId: journeyData.journeyId,
+                journeyId: journeyData.id || journeyData.journeyId || primaryJourneyId,
                 cvId: journeyData.cvId || undefined,
                 coverLetterId: journeyData.coverLetterId || undefined,
                 jobId: journeyData.jobId || '',
@@ -894,6 +891,57 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
   // Function to update CV journey with document IDs
   const updateJourneyWithDocument = async (documentId: string, documentType: 'cv' | 'cover-letter') => {
+    // Prioritize journeyId if available
+    const targetJourneyId = journeyId || journeyInfo?.journeyId;
+    
+    if (targetJourneyId) {
+      // Update existing journey by ID
+      try {
+        const updateData: any = {
+          currentStep: documentType === 'cv' ? 2 : 4, // CV is step 2, Cover Letter is step 4
+          status: 'in-progress'
+        };
+
+        if (documentType === 'cv') {
+          updateData.cvId = documentId;
+        } else {
+          updateData.coverLetterId = documentId;
+        }
+
+        const response = await fetch(`/api/application-journey/${targetJourneyId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Update local journey state
+          if (documentType === 'cv') {
+            updateCVId(documentId);
+          } else {
+            updateCoverLetterId(documentId);
+          }
+
+          // Update journey info
+          if (journeyInfo) {
+            setJourneyInfo({
+              ...journeyInfo,
+              cvId: documentType === 'cv' ? documentId : journeyInfo.cvId,
+              coverLetterId: documentType === 'cover-letter' ? documentId : journeyInfo.coverLetterId
+            });
+          }
+          return; // Success, exit early
+        }
+      } catch (error) {
+        console.error('❌ Error updating journey by ID:', error);
+      }
+    }
+
+    // Fallback: Create/update journey using jobId (legacy approach)
     const targetJobId = journeyInfo?.jobId || selectedJobId;
     
     if (!targetJobId) {
@@ -1589,24 +1637,24 @@ const CVStudio: React.FC<CVStudioProps> = ({
       if (journeyInfo.cvId && !cvData) {
         try {
           console.log('🔍 CVStudio - Loading CV from journey:', journeyInfo.cvId);
-          const cvResponse = await fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`);
-          if (cvResponse.ok) {
-            const cvResult = await cvResponse.json();
-            const loadedCvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
-            const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
-            if (loadedCvData) {
-              console.log('✅ CVStudio - CV loaded from journey:', loadedCvData);
-              await setCvDataWithStructure(loadedCvData, templateId);
-              setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
+          // Use UnifiedCVService like ai-career-report does
+          const cvDocument = await UnifiedCVService.getCV(journeyInfo.cvId, userId);
+          if (cvDocument && cvDocument.cvData) {
+            console.log('✅ CVStudio - CV loaded from journey:', cvDocument.id);
+            await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
+            setCvTitle(cvDocument.title || 'Untitled CV');
               
-              // Check if this is a master CV
-              const isMasterCV = cvResult.data?.cv?.metadata?.isMaster || false;
+              // Check if this is a master CV - if so, redirect to ai-career-report
+              const isMasterCV = cvDocument.metadata?.isMaster === true || 
+                                cvDocument.metadata?.isMaster === 'true' ||
+                                cvDocument.isMaster === true ||
+                                cvDocument.metadata?.createdVia === 'ai-career-report';
               if (isMasterCV) {
-                setIsMasterCV(true);
-                setCurrentMasterCV({ id: journeyInfo.cvId, title: cvResult.data?.cv?.title || cvResult.cv?.title });
+                console.log('🔄 CVStudio - Master CV detected in journey, redirecting to ai-career-report');
+                router.replace(`/ai-career-report?editMaster=true&masterCVId=${journeyInfo.cvId}`);
+                return; // Exit early, don't load master CV in studio
               }
             }
-          }
         } catch (error) {
           console.error('❌ CVStudio - Failed to load CV from journey:', error);
         }
@@ -1653,12 +1701,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
           
           // Update URL to show duplicated CV with journey context
           const urlParams = new URLSearchParams();
-          urlParams.set('type', 'cv');
-          urlParams.set('cvId', duplicatedCVId);
           if (journeyId) {
             urlParams.set('journeyId', journeyId);
-          } else if (selectedJobId) {
-            urlParams.set('jobId', selectedJobId);
+            urlParams.set('documentType', 'cv');
+            urlParams.set('mode', 'cvedit');
+          } else {
+            // Fallback for standalone mode
+            urlParams.set('cvId', duplicatedCVId);
           }
           router.replace(`/studio?${urlParams.toString()}`);
           
@@ -1741,6 +1790,113 @@ const CVStudio: React.FC<CVStudioProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, cvId, router, updateJourneyStatus, updateCVId, cvData]);
 
+  // Unified function to load all journey data (CV, job, CL) in a single API call
+  const loadJourneyData = useCallback(async (journeyIdParam: string) => {
+    // Prevent duplicate loading
+    if (isJourneyDataLoaded) {
+      console.log('🔍 CVStudio - Journey data already loaded, skipping');
+      return;
+    }
+
+    try {
+      console.log('🔍 CVStudio - Loading journey data:', journeyIdParam);
+      
+      // Single API call to get all journey data
+      const response = await fetch(`/api/application-journey/${journeyIdParam}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch journey: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success || !result.data) {
+        throw new Error('Invalid journey data response');
+      }
+
+      const { journey, jobData, cvData: journeyCvData, coverLetterData } = result.data;
+
+      // Set journey info
+      if (journey) {
+        const journeyInfoData: CVJourneyInfo = {
+          journeyId: journey.id || journey.journeyId,
+          cvId: journey.cvId || undefined,
+          coverLetterId: journey.coverLetterId || undefined,
+          jobId: journey.jobId || '',
+          userId,
+          status: journey.status || 'in-progress',
+          currentStep: journey.currentStep || 1,
+          jobTitle: journey.jobTitle,
+          company: journey.company
+        };
+        setJourneyInfo(journeyInfoData);
+        
+        // Update journey context
+        if (journey.cvId) {
+          updateCVId(journey.cvId);
+        }
+        if (journey.coverLetterId) {
+          updateCoverLetterId(journey.coverLetterId);
+        }
+        if (journey.jobId) {
+          updateCurrentJobId(journey.jobId);
+        }
+      }
+
+      // Set job data
+      if (jobData) {
+        setCurrentJob(jobData);
+        setSelectedJobId(jobData.id);
+        setJobAutoLoadedFromJourney(true);
+        console.log('✅ CVStudio - Job data loaded from journey:', jobData);
+      }
+
+      // Set CV data if available
+      if (journeyCvData && journeyCvData.cvData) {
+        await setCvDataWithStructure(journeyCvData.cvData, journeyCvData.templateId);
+        setCvTitle(journeyCvData.title || 'Untitled CV');
+        setOriginalCvId(journeyCvData.id);
+        console.log('✅ CVStudio - CV data loaded from journey:', journeyCvData.id);
+      } else if (journey.cvId) {
+        // Fallback: If cvData not in journey response, fetch directly using UnifiedCVService
+        try {
+          console.log('🔍 CVStudio - Fetching CV data directly for journey CV:', journey.cvId);
+          const cvDocument = await UnifiedCVService.getCV(journey.cvId, userId);
+          if (cvDocument && cvDocument.cvData) {
+            await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
+            setCvTitle(cvDocument.title || 'Untitled CV');
+            setOriginalCvId(cvDocument.id);
+            console.log('✅ CVStudio - CV data loaded via UnifiedCVService:', cvDocument.id);
+          }
+        } catch (error) {
+          console.error('❌ CVStudio - Failed to load CV via UnifiedCVService:', error);
+        }
+      }
+
+      // Set cover letter data if available
+      if (coverLetterData) {
+        setCoverLetterData({
+          content: coverLetterData.content || '',
+          title: coverLetterData.title || 'Untitled Cover Letter',
+          metadata: coverLetterData.metadata || {}
+        });
+        setCoverLetterTitle(coverLetterData.title || 'Untitled Cover Letter');
+        setOriginalCoverLetterId(coverLetterData.id);
+        console.log('✅ CVStudio - Cover letter data loaded from journey:', coverLetterData.id);
+      }
+
+      // Mark as loaded
+      setIsJourneyDataLoaded(true);
+      console.log('✅ CVStudio - All journey data loaded successfully');
+
+    } catch (error) {
+      console.error('❌ CVStudio - Error loading journey data:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load journey data');
+      // Still mark as loaded to prevent infinite retries
+      setIsJourneyDataLoaded(true);
+    }
+  }, [userId, isJourneyDataLoaded, setCvDataWithStructure, updateCVId, updateCoverLetterId, updateCurrentJobId]);
+
   // Load initial data
   useEffect(() => {
     const loadInitialData = async () => {
@@ -1768,6 +1924,23 @@ const CVStudio: React.FC<CVStudioProps> = ({
           setTemplates([]);
         }
 
+        // NEW APPROACH: If journeyId is present, use unified loader (single API call)
+        if (journeyId && !isJourneyDataLoaded) {
+          console.log('🔍 CVStudio - Using unified journey data loader');
+          await loadJourneyData(journeyId);
+          setIsLoading(false);
+          return; // Exit early - unified loader handles all data
+        }
+        
+        // CRITICAL: If journeyId is present, NEVER create default CV data
+        // Journeys always have CV data (created from master CV), so we should never overwrite it
+        if (journeyId) {
+          console.log('✅ CVStudio - Journey mode: skipping default CV creation (journey has CV data)');
+          setIsLoading(false);
+          return; // Exit early - journey will have CV data, don't create default
+        }
+
+        // Fallback to legacy loading for standalone mode (no journeyId)
         // NEW APPROACH: Load job data prioritizing journeyId for reliable Application Package context
         const primaryJourneyId = journeyId;
         const targetJobId = journeyInfo?.jobId;
@@ -1941,29 +2114,26 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 if (loadedJourneyInfo.cvId) {
                   try {
                     console.log('🔍 CVStudio - Loading CV from journey:', loadedJourneyInfo.cvId);
-                    const cvResponse = await fetch(`/api/cvs/${loadedJourneyInfo.cvId}?userId=${userId}`);
-                    if (cvResponse.ok) {
-                      const cvResult = await cvResponse.json();
-                      const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
-                      const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
-                      if (cvData) {
-                        console.log('✅ CVStudio - CV loaded:', cvData);
-                        await setCvDataWithStructure(cvData, templateId);
-                        setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
-                        
-                        // Check if this is a master CV
-                        const isMasterCV = cvResult.data?.cv?.metadata?.isMaster || false;
-                        if (isMasterCV) {
-                          setIsMasterCV(true);
-                          setCurrentMasterCV({ id: loadedJourneyInfo.cvId, title: cvResult.data?.cv?.title || cvResult.cv?.title });
-                        } else {
-                          setIsMasterCV(false);
-                          setCurrentMasterCV(null);
-                        }
-                        
-                        // Store cvId for seamless switching
-                        setOriginalCvId(loadedJourneyInfo.cvId);
+                    // Use UnifiedCVService like ai-career-report does
+                    const cvDocument = await UnifiedCVService.getCV(loadedJourneyInfo.cvId, userId);
+                    if (cvDocument && cvDocument.cvData) {
+                      console.log('✅ CVStudio - CV loaded:', cvDocument.id);
+                      await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
+                      setCvTitle(cvDocument.title || 'Untitled CV');
+                      
+                      // Check if this is a master CV - if so, redirect to ai-career-report
+                      const isMasterCV = cvDocument.metadata?.isMaster === true || 
+                                        cvDocument.metadata?.isMaster === 'true' ||
+                                        cvDocument.isMaster === true ||
+                                        cvDocument.metadata?.createdVia === 'ai-career-report';
+                      if (isMasterCV) {
+                        console.log('🔄 CVStudio - Master CV detected in journey, redirecting to ai-career-report');
+                        router.replace(`/ai-career-report?editMaster=true&masterCVId=${loadedJourneyInfo.cvId}`);
+                        return; // Exit early, don't load master CV in studio
                       }
+                      
+                      // Store cvId for seamless switching
+                      setOriginalCvId(loadedJourneyInfo.cvId);
                     }
                   } catch (error) {
                     console.error('❌ CVStudio - Failed to load CV:', error);
@@ -1994,16 +2164,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 if (coverLetter.cvId) {
                   console.log('🔍 CVStudio - Auto-loading linked CV:', coverLetter.cvId);
                   try {
-                    const cvResponse = await fetch(`/api/cvs/${coverLetter.cvId}?userId=${userId}`);
-                    if (cvResponse.ok) {
-                      const cvResult = await cvResponse.json();
-                      const cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
-                      const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
-                      if (cvData) {
-                        await setCvDataWithStructure(cvData, templateId);
-                        setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
-                        setOriginalCvId(coverLetter.cvId);
-                      }
+                    // Use UnifiedCVService like ai-career-report does
+                    const cvDocument = await UnifiedCVService.getCV(coverLetter.cvId, userId);
+                    if (cvDocument && cvDocument.cvData) {
+                      await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
+                      setCvTitle(cvDocument.title || 'Untitled CV');
+                      setOriginalCvId(coverLetter.cvId);
                     }
                   } catch (error) {
                     console.error('Error loading linked CV:', error);
@@ -2048,17 +2214,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
               // Load CV data if we have cvId
               if (journeyInfo.cvId && !cvData) {
                 try {
-                  const cvResponse = await fetch(`/api/cvs/${journeyInfo.cvId}?userId=${userId}`);
-                  if (cvResponse.ok) {
-                    const cvResult = await cvResponse.json();
-                    const loadedCvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData;
-                    const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
-                    if (loadedCvData) {
-                      console.log('✅ CVStudio - CV loaded from journey:', loadedCvData);
-                      // Use setCvDataWithStructure to ensure structure is initialized
-                      await setCvDataWithStructure(loadedCvData, templateId);
-                      setCvTitle(cvResult.data?.cv?.title || cvResult.cv?.title || 'Untitled CV');
-                    }
+                  // Use UnifiedCVService like ai-career-report does
+                  const cvDocument = await UnifiedCVService.getCV(journeyInfo.cvId, userId);
+                  if (cvDocument && cvDocument.cvData) {
+                    console.log('✅ CVStudio - CV loaded from journey:', cvDocument.id);
+                    // Use setCvDataWithStructure to ensure structure is initialized
+                    await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
+                    setCvTitle(cvDocument.title || 'Untitled CV');
                   }
                 } catch (error) {
                   console.error('❌ CVStudio - Failed to load CV from journey:', error);
@@ -2154,49 +2316,54 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 }
               }
             } else if (masterCVData || editingCVData) {
-              // Handle master CV data from sessionStorage
+              // Master CVs can only be edited in ai-career-report, not in studio
+              // If master CV data is found in sessionStorage, redirect to ai-career-report
               try {
-                let masterCV: any = null;
-                let cvDataFromStorage: any = null;
-                
                 if (masterCVData) {
-                  masterCV = masterCVData;
-                  cvDataFromStorage = masterCV.cvData;
-                  console.log('🔍 Found master CV data in sessionStorage:', masterCV);
-                } else if (editingCVData) {
-                  cvDataFromStorage = editingCVData;
-                  console.log('🔍 Found editing CV data in sessionStorage:', cvDataFromStorage);
+                  console.log('🔄 CVStudio - Master CV data found in sessionStorage, redirecting to ai-career-report');
+                  const masterCVId = masterCVData.id || editingCVId;
+                  if (masterCVId) {
+                    router.replace(`/ai-career-report?editMaster=true&masterCVId=${masterCVId}`);
+                  } else {
+                    router.replace('/ai-career-report?editMaster=true');
+                  }
+                  // Clear master CV sessionStorage
+                  sessionStorage.removeItem('editingMasterCV');
+                  sessionStorage.removeItem('editingCVId');
+                  sessionStorage.removeItem('editingCVTitle');
+                  sessionStorage.removeItem('editingCVData');
+                  return; // Exit early, don't load master CV in studio
+                } else if (editingCVData && editingCVId) {
+                  // Check if this is a master CV by checking the CV ID
+                  try {
+                    // Use UnifiedCVService like ai-career-report does
+                    const cvCheckDocument = await UnifiedCVService.getCV(editingCVId, userId);
+                    if (cvCheckDocument) {
+                      const isMasterCV = cvCheckDocument.metadata?.isMaster === true || 
+                                        cvCheckDocument.metadata?.isMaster === 'true' ||
+                                        cvCheckDocument.isMaster === true ||
+                                        cvCheckDocument.metadata?.createdVia === 'ai-career-report';
+                      if (isMasterCV) {
+                        console.log('🔄 CVStudio - Master CV detected from editingCVData, redirecting to ai-career-report');
+                        router.replace(`/ai-career-report?editMaster=true&masterCVId=${editingCVId}`);
+                        sessionStorage.removeItem('editingCVId');
+                        sessionStorage.removeItem('editingCVTitle');
+                        sessionStorage.removeItem('editingCVData');
+                        return; // Exit early
+                      }
+                    }
+                  } catch (error) {
+                    console.warn('⚠️ CVStudio - Could not check CV master status from editingCVData:', error);
+                  }
+                  // If not a master CV, continue with normal loading
+                  convertedData = editingCVData;
+                  console.log('🔍 Found editing CV data in sessionStorage:', convertedData);
                 }
-                
-                if (cvDataFromStorage) {
-                  // Data is already in unified format
-                  convertedData = cvDataFromStorage;
-                  
-                  console.log('✅ Master CV data loaded from sessionStorage:', convertedData);
-                  // Use setCvDataWithStructure to ensure structure is initialized
-                  await setCvDataWithStructure(convertedData, masterCV?.templateId);
-                  setCvTitle(masterCV?.title || 'Master CV');
-                  setIsMasterCV(true);
-                  
-                  // Create a mock cvResult for consistency
-                  cvResult = {
-                    title: masterCV?.title || 'Master CV',
-                    cvData: convertedData,
-                    templateId: masterCV?.templateId,
-                    isMaster: true
-                  };
-                }
-                
-                // Clear master CV sessionStorage
-                sessionStorage.removeItem('editingMasterCV');
-                sessionStorage.removeItem('editingCVId');
-                sessionStorage.removeItem('editingCVTitle');
-                sessionStorage.removeItem('editingCVData');
                 
               } catch (error) {
                 console.error('❌ Error parsing master CV data:', error);
-                // Fallback to API call
-                cvResult = await CVService.getCV(cvId, userId);
+                // Fallback to UnifiedCVService
+                cvResult = await UnifiedCVService.getCV(cvId, userId);
                 convertedData = cvResult.cvData;
                 console.log('Error fallback CV data:', convertedData);
                 // Use setCvDataWithStructure to ensure structure is initialized
@@ -2208,7 +2375,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               console.log('🔍 CVStudio - User ID type:', typeof userId, 'Length:', userId?.length);
               console.log('🔍 CVStudio - CV ID type:', typeof cvId, 'Length:', cvId?.length);
               
-              // CRITICAL FIX: Check if this is a Master CV first, then use master CV API
+              // CRITICAL: Master CVs can only be edited in ai-career-report, not in studio
               // Check URL parameter first, then check CV metadata
               const isMasterFromURL = new URLSearchParams(window.location.search).get('master') === 'true';
               
@@ -2216,22 +2383,38 @@ const CVStudio: React.FC<CVStudioProps> = ({
               let isMasterCV = isMasterFromURL;
               if (!isMasterCV && cvId) {
                 try {
-                  // Quick check: fetch CV metadata to see if it's a master CV
-                  const cvCheckResponse = await fetch(`/api/cvs/${cvId}?userId=${userId}`);
-                  if (cvCheckResponse.ok) {
-                    const cvCheckData = await cvCheckResponse.json();
-                    const metadataIsMaster = cvCheckData.data?.cv?.metadata?.isMaster;
-                    const rootIsMaster = cvCheckData.data?.cv?.isMaster;
-                    isMasterCV = metadataIsMaster === true || metadataIsMaster === 'true' || rootIsMaster === true || rootIsMaster === 'true';
-                    console.log('🔍 CVStudio - CV master status check:', { isMasterCV, metadataIsMaster, rootIsMaster });
+                  // Quick check: fetch CV metadata to see if it's a master CV using UnifiedCVService
+                  const cvCheckDocument = await UnifiedCVService.getCV(cvId, userId);
+                  if (cvCheckDocument) {
+                    const metadataIsMaster = cvCheckDocument.metadata?.isMaster;
+                    const rootIsMaster = cvCheckDocument.isMaster;
+                    const createdVia = cvCheckDocument.metadata?.createdVia;
+                    // Primary check: metadata.isMaster, fallback: root isMaster, fallback: createdVia
+                    isMasterCV = metadataIsMaster === true || metadataIsMaster === 'true' || 
+                                rootIsMaster === true || rootIsMaster === 'true' ||
+                                createdVia === 'ai-career-report';
+                    console.log('🔍 CVStudio - CV master status check:', { isMasterCV, metadataIsMaster, rootIsMaster, createdVia });
                   }
                 } catch (checkError) {
-                  console.warn('⚠️ CVStudio - Could not check CV master status, will try master API if URL param is set:', checkError);
+                  console.warn('⚠️ CVStudio - Could not check CV master status:', checkError);
                 }
               }
               
-              // If this is a master CV (from URL or metadata), use master CV API
+              // If this is a master CV, redirect silently to ai-career-report for editing
               if (isMasterCV) {
+                console.log('🔄 CVStudio - Master CV detected, redirecting to ai-career-report for editing');
+                const masterCVId = cvId || (await fetch(`/api/cvs/master?userId=${userId}`).then(r => r.json()).then(d => d.data?.masterCV?.id)).catch(() => null);
+                if (masterCVId) {
+                  router.replace(`/ai-career-report?editMaster=true&masterCVId=${masterCVId}`);
+                } else {
+                  router.replace('/ai-career-report?editMaster=true');
+                }
+                return; // Exit early, don't load master CV in studio
+              }
+              
+              // If this is NOT a master CV, continue with normal loading
+              // (Removed the old master CV loading logic - master CVs are now edited only in ai-career-report)
+              if (false) { // This block is now unreachable but kept for reference
                 console.log('🔍 CVStudio - Detected Master CV, using master API (single source of truth)');
                 try {
                   const masterResponse = await fetch(`/api/cvs/master?userId=${userId}`);
@@ -2275,7 +2458,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     
                     // CRITICAL: Set cvId to master CV ID to prevent creating new CVs
                     if (cvResult.id) {
-                      setCvId(cvResult.id);
+                      setOriginalCvId(cvResult.id);
                     }
                     
                     console.log('✅ CVStudio - Master CV loaded successfully from master API');
@@ -2293,15 +2476,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 }
               }
               
-              // If not a master CV, use CVService
+              // If not a master CV, use UnifiedCVService (same as ai-career-report)
               if (!cvResult) {
                 try {
-                  console.log('🔍 CVStudio - Fetching CV using CVService with cvId:', cvId, 'userId:', userId);
-                  cvResult = await CVService.getCV(cvId, userId);
-                  console.log('🔍 CVStudio - CVService returned:', cvResult);
+                  console.log('🔍 CVStudio - Fetching CV using UnifiedCVService with cvId:', cvId, 'userId:', userId);
+                  // Use UnifiedCVService.getCV like ai-career-report does
+                  cvResult = await UnifiedCVService.getCV(cvId, userId);
+                  console.log('🔍 CVStudio - UnifiedCVService returned:', cvResult);
                   console.log('🔍 CVStudio - cvResult has cvData?', !!cvResult?.cvData);
                   
-                  // CVService.getCV returns UnifiedCVDocument which has cvData property
+                  // UnifiedCVService.getCV returns UnifiedCVDocument which has cvData property
                   convertedData = cvResult.cvData;
                   console.log('🔍 CVStudio - Existing CV data from service:', convertedData);
                   console.log('🔍 CVStudio - CV data type:', typeof convertedData);
@@ -2326,9 +2510,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   }
 
                   // Check if this is a master CV from the CVService response
+                  // Check both isMaster flag and createdVia for ai-career-report compatibility
                   const metadataIsMaster = cvResult.metadata?.isMaster;
                   const rootIsMaster = (cvResult as any)?.isMaster;
-                  const isMasterFromResponse = metadataIsMaster === true || metadataIsMaster === 'true' || rootIsMaster === true || rootIsMaster === 'true';
+                  const createdVia = cvResult.metadata?.createdVia;
+                  const isMasterFromResponse = 
+                    metadataIsMaster === true || 
+                    metadataIsMaster === 'true' || 
+                    rootIsMaster === true || 
+                    rootIsMaster === 'true' ||
+                    createdVia === 'ai-career-report'; // Fallback for ai-career-report CVs
                   
                   if (isMasterFromResponse) {
                     setIsMasterCV(true);
@@ -2413,20 +2604,20 @@ const CVStudio: React.FC<CVStudioProps> = ({
             // Priority 2: Try to get templateId from API response if available
             if (!templateIdToMatch && cvId) {
               try {
-                const cvResponse = await fetch(`/api/cvs/${cvId}?userId=${userId}`);
-                if (cvResponse.ok) {
-                  const cvApiResult = await cvResponse.json();
-                  const apiTemplateId = cvApiResult.data?.cv?.templateId || cvApiResult.cv?.templateId;
+                // Use UnifiedCVService like ai-career-report does
+                const cvDocument = await UnifiedCVService.getCV(cvId, userId);
+                if (cvDocument) {
+                  const apiTemplateId = cvDocument.templateId;
                   if (apiTemplateId) {
                     templateIdToMatch = apiTemplateId.toString();
-                    console.log('🔍 Studio - Got templateId from API response:', templateIdToMatch);
+                    console.log('🔍 Studio - Got templateId from UnifiedCVService:', templateIdToMatch);
                   }
                   
-                  // Also check for templateData in API response (faster loading)
-                  const apiTemplateData = cvApiResult.data?.cv?.templateData || cvApiResult.cv?.templateData;
+                  // Also check for templateData in document (faster loading)
+                  const apiTemplateData = (cvDocument as any).templateData;
                   if (apiTemplateData && !templateIdToMatch) {
                     // Use templateData directly if available
-                    console.log('✅ Studio - Using templateData from API response');
+                    console.log('✅ Studio - Using templateData from UnifiedCVService');
                     setSelectedTemplate(apiTemplateData);
                     templateIdToMatch = apiTemplateData.id || apiTemplateData._id;
                   }
@@ -2494,7 +2685,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
           
           // Reset change tracking flag after initial load
           cvDataChangedRef.current = false;
-        } else {
+        } else if (documentType === 'cv' && !journeyId) {
+            // Only create default CV data if:
+            // 1. We're in CV mode (not cover letter)
+            // 2. AND no journeyId is present (standalone mode)
+            // CRITICAL: Never create default CV if journeyId exists - journeys always have CV data from master CV
+            console.log('🔍 CVStudio - Creating default CV data (standalone mode, no journey)');
             // Create default CV data structure
             const defaultCVData: UnifiedCVDataStructure = {
               basics: {
@@ -2562,7 +2758,45 @@ const CVStudio: React.FC<CVStudioProps> = ({
     };
 
     loadInitialData();
-  }, [cvId, coverLetterId, userId, documentType, journeyId, setTemplates, setSelectedTemplate, setCurrentJob]);
+  }, [cvId, coverLetterId, userId, documentType, journeyId, isJourneyDataLoaded, loadJourneyData, setTemplates, setSelectedTemplate, setCurrentJob]);
+
+  // CRITICAL: Clean up legacy URL parameters when journeyId is present
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const currentParams = new URLSearchParams(window.location.search);
+    const hasJourneyId = currentParams.get('journeyId');
+    
+    // If journeyId is present, ensure URL uses standardized format
+    if (hasJourneyId) {
+      const hasLegacyParams = currentParams.has('type') || 
+                             currentParams.has('cvJourneyId') || 
+                             (currentParams.has('jobId') && !currentParams.has('documentType')) ||
+                             (currentParams.has('cvId') && !currentParams.has('documentType'));
+      
+      if (hasLegacyParams) {
+        console.log('🔧 CVStudio - Cleaning up legacy URL parameters');
+        const cleanParams = new URLSearchParams();
+        
+        // Preserve standardized parameters
+        cleanParams.set('journeyId', hasJourneyId);
+        
+        const documentType = currentParams.get('documentType') || 
+                           (currentParams.get('type') === 'cover_letter' ? 'cl' : 'cv');
+        const mode = currentParams.get('mode') || 
+                    (documentType === 'cl' ? 'cledit' : 'cvedit');
+        
+        cleanParams.set('documentType', documentType);
+        cleanParams.set('mode', mode);
+        
+        // Only preserve cvId/coverLetterId for standalone mode (no journeyId)
+        // But since we have journeyId, we don't need them
+        
+        const newUrl = `/studio?${cleanParams.toString()}`;
+        router.replace(newUrl);
+      }
+    }
+  }, [journeyId, router]);
 
   // Ref to store preview element for downloads
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -2788,19 +3022,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const reloadCVData = async (cvIdToLoad: string) => {
     try {
       console.log('🔄 Reloading CV data for ID:', cvIdToLoad);
-      const response = await fetch(`/api/cvs/${cvIdToLoad}?userId=${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to load CV');
-      }
-      const cvResult = await response.json();
-      let cvData = cvResult.data?.cv?.cvData || cvResult.cv?.cvData || cvResult.cvData;
-      const cvTitle = cvResult.data?.cv?.title || cvResult.cv?.title || cvResult.title;
-      const templateId = cvResult.data?.cv?.templateId || cvResult.cv?.templateId;
+      // Use UnifiedCVService like ai-career-report does
+      const cvDocument = await UnifiedCVService.getCV(cvIdToLoad, userId);
       
-      if (cvData) {
-        await setCvDataWithStructure(cvData, templateId);
-        setCvTitle(cvTitle || 'Untitled CV');
-        console.log('✅ CV data reloaded successfully:', cvTitle);
+      if (cvDocument && cvDocument.cvData) {
+        await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
+        setCvTitle(cvDocument.title || 'Untitled CV');
+        console.log('✅ CV data reloaded successfully:', cvDocument.title);
       } else {
         console.warn('⚠️ No CV data found in response');
       }
@@ -2950,18 +3178,17 @@ const CVStudio: React.FC<CVStudioProps> = ({
         newParams.set('journeyId', currentJourneyId);
         console.log('✅ Preserving journeyId in URL:', currentJourneyId);
       }
-      
-      // Keep jobId for backwards compatibility
-      const finalJobId = freshJourneyData?.jobId || selectedJobId;
-      if (finalJobId) {
-        newParams.set('jobId', finalJobId);
-      }
     
       if (newType === 'cover-letter') {
-        // Switch to cover letter mode
+        // Switch to cover letter mode using standardized format
         console.log('🔄 Setting cover letter mode parameters');
-        newParams.set('type', 'cover_letter');
-        newParams.set('mode', 'cover-letter');  // Set mode to match document type
+        if (currentJourneyId) {
+          newParams.set('documentType', 'cl');
+          newParams.set('mode', 'cledit');
+        } else {
+          // Fallback for standalone mode
+          newParams.set('type', 'cover_letter');
+        }
         newParams.delete('cvId'); // Ensure cvId is not in params for cover letter mode
         
         // CRITICAL: Ensure CV data is loaded for AI generation in cover letters
@@ -3091,31 +3318,36 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
         }
         
-        // CRITICAL: Always set coverLetterId in URL if we have one
-        // This must happen AFTER all async operations complete
-        if (finalCoverLetterId) {
+        // CRITICAL: For journey mode, don't set coverLetterId in URL (journeyId is enough)
+        // Only set coverLetterId for standalone mode
+        if (!currentJourneyId && finalCoverLetterId) {
           newParams.set('coverLetterId', finalCoverLetterId);
-          newParams.delete('cvId');
-          console.log('✅ Final cover letter ID set in URL:', finalCoverLetterId);
-        } else {
-          console.warn('⚠️ No cover letter ID available for URL');
-          // If no cover letter ID was found or created, we still navigate
-          // The studio will handle creating one on load if needed
         }
+        newParams.delete('cvId');
+        console.log('✅ Cover letter mode set in URL');
       } else {
-        // Switch to CV mode
-        newParams.set('type', 'cv');
-        newParams.set('mode', 'cv');  // Set mode to match document type
+        // Switch to CV mode using standardized format
+        if (currentJourneyId) {
+          newParams.set('documentType', 'cv');
+          newParams.set('mode', 'cvedit');
+        } else {
+          // Fallback for standalone mode
+          newParams.set('type', 'cv');
+        }
         
         // Find existing CV ID from fresh journey data FIRST
         const existingCvId = freshJourneyData?.cvId || originalCvId || cvId;
         console.log('🔄 Switching to CV - Found from journey:', existingCvId);
         
+        // Remove coverLetterId param when in CV mode
+        newParams.delete('coverLetterId');
+        
         if (existingCvId) {
-          newParams.set('cvId', existingCvId);
-          // Remove coverLetterId param when in CV mode
-          newParams.delete('coverLetterId');
-          
+          // Use existing CV ID
+          if (!currentJourneyId) {
+            // Only set cvId for standalone mode
+            newParams.set('cvId', existingCvId);
+          }
           // Update state to ensure we track this cvId
           setOriginalCvId(existingCvId);
           
@@ -3127,9 +3359,10 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
         } else if (journeyInfo?.cvId) {
           // Use CV from journey
-          newParams.set('cvId', journeyInfo.cvId);
-          // Remove coverLetterId param when in CV mode
-          newParams.delete('coverLetterId');
+          if (!currentJourneyId) {
+            // Only set cvId for standalone mode
+            newParams.set('cvId', journeyInfo.cvId);
+          }
           setOriginalCvId(journeyInfo.cvId);
           try {
             await reloadCVData(journeyInfo.cvId);
@@ -3138,7 +3371,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
         } else {
           console.warn('⚠️ No CV found in any context');
-          setError('No existing CV found. Please ensure you have a CV linked to this journey.');
+          if (!currentJourneyId) {
+            setError('No existing CV found. Please ensure you have a CV linked to this journey.');
+          }
         }
       }
       
@@ -3149,12 +3384,12 @@ const CVStudio: React.FC<CVStudioProps> = ({
       console.log('🔗 ============================================');
       console.log('🔗 New document type:', newType);
       console.log('🔗 Final URL params:', {
-        type: newParams.get('type'),
+        journeyId: newParams.get('journeyId'),
+        documentType: newParams.get('documentType'),
+        type: newParams.get('type'), // Legacy fallback
         mode: newParams.get('mode'),
         cvId: newParams.get('cvId'),
-        coverLetterId: newParams.get('coverLetterId'),
-        journeyId: newParams.get('journeyId'),
-        jobId: newParams.get('jobId')
+        coverLetterId: newParams.get('coverLetterId')
       });
       console.log('🔗 Full URL:', newUrl);
       console.log('🔗 About to call router.push()...');
@@ -3170,15 +3405,22 @@ const CVStudio: React.FC<CVStudioProps> = ({
     // Still try to navigate even if there was an error, but without coverLetterId
     try {
       const fallbackParams = new URLSearchParams();
-      if (currentJourneyId) fallbackParams.set('journeyId', currentJourneyId);
-      const finalJobId = journeyInfo?.jobId || selectedJobId;
-      if (finalJobId) fallbackParams.set('jobId', finalJobId);
-      if (newType === 'cover-letter') {
-        fallbackParams.set('type', 'cover_letter');
-        fallbackParams.set('mode', 'cover-letter');
+      if (currentJourneyId) {
+        fallbackParams.set('journeyId', currentJourneyId);
+        if (newType === 'cover-letter') {
+          fallbackParams.set('documentType', 'cl');
+          fallbackParams.set('mode', 'cledit');
+        } else {
+          fallbackParams.set('documentType', 'cv');
+          fallbackParams.set('mode', 'cvedit');
+        }
       } else {
-        fallbackParams.set('type', 'cv');
-        fallbackParams.set('mode', 'cv');
+        // Fallback for standalone mode
+        if (newType === 'cover-letter') {
+          fallbackParams.set('type', 'cover_letter');
+        } else {
+          fallbackParams.set('type', 'cv');
+        }
       }
       router.push(`/studio?${fallbackParams.toString()}`);
     } catch (navError) {

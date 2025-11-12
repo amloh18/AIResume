@@ -14,9 +14,8 @@ import {
   FileText
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-import { CVProgressService } from '@/lib/services/cvProgressService';
-import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 // CVPreviewThumbnail removed - using S3 thumbnails only
+// UnifiedCVService removed - Canvas handles all data loading
 
 interface MasterCV {
   id: string;
@@ -26,6 +25,7 @@ interface MasterCV {
   isMaster: boolean;
   cvData?: any;
   templateId?: string; // Template ID reference
+  templateName?: string; // Template name for display
   template?: {
     _id: string;
     name: string;
@@ -86,36 +86,21 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   };
 
   useEffect(() => {
-    console.log('🔍 MasterCVCardOverlay - useEffect triggered');
-    console.log('🔍 MasterCVCardOverlay - masterCVData:', masterCVData);
-    console.log('🔍 MasterCVCardOverlay - userId:', userId);
-    console.log('🔍 MasterCVCardOverlay - userId type:', typeof userId);
-    console.log('🔍 MasterCVCardOverlay - userId length:', userId?.length);
-    
+    // MasterCVCardOverlay should always receive data from Canvas
+    // No fallback fetch - Canvas handles all data loading
     if (masterCVData) {
-      // Use passed Master CV data
-      console.log('🔍 MasterCVCardOverlay - Using passed masterCVData:', masterCVData);
-      console.log('🔍 MasterCVCardOverlay - Master CV details:', {
-        id: masterCVData.id,
-        title: masterCVData.title,
-        isMaster: masterCVData.isMaster,
-        status: masterCVData.status,
-        cvData: masterCVData.cvData ? 'Present' : 'Missing'
-      });
       setMasterCV(masterCVData);
       // Initialize thumbnail from masterCVData.thumbnail or metadata.thumbnailUrl
       setThumbnailUrl(masterCVData.thumbnail || masterCVData.metadata?.thumbnailUrl || null);
       setLoading(false);
       setError(null);
-    } else if (userId) {
-      // Fallback to fetching if no data passed
-      console.log('🔍 MasterCVCardOverlay - No masterCVData, fetching...');
-      fetchMasterCV();
     } else {
-      console.log('🔍 MasterCVCardOverlay - No masterCVData and no userId, setting loading to false');
+      // No master CV exists - show empty state
+      setMasterCV(null);
       setLoading(false);
+      setError(null);
     }
-  }, [userId, masterCVData]);
+  }, [masterCVData]);
 
   // Track if we've attempted to fetch thumbnail to prevent loops
   const thumbnailFetchAttemptedRef = useRef<string | null>(null);
@@ -132,101 +117,8 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   // This was causing performance issues with POST requests during initial render
   // Now we just use whatever thumbnail URL is already available in masterCV.thumbnail or masterCV.metadata.thumbnailUrl
 
-  const fetchMasterCV = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log('🔍 MasterCVCardOverlay - Fetching master CV with userId:', {
-        userId,
-        userIdType: typeof userId,
-        userIdLength: userId?.length,
-        sessionUserId: session?.user?.id
-      });
-      
-      if (!userId) {
-        throw new Error('No user ID provided');
-      }
-      
-      // Use unified service to get master CV
-      console.log('🔍 MasterCVCardOverlay - Calling UnifiedCVService.getCVs...');
-      const allCVs = await UnifiedCVService.getCVs(userId, { 
-        projection: 'summary'
-      });
-      console.log('🔍 MasterCVCardOverlay - UnifiedCVService.getCVs result:', allCVs);
-      
-      // Filter for master CVs - UnifiedCVDocument uses metadata.isMaster
-      const masterCVs = allCVs.filter(cv => {
-        const isMaster = cv.metadata?.isMaster;
-        if (typeof isMaster === 'boolean') return isMaster === true;
-        if (typeof isMaster === 'string') return isMaster === 'true';
-        return String(isMaster) === 'true';
-      });
-      
-      console.log('🔍 MasterCVCardOverlay - Unified service response:', masterCVs);
-      
-      if (masterCVs && masterCVs.length > 0) {
-        const masterCVData = masterCVs[0];
-        console.log('✅ MasterCVCardOverlay - Master CV found:', masterCVData);
-        console.log('🔍 MasterCVCardOverlay - Template data:', {
-          templateId: masterCVData.templateId,
-          templateName: masterCVData.templateName
-        });
-        
-        // Fetch full template if templateId is provided
-        let template = null;
-        if (masterCVData.templateId) {
-          try {
-            console.log('🔍 MasterCVCardOverlay - Fetching full template data for:', masterCVData.templateId);
-            const templateResponse = await fetch(`/api/templates/${masterCVData.templateId}`);
-            if (templateResponse.ok) {
-              const templateResult = await templateResponse.json();
-              if (templateResult.success && templateResult.data) {
-                template = templateResult.data;
-                console.log('✅ MasterCVCardOverlay - Template fetched successfully');
-              }
-            }
-          } catch (templateError) {
-            console.warn('⚠️ MasterCVCardOverlay - Failed to fetch template:', templateError);
-          }
-        }
-        
-        // Transform to expected format - UnifiedCVDocument format
-        const transformedMasterCV = {
-          id: masterCVData.id,
-          title: masterCVData.title,
-          lastModified: new Date(masterCVData.metadata?.lastModified || masterCVData.updatedAt).toLocaleDateString(),
-          status: masterCVData.status,
-          isMaster: masterCVData.metadata?.isMaster || true,
-          cvData: masterCVData.cvData,
-          template: template, // Include fetched template if available
-          templateId: masterCVData.templateId,
-          templateName: masterCVData.templateName,
-          isStarred: masterCVData.metadata?.starred || false,
-          thumbnail: masterCVData.metadata?.thumbnailUrl
-        };
-        
-        console.log('🔍 MasterCVCardOverlay - Transformed Master CV:', {
-          id: transformedMasterCV.id,
-          hasCvData: !!transformedMasterCV.cvData,
-          hasTemplate: !!transformedMasterCV.template,
-          templateHasGlobalStyles: !!transformedMasterCV.template?.globalStyles
-        });
-        
-        setMasterCV(transformedMasterCV);
-        // Initialize thumbnail from thumbnail or metadata.thumbnailUrl
-        setThumbnailUrl(transformedMasterCV.thumbnail || transformedMasterCV.metadata?.thumbnailUrl || null);
-      } else {
-        console.log('❌ MasterCVCardOverlay - No master CV found');
-        setError('No master CV found');
-      }
-    } catch (error) {
-      console.error('❌ MasterCVCardOverlay - Error fetching master CV:', error);
-      setError('Failed to load master CV');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed fetchMasterCV - Canvas now handles all data loading
+  // MasterCVCardOverlay receives all data via props for better performance
 
   const handleEdit = async (e: React.MouseEvent) => {
     e.stopPropagation();
