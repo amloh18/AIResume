@@ -31,14 +31,18 @@ function StudioPageContent() {
   // Get URL parameters - NEW STRUCTURE: journeyId-first approach
   const journeyId = searchParams.get('journeyId'); // PRIMARY: Journey ID for proper Application Package context
   const type = searchParams.get('type'); // 'cv' or 'cover_letter' (legacy)
-  const documentType = searchParams.get('documentType'); // 'cv' or 'cover-letter' (new format)
+  const documentType = searchParams.get('documentType'); // 'cv' or 'cl' (new format - 'cl' maps to 'cover-letter')
   const cvId = searchParams.get('cvId');
   const coverLetterId = searchParams.get('coverLetterId');
   const jobId = searchParams.get('jobId'); // Job ID for context
-  const mode = searchParams.get('mode'); // 'cv-onboarding', 'ats-edit', 'cover-letter-edit', 'document-first'
+  const mode = searchParams.get('mode'); // 'cvedit', 'cledit', 'atsedit', etc.
 
   // Determine which ID to use based on type
-  const finalDocumentType: 'cv' | 'cover-letter' = documentType === 'cover-letter' || type === 'cover_letter' ? 'cover-letter' : 'cv';
+  // Map 'cl' to 'cover-letter' for internal use, handle legacy 'cover_letter' as well
+  const finalDocumentType: 'cv' | 'cover-letter' = 
+    documentType === 'cl' || documentType === 'cover-letter' || type === 'cover_letter' 
+      ? 'cover-letter' 
+      : 'cv';
   const documentId = finalDocumentType === 'cover-letter' ? coverLetterId : cvId;
 
   // NEW APPROACH: Use journeyId for reliable Application Package context

@@ -256,13 +256,41 @@ export async function GET(request: NextRequest) {
           styling: cv.styling
         }),
         ...(projection === 'summary' && {
-          // For summary, include minimal cvData (no full structure)
+          // For summary, include cvData fields needed for completion percentage calculation
+          // Include basics (for personal info), work (for experience), education, skills, and projects
           cvData: cv.cvData ? {
             basics: cv.cvData.basics ? {
               name: cv.cvData.basics.name,
               label: cv.cvData.basics.label,
-              email: cv.cvData.basics.email
-            } : undefined
+              email: cv.cvData.basics.email,
+              phone: cv.cvData.basics.phone,
+              location: cv.cvData.basics.location,
+              summary: cv.cvData.basics.summary
+            } : undefined,
+            // Include work array for completion calculation (include all entries but limit fields per entry)
+            work: Array.isArray(cv.cvData.work) ? cv.cvData.work.map((w: any) => ({
+              name: w.name,
+              position: w.position,
+              startDate: w.startDate,
+              summary: w.summary
+            })) : undefined,
+            // Include education array for completion calculation (include all entries but limit fields)
+            education: Array.isArray(cv.cvData.education) ? cv.cvData.education.map((e: any) => ({
+              institution: e.institution,
+              area: e.area,
+              startDate: e.startDate
+            })) : undefined,
+            // Include skills array for completion calculation (include all entries but limit fields)
+            skills: Array.isArray(cv.cvData.skills) ? cv.cvData.skills.map((s: any) => ({
+              name: s.name,
+              level: s.level
+            })) : undefined,
+            // Include projects array for completion calculation (include all entries but limit fields)
+            projects: Array.isArray(cv.cvData.projects) ? cv.cvData.projects.map((p: any) => ({
+              name: p.name,
+              description: p.description,
+              url: p.url
+            })) : undefined
           } : undefined,
           templateId: cv.templateId,
           templateName: cv.templateName,
@@ -286,14 +314,15 @@ export async function GET(request: NextRequest) {
       id: String(cv.id),
       userId: userId, // Use the userId from authResult
       title: cv.title,
-      cvData: cv.cvData, // Only included for 'full' projection
+      cvData: cv.cvData, // Included for 'full' projection (complete) and 'summary' projection (limited fields for completion calculation)
       templateId: cv.templateId,
       status: cv.status,
       version: 1, // Default version
       metadata: {
         isMaster: cv.isMaster,
         lastModified: cv.lastModified,
-        createdFrom: undefined,
+        createdFrom: cv.metadata?.createdFrom,
+        createdVia: cv.metadata?.createdVia, // Preserve createdVia for ai-career-report compatibility
         tags: cv.metadata?.tags || [],
         isPublic: cv.metadata?.isPublic || false,
         viewCount: cv.viewCount,
@@ -309,7 +338,8 @@ export async function GET(request: NextRequest) {
         thumbnailGeneratedAt: projection === 'list' || projection === 'summary' 
           ? undefined 
           : cv.metadata?.thumbnailGeneratedAt,
-        starred: cv.starred
+        starred: cv.starred,
+        aiAnalysis: projection === 'full' ? cv.metadata?.aiAnalysis : undefined // Include AI analysis for full projection
       },
       createdAt: cv.createdAt,
       updatedAt: cv.updatedAt

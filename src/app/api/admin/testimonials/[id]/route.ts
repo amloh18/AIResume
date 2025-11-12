@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Testimonial from '@/models/Testimonial';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const testimonial = await Testimonial.findById(params.id).lean();
+    const testimonial = await Testimonial.findById(id).lean();
 
     if (!testimonial) {
       return NextResponse.json(
@@ -32,14 +27,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     const updateData = await request.json();
 
     const testimonial = await Testimonial.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     );
@@ -62,11 +58,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const result = await Testimonial.findByIdAndDelete(params.id);
+    const result = await Testimonial.findByIdAndDelete(id);
 
     if (!result) {
       return NextResponse.json(

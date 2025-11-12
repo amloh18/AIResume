@@ -21,6 +21,8 @@ function AICareerReportContent() {
   const stepParam = searchParams.get('step');
   const modeParam = searchParams.get('mode');
   const jobIdParam = searchParams.get('jobId');
+  const editMasterParam = searchParams.get('editMaster') === 'true';
+  const masterCVIdParam = searchParams.get('masterCVId');
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -74,9 +76,19 @@ function AICareerReportContent() {
       hasCvData: !!(state.cvData.work?.length || state.cvData.education?.length)
     });
 
-    // Priority: URL step param > Saved step (if has data) > Mode param > Default
-    // Only override if URL explicitly specifies a different step
-    if (stepParam) {
+    // Flow Detection: Determine which flow user is in
+    // Flow 3 (Edit Master): editMaster=true param present
+    // Flow 1/2 (New Master CV): No editMaster param
+    
+    // Priority: Flow 3 (editMaster) > URL step param > Saved step (if has data) > Mode param > Default
+    if (editMasterParam) {
+      // Flow 3: Master CV Edit - start at step 2 (skip step 1)
+      // Context already handles this, but ensure it's set correctly
+      if (state.currentStep !== 2) {
+        console.log('📍 Flow 3 detected: Setting step to 2 (Master CV Edit)');
+        dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
+      }
+    } else if (stepParam) {
       // URL explicitly specifies step - use it only if different from current
       const step = parseInt(stepParam);
       if (step >= 1 && step <= 3 && step !== state.currentStep) {
@@ -224,6 +236,13 @@ function AICareerReportContent() {
 
   // Safe back handler that checks authentication
   const handleSafeBack = () => {
+    // Flow 3 (Edit Master): Don't allow going back to step 1
+    if (editMasterParam && state.currentStep === 2) {
+      // In Flow 3, step 2 is the first step, so back should go to dashboard
+      router.push('/dashboard');
+      return;
+    }
+    
     if (state.currentStep > 1) {
       prevStep();
     } else {

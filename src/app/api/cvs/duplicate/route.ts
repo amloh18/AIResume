@@ -135,6 +135,18 @@ export async function POST(request: NextRequest) {
       console.log('⚠️ CV Duplicate API - Source CV missing structure, will be initialized in studio');
     }
 
+    // Set createdVia based on context:
+    // - If journeyId is provided, set to 'journey' (duplicate is always a regular CV)
+    // - Otherwise, preserve existing createdVia or leave undefined
+    let createdVia: string | undefined;
+    if (journeyId) {
+      // CV duplicated in journey step 2 - always set createdVia to 'journey' for regular CVs
+      createdVia = 'journey';
+    } else if (sourceCV.metadata?.createdVia) {
+      // Preserve existing createdVia if source has one (for non-journey duplications)
+      createdVia = sourceCV.metadata.createdVia;
+    }
+
     // Create the duplicated CV with deep copies to preserve all data
     const duplicatedCV = new CV({
       userId: toObjectId(userId),
@@ -151,6 +163,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         ...sourceCV.metadata,
         isMaster: false, // Ensure duplicated CVs are never master CVs
+        createdVia: createdVia, // Set createdVia for journey CVs
         lastModified: new Date(),
         createdFrom: sourceCV._id,
         viewCount: 0,

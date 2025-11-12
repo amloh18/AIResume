@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ITemplate } from '@/types/template';
-import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 // import EnhancedCVPreview from './EnhancedCVPreview'; // TODO: Create component if needed
 import CVPreviewContent from './CVPreviewContent';
 
@@ -19,98 +19,8 @@ const TemplatePreview: React.FC<TemplatePreviewProps> = ({
   scale = 0.3,
   className = ''
 }) => {
-  // Generate sample CV data if none provided
-  const sampleCVData: UnifiedCVDataStructure = (cvData as UnifiedCVDataStructure) || {
-    basics: {
-      name: 'John Doe',
-      label: 'Software Engineer',
-      email: 'john.doe@example.com',
-      phone: '+1 (555) 123-4567',
-      url: 'https://johndoe.dev',
-      image: '',
-      summary: 'Experienced software engineer with 5+ years of expertise in full-stack development, cloud architecture, and team leadership.',
-      location: {
-        address: '',
-        postalCode: '',
-        city: 'San Francisco',
-        countryCode: 'US',
-        region: 'CA'
-      },
-      profiles: []
-    },
-    work: [
-      {
-        name: 'Tech Corp',
-        position: 'Senior Software Engineer',
-        startDate: '2022-01',
-        endDate: 'present',
-        summary: 'Led development of microservices architecture and mentored junior developers.',
-        highlights: [
-          'Architected scalable microservices reducing system load by 40%',
-          'Led team of 5 developers in agile environment',
-          'Implemented CI/CD pipelines improving deployment efficiency'
-        ]
-      },
-      {
-        name: 'StartupXYZ',
-        position: 'Full Stack Developer',
-        startDate: '2020-06',
-        endDate: '2021-12',
-        summary: 'Developed web applications using modern technologies and best practices.',
-        highlights: [
-          'Built responsive web applications serving 10K+ users',
-          'Collaborated with cross-functional teams',
-          'Optimized database queries improving performance by 60%'
-        ]
-      }
-    ],
-    education: [
-      {
-        institution: 'University of California',
-        area: 'Computer Science',
-        studyType: 'Bachelor',
-        startDate: '2016-09',
-        endDate: '2020-05',
-        gpa: '3.8'
-      }
-    ],
-    skills: [
-      {
-        category: 'Programming Languages',
-        skills: ['JavaScript', 'TypeScript', 'Python', 'Java', 'Go']
-      },
-      {
-        category: 'Frameworks & Libraries',
-        skills: ['React', 'Node.js', 'Express', 'Next.js', 'Django']
-      },
-      {
-        category: 'Cloud & DevOps',
-        skills: ['AWS', 'Docker', 'Kubernetes', 'CI/CD', 'Terraform']
-      }
-    ],
-    projects: [
-      {
-        name: 'E-commerce Platform',
-        description: 'Full-stack e-commerce solution with payment integration',
-        highlights: ['Built with React and Node.js', 'Integrated Stripe payments', 'Deployed on AWS'],
-        keywords: [],
-        startDate: '2023-01',
-        endDate: '2023-06',
-        url: 'https://github.com/johndoe/ecommerce-platform'
-      }
-    ],
-    certificates: [],
-    languages: [
-      {
-        language: 'English',
-        fluency: 'Native'
-      },
-      {
-        language: 'Spanish',
-        fluency: 'Conversational'
-      }
-    ]
-  };
+  // Use provided CV data or empty default structure - no hardcoded sample data
+  const sampleCVData: UnifiedCVDataStructure = (cvData as UnifiedCVDataStructure) || DEFAULT_UNIFIED_CV_DATA;
 
   const previewDimensions = {
     width: 300 * scale,

@@ -628,24 +628,23 @@ export async function DELETE(request: NextRequest) {
       }
     }
 
-    // Step 2: Delete CV if it exists (but not if it's a Master CV)
+    // Step 2: Delete CV if it exists (check CV object reference only)
     if (journey.cvId) {
       try {
         console.log('🔍 CV Journey DELETE API - Checking CV for deletion:', journey.cvId);
         const cv = await CV.findById(journey.cvId);
         
         if (cv) {
-          // Hard stop for Master CV protection
-          if (cv.isMaster || cv.metadata?.isMaster) {
-            console.error(`❌ CRITICAL: Attempt to delete Master CV ${cv._id} from journey ${journeyId}. Aborting CV deletion.`);
-            // Do NOT proceed with CV deletion - skip this step
-            console.log('⚠️ CV Journey DELETE API - Skipping Master CV deletion (protected)');
-          } else {
+          // Verify CV belongs to the user before deletion (check CV object reference only)
+          const cvUserId = cv.userId.toString();
+          if (cvUserId === userId) {
             console.log('🔍 CV Journey DELETE API - Deleting CV:', journey.cvId);
             const cvResult = await CV.findByIdAndDelete(journey.cvId);
             if (cvResult) {
               console.log('✅ CV Journey DELETE API - CV deleted successfully');
             }
+          } else {
+            console.warn('⚠️ CV Journey DELETE API - CV does not belong to user, skipping deletion');
           }
         } else {
           console.log('⚠️ CV Journey DELETE API - CV not found (already deleted)');

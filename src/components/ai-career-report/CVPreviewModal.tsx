@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Eye, Calendar, MapPin, Phone, Mail, Globe, Linkedin, Github } from 'lucide-react';
+import { X, Eye } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { ExecutiveProfessionalLayoutTemplate } from '@/lib/templates/custom-renderers/ExecutiveProfessionalLayoutTemplate';
 
 interface CVPreviewModalProps {
   isOpen: boolean;
@@ -12,39 +13,6 @@ interface CVPreviewModalProps {
 }
 
 export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewModalProps) {
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    // Handle YYYY-MM format
-    if (/^\d{4}-\d{2}$/.test(dateString)) {
-      const [year, month] = dateString.split('-');
-      const date = new Date(parseInt(year), parseInt(month) - 1);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short' 
-      });
-    }
-    // Handle YYYY format
-    if (/^\d{4}$/.test(dateString)) {
-      return dateString;
-    }
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return dateString;
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short' 
-    });
-  };
-
-  const formatDateRange = (startDate: string, endDate: string, isCurrent: boolean) => {
-    if (!startDate && !endDate) return '';
-    const start = startDate ? formatDate(startDate) : '';
-    const end = isCurrent ? 'Present' : (endDate ? formatDate(endDate) : '');
-    if (!start && !end) return '';
-    if (!start) return end;
-    if (!end) return start;
-    return `${start} - ${end}`;
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -78,237 +46,13 @@ export default function CVPreviewModal({ isOpen, onClose, cvData }: CVPreviewMod
             </button>
           </div>
 
-          {/* CV Content */}
-          <div className="p-8 flex-1 overflow-y-auto min-h-0">
-            <div className="max-w-4xl mx-auto">
-              {/* Header Section */}
-              <div className="text-center mb-8">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                  {cvData.basics.name || 'Your Name'}
-                </h1>
-                <p className="text-xl text-gray-600 mb-4">
-                  {cvData.basics.label || 'Professional Title'}
-                </p>
-                
-                {/* Contact Info */}
-                <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-600">
-                  {cvData.basics.email && (
-                    <div className="flex items-center gap-1">
-                      <Mail className="w-4 h-4" />
-                      <span>{cvData.basics.email}</span>
-                    </div>
-                  )}
-                  {cvData.basics.phone && (
-                    <div className="flex items-center gap-1">
-                      <Phone className="w-4 h-4" />
-                      <span>{cvData.basics.phone}</span>
-                    </div>
-                  )}
-                  {cvData.basics.location?.city && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-4 h-4" />
-                      <span>{cvData.basics.location.city}</span>
-                    </div>
-                  )}
-                  {cvData.basics.url && (
-                    <div className="flex items-center gap-1">
-                      <Globe className="w-4 h-4" />
-                      <span>{cvData.basics.url}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Summary */}
-              {cvData.basics.summary && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-3 border-b border-gray-300 pb-1">
-                    Professional Summary
-                  </h2>
-                  <p className="text-gray-700 leading-relaxed">
-                    {cvData.basics.summary}
-                  </p>
-                </div>
-              )}
-
-              {/* Work Experience */}
-              {cvData.work && cvData.work.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-1">
-                    Work Experience
-                  </h2>
-                  <div className="space-y-6">
-                    {cvData.work.map((work, index) => (
-                      <div key={index} className="border-l-4 border-blue-500 pl-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {work.position || 'Position'}
-                            </h3>
-                            <p className="text-gray-600 font-medium">
-                              {work.name || 'Company'}
-                            </p>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {formatDateRange(work.startDate, work.endDate, !work.endDate)}
-                          </div>
-                        </div>
-                        {work.summary && (
-                          <p className="text-gray-700 mb-2">{work.summary}</p>
-                        )}
-                        {work.highlights && work.highlights.length > 0 && (
-                          <ul className="list-disc list-inside space-y-1">
-                            {work.highlights.map((highlight, i) => (
-                              <li key={i} className="text-gray-700 text-sm">
-                                {highlight}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Education */}
-              {cvData.education && cvData.education.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-1">
-                    Education
-                  </h2>
-                  <div className="space-y-4">
-                    {cvData.education.map((edu, index) => (
-                      <div key={index} className="border-l-4 border-green-500 pl-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {edu.studyType} {edu.area}
-                            </h3>
-                            <p className="text-gray-600 font-medium">
-                              {edu.institution || 'Institution'}
-                            </p>
-                            {edu.score && (
-                              <p className="text-sm text-gray-500">GPA: {edu.score}</p>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {formatDateRange(edu.startDate, edu.endDate, !edu.endDate)}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Skills */}
-              {cvData.skills && cvData.skills.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-1">
-                    Skills
-                  </h2>
-                  <div className="space-y-4">
-                    {cvData.skills.map((skill, index) => (
-                      <div key={index}>
-                        <h3 className="font-semibold text-gray-900 mb-2">
-                          {skill.category}
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          {skill.skills?.map((skillItem, i) => (
-                            <span
-                              key={i}
-                              className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                            >
-                              {skillItem}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Projects */}
-              {cvData.projects && cvData.projects.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-1">
-                    Projects
-                  </h2>
-                  <div className="space-y-4">
-                    {cvData.projects.map((project, index) => (
-                      <div key={index} className="border-l-4 border-purple-500 pl-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {project.name}
-                            </h3>
-                            {project.url && (
-                              <a
-                                href={project.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 text-sm"
-                              >
-                                {project.url}
-                              </a>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {formatDateRange(project.startDate, project.endDate, !project.endDate)}
-                          </div>
-                        </div>
-                        {project.description && (
-                          <p className="text-gray-700">{project.description}</p>
-                        )}
-                        {project.highlights && project.highlights.length > 0 && (
-                          <div className="mt-2">
-                            <div className="flex flex-wrap gap-2">
-                              {project.highlights.map((highlight, i) => (
-                                <span
-                                  key={i}
-                                  className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm"
-                                >
-                                  {highlight}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Certifications */}
-              {cvData.certificates && cvData.certificates.length > 0 && (
-                <div className="mb-8">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-1">
-                    Certifications
-                  </h2>
-                  <div className="space-y-3">
-                    {cvData.certificates.map((cert, index) => (
-                      <div key={index} className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            {cert.name}
-                          </h3>
-                          <p className="text-gray-600 text-sm">
-                            {cert.issuer}
-                          </p>
-                        </div>
-                        {cert.date && (
-                          <div className="text-sm text-gray-500">
-                            {formatDate(cert.date)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {/* CV Content - Using Executive Professional Template */}
+          <div className="p-4 flex-1 overflow-y-auto min-h-0 bg-gray-50">
+            <div className="max-w-4xl mx-auto bg-white shadow-sm">
+              <ExecutiveProfessionalLayoutTemplate
+                cvData={cvData}
+                className="preview-mode"
+              />
             </div>
           </div>
         </motion.div>

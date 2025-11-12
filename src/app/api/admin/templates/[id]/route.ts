@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Template from '@/models/Template';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const template = await Template.findById(params.id)
+    const template = await Template.findById(id)
       .populate('createdBy', 'firstName lastName email')
       .lean();
 
@@ -34,14 +29,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     const updateData = await request.json();
 
     const template = await Template.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     ).populate('createdBy', 'firstName lastName email');
@@ -64,11 +60,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const template = await Template.findById(params.id);
+    const template = await Template.findById(id);
     if (!template) {
       return NextResponse.json(
         { success: false, error: 'Template not found' },
@@ -83,7 +80,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await Template.findByIdAndDelete(params.id);
+    await Template.findByIdAndDelete(id);
 
     return NextResponse.json({ 
       success: true, 

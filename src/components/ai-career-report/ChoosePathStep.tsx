@@ -77,6 +77,10 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
   const { state, dispatch } = useAICareerReport();
   const [selectedOption, setSelectedOption] = useState<'upload' | 'manual' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Check if this is Flow 3: Master CV Edit
+  const isEditingMasterCV = typeof window !== 'undefined' && 
+    new URLSearchParams(window.location.search).get('editMaster') === 'true';
 
   const handleFileUpload = async (file: File) => {
     dispatch({ type: 'SET_UPLOADING', payload: true });
@@ -266,12 +270,35 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
     }
   };
 
+  // If editing master CV (Flow 3), show read-only message and auto-advance
+  useEffect(() => {
+    if (isEditingMasterCV) {
+      // Auto-advance to step 2 when editing master CV
+      const timer = setTimeout(() => {
+        onNext();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [isEditingMasterCV, onNext]);
+
   return (
     <div 
       className="h-screen bg-[#1A201A] flex items-center justify-center p-4 pt-4 lg:pt-8 overflow-hidden"
       onClick={handleClickOutside}
     >
       <div className="w-full max-w-7xl h-full flex flex-col justify-center">
+        {/* Flow 3: Read-only message when editing master CV */}
+        {isEditingMasterCV && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-6 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-center backdrop-blur-sm"
+          >
+            <p className="text-[#80FF00] font-medium text-lg mb-2">Master CV data is loaded</p>
+            <p className="text-white/70 text-sm">Click Next to continue editing your Master CV</p>
+          </motion.div>
+        )}
+        
         {/* Header Section */}
         <div className="text-center mb-4 lg:mb-8">
           
@@ -340,15 +367,20 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
 
               {selectedOption !== 'upload' ? (
                 <button
-                  onClick={() => setSelectedOption('upload')}
-                  className="w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-[#70e600] hover:to-[#60d600] transition-all duration-300 shadow-lg shadow-[#80FF00]/30 hover:shadow-xl hover:shadow-[#80FF00]/40"
+                  onClick={() => !isEditingMasterCV && setSelectedOption('upload')}
+                  disabled={isEditingMasterCV}
+                  className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 ${
+                    isEditingMasterCV 
+                      ? 'opacity-50 cursor-not-allowed' 
+                      : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
+                  }`}
                 >
-                  Choose File
+                  {isEditingMasterCV ? 'File Upload Disabled (Editing Master CV)' : 'Choose File'}
                 </button>
               ) : (
                 <div className="space-y-6">
-                  {/* Only show drag & drop section when not uploading */}
-                  {!state.isUploading && (
+                  {/* Only show drag & drop section when not uploading and not editing master CV */}
+                  {!state.isUploading && !isEditingMasterCV && (
                     <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center bg-white/5 backdrop-blur-sm">
                       <Upload className="h-16 w-16 text-white/40 mx-auto mb-4" />
                       <h4 className="text-xl font-semibold text-white mb-2">Drag & drop your file here</h4>
@@ -363,11 +395,19 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                     </div>
                   )}
 
+                  {isEditingMasterCV && (
+                    <div className="border-2 border-dashed border-[#80FF00]/30 rounded-xl p-8 text-center bg-[#80FF00]/5 backdrop-blur-sm">
+                      <p className="text-[#80FF00] font-medium mb-2">Master CV Editing Mode</p>
+                      <p className="text-white/70 text-sm">File upload is disabled. Your Master CV data is already loaded.</p>
+                    </div>
+                  )}
+
                   <input
                     ref={fileInputRef}
                     type="file"
                     accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                     onChange={handleFileSelect}
+                    disabled={isEditingMasterCV}
                     className="hidden"
                   />
 
@@ -433,10 +473,19 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
 
               <button
                 onClick={handleManualStart}
-                className="w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg hover:from-[#70e600] hover:to-[#60d600] transition-all duration-300 shadow-lg shadow-[#80FF00]/30 hover:shadow-xl hover:shadow-[#80FF00]/40 flex items-center justify-center gap-3"
+                disabled={isEditingMasterCV}
+                className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 flex items-center justify-center gap-3 ${
+                  isEditingMasterCV 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
+                }`}
               >
-                Create Manually
-                <ArrowRight className="h-5 w-5" />
+                {isEditingMasterCV ? 'Manual Entry Disabled (Editing Master CV)' : (
+                  <>
+                    Create Manually
+                    <ArrowRight className="h-5 w-5" />
+                  </>
+                )}
               </button>
             </div>
               </motion.div>

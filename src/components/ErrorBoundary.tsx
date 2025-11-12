@@ -12,6 +12,7 @@ interface Props {
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
   showDetails?: boolean;
+  context?: 'studio' | 'dashboard' | 'general';
 }
 
 interface State {
@@ -69,6 +70,15 @@ class ErrorBoundary extends Component<Props, State> {
 
   handleGoHome = () => {
     window.location.href = '/';
+  };
+
+  handleExitWithoutSaving = () => {
+    // Clear any pending saves
+    sessionStorage.removeItem('studioUnsavedChanges');
+    localStorage.removeItem('studioDraftData');
+    
+    // Navigate to dashboard
+    window.location.href = '/dashboard';
   };
 
   handleReportBug = () => {
@@ -163,10 +173,19 @@ class ErrorBoundary extends Component<Props, State> {
                   Try Again
                 </Button>
                 
-                <Button variant="outline" onClick={this.handleGoHome} className="flex items-center gap-2">
-                  <Home className="h-4 w-4" />
-                  Go Home
-                </Button>
+                {this.props.context === 'studio' && (
+                  <Button variant="outline" onClick={this.handleExitWithoutSaving} className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Exit Without Saving
+                  </Button>
+                )}
+                
+                {this.props.context !== 'studio' && (
+                  <Button variant="outline" onClick={this.handleGoHome} className="flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Go Home
+                  </Button>
+                )}
                 
                 <Button variant="outline" onClick={this.handleReportBug} className="flex items-center gap-2">
                   <Bug className="h-4 w-4" />

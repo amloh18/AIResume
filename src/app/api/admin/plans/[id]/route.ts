@@ -2,17 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import PricingPlan from '@/models/PricingPlan';
 
-interface RouteParams {
-  params: {
-    id: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
-    const plan = await PricingPlan.findById(params.id).lean();
+    const plan = await PricingPlan.findById(id).lean();
 
     if (!plan) {
       return NextResponse.json(
@@ -32,15 +27,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     const updateData = await request.json();
 
     // Update plan
     const plan = await PricingPlan.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     );
@@ -63,15 +59,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     const updateData = await request.json();
 
     // Update plan with PATCH (partial update)
     const plan = await PricingPlan.findByIdAndUpdate(
-      params.id,
+      id,
       updateData,
       { new: true, runValidators: true }
     );
@@ -94,12 +91,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     await getConnection();
 
     // Prevent deletion of essential plans
-    const plan = await PricingPlan.findById(params.id);
+    const plan = await PricingPlan.findById(id);
     if (!plan) {
       return NextResponse.json(
         { success: false, error: 'Plan not found' },
@@ -115,7 +113,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete plan
-    await PricingPlan.findByIdAndDelete(params.id);
+    await PricingPlan.findByIdAndDelete(id);
 
     return NextResponse.json({ 
       success: true, 

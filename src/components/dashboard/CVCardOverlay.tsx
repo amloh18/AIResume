@@ -250,7 +250,8 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           )}
 
           {/* Master Badge - Top right corner */}
-          {(cv.isMaster || cv.metadata?.isMaster) && (
+          {/* Master CV: isMaster: true OR createdVia: 'ai-career-report' */}
+          {((cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true') || cv.metadata?.createdVia === 'ai-career-report') && (
             <div className="absolute top-3 right-3">
               <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
                 Master

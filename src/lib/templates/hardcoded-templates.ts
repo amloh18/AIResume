@@ -1,5 +1,5 @@
 import { ITemplate } from '@/types/template';
-import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 
 // Import hardcoded template components
 import { DataDrivenProTemplate } from './custom-renderers/DataDrivenProTemplate';
@@ -542,118 +542,8 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
 ];
 
 // Generate preview data for hardcoded templates
+// Returns empty CV data structure - no hardcoded sample data
 export const generateHardcodedTemplatePreview = (templateId: string): UnifiedCVDataStructure => {
-  return {
-    basics: {
-      name: 'John Doe',
-      label: 'Software Engineer',
-      image: '',
-      email: 'john.doe@email.com',
-      phone: '+1 (555) 123-4567',
-      url: 'https://johndoe.dev',
-      summary: 'Experienced software engineer with expertise in full-stack development, cloud technologies, and agile methodologies. Proven track record of delivering scalable solutions and collaborating effectively with cross-functional teams.',
-      location: {
-        address: '123 Main Street',
-        postalCode: '12345',
-        city: 'San Francisco',
-        countryCode: 'US',
-        region: 'CA'
-      },
-      profiles: [
-        { network: 'LinkedIn', username: 'johndoe', url: 'https://linkedin.com/in/johndoe' },
-        { network: 'GitHub', username: 'johndoe', url: 'https://github.com/johndoe' }
-      ]
-    },
-    work: [
-      {
-        name: 'Tech Solutions Inc.',
-        position: 'Senior Software Engineer',
-        url: 'https://techsolutions.com',
-        startDate: '2021-01',
-        endDate: '',
-        summary: 'Leading development of scalable web applications and mentoring junior developers.',
-        highlights: [
-          'Developed and maintained scalable backend services using Node.js and Express',
-          'Implemented new features for customer-facing web application using React and Redux',
-          'Collaborated with product managers and designers to define project requirements',
-          'Participated in code reviews and contributed to improving code quality'
-        ]
-      },
-      {
-        name: 'StartupXYZ',
-        position: 'Full Stack Developer',
-        url: 'https://startupxyz.com',
-        startDate: '2019-06',
-        endDate: '2020-12',
-        summary: 'Built full-stack applications from scratch using modern web technologies.',
-        highlights: [
-          'Built responsive web applications using React, Node.js, and MongoDB',
-          'Implemented RESTful APIs and database design',
-          'Collaborated with design team to create user-friendly interfaces'
-        ]
-      }
-    ],
-    volunteer: [],
-    education: [
-      {
-        institution: 'University of California, Berkeley',
-        url: 'https://berkeley.edu',
-        area: 'Computer Science',
-        studyType: 'Bachelor of Science',
-        startDate: '2015-09',
-        endDate: '2019-05',
-        score: '3.8 GPA',
-        courses: []
-      }
-    ],
-    awards: [
-      {
-        title: 'Employee of the Year',
-        date: '2022',
-        awarder: 'Tech Solutions Inc.',
-        summary: 'Recognized for outstanding performance and leadership'
-      }
-    ],
-    certificates: [],
-    publications: [],
-    skills: [
-      {
-        category: 'Programming Languages',
-        skills: ['JavaScript', 'TypeScript', 'Python', 'Java', 'C++']
-      },
-      {
-        category: 'Frameworks & Libraries',
-        skills: ['React', 'Node.js', 'Express', 'Django', 'Spring Boot']
-      },
-      {
-        category: 'Tools & Technologies',
-        skills: ['Git', 'Docker', 'AWS', 'MongoDB', 'PostgreSQL']
-      }
-    ],
-    languages: [
-      { language: 'English', fluency: 'Native' },
-      { language: 'Spanish', fluency: 'Intermediate' }
-    ],
-    interests: [
-      { name: 'Technology', keywords: ['AI', 'Machine Learning', 'Web Development'] },
-      { name: 'Sports', keywords: ['Basketball', 'Running'] }
-    ],
-    references: [],
-    projects: [
-      {
-        name: 'E-commerce Platform',
-        startDate: '2023-01',
-        endDate: '2023-03',
-        description: 'Full-stack e-commerce application with user authentication, product catalog, and payment integration.',
-        highlights: [
-          'Built responsive frontend using React and Material-UI',
-          'Developed RESTful API using Node.js and Express',
-          'Implemented secure payment processing with Stripe',
-          'Deployed application on AWS with CI/CD pipeline'
-        ],
-        url: 'https://github.com/johndoe/ecommerce-platform',
-        keywords: ['React', 'Node.js', 'Express', 'MongoDB', 'Stripe', 'AWS']
-      }
-    ]
-  };
+  // Return empty default structure - no hardcoded data
+  return { ...DEFAULT_UNIFIED_CV_DATA };
 };

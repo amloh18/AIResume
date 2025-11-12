@@ -428,29 +428,14 @@ ${userName}`
   };
 
   const handleContinueJourney = (journey: any) => {
-    // Determine the appropriate mode based on journey progress
-    let mode = 'cv-onboarding'; // Default for new journeys
-    
-    if (journey.cvId) {
-      // If CV exists, determine mode based on journey status
-      if (journey.status === 'in-progress') {
-        // Check if we need ATS editing or can proceed to cover letter
-        if (journey.atsScore && journey.atsScore >= 80) {
-          mode = 'cover-letter-edit'; // Ready for cover letter
-        } else {
-          mode = 'ats-edit'; // Need to improve ATS score
-        }
-      } else {
-        mode = 'ats-edit'; // Default to ATS editing for existing CVs
-      }
-    }
-    
-    // Navigate to studio with journey context using determined mode
-    const url = `/studio?journeyId=${journey.id}&type=cv&mode=${mode}`;
-    if (journey.cvId) {
-      router.push(`${url}&cvId=${journey.cvId}`);
+    // Navigate to studio with journey context (new architecture)
+    // The studio will automatically determine document type and load appropriate data
+    if (journey.atsScore && journey.atsScore >= 80 && journey.coverLetterId) {
+      // If ATS score is good and cover letter exists, open cover letter
+      router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit`);
     } else {
-      router.push(url);
+      // Default to CV editing
+      router.push(`/studio?journeyId=${journey.id}&documentType=cv&mode=cvedit`);
     }
   };
 

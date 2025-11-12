@@ -127,6 +127,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const [isRetryingDocuments, setIsRetryingDocuments] = React.useState(false);
   const [isCreatingCoverLetter, setIsCreatingCoverLetter] = React.useState(false);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  const [isAutoCreatingCV, setIsAutoCreatingCV] = React.useState(false);
+  const [isAutoCreatingCoverLetter, setIsAutoCreatingCoverLetter] = React.useState(false);
+  const hasAttemptedAutoCreateCV = React.useRef(false);
+  const hasAttemptedAutoCreateCoverLetter = React.useRef(false);
+  const [hasMasterCV, setHasMasterCV] = React.useState(false);
+  const hasAttemptedRecreateFromMaster = React.useRef(false);
+  const [isRecreatingFromMaster, setIsRecreatingFromMaster] = React.useState(false);
   
   // New state for Step 5 functionality
   const [showMoveToAppliedModal, setShowMoveToAppliedModal] = React.useState(false);
@@ -227,6 +234,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             // CVs loaded successfully
             setUserCVs(cvs);
             
+            // Check if master CV exists
+            const masterCVExists = cvs.some((cv: CV) => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+            });
+            setHasMasterCV(masterCVExists);
+            
             // Filter freestanding CVs (not master CVs and not linked to other journeys)
             const freestanding = cvs.filter((cv: CV) => {
               const isMasterAtRoot = cv.isMaster === true;
@@ -236,11 +252,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               
               return !isMasterCV && (cv.journeyId === null || cv.journeyId === undefined);
             });
-            // Only show toast for debugging info
-            if (freestanding.length > 0) {
-              console.log('🔍 JourneyTimelineCard - Freestanding CVs available:', freestanding.length);
-            }
-            
             setFreestandingCVs(freestanding);
             
             // Find and set the linked CV
@@ -257,7 +268,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 console.log('❌ JourneyTimelineCard - CV not found in user CVs list');
                 setLinkedCV(null);
                 setCvNotFound(true);
-                toast.error('Linked CV has been deleted. Please create a new CV or link an existing one.');
+                // Don't show toast - will auto-recreate from master CV
               }
             }
           }
@@ -312,7 +323,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       } else {
         setLinkedCV(null);
         setCvNotFound(true);
-        toast.error('Linked CV has been deleted. Please create a new CV or link an existing one.');
+        // Don't show toast - will auto-recreate from master CV
       }
     } else if (journey.cvId && userCVs.length === 0) {
       // If we have a CV ID but no CVs loaded yet, try to fetch the specific CV
@@ -330,13 +341,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             console.log('❌ JourneyTimelineCard - CV not found (404)');
             setLinkedCV(null);
             setCvNotFound(true);
-            toast.error('Linked CV has been deleted. Please create a new CV or link an existing one.');
+            // Don't show toast - will auto-recreate from master CV
           }
         } catch (error) {
           console.error('❌ JourneyTimelineCard - Error fetching specific CV:', error);
           setLinkedCV(null);
           setCvNotFound(true);
-          toast.error('Linked CV has been deleted. Please create a new CV or link an existing one.');
+          // Don't show toast - will auto-recreate from master CV
         }
       };
       fetchSpecificCV();
@@ -362,6 +373,255 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       setCoverLetterNotFound(false);
     }
   }, [journey.coverLetterId, userCoverLetters]);
+
+  // Auto-recreate CV from master CV when CV is not found
+  React.useEffect(() => {
+    // Only recreate if:
+    // 1. CV ID exists but CV is not found
+    // 2. Master CV is available
+    // 3. Haven't attempted recreate yet
+    // 4. Not currently recreating
+    // 5. Journey is active
+    if (
+      journey.cvId &&
+      cvNotFound &&
+      hasMasterCV &&
+      !hasAttemptedRecreateFromMaster.current &&
+      !isRecreatingFromMaster &&
+      journey.status !== 'completed' &&
+      mongoDBUserId
+    ) {
+      hasAttemptedRecreateFromMaster.current = true;
+      setIsRecreatingFromMaster(true);
+      
+      // Auto-duplicate master CV to recreate the missing CV
+      const recreateFromMaster = async () => {
+        try {
+          // Find the master CV
+          const masterCV = userCVs.find(cv => 
+            (() => {
+              const isMasterAtRoot = cv.isMaster === true;
+              const isMasterInMetadata = cv.metadata?.isMaster === true;
+              const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+              return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+            })()
+          );
+          
+          if (!masterCV || !masterCV.id) {
+            setIsRecreatingFromMaster(false);
+            return;
+          }
+
+          // Generate smart CV name
+          const generateCVName = (jobTitle: string, company: string) => {
+            const cleanJobTitle = jobTitle?.trim() || 'Job';
+            const cleanCompany = company?.trim() || 'Company';
+            const baseCVName = `${cleanCompany}_${cleanJobTitle} | CV`;
+            
+            let finalName = baseCVName;
+            let counter = 1;
+            
+            while (userCVs.some(cv => cv.title === finalName)) {
+              finalName = `${baseCVName} ${counter}`;
+              counter++;
+            }
+            
+            return finalName;
+          };
+
+          const smartCVName = generateCVName(journey.jobTitle, journey.company);
+
+          // Call the duplicate CV API
+          const response = await fetch('/api/cvs/duplicate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sourceCvId: masterCV.id,
+              userId: mongoDBUserId,
+              customTitle: smartCVName,
+              journeyId: journey.id,
+              jobId: journey.jobId
+            })
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            
+            if (result.data?.cv?.id || result.cvId) {
+              const duplicatedCVId = result.data?.cv?.id || result.cvId;
+              
+              // Update journey via API
+              const journeyUpdateResponse = await fetch(`/api/application-journey`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  userId: mongoDBUserId,
+                  jobId: journey.jobId,
+                  cvId: duplicatedCVId,
+                  currentStep: 3,
+                  status: 'in-progress'
+                })
+              });
+              
+              if (journeyUpdateResponse.ok) {
+                // Update local state
+                updateCVId(duplicatedCVId);
+                updateCurrentStep(3);
+                updateJourneyStatus('cv-created');
+                setCvNotFound(false);
+                
+                // Update parent component
+                if (onUpdateJourney) {
+                  onUpdateJourney(journey.id, {
+                    cvId: duplicatedCVId,
+                    currentStep: 3
+                  });
+                }
+                
+                // Refresh journey data
+                if (onRefresh) {
+                  setTimeout(() => {
+                    onRefresh();
+                  }, 1000);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ JourneyTimelineCard - Error recreating CV from master:', error);
+        } finally {
+          setIsRecreatingFromMaster(false);
+        }
+      };
+      
+      recreateFromMaster();
+    }
+  }, [journey.cvId, cvNotFound, hasMasterCV, journey.status, mongoDBUserId, userCVs, journey.jobTitle, journey.company, journey.id, journey.jobId, onRefresh, onUpdateJourney, updateCVId, updateCurrentStep, updateJourneyStatus]);
+
+  // Auto-create CV when step 2 is empty (no cvId)
+  React.useEffect(() => {
+    // Only auto-create if:
+    // 1. Journey is active (not completed)
+    // 2. No CV exists
+    // 3. Haven't attempted auto-create yet
+    // 4. Not currently processing documents
+    // 5. Not in failed state
+    if (
+      !journey.cvId &&
+      journey.status !== 'completed' &&
+      journey.status !== 'processing_documents' &&
+      journey.status !== 'creation_failed' &&
+      !hasAttemptedAutoCreateCV.current &&
+      !isAutoCreatingCV &&
+      mongoDBUserId
+    ) {
+      hasAttemptedAutoCreateCV.current = true;
+      setIsAutoCreatingCV(true);
+      
+      // Auto-create CV via journey documents API
+      const createCV = async () => {
+        try {
+          const response = await fetch('/api/journey-documents/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ journeyId: journey.id })
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            // Refresh journey data
+            if (onRefresh) {
+              setTimeout(() => {
+                onRefresh();
+              }, 1000);
+            }
+            
+            // Update local state if CV ID is returned
+            if (result.data?.cvId) {
+              updateCVId(result.data.cvId);
+              if (onUpdateJourney) {
+                onUpdateJourney(journey.id, {
+                  cvId: result.data.cvId,
+                  status: 'in-progress'
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ JourneyTimelineCard - Error auto-creating CV:', error);
+        } finally {
+          setIsAutoCreatingCV(false);
+        }
+      };
+      
+      createCV();
+    }
+  }, [journey.cvId, journey.id, journey.status, mongoDBUserId, onRefresh, onUpdateJourney, updateCVId]);
+
+  // Auto-create Cover Letter when step 4 is empty (no coverLetterId) and CV exists
+  React.useEffect(() => {
+    // Only auto-create if:
+    // 1. CV exists
+    // 2. No Cover Letter exists
+    // 3. Journey is active (not completed)
+    // 4. Haven't attempted auto-create yet
+    // 5. Not currently processing documents
+    // 6. Not in failed state
+    if (
+      journey.cvId &&
+      !journey.coverLetterId &&
+      journey.status !== 'completed' &&
+      journey.status !== 'processing_documents' &&
+      journey.status !== 'creation_failed' &&
+      !hasAttemptedAutoCreateCoverLetter.current &&
+      !isAutoCreatingCoverLetter &&
+      mongoDBUserId &&
+      !cvNotFound
+    ) {
+      hasAttemptedAutoCreateCoverLetter.current = true;
+      setIsAutoCreatingCoverLetter(true);
+      
+      // Auto-create Cover Letter via journey documents API
+      const createCoverLetter = async () => {
+        try {
+          const response = await fetch('/api/journey-documents/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ journeyId: journey.id })
+          });
+          
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            // Refresh journey data
+            if (onRefresh) {
+              setTimeout(() => {
+                onRefresh();
+              }, 1000);
+            }
+            
+            // Update local state if cover letter ID is returned
+            if (result.data?.coverLetterId) {
+              updateCoverLetterId(result.data.coverLetterId);
+              if (onUpdateJourney) {
+                onUpdateJourney(journey.id, {
+                  coverLetterId: result.data.coverLetterId,
+                  status: 'in-progress'
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ JourneyTimelineCard - Error auto-creating cover letter:', error);
+        } finally {
+          setIsAutoCreatingCoverLetter(false);
+        }
+      };
+      
+      createCoverLetter();
+    }
+  }, [journey.cvId, journey.coverLetterId, journey.id, journey.status, mongoDBUserId, cvNotFound, onRefresh, onUpdateJourney, updateCoverLetterId]);
 
   // Initialize ATS score from journey data or auto-fetch if needed
   React.useEffect(() => {
@@ -554,9 +814,48 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDownloadDropdown]);
 
-  const handleCreateCV = () => {
-    updateCurrentJobId(journey.jobId);
-    router.push(`/studio?journeyId=${journey.id}&jobId=${journey.jobId}&mode=cv-tailoring`);
+  const handleCreateCV = async () => {
+    if (isRetryingDocuments) return;
+    
+    setIsRetryingDocuments(true);
+    try {
+      // Auto-create CV via journey documents API
+      const response = await fetch('/api/journey-documents/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ journeyId: journey.id })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.success) {
+        // Refresh journey data
+        if (onRefresh) {
+          setTimeout(() => {
+            onRefresh();
+          }, 1000);
+        }
+        
+        // Update local state if CV ID is returned
+        if (result.data?.cvId) {
+          updateCVId(result.data.cvId);
+          if (onUpdateJourney) {
+            onUpdateJourney(journey.id, {
+              cvId: result.data.cvId,
+              status: 'in-progress'
+            });
+          }
+        }
+      } else {
+        console.error('❌ JourneyTimelineCard - Failed to create CV:', result);
+        toast.error(result.error || result.message || 'Failed to create CV');
+      }
+    } catch (error) {
+      console.error('❌ JourneyTimelineCard - Error creating CV:', error);
+      toast.error('Failed to create CV. Please try again.');
+    } finally {
+      setIsRetryingDocuments(false);
+    }
   };
 
   const handleSelectCV = async (cvId: string) => {
@@ -2140,59 +2439,33 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   {/* Handle document creation status */}
                   {journey.cvId ? (
                     <div>
-                      {cvNotFound ? (
+                      {cvNotFound && isRecreatingFromMaster ? (
                         <div className="space-y-1">
-                          <p className="text-xs text-red-400 font-medium truncate">
-                            CV {journey.cvId.slice(-6)} - Not Found
-                          </p>
-                          <p className="text-xs text-red-300">
-                            This CV has been deleted or is unavailable
+                          <div className="flex items-center gap-2">
+                            <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
+                            <p className="text-xs text-blue-400 font-medium">Recreating CV from master...</p>
+                          </div>
+                          <p className="text-xs text-white/60">Please wait while we recreate your CV</p>
+                        </div>
+                      ) : cvNotFound && !hasMasterCV ? (
+                        <div className="space-y-2">
+                          <p className="text-xs text-yellow-400 font-medium">No Master CV Available</p>
+                          <p className="text-xs text-white/60">
+                            You need to create a master CV first before creating job-specific CVs.
                           </p>
                           <motion.button
-                            onClick={handleCreateCV}
+                            onClick={() => router.push('/ai-career-report')}
                             className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
                             <Plus className="h-3 w-3" />
-                            Create New CV
+                            Create Master CV
                           </motion.button>
-                          {freestandingCVs.length > 0 ? (
-                            <motion.button
-                              onClick={() => setExpandedStep(expandedStep === 2 ? null : 2)}
-                              className="w-full px-2 py-1 bg-white/10 hover:bg-white/20 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center"
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                            >
-                              <Copy className="h-3 w-3" />
-                              Link Existing CV
-                            </motion.button>
-                          ) : (
-                            userCVs.some(cv => 
-                              (() => {
-                                const isMasterAtRoot = cv.isMaster === true;
-                                const isMasterInMetadata = cv.metadata?.isMaster === true;
-                                const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-                                return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
-                              })()
-                            ) && (
-                              <motion.button
-                                onClick={handleDuplicateMasterCV}
-                                className="w-full px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 text-xs rounded transition-colors flex items-center gap-1 justify-center border border-blue-500/30"
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                              >
-                                <Copy className="h-3 w-3" />
-                                Duplicate Master CV
-                              </motion.button>
-                            )
-                          )}
-                          {/* Debug info */}
-                          {process.env.NODE_ENV === 'development' && (
-                            <div className="text-xs text-gray-400">
-                              Debug: freestandingCVs.length = {freestandingCVs.length}
-                            </div>
-                          )}
+                        </div>
+                      ) : cvNotFound ? (
+                        <div className="space-y-1">
+                          <p className="text-xs text-white/60">Recreating CV from master...</p>
                         </div>
                       ) : (
                         <div>
@@ -2202,47 +2475,23 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCV ? 'Ready for editing' : 'Document linked'}
                           </p>
-                          {liveProgress.status !== 'completed' && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <motion.button
-                                onClick={() => {
-                                  // Determine mode: cv-tailoring if journey step <= 2, otherwise cv-edit
-                                  const mode = journey.currentStep <= 2 ? 'cv-tailoring' : 'cv-edit';
-                                  router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}&jobId=${journey.jobId}&type=cv&mode=${mode}`);
-                                }}
-                                className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Edit
-                              </motion.button>
-                              <motion.button
-                                onClick={() => setShowCVSelector(!showCVSelector)}
-                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                              >
-                                <RefreshCw className="h-3 w-3" />
-                                Change
-                              </motion.button>
-                            </div>
-                          )}
-                          {liveProgress.status === 'completed' && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <motion.button
-                                onClick={() => {
-                                  // Determine mode: cv-tailoring if journey step <= 2, otherwise cv-edit
-                                  const mode = journey.currentStep <= 2 ? 'cv-tailoring' : 'cv-edit';
-                                  router.push(`/studio?journeyId=${journey.id}&cvId=${journey.cvId}&jobId=${journey.jobId}&type=cv&mode=${mode}`);
-                                }}
-                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Edit
-                              </motion.button>
-                            </div>
-                          )}
+                          {/* Only show Edit button */}
+                          <div className="flex items-center gap-2 mt-1">
+                            <motion.button
+                              onClick={() => {
+                                // Navigate to studio in journey mode
+                                router.push(`/studio?journeyId=${journey.id}&documentType=cv&mode=cvedit`);
+                              }}
+                              className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Edit
+                            </motion.button>
+                          </div>
                         </div>
                       )}
                     </div>
-                  ) : journey.status === 'processing_documents' ? (
+                  ) : journey.status === 'processing_documents' || isAutoCreatingCV ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
@@ -2254,29 +2503,26 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     <div className="space-y-1">
                       <p className="text-xs text-red-400 font-medium">Failed to create CV</p>
                       <p className="text-xs text-red-300">Document creation encountered an error</p>
-                      <motion.button
-                        onClick={handleRetryDocuments}
-                        disabled={isRetryingDocuments}
-                        className="w-full px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center disabled:opacity-50"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <RefreshCw className={`h-3 w-3 ${isRetryingDocuments ? 'animate-spin' : ''}`} />
-                        {isRetryingDocuments ? 'Retrying...' : 'Retry'}
-                      </motion.button>
                     </div>
-                  ) : (
-                    <div className="space-y-1">
-                      <p className="text-xs text-white/60">No CV linked</p>
+                  ) : !hasMasterCV ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-yellow-400 font-medium">No Master CV Available</p>
+                      <p className="text-xs text-white/60">
+                        You need to create a master CV first before creating job-specific CVs.
+                      </p>
                       <motion.button
-                        onClick={handleCreateCV}
+                        onClick={() => router.push('/ai-career-report')}
                         className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <Plus className="h-3 w-3" />
-                        Create CV
+                        Create Master CV
                       </motion.button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-xs text-white/60">Creating CV...</p>
                     </div>
                   )}
                 </div>
@@ -2342,10 +2588,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <motion.button
                             onClick={() => {
                               // Open Studio with CV type and ATS mode
-                              const studioUrl = `/studio?type=cv&mode=ats&cvId=${journey.cvId}&jobId=${journey.jobId}`;
+                              const studioUrl = `/studio?journeyId=${journey.id}&documentType=cv&mode=atsedit`;
                               window.open(studioUrl, '_blank');
                             }}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs rounded-lg transition-colors border border-purple-500/30"
+                            className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium rounded transition-colors border border-purple-500/30"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -2360,7 +2606,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           </div>
                           <motion.button
                             onClick={() => fetchATSScore(journey.cvId!, journey.jobId)}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs rounded-lg transition-colors border border-purple-500/30"
+                            className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium rounded transition-colors border border-purple-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             disabled={atsScoreLoading}
@@ -2398,25 +2644,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-red-300">
                             This cover letter has been deleted or is unavailable
                           </p>
-                          <motion.button
-                            onClick={handleCreateCoverLetter}
-                            disabled={isCreatingCoverLetter}
-                            className="mt-1 text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
-                            whileHover={{ scale: isCreatingCoverLetter ? 1 : 1.05 }}
-                            whileTap={{ scale: isCreatingCoverLetter ? 1 : 0.95 }}
-                          >
-                            {isCreatingCoverLetter ? (
-                              <>
-                                <RefreshCw className="h-3 w-3 animate-spin" />
-                                Creating...
-                              </>
-                            ) : (
-                              <>
-                                <Plus className="h-3 w-3" />
-                                Create New Cover Letter
-                              </>
-                            )}
-                          </motion.button>
                         </div>
                       ) : (
                         <div>
@@ -2426,9 +2653,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCoverLetter ? 'Ready for download' : 'Document linked'}
                           </p>
+                          {/* Only show Edit button */}
                           <div className="flex items-center gap-2 mt-1">
                             <motion.button
-                              onClick={() => router.push(`/studio?journeyId=${journey.id}&jobId=${journey.jobId}&coverLetterId=${journey.coverLetterId}&type=cover_letter&mode=cover-letter-edit`)}
+                              onClick={() => router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit`)}
                               className={`text-xs flex items-center gap-1 ${
                                 liveProgress.status === 'completed' 
                                   ? 'text-blue-400 hover:text-blue-300' 
@@ -2444,7 +2672,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         </div>
                       )}
                     </div>
-                  ) : journey.status === 'processing_documents' ? (
+                  ) : journey.status === 'processing_documents' || isAutoCreatingCoverLetter ? (
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
@@ -2456,37 +2684,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     <div className="space-y-1">
                       <p className="text-xs text-red-400 font-medium">Failed to create Cover Letter</p>
                       <p className="text-xs text-red-300">Document creation encountered an error</p>
-                      <motion.button
-                        onClick={handleRetryDocuments}
-                        disabled={isRetryingDocuments}
-                        className="w-full px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center disabled:opacity-50"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <RefreshCw className={`h-3 w-3 ${isRetryingDocuments ? 'animate-spin' : ''}`} />
-                        {isRetryingDocuments ? 'Retrying...' : 'Retry'}
-                      </motion.button>
                     </div>
                   ) : cvNotFound ? (
                     <div>
                       <p className="text-xs text-red-400 font-medium">CV Not Available</p>
                       <p className="text-xs text-red-300">Cannot create cover letter</p>
                     </div>
-                  ) : atsScore !== null ? (
-                    <div className="space-y-1">
-                      {/* Single Duplicate Cover Letter button */}
-                      <motion.button
-                        onClick={() => setExpandedStep(expandedStep === 4 ? null : 4)}
-                        className="w-full px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Copy className="h-3 w-3" />
-                        Duplicate Cover Letter
-                      </motion.button>
-                    </div>
                   ) : (
-                    <p className="text-xs text-white/60">ATS check required first</p>
+                    <div className="space-y-1">
+                      <p className="text-xs text-white/60">Creating cover letter...</p>
+                    </div>
                   )}
                 </div>
 
@@ -2525,7 +2732,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                 handleGetFileSizeEstimates();
                                 setShowMoveToAppliedModal(true);
                               }}
-                              className="w-full px-2 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                              className="w-full px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                               disabled={isCompletingJourney}
@@ -2536,7 +2743,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         
                           <motion.button
                           onClick={() => setDownloadModalOpen(true)}
-                          className="w-full px-2 py-2 bg-lime-600 hover:bg-lime-700 text-white text-xs rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                          className="w-full px-2 py-1 bg-lime-600 hover:bg-lime-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center min-w-0"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                           >
@@ -2554,11 +2761,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                   ? "Please link CV and Cover Letter"
                                   : "ATS score below 70%. Please improve your CV to continue."}
                               </p>
-                              <p className="text-xs text-orange-300 mt-1">
-                                {!hasCV ? "Complete Step 2 to add a CV" :
-                                 !hasCoverLetter ? "Complete Step 4 to add a Cover Letter" :
-                                 "Improve your CV content to increase ATS score"}
-                              </p>
+                              {/* Only show second line for CV/Cover Letter missing, not for ATS score */}
+                              {(!hasCV || !hasCoverLetter) && (
+                                <p className="text-xs text-orange-300 mt-1">
+                                  {!hasCV ? "Complete Step 2 to add a CV" :
+                                   !hasCoverLetter ? "Complete Step 4 to add a Cover Letter" : ""}
+                                </p>
+                              )}
                             </div>
                           </div>
                         );
@@ -2830,15 +3039,6 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
                   })()
                 );
-                console.log('🔍 JourneyTimelineCard - Master CV check:', {
-                  totalCVs: userCVs.length,
-                  hasMasterCV,
-                  cvDetails: userCVs.map(cv => ({
-                    id: cv.id,
-                    title: cv.title,
-                    isMaster: cv.isMaster
-                  }))
-                });
                 return hasMasterCV;
               })() && (
                 <motion.button
