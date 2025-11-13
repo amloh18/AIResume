@@ -30,7 +30,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
-import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
+import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 
 interface Job {
   id?: string;
@@ -120,8 +120,9 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
+  
+  // Global credit exhaustion handler
+  const { checkUsageAndHandleExhaustion } = useCreditExhaustionHandler();
   
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -313,14 +314,9 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
           if (creditCheckResponse.ok) {
             const creditCheck = await creditCheckResponse.json();
-            if (!creditCheck.allowed) {
-              // Credits exhausted - show paywall
-              setCreditInfo({
-                creditsRemaining: creditCheck.usage?.currentUsage || 0,
-                limit: creditCheck.usage?.limit || 1,
-                resetTime: creditCheck.usage?.resetTime ? new Date(creditCheck.usage.resetTime) : undefined
-              });
-              setShowPaywall(true);
+            // Use global credit exhaustion handler - it will show modal if credits exhausted
+            if (checkUsageAndHandleExhaustion(creditCheck, 'pro_monthly')) {
+              // Credits exhausted, modal is shown by handler
               if (!isAutoSave) setIsSaving(false);
               return;
             }
@@ -1020,15 +1016,6 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         </AnimatePresence>
       )}
 
-    {/* Job Creation Paywall */}
-    <JobCreationPaywall
-      isOpen={showPaywall}
-      onClose={() => setShowPaywall(false)}
-      creditsRemaining={creditInfo?.creditsRemaining || 0}
-      limit={creditInfo?.limit || 1}
-      resetTime={creditInfo?.resetTime}
-      preselectedPlanKey="pro_monthly"
-    />
     </>
   );
 };
