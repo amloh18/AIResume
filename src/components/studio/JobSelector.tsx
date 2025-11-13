@@ -19,6 +19,7 @@ import {
   CheckCircle
 } from 'lucide-react';
 import EditJobModal from '@/components/modals/EditJobModal';
+import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 
 interface Job {
   id: string;
@@ -60,9 +61,10 @@ const JobSelector: React.FC<JobSelectorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
-  const [showPaywall, setShowPaywall] = useState(false);
-  const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Global credit exhaustion handler
+  const { checkUsageAndHandleExhaustion } = useCreditExhaustionHandler();
 
   // Load jobs from database
   useEffect(() => {
@@ -512,14 +514,9 @@ const JobSelector: React.FC<JobSelectorProps> = ({
 
                       if (creditCheckResponse.ok) {
                         const creditCheck = await creditCheckResponse.json();
-                        if (!creditCheck.allowed) {
-                          // Credits exhausted - show paywall
-                          setCreditInfo({
-                            creditsRemaining: creditCheck.usage?.currentUsage || 0,
-                            limit: creditCheck.usage?.limit || 1,
-                            resetTime: creditCheck.usage?.resetTime ? new Date(creditCheck.usage.resetTime) : undefined
-                          });
-                          setShowPaywall(true);
+                        // Use global credit exhaustion handler - it will show modal if credits exhausted
+                        if (checkUsageAndHandleExhaustion(creditCheck, 'pro_monthly')) {
+                          // Credits exhausted, modal is shown by handler
                           setIsOpen(false);
                           return;
                         }

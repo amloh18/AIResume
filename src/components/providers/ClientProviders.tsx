@@ -7,6 +7,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/lib/contexts/ThemeContext';
 import PerformanceMonitor from '@/components/ui/PerformanceMonitor';
 import { PaymentModalProvider } from '@/contexts/PaymentModalContext';
+import { CreditExhaustionProvider } from '@/contexts/CreditExhaustionContext';
 import CookieConsent from '@/components/CookieConsent';
 import { ConsoleLoggerProvider } from '@/contexts/ConsoleLoggerProvider';
 import { NotificationProvider } from '@/contexts/NotificationContext';
@@ -26,14 +27,16 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
   return (
     <ThemeProvider>
       <PaymentModalProvider>
-        <ConsoleLoggerProvider>
-          <PerformanceMonitor />
-          <CookieConsent />
-          <SessionCleanup />
-          <Toaster />
-          <FeedbackPrompt />
-          {children}
-        </ConsoleLoggerProvider>
+        <CreditExhaustionProvider>
+          <ConsoleLoggerProvider>
+            <PerformanceMonitor />
+            <CookieConsent />
+            <SessionCleanup />
+            <Toaster />
+            <FeedbackPrompt />
+            {children}
+          </ConsoleLoggerProvider>
+        </CreditExhaustionProvider>
       </PaymentModalProvider>
     </ThemeProvider>
   );
