@@ -107,6 +107,81 @@ class ErrorBoundary extends Component<Props, State> {
       });
   };
 
+  getContextualMessage = () => {
+    const { context, userFriendlyError } = this.props;
+    const { error } = this.state;
+
+    if (userFriendlyError?.message) {
+      return userFriendlyError.message;
+    }
+
+    switch (context) {
+      case 'studio':
+        return 'An error occurred while editing your CV. Your changes may not have been saved.';
+      case 'dashboard':
+        return 'An error occurred while loading dashboard data. Some information may be missing.';
+      default:
+        return error?.message || 'An unexpected error occurred. Please try again.';
+    }
+  };
+
+  getContextualTitle = () => {
+    const { context, userFriendlyError } = this.props;
+
+    if (userFriendlyError?.title) {
+      return userFriendlyError.title;
+    }
+
+    switch (context) {
+      case 'studio':
+        return 'Studio Error';
+      case 'dashboard':
+        return 'Dashboard Error';
+      default:
+        return 'Something went wrong';
+    }
+  };
+
+  getContextualActions = () => {
+    const { context } = this.props;
+    const actions = [];
+
+    // Always show retry
+    actions.push(
+      <Button key="retry" onClick={this.handleRetry} className="flex items-center gap-2">
+        <RefreshCw className="h-4 w-4" />
+        Try Again
+      </Button>
+    );
+
+    // Context-specific actions
+    if (context === 'studio') {
+      actions.push(
+        <Button key="exit" variant="outline" onClick={this.handleExitWithoutSaving} className="flex items-center gap-2">
+          <Home className="h-4 w-4" />
+          Exit Without Saving
+        </Button>
+      );
+    } else {
+      actions.push(
+        <Button key="home" variant="outline" onClick={this.handleGoHome} className="flex items-center gap-2">
+          <Home className="h-4 w-4" />
+          Go Home
+        </Button>
+      );
+    }
+
+    // Always show report bug
+    actions.push(
+      <Button key="report" variant="outline" onClick={this.handleReportBug} className="flex items-center gap-2">
+        <Bug className="h-4 w-4" />
+        Report Bug
+      </Button>
+    );
+
+    return actions;
+  };
+
   render() {
     if (this.state.hasError) {
       // Use custom fallback if provided
@@ -122,14 +197,14 @@ class ErrorBoundary extends Component<Props, State> {
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <AlertTriangle className="h-5 w-5" />
-                {userFriendlyError?.title || 'Something went wrong'}
+                {this.getContextualTitle()}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* User-friendly error message */}
               <div className="space-y-2">
                 <p className="text-muted-foreground">
-                  {userFriendlyError?.message || 'An unexpected error occurred while rendering your CV preview.'}
+                  {this.getContextualMessage()}
                 </p>
                 
                 {userFriendlyError?.action && (
@@ -168,29 +243,7 @@ class ErrorBoundary extends Component<Props, State> {
 
               {/* Action buttons */}
               <div className="flex flex-wrap gap-2">
-                <Button onClick={this.handleRetry} className="flex items-center gap-2">
-                  <RefreshCw className="h-4 w-4" />
-                  Try Again
-                </Button>
-                
-                {this.props.context === 'studio' && (
-                  <Button variant="outline" onClick={this.handleExitWithoutSaving} className="flex items-center gap-2">
-                    <Home className="h-4 w-4" />
-                    Exit Without Saving
-                  </Button>
-                )}
-                
-                {this.props.context !== 'studio' && (
-                  <Button variant="outline" onClick={this.handleGoHome} className="flex items-center gap-2">
-                    <Home className="h-4 w-4" />
-                    Go Home
-                  </Button>
-                )}
-                
-                <Button variant="outline" onClick={this.handleReportBug} className="flex items-center gap-2">
-                  <Bug className="h-4 w-4" />
-                  Report Bug
-                </Button>
+                {this.getContextualActions()}
               </div>
 
               {/* Additional help */}

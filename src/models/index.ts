@@ -4,12 +4,17 @@ export { default as JobApplication, type IJobApplication } from './JobApplicatio
 
 export { default as Template, type ITemplate, type ISectionBlueprint } from './Template';
 export { default as PricingPlan, type IPricingPlan } from './PricingPlan';
-export { default as PriceRegion, type IPriceRegion } from './PriceRegion';
-export { default as CountryMapping, type ICountryMapping } from './CountryMapping';
+export { default as CountryPricing, type ICountryPricing } from './CountryPricing';
 export { default as DiscountCode, type IDiscountCode } from './DiscountCode';
 export { default as Subscription, type ISubscription } from './Subscription';
 export { default as PaymentMethod, type IPaymentMethod } from './PaymentMethod';
 export { default as Invoice, type IInvoice } from './Invoice';
+export { default as Transaction, type ITransaction } from './Transaction';
+export { default as TaxRate, type ITaxRate } from './TaxRate';
+export { default as InvoiceItem, type IInvoiceItem } from './InvoiceItem';
+export { default as SubscriptionDiscount, type ISubscriptionDiscount } from './SubscriptionDiscount';
+export { default as UserBillingProfile, type IUserBillingProfile } from './UserBillingProfile';
+export { default as WebhookLog, type IWebhookLog } from './WebhookLog';
 
 export { default as CoverLetter, type ICoverLetter } from './CoverLetter';
 export { default as Testimonial, type ITestimonial } from './Testimonial';

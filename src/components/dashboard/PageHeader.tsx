@@ -38,15 +38,15 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   return (
     <div className="mb-3 sm:mb-4">
       {/* Responsive Header - Visible on all screen sizes */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 py-3 sm:py-4 md:py-4 lg:py-4 xl:py-6">
+      <div className="flex flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4 py-3 sm:py-4 md:py-4 lg:py-4 xl:py-6">
         {/* Title and Description */}
-        <div className="min-w-0 flex-1 w-full sm:w-auto">
+        <div className="min-w-0 flex-1">
           <h1 className="text-lg sm:text-xl md:text-2xl lg:text-2xl xl:text-3xl font-bold text-gray-900 dark:text-white truncate">{title}</h1>
           <p className="text-xs sm:text-sm md:text-sm lg:text-sm xl:text-base text-gray-600 dark:text-white/60 mt-1 sm:mt-1 md:mt-1 lg:mt-1 xl:mt-2 line-clamp-1 sm:line-clamp-2">{description}</p>
         </div>
         
         {/* Search Bar and Notifications - Right side */}
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0 w-full sm:w-auto justify-end sm:justify-start">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-shrink-0">
           {/* Mobile: Show hamburger menu */}
           <button
             onClick={onMobileMenuToggle}

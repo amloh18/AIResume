@@ -14,7 +14,7 @@ export interface IJob extends Document {
     period?: 'hourly' | 'monthly' | 'yearly';
   };
   sponsorship?: 'yes' | 'no' | 'unknown';
-  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'; // Single status field for Kanban board
+  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'; // Single status field for Kanban board
   priority: 'low' | 'medium' | 'high';
   applicationDate?: Date;
   deadline?: Date;
@@ -134,7 +134,7 @@ const jobSchema = new Schema<IJob>({
   },
   status: {
     type: String,
-    enum: ['created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
+    enum: ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
     default: 'created',
     required: true
     // Note: Index defined in compound index below for Kanban board queries

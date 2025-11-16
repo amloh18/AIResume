@@ -6,6 +6,8 @@ import type { IApplicationJourney } from '@/models/ApplicationJourney';
 import { createErrorResponse } from '@/lib/db-utils';
 import mongoose from 'mongoose';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
+import jwt from 'jsonwebtoken';
+import type { MyJwtPayload } from '@/types/jwt-payload';
 
 // Type for journey object returned from Mongoose create operations
 interface LeanJourney {
@@ -112,15 +114,58 @@ async function cleanupOrphanedJourneyReferences(userId: string) {
   }
 }
 
+// Helper function to get userId from either session or extension token
+async function getUserIdFromRequest(request: NextRequest): Promise<{ userId: string; source: 'session' | 'extension' } | null> {
+  // Check if this is an extension request (with JWT token)
+  const authHeader = request.headers.get('authorization');
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Extension request with JWT token
+    const token = authHeader.substring(7);
+    
+    try {
+      const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
+      
+      if (decoded.type !== 'extension') {
+        console.log('❌ Invalid token type');
+        return null;
+      }
+      
+      const userId = decoded.userId || decoded.id || '';
+      if (!userId) {
+        console.log('❌ No userId in extension token');
+        return null;
+      }
+      
+      console.log('✅ Extension token verified for user:', userId);
+      return { userId, source: 'extension' };
+    } catch (error) {
+      console.log('❌ Invalid extension token:', error);
+      return null;
+    }
+  } else {
+    // Web interface request with session
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ No valid authentication found for web request');
+      return null;
+    }
+    
+    console.log('✅ Web session verified for user:', authResult.userId);
+    return { userId: authResult.userId, source: 'session' };
+  }
+}
+
 // GET - Get CV journeys for a user
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
     
-    // Use new authentication system
-    const authResult = await getAuthenticatedUser();
+    // Get userId from either session or extension token
+    const authInfo = await getUserIdFromRequest(request);
     
-    if (!authResult) {
+    if (!authInfo) {
       console.log('❌ CV Journey API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -128,8 +173,8 @@ export async function GET(request: NextRequest) {
       );
     }
     
-    const userId = authResult.userId;
-    console.log('🔍 CV Journey API - Using authenticated user:', authResult.userEmail);
+    const userId = authInfo.userId;
+    console.log('🔍 CV Journey API - Using authenticated user:', userId, `(${authInfo.source})`);
     
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
@@ -287,10 +332,10 @@ export async function POST(request: NextRequest) {
   try {
     await getConnection();
     
-    // Use new authentication system
-    const authResult = await getAuthenticatedUser();
+    // Get userId from either session or extension token
+    const authInfo = await getUserIdFromRequest(request);
     
-    if (!authResult) {
+    if (!authInfo) {
       console.log('❌ CV Journey POST API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -298,8 +343,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const userId = authResult.userId;
-    console.log('🔍 CV Journey POST API - Using authenticated user:', authResult.userEmail);
+    const userId = authInfo.userId;
+    console.log('🔍 CV Journey POST API - Using authenticated user:', userId, `(${authInfo.source})`);
 
     const body = await request.json();
     const {
@@ -560,10 +605,10 @@ export async function DELETE(request: NextRequest) {
     console.log('🔍 CV Journey DELETE API - Request method:', request.method);
     await getConnection();
     
-    // Use new authentication system
-    const authResult = await getAuthenticatedUser();
+    // Get userId from either session or extension token
+    const authInfo = await getUserIdFromRequest(request);
     
-    if (!authResult) {
+    if (!authInfo) {
       console.log('❌ CV Journey DELETE API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -571,7 +616,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    const userId = authResult.userId;
+    const userId = authInfo.userId;
 
     const body = await request.json();
     console.log('🔍 CV Journey DELETE API - Request body:', body);

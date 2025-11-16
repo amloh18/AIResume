@@ -72,18 +72,29 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
+  const [providerHealth, setProviderHealth] = useState<{
+    stripe: boolean | null;
+    razorpay: boolean | null;
+  }>({ stripe: null, razorpay: null });
+  const [providerHealthLoading, setProviderHealthLoading] = useState(false);
 
   // Use the shared pricing hook only if props are not provided
   // Hooks must be called unconditionally at top level
   const hookResult = usePricingPlans({});
   
-  // Use props if provided, otherwise fall back to hook result
-  const pricingPlansRaw = propPlans ?? hookResult.plans;
+  // Use props if provided and non-empty, otherwise fall back to hook result
+  // This ensures we always have plans if available from either source
+  const pricingPlansRaw = (propPlans && propPlans.length > 0) 
+    ? propPlans 
+    : (hookResult.plans.length > 0 ? hookResult.plans : (propPlans ?? hookResult.plans));
   const promotionalOffers = propPromotionalOffers ?? hookResult.promotionalOffers;
   const locationData = propLocationData ?? hookResult.locationData;
   const regionalPricing = propRegionalPricing ?? hookResult.regionalPricing;
-  const plansLoading = propPlans ? false : hookResult.loading;
-  const plansError = propPlans ? null : hookResult.error;
+  // Show loading if: we're using hook and it's loading, OR props are provided but empty and hook is loading
+  const plansLoading = (propPlans && propPlans.length > 0) 
+    ? false 
+    : hookResult.loading;
+  const plansError = (propPlans && propPlans.length > 0) ? null : hookResult.error;
   const getRegionalPrice = propGetRegionalPrice ?? hookResult.getRegionalPrice;
   const getMonthlyEquivalent = propGetMonthlyEquivalent ?? hookResult.getMonthlyEquivalent;
   const getCurrencySymbol = propGetCurrencySymbol ?? hookResult.getCurrencySymbol;
@@ -96,12 +107,45 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     ? (pricingPlansRaw as unknown as PricingPlan[])
     : [];
 
-  // Set preselected plan when plans are loaded
+  // Debug logging to help diagnose issues
   useEffect(() => {
-    if (pricingPlans.length > 0 && !selectedPlan) {
-      if (preselectedPlanKey) {
-        const plan = pricingPlans.find((p: PricingPlan) => p.key === preselectedPlanKey);
-        if (plan) {
+    if (isOpen) {
+      console.log('UniversalPaymentModal - Plans state:', {
+        propPlans: propPlans?.length ?? 0,
+        hookPlans: hookResult.plans?.length ?? 0,
+        pricingPlansRaw: pricingPlansRaw?.length ?? 0,
+        pricingPlans: pricingPlans.length,
+        plansLoading,
+        plansError,
+        usingProps: !!propPlans
+      });
+    }
+  }, [isOpen, propPlans, hookResult.plans, pricingPlansRaw, pricingPlans, plansLoading, plansError]);
+
+  // Reset selected plan when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedPlan(null);
+      setStep(1);
+      setDiscountCode('');
+      setAppliedDiscount(null);
+      setDiscountError(null);
+    }
+  }, [isOpen]);
+
+  // Set preselected plan when plans are loaded or when preselectedPlanKey changes
+  useEffect(() => {
+    // Only proceed if modal is open and we have plans
+    if (!isOpen || pricingPlans.length === 0) {
+      return;
+    }
+
+    if (preselectedPlanKey) {
+      // Always set the preselected plan, even if one is already selected
+      const plan = pricingPlans.find((p: PricingPlan) => p.key === preselectedPlanKey);
+      if (plan) {
+        // Only update if it's different from current selection
+        if (!selectedPlan || selectedPlan.key !== preselectedPlanKey) {
           // Attach regional pricing to preselected plan
           const dbPlan = plan as unknown as DatabasePricingPlan;
           // Determine the correct price based on plan key and billing interval
@@ -135,7 +179,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             regionalPricing: {
               price: finalPrice || planPrice || 0,
               currencySymbol: currencySymbol,
-              currency: regionalPricing?.currency || 'USD'
+              currency: regionalPricing?.currency || locationData?.currency || 'USD'
             },
             durationInfo: monthlyEquivalent.showMonthly ? {
               displayText: monthlyEquivalent.price
@@ -144,53 +188,66 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           setSelectedPlan(planWithPricing);
         }
       } else {
-        // Default to first paid plan (not free)
-        const paidPlan = pricingPlans.find((p: PricingPlan) => p.key !== 'free');
-        if (paidPlan) {
-          // Attach regional pricing to default plan
-          const dbPlan = paidPlan as unknown as DatabasePricingPlan;
-          // Determine the correct price based on plan key and billing interval
-          let planPrice = 0;
-          if (paidPlan.key === 'pro_monthly') {
-            planPrice = dbPlan.price_monthly || 0;
-          } else if (paidPlan.key === 'pro_quarterly') {
-            planPrice = dbPlan.price_quarterly || 0;
-          } else if (paidPlan.key === 'pro_yearly') {
-            planPrice = dbPlan.price_yearly || 0;
-          } else if (paidPlan.key === 'day_pass') {
-            planPrice = dbPlan.price_one_time || 0;
-          } else {
-            planPrice = getEffectivePrice(dbPlan) || 0;
-          }
-          
-          const currencySymbol = getCurrencySymbol();
-          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
-          const regionalPriceStr = getRegionalPrice(dbPlan);
-          // Extract numeric price from regional price string
-          const extractNumericFromString = (priceString: string): number => {
-            if (!priceString) return 0;
-            let cleaned = priceString.replace(/[^\d.,]/g, '');
-            cleaned = cleaned.replace(/,/g, '');
-            return parseFloat(cleaned) || 0;
-          };
-          const finalPrice = regionalPriceStr ? extractNumericFromString(regionalPriceStr) : planPrice;
-          
-          const planWithPricing = {
-            ...paidPlan,
-            regionalPricing: {
-              price: finalPrice || planPrice || 0,
-              currencySymbol: currencySymbol,
-              currency: regionalPricing?.currency || 'USD'
-            },
-            durationInfo: monthlyEquivalent.showMonthly ? {
-              displayText: monthlyEquivalent.price
-            } : undefined
-          };
-          setSelectedPlan(planWithPricing);
+        console.warn(`Plan with key "${preselectedPlanKey}" not found in pricing plans`);
+      }
+    } else if (!selectedPlan && pricingPlans.length > 0) {
+      // Default to first paid plan (prefer professional plans)
+      // Try to find a professional plan first
+      const professionalPlan = pricingPlans.find((p: PricingPlan) => 
+        p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_yearly'
+      );
+      
+      // If no professional plan, try day pass
+      const dayPassPlan = pricingPlans.find((p: PricingPlan) => p.key === 'day_pass');
+      
+      // Fallback to first paid plan (not free)
+      const paidPlan = professionalPlan || dayPassPlan || pricingPlans.find((p: PricingPlan) => p.key !== 'free');
+      
+      if (paidPlan) {
+        // Attach regional pricing to default plan
+        const dbPlan = paidPlan as unknown as DatabasePricingPlan;
+        // Determine the correct price based on plan key and billing interval
+        let planPrice = 0;
+        if (paidPlan.key === 'pro_monthly') {
+          planPrice = dbPlan.price_monthly || 0;
+        } else if (paidPlan.key === 'pro_quarterly') {
+          planPrice = dbPlan.price_quarterly || 0;
+        } else if (paidPlan.key === 'pro_yearly') {
+          planPrice = dbPlan.price_yearly || 0;
+        } else if (paidPlan.key === 'day_pass') {
+          planPrice = dbPlan.price_one_time || 0;
+        } else {
+          planPrice = getEffectivePrice(dbPlan) || 0;
         }
+        
+        // Use regional currency symbol, not hardcoded
+        const currencySymbol = getCurrencySymbol();
+        const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+        const regionalPriceStr = getRegionalPrice(dbPlan);
+        // Extract numeric price from regional price string
+        const extractNumericFromString = (priceString: string): number => {
+          if (!priceString) return 0;
+          let cleaned = priceString.replace(/[^\d.,]/g, '');
+          cleaned = cleaned.replace(/,/g, '');
+          return parseFloat(cleaned) || 0;
+        };
+        const finalPrice = regionalPriceStr ? extractNumericFromString(regionalPriceStr) : planPrice;
+        
+        const planWithPricing = {
+          ...paidPlan,
+          regionalPricing: {
+            price: finalPrice || planPrice || 0,
+            currencySymbol: currencySymbol,
+            currency: regionalPricing?.currency || locationData?.currency || 'USD'
+          },
+          durationInfo: monthlyEquivalent.showMonthly ? {
+            displayText: monthlyEquivalent.price
+          } : undefined
+        };
+        setSelectedPlan(planWithPricing);
       }
     }
-  }, [pricingPlans, preselectedPlanKey, selectedPlan, getEffectivePrice, getCurrencySymbol, getMonthlyEquivalent, regionalPricing]);
+  }, [pricingPlans, preselectedPlanKey, isOpen, currentUserPlan, getEffectivePrice, getCurrencySymbol, getMonthlyEquivalent, regionalPricing, locationData, getRegionalPrice, selectedPlan]);
 
   // Check if any plans have promotional pricing
   useEffect(() => {
@@ -238,6 +295,51 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       setPaymentProvider(locationData.paymentPartner);
     }
   }, [locationData]);
+
+  // Check provider health when modal opens
+  useEffect(() => {
+    const checkProviderHealth = async (provider: 'stripe' | 'razorpay') => {
+      try {
+        const response = await fetch(`/api/payment/${provider}/health`);
+        const data = await response.json();
+        return data.healthy === true;
+      } catch {
+        return false;
+      }
+    };
+
+    const checkAllProviders = async () => {
+      if (!isOpen) return;
+      
+      setProviderHealthLoading(true);
+      try {
+        const [stripeHealthy, razorpayHealthy] = await Promise.all([
+          checkProviderHealth('stripe'),
+          checkProviderHealth('razorpay')
+        ]);
+
+        setProviderHealth({
+          stripe: stripeHealthy,
+          razorpay: razorpayHealthy
+        });
+
+        // Auto-switch to healthy provider if current provider is down
+        if (paymentProvider === 'stripe' && !stripeHealthy && razorpayHealthy) {
+          console.warn('Stripe is down, switching to Razorpay');
+          setPaymentProvider('razorpay');
+        } else if (paymentProvider === 'razorpay' && !razorpayHealthy && stripeHealthy) {
+          console.warn('Razorpay is down, switching to Stripe');
+          setPaymentProvider('stripe');
+        }
+      } catch (error) {
+        console.error('Error checking provider health:', error);
+      } finally {
+        setProviderHealthLoading(false);
+      }
+    };
+
+    checkAllProviders();
+  }, [isOpen, paymentProvider]);
 
   const applyDiscountCode = async () => {
     if (!discountCode.trim() || !selectedPlan) return;
@@ -299,13 +401,38 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   const handleRazorpayCheckout = async (checkoutData: any) => {
     try {
+      // Get user information for prefill (if available)
+      let userName = '';
+      let userEmail = '';
+      let userContact = '';
+      
+      try {
+        const userResponse = await fetch('/api/user/current');
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          if (userData.user) {
+            userName = `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim() || userData.user.email || '';
+            userEmail = userData.user.email || '';
+            userContact = userData.user.phone || '';
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch user info for prefill:', err);
+      }
+
+      // According to Razorpay docs: amount should be in currency subunits (paise for INR)
+      // The amount from server is already in paise, ensure it's a number
+      const amount = typeof checkoutData.amount === 'string' 
+        ? parseInt(checkoutData.amount, 10) 
+        : Math.round(checkoutData.amount);
+
       const options = {
         key: checkoutData.key_id || (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string),
-        amount: checkoutData.amount,
-        currency: checkoutData.currency,
+        amount: amount, // Amount in currency subunits (paise for INR)
+        currency: checkoutData.currency.toLowerCase(), // Razorpay expects lowercase currency
         name: 'CV Circle',
         description: `${selectedPlan?.name} Subscription`,
-        order_id: checkoutData.order_id,
+        order_id: checkoutData.order_id, // Mandatory: Order ID from server
         handler: async function (response: any) {
           // Payment successful - verify and process
           try {
@@ -335,8 +462,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           }
         },
         prefill: {
-          name: '',
-          email: '',
+          name: userName,
+          email: userEmail,
+          contact: userContact, // Phone number improves conversion rates per Razorpay docs
         },
         theme: {
           color: '#84cc16' // lime-500
@@ -345,14 +473,36 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           ondismiss: function() {
             setLoading(false);
           }
+        },
+        // Handle payment failure
+        'onPayment.failed': function(response: any) {
+          console.error('Payment failed:', response);
+          setLoading(false);
+          alert(`Payment failed: ${response.error?.description || response.error?.reason || 'Unknown error'}. Please try again.`);
         }
       };
+
+      // Validate required fields per Razorpay documentation
+      if (!options.key) {
+        throw new Error('Razorpay key ID is missing');
+      }
+      if (!options.order_id) {
+        throw new Error('Order ID is missing');
+      }
+      if (!amount || amount <= 0) {
+        throw new Error('Invalid payment amount');
+      }
+      if (!options.currency || options.currency.length !== 3) {
+        throw new Error('Invalid currency code');
+      }
 
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error) {
       console.error('Razorpay checkout error:', error);
-      throw new Error('Failed to open Razorpay checkout');
+      const errorMsg = error instanceof Error ? error.message : 'Failed to open Razorpay checkout';
+      alert(`Payment Error: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
   };
 
@@ -585,12 +735,60 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             console.log('Stripe payment intent:', data.client_secret);
           }
         } else {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to create checkout session');
+          let errorMessage = 'Failed to create checkout session';
+          let shouldRetryWithStripe = false;
+          
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.details || errorMessage;
+            console.error('Checkout session error:', errorData);
+            
+            // If currency is not supported by Razorpay, automatically retry with Stripe
+            if (errorData.unsupportedCurrency && errorData.suggestedProvider === 'stripe' && paymentProvider === 'razorpay') {
+              console.log('Currency not supported by Razorpay, switching to Stripe');
+              shouldRetryWithStripe = true;
+              setPaymentProvider('stripe');
+              
+              // Retry the payment with Stripe
+              const retryBody = {
+                planKey: selectedPlan?.key,
+                interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
+                discountCode: appliedDiscount?.code || undefined,
+                couponCode: appliedDiscount?.code || undefined,
+                provider: 'stripe',
+                returnUrl: returnUrl || window.location.href,
+                triggerContext
+              };
+              
+              const retryResponse = await fetch('/api/checkout/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(retryBody)
+              });
+              
+              if (retryResponse.ok) {
+                const retryData = await retryResponse.json();
+                if (retryData.redirect_url) {
+                  window.location.href = retryData.redirect_url;
+                  return; // Exit early, redirecting to Stripe
+                }
+              }
+            }
+          } catch (parseError) {
+            const errorText = await response.text();
+            console.error('Failed to parse error response:', errorText);
+            errorMessage = `Server error (${response.status}): ${errorText.substring(0, 100)}`;
+          }
+          
+          if (!shouldRetryWithStripe) {
+            throw new Error(errorMessage);
+          }
         }
       }
     } catch (error) {
       console.error('Error processing payment:', error);
+      const errorMsg = error instanceof Error ? error.message : 'An unknown error occurred';
+      alert(`Payment Error: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -635,14 +833,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[95] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] sm:w-[90%] max-w-6xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] sm:w-[90%] max-w-6xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col relative z-[101]"
       >
         {/* Header */}
         <div className="flex items-start sm:items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -727,15 +925,71 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   </div>
                 </div>
 
+                {/* Selected Plan Display (if preselected) */}
+                {selectedPlan && preselectedPlanKey && (
+                  <div className="mb-6 p-4 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-xl">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                          Selected Plan: {selectedPlan.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          {(() => {
+                            const billingInterval = getBillingInterval(selectedPlan);
+                            if (billingInterval === 'one-time') {
+                              return 'One-time payment';
+                            } else if (billingInterval === 'yearly') {
+                              return 'Billed yearly';
+                            } else if (billingInterval === 'quarterly') {
+                              return 'Billed quarterly';
+                            } else {
+                              return 'Billed monthly';
+                            }
+                          })()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                          {(() => {
+                            const regionalPrice = (selectedPlan as any).regionalPricing;
+                            const currencySymbol = regionalPrice?.currencySymbol || getCurrencySymbol();
+                            return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedPlan(null)}
+                      className="mt-3 text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300"
+                    >
+                      Change Plan
+                    </button>
+                  </div>
+                )}
+
                 {/* Plans Grid */}
                 {(() => {
+                  // Define plan hierarchy for upgrade logic
+                  const planOrder: Record<string, number> = { 
+                    free: 0, 
+                    day_pass: 1, 
+                    pro_monthly: 2, 
+                    pro_quarterly: 3, 
+                    pro_yearly: 4 
+                  };
+                  
+                  // Filter plans based on category
+                  // Show all plans in the selected category (users should be able to see all options)
                   const filteredPlans = Array.isArray(pricingPlans) && pricingPlans.length > 0 
                     ? pricingPlans.filter(plan => {
-                        if (selectedCategory === 'essential') {
-                          return plan.key === 'free' || plan.key === 'day_pass';
-                        } else {
-                          return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
-                        }
+                        // Category filter - show all plans in the selected category
+                        const matchesCategory = selectedCategory === 'essential'
+                          ? (plan.key === 'free' || plan.key === 'day_pass')
+                          : (plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly');
+                        
+                        // Return true if plan matches the category
+                        // This allows users to see all plans in the category, not just upgrades
+                        return matchesCategory;
                       })
                     : [];
                   
@@ -758,12 +1012,15 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
                           const isCurrent = isCurrentPlan(plan);
                           const isSelected = selectedPlan?.key === plan.key;
+                          
+                          // If this is the preselected plan, ensure it's selected
+                          const isPreselected = preselectedPlanKey === plan.key;
 
                           return (
                             <motion.div
                               key={plan.key}
                               className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl rounded-2xl p-4 flex flex-col cursor-pointer transition-all ${
-                                isSelected
+                                isSelected || isPreselected
                                   ? 'border-2 border-lime-400 ring-2 ring-lime-400/50'
                                   : 'border border-white/10 dark:border-gray-700'
                               }`}
@@ -771,6 +1028,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.6, delay: 0.1 * index }}
                               onClick={() => {
+                                // If this is the preselected plan and already selected, don't re-select
+                                if (isPreselected && isSelected) {
+                                  return;
+                                }
+                                
                                 // Determine the correct FULL price based on plan key and billing interval
                                 // IMPORTANT: Use the actual plan price, not regional price string which might be monthly equivalent
                                 let planPrice = 0;
@@ -815,7 +1077,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   regionalPricing: {
                                     price: finalPrice, // This is the FULL price for the selected interval
                                     currencySymbol: currencySymbol,
-                                    currency: regionalPricing?.currency || 'USD'
+                                    currency: regionalPricing?.currency || locationData?.currency || 'USD'
                                   },
                                   durationInfo: monthlyEquivalent.showMonthly ? {
                                     displayText: monthlyEquivalent.price
@@ -964,8 +1226,20 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       ) : (
                         <div className="col-span-full text-center py-8">
                           <p className="text-gray-500 dark:text-gray-400">
-                            {plansLoading ? 'Loading plans...' : 'No plans available'}
+                            {plansLoading ? 'Loading plans...' : (
+                              pricingPlans.length === 0 
+                                ? 'No plans available. Please try refreshing the page.'
+                                : `No ${selectedCategory === 'essential' ? 'essential' : 'professional'} plans available. Try switching categories.`
+                            )}
                           </p>
+                          {!plansLoading && pricingPlans.length > 0 && (
+                            <button
+                              onClick={() => setSelectedCategory(selectedCategory === 'essential' ? 'professional' : 'essential')}
+                              className="mt-4 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                              Switch to {selectedCategory === 'essential' ? 'Professional' : 'Essential'} Plans
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1033,15 +1307,17 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       <div className="mb-2">
                         <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">
                           {(() => {
+                            if (!selectedPlan) return 'No Plan Selected';
                             if (selectedPlan.key === 'pro_yearly') return 'Pro Annual Plan';
                             if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
                             if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
                             if (selectedPlan.key === 'day_pass') return 'Day Pass';
-                            return selectedPlan.name;
+                            return selectedPlan.name || `Plan ${selectedPlan.key}`;
                           })()}
                         </h3>
                         <p className="text-gray-600 dark:text-white/70 text-xs sm:text-sm">
                           {(() => {
+                            if (!selectedPlan) return 'Please select a plan';
                             const billingInterval = getBillingInterval(selectedPlan);
                             if (billingInterval === 'one-time') {
                               return 'One-time payment. Access to all premium features.';
@@ -1057,6 +1333,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       </div>
                       <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                         {(() => {
+                          if (!selectedPlan) return 'N/A';
                           const regionalPrice = (selectedPlan as any).regionalPricing;
                           const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
                           return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
@@ -1157,10 +1434,51 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       </div>
                     </div>
 
+                    {/* Provider Health Status */}
+                    {providerHealthLoading ? (
+                      <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm text-gray-600 dark:text-gray-400">
+                        Checking payment provider status...
+                      </div>
+                    ) : (
+                      <>
+                        {providerHealth[paymentProvider] === false && (
+                          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                              <div className="flex-1">
+                                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                                  {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is currently unavailable
+                                </p>
+                                <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+                                  {providerHealth.stripe && providerHealth.razorpay ? (
+                                    'Both providers are available. Please try again.'
+                                  ) : providerHealth.stripe ? (
+                                    'Switched to Stripe. Please try again.'
+                                  ) : providerHealth.razorpay ? (
+                                    'Switched to Razorpay. Please try again.'
+                                  ) : (
+                                    'Payment processing is temporarily unavailable. Please try again later.'
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {providerHealth[paymentProvider] === true && (
+                          <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
+                            <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
+                              <Check className="w-4 h-4" />
+                              <span>Payment via {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is available</span>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+
                     {/* Proceed to Payment Button */}
                     <button
                       onClick={handlePayment}
-                      disabled={loading}
+                      disabled={loading || providerHealth[paymentProvider] === false || providerHealthLoading}
                       className="w-full py-3 sm:py-3.5 bg-lime-500 hover:bg-lime-600 dark:bg-[rgb(129,255,0)] dark:hover:bg-[rgb(110,230,0)] text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm sm:text-base"
                     >
                       {loading ? (

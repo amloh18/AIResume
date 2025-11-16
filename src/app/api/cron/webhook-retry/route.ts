@@ -1,0 +1,113 @@
+import { NextRequest, NextResponse } from 'next/server';
+import webhookRetryService from '@/lib/services/webhookRetryService';
+
+/**
+ * Webhook Retry Cron Endpoint
+ * Should be called periodically (e.g., every 15 minutes) by a cron service
+ * 
+ * Security: Requires CRON_SECRET or CRON_API_KEY authentication
+ */
+const verifyCronSecret = (request: NextRequest): boolean => {
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET || process.env.CRON_API_KEY;
+  
+  return cronSecret ? authHeader === `Bearer ${cronSecret}` : false;
+};
+
+export async function GET(request: NextRequest) {
+  return POST(request);
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verify cron secret
+    if (!verifyCronSecret(request)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const webhookId = searchParams.get('webhookId'); // Optional: retry specific webhook
+
+    const results: any = {
+      timestamp: new Date().toISOString(),
+      retried: [],
+      failed: [],
+      skipped: []
+    };
+
+    if (webhookId) {
+      // Retry specific webhook
+      const result = await webhookRetryService.retryFailedWebhook(webhookId);
+      if (result.success) {
+        results.retried.push({
+          webhookId: result.webhookLogId,
+          retryCount: result.retryCount
+        });
+      } else {
+        results.failed.push({
+          webhookId: result.webhookLogId,
+          retryCount: result.retryCount,
+          error: result.error
+        });
+      }
+    } else {
+      // Get failed webhooks ready for retry
+      const failedWebhooks = await webhookRetryService.getFailedWebhooks(limit);
+
+      console.log(`Found ${failedWebhooks.length} webhooks ready for retry`);
+
+      // Retry each webhook
+      for (const webhook of failedWebhooks) {
+        try {
+          const result = await webhookRetryService.retryFailedWebhook(webhook._id.toString());
+          
+          if (result.success) {
+            results.retried.push({
+              webhookId: result.webhookLogId,
+              retryCount: result.retryCount,
+              provider: webhook.provider,
+              eventType: webhook.eventType
+            });
+          } else {
+            results.failed.push({
+              webhookId: result.webhookLogId,
+              retryCount: result.retryCount,
+              error: result.error,
+              provider: webhook.provider,
+              eventType: webhook.eventType
+            });
+          }
+        } catch (error: any) {
+          results.failed.push({
+            webhookId: webhook._id.toString(),
+            error: error.message,
+            provider: webhook.provider,
+            eventType: webhook.eventType
+          });
+        }
+      }
+    }
+
+    // Get statistics
+    const stats = await webhookRetryService.getRetryStatistics();
+
+    return NextResponse.json({
+      success: true,
+      message: 'Webhook retry completed',
+      results,
+      statistics: stats
+    });
+  } catch (error: any) {
+    console.error('Error in webhook retry cron:', error);
+    return NextResponse.json(
+      { 
+        success: false,
+        error: 'Internal server error',
+        message: error.message 
+      },
+      { status: 500 }
+    );
+  }
+}
+

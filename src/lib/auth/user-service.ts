@@ -17,6 +17,7 @@ export interface AuthenticatedUser {
   role: string;
   planKey: string;
   subscriptionStatus?: string;
+  requiresTwoFactor?: boolean; // Flag to indicate 2FA is required
 }
 
 export interface AuthenticationResult {
