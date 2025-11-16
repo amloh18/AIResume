@@ -6,12 +6,42 @@ import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
 import { callGeminiWithFallback } from '@/lib/utils/gemini-api-helper';
+import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from '@/lib/utils/extension-errors';
+import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
+import crypto from 'crypto';
+
+// In-memory cache for CV match results (in production, use Redis)
+const matchCache = new Map<string, { result: any; expiresAt: number }>();
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+// Cleanup expired cache entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of Array.from(matchCache.entries())) {
+    if (now > value.expiresAt) {
+      matchCache.delete(key);
+    }
+  }
+}, 5 * 60 * 1000); // Cleanup every 5 minutes
+
+/**
+ * Generate cache key from job description
+ */
+function generateCacheKey(userId: string, jobDescription: string, jobTitle?: string, company?: string): string {
+  const hash = crypto
+    .createHash('sha256')
+    .update(`${userId}-${jobDescription}-${jobTitle || ''}-${company || ''}`)
+    .digest('hex')
+    .substring(0, 16);
+  return `cv-match-${userId}-${hash}`;
+}
 
 export async function POST(request: NextRequest) {
   try {
     await getConnection();
     
     let userId: string;
+    let source = 'web';
     
     // Check if this is an extension request (with JWT token)
     const authHeader = request.headers.get('authorization');
@@ -26,17 +56,26 @@ export async function POST(request: NextRequest) {
         if (decoded.type !== 'extension') {
           console.log('❌ CV Match Analysis API - Invalid token type');
           return NextResponse.json(
-            { error: 'Invalid token type' },
+            formatExtensionError(
+              ExtensionErrorCode.AUTH_INVALID,
+              'Invalid token type. This endpoint requires an extension token.'
+            ),
             { status: 401 }
           );
         }
         
         userId = decoded.userId || '';
+        source = 'extension';
         console.log('✅ CV Match Analysis API - Extension token verified for user:', userId);
-      } catch (error) {
+      } catch (error: any) {
         console.log('❌ CV Match Analysis API - Invalid extension token:', error);
         return NextResponse.json(
-          { error: 'Invalid token' },
+          formatExtensionError(
+            ExtensionErrorCode.AUTH_INVALID,
+            error.name === 'TokenExpiredError' 
+              ? 'Token has expired. Please refresh your token.'
+              : 'Invalid token. Please sign in again.'
+          ),
           { status: 401 }
         );
       }
@@ -56,10 +95,48 @@ export async function POST(request: NextRequest) {
       console.log('✅ CV Match Analysis API - Web session verified for user:', userId);
     }
     
+    // Rate limiting for extension requests
+    if (source === 'extension') {
+      const rateLimitResult = await rateLimiter.checkLimit(
+        { userId, path: '/api/jobs/analyze-cv-match' },
+        rateLimitConfigs.ai // Use AI rate limit config (20 requests per hour)
+      );
+      
+      if (!rateLimitResult.allowed) {
+        console.log('❌ CV Match Analysis API - Rate limit exceeded for user:', userId);
+        return NextResponse.json(
+          formatExtensionError(
+            ExtensionErrorCode.RATE_LIMIT_EXCEEDED,
+            `Too many CV match requests. Please wait ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.`,
+            undefined,
+            true,
+            Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+          ),
+          { 
+            status: 429,
+            headers: {
+              'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
+              'X-RateLimit-Limit': rateLimitConfigs.ai.maxRequests.toString(),
+              'X-RateLimit-Remaining': rateLimitResult.remaining.toString()
+            }
+          }
+        );
+      }
+    }
+    
     const body = await request.json();
     const { jobDescription, jobTitle, company } = body;
     
     if (!jobDescription) {
+      if (source === 'extension') {
+        return NextResponse.json(
+          formatExtensionError(
+            ExtensionErrorCode.JOB_VALIDATION_FAILED,
+            'Job description is required'
+          ),
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: 'Job description is required' },
         { status: 400 }
@@ -90,24 +167,100 @@ export async function POST(request: NextRequest) {
     }
     
     if (!masterCV || !masterCV.metadata?.aiAnalysis) {
+      if (source === 'extension') {
+        return NextResponse.json(
+          formatExtensionError(
+            ExtensionErrorCode.CV_NOT_FOUND,
+            'Master CV or AI analysis not found. Please create a master CV on cvcircle.io'
+          ),
+          { status: 404 }
+        );
+      }
       return NextResponse.json(
         { error: 'Master CV or AI analysis not found. Please create a master CV on cvcircle.io' },
         { status: 404 }
       );
     }
     
-    // Use AI to analyze match
-    const matchResult = await analyzeCVMatchWithAI(
-      masterCV.metadata.aiAnalysis,
-      masterCV.cvData,
-      jobDescription,
-      jobTitle,
-      company
-    );
+    // Check cache first
+    const cacheKey = generateCacheKey(userId, jobDescription, jobTitle, company);
+    const cached = matchCache.get(cacheKey);
     
-    return NextResponse.json(matchResult);
-  } catch (error) {
+    if (cached && Date.now() < cached.expiresAt) {
+      console.log('✅ CV Match Analysis API - Returning cached result');
+      if (source === 'extension') {
+        return NextResponse.json(formatExtensionSuccess(cached.result));
+      }
+      return NextResponse.json(cached.result);
+    }
+    
+    // Use AI to analyze match with timeout
+    let matchResult;
+    try {
+      matchResult = await Promise.race([
+        analyzeCVMatchWithAI(
+          masterCV.metadata.aiAnalysis,
+          masterCV.cvData,
+          jobDescription,
+          jobTitle,
+          company
+        ),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('CV match analysis timed out')), 30000) // 30 second timeout
+        )
+      ]) as any;
+      
+      // Cache the result
+      matchCache.set(cacheKey, {
+        result: matchResult,
+        expiresAt: Date.now() + CACHE_TTL_MS
+      });
+      
+      if (source === 'extension') {
+        return NextResponse.json(formatExtensionSuccess(matchResult));
+      }
+      return NextResponse.json(matchResult);
+    } catch (timeoutError: any) {
+      console.error('❌ CV Match Analysis API - Timeout or error:', timeoutError);
+      
+      if (source === 'extension') {
+        return NextResponse.json(
+          formatExtensionError(
+            timeoutError.message?.includes('timeout') 
+              ? ExtensionErrorCode.CV_MATCH_TIMEOUT
+              : ExtensionErrorCode.CV_MATCH_FAILED,
+            timeoutError.message || 'Failed to analyze CV match',
+            undefined,
+            true // Retryable
+          ),
+          { status: 500 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: timeoutError.message || 'Failed to analyze CV match' },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
     console.error('Error analyzing CV match:', error);
+    
+    // Determine source from request
+    const authHeader = request.headers.get('authorization');
+    const isExtension = authHeader && authHeader.startsWith('Bearer ');
+    
+    if (isExtension) {
+      return NextResponse.json(
+        formatExtensionError(
+          ExtensionErrorCode.CV_MATCH_FAILED,
+          error.message || 'Failed to analyze CV match',
+          undefined,
+          true // Retryable
+        ),
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Failed to analyze CV match' },
       { status: 500 }

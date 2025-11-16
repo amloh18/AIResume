@@ -15,6 +15,7 @@ import { useRoutePreloader } from '@/lib/services/routePreloader';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
+import PaymentPastDueBanner from './PaymentPastDueBanner';
 
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
@@ -322,11 +323,35 @@ const OptimizedNavigation: React.FC = () => {
         </div>
       )}
 
+      {/* Payment Past Due Banner - Show for past_due/unpaid subscriptions */}
+      {(() => {
+        const planStatus = userData?.subscription?.status || 'active';
+        const isPastDue = planStatus === 'past_due' || planStatus === 'unpaid';
+        
+        if (isPastDue) {
+          return (
+            <div className="px-4 pb-3">
+              <PaymentPastDueBanner
+                amount={userData?.subscription?.purchasePrice}
+                currency={userData?.subscription?.purchaseCurrency || 'USD'}
+                dueDate={userData?.subscription?.endDate}
+              />
+            </div>
+          );
+        }
+        return null;
+      })()}
+
       {/* Membership Card - Persistent for free and day pass only */}
       <div className="px-4 pb-3">
         {(() => {
           const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
           const planStatus = userData?.subscription?.status || 'active';
+          
+          // Don't show membership card if subscription is past_due (PaymentPastDueBanner handles that)
+          if (planStatus === 'past_due' || planStatus === 'unpaid') {
+            return null;
+          }
           
           // Only show for free and day_pass plans
           if (currentPlan !== 'free' && currentPlan !== 'day_pass') {
@@ -687,6 +712,29 @@ const OptimizedNavigation: React.FC = () => {
       <UniversalPaymentModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
+        preselectedPlanKey={(() => {
+          // Determine which plan to preselect based on current plan
+          const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
+          const planStatus = userData?.subscription?.status || 'active';
+          
+          // If past due, suggest pro_monthly as default
+          if (planStatus === 'past_due' || planStatus === 'unpaid') {
+            return 'pro_monthly';
+          }
+          
+          // If free, suggest pro_monthly
+          if (currentPlan === 'free') {
+            return 'pro_monthly';
+          }
+          
+          // If day_pass, suggest pro_monthly
+          if (currentPlan === 'day_pass') {
+            return 'pro_monthly';
+          }
+          
+          // Otherwise, don't preselect (let user choose)
+          return undefined;
+        })()}
         currentUserPlan={userData?.subscription?.planKey || 'free'}
       />
     </div>

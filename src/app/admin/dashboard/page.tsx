@@ -20,6 +20,7 @@ import UserManagement from '@/components/admin/UserManagement';
 import EmailCampaignManager from '@/components/admin/EmailCampaignManager';
 import DraftManagement from '@/components/admin/DraftManagement';
 import NotificationManager from '@/components/admin/NotificationManager';
+import NotificationTester from '@/components/admin/NotificationTester';
 import SystemHealth from '@/components/admin/SystemHealth';
 import PricingPlanManager from '@/components/admin/PricingPlanManager';
 import TestimonialManager from '@/components/admin/TestimonialManager';
@@ -411,7 +412,8 @@ export default function AdminDashboard() {
                   <EmailCampaignManager />
                 </TabsContent>
 
-                <TabsContent value="notifications" className="mt-6">
+                <TabsContent value="notifications" className="mt-6 space-y-6">
+                  <NotificationTester />
                   <NotificationManager />
                 </TabsContent>
 

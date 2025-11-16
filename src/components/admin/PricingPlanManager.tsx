@@ -84,8 +84,7 @@ const PricingPlanManager: React.FC = () => {
   const [allPromotionalOffers, setAllPromotionalOffers] = useState<any[]>([]);
   const [loadingOffers, setLoadingOffers] = useState(false);
   const [regionalFilter, setRegionalFilter] = useState<string>('all');
-  const [priceRegions, setPriceRegions] = useState<any[]>([]);
-  const [countryMappings, setCountryMappings] = useState<any[]>([]);
+  const [countryPricing, setCountryPricing] = useState<any[]>([]);
   const [loadingPricing, setLoadingPricing] = useState(true);
 
   // Use the shared pricing hook
@@ -96,13 +95,12 @@ const PricingPlanManager: React.FC = () => {
   const safePromotionalOffers = Array.isArray(promotionalOffers) ? promotionalOffers : [];
   
   // Ensure pricing data is always an array to prevent errors
-  const safePriceRegions = Array.isArray(priceRegions) ? priceRegions : [];
-  const safeCountryMappings = Array.isArray(countryMappings) ? countryMappings : [];
-
+  const safeCountryPricing = Array.isArray(countryPricing) ? countryPricing : [];
+  
   // Calculate metrics for dashboard overview
   const activePlans = safePlans.filter(p => p.status === 'active').length;
   const activePromotions = safePromotionalOffers.filter((offer: any) => offer.isActive).length;
-  const regionsWithCustomPricing = safePriceRegions.length; // From database
+  const regionsWithCustomPricing = safeCountryPricing.length; // From database
   
   // Calculate monthly changes (placeholder - would need historical data)
   const activePlansChange = 2; // Would calculate from historical data
@@ -135,27 +133,26 @@ const PricingPlanManager: React.FC = () => {
     fetchAllOffers();
   }, []);
 
-  // Fetch pricing regions and country mappings from database
+  // Fetch country pricing from database
   useEffect(() => {
     const fetchPricingData = async () => {
       setLoadingPricing(true);
       try {
-        const response = await fetch('/api/admin/pricing-regions');
+        const response = await fetch('/api/admin/country-pricing');
         if (response.ok) {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const data = await response.json();
             if (data.success) {
-              setPriceRegions(data.priceRegions || []);
-              setCountryMappings(data.countryMappings || []);
+              setCountryPricing(data.countryPricing || []);
             }
           }
         }
       } catch (error) {
         if (error instanceof Error) {
-          console.error('Error fetching pricing regions:', error.message);
+          console.error('Error fetching country pricing:', error.message);
         } else if (error && typeof error === 'object' && !('target' in error)) {
-          console.error('Error fetching pricing regions:', String(error));
+          console.error('Error fetching country pricing:', String(error));
         }
       } finally {
         setLoadingPricing(false);

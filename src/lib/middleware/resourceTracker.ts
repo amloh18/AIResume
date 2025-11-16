@@ -7,6 +7,7 @@ import Job from '@/models/Job';
 // import CVJourney from '@/models/CVJourney'; // Model not found, commented out
 import User from '@/models/User';
 import usageLimitsService from '@/lib/services/usageLimitsService';
+import { getAdminPricingPlan } from '@/models/admin-models';
 
 export interface ResourceCounts {
   cvs: number;
@@ -16,16 +17,92 @@ export interface ResourceCounts {
 }
 
 export interface SubscriptionLimits {
-  maxCVs: number;
-  maxCoverLetters: number;
-  maxJobs: number;
-  maxJourneys: number;
+  // Credit-based limits (primary)
+  credits?: {
+    cvCredits: number | 'Unlimited';
+    exportCredits: number | 'Unlimited';
+    atsCheckCredits: number | 'Unlimited';
+    jobCredits: number | 'Unlimited';
+    resetSchedule: string;
+  };
+  // Legacy limits (deprecated - kept for backward compatibility)
+  maxCVs?: number | 'Unlimited';
+  maxCoverLetters?: number | 'Unlimited';
+  maxJobs?: number | 'Unlimited';
+  maxJourneys?: number | 'Unlimited';
 }
 
 /**
- * Get subscription limits based on plan type
+ * Get subscription limits from plan's credits (primary method)
+ */
+export async function getSubscriptionLimitsFromPlan(planKey: string): Promise<SubscriptionLimits> {
+  try {
+    await getConnection();
+    const PricingPlan = await getAdminPricingPlan();
+    const plan = await PricingPlan.findOne({ key: planKey }).lean();
+    
+    if (!plan) {
+      // Fallback to default free plan limits
+      return {
+        credits: {
+          cvCredits: 3,
+          exportCredits: 3,
+          atsCheckCredits: 0,
+          jobCredits: 1,
+          resetSchedule: 'monthly'
+        }
+      };
+    }
+
+    const credits = (plan as any).credits;
+    if (credits) {
+      return {
+        credits: {
+          cvCredits: credits.cvCredits === -1 ? 'Unlimited' : credits.cvCredits,
+          exportCredits: credits.exportCredits === -1 ? 'Unlimited' : credits.exportCredits,
+          atsCheckCredits: credits.atsCheckCredits === -1 ? 'Unlimited' : credits.atsCheckCredits,
+          jobCredits: credits.jobCredits === -1 ? 'Unlimited' : credits.jobCredits,
+          resetSchedule: credits.resetSchedule
+        },
+        // Legacy fields for backward compatibility
+        maxCVs: credits.cvCredits === -1 ? 'Unlimited' : credits.cvCredits,
+        maxJobs: credits.jobCredits === -1 ? 'Unlimited' : credits.jobCredits,
+        maxJourneys: credits.jobCredits === -1 ? 'Unlimited' : credits.jobCredits, // Using jobCredits for journeys
+        maxCoverLetters: credits.cvCredits === -1 ? 'Unlimited' : credits.cvCredits // Using cvCredits for cover letters
+      };
+    }
+
+    // Fallback if credits not found
+    return {
+      credits: {
+        cvCredits: 3,
+        exportCredits: 3,
+        atsCheckCredits: 0,
+        jobCredits: 1,
+        resetSchedule: 'monthly'
+      }
+    };
+  } catch (error) {
+    console.error('Error getting subscription limits from plan:', error);
+    // Fallback to default
+    return {
+      credits: {
+        cvCredits: 3,
+        exportCredits: 3,
+        atsCheckCredits: 0,
+        jobCredits: 1,
+        resetSchedule: 'monthly'
+      }
+    };
+  }
+}
+
+/**
+ * Get subscription limits based on plan type (legacy - deprecated)
+ * @deprecated Use getSubscriptionLimitsFromPlan instead
  */
 export function getSubscriptionLimits(plan: string): SubscriptionLimits {
+  // Legacy hardcoded values - should not be used, but kept for backward compatibility
   switch (plan) {
     case 'free':
       return {
@@ -125,34 +202,57 @@ export async function canCreateResource(
     }
 
     const plan = user.currentPlanKey || 'free';
-    const limits = getSubscriptionLimits(plan);
+    const limits = await getSubscriptionLimitsFromPlan(plan);
     const counts = await getUserResourceCounts(userId);
 
-    // Check specific resource limit
+    // Check specific resource limit using credits
     let currentCount = 0;
-    let maxLimit = 0;
+    let maxLimit: number | 'Unlimited' = 0;
 
-    switch (resourceType) {
-      case 'cv':
-        currentCount = counts.cvs;
-        maxLimit = limits.maxCVs;
-        break;
-      case 'coverLetter':
-        currentCount = counts.coverLetters;
-        maxLimit = limits.maxCoverLetters;
-        break;
-      case 'job':
-        currentCount = counts.jobs;
-        maxLimit = limits.maxJobs;
-        break;
-      case 'journey':
-        currentCount = counts.journeys;
-        maxLimit = limits.maxJourneys;
-        break;
+    // Use credits from plan (primary method)
+    if (limits.credits) {
+      switch (resourceType) {
+        case 'cv':
+          currentCount = counts.cvs;
+          maxLimit = limits.credits.cvCredits;
+          break;
+        case 'coverLetter':
+          currentCount = counts.coverLetters;
+          maxLimit = limits.credits.cvCredits; // Cover letters use CV credits
+          break;
+        case 'job':
+          currentCount = counts.jobs;
+          maxLimit = limits.credits.jobCredits;
+          break;
+        case 'journey':
+          currentCount = counts.journeys;
+          maxLimit = limits.credits.jobCredits; // Journeys use job credits
+          break;
+      }
+    } else {
+      // Fallback to legacy limits
+      switch (resourceType) {
+        case 'cv':
+          currentCount = counts.cvs;
+          maxLimit = limits.maxCVs || 3;
+          break;
+        case 'coverLetter':
+          currentCount = counts.coverLetters;
+          maxLimit = limits.maxCoverLetters || 3;
+          break;
+        case 'job':
+          currentCount = counts.jobs;
+          maxLimit = limits.maxJobs || 5;
+          break;
+        case 'journey':
+          currentCount = counts.journeys;
+          maxLimit = limits.maxJourneys || 5;
+          break;
+      }
     }
 
-    // -1 means unlimited
-    if (maxLimit === -1) {
+    // 'Unlimited' or -1 means unlimited
+    if (maxLimit === 'Unlimited' || maxLimit === -1) {
       return { allowed: true, counts, limits };
     }
 

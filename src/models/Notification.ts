@@ -10,7 +10,10 @@ export type NotificationType =
   | 'membership_expired'
   | 'discount_offer'
   | 'system_update'
-  | 'achievement';
+  | 'achievement'
+  | 'documents_ready'
+  | 'interview_follow_up'
+  | 'job_applied';
 
 export type NotificationChannel = 'in-app' | 'email' | 'push';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -82,6 +85,9 @@ const notificationSchema = new Schema<INotification>(
         'discount_offer',
         'system_update',
         'achievement',
+        'documents_ready',
+        'interview_follow_up',
+        'job_applied',
       ],
       required: true
       // Note: Index defined in compound index below

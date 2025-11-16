@@ -408,6 +408,9 @@ export function useConsoleLogger() {
 
 /**
  * Hook for inline messages in auth pages
+ * 
+ * NOTE: This hook uses useState, so it must only be used in client components
+ * The file already has 'use client' directive at the top
  */
 export function useInlineMessages() {
   const [messages, setMessages] = useState<ConsoleLogEntry[]>([]);

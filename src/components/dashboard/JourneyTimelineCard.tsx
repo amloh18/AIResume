@@ -2950,7 +2950,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             <span>{new Date(job.deadline).toLocaleDateString()}</span>
                           </div>
                         )}
-                        {job?.status && job.status !== 'created' && (
+                        {job?.status && job.status !== 'draft' && job.status !== 'created' && (
                           <div className="flex items-center gap-1">
                             <CheckCircle className="h-3 w-3 text-green-400" />
                             <span className="capitalize">{job.status}</span>

@@ -5,7 +5,6 @@ import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
-import { useFirebaseAuth } from '@/lib/hooks/useFirebaseAuth';
 import PrivacyPolicyDialog from '@/components/ui/PrivacyPolicyDialog';
 
 interface RegistrationModalProps {
@@ -32,14 +31,11 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
   const router = useRouter();
-  const { signInWithGoogle: firebaseSignInWithGoogle } = useFirebaseAuth();
 
-  // Check if OAuth providers are available
-  // For Firebase Google Auth, we check for Firebase config
-  const hasFirebaseGoogle = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN;
-  // For NextAuth Google Auth, we check for NextAuth credentials (server-side only)
-  const hasNextAuthGoogle = false; // NextAuth credentials are server-side only
-  const hasAppleCredentials = false; // Apple credentials are server-side only
+  // OAuth providers are configured server-side via NextAuth
+  // We assume Google is available if NextAuth is configured
+  const hasGoogle = true; // NextAuth Google provider is configured server-side
+  const hasApple = false; // Apple provider not yet configured
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -153,64 +149,28 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
     setIsLoading(true);
     setError('');
 
-    if (provider === 'google') {
-      // Use Firebase for Google authentication
-      try {
-        const user = await firebaseSignInWithGoogle();
-        
-        // The useFirebaseAuth hook already handles localStorage storage
-        
-        // Check if this is a new user by checking if they have a CV
-        const userData = localStorage.getItem('user');
-        if (userData) {
-          try {
-            const parsedUser = JSON.parse(userData);
-            
-            // Check if user has any CVs
-            try {
-              const response = await fetch(`/api/cvs?userId=${parsedUser.id}`);
-              const result = await response.json();
-              
-              if (result.success && result.data.cvs && result.data.cvs.length > 0) {
-                // User has CVs, redirect to dashboard
-                onClose();
-                window.location.href = '/dashboard';
-              } else {
-                // New user, redirect to universal onboarding
-                onClose();
-                window.location.href = '/ai-career-report';
-              }
-            } catch (error) {
-              console.log('Error checking CVs, assuming new user:', error);
-              // If we can't check CVs, assume new user and redirect to universal onboarding
-              onClose();
-              window.location.href = '/master-cv-onboarding';
-            }
-          } catch (error) {
-            console.log('Error parsing user data, assuming new user:', error);
-            // Error parsing user data, assume new user
-            onClose();
-            window.location.href = '/master-cv-onboarding';
-          }
-        } else {
-          console.log('No user data in localStorage, assuming new user');
-          // No user data, redirect to universal onboarding
-          onClose();
-          window.location.href = '/master-cv-onboarding';
-        }
-      } catch (error: any) {
-        setError(error.message || 'Failed to sign in with Google. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      // Use NextAuth for Apple authentication
-      try {
-        await signIn(provider, { callbackUrl: '/dashboard' });
-      } catch (error) {
+    try {
+      // Use NextAuth signIn for OAuth providers
+      const result = await signIn(provider, {
+        callbackUrl: '/dashboard',
+        redirect: false
+      });
+
+      if (result?.error) {
         setError(`Failed to sign in with ${provider}. Please try again.`);
         setIsLoading(false);
+        return;
       }
+
+      if (result?.ok) {
+        // Sign in successful, close modal and redirect
+        onClose();
+        // NextAuth will handle the redirect via callbackUrl
+        router.push('/dashboard');
+      }
+    } catch (error: any) {
+      setError(error.message || `Failed to sign in with ${provider}. Please try again.`);
+      setIsLoading(false);
     }
   };
 
@@ -302,11 +262,11 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                   </div>
 
                   {/* OAuth Buttons - Show Google sign-in if Firebase is configured */}
-                  {(hasFirebaseGoogle || hasNextAuthGoogle || hasAppleCredentials) && (
+                  {(hasGoogle || hasApple) && (
                     <>
                       <div className="space-y-3 mb-6">
                         {/* Firebase Google Auth (Primary) */}
-                        {hasFirebaseGoogle && (
+                        {hasGoogle && (
                           <motion.button
                             onClick={() => handleOAuthSignIn('google')}
                             disabled={isLoading}
@@ -325,7 +285,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         )}
 
                         {/* NextAuth Google Auth (Fallback) */}
-                        {!hasFirebaseGoogle && hasNextAuthGoogle && (
+                        {hasGoogle && (
                           <motion.button
                             onClick={() => handleOAuthSignIn('google')}
                             disabled={isLoading}
@@ -372,7 +332,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                   )}
 
                   {/* Show message if no OAuth providers are configured */}
-                  {!hasFirebaseGoogle && !hasNextAuthGoogle && !hasAppleCredentials && (
+                  {!hasGoogle && !hasApple && (
                     <div className="mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                       <p className="text-yellow-400 text-sm text-center">
                         🔧 OAuth providers not configured. Please set up Firebase or NextAuth credentials.

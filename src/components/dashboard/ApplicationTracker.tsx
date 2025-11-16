@@ -33,7 +33,7 @@ interface JobApplication {
   jobTitle: string;
   title?: string; // For compatibility
   company: string;
-  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   jobDescription?: string;
   description?: string; // For compatibility
   location?: string;
@@ -654,6 +654,7 @@ ${userName}`
 
   // Group jobs by status
   const jobsByStatus = {
+    draft: filteredAndSortedJobs.filter(job => job.status === 'draft'),
     created: filteredAndSortedJobs.filter(job => job.status === 'created'),
     applied: filteredAndSortedJobs.filter(job => job.status === 'applied'),
     interview: filteredAndSortedJobs.filter(job => job.status === 'interview'),
@@ -778,7 +779,7 @@ ${userName}`
 
   // Helper function to check if a stage allows drag operations
   const isDraggableStage = (stage: string) => {
-    return ['applied', 'interview', 'offer', 'rejected'].includes(stage);
+    return ['draft', 'applied', 'interview', 'offer', 'rejected'].includes(stage);
   };
 
   // Helper function to check if a job can be dragged
@@ -941,64 +942,67 @@ ${userName}`
   };
 
   return (
-    <>
-    <div className="space-y-6">
-      {/* Page Header - Always show immediately */}
-      <PageHeader
-        title="Application Tracker"
-        description="Manage your job applications with integrated CV journeys"
-        user={{
-          name: getUserDisplayName(userData),
-          email: getUserEmail(userData),
-          username: userData?.username || '',
-          profilePhoto: getUserAvatar(userData),
-          designation: userData?.role || '',
-          subscription: userData?.subscription
-        }}
-        showSettings={true}
-        onMobileMenuToggle={toggleSidebar}
-        isMobileMenuOpen={isMobileMenuOpen}
-      />
+    <React.Fragment>
+    <div className="h-full flex flex-col min-w-0">
+      <div className="w-full h-full flex flex-col min-w-0">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0 space-y-6 pb-4 pt-6 min-w-0">
+        {/* Page Header - Always show immediately */}
+        <div className="min-w-0 w-full">
+          <PageHeader
+            title="Application Tracker"
+            description="Manage your job applications with integrated CV journeys"
+            user={{
+              name: getUserDisplayName(userData),
+              email: getUserEmail(userData),
+              username: userData?.username || '',
+              profilePhoto: getUserAvatar(userData),
+              designation: userData?.role || '',
+              subscription: userData?.subscription
+            }}
+            showSettings={true}
+            onMobileMenuToggle={toggleSidebar}
+            isMobileMenuOpen={isMobileMenuOpen}
+          />
+        </div>
 
-      {/* CV Context Banner */}
-      {cvContext && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full p-4 mb-6"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText size={20} className="text-blue-600 dark:text-blue-400" />
-              <div>
-                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Working with CV: {cvContext.title}
-                </h3>
-                <p className="text-xs text-blue-700 dark:text-blue-300">
-                  Create or continue application journeys for this CV
-                </p>
+        {/* CV Context Banner */}
+        {cvContext && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full p-4 min-w-0"
+          >
+            <div className="flex items-center justify-between gap-2 min-w-0">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <FileText size={20} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 truncate">
+                    Working with CV: {cvContext.title}
+                  </h3>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 truncate">
+                    Create or continue application journeys for this CV
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={() => {
+                  setCvContext(null);
+                  window.history.replaceState({}, '', '/dashboard/application-tracker');
+                }}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium flex-shrink-0 whitespace-nowrap"
+              >
+                Clear Context
+              </button>
             </div>
-            <button
-              onClick={() => {
-                // Clear CV context and remove URL parameter
-                setCvContext(null);
-                window.history.replaceState({}, '', '/dashboard/application-tracker');
-              }}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium"
-            >
-              Clear Context
-            </button>
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
 
-
-      {/* Enhanced Action Bar */}
-      <div className="space-y-4">
-        {/* Top Row */}
-        <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center justify-between">
-          <div className="flex flex-row items-center gap-2 w-full lg:w-auto lg:flex-1 overflow-x-auto scrollbar-hide pb-1 lg:pb-0">
+        {/* Enhanced Action Bar */}
+        <div className="space-y-4 min-w-0">
+          {/* Top Row */}
+          <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center justify-between min-w-0">
+            <div className="flex flex-row items-center gap-2 w-full lg:w-auto lg:flex-1 min-w-0 flex-wrap sm:flex-nowrap">
             <motion.button
               onClick={handleAddJob}
               className="px-3 sm:px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg flex-shrink-0 h-[36px]"
@@ -1039,17 +1043,17 @@ ${userName}`
               </motion.button>
             </div>
 
-            {/* Consolidated Sort Button */}
-            <motion.button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px]"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Filter size={16} />
-              <span className="hidden sm:inline">Sort & Filter</span>
-              <ChevronDown size={16} className="hidden sm:block" />
-            </motion.button>
+              {/* Consolidated Sort Button */}
+              <motion.button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f] transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px] min-w-0"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Filter size={16} className="flex-shrink-0" />
+                <span className="hidden sm:inline truncate">Sort & Filter</span>
+                <ChevronDown size={16} className="hidden sm:block flex-shrink-0" />
+              </motion.button>
           </div>
         </div>
 
@@ -1084,6 +1088,7 @@ ${userName}`
                     defaultValue=""
                   >
                     <option value="" disabled>Update Status</option>
+                    <option value="draft">Draft</option>
                     <option value="created">Created</option>
                     <option value="applied">Applied</option>
                     <option value="interview">Interview</option>
@@ -1104,161 +1109,61 @@ ${userName}`
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
       </div>
 
-      {/* Enhanced Filter Options */}
-      {showFilters && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="glass-widget-premium rounded-xl p-4 space-y-4"
-        >
-          {/* Application-Specific Metrics Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* Last Updated Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Last Updated</label>
-              <select
-                value={lastUpdatedFilter}
-                onChange={(e) => setLastUpdatedFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              >
-                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All Time</option>
-                <option value="today" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Today</option>
-                <option value="last7days" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Last 7 Days</option>
-                <option value="last30days" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Last 30 Days</option>
-              </select>
-            </div>
-
-            {/* Follow-Up Date Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Follow-Up Status</label>
-              <select
-                value={followUpFilter}
-                onChange={(e) => setFollowUpFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              >
-                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All</option>
-                <option value="upcoming" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Upcoming (Next 7 Days)</option>
-                <option value="overdue" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Overdue</option>
-              </select>
-            </div>
-
-            {/* Salary Range Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Salary Range</label>
-              <select
-                value={salaryRangeFilter}
-                onChange={(e) => setSalaryRangeFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              >
-                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All Salaries</option>
-                <option value="under50k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Under $50k</option>
-                <option value="50k-75k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$50k - $75k</option>
-                <option value="75k-100k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$75k - $100k</option>
-                <option value="100k-150k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$100k - $150k</option>
-                <option value="150k-200k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">$150k - $200k</option>
-                <option value="over200k" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Over $200k</option>
-              </select>
-            </div>
-
-            {/* Priority Level Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Priority Level</label>
-              <select
-                value={priorityFilter}
-                onChange={(e) => setPriorityFilter(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              >
-                <option value="all" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">All Priorities</option>
-                <option value="high" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">High Priority</option>
-                <option value="medium" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Medium Priority</option>
-                <option value="low" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Low Priority</option>
-              </select>
-            </div>
-
-            {/* Sort Options */}
-            <div>
-              <label className="block text-sm font-medium text-gray-600 dark:text-white/80 mb-2">Sort By</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full px-3 py-2 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-full text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-200"
-              >
-                <option value="lastUpdated" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Last Updated</option>
-                <option value="followUpDate" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Follow-Up Date</option>
-                <option value="salaryRange" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Salary Range</option>
-                <option value="priority" className="bg-gray-50 dark:bg-[#232f1c] text-gray-900 dark:text-white">Priority Level</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-2 border-t border-gray-200 dark:border-white/20">
-            <div className="text-center">
-              <div className="text-lg font-bold text-purple-400">{jobsByStatus.created.length}</div>
-              <div className="text-xs text-gray-600 dark:text-white/60">Created</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-blue-400">{jobsByStatus.applied.length}</div>
-              <div className="text-xs text-gray-600 dark:text-white/60">Applied</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-orange-400">{jobsByStatus.interview.length}</div>
-              <div className="text-xs text-gray-600 dark:text-white/60">Interview</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-400">{jobsByStatus.offer.length}</div>
-              <div className="text-xs text-gray-600 dark:text-white/60">Offer</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-red-400">{jobsByStatus.rejected.length}</div>
-              <div className="text-xs text-gray-600 dark:text-white/60">Rejected</div>
-            </div>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Enhanced Kanban Board */}
-      <AnimatePresence mode="wait">
-        <motion.div 
-          key={zoomedStage || 'all-stages'}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.3 }}
-          className={`${
-            viewMode === 'kanban' 
-              ? zoomedStage 
-                ? 'grid grid-cols-1 gap-4' 
-                : 'flex flex-row overflow-x-auto gap-4 pb-4 scrollbar-hide'
-              : 'grid grid-cols-1 gap-4'
-          }`}
-        >
+      {/* Scrollable Kanban Board Container */}
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto pb-6 min-w-0">
+        <AnimatePresence mode="wait">
+          <motion.div 
+            key={zoomedStage || 'all-stages'}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.3 }}
+            className={`h-full ${
+              viewMode === 'kanban' 
+                ? zoomedStage 
+                  ? 'grid grid-cols-1 gap-4 auto-rows-max overflow-auto w-full' 
+                  : 'w-max min-w-full'
+                : 'grid grid-cols-1 gap-4 auto-rows-max overflow-auto w-full'
+            }`}
+          >
           {viewMode === 'kanban' ? (
-          (zoomedStage 
-            ? [
+            zoomedStage ? (
+              // Zoomed stage - single column
+              [
                 { status: zoomedStage, title: zoomedStage.charAt(0).toUpperCase() + zoomedStage.slice(1), color: 
+                  zoomedStage === 'draft' ? 'bg-gray-600 dark:bg-gray-500/20 border-gray-700 dark:border-gray-500/30 text-white' :
                   zoomedStage === 'created' ? 'bg-purple-600 dark:bg-purple-500/20 border-purple-700 dark:border-purple-500/30 text-white' :
                   zoomedStage === 'applied' ? 'bg-blue-600 dark:bg-blue-500/20 border-blue-700 dark:border-blue-500/30 text-white' :
                   zoomedStage === 'interview' ? 'bg-orange-600 dark:bg-orange-500/20 border-orange-700 dark:border-orange-500/30 text-white' :
                   zoomedStage === 'offer' ? 'bg-green-600 dark:bg-green-500/20 border-green-700 dark:border-green-500/30 text-white' :
                   'bg-red-600 dark:bg-red-500/20 border-red-700 dark:border-red-500/30 text-white'
                 }
-              ]
-            : [
-                { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-white' },
-                { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-800 dark:text-white' },
-                { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-800 dark:text-white' },
-                { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-800 dark:text-white' },
-                { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-800 dark:text-white' }
-              ]
-          ).map((stage) => (
-          <div key={stage.status} className={`space-y-4 ${viewMode === 'kanban' && !zoomedStage ? 'min-w-[280px] flex-shrink-0' : ''}`}>
+              ].map((stage) => (
+                <div key={stage.status} className="space-y-4">
+                  {/* Zoomed stage - will use same rendering as regular stages */}
+                  <div className={`p-3 rounded-xl border-2 ${stage.status === 'draft' || stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center`}>
+                    <h3 className="text-base font-bold">{stage.title}</h3>
+                  </div>
+                </div>
+              ))
+            ) : (
+              // All stages - horizontal scrollable
+              <div className="flex flex-row gap-4 h-full min-w-max pb-4">
+                {[
+                  { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-800 dark:text-white' },
+                  { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-white' },
+                  { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-800 dark:text-white' },
+                  { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-800 dark:text-white' },
+                  { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-800 dark:text-white' },
+                  { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-800 dark:text-white' }
+                ].map((stage) => (
+              <div key={stage.status} className={`space-y-4 min-w-[280px] flex-shrink-0`}>
             {/* Stage Header */}
             <div 
-              className={`p-3 rounded-xl border-2 ${stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
+              className={`p-3 rounded-xl border-2 ${stage.status === 'draft' || stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
               onClick={() => handleStageClick(stage.status)}
             >
               <div className="flex items-center justify-between w-full">
@@ -1275,6 +1180,7 @@ ${userName}`
                     </button>
                   )}
                   <h3 className={`text-base font-bold ${
+                    stage.status === 'draft' ? 'text-gray-800 dark:text-gray-400' :
                     stage.status === 'created' ? 'text-purple-800 dark:text-purple-400' :
                     stage.status === 'applied' ? 'text-blue-800 dark:text-blue-400' :
                     stage.status === 'interview' ? 'text-orange-800 dark:text-orange-400' :
@@ -1283,6 +1189,7 @@ ${userName}`
                   }`}>{stage.title}</h3>
                 </div>
                 <span className={`text-sm ${
+                  stage.status === 'draft' ? 'text-gray-800 dark:text-gray-400' :
                   stage.status === 'created' ? 'text-purple-800 dark:text-purple-400' :
                   stage.status === 'applied' ? 'text-blue-800 dark:text-blue-400' :
                   stage.status === 'interview' ? 'text-orange-800 dark:text-orange-400' :
@@ -1406,7 +1313,7 @@ ${userName}`
                     </div>
                   </div>
                 ))
-              ) : stage.status === 'created' && zoomedStage ? (
+              ) : (stage.status === 'draft' || stage.status === 'created') && zoomedStage ? (
                 // Show journey cards for created stage when zoomed
                 jobsByStatus[stage.status as keyof typeof jobsByStatus].map((job) => {
                   const jobJourneys = getJobJourneys(job.id);
@@ -1470,7 +1377,7 @@ ${userName}`
                     className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
                       isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${
-                      !canDrag && stage.status !== 'created' ? 'opacity-60 cursor-not-allowed' : ''
+                      !canDrag && stage.status !== 'draft' && stage.status !== 'created' ? 'opacity-60 cursor-not-allowed' : ''
                     }`}
                     role="button"
                     tabIndex={0}
@@ -1773,7 +1680,9 @@ ${userName}`
               </div>
             </div>
           </div>
-        ))
+                ))}
+              </div>
+            )
         ) : (
           /* List View */
           <div className="bg-white dark:bg-[#141810] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
@@ -1895,9 +1804,12 @@ ${userName}`
               </table>
             </div>
           </div>
-        )}
+          )}
         </motion.div>
       </AnimatePresence>
+      </div>
+      </div>
+    </div>
 
       {/* Application Journey Modal */}
       {showModal && selectedJob && (
@@ -1935,8 +1847,7 @@ ${userName}`
         resetTime={creditInfo?.resetTime}
         preselectedPlanKey="pro_monthly"
       />
-    </div>
-    </>
+    </React.Fragment>
   );
 };
 

@@ -120,11 +120,14 @@ const subscriptionSchema = new Schema<ISubscription>({
   timestamps: true
 });
 
-// Index for better query performance
+// Index for better query performance - optimized for billing scheduler
 subscriptionSchema.index({ userId: 1, status: 1 });
 subscriptionSchema.index({ status: 1, endDate: 1 });
 subscriptionSchema.index({ paymentProviderId: 1 });
-subscriptionSchema.index({ nextBillingDate: 1 });
+// Optimized compound index for renewal queries (billing scheduler)
+subscriptionSchema.index({ status: 1, nextBillingDate: 1 });
+// Index for dunning queries
+subscriptionSchema.index({ status: 1 }); // For finding past_due subscriptions
 
 // Virtual for checking if subscription is active
 subscriptionSchema.virtual('isActive').get(function() {
