@@ -79,6 +79,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
   const coherenceScore = careerCoherence?.score ?? 85;
   
   // Generate trajectory data points based on career path steps
+  // Ensure all level values are valid numbers
   const trajectoryData = [
     {
       stage: 'Current',
@@ -119,7 +120,13 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
         ? careerPath.step3.title.substring(0, 15) + '...' 
         : careerPath.step3.title
     }
-  ];
+  ].map(item => ({
+    ...item,
+    // Double-check that level is a valid finite number (safety check)
+    level: typeof item.level === 'number' && isFinite(item.level) && !isNaN(item.level) 
+      ? item.level 
+      : 1
+  }));
 
   // Custom tooltip component
   const CustomTooltip = ({ active, payload }: any) => {
@@ -141,12 +148,27 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
   // Custom label component for milestones
   const CustomLabel = ({ x, y, value, payload }: any) => {
     // Validate that x and y are valid numbers
-    if (x == null || y == null || isNaN(Number(x)) || isNaN(Number(y))) {
+    // Convert to numbers first, then check for NaN
+    const xNum = typeof x === 'number' ? x : Number(x);
+    const yNum = typeof y === 'number' ? y : Number(y);
+    
+    // Check for invalid values (null, undefined, NaN, Infinity)
+    if (
+      x == null || 
+      y == null || 
+      isNaN(xNum) || 
+      isNaN(yNum) || 
+      !isFinite(xNum) || 
+      !isFinite(yNum)
+    ) {
       return null;
     }
 
-    const xNum = Number(x);
-    const yNum = Number(y);
+    // Calculate text y position and validate it
+    const textY = yNum - 20;
+    if (isNaN(textY) || !isFinite(textY)) {
+      return null;
+    }
 
     return (
       <g>
@@ -167,7 +189,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
         />
         <text
           x={xNum}
-          y={yNum - 20}
+          y={textY}
           textAnchor="middle"
           className={`text-xs font-semibold ${useLightTheme ? 'fill-gray-900' : 'fill-gray-100 dark:fill-gray-100'}`}
           style={{ fontWeight: 600 }}

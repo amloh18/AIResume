@@ -313,7 +313,15 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
             }
           }
         } catch (error) {
-          console.error('Error parsing SSE message:', error);
+          // Safely handle errors without stringifying Event objects
+          if (error instanceof Error) {
+            console.error('Error parsing SSE message:', error.message, error.stack);
+          } else if (error && typeof error === 'object' && 'type' in error) {
+            // Likely an Event object
+            console.error('Error parsing SSE message: Event object received');
+          } else {
+            console.error('Error parsing SSE message:', String(error));
+          }
         }
       };
 

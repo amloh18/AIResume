@@ -193,20 +193,43 @@ export class UnifiedCVService {
   /**
    * Update an existing CV
    * Accepts unified format - no transformation
+   * Includes updatedAt for conflict detection
    */
-  static async updateCV(cvId: string, cvData: Partial<UnifiedCVRequest>, userId?: string): Promise<UnifiedCVDocument> {
+  static async updateCV(
+    cvId: string, 
+    cvData: Partial<UnifiedCVRequest> & { updatedAt?: string | Date }, 
+    userId?: string
+  ): Promise<UnifiedCVDocument> {
     const params = new URLSearchParams();
     if (userId) {
       params.append('userId', userId);
     }
+    
+    // Include updatedAt if provided (for conflict detection)
+    const updatePayload = {
+      ...cvData,
+      updatedAt: cvData.updatedAt ? (typeof cvData.updatedAt === 'string' ? cvData.updatedAt : cvData.updatedAt.toISOString()) : undefined
+    };
     
     const response = await authenticatedFetch(`/api/cvs/${cvId}?${params.toString()}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(cvData),
+      body: JSON.stringify(updatePayload),
     });
+    
+    // Check for conflict (409 status)
+    if (response.status === 409) {
+      const conflictData = await response.json();
+      if (conflictData.conflict) {
+        const conflictError: any = new Error(conflictData.message || 'Conflict detected');
+        conflictError.conflict = true;
+        conflictError.serverVersion = conflictData.serverVersion;
+        conflictError.clientVersion = conflictData.clientVersion;
+        throw conflictError;
+      }
+    }
     
     if (!response.ok) {
       const errorText = await response.text();

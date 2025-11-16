@@ -32,6 +32,23 @@ class SubscriptionService {
     try {
       await connectToDatabase();
 
+      // STATE VERIFICATION: Check user state before activation
+      const stateBefore = await this.verifyUserState(userId);
+      console.log('🔍 SubscriptionService - State before day pass activation:', {
+        userId,
+        currentPlan: stateBefore.currentPlan,
+        subscriptionStatus: stateBefore.currentSubscriptionStatus,
+        warnings: stateBefore.warnings,
+        errors: stateBefore.errors
+      });
+
+      if (!stateBefore.valid) {
+        return { 
+          success: false, 
+          error: `Invalid user state: ${stateBefore.errors?.join(', ')}` 
+        };
+      }
+
       const user = await User.findById(userId);
       if (!user) {
         return { success: false, error: 'User not found' };
@@ -98,6 +115,15 @@ class SubscriptionService {
       // Initialize credits for day pass
       await creditService.initializeCredits(userId, 'day_pass');
 
+      // STATE VERIFICATION: Check user state after activation
+      const stateAfter = await this.verifyUserState(userId);
+      console.log('✅ SubscriptionService - State after day pass activation:', {
+        userId,
+        currentPlan: stateAfter.currentPlan,
+        subscriptionStatus: stateAfter.currentSubscriptionStatus,
+        warnings: stateAfter.warnings
+      });
+
       const hoursRemaining = durationHours;
 
       return {
@@ -128,6 +154,24 @@ class SubscriptionService {
   ): Promise<SubscriptionActivationResult> {
     try {
       await connectToDatabase();
+
+      // STATE VERIFICATION: Check user state before activation
+      const stateBefore = await this.verifyUserState(userId);
+      console.log('🔍 SubscriptionService - State before pro plan activation:', {
+        userId,
+        planKey,
+        currentPlan: stateBefore.currentPlan,
+        subscriptionStatus: stateBefore.currentSubscriptionStatus,
+        warnings: stateBefore.warnings,
+        errors: stateBefore.errors
+      });
+
+      if (!stateBefore.valid) {
+        return { 
+          success: false, 
+          error: `Invalid user state: ${stateBefore.errors?.join(', ')}` 
+        };
+      }
 
       const user = await User.findById(userId);
       if (!user) {
@@ -206,6 +250,16 @@ class SubscriptionService {
 
       // Initialize credits for pro plan
       await creditService.initializeCredits(userId, planKey);
+
+      // STATE VERIFICATION: Check user state after activation
+      const stateAfter = await this.verifyUserState(userId);
+      console.log('✅ SubscriptionService - State after pro plan activation:', {
+        userId,
+        planKey,
+        currentPlan: stateAfter.currentPlan,
+        subscriptionStatus: stateAfter.currentSubscriptionStatus,
+        warnings: stateAfter.warnings
+      });
 
       return {
         success: true,
@@ -294,6 +348,99 @@ class SubscriptionService {
         return start;
       default:
         return start;
+    }
+  }
+
+  /**
+   * Verify user state before activating subscription
+   * Checks current plan, credits, and subscription status
+   */
+  async verifyUserState(userId: string): Promise<{
+    valid: boolean;
+    currentPlan?: string;
+    currentSubscriptionStatus?: string;
+    credits?: {
+      jobCredits: number;
+      limit: number;
+    };
+    subscription?: {
+      planKey: string;
+      status: string;
+      expiresAt?: Date;
+      currentPeriodEnd?: Date;
+    };
+    warnings?: string[];
+    errors?: string[];
+  }> {
+    try {
+      await connectToDatabase();
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return {
+          valid: false,
+          errors: ['User not found']
+        };
+      }
+
+      const state: any = {
+        valid: true,
+        currentPlan: user.currentPlanKey || 'free',
+        currentSubscriptionStatus: user.subscription?.status || 'none',
+        warnings: [],
+        errors: []
+      };
+
+      // Get current credits
+      const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
+      state.credits = {
+        jobCredits: creditCheck.creditsRemaining,
+        limit: creditCheck.limit
+      };
+
+      // Get subscription info
+      if (user.subscription) {
+        state.subscription = {
+          planKey: user.subscription.planKey || 'free',
+          status: user.subscription.status || 'none',
+          expiresAt: user.subscription.accessExpiresAt,
+          currentPeriodEnd: user.subscription.currentPeriodEnd
+        };
+      }
+
+      // Check for potential issues
+      if (user.subscription?.status === 'active' && user.currentPlanKey !== 'free') {
+        // Check if subscription is about to expire
+        const expiresAt = user.subscription.accessExpiresAt || user.subscription.currentPeriodEnd;
+        if (expiresAt) {
+          const expiryDate = new Date(expiresAt);
+          const now = new Date();
+          const daysUntilExpiry = Math.round((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (daysUntilExpiry < 0) {
+            state.warnings?.push('Subscription has expired');
+          } else if (daysUntilExpiry <= 7) {
+            state.warnings?.push(`Subscription expires in ${daysUntilExpiry} days`);
+          }
+        }
+      }
+
+      // Check for conflicting states
+      if (user.subscription?.status === 'active' && user.currentPlanKey === 'free') {
+        state.warnings?.push('Subscription status is active but plan is free - possible state mismatch');
+      }
+
+      if (user.subscription?.status === 'expired' && user.currentPlanKey !== 'free') {
+        state.warnings?.push('Subscription is expired but plan is not free - should be downgraded');
+      }
+
+      return state;
+    } catch (error: any) {
+      console.error('Error verifying user state:', error);
+      return {
+        valid: false,
+        errors: [error.message || 'Failed to verify user state']
+      };
     }
   }
 

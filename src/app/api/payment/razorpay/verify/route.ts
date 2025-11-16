@@ -4,12 +4,18 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { razorpay } from '@/lib/payment/razorpay';
 import User from '@/models/User';
-import Coupon from '@/models/Coupon';
-import subscriptionService from '@/lib/services/subscriptionService';
-import { detectUserRegion } from '@/lib/services/regionDetectionService';
+import Invoice from '@/models/Invoice';
 
 /**
- * Verify Razorpay payment and activate subscription
+ * Verify Razorpay payment signature
+ * 
+ * CRITICAL: This route only verifies payment signature.
+ * Subscription activation is handled by the webhook to prevent race conditions.
+ * 
+ * Flow:
+ * 1. Verify payment signature
+ * 2. Check if payment already processed (idempotency)
+ * 3. Return status to frontend (webhook will process activation)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -25,9 +31,7 @@ export async function POST(request: NextRequest) {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
-      planKey,
-      interval,
-      couponId
+      planKey
     } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -55,75 +59,41 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Get order details to extract metadata
-    const order = await razorpay.orders.fetch(razorpay_order_id);
-    const metadata = order.notes || {};
-    const region = metadata.region || 'IN';
-    const currency = payment.currency.toUpperCase() || 'INR';
-    const amount = payment.amount / 100; // Convert from paise
+    // IDEMPOTENCY CHECK: Check if payment already processed by webhook
+    const existingInvoice = await Invoice.findOne({
+      'metadata.razorpayPaymentId': razorpay_payment_id,
+      status: 'paid'
+    });
 
-    // Increment coupon usage if applicable
-    if (couponId || metadata.couponId) {
-      const coupon = await Coupon.findById(couponId || metadata.couponId);
-      if (coupon) {
-        await coupon.incrementUsage();
-      }
-    }
-
-    // Activate subscription based on plan
-    if (planKey === 'day_pass') {
-      const result = await subscriptionService.activateDayPass(
-        user._id.toString(),
-        razorpay_payment_id,
-        region,
-        currency,
-        amount
-      );
-
-      if (!result.success) {
-        return NextResponse.json({ error: result.error || 'Failed to activate day pass' }, { status: 400 });
-      }
-
-      return NextResponse.json({
-        success: true,
-        subscription: {
-          planKey: 'day_pass',
-          status: 'active',
-          expiresAt: result.expiresAt,
-          hoursRemaining: result.hoursRemaining
-        }
-      });
-    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey)) {
-      const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
-                                         planKey === 'pro_quarterly' ? 'quarterly' : 'yearly');
+    if (existingInvoice) {
+      // Payment already processed by webhook
+      console.log(`Payment ${razorpay_payment_id} already processed`);
       
-      const result = await subscriptionService.activateProPlan(
-        user._id.toString(),
-        planKey,
-        finalInterval,
-        razorpay_payment_id,
-        region,
-        currency,
-        amount,
-        undefined, // subscriptionId (for one-time payments)
-        undefined // customerId
-      );
-
-      if (!result.success) {
-        return NextResponse.json({ error: result.error || 'Failed to activate subscription' }, { status: 400 });
-      }
-
+      // Get current subscription status
+      const updatedUser = await User.findById(user._id);
+      const subscription = updatedUser?.subscription;
+      
       return NextResponse.json({
         success: true,
-        subscription: {
-          planKey,
-          status: 'active',
-          interval: finalInterval
-        }
+        alreadyProcessed: true,
+        subscription: subscription ? {
+          planKey: subscription.planKey,
+          status: subscription.status,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          expiresAt: subscription.endDate
+        } : null,
+        message: 'Payment already processed'
       });
     }
 
-    return NextResponse.json({ error: 'Invalid plan key' }, { status: 400 });
+    // Payment verified but not yet processed by webhook
+    // Return pending status - webhook will process activation
+    return NextResponse.json({
+      success: true,
+      pending: true,
+      message: 'Payment verified. Subscription activation in progress...',
+      paymentId: razorpay_payment_id
+    });
 
   } catch (error) {
     console.error('Razorpay verification error:', error);

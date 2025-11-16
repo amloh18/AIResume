@@ -4,17 +4,24 @@ export interface IPricingPlan extends Document {
   key: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
   name: string;
   description: string;
-  price_monthly?: number;
-  price_quarterly?: number;
-  price_yearly?: number;
-  price_one_time?: number;
-  currency: string;
+  // REMOVED: price_monthly, price_quarterly, price_yearly, price_one_time (now in CountryPricing)
+  // REMOVED: currency (now in CountryPricing)
+  // KEEP: billingCycle - this is plan structure metadata, not pricing
   billingCycle: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
-  maxCVs: number;
-  maxExports: number;
-  maxCoverLetters: number;
-  maxJobs: number;
-  maxJourneys: number;
+  // Credit-based system (replaces maxCVs, maxJobs, maxJourneys, maxExports, maxCoverLetters)
+  credits: {
+    cvCredits: number; // -1 for unlimited
+    exportCredits: number; // -1 for unlimited
+    atsCheckCredits: number; // -1 for unlimited
+    jobCredits: number; // -1 for unlimited
+    resetSchedule: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
+  };
+  // Legacy fields (deprecated - use credits instead)
+  maxCVs?: number;
+  maxExports?: number;
+  maxCoverLetters?: number;
+  maxJobs?: number;
+  maxJourneys?: number;
   storageLimit: number; // in MB
   features: string[];
   notIncludedFeatures: string[];
@@ -45,15 +52,22 @@ export interface IPricingPlan extends Document {
   // Time-based fields
   durationInDays?: number; // 1, 30, 90, 365
   durationType?: 'hour' | 'day' | 'month' | 'year';
-  // Regional pricing - supports multiple prices per region for different billing cycles
+  // Reference to CountryPricing ObjectIds
+  // All prices and currency come from CountryPricing collection via these references
+  // Option 1: Default CountryPricing (fallback when user's country not found)
+  defaultCountryPricingId?: mongoose.Types.ObjectId;
+  // Option 2: Map of country codes to CountryPricing ObjectIds (for country-specific pricing)
+  // Format: { 'GB': ObjectId, 'US': ObjectId, 'IN': ObjectId, ... }
+  countryPricingMap?: Map<string, mongoose.Types.ObjectId>;
+  // DEPRECATED: Regional pricing array - kept for backward compatibility during migration
   regionalPricing?: Array<{
-    region: string; // 'IN', 'US', 'EU', 'GB', etc.
+    region: string;
     currency: string;
-    billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time'; // Optional: if not specified, applies to all cycles
+    billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time';
     price: number;
     displayPrice: string;
-    stripePriceId?: string; // Region-specific Stripe price ID
-    razorpayPlanId?: string; // Region-specific Razorpay plan ID
+    stripePriceId?: string;
+    razorpayPlanId?: string;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -77,63 +91,68 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     trim: true,
     maxlength: [500, 'Plan description cannot exceed 500 characters']
   },
-  price_monthly: {
-    type: Number,
-    min: [0, 'Price cannot be negative']
-  },
-  price_quarterly: {
-    type: Number,
-    min: [0, 'Price cannot be negative']
-  },
-  price_yearly: {
-    type: Number,
-    min: [0, 'Price cannot be negative']
-  },
-  price_one_time: {
-    type: Number,
-    min: [0, 'Price cannot be negative']
-  },
-  currency: {
-    type: String,
-    required: [true, 'Currency is required'],
-    default: 'EUR',
-    enum: ['EUR', 'USD', 'INR']
-  },
+  // REMOVED: price_monthly, price_quarterly, price_yearly, price_one_time
+  // Prices are now stored in CountryPricing collection and referenced via ObjectIds
+  // REMOVED: currency field - currency comes from CountryPricing collection
   billingCycle: {
     type: String,
     required: [true, 'Billing cycle is required'],
     enum: ['one-time', 'monthly', 'quarterly', 'yearly'],
     default: 'monthly'
   },
+  // Credit-based system (primary)
+  credits: {
+    cvCredits: {
+      type: Number,
+      required: [true, 'CV credits are required'],
+      min: [-1, 'CV credits cannot be less than -1 (unlimited)'],
+      default: 3
+    },
+    exportCredits: {
+      type: Number,
+      required: [true, 'Export credits are required'],
+      min: [-1, 'Export credits cannot be less than -1 (unlimited)'],
+      default: 1
+    },
+    atsCheckCredits: {
+      type: Number,
+      required: [true, 'ATS check credits are required'],
+      min: [-1, 'ATS check credits cannot be less than -1 (unlimited)'],
+      default: 0
+    },
+    jobCredits: {
+      type: Number,
+      required: [true, 'Job credits are required'],
+      min: [-1, 'Job credits cannot be less than -1 (unlimited)'],
+      default: 1
+    },
+    resetSchedule: {
+      type: String,
+      required: [true, 'Credit reset schedule is required'],
+      enum: ['monthly', 'quarterly', 'yearly', 'one-time', 'never'],
+      default: 'monthly'
+    }
+  },
+  // Legacy fields (deprecated - kept for backward compatibility)
   maxCVs: {
     type: Number,
-    required: [true, 'Maximum CVs limit is required'],
-    min: [0, 'CV limit cannot be negative'],
-    default: 3
+    min: [0, 'CV limit cannot be negative']
   },
   maxExports: {
     type: Number,
-    required: [true, 'Maximum exports limit is required'],
-    min: [0, 'Export limit cannot be negative'],
-    default: 1
+    min: [0, 'Export limit cannot be negative']
   },
   maxCoverLetters: {
     type: Number,
-    required: [true, 'Maximum cover letters limit is required'],
-    min: [0, 'Cover letter limit cannot be negative'],
-    default: 3
+    min: [0, 'Cover letter limit cannot be negative']
   },
   maxJobs: {
     type: Number,
-    required: [true, 'Maximum jobs limit is required'],
-    min: [0, 'Job limit cannot be negative'],
-    default: 5
+    min: [0, 'Job limit cannot be negative']
   },
   maxJourneys: {
     type: Number,
-    required: [true, 'Maximum journeys limit is required'],
-    min: [0, 'Journey limit cannot be negative'],
-    default: 5
+    min: [0, 'Journey limit cannot be negative']
   },
   storageLimit: {
     type: Number,
@@ -227,7 +246,21 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     enum: ['hour', 'day', 'month', 'year'],
     default: 'day'
   },
-  // Regional pricing - supports multiple prices per region for different billing cycles
+  // Reference to default CountryPricing ObjectId (fallback when user's country not found)
+  defaultCountryPricingId: {
+    type: Schema.Types.ObjectId,
+    ref: 'CountryPricing',
+    required: false
+  },
+  // Map of country codes to CountryPricing ObjectIds
+  // Allows plans to reference multiple country-specific pricing records
+  countryPricingMap: {
+    type: Map,
+    of: Schema.Types.ObjectId,
+    default: new Map()
+  },
+  // Note: Regional pricing has been moved to CountryPricing collection (normalized structure)
+  // This field is kept for backward compatibility during migration
   regionalPricing: [{
     region: {
       type: String,
@@ -270,31 +303,28 @@ pricingPlanSchema.virtual('isPromotionActive').get(function() {
   return now >= this.promotionValidFrom && now <= this.promotionValidUntil;
 });
 
-// Virtual for getting effective price based on promotion
+// DEPRECATED: effectivePrice virtual - prices now come from CountryPricing
+// This virtual is kept for backward compatibility but should not be used
+// Prices should be fetched from CountryPricing collection via defaultCountryPricingId or countryPricingMap
 pricingPlanSchema.virtual('effectivePrice').get(function() {
-  const isActive = this.get('isPromotionActive');
-  if (isActive) {
-    return {
-      monthly: this.promotionalPrice_monthly || this.price_monthly,
-      quarterly: this.promotionalPrice_quarterly || this.price_quarterly,
-      yearly: this.promotionalPrice_yearly || this.price_yearly,
-      oneTime: this.promotionalPrice_one_time || this.price_one_time
-    };
-  }
+  // Return empty object - prices must be fetched from CountryPricing
   return {
-    monthly: this.price_monthly,
-    quarterly: this.price_quarterly,
-    yearly: this.price_yearly,
-    oneTime: this.price_one_time
+    monthly: undefined,
+    quarterly: undefined,
+    yearly: undefined,
+    oneTime: undefined
   };
 });
 
 // Index for better query performance
 pricingPlanSchema.index({ key: 1 }, { unique: true });
 pricingPlanSchema.index({ status: 1, sortOrder: 1 });
-pricingPlanSchema.index({ billingCycle: 1, currency: 1 });
+pricingPlanSchema.index({ billingCycle: 1 }); // Removed currency from index (now in CountryPricing)
 pricingPlanSchema.index({ displayOnLanding: 1, targetAudience: 1 });
 pricingPlanSchema.index({ promotionValidFrom: 1, promotionValidUntil: 1 });
+pricingPlanSchema.index({ defaultCountryPricingId: 1 });
+pricingPlanSchema.index({ 'countryPricingMap': 1 }); // Index for country pricing map lookups
+// Note: regionalPricing index kept for backward compatibility during migration
 pricingPlanSchema.index({ 'regionalPricing.region': 1 });
 
 // Export the schema for use in admin models

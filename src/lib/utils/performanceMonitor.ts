@@ -1,4 +1,6 @@
 // Performance monitoring utilities for measuring dashboard improvements
+'use client';
+
 import React from 'react';
 
 interface PerformanceMetrics {

@@ -256,6 +256,7 @@ export async function GET(request: NextRequest) {
     try {
       await getConnection();
       const PricingPlanModel = await getAdminPricingPlan();
+      // Fetch plans without populate - we'll fetch CountryPricing manually when needed
       const dbPlans = await PricingPlanModel.find(query)
         .sort({ sortOrder: 1 })
         .lean();
@@ -272,51 +273,74 @@ export async function GET(request: NextRequest) {
       plans = fallbackPlans;
     }
 
-    // Add promotional pricing, regional pricing, and computed fields
+    // Get country pricing for user's region (if available)
+    // This is the primary source for prices - all prices come from CountryPricing collection
+    const { getCountryPricing } = await import('@/lib/services/countryPricingService');
+    const countryPricing = regionInfo?.countryCode 
+      ? await getCountryPricing(regionInfo.countryCode)
+      : null;
+    
+    // Get default country pricing from plan's defaultCountryPricingId as fallback
+    // This ensures we always have pricing even if user's country pricing doesn't exist
+    let defaultCountryPricing = null;
+    if (plans.length > 0 && plans[0].defaultCountryPricingId) {
+      const defaultCountryPricingId = (plans[0] as any).defaultCountryPricingId;
+      // Fetch CountryPricing by ObjectId (not populated)
+      const { getCountryPricingById } = await import('@/lib/services/countryPricingService');
+      defaultCountryPricing = await getCountryPricingById(defaultCountryPricingId);
+    }
+
+    // Add promotional pricing, country pricing, and computed fields
     const currentDate = new Date();
-    const enhancedPlans = plans.map(plan => {
+    const enhancedPlans = await Promise.all(plans.map(async (plan) => {
       
       // Check if promotion is active
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
         new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
 
-      // Get regional pricing from plan's regionalPricing array
-      const planRegionalPricing = (plan as any).regionalPricing || [];
-      
-      // Find regional pricing entries for the user's region
-      const userRegionPricings = planRegionalPricing.filter((rp: any) => 
-        rp.region === regionInfo?.countryCode
-      );
-
-      // Helper to get regional price for a specific billing cycle
-      const getRegionalPriceForCycle = (cycle: 'monthly' | 'quarterly' | 'yearly' | 'oneTime') => {
-        // Map our cycle names to the billing cycle enum
-        const cycleMap: Record<string, string> = {
-          'monthly': 'monthly',
-          'quarterly': 'quarterly',
-          'yearly': 'yearly',
-          'oneTime': 'one-time'
+      // Helper to get country price for a specific plan from CountryPricing collection
+      // Priority: 1. User's country pricing, 2. Plan's defaultCountryPricingId, 3. Legacy plan prices (deprecated)
+      const getCountryPriceForPlan = (planKey: string, pricingSource: any) => {
+        if (!pricingSource) return null;
+        
+        const planKeyMap: Record<string, keyof typeof pricingSource.planPrices> = {
+          'free': 'free',
+          'day_pass': 'dayPass',
+          'pro_monthly': 'monthly',
+          'pro_quarterly': 'quarterly',
+          'pro_yearly': 'yearly'
         };
-        const mappedCycle = cycleMap[cycle];
         
-        // First try to find a specific entry for this cycle
-        const cycleSpecific = userRegionPricings.find((rp: any) => 
-          rp.billingCycle === mappedCycle
-        );
-        if (cycleSpecific) return cycleSpecific.price;
-        
-        // If no cycle-specific entry, look for one without billingCycle (applies to all)
-        const general = userRegionPricings.find((rp: any) => !rp.billingCycle);
-        if (general) return general.price;
-        
-        return null;
+        const pricingKey = planKeyMap[planKey];
+        return pricingKey ? pricingSource.planPrices[pricingKey]?.price : null;
       };
+      
+      // Get price from user's country pricing, or fallback to plan's defaultCountryPricingId
+      const activePricing = countryPricing || defaultCountryPricing;
+      const planDefaultPricingId = (plan as any).defaultCountryPricingId;
+      
+      // Try to get default pricing from ObjectId reference (fetch manually, no populate)
+      let planDefaultCountryPricing = null;
+      if (planDefaultPricingId) {
+        // Fetch CountryPricing by ObjectId
+        const { getCountryPricingById } = await import('@/lib/services/countryPricingService');
+        planDefaultCountryPricing = await getCountryPricingById(planDefaultPricingId);
+      }
 
+      // All prices MUST come from CountryPricing - no legacy fallbacks
       const basePrice = {
-        monthly: getRegionalPriceForCycle('monthly') || plan.price_monthly,
-        quarterly: getRegionalPriceForCycle('quarterly') || plan.price_quarterly,
-        yearly: getRegionalPriceForCycle('yearly') || plan.price_yearly,
-        oneTime: getRegionalPriceForCycle('oneTime') || plan.price_one_time
+        monthly: getCountryPriceForPlan('pro_monthly', activePricing) 
+          || getCountryPriceForPlan('pro_monthly', planDefaultCountryPricing)
+          || 0, // No legacy fallback - prices must be in CountryPricing
+        quarterly: getCountryPriceForPlan('pro_quarterly', activePricing)
+          || getCountryPriceForPlan('pro_quarterly', planDefaultCountryPricing)
+          || 0, // No legacy fallback
+        yearly: getCountryPriceForPlan('pro_yearly', activePricing)
+          || getCountryPriceForPlan('pro_yearly', planDefaultCountryPricing)
+          || 0, // No legacy fallback
+        oneTime: getCountryPriceForPlan('day_pass', activePricing)
+          || getCountryPriceForPlan('day_pass', planDefaultCountryPricing)
+          || 0 // No legacy fallback
       };
 
       const effectivePrice = {
@@ -363,36 +387,65 @@ export async function GET(request: NextRequest) {
         };
       }
 
+      // Get currency from CountryPricing (primary source) - no legacy fallbacks
+      const planCurrency = activePricing?.currency 
+        || planDefaultCountryPricing?.currency 
+        || regionInfo?.currency 
+        || 'GBP'; // Default to GBP (matches our defaultCountryPricing)
+      
+      const planCurrencySymbol = activePricing?.currencySymbol 
+        || planDefaultCountryPricing?.currencySymbol 
+        || getCurrencySymbol(planCurrency);
+
       return {
         ...plan,
-        maxCVs: plan.maxCVs === -1 ? 'Unlimited' : plan.maxCVs,
-        maxExports: plan.maxExports === -1 ? 'Unlimited' : plan.maxExports,
-        maxCoverLetters: plan.maxCoverLetters === -1 ? 'Unlimited' : plan.maxCoverLetters,
-        maxJobs: plan.maxJobs === -1 ? 'Unlimited' : plan.maxJobs,
-        maxJourneys: plan.maxJourneys === -1 ? 'Unlimited' : plan.maxJourneys,
+        // Credit-based system (primary)
+        credits: plan.credits ? {
+          cvCredits: plan.credits.cvCredits === -1 ? 'Unlimited' : plan.credits.cvCredits,
+          exportCredits: plan.credits.exportCredits === -1 ? 'Unlimited' : plan.credits.exportCredits,
+          atsCheckCredits: plan.credits.atsCheckCredits === -1 ? 'Unlimited' : plan.credits.atsCheckCredits,
+          jobCredits: plan.credits.jobCredits === -1 ? 'Unlimited' : plan.credits.jobCredits,
+          resetSchedule: plan.credits.resetSchedule
+        } : undefined,
+        // Legacy fields (deprecated - kept for backward compatibility)
+        maxCVs: plan.maxCVs ? ((plan.maxCVs === 999999 || plan.maxCVs === -1) ? 'Unlimited' : plan.maxCVs) : undefined,
+        maxExports: plan.maxExports ? ((plan.maxExports === 999999 || plan.maxExports === -1) ? 'Unlimited' : plan.maxExports) : undefined,
+        maxCoverLetters: plan.maxCoverLetters ? ((plan.maxCoverLetters === 999999 || plan.maxCoverLetters === -1) ? 'Unlimited' : plan.maxCoverLetters) : undefined,
+        maxJobs: plan.maxJobs ? ((plan.maxJobs === 999999 || plan.maxJobs === -1) ? 'Unlimited' : plan.maxJobs) : undefined,
+        maxJourneys: plan.maxJourneys ? ((plan.maxJourneys === 999999 || plan.maxJourneys === -1) ? 'Unlimited' : plan.maxJourneys) : undefined,
+        // Currency from CountryPricing collection (primary source)
+        currency: planCurrency,
+        currencySymbol: planCurrencySymbol,
         // Add computed fields for backward compatibility
-        price: plan.price_monthly || plan.price_one_time || 0,
+        price: basePrice.monthly || basePrice.oneTime || 0,
         billingCycle: plan.billingCycle,
-        // Regional pricing info - use monthly pricing for display
+        // Country pricing info - use monthly pricing for display (from CountryPricing collection)
         regionalPricing: (() => {
-          const monthlyRegional = userRegionPricings.find((rp: any) => rp.billingCycle === 'monthly' || !rp.billingCycle) || userRegionPricings[0];
-          return monthlyRegional ? {
-            region: monthlyRegional.region,
-            regionName: regionInfo.countryName,
-            currency: monthlyRegional.currency,
-            currencySymbol: getCurrencySymbol(monthlyRegional.currency),
-            price: monthlyRegional.price,
-            displayPrice: monthlyRegional.displayPrice || `${getCurrencySymbol(monthlyRegional.currency)}${monthlyRegional.price}`,
-            stripePriceId: monthlyRegional.stripePriceId,
-            razorpayPlanId: monthlyRegional.razorpayPlanId
-          } : {
-            region: regionInfo.countryCode,
-            regionName: regionInfo.countryName,
-            currency: plan.currency || regionInfo.currency,
-            currencySymbol: getCurrencySymbol(plan.currency || regionInfo.currency),
-            price: plan.price_monthly || 0,
-            displayPrice: `${getCurrencySymbol(plan.currency || regionInfo.currency)}${plan.price_monthly || 0}`
-          };
+          // Priority: 1. User's country pricing, 2. Plan's defaultCountryPricingId, 3. Fallback
+          const pricingSource = countryPricing || planDefaultCountryPricing || defaultCountryPricing;
+          if (pricingSource) {
+            const monthlyPrice = pricingSource.planPrices.monthly.price;
+            return {
+              region: pricingSource.countryCode,
+              regionName: pricingSource.countryName,
+              currency: pricingSource.currency,
+              currencySymbol: pricingSource.currencySymbol,
+              price: monthlyPrice,
+              displayPrice: `${pricingSource.currencySymbol}${monthlyPrice}`,
+              stripePriceId: pricingSource.stripePriceIds?.monthly,
+              razorpayPlanId: pricingSource.razorpayPlanIds?.monthly
+            };
+          } else {
+            // Fallback to region info (should rarely happen if CountryPricing is properly set up)
+            return {
+              region: regionInfo?.countryCode || 'US',
+              regionName: regionInfo?.countryName || 'United States',
+              currency: planCurrency,
+              currencySymbol: planCurrencySymbol,
+              price: basePrice.monthly || 0,
+              displayPrice: `${planCurrencySymbol}${basePrice.monthly || 0}`
+            };
+          }
         })(),
         // Time-based metadata
         durationInfo,
@@ -402,7 +455,7 @@ export async function GET(request: NextRequest) {
         // Add days remaining for promotion
         promotionDaysRemaining: isPromotionActive && (plan as any).promotionValidUntil ? Math.ceil((new Date((plan as any).promotionValidUntil).getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24)) : null
       };
-    });
+    }));
 
     const responseData = {
       plans: enhancedPlans,

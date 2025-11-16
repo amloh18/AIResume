@@ -287,6 +287,59 @@ export function useUsageLimits() {
     fetchUsageLimits();
   }, [fetchUsageLimits]);
 
+  // Real-time credit sync: Poll for updates every 30 seconds when modal/page is active
+  useEffect(() => {
+    if (!session?.user?.email) return;
+
+    // Only poll when document is visible (tab is active)
+    const isDocumentVisible = () => !document.hidden;
+
+    // Polling interval: 30 seconds
+    const POLL_INTERVAL = 30000; // 30 seconds
+
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (pollInterval) return; // Already polling
+
+      pollInterval = setInterval(() => {
+        // Only fetch if document is visible
+        if (isDocumentVisible()) {
+          fetchUsageLimits();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    // Start polling when component mounts
+    startPolling();
+
+    // Handle visibility change - pause polling when tab is hidden
+    const handleVisibilityChange = () => {
+      if (isDocumentVisible()) {
+        startPolling();
+        // Immediately fetch when tab becomes visible
+        fetchUsageLimits();
+      } else {
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup on unmount
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [session?.user?.email, fetchUsageLimits]);
+
   return {
     usageLimits,
     timeAccess,

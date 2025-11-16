@@ -54,6 +54,8 @@ export async function GET(request: NextRequest) {
       invoices: invoices.map((invoice: any) => ({
         id: invoice._id,
         invoiceNumber: invoice.invoiceNumber,
+        subtotal: invoice.subtotal || invoice.amount,
+        taxAmount: invoice.taxAmount || 0,
         amount: invoice.amount,
         currency: invoice.currency,
         status: invoice.status,
@@ -63,6 +65,7 @@ export async function GET(request: NextRequest) {
         paymentMethodLast4: invoice.paymentMethodLast4,
         paidAt: invoice.paidAt,
         dueDate: invoice.dueDate,
+        invoiceDate: invoice.invoiceDate || invoice.createdAt,
         description: invoice.description,
         createdAt: invoice.createdAt
       })),

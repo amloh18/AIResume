@@ -404,6 +404,44 @@ Sincerely,
 
     console.log('✅ Journey Document Service - Documents created successfully for journey:', journeyId);
 
+    // Send notification that documents are ready
+    try {
+      const notificationService = (await import('./notificationService')).default;
+      const { JobApplication } = await import('@/models');
+      
+      // Get job details for notification
+      const job = await JobApplication.findById(currentJourney.jobId);
+      if (job) {
+        await notificationService.createNotification({
+          userId: userId,
+          type: 'documents_ready',
+          title: '✨ Your Documents Are Ready!',
+          message: `Your tailored CV and cover letter for ${job.jobTitle} at ${job.company} are ready. Edit them in Studio or apply to the job now!`,
+          actionType: 'review_job',
+          actionData: {
+            jobId: job._id.toString(),
+            journeyId: journeyId,
+            url: `/studio?journeyId=${journeyId}`,
+          },
+          interactive: true,
+          priority: 'high',
+          channels: ['in-app', 'email'],
+          persistent: false,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
+          metadata: {
+            jobId: job._id.toString(),
+            journeyId: journeyId,
+            jobTitle: job.jobTitle,
+            company: job.company,
+          },
+        });
+        console.log('✅ Journey Document Service - Notification sent for documents ready');
+      }
+    } catch (notificationError) {
+      console.error('⚠️ Journey Document Service - Failed to send notification (non-critical):', notificationError);
+      // Don't fail document creation if notification fails
+    }
+
     return {
       success: true,
       cvId,

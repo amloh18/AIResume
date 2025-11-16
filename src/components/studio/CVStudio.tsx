@@ -22,6 +22,7 @@ import CertificatesSection from './forms/CertificatesSection';
 import LanguagesSection from './forms/LanguagesSection';
 import VolunteerSection from './forms/VolunteerSection';
 import MasterCVCard from './MasterCVCard';
+import { ConflictResolver } from './ConflictResolver';
 import {
   User,
   Briefcase,
@@ -191,6 +192,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isMasterCV, setIsMasterCV] = useState(false);
   const [currentMasterCV, setCurrentMasterCV] = useState<any>(null);
+  
+  // Track last fetched CV's updatedAt for conflict detection
+  const lastFetchedUpdatedAtRef = useRef<string | null>(null);
+  
+  // Conflict resolution state
+  const [conflictData, setConflictData] = useState<{
+    serverVersion: any;
+    clientVersion: any;
+  } | null>(null);
+  const [showConflictResolver, setShowConflictResolver] = useState(false);
   
   // Track if CV data has changed during this session (for thumbnail generation on exit)
   const cvDataChangedRef = useRef(false);
@@ -1418,9 +1429,41 @@ const CVStudio: React.FC<CVStudioProps> = ({
           console.log('🔍 Studio - Update data:', updateData);
           console.log('🔍 Studio - Template ID being saved:', updateData.templateId);
           
-          await CVService.updateCV(cvId, updateData, userId || undefined);
-          setSaveStatus('saved');
-          setLastSavedData(JSON.stringify(cvData));
+          // Include updatedAt for conflict detection
+          if (lastFetchedUpdatedAtRef.current) {
+            updateData.updatedAt = lastFetchedUpdatedAtRef.current;
+          }
+          
+          try {
+            const updatedCV = await CVService.updateCV(cvId, updateData, userId || undefined);
+            setSaveStatus('saved');
+            setLastSavedData(JSON.stringify(cvData));
+            
+            // Update lastFetchedUpdatedAt with the new updatedAt from server
+            if (updatedCV.updatedAt) {
+              lastFetchedUpdatedAtRef.current = typeof updatedCV.updatedAt === 'string' 
+                ? updatedCV.updatedAt 
+                : new Date(updatedCV.updatedAt).toISOString();
+            }
+          } catch (error: any) {
+            // Handle conflict
+            if (error.conflict && error.serverVersion && error.clientVersion) {
+              console.log('⚠️ Studio - Conflict detected, showing resolver');
+              setConflictData({
+                serverVersion: error.serverVersion,
+                clientVersion: {
+                  ...error.clientVersion,
+                  cvData: cvData,
+                  title: cvTitle,
+                  templateId: updateData.templateId
+                }
+              });
+              setShowConflictResolver(true);
+              setSaveStatus('error');
+              return;
+            }
+            throw error; // Re-throw if not a conflict
+          }
           
           // Trigger ATS recalculation if we have a journey and job
           if (journeyId && selectedJobId) {
@@ -1652,6 +1695,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
           const cvDocument = await UnifiedCVService.getCV(journeyInfo.cvId, userId);
           if (cvDocument && cvDocument.cvData) {
             console.log('✅ CVStudio - CV loaded from journey:', cvDocument.id);
+            
+            // Store updatedAt for conflict detection
+            if (cvDocument.updatedAt) {
+              lastFetchedUpdatedAtRef.current = typeof cvDocument.updatedAt === 'string' 
+                ? cvDocument.updatedAt 
+                : new Date(cvDocument.updatedAt).toISOString();
+            }
+            
             await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
             setCvTitle(cvDocument.title || 'Untitled CV');
               
@@ -1874,6 +1925,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
           console.log('🔍 CVStudio - Fetching CV data directly for journey CV:', journey.cvId);
           const cvDocument = await UnifiedCVService.getCV(journey.cvId, userId);
           if (cvDocument && cvDocument.cvData) {
+            // Store updatedAt for conflict detection
+            if (cvDocument.updatedAt) {
+              lastFetchedUpdatedAtRef.current = typeof cvDocument.updatedAt === 'string' 
+                ? cvDocument.updatedAt 
+                : new Date(cvDocument.updatedAt).toISOString();
+            }
+            
             await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
             setCvTitle(cvDocument.title || 'Untitled CV');
             setOriginalCvId(cvDocument.id);
@@ -2131,6 +2189,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
                     const cvDocument = await UnifiedCVService.getCV(loadedJourneyInfo.cvId, userId);
                     if (cvDocument && cvDocument.cvData) {
                       console.log('✅ CVStudio - CV loaded:', cvDocument.id);
+                      
+                      // Store updatedAt for conflict detection
+                      if (cvDocument.updatedAt) {
+                        lastFetchedUpdatedAtRef.current = typeof cvDocument.updatedAt === 'string' 
+                          ? cvDocument.updatedAt 
+                          : new Date(cvDocument.updatedAt).toISOString();
+                      }
+                      
                       await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
                       setCvTitle(cvDocument.title || 'Untitled CV');
                       
@@ -2231,6 +2297,14 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   const cvDocument = await UnifiedCVService.getCV(journeyInfo.cvId, userId);
                   if (cvDocument && cvDocument.cvData) {
                     console.log('✅ CVStudio - CV loaded from journey:', cvDocument.id);
+                    
+                    // Store updatedAt for conflict detection
+                    if (cvDocument.updatedAt) {
+                      lastFetchedUpdatedAtRef.current = typeof cvDocument.updatedAt === 'string' 
+                        ? cvDocument.updatedAt 
+                        : new Date(cvDocument.updatedAt).toISOString();
+                    }
+                    
                     // Use setCvDataWithStructure to ensure structure is initialized
                     await setCvDataWithStructure(cvDocument.cvData, cvDocument.templateId);
                     setCvTitle(cvDocument.title || 'Untitled CV');
@@ -2497,6 +2571,13 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   cvResult = await UnifiedCVService.getCV(cvId, userId);
                   console.log('🔍 CVStudio - UnifiedCVService returned:', cvResult);
                   console.log('🔍 CVStudio - cvResult has cvData?', !!cvResult?.cvData);
+                  
+                  // Store updatedAt for conflict detection
+                  if (cvResult.updatedAt) {
+                    lastFetchedUpdatedAtRef.current = typeof cvResult.updatedAt === 'string' 
+                      ? cvResult.updatedAt 
+                      : new Date(cvResult.updatedAt).toISOString();
+                  }
                   
                   // UnifiedCVService.getCV returns UnifiedCVDocument which has cvData property
                   convertedData = cvResult.cvData;
@@ -4362,6 +4443,98 @@ const CVStudio: React.FC<CVStudioProps> = ({
         onAction={actionBlockerConfig.onAction}
         actionLabel="Go to ATS Editor"
       />
+
+      {/* Conflict Resolver */}
+      {conflictData && (
+        <ConflictResolver
+          open={showConflictResolver}
+          onClose={() => {
+            setShowConflictResolver(false);
+            setConflictData(null);
+          }}
+          serverVersion={conflictData.serverVersion}
+          clientVersion={conflictData.clientVersion}
+          onResolve={async (resolution) => {
+            if (!cvId || !conflictData) return;
+
+            try {
+              setSaveStatus('saving');
+              
+              if (resolution === 'server') {
+                // Use server version - reload from server
+                const serverCV = await CVService.getCV(cvId, userId || undefined);
+                if (serverCV) {
+                  await setCvDataWithStructure(serverCV.cvData, serverCV.templateId);
+                  setCvTitle(serverCV.title || 'Untitled CV');
+                  if (serverCV.updatedAt) {
+                    lastFetchedUpdatedAtRef.current = typeof serverCV.updatedAt === 'string' 
+                      ? serverCV.updatedAt 
+                      : new Date(serverCV.updatedAt).toISOString();
+                  }
+                }
+              } else if (resolution === 'client') {
+                // Use client version - force save (overwrite server)
+                const updateData = {
+                  title: cvTitle,
+                  cvData: cvData,
+                  templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
+                  metadata: {
+                    isMaster: isMasterCV
+                  },
+                  // Don't include updatedAt to force overwrite
+                };
+                const updatedCV = await CVService.updateCV(cvId, updateData, userId || undefined);
+                if (updatedCV.updatedAt) {
+                  lastFetchedUpdatedAtRef.current = typeof updatedCV.updatedAt === 'string' 
+                    ? updatedCV.updatedAt 
+                    : new Date(updatedCV.updatedAt).toISOString();
+                }
+              }
+              
+              setSaveStatus('saved');
+              setShowConflictResolver(false);
+              setConflictData(null);
+            } catch (error) {
+              console.error('Error resolving conflict:', error);
+              setSaveStatus('error');
+            }
+          }}
+          onMerge={async (mergedData) => {
+            if (!cvId) return;
+
+            try {
+              setSaveStatus('saving');
+              
+              const updateData = {
+                title: cvTitle,
+                cvData: mergedData,
+                templateId: selectedTemplate?._id?.toString() || selectedTemplate?.id?.toString() || '',
+                metadata: {
+                  isMaster: isMasterCV
+                }
+              };
+              
+              const updatedCV = await CVService.updateCV(cvId, updateData, userId || undefined);
+              
+              // Update local state with merged data
+              await setCvDataWithStructure(mergedData, updatedCV.templateId);
+              
+              if (updatedCV.updatedAt) {
+                lastFetchedUpdatedAtRef.current = typeof updatedCV.updatedAt === 'string' 
+                  ? updatedCV.updatedAt 
+                  : new Date(updatedCV.updatedAt).toISOString();
+              }
+              
+              setSaveStatus('saved');
+              setShowConflictResolver(false);
+              setConflictData(null);
+            } catch (error) {
+              console.error('Error saving merged data:', error);
+              setSaveStatus('error');
+            }
+          }}
+        />
+      )}
 
       {/* Add Section Modal - Matching MasterCVBuilderStep */}
         {showAddSectionModal && (

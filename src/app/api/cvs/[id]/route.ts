@@ -251,6 +251,46 @@ export async function PUT(
       );
     }
 
+    // CONFLICT DETECTION: Check if CV was modified since client last fetched it
+    const clientUpdatedAt = body.updatedAt ? new Date(body.updatedAt) : null;
+    const serverUpdatedAt = cv.updatedAt || cv.metadata?.lastModified || new Date(cv.createdAt);
+    
+    if (clientUpdatedAt && serverUpdatedAt > clientUpdatedAt) {
+      console.log('⚠️ CV UPDATE API - Conflict detected:', {
+        clientUpdatedAt: clientUpdatedAt.toISOString(),
+        serverUpdatedAt: serverUpdatedAt.toISOString()
+      });
+      
+      // Return conflict response with both versions
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Conflict',
+          conflict: true,
+          message: 'This CV was modified by another session. Please resolve the conflict.',
+          serverVersion: {
+            id: cv._id.toString(),
+            title: cv.title,
+            cvData: cv.cvData,
+            templateId: cv.templateId?.toString(),
+            version: cv.version,
+            updatedAt: serverUpdatedAt.toISOString(),
+            metadata: cv.metadata
+          },
+          clientVersion: {
+            id: body.id || id,
+            title: body.title,
+            cvData: body.cvData,
+            templateId: body.templateId,
+            version: body.version || cv.version,
+            updatedAt: clientUpdatedAt.toISOString(),
+            metadata: body.metadata
+          }
+        },
+        { status: 409 }
+      );
+    }
+
     // Prepare update data (excluding legacy fields)
     const allowedFields = [
       'title', 'cvData', 'templateId', 'status', 'isMaster', 'metadata'

@@ -84,6 +84,8 @@ export async function uploadToS3(options: UploadOptions): Promise<UploadResult> 
 
 /**
  * React hook for file uploads with progress tracking
+ * NOTE: This hook uses useState, so it must only be used in client components
+ * The file already has 'use client' directive at the top
  */
 export function useFileUpload() {
   const [uploading, setUploading] = useState(false);

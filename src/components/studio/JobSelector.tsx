@@ -225,9 +225,10 @@ const JobSelector: React.FC<JobSelectorProps> = ({
   }, {} as Record<string, Job[]>);
 
   // Define stage order and labels
-  const stageOrder = ['created', 'applied', 'interview', 'offer', 'rejected'];
+  const stageOrder = ['draft', 'created', 'applied', 'interview', 'offer', 'rejected'];
   const stageLabels = {
-    created: 'Draft',
+    draft: 'Draft',
+    created: 'Created',
     applied: 'Applied',
     interview: 'Interview',
     offer: 'Offer',
@@ -320,6 +321,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                 <Briefcase className="h-3 w-3 text-lime-600" />
                 <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">{selectedJob.jobTitle}</span>
                 <div className={`px-1 py-0.5 rounded text-xs font-medium ${
+                  selectedJob.status === 'draft' ? 'bg-gray-100 text-gray-500' :
                   selectedJob.status === 'created' ? 'bg-gray-100 text-gray-600' :
                   selectedJob.status === 'applied' ? 'bg-blue-100 text-blue-700' :
                   selectedJob.status === 'interview' ? 'bg-yellow-100 text-yellow-700' :
@@ -478,6 +480,7 @@ const JobSelector: React.FC<JobSelectorProps> = ({
                                   </div>
                                 </div>
                                 <div className={`px-1.5 py-0.5 rounded-md text-xs font-medium ml-2 ${
+                                  job.status === 'draft' ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400' :
                                   job.status === 'created' ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' :
                                   job.status === 'applied' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
                                   job.status === 'interview' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :

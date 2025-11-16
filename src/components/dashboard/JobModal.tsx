@@ -7,7 +7,7 @@ import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/ap
 import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
-  Target, Building2, Star, Copy, Archive, ChevronDown, ChevronUp, User, Mail, Phone
+  Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone
 } from 'lucide-react';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import JobInfoContent from './JobInfoContent';
@@ -24,7 +24,7 @@ interface JobApplication {
   jobTitle: string;
   title?: string; // For compatibility
   company: string;
-  status: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   jobDescription?: string;
   description?: string; // For compatibility
   location?: string;

@@ -42,6 +42,8 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const [showSendCodeButton, setShowSendCodeButton] = useState(false);
   const [showPasswordResetForm, setShowPasswordResetForm] = useState(false);
   const [resetToken, setResetToken] = useState<string | null>(null);
+  const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
+  const [twoFactorUserId, setTwoFactorUserId] = useState<string | null>(null);
 
   // Check if user is already signed in
   useEffect(() => {
@@ -110,7 +112,36 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         return;
       }
       
-      // Add timeout to prevent hanging
+      // Verify credentials and check for 2FA
+      const verifyResponse = await fetch('/api/auth/verify-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const verifyResult = await verifyResponse.json();
+
+      if (!verifyResult.success) {
+        setError(verifyResult.error || 'Invalid email or password.');
+        return;
+      }
+
+      // Check if 2FA is required
+      if (verifyResult.requiresTwoFactor && verifyResult.sessionId) {
+        // Store 2FA session info and switch to 2FA verification mode
+        setTwoFactorSessionId(verifyResult.sessionId);
+        setTwoFactorUserId(verifyResult.userId);
+        setEmail(formData.email);
+        setVerificationType('passwordless-login'); // Reuse existing verification screen
+        setMode('verify-code');
+        setSuccess('Please enter the 4-digit code sent to your email.');
+        return;
+      }
+
+      // No 2FA required - proceed with normal NextAuth sign-in
       const signInPromise = signIn('credentials', {
         email: formData.email,
         password: formData.password,
@@ -127,14 +158,11 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
-        // Force session update and wait for it to be ready
-        // Use window.location for reliable redirect that preserves callbackUrl
         setTimeout(() => {
           console.log('✅ Redirecting to:', callbackUrl);
           window.location.href = callbackUrl;
         }, 1000);
       } else {
-        // Handle specific error cases
         let errorMessage = 'Invalid email or password.';
         
         if (result?.error === 'CredentialsSignin') {
@@ -233,6 +261,67 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     setError('');
 
     try {
+      // Check if this is a 2FA verification (has twoFactorSessionId)
+      if (twoFactorSessionId) {
+        // Verify 2FA code
+        const verifyResponse = await fetch('/api/auth/two-factor/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: twoFactorSessionId,
+            code,
+          }),
+        });
+
+        const verifyResult = await verifyResponse.json();
+
+        if (!verifyResult.success) {
+          setError(verifyResult.error || 'Invalid code. Please try again.');
+          return;
+        }
+
+        // Complete sign-in with 2FA token
+        const completeResponse = await fetch('/api/auth/complete-two-factor-signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: twoFactorSessionId,
+            code,
+          }),
+        });
+
+        const completeResult = await completeResponse.json();
+
+        if (!completeResult.success) {
+          setError(completeResult.error || 'Failed to complete sign-in.');
+          return;
+        }
+
+        // Create NextAuth session
+        const sessionResponse = await fetch('/api/auth/create-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: completeResult.userId,
+            email: completeResult.email,
+          }),
+        });
+
+        const sessionResult = await sessionResponse.json();
+
+        if (!sessionResult.success) {
+          setError('Failed to create session. Please try again.');
+          return;
+        }
+
+        // Success - redirect
+        setSuccess('Sign in successful! Redirecting...');
+        setTimeout(() => {
+          window.location.href = callbackUrl;
+        }, 1000);
+        return;
+      }
+
       // Handle different verification types
       switch (verificationType) {
         case 'passwordless-login': {

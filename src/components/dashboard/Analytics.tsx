@@ -23,6 +23,9 @@ import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import ComprehensiveATSAnalyzer from '@/components/studio/ComprehensiveATSAnalyzer';
+import PaymentPastDueBanner from './PaymentPastDueBanner';
+import SubscriptionExpiryBanner from './SubscriptionExpiryBanner';
+import { useUsageLimits } from '@/lib/hooks/useUsageLimits';
 
 // Helper functions for CV scoring
 const calculatePersonalInfoScore = (basics: any): number => {
@@ -585,7 +588,7 @@ const IntelligenceDashboard: React.FC<{
       return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
     });
 
-    const responsiveJobs = jobs.filter(job => job.status !== 'created' && job.status !== 'applied');
+    const responsiveJobs = jobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied');
     const interviewJobs = jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted');
     
     const metrics = {
@@ -653,7 +656,7 @@ const IntelligenceDashboard: React.FC<{
       industryJobs: industryJobs.length,
       avgSalary: Math.round(avgSalary / 1000),
       avgResponseTime: Math.round(avgResponseTime),
-      marketDemandScore: Math.round((jobs.filter(job => job.status !== 'created' && job.status !== 'applied').length / Math.max(jobs.length, 1)) * 100),
+      marketDemandScore: Math.round((jobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied').length / Math.max(jobs.length, 1)) * 100),
       skillMatchScore: userProfile.skills.length > 0 ? 
         Math.round((userProfile.skills.filter(skill => 
           jobs.some(job => job.requirements?.toLowerCase().includes(skill.toLowerCase()))
@@ -695,7 +698,7 @@ const PerformanceInsights: React.FC<{
 }> = ({ analyticsData, jobs, cvs, selectedPeriod, onPeriodChange }) => {
   const calculatePerformanceMetrics = () => {
     const applicationFunnel = {
-      applied: jobs.filter(job => job.status === 'applied' || job.status !== 'created').length,
+      applied: jobs.filter(job => job.status === 'applied' || (job.status !== 'draft' && job.status !== 'created')).length,
       screening: jobs.filter(job => job.status === 'screening').length,
       interview: jobs.filter(job => job.status === 'interview').length,
       offer: jobs.filter(job => job.status === 'offer' || job.status === 'accepted').length
@@ -719,7 +722,7 @@ const PerformanceInsights: React.FC<{
 
     const periodJobs = jobs.filter(job => periodFilter(new Date(job.createdAt)));
     const periodApplications = periodJobs.length;
-    const periodResponses = periodJobs.filter(job => job.status !== 'created' && job.status !== 'applied').length;
+    const periodResponses = periodJobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied').length;
 
     // Performance trends
     const responseTime = jobs.filter(job => job.lastStatusUpdate).reduce((avg, job) => {
@@ -849,7 +852,7 @@ const PerformanceInsights: React.FC<{
                 return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
               });
               
-              const responseRate = jobs.filter(job => job.status !== 'created' && job.status !== 'applied').length / Math.max(jobs.length, 1) * 100;
+              const responseRate = jobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied').length / Math.max(jobs.length, 1) * 100;
               const interviewRate = jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / Math.max(jobs.length, 1) * 100;
               
               if (thisMonth.length < 5) {
@@ -1270,6 +1273,22 @@ const Analytics: React.FC = () => {
   // Removed skeleton loading - dashboard shows content immediately
   // Data will populate as it loads without blocking the UI
 
+  // Check if subscription is past due
+  const subscriptionStatus = userProfile?.subscription?.status;
+  const isPastDue = subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid';
+  
+  // Get expiry information from useUsageLimits
+  const { timeAccess, subscription: usageSubscription } = useUsageLimits();
+  
+  // Determine if we should show expiry banner
+  // Show if: subscription is active, not free, and (expiring within 7 days OR in grace period)
+  const shouldShowExpiryBanner = !isPastDue && 
+    userProfile?.subscription?.status === 'active' && 
+    userProfile?.subscription?.planKey !== 'free' &&
+    timeAccess &&
+    ((timeAccess.daysRemaining !== undefined && timeAccess.daysRemaining <= 7) || 
+     (timeAccess.isInGracePeriod === true));
+
   return (
     <div className="dashboard-page space-y-4 pb-0">
       {/* Page Header */}
@@ -1288,6 +1307,27 @@ const Analytics: React.FC = () => {
         onMobileMenuToggle={toggleSidebar}
         isMobileMenuOpen={isMobileMenuOpen}
       />
+
+      {/* Payment Past Due Banner */}
+      {isPastDue && (
+        <PaymentPastDueBanner
+          amount={userProfile?.subscription?.purchasePrice}
+          currency={userProfile?.subscription?.purchaseCurrency || 'USD'}
+          dueDate={userProfile?.subscription?.endDate}
+        />
+      )}
+
+      {/* Subscription Expiry Banner */}
+      {shouldShowExpiryBanner && timeAccess && usageSubscription && (
+        <SubscriptionExpiryBanner
+          planKey={usageSubscription.planKey || userProfile?.subscription?.planKey || 'free'}
+          expiresAt={timeAccess.expiredAt || usageSubscription.accessExpiresAt || usageSubscription.currentPeriodEnd}
+          daysRemaining={timeAccess.daysRemaining}
+          hoursRemaining={timeAccess.hoursRemaining}
+          isInGracePeriod={timeAccess.isInGracePeriod}
+          gracePeriodEndsAt={timeAccess.gracePeriodEndsAt}
+        />
+      )}
 
       {/* First Row: CV Management, Recent Jobs, and Application Calendar */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

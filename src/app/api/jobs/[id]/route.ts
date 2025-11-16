@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
+import mongoose from 'mongoose';
 
 export async function GET(
   request: NextRequest,
@@ -257,6 +258,155 @@ export async function PUT(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Check if status changed from 'draft' to 'created' and create journey if needed
+    const previousStatus = currentJob?.status;
+    const newStatus = body.status || job.status;
+    
+    if (previousStatus === 'draft' && newStatus === 'created') {
+      try {
+        const { ApplicationJourney } = await import('@/models');
+        const { createJourneyDocuments } = await import('@/lib/services/journeyDocumentService');
+        
+        // Check if journey already exists for this job
+        const existingJourney = await ApplicationJourney.findOne({
+          jobId: resolvedParams.id,
+          userId: userId
+        });
+        
+        if (!existingJourney) {
+          console.log(`🚀 Job Update API - Creating ApplicationJourney for job moved from draft to created: ${resolvedParams.id}`);
+          
+          // Determine if documents need to be created
+          const needsDocuments = true; // Always create documents when moving to created
+          const initialStatus = needsDocuments ? 'processing_documents' : 'in-progress';
+          
+          const journeyData = {
+            journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userId: new mongoose.Types.ObjectId(userId),
+            jobId: resolvedParams.id,
+            cvId: null,
+            coverLetterId: null,
+            status: initialStatus,
+            currentStep: 1,
+            totalSteps: 5,
+            jobTitle: job.jobTitle,
+            company: job.company,
+            journeyType: 'standard',
+            steps: [
+              {
+                stepId: 1,
+                name: 'Job Saved',
+                status: 'completed',
+                completedAt: new Date(),
+                data: {}
+              },
+              {
+                stepId: 2,
+                name: 'CV Tailoring',
+                status: 'pending',
+                data: {}
+              },
+              {
+                stepId: 3,
+                name: 'Cover Letter',
+                status: 'pending',
+                data: {}
+              },
+              {
+                stepId: 4,
+                name: 'ATS Check',
+                status: 'pending',
+                data: {}
+              },
+              {
+                stepId: 5,
+                name: 'Application Ready',
+                status: 'pending',
+                data: {}
+              }
+            ],
+            lastWorkedOn: new Date(),
+            atsScoreHistory: [],
+            downloadHistory: [],
+            metadata: {
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              lastAccessedAt: new Date(),
+              tags: job.source === 'extension' ? ['extension-saved'] : [],
+              notes: ''
+            }
+          };
+          
+          const newJourney = await ApplicationJourney.create(journeyData);
+          console.log('✅ Job Update API - ApplicationJourney created successfully:', newJourney._id);
+          
+          // Send notification that documents are being generated
+          try {
+            const notificationService = (await import('@/lib/services/notificationService')).default;
+            await notificationService.createNotification({
+              userId: userId,
+              type: 'documents_ready',
+              title: 'Generating Your Documents',
+              message: `We're creating your tailored CV and cover letter for ${job.jobTitle} at ${job.company}. You'll be notified when they're ready!`,
+              actionType: 'review_job',
+              actionData: {
+                jobId: job._id.toString(),
+                journeyId: newJourney._id.toString(),
+                url: `/dashboard?jobId=${job._id}`,
+              },
+              interactive: false,
+              priority: 'medium',
+              channels: ['in-app'],
+              persistent: false,
+              expiresAt: new Date(Date.now() + 1 * 60 * 60 * 1000), // Expires in 1 hour (will be replaced by documents ready notification)
+              metadata: {
+                jobId: job._id.toString(),
+                journeyId: newJourney._id.toString(),
+                jobTitle: job.jobTitle,
+                company: job.company,
+                status: 'generating',
+              },
+            });
+            console.log('✅ Job Update API - Notification sent for document generation started');
+          } catch (notificationError) {
+            console.error('⚠️ Job Update API - Failed to send notification (non-critical):', notificationError);
+          }
+          
+          // If documents need to be created, trigger async creation
+          if (needsDocuments && newJourney.status === 'processing_documents') {
+            // Call document creation service directly (no HTTP request needed)
+            // Run in background to avoid blocking the response
+            setImmediate(async () => {
+              try {
+                console.log('🚀 Job Update API - Starting document creation for journey:', newJourney._id);
+                const result = await createJourneyDocuments(newJourney._id.toString(), userId);
+                
+                if (result.success) {
+                  console.log('✅ Job Update API - Document creation completed successfully:', {
+                    journeyId: newJourney._id,
+                    cvId: result.cvId,
+                    coverLetterId: result.coverLetterId
+                  });
+                } else {
+                  console.error('❌ Job Update API - Document creation failed:', result.error);
+                }
+              } catch (error) {
+                console.error('❌ Job Update API - Error in document creation:', error);
+                // Journey status will be updated by the service on error
+              }
+            });
+            
+            console.log('🚀 Job Update API - Triggered async document creation for journey:', newJourney._id);
+          }
+        } else {
+          console.log(`ℹ️ Job Update API - Journey already exists for job ${resolvedParams.id}, skipping creation`);
+        }
+      } catch (journeyError) {
+        console.error('⚠️ Job Update API - Failed to create ApplicationJourney (non-critical):', journeyError);
+        // Don't fail the job update if journey creation fails
+      }
+    }
+
     // Update CV journeys with new job data if job title or company changed
     if (body.jobTitle || body.company) {
       try {
@@ -306,9 +456,132 @@ export async function PUT(
         if (updatedJourneys.modifiedCount > 0) {
           console.log(`✅ Bidirectional sync: Marked ${updatedJourneys.modifiedCount} journeys as completed for job ${resolvedParams.id}`);
         }
+
+        // Send notification when job is applied
+        try {
+          const notificationService = (await import('@/lib/services/notificationService')).default;
+          await notificationService.createNotification({
+            userId: userId,
+            type: 'job_applied',
+            title: 'Application Submitted!',
+            message: `Great! You've applied to ${job.jobTitle} at ${job.company}. Good luck!`,
+            actionType: 'review_job',
+            actionData: {
+              jobId: job._id.toString(),
+              url: `/dashboard?jobId=${job._id}`,
+            },
+            interactive: true,
+            priority: 'medium',
+            channels: ['in-app'],
+            persistent: false,
+            expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // Expires in 3 days
+            metadata: {
+              jobId: job._id.toString(),
+              jobTitle: job.jobTitle,
+              company: job.company,
+            },
+          });
+          console.log('✅ Job Update API - Notification sent for job applied');
+        } catch (notificationError) {
+          console.error('⚠️ Job Update API - Failed to send notification (non-critical):', notificationError);
+        }
       } catch (error) {
         console.error('Error in bidirectional sync:', error);
         // Don't fail the job update if journey sync fails
+      }
+    }
+
+    // Send notification when job moves to interview stage
+    if (body.status === 'interview' && previousStatus !== 'interview') {
+      try {
+        const notificationService = (await import('@/lib/services/notificationService')).default;
+        await notificationService.createNotification({
+          userId: userId,
+          type: 'interview_follow_up',
+          title: '🎉 Interview Scheduled!',
+          message: `Congratulations! You have an interview for ${job.jobTitle} at ${job.company}. Don't forget to send a follow-up email after the interview to show your continued interest.`,
+          actionType: 'review_job',
+          actionData: {
+            jobId: job._id.toString(),
+            url: `/dashboard?jobId=${job._id}`,
+          },
+          interactive: true,
+          priority: 'high',
+          channels: ['in-app', 'email'],
+          persistent: false,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
+          metadata: {
+            jobId: job._id.toString(),
+            jobTitle: job.jobTitle,
+            company: job.company,
+            reminderType: 'follow_up_email',
+          },
+        });
+        console.log('✅ Job Update API - Notification sent for interview stage');
+      } catch (notificationError) {
+        console.error('⚠️ Job Update API - Failed to send interview notification (non-critical):', notificationError);
+      }
+    }
+
+    // Send notification when job receives an offer
+    if (body.status === 'offer' && previousStatus !== 'offer') {
+      try {
+        const notificationService = (await import('@/lib/services/notificationService')).default;
+        await notificationService.createNotification({
+          userId: userId,
+          type: 'achievement',
+          title: '🎊 Job Offer Received!',
+          message: `Amazing news! You received an offer for ${job.jobTitle} at ${job.company}. Review the details and make your decision.`,
+          actionType: 'review_job',
+          actionData: {
+            jobId: job._id.toString(),
+            url: `/dashboard?jobId=${job._id}`,
+          },
+          interactive: true,
+          priority: 'urgent',
+          channels: ['in-app', 'email'],
+          persistent: true,
+          expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Expires in 14 days
+          metadata: {
+            jobId: job._id.toString(),
+            jobTitle: job.jobTitle,
+            company: job.company,
+          },
+        });
+        console.log('✅ Job Update API - Notification sent for job offer');
+      } catch (notificationError) {
+        console.error('⚠️ Job Update API - Failed to send offer notification (non-critical):', notificationError);
+      }
+    }
+
+    // Send notification when job is accepted
+    if (body.status === 'accepted' && previousStatus !== 'accepted') {
+      try {
+        const notificationService = (await import('@/lib/services/notificationService')).default;
+        await notificationService.createNotification({
+          userId: userId,
+          type: 'achievement',
+          title: '🎉 Congratulations!',
+          message: `You've accepted the offer for ${job.jobTitle} at ${job.company}! Best of luck in your new role!`,
+          actionType: 'review_job',
+          actionData: {
+            jobId: job._id.toString(),
+            url: `/dashboard?jobId=${job._id}`,
+          },
+          interactive: false,
+          priority: 'high',
+          channels: ['in-app', 'email'],
+          persistent: false,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Expires in 30 days
+          metadata: {
+            jobId: job._id.toString(),
+            jobTitle: job.jobTitle,
+            company: job.company,
+          },
+        });
+        console.log('✅ Job Update API - Notification sent for job accepted');
+      } catch (notificationError) {
+        console.error('⚠️ Job Update API - Failed to send accepted notification (non-critical):', notificationError);
       }
     }
 

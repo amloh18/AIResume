@@ -10,8 +10,27 @@ interface DashboardDataContextType {
   coverLetters: any[];
   jobs: any[];
   analytics: any;
+  // Loading states
+  criticalLoading: boolean; // User/subscription data
+  secondaryLoading: {
+    cvs: boolean;
+    coverLetters: boolean;
+    jobs: boolean;
+    analytics: boolean;
+  };
+  // Legacy loading for backward compatibility
   loading: boolean;
+  // Per-category errors
+  errors: {
+    cvs?: string | null;
+    coverLetters?: string | null;
+    jobs?: string | null;
+    analytics?: string | null;
+  };
+  // Legacy error for backward compatibility
   error: string | null;
+  // Ready state: true when critical data is loaded
+  isReady: boolean;
   refreshCVs: () => Promise<void>;
   refreshCoverLetters: () => Promise<void>;
   refreshJobs: () => Promise<void>;
@@ -30,13 +49,27 @@ export const useDashboardData = () => {
 };
 
 export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useUnifiedAuth();
+  const { user, loading: authLoading, userId } = useUnifiedAuth();
   const [cvs, setCvs] = useState<any[]>([]);
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Separate loading states for critical vs secondary data
+  const [criticalLoading, setCriticalLoading] = useState(true);
+  const [secondaryLoading, setSecondaryLoading] = useState({
+    cvs: false,
+    coverLetters: false,
+    jobs: false,
+    analytics: false
+  });
+  
+  const [errors, setErrors] = useState<{
+    cvs?: string | null;
+    coverLetters?: string | null;
+    jobs?: string | null;
+    analytics?: string | null;
+  }>({});
   
   // Track if data has been loaded to prevent duplicate fetches
   const hasLoadedRef = useRef(false);
@@ -57,6 +90,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         loadingStates.current.set('cvs', true);
+        setSecondaryLoading(prev => ({ ...prev, cvs: true }));
+        setErrors(prev => ({ ...prev, cvs: null }));
         console.log('🔍 DashboardData - Fetching CVs');
         const response = await authenticatedFetch(endpoint);
         const contentType = response.headers.get('content-type');
@@ -69,12 +104,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           console.error('CVs response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching CVs:', err);
-        setError(err.message || 'Failed to fetch CVs');
+        const errorMsg = err.message || 'Failed to fetch CVs';
+        setErrors(prev => ({ ...prev, cvs: errorMsg }));
+        setError(errorMsg); // Legacy error
       } finally {
         loadingStates.current.set('cvs', false);
+        setSecondaryLoading(prev => ({ ...prev, cvs: false }));
       }
     });
   }, []);
@@ -91,6 +130,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         loadingStates.current.set('coverLetters', true);
+        setSecondaryLoading(prev => ({ ...prev, coverLetters: true }));
+        setErrors(prev => ({ ...prev, coverLetters: null }));
         console.log('🔍 DashboardData - Fetching cover letters');
         const response = await authenticatedFetch(endpoint);
         const contentType = response.headers.get('content-type');
@@ -103,12 +144,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           console.error('Cover letters response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching cover letters:', err);
-        setError(err.message || 'Failed to fetch cover letters');
+        const errorMsg = err.message || 'Failed to fetch cover letters';
+        setErrors(prev => ({ ...prev, coverLetters: errorMsg }));
+        setError(errorMsg); // Legacy error
       } finally {
         loadingStates.current.set('coverLetters', false);
+        setSecondaryLoading(prev => ({ ...prev, coverLetters: false }));
       }
     });
   }, []);
@@ -125,6 +170,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         loadingStates.current.set('jobs', true);
+        setSecondaryLoading(prev => ({ ...prev, jobs: true }));
+        setErrors(prev => ({ ...prev, jobs: null }));
         console.log('🔍 DashboardData - Fetching jobs');
         const response = await authenticatedFetch(endpoint);
         const contentType = response.headers.get('content-type');
@@ -137,12 +184,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           console.error('Jobs response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching jobs:', err);
-        setError(err.message || 'Failed to fetch jobs');
+        const errorMsg = err.message || 'Failed to fetch jobs';
+        setErrors(prev => ({ ...prev, jobs: errorMsg }));
+        setError(errorMsg); // Legacy error
       } finally {
         loadingStates.current.set('jobs', false);
+        setSecondaryLoading(prev => ({ ...prev, jobs: false }));
       }
     });
   }, []);
@@ -159,6 +210,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
       try {
         loadingStates.current.set('analytics', true);
+        setSecondaryLoading(prev => ({ ...prev, analytics: true }));
+        setErrors(prev => ({ ...prev, analytics: null }));
         console.log('🔍 DashboardData - Fetching analytics');
         const response = await authenticatedFetch(endpoint);
         const contentType = response.headers.get('content-type');
@@ -171,12 +224,15 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           console.error('Analytics response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
         }
       } catch (err: any) {
         console.error('❌ DashboardData - Error fetching analytics:', err);
-        // Analytics is optional, don't set main error
+        // Analytics is optional, but still track error
+        setErrors(prev => ({ ...prev, analytics: err.message || 'Failed to fetch analytics' }));
       } finally {
         loadingStates.current.set('analytics', false);
+        setSecondaryLoading(prev => ({ ...prev, analytics: false }));
       }
     });
   }, []);
@@ -214,12 +270,13 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!userId) return;
 
     console.log('🔄 DashboardData - Refreshing all data for user:', userId);
-    setLoading(true);
+    setSecondaryLoading({ cvs: true, coverLetters: true, jobs: true, analytics: true });
     setError(null);
+    setErrors({});
     
     const startTime = performance.now();
     
-    // Fetch all in parallel - request deduplication will handle any overlapping calls
+    // Fetch all secondary data in parallel - request deduplication will handle any overlapping calls
     await Promise.all([
       fetchCVs(userId),
       fetchCoverLetters(userId),
@@ -228,19 +285,26 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     ]);
     
     const duration = Math.round(performance.now() - startTime);
-    console.log(`✅ DashboardData - All data loaded in ${duration}ms`);
-    
-    setLoading(false);
+    console.log(`✅ DashboardData - All secondary data loaded in ${duration}ms`);
   }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchAnalytics]);
 
-  // Initial data load
+  // CRITICAL PATH LOADING: Wait for auth, then load secondary data
   useEffect(() => {
+    // Wait for authentication to complete
+    if (authLoading) {
+      setCriticalLoading(true);
+      return;
+    }
+
     const userId = getUserIdForAPI(user);
     
     if (!userId) {
-      setLoading(false);
+      setCriticalLoading(false);
       return;
     }
+
+    // Critical data is ready (user is authenticated)
+    setCriticalLoading(false);
 
     // Prevent duplicate fetches on tab switch or re-render
     if (hasLoadedRef.current && lastUserIdRef.current === userId) {
@@ -256,15 +320,25 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       setCoverLetters([]);
       setJobs([]);
       setAnalytics(null);
+      setErrors({});
     }
 
-    // Load data
+    // Load secondary data (parallel, after critical data is ready)
     console.log('🔍 DashboardData - Initial load for user:', userId);
     hasLoadedRef.current = true;
     lastUserIdRef.current = userId;
     
     refreshAll();
-  }, [user?.id, refreshAll]);
+  }, [authLoading, user?.id, refreshAll]);
+  
+  // Calculate legacy loading state (for backward compatibility)
+  const loading = criticalLoading || Object.values(secondaryLoading).some(v => v);
+  
+  // Calculate legacy error state (for backward compatibility)
+  const error = Object.values(errors).find(e => e) || null;
+  
+  // Ready state: true when critical data is loaded
+  const isReady = !criticalLoading && !!userId;
 
   return (
     <DashboardDataContext.Provider
@@ -273,8 +347,12 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         coverLetters,
         jobs,
         analytics,
-        loading,
-        error,
+        criticalLoading,
+        secondaryLoading,
+        loading, // Legacy
+        errors,
+        error, // Legacy
+        isReady,
         refreshCVs,
         refreshCoverLetters,
         refreshJobs,

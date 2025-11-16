@@ -595,8 +595,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   };
 
   return (
-    <div className="p-8 h-full">
-      <div className="space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+      <div className="space-y-8 min-w-0 max-w-full">
         {/* Avatar Section */}
         <div className="py-4 sm:py-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -1063,8 +1063,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   };
 
   return (
-    <div className="p-8 h-full">
-      <div className="space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+      <div className="space-y-8 min-w-0 max-w-full">
         {/* Security Section */}
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Security</h3>
@@ -1223,8 +1223,8 @@ const MembershipBilling = ({ user }: { user: User }) => {
   };
 
   return (
-    <div className="p-8 h-full overflow-y-auto">
-      <div className="space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 h-full overflow-y-auto overflow-x-hidden min-w-0 max-w-full">
+      <div className="space-y-8 min-w-0 max-w-full">
         
         {/* Plan Cards Section */}
         <div className="space-y-6">
@@ -1272,15 +1272,25 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   </p>
                 </div>
               </div>
-              {subscription?.endDate && (
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
-                  Next billing: {subscription.endDate}
-                </p>
+              {subscription?.currentPeriodStart && subscription?.currentPeriodEnd && (
+                <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-1">
+                  <p>Start Date: {formatDate(subscription.currentPeriodStart)}</p>
+                  <p>End Date: {formatDate(subscription.currentPeriodEnd)}</p>
+                  {subscription?.nextBillingDate && (
+                    <p>Next Billing: {formatDate(subscription.nextBillingDate)}</p>
+                  )}
+                </div>
               )}
               {subscription?.planDetails?.features && (
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                   <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>
                   <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
+                </div>
+              )}
+              {subscription?.amount && subscription?.currency && (
+                <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                  <p className="font-semibold">Price: {formatCurrency(subscription.amount, subscription.currency)}</p>
+                  <p>Billing Cycle: {subscription.billingCycle || 'N/A'}</p>
                 </div>
               )}
               </div>
@@ -1409,15 +1419,20 @@ const MembershipBilling = ({ user }: { user: User }) => {
                       </div>
                     </div>
                     
-                    <div className="space-y-2">
-                      <div className="text-lg font-mono tracking-wider">
-                        •••• •••• •••• {method.last4}
+                      <div className="space-y-2">
+                        <div className="text-lg font-mono tracking-wider">
+                          •••• •••• •••• {method.last4}
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-300">
+                          <span>{method.expiryMonth?.toString().padStart(2, '0')}/{method.expiryYear}</span>
+                          <span className="uppercase">{method.brand}</span>
+                        </div>
+                        {method.gatewayCustomerId && (
+                          <div className="text-xs text-gray-400 mt-1">
+                            Gateway ID: {method.gatewayCustomerId.substring(0, 12)}...
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between text-sm text-gray-300">
-                        <span>{method.expiryMonth.toString().padStart(2, '0')}/{method.expiryYear}</span>
-                        <span className="uppercase">{method.brand}</span>
-                      </div>
-                    </div>
                   </div>
                 ))}
               </div>
@@ -1499,11 +1514,32 @@ const MembershipBilling = ({ user }: { user: User }) => {
                           {invoice.planName} - {invoice.billingCycle}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Invoice #{invoice.invoiceNumber} • {formatDate(invoice.createdAt)}
+                          Invoice #{invoice.invoiceNumber} • {formatDate(invoice.invoiceDate || invoice.createdAt)}
                         </p>
                         <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {invoice.paymentMethodType.toUpperCase()} •••• {invoice.paymentMethodLast4}
+                          {invoice.paymentMethodType?.toUpperCase() || 'N/A'} •••• {invoice.paymentMethodLast4 || 'N/A'}
                         </p>
+                        {invoice.subtotal !== undefined && invoice.taxAmount !== undefined && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Subtotal: {formatCurrency(invoice.subtotal, invoice.currency)}
+                            {invoice.taxAmount > 0 && ` • Tax: ${formatCurrency(invoice.taxAmount, invoice.currency)}`}
+                          </div>
+                        )}
+                        {invoice.items && invoice.items.length > 0 && (
+                          <details className="mt-2">
+                            <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                              View Line Items ({invoice.items.length})
+                            </summary>
+                            <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                              {invoice.items.map((item: any, idx: number) => (
+                                <div key={idx} className="flex justify-between">
+                                  <span>{item.description}</span>
+                                  <span>{formatCurrency(item.amount, invoice.currency)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
                       </div>
                     </div>
                     <div className="text-right">
@@ -1514,12 +1550,15 @@ const MembershipBilling = ({ user }: { user: User }) => {
                         {invoice.status.toUpperCase()}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+                        <a
+                          href={`/api/user/invoices/${invoice.id}/download`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          title="Download Invoice"
+                        >
                           <Download className="w-4 h-4" />
-                        </button>
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -1707,8 +1746,8 @@ const SettingsContent = () => {
         return loading || !userData ? <MembershipSkeleton /> : <MembershipBilling user={userData} />;
       case 'integrations':
         return (
-          <div className="p-4 sm:p-6 lg:p-8 h-full">
-            <div className="max-w-7xl mx-auto">
+          <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+            <div className="w-full min-w-0 max-w-full">
               <div className="text-center py-8 sm:py-12">
                 <Link size={40} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
@@ -1721,8 +1760,8 @@ const SettingsContent = () => {
         );
       case 'workspace':
         return (
-          <div className="p-4 sm:p-6 lg:p-8 h-full">
-            <div className="max-w-7xl mx-auto">
+          <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+            <div className="w-full min-w-0 max-w-full">
               <div className="text-center py-8 sm:py-12">
                 <Users size={40} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
@@ -1735,8 +1774,8 @@ const SettingsContent = () => {
         );
       default:
         return (
-          <div className="p-4 sm:p-6 lg:p-8 h-full">
-            <div className="max-w-7xl mx-auto">
+          <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
+            <div className="w-full min-w-0 max-w-full">
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-4">Coming Soon</h3>
               <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300">This section is currently under development.</p>
             </div>
@@ -1753,8 +1792,8 @@ const SettingsContent = () => {
 
   return (
     <RouteGuard requireAuth={true}>
-      <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen w-full min-w-0 overflow-x-hidden">
+        <div className="w-full min-w-0 max-w-full">
           {/* Page Header - Same style as other dashboard pages */}
           <PageHeader
             title="Settings"
@@ -1774,9 +1813,9 @@ const SettingsContent = () => {
           />
 
           {/* Settings Tabs */}
-          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
-              <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full min-w-0 max-w-full">
+            <div className="border-b border-gray-200 dark:border-gray-700 mb-6 min-w-0 max-w-full overflow-x-hidden">
+              <div className="overflow-x-auto scrollbar-hide -mx-6 px-6 md:mx-0 md:px-0 min-w-0 max-w-full">
                 <TabsList className="flex w-max bg-transparent border-0 justify-start">
                   {settingsTabs.map((tab) => {
                     const IconComponent = tab.icon;
@@ -1797,7 +1836,7 @@ const SettingsContent = () => {
             </div>
 
             {/* Content Area */}
-            <TabsContent value={activeTab} className="mt-0">
+            <TabsContent value={activeTab} className="mt-0 min-w-0 max-w-full overflow-x-hidden">
               {renderTabContent()}
             </TabsContent>
           </Tabs>

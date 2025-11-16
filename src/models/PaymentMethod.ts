@@ -12,6 +12,9 @@ export interface IPaymentMethod extends Document {
   isActive: boolean;
   email?: string; // For PayPal
   accountName?: string;
+  // Gateway integration fields
+  gatewayCustomerId?: string; // Stripe customer ID / Razorpay customer ID
+  gatewayPaymentMethodId?: string; // Tokenized payment method ID from gateway
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +75,15 @@ const paymentMethodSchema = new Schema<IPaymentMethod>({
     type: String,
     trim: true,
     maxlength: [100, 'Account name cannot exceed 100 characters']
+  },
+  // Gateway integration fields
+  gatewayCustomerId: {
+    type: String,
+    trim: true
+  },
+  gatewayPaymentMethodId: {
+    type: String,
+    trim: true
   }
 }, {
   timestamps: true

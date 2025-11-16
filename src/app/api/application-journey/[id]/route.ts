@@ -4,6 +4,52 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { ApplicationJourney, CV, JobApplication, CoverLetter } from '@/models';
 import mongoose from 'mongoose';
+import jwt from 'jsonwebtoken';
+import type { MyJwtPayload } from '@/types/jwt-payload';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
+
+// Helper function to get userId from either session or extension token
+async function getUserIdFromRequest(request: NextRequest): Promise<{ userId: string; source: 'session' | 'extension' } | null> {
+  // Check if this is an extension request (with JWT token)
+  const authHeader = request.headers.get('authorization');
+  
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    // Extension request with JWT token
+    const token = authHeader.substring(7);
+    
+    try {
+      const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
+      
+      if (decoded.type !== 'extension') {
+        console.log('❌ Invalid token type');
+        return null;
+      }
+      
+      const userId = decoded.userId || decoded.id || '';
+      if (!userId) {
+        console.log('❌ No userId in extension token');
+        return null;
+      }
+      
+      console.log('✅ Extension token verified for user:', userId);
+      return { userId, source: 'extension' };
+    } catch (error) {
+      console.log('❌ Invalid extension token:', error);
+      return null;
+    }
+  } else {
+    // Web interface request with session
+    const authResult = await getAuthenticatedUser();
+    
+    if (!authResult) {
+      console.log('❌ No valid authentication found for web request');
+      return null;
+    }
+    
+    console.log('✅ Web session verified for user:', authResult.userId);
+    return { userId: authResult.userId, source: 'session' };
+  }
+}
 
 /**
  * GET endpoint to fetch a journey by ID with all related data (CV, job, cover letter)
@@ -18,24 +64,18 @@ export async function GET(
     const resolvedParams = await params;
     const journeyId = resolvedParams.id;
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Get userId from either session or extension token
+    const authInfo = await getUserIdFromRequest(request);
+    
+    if (!authInfo) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Get user ID from session
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
+    const userId = authInfo.userId;
+    console.log('🔍 Journey GET API - Using authenticated user:', userId, `(${authInfo.source})`);
 
     // Find the journey with user validation
     // Support both MongoDB _id and custom journeyId field
@@ -180,24 +220,18 @@ export async function PUT(
     const resolvedParams = await params;
     const journeyId = resolvedParams.id;
     
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Get userId from either session or extension token
+    const authInfo = await getUserIdFromRequest(request);
+    
+    if (!authInfo) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    // Get user ID from session
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { success: false, error: 'User identification failed' },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
+    const userId = authInfo.userId;
+    console.log('🔍 Journey PUT API - Using authenticated user:', userId, `(${authInfo.source})`);
 
     // Find the journey with user validation
     const journeyQuery: Record<string, any> = { 

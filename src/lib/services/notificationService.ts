@@ -53,6 +53,9 @@ class NotificationService {
       discount_offer: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       system_update: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       achievement: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      documents_ready: { enabled: true, channels: { 'in-app': true, email: true, push: false } },
+      interview_follow_up: { enabled: true, channels: { 'in-app': true, email: true, push: false } },
+      job_applied: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
     };
 
     return defaults[type] || { enabled: true, channels: { 'in-app': true, email: false, push: false } };

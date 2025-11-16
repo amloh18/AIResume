@@ -35,6 +35,8 @@ interface PaymentMethod {
 interface Invoice {
   id: string;
   invoiceNumber: string;
+  subtotal: number;
+  taxAmount: number;
   amount: number;
   currency: string;
   status: string;
@@ -44,7 +46,30 @@ interface Invoice {
   paymentMethodLast4: string;
   paidAt?: string;
   dueDate?: string;
+  invoiceDate?: string;
   description: string;
+  createdAt: string;
+  items?: InvoiceItem[];
+}
+
+interface InvoiceItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  type: string;
+}
+
+interface Transaction {
+  id: string;
+  invoiceId?: string;
+  paymentMethodId?: string;
+  amount: number;
+  status: string;
+  gatewayReferenceId: string;
+  gateway: string;
+  failureReason?: string;
   createdAt: string;
 }
 
@@ -52,6 +77,7 @@ interface BillingData {
   subscription: Subscription | null;
   paymentMethods: PaymentMethod[];
   invoices: Invoice[];
+  transactions: Transaction[];
 }
 
 interface UseBillingDataResult {
@@ -61,6 +87,7 @@ interface UseBillingDataResult {
     subscription: string | null;
     paymentMethods: string | null;
     invoices: string | null;
+    transactions: string | null;
   };
   refetch: () => void;
 }
@@ -74,16 +101,19 @@ export function useBillingData(): UseBillingDataResult {
     subscription: null,
     paymentMethods: [],
     invoices: [],
+    transactions: [],
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<{
     subscription: string | null;
     paymentMethods: string | null;
     invoices: string | null;
+    transactions: string | null;
   }>({
     subscription: null,
     paymentMethods: null,
     invoices: null,
+    transactions: null,
   });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -97,13 +127,35 @@ export function useBillingData(): UseBillingDataResult {
           subscription: null,
           paymentMethods: null,
           invoices: null,
+          transactions: null,
         });
 
-        // Fetch all three endpoints in parallel using Promise.all
-        const [subscriptionResponse, paymentMethodsResponse, invoicesResponse] = await Promise.all([
+        // Use unified billing data API (Option A - recommended)
+        try {
+          const response = await fetch('/api/user/billing-data');
+          if (response.ok) {
+            const billingData = await response.json();
+            if (billingData.success && billingData.data) {
+              setData({
+                subscription: billingData.data.subscription,
+                paymentMethods: billingData.data.paymentMethods || [],
+                invoices: billingData.data.invoices || [],
+                transactions: billingData.data.transactions || [],
+              });
+              setIsLoading(false);
+              return;
+            }
+          }
+        } catch (unifiedError) {
+          console.warn('Unified billing API failed, falling back to individual APIs:', unifiedError);
+        }
+
+        // Fallback: Fetch all endpoints in parallel using Promise.all (Option B)
+        const [subscriptionResponse, paymentMethodsResponse, invoicesResponse, transactionsResponse] = await Promise.all([
           fetch('/api/user/subscription'),
           fetch('/api/user/payment-methods'),
           fetch('/api/user/invoices?limit=20'),
+          fetch('/api/user/transactions?limit=50'),
         ]);
 
         // Process subscription data
@@ -128,7 +180,6 @@ export function useBillingData(): UseBillingDataResult {
           if (paymentData.success) {
             paymentMethods = paymentData.paymentMethods || [];
           } else {
-            // Only show error if it's not a "no records" case
             if (paymentData.error && !paymentData.error.includes('No payment methods found') && !paymentData.error.includes('not found')) {
               paymentMethodsError = paymentData.error;
             } else {
@@ -136,7 +187,6 @@ export function useBillingData(): UseBillingDataResult {
             }
           }
         } else {
-          // Only show error for actual HTTP errors, not 404s for empty data
           if (paymentMethodsResponse.status !== 404) {
             paymentMethodsError = 'Failed to load payment methods';
           } else {
@@ -152,7 +202,6 @@ export function useBillingData(): UseBillingDataResult {
           if (invoiceData.success) {
             invoices = invoiceData.invoices || [];
           } else {
-            // Only show error if it's not a "no records" case
             if (invoiceData.error && !invoiceData.error.includes('No invoices found') && !invoiceData.error.includes('not found')) {
               invoicesError = invoiceData.error;
             } else {
@@ -160,11 +209,32 @@ export function useBillingData(): UseBillingDataResult {
             }
           }
         } else {
-          // Only show error for actual HTTP errors, not 404s for empty data
           if (invoicesResponse.status !== 404) {
             invoicesError = 'Failed to load invoices';
           } else {
             invoices = [];
+          }
+        }
+
+        // Process transactions data
+        let transactions: Transaction[] = [];
+        let transactionsError: string | null = null;
+        if (transactionsResponse.ok) {
+          const transactionData = await transactionsResponse.json();
+          if (transactionData.success) {
+            transactions = transactionData.transactions || [];
+          } else {
+            if (transactionData.error && !transactionData.error.includes('No transactions found') && !transactionData.error.includes('not found')) {
+              transactionsError = transactionData.error;
+            } else {
+              transactions = [];
+            }
+          }
+        } else {
+          if (transactionsResponse.status !== 404) {
+            transactionsError = 'Failed to load transactions';
+          } else {
+            transactions = [];
           }
         }
 
@@ -173,12 +243,14 @@ export function useBillingData(): UseBillingDataResult {
           subscription,
           paymentMethods,
           invoices,
+          transactions,
         });
 
         setError({
           subscription: subscriptionError,
           paymentMethods: paymentMethodsError,
           invoices: invoicesError,
+          transactions: transactionsError,
         });
       } catch (error) {
         console.error('Error fetching billing data:', error);
@@ -186,6 +258,7 @@ export function useBillingData(): UseBillingDataResult {
           subscription: 'Network error loading subscription',
           paymentMethods: 'Network error loading payment methods',
           invoices: 'Network error loading invoices',
+          transactions: 'Network error loading transactions',
         });
       } finally {
         setIsLoading(false);
