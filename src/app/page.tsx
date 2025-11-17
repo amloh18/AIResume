@@ -13,7 +13,6 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
-import LaunchBanner from '@/components/landing/LaunchBanner';
 
 function LandingPageContent() {
   // Handle logout cleanup - client-side only
@@ -58,7 +57,8 @@ function LandingPageContent() {
   
   const navLinks = [
     { label: 'Features', href: '#features', ariaLabel: 'View features section' },
-    { label: 'Testimonials', href: '#testimonials', ariaLabel: 'View testimonials section' },
+    { label: 'Extension', href: '#chrome-extension', ariaLabel: 'View browser extension section' },
+    { label: 'Templates', href: '#premium-templates', ariaLabel: 'View premium templates section' },
     { label: 'Pricing', href: '#pricing', ariaLabel: 'View pricing section' },
     { label: 'FAQ', href: '#faq', ariaLabel: 'View FAQ section' }
   ];
@@ -111,14 +111,7 @@ function LandingPageContent() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      {/* Hidden SEO text for brand name variations */}
-      <div className="sr-only">
-        <p>CVCircle, also known as CV Circle, cv circle, CV Circle.io, or cv circle io, is the leading AI-powered CV builder platform.</p>
-      </div>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        {/* Launch Offer Banner */}
-        <LaunchBanner />
-      
       {/* Navigation */}
       <CardNav 
         logo="CVCircle"

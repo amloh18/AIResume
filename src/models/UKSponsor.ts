@@ -13,14 +13,12 @@ const ukSponsorSchema = new Schema<IUKSponsor>({
   companyName: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   normalizedName: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   licenceNumber: {
     type: String,
@@ -29,8 +27,7 @@ const ukSponsorSchema = new Schema<IUKSponsor>({
   status: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   expiryDate: {
     type: Date
@@ -42,7 +39,9 @@ const ukSponsorSchema = new Schema<IUKSponsor>({
 // Compound index for efficient lookups
 ukSponsorSchema.index({ normalizedName: 1, status: 1 });
 ukSponsorSchema.index({ companyName: 1 });
+ukSponsorSchema.index({ normalizedName: 1 });
 
 export default mongoose.models.UKSponsor || mongoose.model<IUKSponsor>('UKSponsor', ukSponsorSchema);
+
 
 
