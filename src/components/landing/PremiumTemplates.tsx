@@ -131,9 +131,10 @@ const PremiumTemplates = () => {
       <div className="relative z-10 w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Main Container with Luxury Design - Matching Landing Page Theme */}
         <motion.div
-          className="relative bg-gradient-to-br from-gray-800/50 via-gray-900/40 to-black/60 backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden min-h-[700px] pt-4 sm:pt-0"
+          className="relative backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden min-h-[700px] pt-4 sm:pt-0 bg-[#603a86]"
           style={{
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            backgroundColor: '#603a86'
           }}
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}

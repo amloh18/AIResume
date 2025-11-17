@@ -242,26 +242,248 @@ export async function PUT(
 
     console.log('🔍 Job Update API - Updating job with data:', Object.keys(updateData));
     
-    const job = await JobApplication.findOneAndUpdate(
-      {
-        _id: resolvedParams.id,
-        userId: userId
-      },
-      updateData,
-      { new: true }
-    );
-
-    console.log('🔍 Job Update API - Job update result:', !!job);
+    // VALIDATION: Prevent invalid status transitions
+    const validStatuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
+    const newStatus = body.status;
+    if (newStatus && !validStatuses.includes(newStatus)) {
+      return NextResponse.json(
+        { error: `Invalid status: ${newStatus}. Valid statuses are: ${validStatuses.join(', ')}` },
+        { status: 400 }
+      );
+    }
     
-    if (!job) {
-      console.log('❌ Job Update API - Job not found for user:', userId);
-      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    // VALIDATION: Prevent status manipulation that could bypass credit checks
+    // Don't allow changing from 'created' back to 'draft' (prevents credit refund exploit)
+    const previousStatus = currentJob?.status;
+    if (previousStatus === 'created' && newStatus === 'draft') {
+      return NextResponse.json(
+        { 
+          error: 'Cannot change job status from "created" to "draft". Once a job is created, it cannot be reverted to draft status.',
+          code: 'INVALID_STATUS_TRANSITION'
+        },
+        { status: 400 }
+      );
+    }
+    
+    // RATE LIMITING: Prevent rapid-fire status change requests
+    if (newStatus && previousStatus !== newStatus) {
+      try {
+        const { rateLimiter } = await import('@/lib/rate-limiter');
+        
+        const keyGenerator = (req: any) => {
+          return `job_status_change:user:${userId}`;
+        };
+        
+        const rateLimitResult = await rateLimiter.checkLimit(request, {
+          windowMs: 60 * 1000, // 1 minute window
+          maxRequests: 20, // Max 20 status changes per minute per user
+          keyGenerator
+        });
+        
+        if (!rateLimitResult.allowed) {
+          console.log(`⚠️ Rate limit exceeded for status change by user: ${userId}`);
+          return NextResponse.json(
+            { 
+              error: 'Too many status change requests. Please wait a moment.',
+              retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
+            },
+            { 
+              status: 429,
+              headers: {
+                'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
+                'X-RateLimit-Limit': '20',
+                'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+                'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+              }
+            }
+          );
+        }
+      } catch (rateLimitError) {
+        // Fail open - if rate limiting fails, allow the request
+        console.warn('⚠️ Rate limiting check failed for status change, allowing request:', rateLimitError);
+      }
+    }
+    
+    // Check if status changed from 'draft' to 'created' - handle this in transaction
+    let job: any = null;
+    
+    if (previousStatus === 'draft' && newStatus === 'created') {
+      // ATOMIC OPERATION: Use transaction to ensure credit check + status update + credit spending are atomic
+      // This prevents race conditions where multiple requests could bypass credit limits
+      try {
+        const { withTransaction } = await import('@/lib/utils/db-transaction');
+        const User = (await import('@/models/User')).default;
+        const creditService = await import('@/lib/services/creditService');
+        
+        await withTransaction(async (session) => {
+          // 1. CREDIT CHECK: Check credits WITHIN transaction (locks user record to prevent race conditions)
+          const user = await User.findById(userId).session(session);
+          if (!user) {
+            throw new Error('User not found');
+          }
+          
+          const usageLimitsService = await import('@/lib/services/usageLimitsService');
+          const creditCheck = await usageLimitsService.default.checkUsageLimit({
+            userId,
+            action: 'job_create'
+          });
+
+          console.log(`🔍 Job Update API - Credit check result (in transaction):`, {
+            allowed: creditCheck.allowed,
+            reason: creditCheck.reason,
+            currentUsage: creditCheck.currentUsage,
+            limit: creditCheck.limit
+          });
+
+          if (!creditCheck.allowed) {
+            console.log(`❌ Job Update API - Credit check failed (in transaction):`, creditCheck.reason);
+            throw new Error(creditCheck.reason || 'Insufficient credits to create job application');
+          }
+          
+          // 2. Update job status within transaction (only if credits are available)
+          // Merge with other update data if provided
+          const statusUpdateData = {
+            ...updateData,
+            status: 'created',
+            updatedAt: new Date()
+          };
+          
+          const updatedJob = await JobApplication.findOneAndUpdate(
+            {
+              _id: resolvedParams.id,
+              userId: userId
+            },
+            statusUpdateData,
+            { session, new: true }
+          );
+          
+          if (!updatedJob) {
+            throw new Error('Job not found');
+          }
+          
+          // Store updated job for later use
+          job = updatedJob;
+          
+          // 3. Spend credit within same transaction (atomic with status update)
+          const planCredits = await creditService.default.getPlanCredits(user.currentPlanKey || 'free');
+          const isUnlimited = planCredits.jobCredits === -1;
+          
+          // Build update operation for credit spending
+          const creditUpdateData: any = {
+            $inc: {
+              'credits.totalCreated.jobs': 1
+            }
+          };
+          
+          if (!isUnlimited) {
+            creditUpdateData.$inc['credits.jobCredits'] = -1;
+          }
+          
+          // Ensure nested structure exists
+          if (!user.credits?.totalCreated || user.credits.totalCreated.jobs === undefined) {
+            const currentJobs = user.credits?.totalCreated?.jobs ?? 0;
+            creditUpdateData.$set = {
+              'credits.totalCreated.jobs': currentJobs + 1,
+              'credits.totalCreated.cvs': user.credits?.totalCreated?.cvs ?? 0,
+              'credits.totalCreated.exports': user.credits?.totalCreated?.exports ?? 0,
+              'credits.totalCreated.atsChecks': user.credits?.totalCreated?.atsChecks ?? 0
+            };
+            if (creditUpdateData.$inc && 'credits.totalCreated.jobs' in creditUpdateData.$inc) {
+              delete creditUpdateData.$inc['credits.totalCreated.jobs'];
+              if (Object.keys(creditUpdateData.$inc).length === 0) {
+                delete creditUpdateData.$inc;
+              }
+            }
+          }
+          
+          // Update user credits within transaction
+          await User.findByIdAndUpdate(
+            userId,
+            creditUpdateData,
+            { session, new: true, runValidators: true }
+          );
+          
+          console.log(`✅ Job Update API - Credit spent in transaction for user: ${userId}`);
+        });
+      } catch (creditError: any) {
+        console.error('❌ Job Update API - Transaction failed:', creditError);
+        console.error('❌ Job Update API - Error details:', {
+          message: creditError.message,
+          stack: creditError.stack,
+          name: creditError.name
+        });
+        
+        // Transaction automatically rolled back - status remains 'draft', credits not spent
+        
+        // Check if error is due to insufficient credits
+        const isCreditError = creditError.message?.includes('limit exceeded') || 
+                             creditError.message?.includes('insufficient credits') ||
+                             creditError.message?.includes('Insufficient credits') ||
+                             creditError.message?.includes('Job creation limit exceeded');
+        
+        if (isCreditError) {
+          // Extract credit info from error if available
+          const usageLimitsService = await import('@/lib/services/usageLimitsService');
+          let creditInfo: any = {};
+          try {
+            const creditCheck = await usageLimitsService.default.checkUsageLimit({
+              userId,
+              action: 'job_create'
+            });
+            creditInfo = {
+              currentUsage: creditCheck.currentUsage,
+              limit: creditCheck.limit,
+              reason: creditCheck.reason
+            };
+          } catch (e) {
+            // Fallback if credit check fails
+            console.error('⚠️ Job Update API - Failed to get credit info:', e);
+          }
+          
+          return NextResponse.json(
+            {
+              success: false,
+              error: creditError.message || 'Insufficient credits to create job application',
+              requiresUpgrade: true,
+              currentUsage: creditInfo.currentUsage,
+              limit: creditInfo.limit,
+              message: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+            },
+            { status: 403 }
+          );
+        }
+        
+        // For other errors, return detailed error message
+        return NextResponse.json(
+          {
+            success: false,
+            error: creditError.message || 'Failed to process credit transaction. Please try again.',
+            requiresUpgrade: true,
+            details: process.env.NODE_ENV === 'development' ? creditError.message : undefined
+          },
+          { status: 500 }
+        );
+      }
+    } else {
+      // For non-draft-to-created updates, update job normally
+      job = await JobApplication.findOneAndUpdate(
+        {
+          _id: resolvedParams.id,
+          userId: userId
+        },
+        updateData,
+        { new: true }
+      );
+
+      console.log('🔍 Job Update API - Job update result:', !!job);
+      
+      if (!job) {
+        console.log('❌ Job Update API - Job not found for user:', userId);
+        return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+      }
     }
 
-    // Check if status changed from 'draft' to 'created' and create journey if needed
-    const previousStatus = currentJob?.status;
-    const newStatus = body.status || job.status;
-    
+    // Create ApplicationJourney after credit is spent (only if moved to created)
     if (previousStatus === 'draft' && newStatus === 'created') {
       try {
         const { ApplicationJourney } = await import('@/models');

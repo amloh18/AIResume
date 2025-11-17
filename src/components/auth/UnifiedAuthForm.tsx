@@ -327,6 +327,7 @@ export default function UnifiedAuthForm({
 export const emailValidation = (value: string): string | null => {
   if (!value.trim()) return 'Email is required';
   if (!/\S+@\S+\.\S+/.test(value)) return 'Please enter a valid email address';
+  if (value.includes('+')) return 'Email address must not contain "+" symbols';
   return null;
 };
 

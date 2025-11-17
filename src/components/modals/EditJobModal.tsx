@@ -123,7 +123,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   const [errorMessage, setErrorMessage] = useState('');
   
   // Global credit exhaustion handler
-  const { checkUsageAndHandleExhaustion } = useCreditExhaustionHandler();
+  const { checkUsageAndHandleExhaustion, showExhaustionModal } = useCreditExhaustionHandler();
   
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -304,8 +304,14 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         return;
       }
 
-      // Check credits before creating new job (not for editing existing jobs)
-      if (isNewJob && !isAutoSave && user?.id) {
+      // Check credits only if creating/updating job with status 'created' (not 'draft')
+      // Draft jobs can be saved unlimited without credit check
+      const jobStatus = jobData.status || 'created';
+      const previousStatus = editingJob?.status;
+      const isMovingToCreated = previousStatus === 'draft' && jobStatus === 'created';
+      const isCreatingAsCreated = isNewJob && jobStatus === 'created';
+      
+      if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave && user?.id) {
         try {
           const creditCheckResponse = await authenticatedFetchWithUserId('/api/user/usage/check', user.id, {
             method: 'POST',
@@ -338,6 +344,31 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       });
 
       console.log('🔍 EditJobModal - Response status:', response.status);
+
+      // Handle insufficient credits error (403)
+      if (response.status === 403) {
+        const errorResult = await response.json();
+        console.log('🔍 EditJobModal - Credit check failed:', errorResult);
+        
+        if (errorResult.requiresUpgrade) {
+          // Show credit exhaustion modal with custom message
+          const customMessage = errorResult.message || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs';
+          const limit = errorResult.limit || 1;
+          const currentUsage = errorResult.currentUsage || limit;
+          const creditsRemaining = Math.max(0, limit - currentUsage);
+          
+          showExhaustionModal(
+            {
+              creditsRemaining,
+              limit,
+              reason: customMessage
+            },
+            'pro_monthly'
+          );
+          if (!isAutoSave) setIsSaving(false);
+          return;
+        }
+      }
 
       if (response.ok) {
         const result = await response.json();

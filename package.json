@@ -31,7 +31,10 @@
     "update-guide": "npx tsx scripts/update-guide.ts",
     "import:uk-sponsors": "npx tsx scripts/import-uk-sponsors-standalone.ts",
     "import:us-h1b": "npx tsx scripts/import-us-h1b-standalone.ts",
-    "test:sponsorship": "npx tsx scripts/test-sponsorship-endpoints.ts"
+    "test:sponsorship": "npx tsx scripts/test-sponsorship-endpoints.ts",
+    "test:job-credits": "npx tsx scripts/test-job-credit-scenarios.ts",
+    "setup:test-users": "npx tsx scripts/setup-test-users.ts",
+    "test:user-flows": "npx tsx scripts/test-user-flows.ts"
   },
   "keywords": [
     "cv",

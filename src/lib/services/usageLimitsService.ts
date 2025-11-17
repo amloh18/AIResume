@@ -48,6 +48,17 @@ class UsageLimitsService {
       }
 
       const subscription = user.subscription;
+      
+      // Allow free tier users to have access (they use credits, not subscription status)
+      if (user.currentPlanKey === 'free') {
+        return {
+          hasAccess: true,
+          subscription,
+          reason: 'Free tier access'
+        };
+      }
+      
+      // For paid plans, check subscription status
       if (!subscription || subscription.status === 'cancelled' || subscription.status === 'inactive') {
         return {
           hasAccess: false,

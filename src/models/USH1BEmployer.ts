@@ -12,14 +12,12 @@ const usH1BEmployerSchema = new Schema<IUSH1BEmployer>({
   employerName: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   normalizedName: {
     type: String,
     required: true,
-    trim: true,
-    index: true
+    trim: true
   },
   fein: {
     type: String,
