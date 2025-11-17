@@ -110,7 +110,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error('❌ DashboardData - Error fetching CVs:', err);
         const errorMsg = err.message || 'Failed to fetch CVs';
         setErrors(prev => ({ ...prev, cvs: errorMsg }));
-        setError(errorMsg); // Legacy error
       } finally {
         loadingStates.current.set('cvs', false);
         setSecondaryLoading(prev => ({ ...prev, cvs: false }));
@@ -150,7 +149,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error('❌ DashboardData - Error fetching cover letters:', err);
         const errorMsg = err.message || 'Failed to fetch cover letters';
         setErrors(prev => ({ ...prev, coverLetters: errorMsg }));
-        setError(errorMsg); // Legacy error
       } finally {
         loadingStates.current.set('coverLetters', false);
         setSecondaryLoading(prev => ({ ...prev, coverLetters: false }));
@@ -190,7 +188,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error('❌ DashboardData - Error fetching jobs:', err);
         const errorMsg = err.message || 'Failed to fetch jobs';
         setErrors(prev => ({ ...prev, jobs: errorMsg }));
-        setError(errorMsg); // Legacy error
       } finally {
         loadingStates.current.set('jobs', false);
         setSecondaryLoading(prev => ({ ...prev, jobs: false }));
@@ -271,7 +268,6 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
     console.log('🔄 DashboardData - Refreshing all data for user:', userId);
     setSecondaryLoading({ cvs: true, coverLetters: true, jobs: true, analytics: true });
-    setError(null);
     setErrors({});
     
     const startTime = performance.now();

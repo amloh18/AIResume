@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Briefcase, 
@@ -564,20 +565,26 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  const modalContent = (
     <>
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 dark:bg-black/70 backdrop-blur-sm"
+        className="fixed inset-0 z-[1150] flex items-center justify-center p-4 bg-black/70 dark:bg-black/70 backdrop-blur-sm overflow-y-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            handleClose();
+          }
+        }}
       >
         <motion.div
-          className="bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 rounded-2xl w-[90%] max-w-7xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col"
+          className="bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-[min(92vw,1280px)] max-h-[min(90vh,920px)] overflow-hidden shadow-2xl flex flex-col mx-auto lg:my-8 lg:mx-8"
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="text-gray-900 dark:text-white flex flex-col flex-1 min-h-0">
             {/* Header */}
@@ -935,13 +942,13 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       {showUnsavedWarning && (
         <AnimatePresence>
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[1160] flex items-center justify-center p-2 sm:p-3 md:p-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/20 rounded-xl p-6 max-w-md w-full shadow-2xl"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/20 rounded-xl p-6 max-w-md w-full max-w-[calc(100vw-2rem)] sm:max-w-md shadow-2xl mx-auto"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -979,13 +986,13 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       {showErrorDialog && (
         <AnimatePresence>
           <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[1160] flex items-center justify-center p-2 sm:p-3 md:p-4 bg-black/70 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-500/30 rounded-xl p-6 max-w-md w-full shadow-2xl"
+              className="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-500/30 rounded-xl p-6 w-full max-w-[calc(100vw-2rem)] sm:max-w-md shadow-2xl mx-auto"
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -1018,6 +1025,13 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
     </>
   );
+
+  // Use portal to render modal at document body level to avoid overflow clipping
+  if (typeof window !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };
 
 export default EditJobModal;

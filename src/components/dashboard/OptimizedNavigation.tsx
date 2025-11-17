@@ -712,29 +712,7 @@ const OptimizedNavigation: React.FC = () => {
       <UniversalPaymentModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        preselectedPlanKey={(() => {
-          // Determine which plan to preselect based on current plan
-          const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
-          const planStatus = userData?.subscription?.status || 'active';
-          
-          // If past due, suggest pro_monthly as default
-          if (planStatus === 'past_due' || planStatus === 'unpaid') {
-            return 'pro_monthly';
-          }
-          
-          // If free, suggest pro_monthly
-          if (currentPlan === 'free') {
-            return 'pro_monthly';
-          }
-          
-          // If day_pass, suggest pro_monthly
-          if (currentPlan === 'day_pass') {
-            return 'pro_monthly';
-          }
-          
-          // Otherwise, don't preselect (let user choose)
-          return undefined;
-        })()}
+        // Don't preselect - let users freely choose any plan (same as settings modal)
         currentUserPlan={userData?.subscription?.planKey || 'free'}
       />
     </div>

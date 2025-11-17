@@ -28,7 +28,10 @@
     "test:step3-auth": "npx tsx scripts/test-step3-auth-init.ts",
     "test:auth-verify-signin": "npx tsx scripts/test-auth-verify-signin.ts",
     "verify:cv-data-fix": "npx tsx scripts/verify-cv-data-fix.ts",
-    "update-guide": "npx tsx scripts/update-guide.ts"
+    "update-guide": "npx tsx scripts/update-guide.ts",
+    "import:uk-sponsors": "npx tsx scripts/import-uk-sponsors-standalone.ts",
+    "import:us-h1b": "npx tsx scripts/import-us-h1b-standalone.ts",
+    "test:sponsorship": "npx tsx scripts/test-sponsorship-endpoints.ts"
   },
   "keywords": [
     "cv",

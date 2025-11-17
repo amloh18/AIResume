@@ -61,20 +61,8 @@ const AIEnhancedFormField: React.FC<AIEnhancedFormFieldProps> = ({
 
   const handleAIClick = useCallback(async () => {
     if (!hasAI) {
-      // Show upgrade modal
-      const event = new CustomEvent('showUpgradeModal', {
-        detail: {
-          feature: 'AI Assistant',
-          description: 'Get AI-powered suggestions to improve your CV content',
-          benefits: [
-            'Professional content optimization',
-            'ATS keyword matching',
-            'Quantified achievements',
-            'Tailored suggestions'
-          ]
-        }
-      });
-      window.dispatchEvent(event);
+      // Redirect to settings page where they can upgrade using the unified payment modal
+      window.location.href = '/dashboard/settings?tab=membership';
       return;
     }
 
