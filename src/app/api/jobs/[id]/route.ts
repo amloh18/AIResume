@@ -808,7 +808,54 @@ export async function PUT(
     }
 
     console.log('✅ Job Update API - Job updated successfully:', job._id);
-    return NextResponse.json({ job });
+    
+    // Serialize job to include _id field for extension compatibility
+    const jobId = job._id ? job._id.toString() : job.id;
+    const serializedJob = {
+      id: jobId,
+      _id: jobId, // Extension expects _id field
+      userId: typeof job.userId === 'string' ? job.userId : job.userId?.toString?.(),
+      jobTitle: job.jobTitle,
+      company: job.company,
+      location: job.location,
+      jobUrl: job.jobUrl,
+      jobDescription: job.jobDescription,
+      source: job.source,
+      status: job.status,
+      priority: job.priority,
+      notes: job.notes,
+      sponsorship: job.sponsorship,
+      tags: job.tags || [],
+      contactDetails: job.contactDetails ? {
+        name: job.contactDetails.name || '',
+        email: job.contactDetails.email || '',
+        phone: job.contactDetails.phone || '',
+        role: job.contactDetails.role || ''
+      } : { name: '', email: '', phone: '', role: '' },
+      salary: job.salary,
+      deadline: job.deadline ? (job.deadline instanceof Date ? job.deadline.toISOString().split('T')[0] : job.deadline) : undefined,
+      applicationDate: job.applicationDate ? (job.applicationDate instanceof Date ? job.applicationDate.toISOString().split('T')[0] : job.applicationDate) : undefined,
+      interviews: (job.interviews || []).map((iv: any) => ({
+        ...iv,
+        date: iv.date instanceof Date ? iv.date.toISOString().split('T')[0] : iv.date
+      })),
+      followUps: (job.followUps || []).map((fu: any) => ({
+        ...fu,
+        date: fu.date instanceof Date ? fu.date.toISOString().split('T')[0] : fu.date
+      })),
+      attachments: job.attachments || [],
+      sourceUrl: job.sourceUrl,
+      atsScore: job.atsScore,
+      isArchived: Boolean(job.isArchived),
+      createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
+      updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt
+    };
+    
+    return NextResponse.json({ 
+      success: true,
+      data: { job: serializedJob },
+      job: serializedJob // Keep for backwards compatibility
+    });
   } catch (error) {
     console.error('❌ Job Update API - Error updating job:', error);
     console.error('❌ Job Update API - Error message:', error instanceof Error ? error.message : 'Unknown error');
