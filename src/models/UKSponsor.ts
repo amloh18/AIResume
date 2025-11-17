@@ -45,3 +45,4 @@ ukSponsorSchema.index({ companyName: 1 });
 
 export default mongoose.models.UKSponsor || mongoose.model<IUKSponsor>('UKSponsor', ukSponsorSchema);
 
+
