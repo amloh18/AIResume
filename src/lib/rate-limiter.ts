@@ -238,4 +238,5 @@ process.on('SIGTERM', () => {
   rateLimiter.destroy();
 });
 
+export { rateLimiter };
 export default rateLimiter;
