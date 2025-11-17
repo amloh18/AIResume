@@ -217,3 +217,5 @@ ApplicationJourneySchema.pre('save', function(next) {
 });
 
 export const ApplicationJourney = mongoose.models.ApplicationJourney || mongoose.model<IApplicationJourney>('ApplicationJourney', ApplicationJourneySchema);
+
+export default ApplicationJourney;

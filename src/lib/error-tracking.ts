@@ -57,9 +57,8 @@ class ErrorTrackingService {
 
     try {
       if (typeof window === 'undefined') {
-        // Server-side Sentry - use dynamic require with variable to prevent Edge bundler analysis
-        const sentryPkg = '@sentry/nextjs';
-        const SentryModule = require(sentryPkg);
+        // Server-side Sentry - use dynamic require (static string keeps bundler happy)
+        const SentryModule = require('@sentry/nextjs');
         const { init, captureException, setUser, setTag, setContext } = SentryModule;
         
         init({
@@ -79,9 +78,8 @@ class ErrorTrackingService {
           }
         };
       } else {
-        // Client-side Sentry - use dynamic require with variable
-        const sentryBrowserPkg = '@sentry/browser';
-        const SentryBrowserModule = require(sentryBrowserPkg);
+        // Client-side Sentry - use dynamic require (static string keeps bundler happy)
+        const SentryBrowserModule = require('@sentry/browser');
         const { init, captureException, setUser, setTag, setContext, addBreadcrumb } = SentryBrowserModule;
         
         init({
