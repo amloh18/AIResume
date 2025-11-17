@@ -1,74 +1,104 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { JobApplication, ApplicationJourney } from '@/models';
-import jwt from 'jsonwebtoken';
-import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { withTransaction } from '@/lib/utils/db-transaction';
 import User from '@/models/User';
 import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from '@/lib/utils/extension-errors';
 import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
+import { setCorsHeaders, handleCorsPreflight } from '@/lib/utils/cors-helpers';
+import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
+
+const formatDateForResponse = (value: Date | string | null | undefined): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return undefined;
+  }
+
+  return date.toISOString().split('T')[0];
+};
+
+const toContactDetails = (details: any) => ({
+  name: details?.name || '',
+  email: details?.email || '',
+  phone: details?.phone || '',
+  role: details?.role || ''
+});
+
+const serializeJob = (job: any) => ({
+  id: job?._id ? job._id.toString() : job?.id,
+  userId: typeof job?.userId === 'string' ? job.userId : job?.userId?.toString?.(),
+  jobTitle: job?.jobTitle,
+  company: job?.company,
+  location: job?.location,
+  jobUrl: job?.jobUrl,
+  jobDescription: job?.jobDescription,
+  source: job?.source,
+  status: job?.status,
+  priority: job?.priority,
+  notes: job?.notes,
+  sponsorship: job?.sponsorship,
+  tags: job?.tags || [],
+  contactDetails: toContactDetails(job?.contactDetails),
+  salary: job?.salary,
+  deadline: formatDateForResponse(job?.deadline),
+  applicationDate: formatDateForResponse(job?.applicationDate),
+  interviews: (job?.interviews || []).map((interview: any) => ({
+    ...interview,
+    date: formatDateForResponse(interview?.date)
+  })),
+  followUps: (job?.followUps || []).map((followUp: any) => ({
+    ...followUp,
+    date: formatDateForResponse(followUp?.date)
+  })),
+  attachments: (job?.attachments || []),
+  sourceUrl: job?.sourceUrl,
+  atsScore: job?.atsScore,
+  isArchived: Boolean(job?.isArchived),
+  createdAt: job?.createdAt,
+  updatedAt: job?.updatedAt
+});
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Job creation request received');
     
-    let userId: string;
-    let source = 'web';
-    
-    // Check if this is an extension request (with JWT token)
-    const authHeader = request.headers.get('authorization');
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Extension request with JWT token
-      const token = authHeader.substring(7);
+    // Authenticate request (supports both session and JWT token)
+    const auth = await authenticateRequest(request);
+    if (!auth) {
+      // Check if this was an extension request to return proper error format
+      const authHeader = request.headers.get('authorization');
+      const isExtension = authHeader && authHeader.startsWith('Bearer ');
       
-      try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-        
-        if (decoded.type !== 'extension') {
-          console.log('❌ Invalid token type');
-          return NextResponse.json(
+      if (isExtension) {
+        return setCorsHeaders(
+          NextResponse.json(
             formatExtensionError(
               ExtensionErrorCode.AUTH_INVALID,
-              'Invalid token type. This endpoint requires an extension token.'
+              'Authentication required. Please sign in again.'
             ),
             { status: 401 }
-          );
-        }
-        
-        userId = decoded.userId || '';
-        source = 'extension';
-        console.log('✅ Extension token verified for user:', userId);
-      } catch (error: any) {
-        console.log('❌ Invalid extension token:', error);
-        return NextResponse.json(
-          formatExtensionError(
-            ExtensionErrorCode.AUTH_INVALID,
-            error.name === 'TokenExpiredError' 
-              ? 'Token has expired. Please refresh your token.'
-              : 'Invalid token. Please sign in again.'
           ),
-          { status: 401 }
+          request
         );
       }
-    } else {
-      // Web interface request with session
-      const authResult = await getAuthenticatedUser();
       
-      if (!authResult) {
-        console.log('❌ No valid authentication found for web request');
-        return NextResponse.json(
+      return setCorsHeaders(
+        NextResponse.json(
           { success: false, error: 'Unauthorized' },
           { status: 401 }
-        );
-      }
-      
-      userId = authResult.userId;
-      console.log('✅ Web session verified for user:', userId);
+        ),
+        request
+      );
     }
+    
+    const userId = auth.userId;
+    const source = auth.source;
     
     // Parse the request body
     const body = await request.json();
@@ -407,32 +437,38 @@ export async function POST(request: NextRequest) {
     
     // Format response based on source
     if (source === 'extension') {
-      return NextResponse.json(
-        formatExtensionSuccess({
+      return setCorsHeaders(
+        NextResponse.json(
+          formatExtensionSuccess({
+            id: jobApplication._id.toString(),
+            jobTitle: jobApplication.jobTitle,
+            company: jobApplication.company,
+            location: jobApplication.location,
+            status: jobApplication.status,
+            createdAt: jobApplication.createdAt
+          }, 'Job saved to application tracker successfully')
+        ),
+        request
+      );
+    }
+    
+    return setCorsHeaders(
+      NextResponse.json({
+        success: true,
+        message: 'Job saved to application tracker successfully',
+        data: {
           id: jobApplication._id.toString(),
           jobTitle: jobApplication.jobTitle,
           company: jobApplication.company,
           location: jobApplication.location,
+          source: jobApplication.source,
           status: jobApplication.status,
+          priority: jobApplication.priority,
           createdAt: jobApplication.createdAt
-        }, 'Job saved to application tracker successfully')
-      );
-    }
-    
-    return NextResponse.json({
-      success: true,
-      message: 'Job saved to application tracker successfully',
-      data: {
-        id: jobApplication._id.toString(),
-        jobTitle: jobApplication.jobTitle,
-        company: jobApplication.company,
-        location: jobApplication.location,
-        source: jobApplication.source,
-        status: jobApplication.status,
-        priority: jobApplication.priority,
-        createdAt: jobApplication.createdAt
-      }
-    });
+        }
+      }),
+      request
+    );
     
   } catch (error: any) {
     console.error('❌ Job creation error:', error);
@@ -443,93 +479,88 @@ export async function POST(request: NextRequest) {
     const isExtension = authHeader && authHeader.startsWith('Bearer ');
     
     if (isExtension) {
-      return NextResponse.json(
-        formatExtensionError(
-          ExtensionErrorCode.JOB_CREATION_FAILED,
-          error.message || 'Failed to create job in application tracker',
-          { details: error.stack },
-          true // Retryable
+      return setCorsHeaders(
+        NextResponse.json(
+          formatExtensionError(
+            ExtensionErrorCode.JOB_CREATION_FAILED,
+            error.message || 'Failed to create job in application tracker',
+            { details: error.stack },
+            true // Retryable
+          ),
+          { status: 500 }
         ),
-        { status: 500 }
+        request
       );
     }
     
     // Check for specific error types
     if (error?.name === 'MongoNetworkError' || error?.name === 'MongoServerSelectionError') {
-      return createErrorNextResponse(
+      const errorResponse = createErrorNextResponse(
         ErrorCode.DB_CONNECTION_FAILED,
         'Database connection failed. Please try again later.',
         { error: error.message },
         true, // Retryable
         60 // Retry after 60 seconds
       );
+      return setCorsHeaders(errorResponse, request);
     }
     
     if (error?.name === 'ValidationError') {
-      return createErrorNextResponse(
+      const errorResponse = createErrorNextResponse(
         ErrorCode.VALIDATION_FAILED,
         'Job validation failed. Please check your input.',
         { error: error.message }
       );
+      return setCorsHeaders(errorResponse, request);
     }
     
-    return createErrorNextResponse(
+    const errorResponse = createErrorNextResponse(
       ErrorCode.JOB_CREATION_FAILED,
       'Failed to create job in application tracker. Please try again.',
       { error: error.message },
       true // Retryable
     );
+    return setCorsHeaders(errorResponse, request);
   }
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflight(request);
 }
 
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Jobs list request received');
     
-    let userId: string;
-    
-    // Check if this is an extension request (with JWT token)
-    const authHeader = request.headers.get('authorization');
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Extension request with JWT token
-      const token = authHeader.substring(7);
+    // Authenticate request (supports both session and JWT token)
+    const auth = await authenticateRequest(request);
+    if (!auth) {
+      // Check if this was an extension request to return proper error format
+      const authHeader = request.headers.get('authorization');
+      const isExtension = authHeader && authHeader.startsWith('Bearer ');
       
-      try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-        
-        if (decoded.type !== 'extension') {
-          console.log('❌ Invalid token type');
-          return NextResponse.json(
-            { success: false, error: 'Invalid token type' },
+      if (isExtension) {
+        return setCorsHeaders(
+          NextResponse.json(
+            { success: false, error: 'Unauthorized' },
             { status: 401 }
-          );
-        }
-        
-        userId = decoded.userId || '';
-        console.log('✅ Extension token verified for user:', userId);
-      } catch (error) {
-        console.log('❌ Invalid extension token:', error);
-        return NextResponse.json(
-          { success: false, error: 'Invalid token' },
-          { status: 401 }
+          ),
+          request
         );
       }
-    } else {
-      // Web interface request with session
-      const authResult = await getAuthenticatedUser();
       
-      if (!authResult) {
-        console.log('❌ No valid authentication found for web request');
-        return NextResponse.json(
+      return setCorsHeaders(
+        NextResponse.json(
           { success: false, error: 'Unauthorized' },
           { status: 401 }
-        );
-      }
-      
-      userId = authResult.userId;
-      console.log('✅ Web session verified for user:', userId);
+        ),
+        request
+      );
     }
+    
+    const userId = auth.userId;
+    const isExtensionRequest = auth.source === 'extension';
     
     // Ensure connection is established
     await getConnection();
@@ -538,172 +569,130 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('id');
     
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
+    
     // If jobId is provided, return single job
     if (jobId) {
       try {
-        const job = await JobApplication.findOne({ 
-          _id: new mongoose.Types.ObjectId(jobId),
-          userId: new mongoose.Types.ObjectId(userId)
-        }).lean();
-        
-        if (!job) {
-          return NextResponse.json(
-            { success: false, error: 'Job not found' },
-            { status: 404 }
+        if (!mongoose.Types.ObjectId.isValid(jobId)) {
+          return setCorsHeaders(
+            NextResponse.json(
+              { success: false, error: 'Invalid job ID' },
+              { status: 400 }
+            ),
+            request
           );
         }
         
-        // Helper to convert Date to ISO string for frontend
-        const dateToISO = (date: Date | undefined | null): string | undefined => {
-          if (!date) return undefined;
-          if (date instanceof Date) {
-            return date.toISOString().split('T')[0];
-          }
-          return undefined;
-        };
+        const job = await JobApplication.findOne({ 
+          _id: new mongoose.Types.ObjectId(jobId),
+          userId: normalizedUserId
+        }).lean();
         
-        return NextResponse.json({
-          success: true,
-          data: {
-            job: {
-              id: job._id.toString(),
-              userId: job.userId.toString(),
-              jobTitle: job.jobTitle,
-              company: job.company,
-              location: job.location,
-              jobUrl: job.jobUrl,
-              jobDescription: job.jobDescription,
-              source: job.source,
-              status: job.status,
-              priority: job.priority,
-              notes: job.notes,
-              sponsorship: job.sponsorship,
-              tags: job.tags || [],
-              contactDetails: job.contactDetails ? {
-                name: job.contactDetails.name || '',
-                email: job.contactDetails.email || '',
-                phone: job.contactDetails.phone || '',
-                role: job.contactDetails.role || ''
-              } : { name: '', email: '', phone: '', role: '' },
-              salary: job.salary,
-              deadline: dateToISO(job.deadline),
-              applicationDate: dateToISO(job.applicationDate),
-              interviews: (job.interviews || []).map((iv: any) => ({
-                ...iv.toObject ? iv.toObject() : iv,
-                date: iv.date instanceof Date ? dateToISO(iv.date) : iv.date
-              })),
-              followUps: (job.followUps || []).map((fu: any) => ({
-                ...fu.toObject ? fu.toObject() : fu,
-                date: fu.date instanceof Date ? dateToISO(fu.date) : fu.date
-              })),
-              attachments: (job.attachments || []).map((att: any) => att.toObject ? att.toObject() : att),
-              sourceUrl: job.sourceUrl,
-              atsScore: job.atsScore,
-              isArchived: job.isArchived || false,
-              createdAt: job.createdAt,
-              updatedAt: job.updatedAt
+        if (!job) {
+          return setCorsHeaders(
+            NextResponse.json(
+              { success: false, error: 'Job not found' },
+              { status: 404 }
+            ),
+            request
+          );
+        }
+        
+        return setCorsHeaders(
+          NextResponse.json({
+            success: true,
+            data: {
+              job: serializeJob(job)
             }
-          }
-        });
+          }),
+          request
+        );
       } catch (error: any) {
         console.error('Error fetching single job:', error);
-        return NextResponse.json(
-          { success: false, error: 'Failed to fetch job' },
-          { status: 500 }
+        return setCorsHeaders(
+          NextResponse.json(
+            { success: false, error: 'Failed to fetch job' },
+            { status: 500 }
+          ),
+          request
         );
       }
     }
     
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const status = searchParams.get('status');
-    const source = searchParams.get('source');
+    const page = Math.max(parseInt(searchParams.get('page') || '1', 10) || 1, 1);
+    const limitParam = searchParams.get('limit');
+    const explicitLimit = limitParam && limitParam !== 'all';
+    const baseLimit = explicitLimit ? (parseInt(limitParam || '10', 10) || 10) : 10;
+    const limit = Math.max(1, Math.min(100, baseLimit));
+    const statusParams = searchParams.getAll('status').filter(Boolean);
+    const sourceFilter = searchParams.get('source');
+    const includeArchived = searchParams.get('includeArchived') === 'true';
     
     // Build query
-    const query: any = { userId };
+    const query: any = { userId: normalizedUserId };
     
-    if (status) {
-      query.status = status;
+    if (statusParams.length === 1) {
+      query.status = statusParams[0];
+    } else if (statusParams.length > 1) {
+      query.status = { $in: statusParams };
     }
     
-    if (source) {
-      query.source = source;
+    if (sourceFilter) {
+      query.source = sourceFilter;
     }
     
-    // Get job applications with pagination - include ALL fields
-    const jobApplications = await JobApplication.find(query)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    if (!includeArchived) {
+      query.isArchived = { $ne: true };
+    }
     
-    // Get total count
-    const total = await JobApplication.countDocuments(query);
+    const paginateResults = !isExtensionRequest || explicitLimit;
+    let jobQuery = JobApplication.find(query).sort({ createdAt: -1 });
+    
+    if (paginateResults) {
+      jobQuery = jobQuery.skip((page - 1) * limit).limit(limit);
+    }
+    
+    const [jobApplications, total] = await Promise.all([
+      jobQuery.lean(),
+      JobApplication.countDocuments(query)
+    ]);
     
     console.log('✅ Job applications retrieved from application tracker:', jobApplications.length);
     
-    // Helper to convert Date to ISO string for frontend
-    const dateToISO = (date: Date | undefined | null): string | undefined => {
-      if (!date) return undefined;
-      if (date instanceof Date) {
-        return date.toISOString().split('T')[0]; // Return YYYY-MM-DD format
-      }
-      return undefined;
-    };
-    
-    return NextResponse.json({
+    const jobs = jobApplications.map(serializeJob);
+    const responsePayload: any = {
       success: true,
       data: {
-        jobs: jobApplications.map(job => ({
-          id: job._id.toString(),
-          jobTitle: job.jobTitle,
-          company: job.company,
-          location: job.location,
-          jobUrl: job.jobUrl,
-          jobDescription: job.jobDescription,
-          source: job.source,
-          status: job.status,
-          priority: job.priority,
-          notes: job.notes,
-          sponsorship: job.sponsorship,
-          tags: job.tags || [],
-          contactDetails: job.contactDetails ? {
-            name: job.contactDetails.name || '',
-            email: job.contactDetails.email || '',
-            phone: job.contactDetails.phone || '',
-            role: job.contactDetails.role || ''
-          } : { name: '', email: '', phone: '', role: '' },
-          salary: job.salary,
-          deadline: dateToISO(job.deadline),
-          applicationDate: dateToISO(job.applicationDate),
-          interviews: (job.interviews || []).map((iv: any) => ({
-            ...iv.toObject ? iv.toObject() : iv,
-            date: iv.date instanceof Date ? dateToISO(iv.date) : iv.date
-          })),
-          followUps: (job.followUps || []).map((fu: any) => ({
-            ...fu.toObject ? fu.toObject() : fu,
-            date: fu.date instanceof Date ? dateToISO(fu.date) : fu.date
-          })),
-          attachments: (job.attachments || []).map((att: any) => att.toObject ? att.toObject() : att),
-          sourceUrl: job.sourceUrl,
-          atsScore: job.atsScore,
-          isArchived: job.isArchived || false,
-          createdAt: job.createdAt,
-          updatedAt: job.updatedAt
-        })),
-        pagination: {
-          page,
-          limit,
-          total,
-          pages: Math.ceil(total / limit)
-        }
+        jobs,
+        total
       }
-    });
+    };
+    
+    if (paginateResults) {
+      responsePayload.data.pagination = {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit) || 1
+      };
+    }
+    
+    return setCorsHeaders(
+      NextResponse.json(responsePayload),
+      request
+    );
     
   } catch (error: any) {
     console.error('❌ Jobs list error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to retrieve jobs from application tracker' },
-      { status: 500 }
+    return setCorsHeaders(
+      NextResponse.json(
+        { success: false, error: 'Failed to retrieve jobs from application tracker' },
+        { status: 500 }
+      ),
+      request
     );
   }
 }
