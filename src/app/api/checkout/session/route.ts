@@ -87,6 +87,7 @@ async function getCountryPricingForPlan(
   }
 }
 import Coupon from '@/models/Coupon';
+import DiscountCode from '@/models/DiscountCode';
 
 export async function POST(request: NextRequest) {
   try {
@@ -116,19 +117,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Plan key is required' }, { status: 400 });
     }
     
-    // Handle coupon/discount code
+    // Handle coupon/discount code - check both Coupon and DiscountCode collections
     let couponDiscount = null;
     if (couponCode || discountCode) {
       const code = (couponCode || discountCode).toUpperCase();
-      const coupon = await Coupon.findOne({ code });
+      console.log('Looking up coupon code:', code);
+      
+      // First, try to find in Coupon collection
+      let coupon = await Coupon.findOne({ code });
       
       if (coupon) {
+        console.log('Coupon found in Coupon collection:', {
+          code: coupon.code,
+          type: coupon.type,
+          discountValue: coupon.discountValue,
+          isActive: coupon.isActive
+        });
+        
         const validation = coupon.isValid();
+        console.log('Coupon validation result:', validation);
+        
         if (validation.valid) {
           // Check if coupon applies to this plan
           const isApplicable = 
             (!coupon.applicablePlanKeys || coupon.applicablePlanKeys.length === 0 || coupon.applicablePlanKeys.includes(planKey)) &&
             (!coupon.applicablePlans || coupon.applicablePlans.length === 0 || coupon.applicablePlans.includes(planKey));
+          
+          console.log('Coupon applicability check:', {
+            applicablePlanKeys: coupon.applicablePlanKeys,
+            applicablePlans: coupon.applicablePlans,
+            planKey,
+            isApplicable
+          });
           
           if (isApplicable) {
             couponDiscount = {
@@ -137,9 +157,128 @@ export async function POST(request: NextRequest) {
               value: coupon.discountValue || 0,
               id: coupon._id.toString()
             };
+            console.log('Coupon discount created:', couponDiscount);
+          } else {
+            console.warn('Coupon found but not applicable to plan:', {
+              code: coupon.code,
+              planKey,
+              applicablePlanKeys: coupon.applicablePlanKeys,
+              applicablePlans: coupon.applicablePlans
+            });
           }
+        } else {
+          console.warn('Coupon validation failed:', {
+            code: coupon.code,
+            reason: validation.reason
+          });
+        }
+      } else {
+        // If not found in Coupon collection, try DiscountCode collection
+        console.log('Coupon not found in Coupon collection, checking DiscountCode collection...');
+        const discountCodeDoc = await DiscountCode.findOne({ 
+          code: code,
+          isActive: true 
+        }).populate('applicablePlans', 'key _id');
+        
+        if (discountCodeDoc) {
+          console.log('Discount code found in DiscountCode collection:', {
+            code: discountCodeDoc.code,
+            discountType: discountCodeDoc.discountType,
+            discountValue: discountCodeDoc.discountValue,
+            isActive: discountCodeDoc.isActive,
+            validFrom: discountCodeDoc.validFrom,
+            validUntil: discountCodeDoc.validUntil
+          });
+          
+          // Validate discount code using the virtual isValid property
+          // Note: DiscountCode model has a virtual 'isValid' getter
+          const isValid = discountCodeDoc.isValid;
+          
+          if (!isValid) {
+            // Check why it's invalid
+            const now = new Date();
+            if (!discountCodeDoc.isActive) {
+              console.warn('Discount code is not active:', {
+                code: discountCodeDoc.code
+              });
+            } else if (now < discountCodeDoc.validFrom) {
+              console.warn('Discount code not yet valid:', {
+                code: discountCodeDoc.code,
+                validFrom: discountCodeDoc.validFrom,
+                now
+              });
+            } else if (now > discountCodeDoc.validUntil) {
+              console.warn('Discount code expired:', {
+                code: discountCodeDoc.code,
+                validUntil: discountCodeDoc.validUntil,
+                now
+              });
+            } else if (discountCodeDoc.usedCount >= discountCodeDoc.maxUses) {
+              console.warn('Discount code usage limit reached:', {
+                code: discountCodeDoc.code,
+                usedCount: discountCodeDoc.usedCount,
+                maxUses: discountCodeDoc.maxUses
+              });
+            }
+          } else {
+            // Check if discount code applies to this plan
+            const PricingPlan = await getAdminPricingPlan();
+            const plan = await PricingPlan.findOne({ key: planKey });
+            
+            let isApplicable = true;
+            if (discountCodeDoc.applicablePlans && discountCodeDoc.applicablePlans.length > 0) {
+              if (plan) {
+                // Check if code applies to plan ID or plan key
+                // applicablePlans can be ObjectIds (when not populated) or plan objects (when populated)
+                isApplicable = 
+                  discountCodeDoc.applicablePlans.some((planRef: any) => {
+                    // If populated, planRef will be an object with _id and key
+                    if (planRef && typeof planRef === 'object' && planRef._id) {
+                      return planRef._id.toString() === plan._id.toString() || planRef.key === plan.key;
+                    }
+                    // If not populated, planRef is an ObjectId
+                    const planIdStr = planRef.toString ? planRef.toString() : String(planRef);
+                    return planIdStr === plan._id.toString();
+                  });
+              } else {
+                isApplicable = false;
+              }
+            }
+            
+            console.log('Discount code applicability check:', {
+              applicablePlans: discountCodeDoc.applicablePlans,
+              planKey,
+              planId: plan?._id.toString(),
+              isApplicable
+            });
+            
+            if (isApplicable) {
+              // Map DiscountCode fields to couponDiscount format
+              // DiscountCode uses 'discountType' (percentage/fixed), Coupon uses 'type'
+              const discountType = discountCodeDoc.discountType === 'percentage' ? 'percentage' : 
+                                   discountCodeDoc.discountType === 'fixed' ? 'fixed' : 'percentage';
+              
+              couponDiscount = {
+                code: discountCodeDoc.code,
+                type: discountType, // Map discountType to type
+                value: discountCodeDoc.discountValue || 0,
+                id: discountCodeDoc._id.toString()
+              };
+              console.log('Discount code discount created:', couponDiscount);
+            } else {
+              console.warn('Discount code found but not applicable to plan:', {
+                code: discountCodeDoc.code,
+                planKey,
+                applicablePlans: discountCodeDoc.applicablePlans
+              });
+            }
+          }
+        } else {
+          console.warn('Coupon/Discount code not found in either collection:', code);
         }
       }
+    } else {
+      console.log('No coupon code provided in request');
     }
 
     // Validate plan key
@@ -345,6 +484,40 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  const origin = request.headers.get('origin');
+  
+  // Allow requests from same origin and configured origins
+  const allowedOrigins = process.env.NODE_ENV === 'production' 
+    ? [
+        'https://cvcircle.io',
+        'https://www.cvcircle.io',
+        'https://app.cvcircle.io',
+      ]
+    : [
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+      ];
+
+  const response = new NextResponse(null, { status: 200 });
+  
+  // Set CORS headers
+  if (origin && (allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://'))) {
+    response.headers.set('Access-Control-Allow-Origin', origin);
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+  } else if (process.env.NODE_ENV === 'development') {
+    // In development, allow all origins for easier testing
+    response.headers.set('Access-Control-Allow-Origin', origin || '*');
+  }
+  
+  response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
+  response.headers.set('Access-Control-Max-Age', '86400');
+  
+  return response;
+}
+
 async function handleDayPassPayment(
   plan: any, 
   user: any, 
@@ -468,11 +641,39 @@ async function handleDayPassPayment(
     regionCode: regionInfo?.countryCode
   });
   
-  // Apply coupon discount
-  if (couponDiscount && couponDiscount.type === 'percentage') {
-    amount = Math.round(amount * (1 - couponDiscount.value / 100));
-  } else if (couponDiscount && couponDiscount.type === 'fixed') {
-    amount = Math.max(0, amount - (couponDiscount.value * 100));
+  // Apply coupon discount BEFORE creating order
+  const originalDayPassAmount = amount;
+  if (couponDiscount) {
+    console.log('Applying coupon discount to Day Pass Razorpay order:', {
+      couponCode: couponDiscount.code,
+      discountType: couponDiscount.type,
+      discountValue: couponDiscount.value,
+      originalAmount: amount,
+      originalAmountInINR: (amount / 100).toFixed(2)
+    });
+    
+    if (couponDiscount.type === 'percentage') {
+      amount = Math.round(amount * (1 - couponDiscount.value / 100));
+      console.log('Percentage discount applied (Day Pass):', {
+        discountPercent: couponDiscount.value,
+        discountedAmount: amount,
+        discountedAmountInINR: (amount / 100).toFixed(2),
+        savings: ((originalDayPassAmount - amount) / 100).toFixed(2)
+      });
+    } else if (couponDiscount.type === 'fixed') {
+      // Fixed discount: subtract from amount (discountValue is in INR, convert to paise)
+      const discountInPaise = Math.round(couponDiscount.value * 100);
+      amount = Math.max(0, amount - discountInPaise);
+      console.log('Fixed discount applied (Day Pass):', {
+        discountInINR: couponDiscount.value,
+        discountInPaise: discountInPaise,
+        discountedAmount: amount,
+        discountedAmountInINR: (amount / 100).toFixed(2),
+        savings: ((originalDayPassAmount - amount) / 100).toFixed(2)
+      });
+    }
+  } else {
+    console.log('No coupon discount applied to Day Pass Razorpay order');
   }
 
   if (provider === 'stripe') {
@@ -603,18 +804,19 @@ async function handleDayPassPayment(
 
       // Fallback: Create Razorpay Order for one-time payment
       // ENFORCE: Razorpay = INR only - strict validation
-      const validCurrency = currency.toLowerCase().trim();
+      // Razorpay expects uppercase 'INR' (not lowercase 'inr')
+      const normalizedCurrency = currency.toUpperCase().trim();
       const finalAmount = Math.round(amount);
       
-      // Validate currency is exactly 'inr' (Razorpay ONLY supports INR)
-      if (validCurrency !== 'inr') {
+      // Validate currency is exactly 'INR' (Razorpay ONLY supports INR)
+      if (normalizedCurrency !== 'INR') {
         console.error('Razorpay currency validation failed (day pass):', {
           provided: currency,
-          normalized: validCurrency,
-          expected: 'inr'
+          normalized: normalizedCurrency,
+          expected: 'INR'
         });
         return NextResponse.json({ 
-          error: `Razorpay only supports INR currency. Got: ${currency.toUpperCase()}. Please use Stripe for other currencies.`,
+          error: `Razorpay only supports INR currency. Got: ${currency}. Please use Stripe for other currencies.`,
           unsupportedCurrency: true,
           providedCurrency: currency,
           suggestedProvider: 'stripe'
@@ -622,7 +824,7 @@ async function handleDayPassPayment(
       }
       
       // Razorpay minimum amount validation
-      if (validCurrency === 'inr' && finalAmount < 100) {
+      if (normalizedCurrency === 'INR' && finalAmount < 100) {
         console.error('Amount too small for Razorpay:', finalAmount);
         return NextResponse.json({ error: 'Amount must be at least ₹1.00' }, { status: 400 });
       }
@@ -632,16 +834,30 @@ async function handleDayPassPayment(
       const timestamp = Date.now().toString().slice(-8);
       const receipt = `dp_${shortUserId}_${timestamp}`.substring(0, 40);
       
+      // Ensure currency is exactly 'INR' - Razorpay is strict about this
+      const finalCurrency = 'INR'; // Always use 'INR' for Razorpay
+      
       console.log('Creating Razorpay order (day pass):', { 
         amount: finalAmount, 
-        currency: validCurrency,
+        amountInINR: (finalAmount / 100).toFixed(2),
+        originalAmount: originalDayPassAmount,
+        originalAmountInINR: (originalDayPassAmount / 100).toFixed(2),
+        discountApplied: !!couponDiscount,
+        couponCode: couponDiscount?.code || null,
+        discountType: couponDiscount?.type || null,
+        discountValue: couponDiscount?.value || null,
+        currency: finalCurrency,
+        normalizedCurrency: normalizedCurrency,
         originalCurrency: currency,
-        receipt: receipt
+        receipt: receipt,
+        currencyType: typeof finalCurrency,
+        currencyLength: finalCurrency.length
       });
       
-      const order = await razorpay.orders.create({
-        amount: finalAmount,
-        currency: validCurrency,
+      // Razorpay API requires exactly 'INR' (uppercase, 3 characters)
+      const orderParams = {
+        amount: finalAmount, // This should be the discounted amount
+        currency: finalCurrency, // Hardcode to 'INR' to ensure it's correct
         receipt: receipt,
         notes: {
           planKey: plan.key,
@@ -650,6 +866,31 @@ async function handleDayPassPayment(
           type: 'day_pass',
           region: regionInfo.countryCode
         }
+      };
+      
+      console.log('Razorpay order params (day pass - FINAL - before creating order):', {
+        amount: orderParams.amount,
+        amountInINR: (orderParams.amount / 100).toFixed(2),
+        originalAmount: originalDayPassAmount,
+        originalAmountInINR: (originalDayPassAmount / 100).toFixed(2),
+        discountApplied: !!couponDiscount,
+        discountAmount: couponDiscount ? (originalDayPassAmount - finalAmount) : 0,
+        discountAmountInINR: couponDiscount ? ((originalDayPassAmount - finalAmount) / 100).toFixed(2) : '0.00',
+        currency: orderParams.currency,
+        couponCode: couponDiscount?.code || null
+      });
+      console.log('Full order params JSON (day pass):', JSON.stringify(orderParams, null, 2));
+      
+      const order = await razorpay.orders.create(orderParams);
+      
+      // Verify the order was created with the correct amount
+      console.log('Razorpay order created (day pass) - verification:', {
+        orderId: order.id,
+        orderAmount: order.amount,
+        orderAmountInINR: (order.amount / 100).toFixed(2),
+        expectedAmount: finalAmount,
+        expectedAmountInINR: (finalAmount / 100).toFixed(2),
+        amountsMatch: order.amount === finalAmount
       });
 
       return NextResponse.json({
@@ -667,6 +908,7 @@ async function handleDayPassPayment(
 
     } catch (error: any) {
       console.error('Razorpay Order error (day pass):', error);
+      console.error('Full error object:', JSON.stringify(error, null, 2));
       
       // Extract detailed error information from Razorpay API
       let errorMessage = 'Payment setup failed';
@@ -697,11 +939,18 @@ async function handleDayPassPayment(
           field: errorField,
           source: errorSource,
           step: errorStep,
-          reason: errorReason
+          reason: errorReason,
+          fullError: razorpayError
         });
         
         // Use Razorpay's error description if available
         errorMessage = errorDescription || errorMessage;
+        
+        // Check if it's a currency error
+        if (errorField === 'currency' || errorDescription?.toLowerCase().includes('currency')) {
+          console.error('Currency error detected. Check Razorpay account configuration for INR support.');
+          errorMessage = `Currency error: ${errorDescription || 'INR currency may not be enabled in your Razorpay account. Please check your Razorpay dashboard settings.'}`;
+        }
       }
       
       return NextResponse.json({ 
@@ -1037,6 +1286,19 @@ async function handleProPlanPayment(
       throw new Error('INR pricing not available for Razorpay. Razorpay only supports INR currency.');
     }
     
+    // Log coupon discount info for debugging
+    console.log('Razorpay payment - Coupon discount check:', {
+      hasCouponDiscount: !!couponDiscount,
+      couponDiscount: couponDiscount ? {
+        code: couponDiscount.code,
+        type: couponDiscount.type,
+        value: couponDiscount.value,
+        id: couponDiscount.id
+      } : null,
+      planKey,
+      interval
+    });
+    
     // Initialize amount and currency - ENFORCE INR
     let razorpayAmount: number;
     let razorpayCurrency: string = 'INR'; // ALWAYS INR for Razorpay
@@ -1065,13 +1327,39 @@ async function handleProPlanPayment(
       return NextResponse.json({ error: 'Invalid payment amount' }, { status: 400 });
     }
     
-    // Apply coupon discount
+    // Apply coupon discount BEFORE creating order
+    const originalAmount = razorpayAmount;
     if (couponDiscount) {
+      console.log('Applying coupon discount to Razorpay order:', {
+        couponCode: couponDiscount.code,
+        discountType: couponDiscount.type,
+        discountValue: couponDiscount.value,
+        originalAmount: razorpayAmount,
+        originalAmountInINR: (razorpayAmount / 100).toFixed(2)
+      });
+      
       if (couponDiscount.type === 'percentage') {
         razorpayAmount = Math.round(razorpayAmount * (1 - couponDiscount.value / 100));
+        console.log('Percentage discount applied:', {
+          discountPercent: couponDiscount.value,
+          discountedAmount: razorpayAmount,
+          discountedAmountInINR: (razorpayAmount / 100).toFixed(2),
+          savings: ((originalAmount - razorpayAmount) / 100).toFixed(2)
+        });
       } else if (couponDiscount.type === 'fixed') {
-        razorpayAmount = Math.max(0, razorpayAmount - (couponDiscount.value * 100));
+        // Fixed discount: subtract from amount (discountValue is in INR, convert to paise)
+        const discountInPaise = Math.round(couponDiscount.value * 100);
+        razorpayAmount = Math.max(0, razorpayAmount - discountInPaise);
+        console.log('Fixed discount applied:', {
+          discountInINR: couponDiscount.value,
+          discountInPaise: discountInPaise,
+          discountedAmount: razorpayAmount,
+          discountedAmountInINR: (razorpayAmount / 100).toFixed(2),
+          savings: ((originalAmount - razorpayAmount) / 100).toFixed(2)
+        });
       }
+    } else {
+      console.log('No coupon discount applied to Razorpay order');
     }
 
     if (!razorpay) {
@@ -1086,17 +1374,18 @@ async function handleProPlanPayment(
 
     try {
       // ENFORCE: Razorpay = INR only - strict validation
-      const validCurrency = razorpayCurrency.toLowerCase().trim();
+      // Razorpay expects uppercase 'INR' (not lowercase 'inr')
+      const normalizedCurrency = razorpayCurrency.toUpperCase().trim();
       
-      // Validate currency is exactly 'inr' (Razorpay ONLY supports INR)
-      if (validCurrency !== 'inr') {
+      // Validate currency is exactly 'INR' (Razorpay ONLY supports INR)
+      if (normalizedCurrency !== 'INR') {
         console.error('Razorpay currency validation failed:', {
           provided: razorpayCurrency,
-          normalized: validCurrency,
-          expected: 'inr'
+          normalized: normalizedCurrency,
+          expected: 'INR'
         });
         return NextResponse.json({ 
-          error: `Razorpay only supports INR currency. Got: ${razorpayCurrency.toUpperCase()}. Please use Stripe for other currencies.`,
+          error: `Razorpay only supports INR currency. Got: ${razorpayCurrency}. Please use Stripe for other currencies.`,
           unsupportedCurrency: true,
           providedCurrency: razorpayCurrency,
           suggestedProvider: 'stripe'
@@ -1104,14 +1393,29 @@ async function handleProPlanPayment(
       }
       
       // Ensure amount is a positive integer (Razorpay requires amount in smallest currency unit)
+      // IMPORTANT: Use the discounted razorpayAmount (discount was applied above)
       const finalAmount = Math.round(razorpayAmount);
+      
+      // Final validation: Ensure we're using the discounted amount
+      if (couponDiscount && finalAmount === originalAmount) {
+        console.error('WARNING: Discount was not applied!', {
+          originalAmount,
+          finalAmount,
+          couponDiscount: {
+            code: couponDiscount.code,
+            type: couponDiscount.type,
+            value: couponDiscount.value
+          }
+        });
+      }
+      
       if (isNaN(finalAmount) || finalAmount <= 0) {
         console.error('Invalid amount for Razorpay order:', finalAmount);
         return NextResponse.json({ error: 'Invalid payment amount' }, { status: 400 });
       }
       
       // Razorpay minimum amount validation (minimum 1 INR = 100 paise)
-      if (validCurrency === 'inr' && finalAmount < 100) {
+      if (normalizedCurrency === 'INR' && finalAmount < 100) {
         console.error('Amount too small for Razorpay:', finalAmount);
         return NextResponse.json({ error: 'Amount must be at least ₹1.00' }, { status: 400 });
       }
@@ -1122,19 +1426,33 @@ async function handleProPlanPayment(
       const timestamp = Date.now().toString().slice(-8); // Use last 8 digits of timestamp
       const receipt = `ord_${shortUserId}_${timestamp}`.substring(0, 40); // Ensure max 40 chars
       
+      // Ensure currency is exactly 'INR' - Razorpay is strict about this
+      const finalCurrency = 'INR'; // Always use 'INR' for Razorpay
+      
       console.log('Creating Razorpay order:', { 
         amount: finalAmount, 
-        currency: validCurrency, 
+        amountInINR: (finalAmount / 100).toFixed(2),
+        originalAmount: originalAmount,
+        originalAmountInINR: (originalAmount / 100).toFixed(2),
+        discountApplied: !!couponDiscount,
+        couponCode: couponDiscount?.code || null,
+        discountType: couponDiscount?.type || null,
+        discountValue: couponDiscount?.value || null,
+        currency: finalCurrency,
+        normalizedCurrency: normalizedCurrency,
+        originalCurrency: razorpayCurrency,
         planKey: plan.key,
         interval: interval,
-        originalCurrency: razorpayCurrency,
-        receipt: receipt
+        receipt: receipt,
+        currencyType: typeof finalCurrency,
+        currencyLength: finalCurrency.length
       });
       
       // Create Razorpay Order for Checkout
-      const order = await razorpay.orders.create({
-        amount: finalAmount,
-        currency: validCurrency,
+      // Razorpay API requires exactly 'INR' (uppercase, 3 characters)
+      const orderParams = {
+        amount: finalAmount, // This should be the discounted amount
+        currency: finalCurrency, // Hardcode to 'INR' to ensure it's correct
         receipt: receipt,
         notes: {
           planKey: plan.key,
@@ -1145,6 +1463,31 @@ async function handleProPlanPayment(
           couponCode: couponDiscount?.code || '',
           couponId: couponDiscount?.id || ''
         }
+      };
+      
+      console.log('Razorpay order params (FINAL - before creating order):', {
+        amount: orderParams.amount,
+        amountInINR: (orderParams.amount / 100).toFixed(2),
+        originalAmount: originalAmount,
+        originalAmountInINR: (originalAmount / 100).toFixed(2),
+        discountApplied: !!couponDiscount,
+        discountAmount: couponDiscount ? (originalAmount - finalAmount) : 0,
+        discountAmountInINR: couponDiscount ? ((originalAmount - finalAmount) / 100).toFixed(2) : '0.00',
+        currency: orderParams.currency,
+        couponCode: couponDiscount?.code || null
+      });
+      console.log('Full order params JSON:', JSON.stringify(orderParams, null, 2));
+      
+      const order = await razorpay.orders.create(orderParams);
+      
+      // Verify the order was created with the correct amount
+      console.log('Razorpay order created - verification:', {
+        orderId: order.id,
+        orderAmount: order.amount,
+        orderAmountInINR: (order.amount / 100).toFixed(2),
+        expectedAmount: finalAmount,
+        expectedAmountInINR: (finalAmount / 100).toFixed(2),
+        amountsMatch: order.amount === finalAmount
       });
       
       console.log('Razorpay order created successfully:', order.id);
@@ -1169,8 +1512,8 @@ async function handleProPlanPayment(
 
     } catch (error: any) {
       console.error('Razorpay Order error:', error);
+      console.error('Full error object:', JSON.stringify(error, null, 2));
       
-      // Extract detailed error information from Razorpay API
       // Extract detailed error information from Razorpay API
       let errorMessage = 'Payment setup failed';
       let errorCode = null;
@@ -1201,11 +1544,18 @@ async function handleProPlanPayment(
           field: errorField,
           source: errorSource,
           step: errorStep,
-          reason: errorReason
+          reason: errorReason,
+          fullError: error.error
         });
         
         // Use Razorpay's error description if available, otherwise use code or message
         errorMessage = errorDescription || errorCode || errorMessage;
+        
+        // Check if it's a currency error
+        if (errorField === 'currency' || errorDescription?.toLowerCase().includes('currency')) {
+          console.error('Currency error detected. Check Razorpay account configuration for INR support.');
+          errorMessage = `Currency error: ${errorDescription || 'INR currency may not be enabled in your Razorpay account. Please check your Razorpay dashboard settings and ensure your account supports INR transactions.'}`;
+        }
       }
       
       // Log full error object for debugging

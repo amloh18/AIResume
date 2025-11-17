@@ -9,13 +9,15 @@ import Invoice from '@/models/Invoice';
 /**
  * Verify Razorpay payment signature
  * 
- * CRITICAL: This route only verifies payment signature.
- * Subscription activation is handled by the webhook to prevent race conditions.
+ * CRITICAL: This route ONLY verifies payment signature.
+ * Subscription activation is handled EXCLUSIVELY by the webhook to prevent race conditions.
  * 
  * Flow:
  * 1. Verify payment signature
- * 2. Check if payment already processed (idempotency)
- * 3. Return status to frontend (webhook will process activation)
+ * 2. Check if payment already processed (idempotency check)
+ * 3. Return verification status to frontend
+ * 
+ * The frontend should poll /api/user/current-plan to check when the webhook has activated the subscription.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -30,8 +32,7 @@ export async function POST(request: NextRequest) {
     const {
       razorpay_order_id,
       razorpay_payment_id,
-      razorpay_signature,
-      planKey
+      razorpay_signature
     } = body;
 
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
@@ -50,13 +51,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid payment signature' }, { status: 400 });
     }
 
-    // Get payment details from Razorpay
+    // Get payment details from Razorpay to verify status
     const payment = await razorpay.payments.fetch(razorpay_payment_id);
     
     // Get user
     const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if payment is successful
+    if (payment.status !== 'captured' && payment.status !== 'authorized') {
+      return NextResponse.json({ 
+        error: `Payment not successful. Status: ${payment.status}` 
+      }, { status: 400 });
     }
 
     // IDEMPOTENCY CHECK: Check if payment already processed by webhook
@@ -75,6 +83,7 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json({
         success: true,
+        verified: true,
         alreadyProcessed: true,
         subscription: subscription ? {
           planKey: subscription.planKey,
@@ -82,23 +91,26 @@ export async function POST(request: NextRequest) {
           currentPeriodEnd: subscription.currentPeriodEnd,
           expiresAt: subscription.endDate
         } : null,
-        message: 'Payment already processed'
+        message: 'Payment verified and already processed'
       });
     }
 
     // Payment verified but not yet processed by webhook
-    // Return pending status - webhook will process activation
+    // Return success - frontend should poll for subscription status
     return NextResponse.json({
       success: true,
+      verified: true,
       pending: true,
       message: 'Payment verified. Subscription activation in progress...',
-      paymentId: razorpay_payment_id
+      paymentId: razorpay_payment_id,
+      // Frontend should poll /api/user/subscription to check when webhook activates subscription
+      pollEndpoint: '/api/user/subscription'
     });
 
   } catch (error) {
     console.error('Razorpay verification error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : undefined },
       { status: 500 }
     );
   }

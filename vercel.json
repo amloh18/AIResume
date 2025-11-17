@@ -92,5 +92,15 @@
       "source": "/api/(.*)",
       "destination": "/api/$1"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/sponsorship/update-uk-registry",
+      "schedule": "0 2 * * 1"
+    },
+    {
+      "path": "/api/cron/sponsorship/update-us-registry",
+      "schedule": "0 3 1 * *"
+    }
   ]
 }

@@ -249,7 +249,10 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
   const totals = getTotalStats();
 
   return (
-    <div className="glass-widget-premium rounded-xl p-4 sm:p-6 h-full flex flex-col">
+    <div
+      className="glass-widget-premium rounded-xl p-4 sm:p-6 h-full flex flex-col"
+      data-analytics-widget="progress-tracking"
+    >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 md:mb-6">
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">

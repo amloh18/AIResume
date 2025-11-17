@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import {
@@ -727,20 +728,20 @@ ${userName}`
   };
 
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-2 sm:p-4"
+        className="fixed inset-0 z-[1100] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full sm:w-[95%] md:w-[90%] lg:w-[90%] max-w-6xl max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col mx-auto"
+          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-[min(90vw,1200px)] max-h-[min(90vh,900px)] overflow-hidden flex flex-col mx-auto lg:my-8 lg:mx-8"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -1369,6 +1370,13 @@ ${userName}`
       )}
     </AnimatePresence>
   );
+
+  // Use portal to render modal at document body level to avoid overflow clipping
+  if (typeof window !== 'undefined') {
+    return createPortal(modalContent, document.body);
+  }
+
+  return modalContent;
 };
 
 export default JobModal;
