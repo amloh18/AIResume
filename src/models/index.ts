@@ -29,4 +29,8 @@ export { default as Notification, type INotification, type NotificationType, typ
 export { default as NotificationQueue, type INotificationQueue, type QueueTaskType, type QueueTaskStatus } from './NotificationQueue';
 
 // Draft models
-export { default as TemporaryCVDraft, type ITemporaryCVDraft } from './TemporaryCVDraft'; 
+export { default as TemporaryCVDraft, type ITemporaryCVDraft } from './TemporaryCVDraft';
+
+// Sponsorship registry models
+export { default as UKSponsor, type IUKSponsor } from './UKSponsor';
+export { default as USH1BEmployer, type IUSH1BEmployer } from './USH1BEmployer'; 

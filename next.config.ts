@@ -267,6 +267,8 @@ const nextConfig: NextConfig = {
   staticPageGenerationTimeout: 1000,
   
   // Handle API routes properly
+  // Note: chrome-extension:// origins are handled dynamically in route handlers via setCorsHeaders()
+  // Static headers here are for web origins only
   async headers() {
     const allowedOrigins = process.env.NODE_ENV === 'production' 
       ? [

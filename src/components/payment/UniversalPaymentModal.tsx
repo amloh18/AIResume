@@ -77,6 +77,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     razorpay: boolean | null;
   }>({ stripe: null, razorpay: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
+  const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
 
   // Use the shared pricing hook only if props are not provided
   // Hooks must be called unconditionally at top level
@@ -133,12 +134,22 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     }
   }, [isOpen]);
 
+  // Reset userChangedPlan when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setUserChangedPlan(false);
+    }
+  }, [isOpen]);
+
   // Set preselected plan when plans are loaded or when preselectedPlanKey changes
   useEffect(() => {
     // Only proceed if modal is open and we have plans
     if (!isOpen || pricingPlans.length === 0) {
       return;
     }
+
+    // Don't auto-select if user has manually changed the plan
+    if (userChangedPlan) return;
 
     if (preselectedPlanKey) {
       // Always set the preselected plan, even if one is already selected
@@ -247,7 +258,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         setSelectedPlan(planWithPricing);
       }
     }
-  }, [pricingPlans, preselectedPlanKey, isOpen, currentUserPlan, getEffectivePrice, getCurrencySymbol, getMonthlyEquivalent, regionalPricing, locationData, getRegionalPrice, selectedPlan]);
+  }, [pricingPlans, preselectedPlanKey, isOpen, getEffectivePrice, getCurrencySymbol, getMonthlyEquivalent, regionalPricing, locationData, getRegionalPrice, userChangedPlan]);
 
   // Check if any plans have promotional pricing
   useEffect(() => {
@@ -300,10 +311,30 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   useEffect(() => {
     const checkProviderHealth = async (provider: 'stripe' | 'razorpay') => {
       try {
-        const response = await fetch(`/api/payment/${provider}/health`);
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const response = await fetch(`/api/payment/${provider}/health`, {
+          signal: controller.signal,
+          cache: 'no-store', // Prevent caching of health check results
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.warn(`${provider} health check failed:`, response.status, response.statusText);
+          return false;
+        }
+        
         const data = await response.json();
         return data.healthy === true;
-      } catch {
+      } catch (error: any) {
+        if (error.name === 'AbortError') {
+          console.warn(`${provider} health check timed out`);
+        } else {
+          console.error(`Error checking ${provider} health:`, error);
+        }
         return false;
       }
     };
@@ -426,19 +457,26 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         ? parseInt(checkoutData.amount, 10) 
         : Math.round(checkoutData.amount);
 
+      // Razorpay checkout.js expects uppercase currency code (ISO 4217 format)
+      const currency = (checkoutData.currency || 'INR').toUpperCase();
+      
       const options = {
         key: checkoutData.key_id || (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string),
         amount: amount, // Amount in currency subunits (paise for INR)
-        currency: checkoutData.currency.toLowerCase(), // Razorpay expects lowercase currency
+        currency: currency, // Razorpay checkout expects uppercase currency (e.g., 'INR')
         name: 'CV Circle',
         description: `${selectedPlan?.name} Subscription`,
         order_id: checkoutData.order_id, // Mandatory: Order ID from server
         handler: async function (response: any) {
-          // Payment successful - verify and process
+          // Payment successful - verify signature and poll for subscription activation
           try {
+            setLoading(true);
+            
+            // Step 1: Verify payment signature
             const verifyResponse = await fetch('/api/payment/razorpay/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
               body: JSON.stringify({
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,
@@ -451,14 +489,88 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
             const verifyData = await verifyResponse.json();
             
-            if (verifyData.success) {
-              onSuccess?.(verifyData.subscription || verifyData);
-            } else {
+            if (!verifyData.success) {
               throw new Error(verifyData.error || 'Payment verification failed');
             }
+
+            // Step 2: If already processed, return immediately
+            if (verifyData.alreadyProcessed && verifyData.subscription) {
+              onSuccess?.(verifyData.subscription);
+              setLoading(false);
+              return;
+            }
+
+            // Step 3: If pending, poll for subscription activation (webhook processes it)
+            if (verifyData.pending) {
+              console.log('Payment verified, waiting for webhook to activate subscription...');
+              
+              // Poll for subscription status (webhook should activate within 1-2 seconds)
+              const maxAttempts = 20; // 20 attempts = ~60 seconds max wait
+              const pollInterval = 3000; // Poll every 3 seconds
+              let attempts = 0;
+              
+              const pollSubscription = async (): Promise<any> => {
+                attempts++;
+                
+                try {
+                  const subscriptionResponse = await fetch('/api/user/subscription', {
+                    credentials: 'include',
+                    cache: 'no-store'
+                  });
+                  
+                  if (subscriptionResponse.ok) {
+                    const subscriptionData = await subscriptionResponse.json();
+                    
+                    if (subscriptionData.success && subscriptionData.subscription) {
+                      const currentPlanKey = subscriptionData.subscription.planKey;
+                      const expectedPlanKey = selectedPlan?.key;
+                      
+                      // Check if the plan has been activated
+                      if (currentPlanKey === expectedPlanKey && currentPlanKey !== 'free') {
+                        console.log('Subscription activated!', subscriptionData.subscription);
+                        return subscriptionData.subscription;
+                      }
+                    }
+                  }
+                  
+                  // If not activated yet and haven't exceeded max attempts, continue polling
+                  if (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, pollInterval));
+                    return pollSubscription();
+                  } else {
+                    // Timeout - subscription not activated yet
+                    throw new Error('Subscription activation is taking longer than expected. Please refresh the page in a few moments.');
+                  }
+                } catch (pollError) {
+                  if (attempts < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, pollInterval));
+                    return pollSubscription();
+                  }
+                  throw pollError;
+                }
+              };
+              
+              try {
+                const activatedSubscription = await pollSubscription();
+                onSuccess?.(activatedSubscription);
+              } catch (pollError) {
+                console.error('Error polling for subscription:', pollError);
+                // Show user-friendly message
+                alert('Payment verified successfully! Your subscription is being activated. Please refresh the page in a few moments to see your updated plan.');
+                // Still call onSuccess to close the modal
+                onSuccess?.({ planKey: selectedPlan?.key, status: 'pending' });
+              }
+            } else {
+              // Already processed case (shouldn't reach here, but handle it)
+              onSuccess?.(verifyData.subscription || { planKey: selectedPlan?.key });
+            }
+            
+            setLoading(false);
           } catch (error) {
             console.error('Payment verification error:', error);
-            alert('Payment verification failed. Please contact support.');
+            setLoading(false);
+            const errorMsg = error instanceof Error ? error.message : 'Payment verification failed';
+            alert(`Payment Error: ${errorMsg}. Please contact support if the issue persists.`);
           }
         },
         prefill: {
@@ -717,7 +829,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
         const response = await fetch('/api/checkout/session', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include', // Include cookies for authentication
           body: JSON.stringify(body)
         });
 
@@ -763,6 +878,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               const retryResponse = await fetch('/api/checkout/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include', // Include cookies for authentication
                 body: JSON.stringify(retryBody)
               });
               
@@ -787,7 +903,20 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       }
     } catch (error) {
       console.error('Error processing payment:', error);
-      const errorMsg = error instanceof Error ? error.message : 'An unknown error occurred';
+      
+      // Provide more detailed error messages
+      let errorMsg = 'An unknown error occurred';
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        errorMsg = 'Network error: Unable to connect to payment server. Please check your internet connection and try again.';
+        console.error('Network error details:', {
+          message: error.message,
+          stack: error.stack,
+          url: '/api/checkout/session'
+        });
+      } else if (error instanceof Error) {
+        errorMsg = error.message;
+      }
+      
       alert(`Payment Error: ${errorMsg}`);
     } finally {
       setLoading(false);
@@ -833,14 +962,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[1200] flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] sm:w-[90%] max-w-6xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col relative z-[101]"
+        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] sm:w-[90%] max-w-6xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col relative z-[1210]"
       >
         {/* Header */}
         <div className="flex items-start sm:items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
@@ -959,8 +1088,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       </div>
                     </div>
                     <button
-                      onClick={() => setSelectedPlan(null)}
-                      className="mt-3 text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300"
+                      onClick={() => {
+                        setSelectedPlan(null);
+                        setUserChangedPlan(true); // Mark that user manually changed plan
+                      }}
+                      className="mt-3 text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium"
                     >
                       Change Plan
                     </button>
@@ -1028,10 +1160,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ duration: 0.6, delay: 0.1 * index }}
                               onClick={() => {
-                                // If this is the preselected plan and already selected, don't re-select
-                                if (isPreselected && isSelected) {
-                                  return;
-                                }
+                                // Mark that user manually changed plan
+                                setUserChangedPlan(true);
                                 
                                 // Determine the correct FULL price based on plan key and billing interval
                                 // IMPORTANT: Use the actual plan price, not regional price string which might be monthly equivalent

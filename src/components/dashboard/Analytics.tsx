@@ -305,7 +305,10 @@ const CVManagementSection: React.FC<{
   const profile = getProfessionalProfile();
 
   return (
-    <div className="glass-widget-premium rounded-xl p-4 h-full flex flex-col w-full">
+    <div
+      className="glass-widget-premium rounded-xl p-4 h-full flex flex-col w-full"
+      data-analytics-widget="cv-management"
+    >
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">CV Management</h2>
         <div className="flex items-center gap-2">
@@ -405,7 +408,10 @@ const ApplicationCalendarWidget: React.FC<{
   jobs: any[];
 }> = ({ jobs }) => {
   return (
-    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full">
+    <div
+      className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full"
+      data-analytics-widget="application-calendar"
+    >
       {/* Header */}
       <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Calendar (3 Weeks)</h2>
@@ -748,7 +754,10 @@ const PerformanceInsights: React.FC<{
   const metrics = calculatePerformanceMetrics();
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6">
+    <div
+      className="glass-widget-premium rounded-xl p-6"
+      data-analytics-widget="performance-insights"
+    >
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
@@ -1008,7 +1017,10 @@ const RecentJobsWidget: React.FC<{
   };
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full">
+    <div
+      className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full"
+      data-analytics-widget="recent-jobs"
+    >
       {/* Header */}
       <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Jobs</h2>

@@ -20,29 +20,36 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Perform a lightweight check - retrieve account info
-    // This is a simple operation that verifies API connectivity
+    // Perform a lightweight check - test API connectivity
+    // We'll try to fetch payments list (with count: 1) which is a lightweight operation
+    // This actually tests the API connection and authentication
     try {
-      // Razorpay doesn't have a direct account.retrieve() method
-      // Instead, we'll try to fetch a payment (with a fake ID) which will fail gracefully
-      // Or we can check if the client is initialized
-      if (!razorpay.payments || !razorpay.orders) {
-        throw new Error('Razorpay client not properly initialized');
-      }
+      // Test API connection by fetching payments list (empty result is fine)
+      // This verifies that the API keys are valid and the connection works
+      const payments = await razorpay.payments.all({ count: 1 });
       
+      // If we get here, the API is working
       return NextResponse.json({
         healthy: true,
         provider: 'razorpay',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        message: 'Razorpay API is accessible'
       });
     } catch (razorpayError: any) {
       console.error('Razorpay health check failed:', razorpayError);
+      
+      // Check if it's an authentication error (401/403) vs other errors
+      const isAuthError = razorpayError.statusCode === 401 || razorpayError.statusCode === 403;
+      const errorMessage = isAuthError 
+        ? 'Razorpay API authentication failed - check your API keys'
+        : razorpayError.error?.description || razorpayError.message || 'Razorpay API error';
       
       return NextResponse.json(
         { 
           healthy: false, 
           provider: 'razorpay',
-          error: razorpayError.message || 'Razorpay API error',
+          error: errorMessage,
+          statusCode: razorpayError.statusCode,
           timestamp: new Date().toISOString()
         },
         { status: 503 }

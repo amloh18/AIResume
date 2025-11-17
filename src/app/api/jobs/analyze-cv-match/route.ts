@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { CV } from '@/models';
-import jwt from 'jsonwebtoken';
-import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
 import { callGeminiWithFallback } from '@/lib/utils/gemini-api-helper';
 import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from '@/lib/utils/extension-errors';
 import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
 import crypto from 'crypto';
+import { setCorsHeaders, handleCorsPreflight } from '@/lib/utils/cors-helpers';
+import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 
 // In-memory cache for CV match results (in production, use Redis)
 const matchCache = new Map<string, { result: any; expiresAt: number }>();
@@ -40,60 +39,37 @@ export async function POST(request: NextRequest) {
   try {
     await getConnection();
     
-    let userId: string;
-    let source = 'web';
-    
-    // Check if this is an extension request (with JWT token)
-    const authHeader = request.headers.get('authorization');
-    
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      // Extension request with JWT token
-      const token = authHeader.substring(7);
+    // Authenticate request (supports both session and JWT token)
+    const auth = await authenticateRequest(request);
+    if (!auth) {
+      // Check if this was an extension request to return proper error format
+      const authHeader = request.headers.get('authorization');
+      const isExtension = authHeader && authHeader.startsWith('Bearer ');
       
-      try {
-        const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-        
-        if (decoded.type !== 'extension') {
-          console.log('❌ CV Match Analysis API - Invalid token type');
-          return NextResponse.json(
+      if (isExtension) {
+        return setCorsHeaders(
+          NextResponse.json(
             formatExtensionError(
               ExtensionErrorCode.AUTH_INVALID,
-              'Invalid token type. This endpoint requires an extension token.'
+              'Authentication required. Please sign in again.'
             ),
             { status: 401 }
-          );
-        }
-        
-        userId = decoded.userId || '';
-        source = 'extension';
-        console.log('✅ CV Match Analysis API - Extension token verified for user:', userId);
-      } catch (error: any) {
-        console.log('❌ CV Match Analysis API - Invalid extension token:', error);
-        return NextResponse.json(
-          formatExtensionError(
-            ExtensionErrorCode.AUTH_INVALID,
-            error.name === 'TokenExpiredError' 
-              ? 'Token has expired. Please refresh your token.'
-              : 'Invalid token. Please sign in again.'
           ),
-          { status: 401 }
+          request
         );
       }
-    } else {
-      // Web interface request with session
-      const authResult = await getAuthenticatedUser();
       
-      if (!authResult) {
-        console.log('❌ CV Match Analysis API - No valid authentication found');
-        return NextResponse.json(
+      return setCorsHeaders(
+        NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
-        );
-      }
-      
-      userId = authResult.userId;
-      console.log('✅ CV Match Analysis API - Web session verified for user:', userId);
+        ),
+        request
+      );
     }
+    
+    const userId = auth.userId;
+    const source = auth.source;
     
     // Rate limiting for extension requests
     if (source === 'extension') {
@@ -189,9 +165,15 @@ export async function POST(request: NextRequest) {
     if (cached && Date.now() < cached.expiresAt) {
       console.log('✅ CV Match Analysis API - Returning cached result');
       if (source === 'extension') {
-        return NextResponse.json(formatExtensionSuccess(cached.result));
+        return setCorsHeaders(
+          NextResponse.json(formatExtensionSuccess(cached.result)),
+          request
+        );
       }
-      return NextResponse.json(cached.result);
+      return setCorsHeaders(
+        NextResponse.json(cached.result),
+        request
+      );
     }
     
     // Use AI to analyze match with timeout
@@ -217,29 +199,41 @@ export async function POST(request: NextRequest) {
       });
       
       if (source === 'extension') {
-        return NextResponse.json(formatExtensionSuccess(matchResult));
+        return setCorsHeaders(
+          NextResponse.json(formatExtensionSuccess(matchResult)),
+          request
+        );
       }
-      return NextResponse.json(matchResult);
+      return setCorsHeaders(
+        NextResponse.json(matchResult),
+        request
+      );
     } catch (timeoutError: any) {
       console.error('❌ CV Match Analysis API - Timeout or error:', timeoutError);
       
       if (source === 'extension') {
-        return NextResponse.json(
-          formatExtensionError(
-            timeoutError.message?.includes('timeout') 
-              ? ExtensionErrorCode.CV_MATCH_TIMEOUT
-              : ExtensionErrorCode.CV_MATCH_FAILED,
-            timeoutError.message || 'Failed to analyze CV match',
-            undefined,
-            true // Retryable
+        return setCorsHeaders(
+          NextResponse.json(
+            formatExtensionError(
+              timeoutError.message?.includes('timeout') 
+                ? ExtensionErrorCode.CV_MATCH_TIMEOUT
+                : ExtensionErrorCode.CV_MATCH_FAILED,
+              timeoutError.message || 'Failed to analyze CV match',
+              undefined,
+              true // Retryable
+            ),
+            { status: 500 }
           ),
-          { status: 500 }
+          request
         );
       }
       
-      return NextResponse.json(
-        { error: timeoutError.message || 'Failed to analyze CV match' },
-        { status: 500 }
+      return setCorsHeaders(
+        NextResponse.json(
+          { error: timeoutError.message || 'Failed to analyze CV match' },
+          { status: 500 }
+        ),
+        request
       );
     }
   } catch (error: any) {
@@ -250,22 +244,33 @@ export async function POST(request: NextRequest) {
     const isExtension = authHeader && authHeader.startsWith('Bearer ');
     
     if (isExtension) {
-      return NextResponse.json(
-        formatExtensionError(
-          ExtensionErrorCode.CV_MATCH_FAILED,
-          error.message || 'Failed to analyze CV match',
-          undefined,
-          true // Retryable
+      return setCorsHeaders(
+        NextResponse.json(
+          formatExtensionError(
+            ExtensionErrorCode.CV_MATCH_FAILED,
+            error.message || 'Failed to analyze CV match',
+            undefined,
+            true // Retryable
+          ),
+          { status: 500 }
         ),
-        { status: 500 }
+        request
       );
     }
     
-    return NextResponse.json(
-      { error: 'Failed to analyze CV match' },
-      { status: 500 }
+    return setCorsHeaders(
+      NextResponse.json(
+        { error: 'Failed to analyze CV match' },
+        { status: 500 }
+      ),
+      request
     );
   }
+}
+
+// Handle CORS preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return handleCorsPreflight(request);
 }
 
 async function analyzeCVMatchWithAI(
