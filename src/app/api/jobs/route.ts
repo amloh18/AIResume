@@ -30,39 +30,43 @@ const toContactDetails = (details: any) => ({
   role: details?.role || ''
 });
 
-const serializeJob = (job: any) => ({
-  id: job?._id ? job._id.toString() : job?.id,
-  userId: typeof job?.userId === 'string' ? job.userId : job?.userId?.toString?.(),
-  jobTitle: job?.jobTitle,
-  company: job?.company,
-  location: job?.location,
-  jobUrl: job?.jobUrl,
-  jobDescription: job?.jobDescription,
-  source: job?.source,
-  status: job?.status,
-  priority: job?.priority,
-  notes: job?.notes,
-  sponsorship: job?.sponsorship,
-  tags: job?.tags || [],
-  contactDetails: toContactDetails(job?.contactDetails),
-  salary: job?.salary,
-  deadline: formatDateForResponse(job?.deadline),
-  applicationDate: formatDateForResponse(job?.applicationDate),
-  interviews: (job?.interviews || []).map((interview: any) => ({
-    ...interview,
-    date: formatDateForResponse(interview?.date)
-  })),
-  followUps: (job?.followUps || []).map((followUp: any) => ({
-    ...followUp,
-    date: formatDateForResponse(followUp?.date)
-  })),
-  attachments: (job?.attachments || []),
-  sourceUrl: job?.sourceUrl,
-  atsScore: job?.atsScore,
-  isArchived: Boolean(job?.isArchived),
-  createdAt: job?.createdAt,
-  updatedAt: job?.updatedAt
-});
+const serializeJob = (job: any) => {
+  const jobId = job?._id ? job._id.toString() : job?.id;
+  return {
+    id: jobId,
+    _id: jobId, // Extension expects _id field
+    userId: typeof job?.userId === 'string' ? job.userId : job?.userId?.toString?.(),
+    jobTitle: job?.jobTitle,
+    company: job?.company,
+    location: job?.location,
+    jobUrl: job?.jobUrl,
+    jobDescription: job?.jobDescription,
+    source: job?.source,
+    status: job?.status,
+    priority: job?.priority,
+    notes: job?.notes,
+    sponsorship: job?.sponsorship,
+    tags: job?.tags || [],
+    contactDetails: toContactDetails(job?.contactDetails),
+    salary: job?.salary,
+    deadline: formatDateForResponse(job?.deadline),
+    applicationDate: formatDateForResponse(job?.applicationDate),
+    interviews: (job?.interviews || []).map((interview: any) => ({
+      ...interview,
+      date: formatDateForResponse(interview?.date)
+    })),
+    followUps: (job?.followUps || []).map((followUp: any) => ({
+      ...followUp,
+      date: formatDateForResponse(followUp?.date)
+    })),
+    attachments: (job?.attachments || []),
+    sourceUrl: job?.sourceUrl,
+    atsScore: job?.atsScore,
+    isArchived: Boolean(job?.isArchived),
+    createdAt: job?.createdAt,
+    updatedAt: job?.updatedAt
+  };
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -559,16 +563,13 @@ export async function POST(request: NextRequest) {
     
     // Format response based on source
     if (source === 'extension') {
+      // Return full serialized job object for extension (includes _id field)
       return setCorsHeaders(
         NextResponse.json(
-          formatExtensionSuccess({
-            id: jobApplication._id.toString(),
-            jobTitle: jobApplication.jobTitle,
-            company: jobApplication.company,
-            location: jobApplication.location,
-            status: jobApplication.status,
-            createdAt: jobApplication.createdAt
-          }, 'Job saved to application tracker successfully')
+          formatExtensionSuccess(
+            serializeJob(jobApplication),
+            'Job saved to application tracker successfully'
+          )
         ),
         request
       );
