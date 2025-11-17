@@ -90,7 +90,7 @@ const CardNav = ({
                 }}
               />
             </div>
-            <span className="logo-text">
+            <span className="logo-text" aria-label={logo}>
               <span className="logo-cv">CV</span>
               <span className="logo-circle">Circle</span>
             </span>

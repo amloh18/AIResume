@@ -3,6 +3,7 @@ import './globals.css'
 import ClientProviders from '@/components/providers/ClientProviders'
 import ResourceHints from '@/components/ResourceHints'
 import DeferredAnalytics from '@/components/DeferredAnalytics'
+import ViewportMeta from '@/components/ViewportMeta'
 import { getServerSession } from 'next-auth'
 import { authConfig } from '@/lib/auth-config'
 
@@ -15,6 +16,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#1a230f' },
+  ],
 }
 
 export const metadata: Metadata = {
@@ -142,6 +148,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
+        <ViewportMeta />
         <ResourceHints />
         <ClientProviders session={session}>
           {children}
