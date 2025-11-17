@@ -108,3 +108,4 @@ export function matchCompany(
   return similarity >= threshold;
 }
 
+
