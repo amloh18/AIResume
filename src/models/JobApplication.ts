@@ -55,6 +55,9 @@ export interface IJobApplication extends Document {
     size: number;
   }>;
   tags: string[];
+  source?: 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
+  sourceUrl?: string;
+  atsScore?: number;
   isArchived: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -196,6 +199,21 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     size: { type: Number, required: true, min: 0 }
   }],
   tags: [{ type: String, trim: true }],
+  source: {
+    type: String,
+    enum: ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'],
+    default: 'manual'
+  },
+  sourceUrl: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Source URL cannot exceed 500 characters']
+  },
+  atsScore: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
   isArchived: {
     type: Boolean,
     default: false

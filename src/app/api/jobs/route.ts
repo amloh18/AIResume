@@ -151,7 +151,8 @@ export async function POST(request: NextRequest) {
     }
     
     const userId = auth.userId;
-    const source = auth.source;
+    // Use source from auth, but fallback to body.source if provided (for compatibility)
+    let source = auth.source;
     
     // Parse the request body
     const body = await request.json();
@@ -169,8 +170,19 @@ export async function POST(request: NextRequest) {
       applicationDate,
       sponsorship,
       tags,
-      contactDetails
+      contactDetails,
+      source: bodySource // Allow source to be passed in body as fallback
     } = body;
+    
+    // If source is not set from auth, use body source or default based on auth method
+    if (!source && bodySource) {
+      source = bodySource;
+    } else if (!source) {
+      // Fallback: if auth method is token, assume extension; otherwise web
+      source = auth.method === 'token' ? 'extension' : 'web';
+    }
+    
+    console.log(`🔍 Jobs API - Source determined: ${source} (from auth: ${auth.source}, method: ${auth.method}, body: ${bodySource})`);
     
     // Set default status: 'draft' for extension, 'created' for web
     const defaultStatus = source === 'extension' ? 'draft' : 'created';
@@ -317,7 +329,13 @@ export async function POST(request: NextRequest) {
         };
         
         jobApplication = await JobApplication.create(jobData);
-        console.log(`✅ [${source.toUpperCase()}] Draft job created (no credits spent):`, jobApplication._id);
+        console.log(`✅ [${source.toUpperCase()}] Draft job created (no credits spent):`, {
+          id: jobApplication._id,
+          status: jobApplication.status,
+          title: jobApplication.jobTitle,
+          company: jobApplication.company,
+          userId: jobApplication.userId
+        });
       }
       
       if (jobStatus === 'created') {
@@ -724,12 +742,14 @@ export async function GET(request: NextRequest) {
           );
         }
         
+        // Return job in format expected by extension
+        // Extension expects response.data to be the job object directly
+        const serialized = serializeJob(job);
         return setCorsHeaders(
           NextResponse.json({
             success: true,
-            data: {
-              job: serializeJob(job)
-            }
+            data: serialized, // Extension expects data to be the job directly
+            job: serialized // Keep for backwards compatibility
           }),
           request
         );
@@ -759,17 +779,24 @@ export async function GET(request: NextRequest) {
     
     if (statusParams.length === 1) {
       query.status = statusParams[0];
+      console.log(`🔍 Jobs API - Filtering by status: ${statusParams[0]}`);
     } else if (statusParams.length > 1) {
       query.status = { $in: statusParams };
+      console.log(`🔍 Jobs API - Filtering by multiple statuses: ${statusParams.join(', ')}`);
+    } else {
+      console.log('🔍 Jobs API - No status filter, returning all jobs');
     }
     
     if (sourceFilter) {
       query.source = sourceFilter;
+      console.log(`🔍 Jobs API - Filtering by source: ${sourceFilter}`);
     }
     
     if (!includeArchived) {
       query.isArchived = { $ne: true };
     }
+    
+    console.log('🔍 Jobs API - Query:', JSON.stringify(query, null, 2));
     
     const paginateResults = !isExtensionRequest || explicitLimit;
     let jobQuery = JobApplication.find(query).sort({ createdAt: -1 });
@@ -783,7 +810,10 @@ export async function GET(request: NextRequest) {
       JobApplication.countDocuments(query)
     ]);
     
-    console.log('✅ Job applications retrieved from application tracker:', jobApplications.length);
+    console.log(`✅ Jobs API - Retrieved ${jobApplications.length} job(s) (total matching: ${total}) for user ${userId}`);
+    if (jobApplications.length > 0) {
+      console.log(`🔍 Jobs API - Sample job statuses:`, jobApplications.slice(0, 3).map((j: any) => ({ id: j._id, status: j.status, title: j.jobTitle })));
+    }
     
     const jobs = jobApplications.map(serializeJob);
     const responsePayload: any = {
