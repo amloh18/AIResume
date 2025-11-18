@@ -11,7 +11,7 @@ export const comprehensiveSignOut = async (): Promise<void> => {
   try {
     console.log('🔍 Starting signout process...');
     
-    // Sign out from NextAuth (clears HTTP-only cookies)
+    // Step 1: Sign out from NextAuth (this calls NextAuth's built-in /api/auth/signout endpoint)
     try {
       console.log('🔍 Signing out from NextAuth...');
       await signOut({ 
@@ -21,6 +21,65 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       console.log('✅ Signed out from NextAuth');
     } catch (error) {
       console.error('❌ Error signing out from NextAuth:', error);
+    }
+    
+    // Step 2: Call our custom signout API endpoint to invalidate server-side cache
+    try {
+      console.log('🔍 Calling custom signout API endpoint...');
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('✅ Custom signout API endpoint called');
+    } catch (error) {
+      console.error('❌ Error calling signout API:', error);
+    }
+    
+    // Step 3: Explicitly clear all NextAuth cookies (in case signOut didn't work)
+    if (typeof document !== 'undefined') {
+      console.log('🔍 Explicitly clearing NextAuth cookies...');
+      const currentDomain = window.location.hostname;
+      const isSecure = window.location.protocol === 'https:';
+      // Detect production by checking if domain contains cvcircle.io or if using secure protocol
+      const isProduction = currentDomain.includes('cvcircle.io') || (isSecure && currentDomain !== 'localhost');
+      
+      // NextAuth cookie names (both dev and production)
+      const nextAuthCookies = [
+        'next-auth.session-token',
+        '__Secure-next-auth.session-token',
+        'next-auth.csrf-token',
+        '__Secure-next-auth.csrf-token',
+        'next-auth.callback-url',
+        '__Secure-next-auth.callback-url',
+      ];
+      
+      nextAuthCookies.forEach(cookieName => {
+        // Clear with various configurations to ensure deletion
+        const domains = isProduction ? [currentDomain, `.${currentDomain}`, ''] : [currentDomain, ''];
+        const paths = ['/', ''];
+        const sameSites = ['strict', 'lax', 'none', ''];
+        
+        domains.forEach(domain => {
+          paths.forEach(path => {
+            sameSites.forEach(sameSite => {
+              try {
+                let cookieString = `${cookieName}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+                if (path) cookieString += `; path=${path}`;
+                if (domain) cookieString += `; domain=${domain}`;
+                if (sameSite) cookieString += `; samesite=${sameSite}`;
+                if (isSecure || cookieName.startsWith('__Secure-')) cookieString += '; secure';
+                document.cookie = cookieString;
+              } catch (e) {
+                // Ignore errors for invalid combinations
+              }
+            });
+          });
+        });
+      });
+      console.log('✅ Cleared NextAuth cookies');
     }
     
     // Preserve cookie consent (not user-specific, should persist across sessions)

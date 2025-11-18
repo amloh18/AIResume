@@ -1125,7 +1125,7 @@ ${userName}`
               viewMode === 'kanban' 
                 ? zoomedStage 
                   ? 'grid grid-cols-1 gap-4 auto-rows-max overflow-auto w-full' 
-                  : 'w-max min-w-full'
+                  : 'w-full min-w-0'
                 : 'grid grid-cols-1 gap-4 auto-rows-max overflow-auto w-full'
             }`}
           >
@@ -1151,7 +1151,7 @@ ${userName}`
               ))
             ) : (
               // All stages - horizontal scrollable
-              <div className="flex flex-row gap-4 h-full min-w-max pb-4">
+              <div className="flex flex-row gap-4 h-full pb-4" style={{ width: 'max-content' }}>
                 {[
                   { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-800 dark:text-white' },
                   { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-white' },

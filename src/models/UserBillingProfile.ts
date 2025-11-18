@@ -74,7 +74,7 @@ const userBillingProfileSchema = new Schema<IUserBillingProfile>({
 });
 
 // Indexes for better query performance
-userBillingProfileSchema.index({ userId: 1 }, { unique: true });
+// Note: userId index is automatically created by unique: true constraint on the field
 userBillingProfileSchema.index({ billingCountryCode: 1 });
 userBillingProfileSchema.index({ billingCurrency: 1 });
 

@@ -30,6 +30,7 @@ const OptimizedNavigation: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [creditInfo, setCreditInfo] = useState<{ remaining: number; limit: number } | null>(null);
   const [creditInfoLoading, setCreditInfoLoading] = useState(true);
+  const [isAnyPaymentModalOpen, setIsAnyPaymentModalOpen] = useState(false);
   
   // Update time every minute for day pass countdown
   useEffect(() => {
@@ -38,6 +39,43 @@ const OptimizedNavigation: React.FC = () => {
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Check if any UniversalPaymentModal is open (from sidebar or settings)
+  useEffect(() => {
+    const checkModalOpen = () => {
+      // Check for the modal backdrop/overlay - UniversalPaymentModal uses z-[1200]
+      // Look for elements with z-index 1200 or the specific backdrop classes
+      const modalBackdrop = 
+        document.querySelector('[class*="z-[1200]"]') || 
+        document.querySelector('[style*="z-index: 1200"]') ||
+        document.querySelector('[style*="z-index:1200"]') ||
+        // Also check for the specific backdrop blur class used by UniversalPaymentModal
+        (document.querySelector('.backdrop-blur-sm') && 
+         document.querySelector('.fixed.inset-0')?.getAttribute('style')?.includes('z-index: 1200'));
+      
+      setIsAnyPaymentModalOpen(!!modalBackdrop);
+    };
+
+    // Check immediately
+    checkModalOpen();
+
+    // Set up MutationObserver to watch for DOM changes
+    const observer = new MutationObserver(checkModalOpen);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style']
+    });
+
+    // Also check periodically as a fallback (every 200ms to reduce overhead)
+    const interval = setInterval(checkModalOpen, 200);
+
+    return () => {
+      observer.disconnect();
+      clearInterval(interval);
+    };
   }, []);
 
   // Fetch credit information for free and day pass plan users
@@ -343,15 +381,16 @@ const OptimizedNavigation: React.FC = () => {
       })()}
 
       {/* Membership Card - Persistent for free and day pass only */}
-      <div className="px-4 pb-3">
-        {(() => {
-          const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
-          const planStatus = userData?.subscription?.status || 'active';
-          
-          // Don't show membership card if subscription is past_due (PaymentPastDueBanner handles that)
-          if (planStatus === 'past_due' || planStatus === 'unpaid') {
-            return null;
-          }
+      {!showSubscriptionModal && !isAnyPaymentModalOpen && (
+        <div className="px-4 pb-3">
+          {(() => {
+            const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
+            const planStatus = userData?.subscription?.status || 'active';
+            
+            // Don't show membership card if subscription is past_due (PaymentPastDueBanner handles that)
+            if (planStatus === 'past_due' || planStatus === 'unpaid') {
+              return null;
+            }
           
           // Only show for free and day_pass plans
           if (currentPlan !== 'free' && currentPlan !== 'day_pass') {
@@ -511,7 +550,8 @@ const OptimizedNavigation: React.FC = () => {
             </motion.div>
           );
         })()}
-      </div>
+        </div>
+      )}
 
       {/* User Profile Section */}
       <div className="border-t border-gray-200 dark:border-gray-700 overflow-visible relative">

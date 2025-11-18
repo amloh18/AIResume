@@ -5,6 +5,13 @@ import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
 import { usePathname } from 'next/navigation';
 import { INotification, NotificationType } from '@/models/Notification';
+import {
+  INITIAL_FETCH_TOAST_WINDOW_MS,
+  TOAST_DEBOUNCE_MS,
+  isInAppToastEligible,
+  isRecentNotification,
+  resolveToastGateState,
+} from '@/contexts/utils/notificationToast';
 
 interface NotificationContextType {
   notifications: INotification[];
@@ -230,8 +237,128 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   }, [markAsRead, refreshNotifications, toast]);
 
   // Track displayed notification IDs to avoid duplicate toasts
-  const displayedToastIdsRef = useRef<Set<string>>(new Set());
+  const displayedToastIdsRef = useRef<Map<string, number>>(new Map());
   const lastToastAtRef = useRef<number>(0);
+  const initialToastHydrationRef = useRef<boolean>(false);
+
+  const shouldShowToast = useCallback(
+    (notification: INotification) => isInAppToastEligible(notification, isAuthenticated),
+    [isAuthenticated]
+  );
+
+  const showToastForNotification = useCallback(
+    (notification: INotification, allowReschedule: boolean = true) => {
+      if (!shouldShowToast(notification)) {
+        return;
+      }
+
+      const notifId = notification._id
+        ? typeof notification._id === 'string'
+          ? notification._id
+          : String(notification._id)
+        : '';
+
+      if (!notifId) {
+        return;
+      }
+
+      const now = Date.now();
+      const lastShownAt = displayedToastIdsRef.current.get(notifId);
+      const gateState = resolveToastGateState({
+        now,
+        lastToastAt: lastToastAtRef.current,
+        lastShownAt,
+      });
+
+      if (gateState === 'repeat-suppressed') {
+        return;
+      }
+
+      if (gateState === 'debounce') {
+        if (allowReschedule && typeof window !== 'undefined') {
+          window.setTimeout(() => showToastForNotification(notification, false), TOAST_DEBOUNCE_MS);
+        }
+        return;
+      }
+
+      lastToastAtRef.current = now;
+      displayedToastIdsRef.current.set(notifId, now);
+
+      toast({
+        title: notification.title,
+        description: notification.message,
+        action:
+          notification.interactive && notification.actionType ? (
+            <button
+              onClick={() => {
+                const safeId = notification._id
+                  ? typeof notification._id === 'string'
+                    ? notification._id
+                    : String(notification._id)
+                  : '';
+                if (safeId) {
+                  handleNotificationAction(safeId, notification.actionType || '');
+                }
+              }}
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              {notification.actionType === 'move_to_next_stage'
+                ? 'Move to Next Stage'
+                : notification.actionType === 'review_job'
+                ? 'Review Job'
+                : 'View Details'}
+            </button>
+          ) : undefined,
+      });
+    },
+    [toast, handleNotificationAction, shouldShowToast]
+  );
+
+  useEffect(() => {
+    if (!isAuthenticated || !Array.isArray(notifications) || notifications.length === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const activeIds = new Set<string>();
+
+    notifications.forEach((notification) => {
+      const notifId = notification._id
+        ? typeof notification._id === 'string'
+          ? notification._id
+          : String(notification._id)
+        : '';
+
+      if (notifId) {
+        activeIds.add(notifId);
+      }
+
+      if (!shouldShowToast(notification) || !notifId) {
+        return;
+      }
+
+      const alreadyShown = displayedToastIdsRef.current.has(notifId);
+      if (alreadyShown) {
+        return;
+      }
+
+      const isRecent = isRecentNotification(notification.createdAt, now, INITIAL_FETCH_TOAST_WINDOW_MS);
+
+      if (!initialToastHydrationRef.current && !isRecent) {
+        return;
+      }
+
+      showToastForNotification(notification);
+    });
+
+    initialToastHydrationRef.current = true;
+
+    displayedToastIdsRef.current.forEach((_, id) => {
+      if (!activeIds.has(id)) {
+        displayedToastIdsRef.current.delete(id);
+      }
+    });
+  }, [notifications, isAuthenticated, shouldShowToast, showToastForNotification]);
 
   // Set up Server-Sent Events for real-time notifications - only if authenticated
   useEffect(() => {
@@ -278,39 +405,6 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
               // Add new notification at the beginning
               return filterExpiredNotifications([notification, ...prev]);
             });
-
-            // Show toast for in-app notifications (only if authenticated)
-            // Fix 5: Ensure channels is an array before calling includes
-            const channels = Array.isArray(notification.channels) ? notification.channels : [];
-            if (channels.includes('in-app') && !notification.read && isAuthenticated) {
-              // Fix 6: Safely convert _id to string
-              const notifId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
-              const now = Date.now();
-              const tooSoon = now - lastToastAtRef.current < 1000;
-              const alreadyShown = displayedToastIdsRef.current.has(notifId);
-              if (!tooSoon && !alreadyShown) {
-                lastToastAtRef.current = now;
-                displayedToastIdsRef.current.add(notifId);
-              toast({
-                title: notification.title,
-                description: notification.message,
-                action: notification.interactive && notification.actionType ? (
-                  <button
-                    onClick={() => {
-                      // Fix 7: Safely convert _id to string
-                      const notifId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
-                      handleNotificationAction(notifId, notification.actionType || '');
-                    }}
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    {notification.actionType === 'move_to_next_stage' ? 'Move to Next Stage' :
-                     notification.actionType === 'review_job' ? 'Review Job' :
-                     'View Details'}
-                  </button>
-                ) : undefined,
-              });
-              }
-            }
           }
         } catch (error) {
           // Safely handle errors without stringifying Event objects

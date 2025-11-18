@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Target, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Target } from 'lucide-react';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 interface ApplicationStats {
   totalApplications: number;
@@ -11,6 +11,12 @@ interface ApplicationStats {
   rejectedApplications: number;
   interviewApplications: number;
   offerApplications: number;
+  // Spider chart data
+  draft?: number;
+  created?: number;
+  applied?: number;
+  accepted?: number;
+  rejected?: number;
 }
 
 interface ApplicationStatsWidgetProps {
@@ -25,6 +31,11 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
     rejectedApplications: 0,
     interviewApplications: 0,
     offerApplications: 0,
+    draft: 0,
+    created: 0,
+    applied: 0,
+    accepted: 0,
+    rejected: 0,
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('7d');
@@ -40,8 +51,10 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
+          console.log('Application Stats API Response:', result.data);
           setStats(result.data);
         } else {
+          console.warn('Application Stats API returned unsuccessful response, using mock data');
           setStats(generateMockStats());
         }
       } else {
@@ -72,72 +85,71 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
       rejectedApplications: Math.floor(base * 0.2) + Math.floor(Math.random() * 2),
       interviewApplications: Math.floor(base * 0.15) + Math.floor(Math.random() * 2),
       offerApplications: Math.floor(base * 0.05) + Math.floor(Math.random() * 1),
+      draft: Math.floor(base * 0.1) + Math.floor(Math.random() * 2),
+      created: Math.floor(base * 0.3) + Math.floor(Math.random() * 3),
+      applied: Math.floor(base * 0.4) + Math.floor(Math.random() * 4),
+      accepted: Math.floor(base * 0.1) + Math.floor(Math.random() * 2),
+      rejected: Math.floor(base * 0.2) + Math.floor(Math.random() * 2),
     };
   };
 
-  const getApplicationRate = () => {
-    if (stats.totalApplications === 0) return 0;
-    return Math.round((stats.appliedApplications / stats.totalApplications) * 100);
-  };
+  // Prepare data for spider/radar chart - memoized to prevent duplicate renders
+  const { radarData, maxValue } = useMemo(() => {
+    const values = [
+      stats.draft || 0,
+      stats.created || 0,
+      stats.applied || 0,
+      stats.accepted || 0,
+      stats.rejected || 0,
+    ];
+    const max = Math.max(...values, 0);
 
-  const getSuccessRate = () => {
-    if (stats.appliedApplications === 0) return 0;
-    return Math.round(((stats.interviewApplications + stats.offerApplications) / stats.appliedApplications) * 100);
-  };
-
-  const renderPieChart = () => {
-    const radius = 28;
-    const circumference = 2 * Math.PI * radius;
-    
-    // Calculate created vs applied ratio
-    const createdApplications = stats.totalApplications;
-    const appliedApplications = stats.appliedApplications;
-    const createdPercentage = createdApplications > 0 ? Math.round((createdApplications / (createdApplications + appliedApplications)) * 100) : 0;
-    const appliedPercentage = appliedApplications > 0 ? Math.round((appliedApplications / (createdApplications + appliedApplications)) * 100) : 0;
-    
     const data = [
-      { label: 'Created', value: createdApplications, color: '#3B82F6', percentage: createdPercentage },
-      { label: 'Applied', value: appliedApplications, color: '#10B981', percentage: appliedPercentage },
+      {
+        metric: 'Draft',
+        value: stats.draft || 0,
+        fullMark: max,
+      },
+      {
+        metric: 'Created',
+        value: stats.created || 0,
+        fullMark: max,
+      },
+      {
+        metric: 'Applied',
+        value: stats.applied || 0,
+        fullMark: max,
+      },
+      {
+        metric: 'Accepted',
+        value: stats.accepted || 0,
+        fullMark: max,
+      },
+      {
+        metric: 'Rejected',
+        value: stats.rejected || 0,
+        fullMark: max,
+      },
     ];
 
-    let cumulativePercentage = 0;
+    return { radarData: data, maxValue: max };
+  }, [stats.draft, stats.created, stats.applied, stats.accepted, stats.rejected]);
 
-    return (
-      <div className="relative w-full h-full flex items-center justify-center">
-        <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-          {data.map((item, index) => {
-            const strokeDasharray = `${(item.percentage / 100) * circumference} ${circumference}`;
-            const strokeDashoffset = -cumulativePercentage * circumference / 100;
-            cumulativePercentage += item.percentage;
-
-            return (
-              <circle
-                key={index}
-                cx="50"
-                cy="50"
-                r={radius}
-                fill="none"
-                stroke={item.color}
-                strokeWidth={8}
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                opacity="0.8"
-              />
-            );
-          })}
-        </svg>
-        
-        {/* Center text */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-xl font-bold text-gray-900 dark:text-white">{appliedPercentage}%</div>
-            <div className="text-xs text-gray-600 dark:text-white/60">Applied</div>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  // Generate custom ticks based on max value to avoid duplicates
+  const customTicks = useMemo(() => {
+    if (maxValue === 0) {
+      return [0];
+    } else if (maxValue === 1) {
+      return [0, 1];
+    } else if (maxValue <= 5) {
+      return Array.from({ length: maxValue + 1 }, (_, i) => i);
+    } else if (maxValue <= 10) {
+      return [0, Math.ceil(maxValue / 2), maxValue];
+    } else {
+      const step = Math.ceil(maxValue / 5);
+      return Array.from({ length: 6 }, (_, i) => i * step).filter(v => v <= maxValue);
+    }
+  }, [maxValue]);
 
 
   return (
@@ -174,18 +186,40 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
         </div>
       </div>
 
-      {/* Pie Chart */}
-      <div className="bg-white/5 rounded-lg flex flex-col">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 text-center p-3 pb-0">Created vs Applied</h3>
-        <div className="flex items-center justify-center" style={{ height: '180px', minHeight: '180px', maxHeight: '180px' }}>
+      {/* Spider/Radar Chart */}
+      <div className="bg-white/5 dark:bg-gray-800/30 rounded-lg flex flex-col p-4">
+        <div className="flex items-center justify-center" style={{ height: '280px', minHeight: '280px', maxHeight: '280px' }}>
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              {renderPieChart()}
-            </div>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData}>
+                <PolarGrid stroke="#e5e7eb" strokeOpacity={0.3} />
+                <PolarAngleAxis 
+                  dataKey="metric" 
+                  tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
+                  className="dark:[&_text]:fill-gray-400"
+                />
+                <PolarRadiusAxis 
+                  angle={90} 
+                  domain={maxValue === 0 ? [0, 1] : [0, maxValue]}
+                  tick={{ fill: '#9ca3af', fontSize: 10 }}
+                  tickFormatter={(value) => Math.round(value).toString()}
+                  ticks={maxValue === 0 ? [0] : customTicks}
+                  className="dark:[&_text]:fill-gray-500"
+                />
+                <Radar
+                  name="Applications"
+                  dataKey="value"
+                  stroke="#8b5cf6"
+                  fill="#8b5cf6"
+                  fillOpacity={0.6}
+                  strokeWidth={2}
+                />
+              </RadarChart>
+            </ResponsiveContainer>
           )}
         </div>
       </div>

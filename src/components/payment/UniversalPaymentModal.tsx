@@ -104,9 +104,38 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   // Convert DatabasePricingPlan to PricingPlan format
   // Ensure pricingPlans is always an array to prevent filter errors
-  const pricingPlans: PricingPlan[] = Array.isArray(pricingPlansRaw) 
+  const basePricingPlans: PricingPlan[] = Array.isArray(pricingPlansRaw) 
     ? (pricingPlansRaw as unknown as PricingPlan[])
     : [];
+
+  // Ensure current user's plan is always included in the list, even if it was filtered out
+  // This allows the "Current Plan" label to be shown when invoked from settings
+  const [enhancedPricingPlans, setEnhancedPricingPlans] = useState<PricingPlan[]>(basePricingPlans);
+  
+  useEffect(() => {
+    if (isOpen && currentUserPlan) {
+      const currentPlanExists = basePricingPlans.some(plan => plan.key === currentUserPlan);
+      
+      if (!currentPlanExists && hookResult.plans.length > 0) {
+        // Find current plan from the hook result (which has all plans, not filtered)
+        const currentPlan = hookResult.plans.find((plan: DatabasePricingPlan) => plan.key === currentUserPlan);
+        
+        if (currentPlan) {
+          // Add current plan to the list so it can be displayed with "Current Plan" label
+          setEnhancedPricingPlans([...basePricingPlans, currentPlan as unknown as PricingPlan]);
+        } else {
+          setEnhancedPricingPlans(basePricingPlans);
+        }
+      } else {
+        setEnhancedPricingPlans(basePricingPlans);
+      }
+    } else {
+      setEnhancedPricingPlans(basePricingPlans);
+    }
+  }, [isOpen, currentUserPlan, basePricingPlans, hookResult.plans]);
+  
+  // Use enhanced pricing plans (includes current plan if it was filtered out)
+  const pricingPlans = enhancedPricingPlans;
 
   // Debug logging to help diagnose issues
   useEffect(() => {
