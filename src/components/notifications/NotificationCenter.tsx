@@ -9,6 +9,7 @@ import { INotification } from '@/models/Notification';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getRelativeTimeLabel } from '@/components/notifications/utils';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function NotificationCenter() {
@@ -17,6 +18,7 @@ export default function NotificationCenter() {
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
   const isAuthenticated = status === 'authenticated' && !!session?.user;
   const { notifications, unreadCount, markAsRead, markAllAsRead, handleNotificationAction } = useNotifications();
+
   
   // Helper function to safely convert _id to string
   const getIdAsString = (id: any): string => {
@@ -287,20 +289,7 @@ function NotificationItem({
               <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
                 <span className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
-                  {(() => {
-                    try {
-                      if (!notification.createdAt) return 'Recently';
-                      const createdAt = new Date(notification.createdAt);
-                      if (isNaN(createdAt.getTime())) {
-                        console.warn('Invalid createdAt date:', notification.createdAt);
-                        return 'Recently';
-                      }
-                      return formatDistanceToNow(createdAt, { addSuffix: true });
-                    } catch (error) {
-                      console.error('Error formatting createdAt:', error, notification);
-                      return 'Recently';
-                    }
-                  })()}
+                  {getRelativeTimeLabel(notification.createdAt)}
                 </span>
                 {notification.expiresAt && !notification.persistent && (() => {
                   try {

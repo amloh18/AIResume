@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
-import Job from '@/models/Job';
-import { ApplicationJourney } from '@/models';
+import { JobApplication, ApplicationJourney } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -23,8 +22,11 @@ export async function GET(request: NextRequest) {
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
     const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 
-    // Fetch all jobs for the user
-    const allJobs = await Job.find({ userId });
+    // Fetch jobs for the user within the date range (using JobApplication model)
+    const allJobs = await JobApplication.find({
+      userId,
+      createdAt: { $gte: startDate }
+    });
 
     // Fetch CV journeys for the user
     const journeys = await ApplicationJourney.find({ userId });
@@ -35,49 +37,63 @@ export async function GET(request: NextRequest) {
     // Jobs with CV journeys are considered "applied"
     const appliedApplications = journeys.length;
     
-    // Calculate status breakdown
+    // Calculate status breakdown for spider chart: draft, created, applied, accepted, rejected
     const statusCounts = {
-      pending: 0,
-      rejected: 0,
-      interview: 0,
-      offer: 0
+      draft: 0,
+      created: 0,
+      applied: 0,
+      accepted: 0,
+      rejected: 0
     };
 
     // Count jobs by status
     allJobs.forEach(job => {
-      switch (job.status?.toLowerCase()) {
-        case 'pending':
+      const status = job.status?.toLowerCase();
+      switch (status) {
+        case 'draft':
+          statusCounts.draft++;
+          break;
+        case 'created':
+          statusCounts.created++;
+          break;
         case 'applied':
-          statusCounts.pending++;
+          statusCounts.applied++;
+          break;
+        case 'accepted':
+          statusCounts.accepted++;
           break;
         case 'rejected':
-        case 'declined':
           statusCounts.rejected++;
           break;
-        case 'interview':
-        case 'interviewing':
-          statusCounts.interview++;
-          break;
-        case 'offer':
-        case 'accepted':
-          statusCounts.offer++;
-          break;
         default:
-          statusCounts.pending++;
+          // Map other statuses to closest match
+          if (status === 'offer') {
+            statusCounts.accepted++;
+          } else if (status === 'screening' || status === 'interview') {
+            statusCounts.applied++;
+          } else {
+            statusCounts.created++;
+          }
       }
     });
 
     // Calculate rates
     const applicationRate = totalApplications > 0 ? Math.round((appliedApplications / totalApplications) * 100) : 0;
-    const successRate = appliedApplications > 0 ? Math.round(((statusCounts.interview + statusCounts.offer) / appliedApplications) * 100) : 0;
+    const successRate = appliedApplications > 0 ? Math.round(((statusCounts.accepted) / appliedApplications) * 100) : 0;
 
     const stats = {
       totalApplications,
       appliedApplications,
-      pendingApplications: statusCounts.pending,
+      pendingApplications: statusCounts.applied || 0, // Keep for backward compatibility
       rejectedApplications: statusCounts.rejected,
-      interviewApplications: statusCounts.interview,
-      offerApplications: statusCounts.offer,
+      interviewApplications: 0, // Keep for backward compatibility
+      offerApplications: statusCounts.accepted || 0, // Keep for backward compatibility
+      // Spider chart data
+      draft: statusCounts.draft,
+      created: statusCounts.created,
+      applied: statusCounts.applied,
+      accepted: statusCounts.accepted,
+      rejected: statusCounts.rejected,
       applicationRate,
       successRate
     };

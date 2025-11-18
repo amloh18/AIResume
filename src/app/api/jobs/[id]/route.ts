@@ -206,13 +206,33 @@ export async function PUT(
     
     const resolvedParams = await params;
     console.log('🔍 Job Update API - Job ID:', resolvedParams.id);
+    console.log('🔍 Job Update API - User ID:', userId);
+
+    // Normalize userId for query
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
 
     const body = await request.json();
     console.log('🔍 Job Update API - Request body keys:', Object.keys(body));
 
-    // Get the current job to check for status changes
-    const currentJob = await JobApplication.findById(resolvedParams.id);
+    // Get the current job to check for status changes - also verify it belongs to the user
+    let currentJob = null;
+    if (mongoose.Types.ObjectId.isValid(resolvedParams.id)) {
+      currentJob = await JobApplication.findOne({
+        _id: new mongoose.Types.ObjectId(resolvedParams.id),
+        userId: normalizedUserId
+      });
+    } else {
+      console.log('❌ Job Update API - Invalid job ID format:', resolvedParams.id);
+      return NextResponse.json({ error: 'Invalid job ID format' }, { status: 400 });
+    }
+    
     console.log('🔍 Job Update API - Current job found:', !!currentJob);
+    if (!currentJob) {
+      console.log('❌ Job Update API - Job not found or does not belong to user');
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 });
+    }
     
     // Track status changes
     if (body.status && body.status !== currentJob?.status) {
@@ -851,9 +871,11 @@ export async function PUT(
       updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt
     };
     
+    // Return response in format expected by extension
+    // Extension expects response.data to be the job object directly, not nested
     return NextResponse.json({ 
       success: true,
-      data: { job: serializedJob },
+      data: serializedJob, // Extension expects data to be the job directly
       job: serializedJob // Keep for backwards compatibility
     });
   } catch (error) {
@@ -940,7 +962,7 @@ export async function DELETE(
     }
 
     // Import models for cascade deletion
-    const { ApplicationJourney, CV, CoverLetter } = await import('@/models');
+    const { ApplicationJourney, CV, CoverLetter, Notification, TemporaryCVDraft } = await import('@/models');
 
     // Step 1: Find all journeys associated with this job
     console.log('🔍 Job DELETE API - Finding associated journeys for job:', jobId);
@@ -1008,7 +1030,40 @@ export async function DELETE(
       }
     }
 
-    // Step 3: Finally, delete the job itself
+    // Step 3: Delete notifications that reference this job
+    let deletedNotificationsCount = 0;
+    try {
+      console.log('🔍 Job DELETE API - Finding notifications for job:', jobId);
+      const notificationsResult = await Notification.deleteMany({
+        userId: new mongoose.Types.ObjectId(userId),
+        $or: [
+          { 'actionData.jobId': jobId.toString() },
+          { 'metadata.jobId': jobId.toString() }
+        ]
+      });
+      deletedNotificationsCount = notificationsResult.deletedCount;
+      console.log(`✅ Job DELETE API - Deleted ${deletedNotificationsCount} notification(s)`);
+    } catch (error) {
+      console.error('❌ Job DELETE API - Error deleting notifications:', error);
+      // Continue with deletion even if notification deletion fails
+    }
+
+    // Step 4: Delete temporary CV drafts that reference this job
+    let deletedDraftsCount = 0;
+    try {
+      console.log('🔍 Job DELETE API - Finding temporary CV drafts for job:', jobId);
+      const draftsResult = await TemporaryCVDraft.deleteMany({
+        jobId: new mongoose.Types.ObjectId(jobId),
+        userId: new mongoose.Types.ObjectId(userId)
+      });
+      deletedDraftsCount = draftsResult.deletedCount;
+      console.log(`✅ Job DELETE API - Deleted ${deletedDraftsCount} temporary CV draft(s)`);
+    } catch (error) {
+      console.error('❌ Job DELETE API - Error deleting temporary CV drafts:', error);
+      // Continue with deletion even if draft deletion fails
+    }
+
+    // Step 5: Finally, delete the job itself
     console.log('🔍 Job DELETE API - Deleting job:', jobId);
     const deletedJob = await JobApplication.findOneAndDelete({
       _id: jobId,
@@ -1021,11 +1076,18 @@ export async function DELETE(
     }
 
     console.log('✅ Job DELETE API - Job and all associated data deleted successfully');
+    
+    // Get counts for response
+    const deletedCVsCount = journeys.filter(j => j.cvId).length;
+    const deletedCoverLettersCount = journeys.filter(j => j.coverLetterId).length;
+    
     return NextResponse.json({ 
       message: 'Job deleted successfully',
       deletedJourneys: journeys.length,
-      deletedCVs: journeys.filter(j => j.cvId).length,
-      deletedCoverLetters: journeys.filter(j => j.coverLetterId).length
+      deletedCVs: deletedCVsCount,
+      deletedCoverLetters: deletedCoverLettersCount,
+      deletedNotifications: deletedNotificationsCount,
+      deletedTemporaryDrafts: deletedDraftsCount
     });
   } catch (error) {
     console.error('Error deleting job:', error);
