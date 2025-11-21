@@ -38,7 +38,7 @@ class FollowUpNotificationService {
               actionType: 'review_job',
               actionData: {
                 jobId: job._id.toString(),
-                url: `/dashboard/jobs/${job._id}`,
+                url: `/dashboard/tracker/${job._id}`,
               },
               interactive: true,
               priority: daysOverdue > 7 ? 'high' : 'medium',
@@ -76,7 +76,7 @@ class FollowUpNotificationService {
             actionType: 'review_job',
             actionData: {
               jobId: job._id.toString(),
-              url: `/dashboard/jobs/${job._id}`,
+              url: `/dashboard/tracker/${job._id}`,
             },
             interactive: true,
             priority: 'low',

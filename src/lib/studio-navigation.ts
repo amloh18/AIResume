@@ -46,7 +46,7 @@ export function navigateToStudioFromJourney(
   }
 
   // Set return URL to jobs page
-  params.set('returnUrl', `/dashboard/jobs?journeyId=${journeyId}`);
+  params.set('returnUrl', `/dashboard/tracker?journeyId=${journeyId}`);
 
   return `/studio?${params.toString()}`;
 }
@@ -291,11 +291,11 @@ export function generateStudioBreadcrumbs(params: StudioNavigationParams): Array
   if (params.journeyId) {
     breadcrumbs.push({
       label: 'Jobs',
-      href: '/dashboard/jobs'
+      href: '/dashboard/tracker'
     });
     breadcrumbs.push({
       label: `Journey ${params.journeyId.slice(-6)}`,
-      href: `/dashboard/jobs?journeyId=${params.journeyId}`
+      href: `/dashboard/tracker?journeyId=${params.journeyId}`
     });
   }
   

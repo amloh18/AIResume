@@ -130,7 +130,9 @@ export default async function middleware(req: NextRequest) {
       log.warn('Insufficient permissions for admin access', { 
         pathname, 
         userId: getUserId(token),
-        role: getUserRole(token)
+        role: getUserRole(token),
+        type: token?.type || 'none',
+        tokenPayload: token ? { id: token.id, email: token.email, role: token.role, type: token.type } : null
       });
       return NextResponse.redirect(new URL('/admin/signin', req.url))
     }

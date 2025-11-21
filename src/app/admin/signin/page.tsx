@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,18 @@ export default function AdminSignInPage() {
   const [error, setError] = useState('');
 
   const router = useRouter();
-  const { data: session, update } = useSession();
+  const { data: session, update, status } = useSession();
+
+  // Redirect if already authenticated as admin
+  useEffect(() => {
+    if (status === 'authenticated' && session?.user) {
+      const user = session.user as any;
+      const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
+      if (isAdmin) {
+        router.push('/admin/dashboard');
+      }
+    }
+  }, [status, session, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

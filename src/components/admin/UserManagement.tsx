@@ -24,7 +24,8 @@ import {
   X,
   Activity,
   Award,
-  TrendingUp
+  TrendingUp,
+  ArrowUpCircle
 } from 'lucide-react';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserActivityModal from './UserActivityModal';
@@ -291,6 +292,10 @@ const UserManagement: React.FC = () => {
   };
 
   const handleCancelSubscription = async (user: User) => {
+    if (!confirm(`Are you sure you want to cancel the plan for ${user.email}?`)) {
+      return;
+    }
+    
     const when = confirm('Cancel now or at period end?') ? 'now' : 'period_end';
     const note = prompt('Enter cancellation reason:');
     
@@ -308,10 +313,44 @@ const UserManagement: React.FC = () => {
         if (response.ok) {
           alert('Subscription cancelled!');
           fetchUsers();
+        } else {
+          const errorData = await response.json();
+          alert(`Error: ${errorData.error || 'Failed to cancel subscription'}`);
         }
       } catch (error) {
         console.error('Error cancelling subscription:', error);
+        alert('Failed to cancel subscription. Please try again.');
       }
+    }
+  };
+
+  const handleDeleteUser = async (user: User) => {
+    if (!confirm(`⚠️ WARNING: This will permanently delete user ${user.email} and all their data.\n\nThis action cannot be undone. Are you absolutely sure?`)) {
+      return;
+    }
+    
+    const confirmation = prompt(`Type "DELETE" to confirm deletion of ${user.email}:`);
+    if (confirmation !== 'DELETE') {
+      alert('Deletion cancelled. Confirmation text did not match.');
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/api/admin/users/${user._id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        alert('User deleted successfully!');
+        fetchUsers();
+      } else {
+        const errorData = await response.json();
+        alert(`Error: ${errorData.error || 'Failed to delete user'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Failed to delete user. Please try again.');
     }
   };
 
@@ -636,39 +675,27 @@ const UserManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => handleChangePlan(user)}
-                        className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                        onClick={() => handleDeleteUser(user)}
+                        className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        title="Delete User"
                       >
-                        <Edit size={14} />
-                        Change Plan
-                      </button>
-                      <button
-                        onClick={() => {
-                          const planKey = prompt(`Enter plan key to send checkout link (available: ${planConfig.plans.join(', ')}):`);
-                          if (planKey && planConfig.plans.includes(planKey)) {
-                            handleSendCheckoutLink(user, planKey);
-                          }
-                        }}
-                        className="text-green-400 hover:text-green-300 flex items-center gap-1"
-                      >
-                        <Send size={14} />
-                        Send Link
-                      </button>
-                      <button
-                        onClick={() => handleCompPlan(user)}
-                        className="text-purple-600 hover:text-purple-900 flex items-center gap-1"
-                      >
-                        <Gift size={14} />
-                        Comp Plan
+                        <Trash2 size={18} />
                       </button>
                       <button
                         onClick={() => handleCancelSubscription(user)}
-                        className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                        className="text-orange-600 hover:text-orange-900 p-2 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                        title="Cancel Plan"
                       >
-                        <X size={14} />
-                        Cancel
+                        <X size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleChangePlan(user)}
+                        className="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        title="Admin Upgrade"
+                      >
+                        <ArrowUpCircle size={18} />
                       </button>
                     </div>
                   </td>

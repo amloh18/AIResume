@@ -53,7 +53,7 @@ export class EnhancedAIService {
    * Generate comprehensive ATS analysis with granular feedback
    */
   static async generateComprehensiveATSAnalysis(
-    cvData: UnifiedCVDataStructure, 
+    cvData: UnifiedCVDataStructure,
     jobData: Job | null
   ): Promise<EnhancedATSResponse> {
     try {
@@ -130,19 +130,19 @@ export class EnhancedAIService {
     // Calculate total years of experience
     let totalMonths = 0;
     const currentDate = new Date();
-    
+
     cvData.work.forEach((job) => {
       if (job.startDate) {
         const startDate = new Date(job.startDate);
         let endDate = currentDate;
-        
+
         if (job.endDate && job.endDate !== 'Present' && job.endDate !== 'Current') {
           endDate = new Date(job.endDate);
         }
-        
-        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                          (endDate.getMonth() - startDate.getMonth());
-        
+
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+          (endDate.getMonth() - startDate.getMonth());
+
         if (monthsDiff > 0) {
           totalMonths += monthsDiff;
         }
@@ -172,7 +172,7 @@ export class EnhancedAIService {
     ];
 
     const jobText = jobDescription.toLowerCase();
-    const foundKeywords = technicalKeywords.filter(keyword => 
+    const foundKeywords = technicalKeywords.filter(keyword =>
       jobText.includes(keyword.toLowerCase())
     );
 
@@ -219,17 +219,17 @@ export class EnhancedAIService {
     const wordCount = summary.split(/\s+/).length;
 
     if (wordCount < 30) {
-      suggestions.push('Expand your professional summary to 3-4 lines. Focus on high-level pitch, top skills, and career goal.');
+      suggestions.push('Expand your professional summary to 3-4 lines. Pitch yourself specifically for this role, highlighting your top relevant achievements.');
     }
 
     if (wordCount > 100) {
-      suggestions.push('Condense your professional summary to 3-4 lines. Keep it concise and impactful.');
+      suggestions.push('Condense your professional summary to 3-4 lines. HR recruiters scan this in seconds - keep it punchy and relevant.');
     }
 
     if (jobData) {
       const topKeywords = this.extractTopKeywords(jobData.description || '', 5);
       if (topKeywords.length > 0) {
-        suggestions.push(`Incorporate these job-relevant keywords into your summary: ${topKeywords.join(', ')}`);
+        suggestions.push(`Integrate these high-priority keywords into your summary naturally: ${topKeywords.join(', ')}`);
       }
     }
 
@@ -242,21 +242,23 @@ export class EnhancedAIService {
     if (cvData.work && cvData.work.length > 0) {
       cvData.work.forEach((work, index) => {
         const highlights = work.highlights || [];
-        
+
         if (highlights.length < 3) {
-          suggestions.push(`Add 3-5 bullet points for your role at ${work.name}. Focus on quantified achievements and action verbs.`);
+          suggestions.push(`Add 3-5 bullet points for ${work.name}. Use the Challenge-Action-Result (CAR) format for each.`);
         }
 
         if (highlights.length > 5) {
-          suggestions.push(`Condense your bullet points for ${work.name} to 3-5 most impactful achievements.`);
+          suggestions.push(`Select the top 3-5 most impactful achievements for ${work.name}. Remove routine duties to focus on results.`);
         }
       });
+
+      suggestions.push('Ensure every bullet point starts with a strong action verb (e.g., "Spearheaded", "Optimized", "Generated").');
     }
 
     if (jobData) {
       const topKeywords = this.extractTopKeywords(jobData.description || '', 8);
       if (topKeywords.length > 0) {
-        suggestions.push(`Incorporate these job-relevant keywords into your work experience: ${topKeywords.join(', ')}`);
+        suggestions.push(`Weave these job keywords into your experience bullet points: ${topKeywords.join(', ')}`);
       }
     }
 
@@ -277,17 +279,17 @@ export class EnhancedAIService {
     }, 0);
 
     if (totalKeywords < 10) {
-      suggestions.push('Add more skills to reach 15-25 relevant hard skills. Categorize by type (Technical, Soft Skills, Tools).');
+      suggestions.push('Add more hard skills (Tools, Technologies, Languages). Aim for 15-20 relevant skills.');
     }
 
     if (totalKeywords > 30) {
-      suggestions.push('Streamline your skills list to 15-25 most relevant skills. Focus on job-relevant keywords.');
+      suggestions.push('Prioritize your skills list. Move the most relevant skills for this job to the top.');
     }
 
     if (jobData) {
       const topKeywords = this.extractTopKeywords(jobData.description || '', 10);
       if (topKeywords.length > 0) {
-        suggestions.push(`Add these job-relevant skills: ${topKeywords.join(', ')}`);
+        suggestions.push(`CRITICAL: Add these missing keywords from the job description: ${topKeywords.join(', ')}`);
       }
     }
 
@@ -299,11 +301,11 @@ export class EnhancedAIService {
     const projects = cvData.projects || [];
 
     if (projects.length < 2) {
-      suggestions.push('Add 2-3 projects to showcase practical application and personal contribution.');
+      suggestions.push('Include 2-3 key projects that demonstrate your skills in action. Quantify the results if possible.');
     }
 
     if (projects.length > 4) {
-      suggestions.push('Limit to 2-3 most impactful projects. Focus on tech stack and quantifiable impact.');
+      suggestions.push('Focus on your top 2-3 projects that are most relevant to this job. Quality over quantity.');
     }
 
     return suggestions;
@@ -316,7 +318,7 @@ export class EnhancedAIService {
     education.forEach((edu, index) => {
       const description = `${edu.institution} ${edu.area} ${edu.studyType}`.trim();
       if (description.length > 100) {
-        suggestions.push(`Condense your education entry for ${edu.institution} to 1-2 lines. Focus on brevity and highest qualification first.`);
+        suggestions.push(`Keep education entries concise. Focus on the degree, institution, and graduation year.`);
       }
     });
 
@@ -330,7 +332,7 @@ export class EnhancedAIService {
     certificates.forEach((cert, index) => {
       const description = `${cert.name} ${cert.issuer}`.trim();
       if (description.length > 80) {
-        suggestions.push(`Condense your certificate entry for ${cert.name} to 1 line. Focus on credibility and recognition.`);
+        suggestions.push(`Keep certificate entries concise. Focus on the certification name and issuing organization.`);
       }
     });
 

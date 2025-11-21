@@ -1148,7 +1148,7 @@ const Canvas: React.FC = () => {
         const duplicatedCVId = duplicateResult.data.cvId;
 
         // Navigate to studio with duplicated CV (standalone mode, ready for job linking)
-        router.push(`/studio?cvId=${duplicatedCVId}`);
+        router.push(`/studio?cvId=${duplicatedCVId}&returnUrl=/dashboard/canvas`);
 
         // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
@@ -1265,15 +1265,15 @@ const Canvas: React.FC = () => {
 
       if (associatedJourney && associatedJourney.journeyId) {
         // Navigate directly to studio in journey mode (new architecture)
-        router.push(`/studio?journeyId=${associatedJourney.journeyId}&documentType=cv&mode=cvedit`);
+        router.push(`/studio?journeyId=${associatedJourney.journeyId}&documentType=cv&mode=cvedit&returnUrl=/dashboard/canvas`);
       } else {
         // If no journey found, navigate directly to studio in standalone mode (new architecture)
-        router.push(`/studio?cvId=${cv.id}`);
+        router.push(`/studio?cvId=${cv.id}&returnUrl=/dashboard/canvas`);
       }
     } catch (error) {
       console.error('Error navigating to studio:', error);
       // Fallback: navigate to standalone mode
-      router.push(`/studio?cvId=${cv.id}`);
+      router.push(`/studio?cvId=${cv.id}&returnUrl=/dashboard/canvas`);
     }
   };
 
@@ -2319,7 +2319,7 @@ const Canvas: React.FC = () => {
                       thumbnail: coverLetter.thumbnail || '',
                       metadata: coverLetter.metadata
                     }}
-                    onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}`); }}
+                    onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}&returnUrl=/dashboard/canvas`); }}
                     onDownload={handleDownloadCoverLetter}
                     onDelete={handleDeleteCoverLetter}
                     onToggleStar={toggleCoverLetterStar}

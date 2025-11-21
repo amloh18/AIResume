@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Clock, AlertCircle, Building, GraduationCap } from 'lucide-react';
-import InterviewPrepSidebar from '../InterviewPrepSidebar';
 import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
@@ -36,7 +35,6 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
   onJobClick,
   onJobStatusUpdate
 }) => {
-  const [selectedJobForPrep, setSelectedJobForPrep] = useState<JobApplication | null>(null);
 
   const getDaysSinceApplication = (applicationDate?: Date | string): number => {
     if (!applicationDate) return 0;
@@ -190,21 +188,13 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                 {/* Actions */}
                 <div className="flex gap-2">
                   <motion.button
-                    onClick={() => setSelectedJobForPrep(job)}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-orange-500 hover:from-purple-600 hover:to-orange-600 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+                    onClick={() => onJobClick(job)}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <GraduationCap className="w-4 h-4" />
-                    View Prep
-                  </motion.button>
-                  <motion.button
-                    onClick={() => onJobClick(job)}
-                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-all"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Details
+                    Interview Prep
                   </motion.button>
                 </div>
               </div>
@@ -212,17 +202,6 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
           );
         })}
       </div>
-
-      {/* Interview Prep Sidebar */}
-      {selectedJobForPrep && (
-        <InterviewPrepSidebar
-          isOpen={!!selectedJobForPrep}
-          onClose={() => setSelectedJobForPrep(null)}
-          jobId={selectedJobForPrep.id || selectedJobForPrep._id}
-          jobTitle={selectedJobForPrep.jobTitle || selectedJobForPrep.title || ''}
-          company={selectedJobForPrep.company}
-        />
-      )}
     </>
   );
 };

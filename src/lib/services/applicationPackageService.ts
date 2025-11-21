@@ -12,6 +12,12 @@ export interface ApplicationPackageData {
   userId: string;
   jobId: string;
   journeyName?: string;
+  jobData?: {
+    jobTitle?: string;
+    title?: string;
+    company?: string;
+    [key: string]: any;
+  };
 }
 
 export interface DuplicateCVData {
@@ -43,30 +49,42 @@ export class ApplicationPackageService {
     try {
       console.log('🎯 ApplicationPackageService - Creating new application package:', data);
       
-      const { userId, jobId, journeyName } = data;
+      const { userId, jobId, journeyName, jobData: providedJobData } = data;
       
-      // Fetch job details for the journey
-      const jobResponse = await fetch(`/api/jobs/${jobId}?userId=${userId}`);
-      if (!jobResponse.ok) {
-        console.error('❌ ApplicationPackageService - Job API response not OK:', jobResponse.status);
-        return {
-          success: false,
-          message: 'Job not found'
-        };
-      }
+      // Use provided job data if available, otherwise fetch it
+      let job: any = null;
       
-      const jobData = await jobResponse.json();
-      console.log('🔍 ApplicationPackageService - Job API response:', jobData);
-      
-      // Handle different response formats from jobs API
-      const job = jobData.job || jobData.data?.job;
-      
-      if (!job) {
-        console.error('❌ ApplicationPackageService - Job data not found in response:', jobData);
-        return {
-          success: false,
-          message: 'Job data not found'
-        };
+      if (providedJobData) {
+        // Use the job data that was already provided (from the save response)
+        job = providedJobData;
+        console.log('🔍 ApplicationPackageService - Using provided job data:', job);
+      } else {
+        // Fallback: Fetch job details for the journey
+        const jobResponse = await fetch(`/api/jobs/${jobId}?userId=${userId}`);
+        if (!jobResponse.ok) {
+          console.error('❌ ApplicationPackageService - Job API response not OK:', jobResponse.status);
+          // If job fetch fails, try to create package with minimal data
+          console.warn('⚠️ ApplicationPackageService - Job fetch failed, attempting to create package with jobId only');
+          job = {
+            jobTitle: journeyName?.replace('Application for ', '').split(' at ')[0] || 'Untitled Job',
+            company: journeyName?.split(' at ')[1] || 'Unknown Company',
+            title: journeyName?.replace('Application for ', '').split(' at ')[0] || 'Untitled Job'
+          };
+        } else {
+          const jobResponseData = await jobResponse.json();
+          console.log('🔍 ApplicationPackageService - Job API response:', jobResponseData);
+          
+          // Handle different response formats from jobs API
+          job = jobResponseData.job || jobResponseData.data?.job || jobResponseData.data;
+          
+          if (!job) {
+            console.error('❌ ApplicationPackageService - Job data not found in response:', jobResponseData);
+            return {
+              success: false,
+              message: 'Job data not found'
+            };
+          }
+        }
       }
       
       // Create new CV Journey (Application Package)
