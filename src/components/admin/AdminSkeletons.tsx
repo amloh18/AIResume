@@ -20,7 +20,7 @@ export const AdminKPISkeleton: React.FC = () => {
       </div>
 
       {/* KPI Cards Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
@@ -34,7 +34,7 @@ export const AdminKPISkeleton: React.FC = () => {
       </div>
 
       {/* Charts Section Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <Skeleton height={24} width="50%" className="mb-4" />
           <SkeletonChart className="h-64" />
@@ -64,7 +64,7 @@ export const AdminUserManagementSkeleton: React.FC = () => {
       </div>
 
       {/* Stats Cards Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <Skeleton height={16} width="60%" className="mb-4" />
@@ -104,7 +104,7 @@ export const AdminSystemHealthSkeleton: React.FC = () => {
       </div>
 
       {/* System Status Cards Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
@@ -122,7 +122,7 @@ export const AdminSystemHealthSkeleton: React.FC = () => {
       </div>
 
       {/* Charts Section Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <Skeleton height={24} width="50%" className="mb-4" />
           <SkeletonChart className="h-64" />
@@ -152,7 +152,7 @@ export const AdminTemplateManagerSkeleton: React.FC = () => {
       </div>
 
       {/* Template Grid Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <Skeleton height={200} width="100%" className="mb-4" />
@@ -185,7 +185,7 @@ export const AdminAIAnalyticsSkeleton: React.FC = () => {
       </div>
 
       {/* AI Metrics Cards Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <Skeleton height={16} width="60%" className="mb-4" />
@@ -196,7 +196,7 @@ export const AdminAIAnalyticsSkeleton: React.FC = () => {
       </div>
 
       {/* Charts Section Skeleton */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
           <Skeleton height={24} width="50%" className="mb-4" />
           <SkeletonChart className="h-64" />
@@ -226,7 +226,7 @@ export const AdminPricingPlanSkeleton: React.FC = () => {
       </div>
 
       {/* Pricing Plans Grid Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <Skeleton height={24} width="60%" className="mb-4" />
@@ -260,7 +260,7 @@ export const AdminTestimonialSkeleton: React.FC = () => {
       </div>
 
       {/* Testimonials Grid Skeleton */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow border border-gray-200 dark:border-gray-700">
             <div className="flex items-center mb-4">

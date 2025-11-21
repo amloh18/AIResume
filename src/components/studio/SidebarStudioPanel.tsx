@@ -154,7 +154,7 @@ function SortableSectionItem({
             : isPersonalHeader
             ? 'text-white/60 hover:text-white hover:bg-white/5'
             : 'text-white/60 hover:text-white hover:bg-blue-500/20 cursor-move'
-        } ${isHovered ? 'justify-start gap-2 md:gap-3 px-2 md:px-3 py-2' : 'justify-center px-0 py-2'}`}
+        } ${isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-3 py-2' : 'justify-center px-0 py-2'}`}
         whileHover={!isPersonalHeader ? { scale: 1.02 } : {}}
         whileTap={{ scale: 0.98 }}
         title={getSectionTitle(section.id)}
@@ -366,12 +366,12 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
         transition={{ duration: 0.3, ease: 'easeInOut' }}
       >
       <div
-          className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl overflow-hidden p-1.5 md:p-3"
+          className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl overflow-hidden p-1.5 tablet:p-3"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         >
           {/* Main Sections Navigation */}
-          <div className="flex-1 p-1.5 md:p-3 space-y-2 overflow-y-auto min-h-0">
+          <div className="flex-1 p-1.5 tablet:p-3 space-y-2 overflow-y-auto min-h-0">
             {mainSections.map((section) => {
               const IconComponent = section.icon;
               const isActive = localActiveSection === section.id;
@@ -386,7 +386,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                       ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
                         : 'bg-[#80FF00] text-black shadow-lg'
                       : 'text-white/70 hover:text-white hover:bg-white/5'
-                  } ${isHovered ? 'justify-start gap-2 md:gap-3 px-2 md:px-4 py-3' : 'justify-center px-0 py-3'}`}
+                  } ${isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3' : 'justify-center px-0 py-3'}`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   title={section.title}
@@ -396,7 +396,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                   </div>
                   {isHovered && (
                     <motion.span 
-                      className="font-medium text-xs md:text-sm whitespace-nowrap"
+                      className="font-medium text-xs tablet:text-sm whitespace-nowrap"
                       initial={{ opacity: 0, width: 0, marginLeft: -8 }}
                       animate={{ opacity: 1, width: 'auto', marginLeft: 0 }}
                       exit={{ opacity: 0, width: 0, marginLeft: -8 }}
@@ -463,7 +463,7 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
                   <DragOverlay>
                     {activeId ? (
                       <div className="flex items-center gap-1 opacity-50">
-                        <div className="flex-1 flex items-center justify-start gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg bg-[#80FF00]/20 text-[#80FF00]">
+                        <div className="flex-1 flex items-center justify-start gap-2 tablet:gap-3 px-2 tablet:px-3 py-2 rounded-lg bg-[#80FF00]/20 text-[#80FF00]">
                           {React.createElement(getSectionIcon(activeId), { size: 16 })}
                           <span className="font-medium text-xs">
                             {getSectionTitle(activeId)}
@@ -479,15 +479,15 @@ const SidebarStudioPanel: React.FC<SidebarStudioPanelProps> = ({
 
           {/* Add Section Button (only shown when Structure is active and documentType is cv) */}
           {localActiveSection === 'structure' && documentType === 'cv' && onAddSection && (
-            <div className="p-1.5 md:p-3 border-t border-white/10">
+            <div className="p-1.5 tablet:p-3 border-t border-white/10">
               <button 
                 onClick={onAddSection}
-                className={`w-full flex items-center text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5 ${isHovered ? 'justify-start gap-2 md:gap-3 px-2 md:px-4 py-3' : 'justify-center px-0 py-3'}`}
+                className={`w-full flex items-center text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5 ${isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3' : 'justify-center px-0 py-3'}`}
                 title="Add New Section"
               >
                 <Plus size={18} />
                 <motion.span 
-                  className="font-medium text-xs md:text-sm whitespace-nowrap"
+                  className="font-medium text-xs tablet:text-sm whitespace-nowrap"
                   initial={false}
                   animate={{
                     opacity: isHovered ? 1 : 0,

@@ -11,7 +11,8 @@ import {
   CheckCircle,
   Plus,
   Star,
-  FileText
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 // CVPreviewThumbnail removed - using S3 thumbnails only
@@ -43,6 +44,7 @@ interface MasterCVCardOverlayProps {
   userId: string;
   onToggleStar?: (cvId: string) => void;
   masterCVData?: MasterCV | null; // Optional prop to pass Master CV data
+  onViewReport?: (masterCV: MasterCV) => void; // View career report
 }
 
 const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
@@ -50,7 +52,8 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   onDuplicateMasterCV,
   userId,
   onToggleStar,
-  masterCVData
+  masterCVData,
+  onViewReport
 }) => {
   const { data: session } = useSession();
   const [masterCV, setMasterCV] = useState<MasterCV | null>(null);
@@ -266,17 +269,33 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
              backgroundColor: masterCV ? getRandomColor(masterCV.id) : '#F0FDF4'
            }}>
         {/* Master CV Preview - Inner smaller preview */}
-        <div className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg"
-             style={{
-               backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
-             }}>
+        <div 
+          className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg cursor-pointer"
+          style={{
+            backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
+          }}
+          onClick={(e) => {
+            e.stopPropagation();
+            // Open career report when clicking thumbnail
+            if (onViewReport && masterCV) {
+              onViewReport(masterCV);
+            }
+          }}
+        >
           {/* Master CV Preview - Prioritize S3 thumbnail for performance */}
           {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`Master CV Preview: ${masterCV.title}`}
-              className="w-full h-full object-cover rounded-xl"
+              className="w-full h-full object-cover rounded-xl cursor-pointer"
               loading="lazy"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Open career report when clicking thumbnail
+                if (onViewReport && masterCV) {
+                  onViewReport(masterCV);
+                }
+              }}
               onError={(e) => {
                 // If S3 URL fails, try to get presigned URL first
                 const target = e.target as HTMLImageElement;
@@ -304,7 +323,16 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             />
           ) : thumbnailLoading ? (
             /* Loading state */
-            <div className="w-full h-full flex items-center justify-center rounded-xl">
+            <div 
+              className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Open career report when clicking thumbnail
+                if (onViewReport && masterCV) {
+                  onViewReport(masterCV);
+                }
+              }}
+            >
               <div className="text-center text-gray-500">
                 <Loader2 size={32} className="mx-auto mb-2 animate-spin opacity-50" />
                 <p className="text-sm font-medium">Generating preview...</p>
@@ -313,7 +341,16 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             </div>
           ) : (
             /* Fallback when no thumbnail available */
-            <div className="w-full h-full flex items-center justify-center rounded-xl">
+            <div 
+              className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Open career report when clicking thumbnail
+                if (onViewReport && masterCV) {
+                  onViewReport(masterCV);
+                }
+              }}
+            >
               <div className="text-center text-gray-500">
                 <Crown size={48} className="mx-auto mb-2 opacity-50" />
                 <p className="text-sm font-medium">{masterCV.title}</p>
@@ -365,6 +402,24 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
               <Edit3 size={16} />
             )}
           </motion.button>
+
+          {/* View Report Icon */}
+          {onViewReport && (
+            <motion.button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (masterCV) {
+                  onViewReport(masterCV);
+                }
+              }}
+              className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="View Career Report"
+            >
+              <BarChart3 size={16} />
+            </motion.button>
+          )}
 
           {/* Duplicate Icon */}
           <motion.button

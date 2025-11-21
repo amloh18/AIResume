@@ -114,7 +114,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
 
   return (
     <section className={`py-16 bg-gradient-to-br from-blue-50 to-indigo-100 ${className}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         <div className="text-center mb-12">
           <motion.h2 
             className="text-4xl font-bold text-gray-900 mb-4"
@@ -162,7 +162,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
                     We're creating an amazing video to show you how CV Circle works. 
                     In the meantime, try our platform for free!
                   </p>
-                  <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <div className="flex flex-col tablet:flex-row gap-4 justify-center">
                     <motion.button
                       className="px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
                       whileHover={{ scale: 1.05 }}
@@ -266,7 +266,7 @@ const ProductVideo: React.FC<ProductVideoProps> = ({
           </div>
 
           {/* Video Features */}
-          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-8 grid grid-cols-1 tablet:grid-cols-3 gap-6">
             <motion.div 
               className="text-center"
               initial={{ opacity: 0, y: 20 }}

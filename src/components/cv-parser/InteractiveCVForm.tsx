@@ -342,7 +342,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
       exit={{ opacity: 0, x: -50 }}
       className="space-y-6"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">First Name</label>
           <input
@@ -376,7 +376,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Phone</label>
           <input
@@ -399,7 +399,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Website</label>
           <input
@@ -475,7 +475,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             exit={{ opacity: 0, y: -20 }}
             className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
                 <input
@@ -506,7 +506,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Field of Study</label>
                 <input
@@ -599,7 +599,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             exit={{ opacity: 0, y: -20 }}
             className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
                 <input
@@ -630,7 +630,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
                 <input
@@ -845,7 +845,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Project URL</label>
                 <input
@@ -876,7 +876,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
                 <input
@@ -934,10 +934,10 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
+        <div className="grid grid-cols-1 desktop:grid-cols-4 gap-8">
           {/* Sidebar Navigation */}
-          <div className="lg:col-span-1">
+          <div className="desktop:col-span-1">
             <div className="sticky top-32 space-y-4">
               {sections.map((section, index) => (
                 <motion.button
@@ -965,7 +965,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
           </div>
 
           {/* Main Form Area */}
-          <div className="lg:col-span-3">
+          <div className="desktop:col-span-3">
             <div className="bg-white/5 border border-white/10 rounded-3xl p-8 min-h-[600px]">
               <AnimatePresence mode="wait">
                 {renderSection()}

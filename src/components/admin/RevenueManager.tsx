@@ -174,7 +174,7 @@ export default function RevenueManager() {
       </div>
 
       {/* Revenue Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
         <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
@@ -225,7 +225,7 @@ export default function RevenueManager() {
         <Card className="bg-gray-800 border-gray-700">
           <CardContent className="p-6">
             <h3 className="text-xl font-bold text-white mb-4">Revenue by Currency</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
               {Object.entries(revenueData.revenueByCurrency).map(([currency, data]) => (
                 <div key={currency} className="bg-gray-700 p-4 rounded-lg">
                   <p className="text-gray-400 text-sm">{currency}</p>

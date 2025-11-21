@@ -82,10 +82,10 @@ export const getThemeClasses = {
 export const getThemeTransition = 'transition-colors duration-200 ease-in-out';
 
 export const getThemeShadow = {
-  sm: 'shadow-sm dark:shadow-gray-900/20',
-  md: 'shadow-md dark:shadow-gray-900/30',
-  lg: 'shadow-lg dark:shadow-gray-900/40',
-  xl: 'shadow-xl dark:shadow-gray-900/50'
+  tablet: 'shadow-sm dark:shadow-gray-900/20',
+  tablet: 'shadow-md dark:shadow-gray-900/30',
+  desktop: 'shadow-lg dark:shadow-gray-900/40',
+  desktop: 'shadow-xl dark:shadow-gray-900/50'
 };
 
 /**
@@ -111,13 +111,13 @@ export const getPageBackground = (pageType: 'dashboard' | 'studio' | 'admin' | '
  */
 export const getSidebarClasses = (isOpen: boolean = true, isMobile: boolean = false) => ({
   container: `
-    fixed lg:sticky top-0 z-50 h-screen
+    fixed desktop:sticky top-0 z-50 h-screen
     ${isMobile ? 'inset-y-0 left-0' : 'top-2 left-2 bottom-2 h-[calc(100vh-1rem)]'}
     ${!isMobile ? 'bg-white dark:bg-gray-800' : 'bg-white dark:bg-gray-900'} 
     border border-gray-200 dark:border-gray-700
     transition-all duration-300 ease-in-out
-    ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-    ${isMobile ? 'w-80' : 'w-72 lg:w-16 xl:w-72'}
+    ${isOpen ? 'translate-x-0' : '-translate-x-full desktop:translate-x-0'}
+    ${isMobile ? 'w-80' : 'w-72 desktop:w-72'}
     rounded-2xl shadow-xl shadow-gray-900/10 dark:shadow-black/20
     ${!isMobile ? 'm-2' : ''}
   `,

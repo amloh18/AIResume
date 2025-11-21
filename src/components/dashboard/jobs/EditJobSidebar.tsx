@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createPortal } from 'react-dom';
 import { 
   X, 
   Briefcase, 
@@ -43,7 +42,7 @@ interface Job {
   jobDescription?: string;
   notes?: string;
   priority?: 'low' | 'medium' | 'high';
-  status?: 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
+  status?: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   deadline?: string;
   applicationDate?: string;
   sponsorship?: 'yes' | 'no' | 'unknown';
@@ -100,7 +99,7 @@ interface Job {
   updatedAt?: string;
 }
 
-interface EditJobModalProps {
+interface EditJobSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onJobSaved: (job: Job) => void;
@@ -108,7 +107,7 @@ interface EditJobModalProps {
   userId?: string;
 }
 
-const EditJobModal: React.FC<EditJobModalProps> = ({
+const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   isOpen,
   onClose,
   onJobSaved,
@@ -119,8 +118,8 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   // Global credit exhaustion handler
   const { checkUsageAndHandleExhaustion, showExhaustionModal } = useCreditExhaustionHandler();
@@ -128,6 +127,11 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<any>(null);
+  const isSavingRef = useRef<boolean>(false);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
 
   // Form state
   const [formData, setFormData] = useState<Partial<Job>>({
@@ -173,6 +177,84 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   const [jobDescriptionCount, setJobDescriptionCount] = useState(0);
   const [notesCount, setNotesCount] = useState(0);
 
+  // Track window width for responsive sidebar
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate sidebar width
+  const sidebarWidth = useMemo(() => {
+    return windowWidth >= 768 ? '50vw' : '100%';
+  }, [windowWidth]);
+
+  // Swipe gesture handling for mobile
+  useEffect(() => {
+    if (!isOpen || !sidebarRef.current) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+
+      const touchEndX = e.touches[0].clientX;
+      const touchEndY = e.touches[0].clientY;
+      const deltaX = touchEndX - touchStartX.current;
+      const deltaY = touchEndY - touchStartY.current;
+
+      // Only handle horizontal swipes (swipe left to close)
+      if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX < -50) {
+        handleClose();
+        touchStartX.current = null;
+        touchStartY.current = null;
+      }
+    };
+
+    const sidebar = sidebarRef.current;
+    sidebar.addEventListener('touchstart', handleTouchStart);
+    sidebar.addEventListener('touchmove', handleTouchMove);
+
+    return () => {
+      sidebar.removeEventListener('touchstart', handleTouchStart);
+      sidebar.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [isOpen]);
+
+  // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
+
   // Initialize form data when editingJob changes or modal opens
   useEffect(() => {
     if (editingJob) {
@@ -204,7 +286,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         jobDescription: '',
         notes: '',
         priority: 'medium' as 'low' | 'medium' | 'high',
-        status: 'created' as 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn',
+        status: 'created' as 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn',
         deadline: '',
         applicationDate: '',
         sponsorship: 'unknown' as 'yes' | 'no' | 'unknown',
@@ -229,7 +311,9 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       lastSavedDataRef.current = newJobData;
     }
     setHasUnsavedChanges(false);
-  }, [editingJob, isOpen]); // Added isOpen dependency to reset when modal opens
+    setErrorMessage('');
+    setFieldErrors({});
+  }, [editingJob, isOpen]);
 
   // Update character counters
   useEffect(() => {
@@ -241,23 +325,28 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
   // Auto-save functionality
   useEffect(() => {
-    if (!isOpen || !editingJob) return;
+    if (!isOpen || !editingJob?.id) return; // Only auto-save for existing jobs
 
-    const currentData = getFormData();
-    const hasChanges = JSON.stringify(currentData) !== JSON.stringify(lastSavedDataRef.current);
+    // Clear existing timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
 
+    // Check if data has changed
+    const hasChanges = JSON.stringify(formData) !== JSON.stringify(lastSavedDataRef.current);
+    
     if (hasChanges) {
       setHasUnsavedChanges(true);
       
-      // Clear existing timeout
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
+      // Set new timeout for auto-save (only if not already saving manually)
+      if (!isSavingRef.current) {
+        autoSaveTimeoutRef.current = setTimeout(() => {
+          // Double-check we're not saving manually before auto-saving
+          if (!isSavingRef.current) {
+            handleSaveJob(true); // Auto-save
+          }
+        }, 2000);
       }
-
-      // Set new timeout for auto-save
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        handleSaveJob(true); // Auto-save
-      }, 2000);
     }
 
     return () => {
@@ -283,8 +372,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
   };
 
   const handleSaveJob = async (isAutoSave = false) => {
+    // Prevent concurrent saves
+    if (isSavingRef.current && !isAutoSave) {
+      console.log('⚠️ EditJobSidebar - Save already in progress, ignoring duplicate call');
+      return;
+    }
+
     try {
       if (!isAutoSave) {
+        isSavingRef.current = true;
         setIsSaving(true);
       }
 
@@ -293,15 +389,52 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
       const url = editingJob?.id ? `/api/jobs/${editingJob.id}` : '/api/jobs';
       const method = editingJob?.id ? 'PUT' : 'POST';
 
-      console.log('🔍 EditJobModal - Saving job:', { method, url, jobData, isNewJob });
+      console.log('🔍 EditJobSidebar - Saving job:', { method, url, jobData, isNewJob });
+
+      // Clear previous errors
+      setErrorMessage('');
+      setFieldErrors({});
 
       // Validate required fields for new jobs
       if (isNewJob && (!jobData.jobTitle || !jobData.company)) {
         console.error('❌ Missing required fields:', { jobTitle: jobData.jobTitle, company: jobData.company });
-        setErrorMessage('Job title and company are required');
-        setShowErrorDialog(true);
+        const errors: Record<string, string> = {};
+        if (!jobData.jobTitle) errors.jobTitle = 'Job title is required';
+        if (!jobData.company) errors.company = 'Company name is required';
+        setFieldErrors(errors);
+        setErrorMessage('Please fill in all required fields');
         if (!isAutoSave) setIsSaving(false);
         return;
+      }
+
+      // Validate jobUrl - must be valid URL or empty
+      if (jobData.jobUrl && jobData.jobUrl.trim()) {
+        try {
+          new URL(jobData.jobUrl);
+        } catch {
+          setFieldErrors({ jobUrl: 'Please enter a valid URL (e.g., https://example.com/job) or leave it empty' });
+          setErrorMessage('Please fix the errors below');
+          if (!isAutoSave) setIsSaving(false);
+          return;
+        }
+      }
+
+      // Validate source is a valid enum value
+      const validSources = ['extension', 'manual', 'import', 'linkedin', 'indeed', 'company-website', 'referral', 'other'];
+      if (jobData.source && !validSources.includes(jobData.source)) {
+        // Auto-fix: map invalid sources to valid ones
+        if (jobData.source === 'web') {
+          jobData.source = 'manual';
+        } else {
+          jobData.source = 'other';
+        }
+      }
+
+      // Clean jobUrl - set to undefined if empty string
+      if (jobData.jobUrl === '' || !jobData.jobUrl?.trim()) {
+        jobData.jobUrl = undefined;
+      } else {
+        jobData.jobUrl = jobData.jobUrl.trim();
       }
 
       // Check credits only if creating/updating job with status 'created' (not 'draft')
@@ -343,12 +476,12 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         body: JSON.stringify(jobData),
       });
 
-      console.log('🔍 EditJobModal - Response status:', response.status);
+      console.log('🔍 EditJobSidebar - Response status:', response.status);
 
       // Handle insufficient credits error (403)
       if (response.status === 403) {
         const errorResult = await response.json();
-        console.log('🔍 EditJobModal - Credit check failed:', errorResult);
+        console.log('🔍 EditJobSidebar - Credit check failed:', errorResult);
         
         if (errorResult.requiresUpgrade) {
           // Show credit exhaustion modal with custom message
@@ -372,7 +505,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
       if (response.ok) {
         const result = await response.json();
-        console.log('🔍 EditJobModal - Save response:', result);
+        console.log('🔍 EditJobSidebar - Save response:', result);
 
         // Check if the API returned a job object directly (for updates) or success/data structure (for creates)
         if (result.job || result.success !== false) {
@@ -383,12 +516,15 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
           lastSavedDataRef.current = savedJob;
           setHasUnsavedChanges(false);
+          setShowUnsavedWarning(false);
+          setErrorMessage('');
+          setFieldErrors({});
 
           // Step 2: If this is a new job, implement the "Job First" workflow
           // Create an Application Package automatically
           if (isNewJob && !isAutoSave && user?.id) {
             try {
-              console.log('🎯 EditJobModal - Creating Application Package for new job:', savedJob.id);
+              console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id);
               
               const packageResult = await ApplicationPackageService.createNewPackage({
                 userId: user.id,
@@ -397,13 +533,13 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
               });
 
               if (packageResult.success) {
-                console.log('✅ EditJobModal - Application Package created:', packageResult.data?.journeyId);
+                console.log('✅ EditJobSidebar - Application Package created:', packageResult.data?.journeyId);
               } else {
-                console.warn('⚠️ EditJobModal - Failed to create Application Package:', packageResult.message);
+                console.warn('⚠️ EditJobSidebar - Failed to create Application Package:', packageResult.message);
                 // Don't fail the job creation if package creation fails
               }
             } catch (packageError) {
-              console.error('❌ EditJobModal - Error creating Application Package:', packageError);
+              console.error('❌ EditJobSidebar - Error creating Application Package:', packageError);
               // Don't fail the job creation if package creation fails
             }
           }
@@ -449,25 +585,30 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
           console.error('❌ API returned success: false:', result);
           if (!isAutoSave) {
             setErrorMessage(result.message || result.error || 'Unknown error');
-            setShowErrorDialog(true);
           }
         }
       } else {
         const errorText = await response.text();
-        console.error('❌ EditJobModal - Save failed with status:', response.status, 'Error:', errorText);
+        console.error('❌ EditJobSidebar - Save failed with status:', response.status, 'Error:', errorText);
         if (!isAutoSave) {
           try {
             const errorJson = JSON.parse(errorText);
+            // Try to parse field-specific errors from validation
+            if (errorJson.errors) {
+              const errors: Record<string, string> = {};
+              Object.keys(errorJson.errors).forEach(field => {
+                errors[field] = errorJson.errors[field].message || errorJson.errors[field];
+              });
+              setFieldErrors(errors);
+            }
             setErrorMessage(errorJson.message || errorJson.error || `Server error (${response.status})`);
-            setShowErrorDialog(true);
           } catch {
             setErrorMessage(`Failed to save job. Server returned status: ${response.status}`);
-            setShowErrorDialog(true);
           }
         }
       }
     } catch (error) {
-      console.error('❌ EditJobModal - Error saving job:', error);
+      console.error('❌ EditJobSidebar - Error saving job:', error);
       if (!isAutoSave) {
         // Provide more specific error messages based on the error type
         let errorMsg = 'Error saving job. Please try again.';
@@ -479,49 +620,31 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         }
         
         setErrorMessage(errorMsg);
-        setShowErrorDialog(true);
       }
     } finally {
       if (!isAutoSave) {
+        isSavingRef.current = false;
         setIsSaving(false);
       }
     }
   };
 
   const handleClose = () => {
-    if (hasUnsavedChanges) {
+    if (hasUnsavedChanges && editingJob?.id) {
+      // Show non-intrusive warning banner instead of modal
       setShowUnsavedWarning(true);
     } else {
-      // Reset form state when closing
-      setFormData({
-        jobTitle: '',
-        company: '',
-        location: '',
-        jobUrl: '',
-        jobDescription: '',
-        notes: '',
-        priority: 'medium',
-        status: 'created',
-        deadline: '',
-        applicationDate: '',
-        sponsorship: 'unknown',
-        tags: [],
-        salary: {
-          min: undefined,
-          max: undefined,
-          currency: 'USD',
-          period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
-        },
-        contactDetails: { name: '', email: '', phone: '', role: '' }
-      });
-      setHasUnsavedChanges(false);
-      onClose();
+      handleConfirmClose();
     }
   };
 
   const handleConfirmClose = () => {
-    setShowUnsavedWarning(false);
-    // Reset form state when confirming close
+    // Clear auto-save timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    // Reset form state
     setFormData({
       jobTitle: '',
       company: '',
@@ -539,109 +662,146 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
         min: undefined,
         max: undefined,
         currency: 'USD',
-        period: 'yearly'
+        period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
       },
-      contactDetails: { name: '', email: '', phone: '', role: '' }
+      contactDetails: { name: '', email: '', phone: '', role: '' },
+      interviews: [],
+      followUps: [],
+      attachments: [],
+      source: 'other' as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
+      sourceUrl: '',
+      atsScore: undefined,
+      atsAnalysis: undefined,
+      statusHistory: []
     });
     setHasUnsavedChanges(false);
+    setShowUnsavedWarning(false);
+    setErrorMessage('');
+    setFieldErrors({});
     onClose();
-  };
-
-  const handleParseJobUrl = async () => {
-    const urlInput = document.getElementById('jobUrlParser') as HTMLInputElement;
-    const url = urlInput?.value?.trim();
-    
-    if (!url) {
-      alert('Please enter a job URL to parse');
-      return;
-    }
-
-    try {
-      console.log('🔍 AddEditJobModal - Parsing job URL:', url);
-      
-      const response = await fetch('/api/parse-job', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.success) {
-          const parsedData = result.data;
-          
-          // Update form fields with parsed data
-          setFormData(prev => ({
-            ...prev,
-            jobTitle: parsedData.title || prev.jobTitle,
-            company: parsedData.company || prev.company,
-            location: parsedData.location || prev.location,
-            jobUrl: parsedData.sourceUrl || prev.jobUrl,
-            jobDescription: parsedData.description || prev.jobDescription,
-            sponsorship: parsedData.sponsorship !== undefined ? (parsedData.sponsorship ? 'yes' : 'no') : prev.sponsorship
-          }));
-          
-          alert('Job details parsed successfully!');
-        } else {
-          alert(`Failed to parse job: ${result.message}`);
-        }
-      } else {
-        alert('Failed to parse job URL. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error parsing job URL:', error);
-      alert('Error parsing job URL. Please try again.');
-    }
   };
 
   if (!isOpen) return null;
 
-  const modalContent = (
-    <>
+  return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-[1150] flex items-center justify-center p-4 bg-black/70 dark:bg-black/70 backdrop-blur-sm overflow-y-auto"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={(e) => {
-          if (e.target === e.currentTarget) {
-            handleClose();
-          }
-        }}
-      >
-        <motion.div
-          className="bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-[min(92vw,1280px)] max-h-[min(90vh,920px)] overflow-hidden shadow-2xl flex flex-col mx-auto lg:my-8 lg:mx-8"
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="text-gray-900 dark:text-white flex flex-col flex-1 min-h-0">
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bg-black/50 backdrop-blur-sm z-40"
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh'
+            }}
+            onClick={handleClose}
+          />
+
+          {/* Sidebar */}
+          <motion.div
+            ref={sidebarRef}
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
+            style={{ width: sidebarWidth }}
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
-              </h2>
+            <div className="border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] sticky top-0 z-10">
+              <div className="flex items-center justify-between p-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
+                </h2>
+                <motion.button
+                  onClick={handleClose}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a2015] rounded-lg transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Close (Esc)"
+                >
+                  <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </motion.button>
+              </div>
               
-              <motion.button
-                onClick={handleClose}
-                className="p-2 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-colors"
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <X size={20} />
-              </motion.button>
+              {/* Non-intrusive Unsaved Changes Banner */}
+              {showUnsavedWarning && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="px-4 pb-3 border-t border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-900/20"
+                >
+                  <div className="flex items-center justify-between gap-3 pt-3">
+                    <div className="flex items-center gap-2 flex-1">
+                      <AlertCircle size={16} className="text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                      <p className="text-sm text-amber-800 dark:text-amber-300">
+                        You have unsaved changes
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        onClick={() => setShowUnsavedWarning(false)}
+                        className="px-3 py-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Cancel
+                      </motion.button>
+                      <motion.button
+                        onClick={handleConfirmClose}
+                        className="px-3 py-1.5 text-sm font-medium bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white rounded-lg transition-colors"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Close Anyway
+                      </motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
-            {/* Two Column Layout - Scrollable Container */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-                {/* Left Column */}
-                <div className="space-y-3">
+            {/* Error Banner */}
+            {errorMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mx-4 mt-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 rounded-lg flex items-start gap-3"
+              >
+                <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-red-900 dark:text-red-300 mb-1">Error Saving Job</h4>
+                  <p className="text-sm text-red-700 dark:text-red-400">{errorMessage}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setErrorMessage('');
+                    setFieldErrors({});
+                  }}
+                  className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                >
+                  <X size={16} />
+                </button>
+              </motion.div>
+            )}
+
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-4 md:p-6">
+              <div className="space-y-6">
                 {/* Basic Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Basic Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
                   
                   <div className="space-y-4">
                     <div>
@@ -649,25 +809,57 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       <input
                         type="text"
                         value={formData.jobTitle || ''}
-                        onChange={(e) => handleFormChange('jobTitle', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                        onChange={(e) => {
+                          handleFormChange('jobTitle', e.target.value);
+                          if (fieldErrors.jobTitle) {
+                            setFieldErrors(prev => {
+                              const next = { ...prev };
+                              delete next.jobTitle;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${
+                          fieldErrors.jobTitle 
+                            ? 'border-red-500 dark:border-red-500' 
+                            : 'border-gray-300 dark:border-white/20'
+                        } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                         placeholder="Enter job title"
                         maxLength={100}
                       />
+                      {fieldErrors.jobTitle && (
+                        <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.jobTitle}</p>
+                      )}
                       <div className="text-gray-500 dark:text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Company</label>
                         <input
                           type="text"
                           value={formData.company || ''}
-                          onChange={(e) => handleFormChange('company', e.target.value)}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                          onChange={(e) => {
+                            handleFormChange('company', e.target.value);
+                            if (fieldErrors.company) {
+                              setFieldErrors(prev => {
+                                const next = { ...prev };
+                                delete next.company;
+                                return next;
+                              });
+                            }
+                          }}
+                          className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${
+                            fieldErrors.company 
+                              ? 'border-red-500 dark:border-red-500' 
+                              : 'border-gray-300 dark:border-white/20'
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                           placeholder="Enter company name"
                           maxLength={100}
                         />
+                        {fieldErrors.company && (
+                          <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.company}</p>
+                        )}
                         <div className="text-gray-500 dark:text-white/50 text-xs mt-1">{companyCount}/100</div>
                       </div>
                       <div>
@@ -687,10 +879,26 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       <input
                         type="url"
                         value={formData.jobUrl || ''}
-                        onChange={(e) => handleFormChange('jobUrl', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                        onChange={(e) => {
+                          handleFormChange('jobUrl', e.target.value);
+                          if (fieldErrors.jobUrl) {
+                            setFieldErrors(prev => {
+                              const next = { ...prev };
+                              delete next.jobUrl;
+                              return next;
+                            });
+                          }
+                        }}
+                        className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${
+                          fieldErrors.jobUrl 
+                            ? 'border-red-500 dark:border-red-500' 
+                            : 'border-gray-300 dark:border-white/20'
+                        } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                         placeholder="https://company.com/job-posting"
                       />
+                      {fieldErrors.jobUrl && (
+                        <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.jobUrl}</p>
+                      )}
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -704,7 +912,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                             className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
                         </div>
                       </div>
                       
@@ -718,7 +926,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                             className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="mm/dd/yyyy"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
                         </div>
                       </div>
                     </div>
@@ -746,111 +954,95 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
                 {/* Salary Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Salary Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Salary Information</h3>
                   
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
-                      <input
-                        type="number"
-                        value={formData.salary?.min || ''}
-                        onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
-                        placeholder="e.g. 80000"
-                      />
+                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
+                        <input
+                          type="number"
+                          value={formData.salary?.min || ''}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                          placeholder="e.g. 80000"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
+                        <input
+                          type="number"
+                          value={formData.salary?.max || ''}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                          placeholder="e.g. 120000"
+                        />
+                      </div>
                     </div>
                     
-                    <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
-                      <input
-                        type="number"
-                        value={formData.salary?.max || ''}
-                        onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
-                        placeholder="e.g. 120000"
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Currency</label>
-                      <select
-                        value={formData.salary?.currency || 'USD'}
-                        onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
-                      >
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="GBP">GBP</option>
-                        <option value="CAD">CAD</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Period</label>
-                      <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
-                        {['yearly', 'monthly', 'hourly'].map((period) => (
-                          <button
-                            key={period}
-                            onClick={() => handleFormChange('salary', { ...formData.salary, period })}
-                            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                              formData.salary?.period === period
-                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
-                                : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white'
-                            }`}
-                          >
-                            {period.charAt(0).toUpperCase() + period.slice(1)}
-                          </button>
-                        ))}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Currency</label>
+                        <select
+                          value={formData.salary?.currency || 'USD'}
+                          onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                        >
+                          <option value="USD">USD</option>
+                          <option value="EUR">EUR</option>
+                          <option value="GBP">GBP</option>
+                          <option value="CAD">CAD</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Period</label>
+                        <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
+                          {['yearly', 'monthly', 'hourly'].map((period) => (
+                            <button
+                              key={period}
+                              onClick={() => handleFormChange('salary', { ...formData.salary, period })}
+                              className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
+                                formData.salary?.period === period
+                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
+                                  : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white'
+                              }`}
+                            >
+                              {period.charAt(0).toUpperCase() + period.slice(1)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                  </div>
                 </div>
 
-                {/* Tags */}
-                <div>
-                  <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
-                  <input
-                    type="text"
-                    value={formData.tags?.join(', ') || ''}
-                    onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
-                    className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
-                    placeholder="Remote, Full-time, FinTech"
-                  />
-                  <div className="text-gray-500 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-3">
                 {/* Job Description */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Job Description</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description</h3>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium">Job Description</label>
-                      <div className="text-gray-500 dark:text-white/50 text-xs">{jobDescriptionCount}/2000</div>
+                      <div className="text-gray-500 dark:text-white/50 text-xs">{jobDescriptionCount}/5000</div>
                     </div>
                     <textarea
                       rows={10}
                       value={formData.jobDescription || ''}
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Paste the job description here..."
-                      maxLength={2000}
+                      maxLength={5000}
                     />
                   </div>
                 </div>
 
                 {/* Additional Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Additional Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h3>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     <div>
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Sponsorship</label>
                       <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
@@ -868,6 +1060,18 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                           </button>
                         ))}
                       </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
+                      <input
+                        type="text"
+                        value={formData.tags?.join(', ') || ''}
+                        onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
+                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                        placeholder="Remote, Full-time, FinTech"
+                      />
+                      <div className="text-gray-500 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
                     </div>
                     
                     <div>
@@ -924,7 +1128,7 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
 
                 {/* Notes */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Notes</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notes</h3>
                   
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -935,18 +1139,17 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                       rows={6}
                       value={formData.notes || ''}
                       onChange={(e) => handleFormChange('notes', e.target.value)}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
+                      className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Add any personal notes here..."
                       maxLength={500}
                     />
                   </div>
                 </div>
               </div>
-              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end p-6 border-t border-gray-200 dark:border-white/20 flex-shrink-0">
+            {/* Footer with Save Button */}
+            <div className="flex items-center justify-end p-4 border-t border-gray-200 dark:border-white/20 flex-shrink-0">
               <motion.button
                 onClick={() => handleSaveJob(false)}
                 disabled={isSaving}
@@ -964,105 +1167,13 @@ const EditJobModal: React.FC<EditJobModalProps> = ({
                 </div>
               </motion.button>
             </div>
-          </div>
-        </motion.div>
-      </motion.div>
+          </motion.div>
+
+        </>
+      )}
     </AnimatePresence>
-
-      {/* Unsaved Changes Warning */}
-      {showUnsavedWarning && (
-        <AnimatePresence>
-          <motion.div
-            className="fixed inset-0 z-[1160] flex items-center justify-center p-2 sm:p-3 md:p-4 bg-black/70 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-white/20 rounded-xl p-6 max-w-md w-full max-w-[calc(100vw-2rem)] sm:max-w-md shadow-2xl mx-auto"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <div className="text-gray-900 dark:text-white text-center">
-                <h3 className="text-lg font-semibold mb-1">Unsaved Changes</h3>
-                <p className="text-gray-600 dark:text-white/70 text-sm mb-2">
-                  You have unsaved changes. Are you sure you want to close without saving?
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <motion.button
-                    onClick={() => setShowUnsavedWarning(false)}
-                    className="px-4 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-700 dark:text-white rounded-xl text-sm font-medium transition-all"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    onClick={handleConfirmClose}
-                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-medium transition-all"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Close Anyway
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
-      )}
-
-      {/* Error Dialog */}
-      {showErrorDialog && (
-        <AnimatePresence>
-          <motion.div
-            className="fixed inset-0 z-[1160] flex items-center justify-center p-2 sm:p-3 md:p-4 bg-black/70 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-500/30 rounded-xl p-6 w-full max-w-[calc(100vw-2rem)] sm:max-w-md shadow-2xl mx-auto"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-            >
-              <div className="text-gray-900 dark:text-white text-center">
-                <div className="flex items-center justify-center mb-2">
-                  <div className="p-3 bg-red-100 dark:bg-red-500/20 rounded-full">
-                    <AlertCircle size={24} className="text-red-600 dark:text-red-400" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-semibold mb-1">Error Saving Job</h3>
-                <p className="text-gray-600 dark:text-white/70 text-sm mb-6">
-                  {errorMessage}
-                </p>
-                <div className="flex gap-3 justify-center">
-                  <motion.button
-                    onClick={() => setShowErrorDialog(false)}
-                    className="px-6 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold rounded-lg transition-all"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Try Again
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </AnimatePresence>
-      )}
-
-    </>
   );
-
-  // Use portal to render modal at document body level to avoid overflow clipping
-  if (typeof window !== 'undefined') {
-    return createPortal(modalContent, document.body);
-  }
-
-  return modalContent;
 };
 
-export default EditJobModal;
+export default EditJobSidebar;
+

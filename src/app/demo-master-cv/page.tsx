@@ -45,7 +45,7 @@ const DemoMasterCVPage: React.FC = () => {
             New Feature
           </motion.div>
           
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-4xl tablet:text-6xl font-bold text-gray-900 dark:text-white mb-6">
             Master CV
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-purple-600">
               Onboarding
@@ -79,7 +79,7 @@ const DemoMasterCVPage: React.FC = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        <div className="grid tablet:grid-cols-2 desktop:grid-cols-4 gap-8 mb-16">
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
@@ -110,7 +110,7 @@ const DemoMasterCVPage: React.FC = () => {
             Design Highlights
           </h2>
           
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid tablet:grid-cols-2 gap-8">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
                 🎨 Modern UI/UX

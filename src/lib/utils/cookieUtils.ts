@@ -127,7 +127,7 @@ export function initializeAnalytics(): void {
   
   // Initialize Google Analytics or other analytics tools here
   // This is a placeholder for when you add analytics
-  console.log('Analytics initialized with user consent');
+  // Analytics initialization is silent in production
 }
 
 /**
@@ -138,6 +138,6 @@ export function initializeMarketing(): void {
   
   // Initialize marketing tools here
   // This is a placeholder for when you add marketing tools
-  console.log('Marketing tools initialized with user consent');
+  // Marketing tools initialization is silent in production
 }
 

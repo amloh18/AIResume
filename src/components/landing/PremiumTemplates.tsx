@@ -128,10 +128,10 @@ const PremiumTemplates = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative z-10 w-full max-w-[1500px] mx-auto px-4 tablet:px-6 desktop:px-8 py-20">
         {/* Main Container with Luxury Design - Matching Landing Page Theme */}
         <motion.div
-          className="relative backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden min-h-[700px] pt-4 sm:pt-0 bg-[#603a86]"
+          className="relative backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden min-h-[700px] pt-4 tablet:pt-0 bg-[#603a86]"
           style={{
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
             backgroundColor: '#603a86'
@@ -141,11 +141,11 @@ const PremiumTemplates = () => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <div className="relative w-full h-full flex flex-col lg:flex-row items-center justify-between min-h-[700px] pl-8 sm:pl-12 lg:pl-16 pb-4 sm:pb-6 lg:pb-8">
+          <div className="relative w-full h-full flex flex-col desktop:flex-row items-center justify-between min-h-[700px] pl-8 tablet:pl-12 desktop:pl-16 pb-4 tablet:pb-6 desktop:pb-8">
               {/* Left Side - Text Content */}
-            <div className="flex-1 flex flex-col justify-center space-y-6 lg:space-y-8 z-10">
+            <div className="flex-1 flex flex-col justify-center space-y-6 desktop:space-y-8 z-10">
                 {/* Badge */}
-                <div className="text-lime-400 uppercase tracking-wider text-xs sm:text-sm font-semibold">
+                <div className="text-lime-400 uppercase tracking-wider text-xs tablet:text-sm font-semibold">
                   CRAFTED FOR SUCCESS
                 </div>
 
@@ -156,7 +156,7 @@ const PremiumTemplates = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white leading-tight"
+                className="text-4xl tablet:text-5xl desktop:text-7xl font-bold text-white leading-tight"
               >
                   {templates[currentIndex].name.split(' ').map((word, i) => (
                     <React.Fragment key={i}>
@@ -167,7 +167,7 @@ const PremiumTemplates = () => {
               </motion.h2>
 
                 {/* Description */}
-                <p className="text-white/70 text-base sm:text-lg lg:text-xl leading-relaxed max-w-lg">
+                <p className="text-white/70 text-base tablet:text-lg desktop:text-xl leading-relaxed max-w-lg">
                   A clean, modern, and straightforward design that lets your experience speak for itself. Perfect for any industry.
                 </p>
 
@@ -183,8 +183,8 @@ const PremiumTemplates = () => {
             </div>
 
             {/* Right Side - CardSwap Component */}
-            <div className="flex-1 flex items-center justify-end relative w-full lg:w-auto h-full overflow-visible p-0">
-              <div className="mt-8 sm:mt-12 lg:mt-16 mr-4 sm:mr-6 lg:mr-8">
+            <div className="flex-1 flex items-center justify-end relative w-full desktop:w-auto h-full overflow-visible p-0">
+              <div className="mt-8 tablet:mt-12 desktop:mt-16 mr-4 tablet:mr-6 desktop:mr-8">
                 <CardSwap
                   width={450}
                   height={550}

@@ -77,8 +77,8 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
       color: 'from-blue-500 to-purple-600'
     },
     {
-      id: 'application-tracker',
-      title: 'Application Tracker',
+      id: 'jobs',
+      title: 'Jobs',
       subtitle: 'Download Our Extension',
       description: 'Install our browser extension to automatically track job applications across all major job boards.',
       icon: Target,

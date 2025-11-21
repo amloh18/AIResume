@@ -63,18 +63,42 @@ export async function GET(request: NextRequest) {
     const user = await User.findById(userId);
     const subscription = user?.subscription;
 
-    // Get credit information for free and day pass plan users
+    // Get credit information (include usage for all plans)
     let creditInfo = null;
     const planKey = user?.currentPlanKey || 'free';
-    if (planKey === 'free' || planKey === 'day_pass') {
-      const creditStatus = await creditService.getCreditStatus(userId);
-      if (creditStatus) {
+    const creditStatus = await creditService.getCreditStatus(userId);
+    if (creditStatus) {
+      let remaining: number | undefined = creditStatus.jobCredits;
+      let limit: number | undefined = creditStatus.jobCredits;
+      
+      if (planKey === 'free' || planKey === 'day_pass') {
         const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
-        creditInfo = {
-          remaining: creditCheck.creditsRemaining,
-          limit: creditCheck.limit
-        };
+        remaining = creditCheck.creditsRemaining;
+        limit = creditCheck.limit;
       }
+      
+      // Fallbacks
+      if (remaining === undefined || remaining === null) {
+        remaining = limit === -1 ? -1 : 0;
+      }
+      if (limit === undefined || limit === null) {
+        limit = -1;
+      }
+
+      const totalCreatedJobs = user?.credits?.totalCreated?.jobs ?? 0;
+      const used = limit === -1
+        ? totalCreatedJobs
+        : Math.max(0, limit - (remaining === -1 ? 0 : remaining));
+
+      creditInfo = {
+        remaining,
+        limit,
+        used,
+        totalCreated: totalCreatedJobs,
+        planKey,
+        nextResetDate: creditStatus.nextResetDate,
+        resetSchedule: creditStatus.resetSchedule
+      };
     }
 
     const responseData = {

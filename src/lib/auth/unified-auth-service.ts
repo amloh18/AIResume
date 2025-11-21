@@ -75,9 +75,13 @@ export class UnifiedAuthService {
             password: { type: 'password' },
           },
           async authorize(credentials, req) {
+            try {
             if (!credentials?.email || !credentials?.password) {
+                console.error('❌ Credentials provider: Missing email or password');
               return null;
             }
+
+              console.log('🔐 Credentials provider: Attempting authentication for:', credentials.email);
 
             const result = await UserService.authenticateUser(
               credentials.email,
@@ -85,15 +89,33 @@ export class UnifiedAuthService {
             );
 
             if (!result.user || result.error) {
+                console.error('❌ Credentials provider: Authentication failed', {
+                  hasUser: !!result.user,
+                  error: result.error
+                });
+                return null;
+              }
+
+              console.log('✅ Credentials provider: Authentication successful for:', result.user.email);
+
+              // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
+              // The JWT callback will further minimize this, but we should start minimal here
+              return {
+                id: String(result.user.id).substring(0, 100),
+                email: String(result.user.email).substring(0, 255),
+                name: String(result.user.name || '').substring(0, 100),
+                // Only include image if it's a short URL (not a large base64 string)
+                image: result.user.image && typeof result.user.image === 'string' && result.user.image.length < 500
+                  ? result.user.image.substring(0, 500)
+                  : undefined,
+              };
+            } catch (error: any) {
+              console.error('❌ Credentials provider: Unexpected error:', {
+                message: error.message,
+                stack: error.stack
+              });
               return null;
             }
-
-            return {
-              id: result.user.id,
-              email: result.user.email,
-              name: result.user.name,
-              image: result.user.image || undefined,
-            };
           },
         }),
 
@@ -258,11 +280,15 @@ export class UnifiedAuthService {
                 // Update last login
                 await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
 
+                // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
                 const userData = {
-                  id: (userDoc._id as any).toString(),
-                  email: userDoc.email,
-                  name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
-                  image: userDoc.avatar || null,
+                  id: String((userDoc._id as any).toString()).substring(0, 100),
+                  email: String(userDoc.email).substring(0, 255),
+                  name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
+                  // Only include image if it's a short URL (not a large base64 string)
+                  image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
+                    ? userDoc.avatar.substring(0, 500)
+                    : undefined,
                 };
 
                 console.log('✅ Passwordless login: Pre-verified authorization successful for user', userData.id);
@@ -364,11 +390,15 @@ export class UnifiedAuthService {
               // Update last login
               await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
 
+              // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
               const userData = {
-                id: (userDoc._id as any).toString(),
-                email: userDoc.email,
-                name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
-                image: userDoc.avatar || null,
+                id: String((userDoc._id as any).toString()).substring(0, 100),
+                email: String(userDoc.email).substring(0, 255),
+                name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
+                // Only include image if it's a short URL (not a large base64 string)
+                image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
+                  ? userDoc.avatar.substring(0, 500)
+                  : undefined,
               };
 
               console.log('✅ Passwordless login: Authorization successful for user', userData.id);
@@ -415,18 +445,60 @@ export class UnifiedAuthService {
 
         async jwt({ token, user }) {
           // Initial sign-in - store minimal data only (id, email)
+          // CRITICAL: Keep JWT token minimal to prevent cookie size issues
+          // The JWT token is what gets stored in the cookie, so it must be tiny
+          
           if (user) {
-            token.id = user.id || '';
-            token.email = user.email || '';
-            // Preserve admin type and role from authorize function
+            // Only store essential identifiers - fetch full data in session callback
+            // Ensure all values are strings and limited in length
+            token.id = String(user.id || '').substring(0, 100);
+            token.email = String(user.email || '').substring(0, 255);
+            
+            // Preserve admin type and role from authorize function (minimal)
             if ((user as any).type === 'admin') {
               token.type = 'admin';
-              token.role = (user as any).role || 'admin';
-              token.name = user.name || (user.email as string)?.split('@')[0] || 'Admin';
+              token.role = String((user as any).role || 'admin').substring(0, 50);
+              // Only store name if it's short (admin emails can be long)
+              const name = user.name || (user.email as string)?.split('@')[0] || 'Admin';
+              token.name = String(name).substring(0, 100); // Limit name length
+            } else {
+              // Regular users - don't store name in token, fetch in session callback
+              token.type = 'user';
             }
+            
+            // Explicitly remove image from token - it can be large
+            delete (token as any).image;
           }
 
-          return token;
+          // CRITICAL: Create a completely clean token object with only primitive values
+          // This prevents any accidental inclusion of large objects or circular references
+          const cleanedToken: any = {
+            id: String(token.id || '').substring(0, 100),
+            email: String(token.email || '').substring(0, 255),
+            type: String(token.type || 'user').substring(0, 50),
+          };
+
+          // Only add standard JWT fields if they exist
+          if (token.iat) cleanedToken.iat = Number(token.iat);
+          if (token.exp) cleanedToken.exp = Number(token.exp);
+          if (token.jti) cleanedToken.jti = String(token.jti).substring(0, 100);
+          
+          // Only add role and name if they exist and are short
+          if (token.role) {
+            cleanedToken.role = String(token.role).substring(0, 50);
+          }
+          if (token.name && token.type === 'admin') {
+            cleanedToken.name = String(token.name).substring(0, 100);
+          }
+
+          // Log token size for debugging (should be < 500 bytes)
+          const tokenSize = JSON.stringify(cleanedToken).length;
+          if (tokenSize > 1000) {
+            console.warn(`⚠️ JWT token size is ${tokenSize} bytes - may cause cookie issues`);
+            console.warn('Token data:', JSON.stringify(cleanedToken).substring(0, 500));
+          }
+
+          return cleanedToken;
         },
 
         async session({ session, token }) {
@@ -481,28 +553,30 @@ export class UnifiedAuthService {
             }
           }
 
-          // Ensure we're not accidentally including large objects
-          // Create a minimal session object with only primitive values
+          // CRITICAL: Create a minimal session object with only primitive values
+          // This prevents cookie size issues by ensuring we only store essential data
           const cleanedSession = {
             user: {
-              id: String(session.user?.id || ''),
-              email: String(session.user?.email || ''),
-              name: String(session.user?.name || ''),
+              id: String(session.user?.id || '').substring(0, 100), // Limit ID length
+              email: String(session.user?.email || '').substring(0, 255), // Limit email length
+              name: String(session.user?.name || '').substring(0, 100), // Limit name length
               image: session.user?.image ? String(session.user.image).substring(0, 500) : undefined, // Limit image URL length
-              role: String((session.user as any)?.role || (isAdmin ? 'admin' : 'user')),
-              type: String((session.user as any)?.type || (isAdmin ? 'admin' : 'user')),
-              planKey: String((session.user as any)?.planKey || (isAdmin ? 'admin' : 'free')),
-              subscriptionStatus: String((session.user as any)?.subscriptionStatus || (isAdmin ? 'active' : 'inactive')),
+              role: String((session.user as any)?.role || (isAdmin ? 'admin' : 'user')).substring(0, 50),
+              type: String((session.user as any)?.type || (isAdmin ? 'admin' : 'user')).substring(0, 50),
+              planKey: String((session.user as any)?.planKey || (isAdmin ? 'admin' : 'free')).substring(0, 50),
+              subscriptionStatus: String((session.user as any)?.subscriptionStatus || (isAdmin ? 'active' : 'inactive')).substring(0, 50),
             },
             expires: session.expires
           };
 
           // Log if session is getting too large (for debugging)
           const sessionSize = JSON.stringify(cleanedSession).length;
-          if (sessionSize > 10000) { // 10KB threshold
+          if (sessionSize > 1000) { // 1KB threshold (should be much smaller)
             console.warn(`⚠️ Session size is ${sessionSize} bytes - may cause cookie issues`);
+            console.warn('Session data:', JSON.stringify(cleanedSession).substring(0, 500));
           }
 
+          // Return the cleaned session - this is what gets stored in the cookie
           return cleanedSession as any;
         },
       },

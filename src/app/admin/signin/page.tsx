@@ -94,7 +94,7 @@ export default function AdminSignInPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-900 py-12 px-4 tablet:px-6 desktop:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Shield className="mx-auto h-12 w-12 text-red-500" />

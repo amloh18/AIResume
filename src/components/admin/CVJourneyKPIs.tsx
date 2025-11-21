@@ -162,7 +162,7 @@ const CVJourneyKPIs: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">CV Journey KPIs</h1>
           <div className="animate-pulse bg-gray-200 dark:bg-gray-600 h-10 w-32 rounded"></div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow animate-pulse">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-4"></div>
@@ -275,7 +275,7 @@ const CVJourneyKPIs: React.FC = () => {
           1. User Engagement & Adoption KPIs
         </h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
           {/* CV Journeys Initiated */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between">
@@ -381,7 +381,7 @@ const CVJourneyKPIs: React.FC = () => {
           2. Application Funnel & Effectiveness KPIs
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
           {/* Application Status Funnel */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Status Funnel</h3>
@@ -455,7 +455,7 @@ const CVJourneyKPIs: React.FC = () => {
           3. Content & System Health KPIs
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
           {/* Asset Growth Rate */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Asset Growth Rate</h3>
@@ -551,7 +551,7 @@ const CVJourneyKPIs: React.FC = () => {
       {/* Summary Stats */}
       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">System Summary</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 tablet:grid-cols-3 desktop:grid-cols-6 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{kpiData.summary.totalUsers}</p>
             <p className="text-sm text-gray-600 dark:text-gray-400">Total Users</p>

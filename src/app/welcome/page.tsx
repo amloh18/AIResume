@@ -222,7 +222,7 @@ const WelcomePage: React.FC = () => {
           transition={{ duration: 0.3 }}
           className="max-w-6xl mx-auto"
         >
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
+          <div className="grid desktop:grid-cols-2 gap-8 items-center">
             {/* Left Side - Content */}
             <div className="space-y-6">
               {/* Icon & Title */}

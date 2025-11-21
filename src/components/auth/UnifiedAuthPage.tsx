@@ -48,7 +48,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   // Check if user is already signed in
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      console.log('🔍 User already signed in, redirecting to:', callbackUrl);
       // Use window.location for reliable redirect that preserves callbackUrl
       window.location.href = callbackUrl;
     }
@@ -57,7 +56,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   // Handle redirect after successful sign-in
   useEffect(() => {
     if (success && status === 'authenticated' && session?.user) {
-      console.log('🔍 Sign-in successful, redirecting to:', callbackUrl);
       // Use window.location for reliable redirect that preserves callbackUrl
       const timer = setTimeout(() => {
         window.location.href = callbackUrl;
@@ -91,8 +89,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
   const handleSignIn = async (formData: Record<string, string>) => {
     try {
-      console.log('🔐 Attempting sign in with credentials...');
-      
       // First check if user exists and is verified
       const checkUserResponse = await fetch('/api/check-email', {
         method: 'POST',
@@ -154,12 +150,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
       const result = await Promise.race([signInPromise, timeoutPromise]) as any;
 
-      console.log('🔐 Sign in result:', result);
-
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
         setTimeout(() => {
-          console.log('✅ Redirecting to:', callbackUrl);
           window.location.href = callbackUrl;
         }, 1000);
       } else {
@@ -328,7 +321,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
           try {
             // For passwordless login, verify code and sign in directly with NextAuth
             // The passwordless provider will handle verification and user creation
-            console.log('🔐 Attempting passwordless sign-in with code for:', email);
             
             const signInResult = await Promise.race([
               signIn('passwordless', {
@@ -341,7 +333,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               )
             ]) as any;
             
-            console.log('🔐 Passwordless sign-in result:', signInResult);
 
             if ((signInResult as any)?.ok) {
               setSuccess('Authentication successful, redirecting...');
@@ -431,7 +422,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
           // Handle other verification types (email-verification)
           // For email-verification, use atomic signup endpoint directly (no double verification)
           if (verificationType === 'email-verification') {
-            console.log('🔐 Starting atomic verify-and-signin for:', email);
             
             try {
               // Data is already stored in database via session ID, no need to preserve localStorage
@@ -460,7 +450,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 return;
               }
 
-              console.log('✅ User verified:', atomicSignupResult.user.id);
 
               // Step 2: Create session server-side (more reliable than client-side signIn)
               setSuccess('Email verified! Creating session...');
@@ -474,10 +463,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
               if (!sessionResponse.ok) {
                 const errorData = await sessionResponse.json();
-                console.error('❌ Session creation failed:', errorData);
-                
                 // Fallback: Try client-side NextAuth signIn as backup
-                console.log('🔄 Falling back to client-side NextAuth sign-in...');
                 
                 const signInResult = await Promise.race([
                   signIn('passwordless', {
@@ -510,7 +496,6 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               const sessionResult = await sessionResponse.json();
 
               if (sessionResult.success) {
-                console.log('✅ Session created server-side, user signed in');
                 setSuccess('Signed in! Redirecting...');
                 
                 // Force a page reload to pick up the new session cookie

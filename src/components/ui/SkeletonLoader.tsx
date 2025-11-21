@@ -159,7 +159,7 @@ export const SkeletonStats: React.FC<{ items?: number; className?: string }> = (
   items = 4, 
   className = '' 
 }) => (
-  <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${className}`}>
+  <div className={`grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6 ${className}`}>
     {Array.from({ length: items }).map((_, index) => (
       <div key={index} className="bg-black/20 border border-white/10 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">

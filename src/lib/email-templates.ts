@@ -295,7 +295,7 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
       }
     }
     
-    @media only screen and (max-width: 480px) {
+    @media only screen and (max-width: 767px) {
       .card {
         padding: 20px;
       }

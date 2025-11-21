@@ -296,7 +296,7 @@ function AICareerReportContent() {
 
       {/* Header */}
       <div className="sticky top-0 z-50 bg-[#1A261A] border-b border-white/10 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
           <div className="flex items-center justify-between h-20">
             {/* Left side - Back button, Logo, and Step Information */}
             <div className="flex items-center gap-6">

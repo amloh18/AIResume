@@ -63,7 +63,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const session = null; // Session handling - using unified auth system
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<'essential' | 'professional'>('professional');
   const [loading, setLoading] = useState(false);
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
@@ -486,6 +485,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         ? parseInt(checkoutData.amount, 10) 
         : Math.round(checkoutData.amount);
 
+      if (!amount || amount <= 0) {
+        setLoading(false);
+        alert('No payment is required for this coupon. Your plan should be active shortly.');
+        return;
+      }
+
       // Razorpay checkout.js expects uppercase currency code (ISO 4217 format)
       const currency = (checkoutData.currency || 'INR').toUpperCase();
       
@@ -867,6 +872,18 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
         if (response.ok) {
           const data = await response.json();
+
+          if (data.zero_amount && data.success) {
+            onSuccess?.(data.subscription);
+            alert(data.message || 'Plan activated successfully. No payment was required.');
+            onClose();
+            if (returnUrl) {
+              window.location.href = returnUrl;
+            } else {
+              window.location.reload();
+            }
+            return;
+          }
           
           if (data.redirect_url) {
             // Stripe Checkout - redirect to Stripe
@@ -991,20 +1008,20 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[1200] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
       <motion.div
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] sm:w-[90%] max-w-6xl max-h-[95vh] sm:max-h-[85vh] overflow-hidden flex flex-col relative z-[1210]"
+        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] tablet:w-[90%] max-w-6xl max-h-[95vh] tablet:max-h-[85vh] overflow-hidden flex flex-col relative z-[9999]"
       >
         {/* Header */}
-        <div className="flex items-start sm:items-center justify-between p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex items-start tablet:items-center justify-between p-4 tablet:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
             <div className="flex-1 min-w-0 pr-2">
-              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              <div className="flex flex-wrap items-center gap-2 tablet:gap-3">
+                <h2 className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
                   {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : 'Choose Your Plan'}
                 </h2>
                 {adminMode && (
@@ -1018,7 +1035,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-sm tablet:text-base text-gray-600 dark:text-gray-400 mt-1">
                 {adminMode 
                   ? 'Grant a plan to the selected user'
                   : previewMode 
@@ -1031,58 +1048,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               onClick={onClose}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors flex-shrink-0"
             >
-              <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
+              <X className="w-5 h-5 tablet:w-6 tablet:h-6 text-gray-500" />
             </button>
           </div>
 
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
+          <div className="p-4 tablet:p-6 overflow-y-auto flex-1 min-h-0">
             {step === 1 && (
               <>
-                {/* Category Toggle - Matching Landing Page */}
-                <div className="flex justify-center mb-6 sm:mb-8">
-                  <div className="relative bg-white/5 dark:bg-gray-800 backdrop-blur-sm border border-white/10 dark:border-gray-700 rounded-full p-1 inline-flex w-full sm:w-auto">
-                    {/* Sliding background indicator */}
-                    <motion.div
-                      className="absolute top-1 bottom-1 bg-lime-400 rounded-full shadow-lg z-0"
-                      initial={false}
-                      animate={{
-                        left: selectedCategory === 'essential' 
-                          ? '4px' 
-                          : 'calc(50% + 2px)',
-                      }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 300,
-                        damping: 30,
-                      }}
-                      style={{
-                        width: 'calc(50% - 4px)',
-                      }}
-                    />
-                    
-                    <button
-                      onClick={() => setSelectedCategory('essential')}
-                      className={`relative z-10 flex-1 sm:flex-none min-w-[120px] sm:min-w-[140px] px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-xs sm:text-sm transition-colors duration-300 ${
-                        selectedCategory === 'essential'
-                          ? 'text-black'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      Essential
-                    </button>
-                    <button
-                      onClick={() => setSelectedCategory('professional')}
-                      className={`relative z-10 flex-1 sm:flex-none min-w-[120px] sm:min-w-[140px] px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-medium text-xs sm:text-sm transition-colors duration-300 ${
-                        selectedCategory === 'professional'
-                          ? 'text-black'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      Professional
-                    </button>
-                  </div>
-                </div>
-
                 {/* Selected Plan Display (if preselected) */}
                 {selectedPlan && preselectedPlanKey && (
                   <div className="mb-6 p-4 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-xl">
@@ -1128,39 +1100,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   </div>
                 )}
 
-                {/* Plans Grid */}
+                {/* Plans - Horizontal Scrollable */}
                 {(() => {
-                  // Define plan hierarchy for upgrade logic
-                  const planOrder: Record<string, number> = { 
-                    free: 0, 
-                    day_pass: 1, 
-                    pro_monthly: 2, 
-                    pro_quarterly: 3, 
-                    pro_yearly: 4 
-                  };
-                  
-                  // Filter plans based on category
-                  // Show all plans in the selected category (users should be able to see all options)
+                  // Filter out free plan and show all other plans
                   const filteredPlans = Array.isArray(pricingPlans) && pricingPlans.length > 0 
-                    ? pricingPlans.filter(plan => {
-                        // Category filter - show all plans in the selected category
-                        const matchesCategory = selectedCategory === 'essential'
-                          ? (plan.key === 'free' || plan.key === 'day_pass')
-                          : (plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly');
-                        
-                        // Return true if plan matches the category
-                        // This allows users to see all plans in the category, not just upgrades
-                        return matchesCategory;
-                      })
+                    ? pricingPlans.filter(plan => plan.key !== 'free')
                     : [];
                   
-                  // Determine grid classes based on number of plans
-                  const gridClasses = filteredPlans.length === 2
-                    ? 'grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 max-w-4xl mx-auto'
-                    : 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6';
-                  
                   return (
-                    <div className={gridClasses}>
+                    <>
+                      <style dangerouslySetInnerHTML={{ __html: `
+                        .plan-cards-scroll::-webkit-scrollbar {
+                          display: none;
+                        }
+                        .plan-cards-scroll {
+                          -ms-overflow-style: none;
+                          scrollbar-width: none;
+                        }
+                      `}} />
+                      <div 
+                        className="plan-cards-scroll overflow-x-auto pb-4 mb-6 -mx-4 tablet:-mx-6 px-4 tablet:px-6"
+                      >
+                        <div className="flex gap-4">
                       {filteredPlans.length > 0 ? (
                         filteredPlans.map((plan, index) => {
                           // Convert to DatabasePricingPlan format for hook functions
@@ -1180,13 +1141,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           return (
                             <motion.div
                               key={plan.key}
-                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl rounded-2xl p-4 flex flex-col cursor-pointer transition-all ${
+                              className={`group relative bg-gradient-to-br from-white/5 to-white/10 dark:from-gray-800/50 dark:to-gray-900/50 backdrop-blur-xl rounded-2xl p-4 flex flex-col cursor-pointer transition-all flex-shrink-0 min-w-[280px] tablet:min-w-[300px] ${
                                 isSelected || isPreselected
                                   ? 'border-2 border-lime-400 ring-2 ring-lime-400/50'
                                   : 'border border-white/10 dark:border-gray-700'
                               }`}
-                              initial={{ opacity: 0, y: 50 }}
-                              animate={{ opacity: 1, y: 0 }}
+                              initial={{ opacity: 0, x: 50 }}
+                              animate={{ opacity: 1, x: 0 }}
                               transition={{ duration: 0.6, delay: 0.1 * index }}
                               onClick={() => {
                                 // Mark that user manually changed plan
@@ -1383,25 +1344,15 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           );
                         })
                       ) : (
-                        <div className="col-span-full text-center py-8">
+                        <div className="text-center py-8 w-full">
                           <p className="text-gray-500 dark:text-gray-400">
-                            {plansLoading ? 'Loading plans...' : (
-                              pricingPlans.length === 0 
-                                ? 'No plans available. Please try refreshing the page.'
-                                : `No ${selectedCategory === 'essential' ? 'essential' : 'professional'} plans available. Try switching categories.`
-                            )}
+                            {plansLoading ? 'Loading plans...' : 'No plans available. Please try refreshing the page.'}
                           </p>
-                          {!plansLoading && pricingPlans.length > 0 && (
-                            <button
-                              onClick={() => setSelectedCategory(selectedCategory === 'essential' ? 'professional' : 'essential')}
-                              className="mt-4 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg text-sm font-medium transition-colors"
-                            >
-                              Switch to {selectedCategory === 'essential' ? 'Professional' : 'Essential'} Plans
-                            </button>
-                          )}
                         </div>
                       )}
                     </div>
+                      </div>
+                    </>
                   );
                 })()}
 
@@ -1423,31 +1374,31 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 {/* Back Button */}
                 <button
                   onClick={() => setStep(1)}
-                  className="flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 sm:mb-6"
+                  className="flex items-center text-sm tablet:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mb-4 tablet:mb-6"
                 >
-                  <span className="hidden sm:inline">← Back to Plans</span>
-                  <span className="sm:hidden">← Back</span>
+                  <span className="hidden tablet:inline">← Back to Plans</span>
+                  <span className="tablet:hidden">← Back</span>
                 </button>
 
                 {/* Two Column Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4 tablet:gap-6">
                   {/* Left Column - Placeholder Image */}
-                  <div className="relative order-2 lg:order-1">
+                  <div className="relative order-2 desktop:order-1">
                     {/* Placeholder Image */}
-                    <div className="relative w-full h-full min-h-[300px] sm:min-h-[400px] lg:min-h-[500px] rounded-xl overflow-hidden">
+                    <div className="relative w-full h-full min-h-[300px] tablet:min-h-[400px] desktop:min-h-[500px] rounded-xl overflow-hidden">
                       <img
                         src="/images/paymentsummary.png"
                         alt="Payment Summary"
                         className="w-full h-full object-cover rounded-xl"
                       />
                       {/* Logo and CVCircle Overlay - Top Left */}
-                      <div className="absolute top-3 left-3 sm:top-4 sm:left-4 flex items-center gap-1.5 sm:gap-2 z-10 bg-black/30 backdrop-blur-sm px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg">
+                      <div className="absolute top-3 left-3 tablet:top-4 tablet:left-4 flex items-center gap-1.5 tablet:gap-2 z-10 bg-black/30 backdrop-blur-sm px-2 tablet:px-3 py-1.5 tablet:py-2 rounded-lg">
                         <img
                           src="/images/logo.png"
                           alt="CVCircle Logo"
-                          className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
+                          className="w-6 h-6 tablet:w-8 tablet:h-8 object-contain"
                         />
-                        <span className="text-white font-bold text-sm sm:text-lg drop-shadow-lg">
+                        <span className="text-white font-bold text-sm tablet:text-lg drop-shadow-lg">
                           CVCircle
                         </span>
                       </div>
@@ -1455,16 +1406,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   </div>
 
                   {/* Right Column - Order Summary */}
-                  <div className="p-4 sm:p-6 flex flex-col order-1 lg:order-2 bg-gray-50 dark:bg-[rgb(20,24,16)] rounded-xl">
+                  <div className="p-4 tablet:p-6 flex flex-col order-1 desktop:order-2 bg-gray-50 dark:bg-[rgb(20,24,16)] rounded-xl">
                     {/* Title */}
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+                    <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-4 tablet:mb-6">
                       Complete Your Order
                     </h2>
 
                     {/* Plan Details Box */}
-                    <div className="rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 bg-lime-50 dark:bg-[rgb(34,43,34)] border border-lime-200 dark:border-transparent">
+                    <div className="rounded-lg p-3 tablet:p-4 mb-4 tablet:mb-6 bg-lime-50 dark:bg-[rgb(34,43,34)] border border-lime-200 dark:border-transparent">
                       <div className="mb-2">
-                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-1">
+                        <h3 className="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white mb-1">
                           {(() => {
                             if (!selectedPlan) return 'No Plan Selected';
                             if (selectedPlan.key === 'pro_yearly') return 'Pro Annual Plan';
@@ -1474,7 +1425,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             return selectedPlan.name || `Plan ${selectedPlan.key}`;
                           })()}
                         </h3>
-                        <p className="text-gray-600 dark:text-white/70 text-xs sm:text-sm">
+                        <p className="text-gray-600 dark:text-white/70 text-xs tablet:text-sm">
                           {(() => {
                             if (!selectedPlan) return 'Please select a plan';
                             const billingInterval = getBillingInterval(selectedPlan);
@@ -1490,7 +1441,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           })()}
                         </p>
                       </div>
-                      <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                      <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
                         {(() => {
                           if (!selectedPlan) return 'N/A';
                           const regionalPrice = (selectedPlan as any).regionalPricing;
@@ -1501,20 +1452,20 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     </div>
 
                     {/* Coupon Code Section */}
-                    <div className="mb-4 sm:mb-6">
-                      <p className="text-gray-900 dark:text-white mb-2 sm:mb-3 text-xs sm:text-sm font-medium">Have a coupon code?</p>
-                      <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="mb-4 tablet:mb-6">
+                      <p className="text-gray-900 dark:text-white mb-2 tablet:mb-3 text-xs tablet:text-sm font-medium">Have a coupon code?</p>
+                      <div className="flex flex-col tablet:flex-row gap-2">
                         <input
                           type="text"
                           value={discountCode}
                           onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
                           placeholder="Enter code here"
-                          className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm sm:text-base bg-white dark:bg-[rgb(26,26,26)] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-colors"
+                          className="flex-1 px-3 tablet:px-4 py-2 tablet:py-2.5 rounded-lg text-sm tablet:text-base bg-white dark:bg-[rgb(26,26,26)] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 border border-gray-300 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:border-lime-500 transition-colors"
                         />
                         <button
                           onClick={applyDiscountCode}
                           disabled={!discountCode.trim() || loading}
-                          className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 bg-gray-800 dark:bg-[rgb(34,43,34)] hover:bg-gray-700 dark:hover:bg-[rgb(40,50,40)] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm sm:text-base"
+                          className="w-full tablet:w-auto px-4 tablet:px-6 py-2 tablet:py-2.5 bg-gray-800 dark:bg-[rgb(34,43,34)] hover:bg-gray-700 dark:hover:bg-[rgb(40,50,40)] text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm tablet:text-base"
                         >
                           Apply
                         </button>
@@ -1545,8 +1496,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 </div>
 
                     {/* Price Summary */}
-                    <div className="mb-4 sm:mb-6 space-y-2 sm:space-y-3">
-                      <div className="flex justify-between text-gray-900 dark:text-white text-sm sm:text-base">
+                    <div className="mb-4 tablet:mb-6 space-y-2 tablet:space-y-3">
+                      <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
                         <span>Subtotal</span>
                         <span>
                           {(() => {
@@ -1557,7 +1508,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         </span>
                       </div>
                       
-                      <div className="flex justify-between text-gray-900 dark:text-white text-sm sm:text-base">
+                      <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
                         <span>Discount</span>
                         <span className={appliedDiscount ? 'text-lime-600 dark:text-lime-400' : 'text-gray-600 dark:text-white'}>
                           {appliedDiscount ? (
@@ -1581,7 +1532,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                         </span>
                       </div>
                       
-                      <div className="flex justify-between text-gray-900 dark:text-white font-bold text-base sm:text-lg pt-2 border-t border-gray-200 dark:border-white/10">
+                      <div className="flex justify-between text-gray-900 dark:text-white font-bold text-base tablet:text-lg pt-2 border-t border-gray-200 dark:border-white/10">
                         <span>Total</span>
                         <span className="text-lime-600 dark:text-[rgb(129,255,0)]">
                           {(() => {
@@ -1638,18 +1589,18 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     <button
                       onClick={handlePayment}
                       disabled={loading || providerHealth[paymentProvider] === false || providerHealthLoading}
-                      className="w-full py-3 sm:py-3.5 bg-lime-500 hover:bg-lime-600 dark:bg-[rgb(129,255,0)] dark:hover:bg-[rgb(110,230,0)] text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm sm:text-base"
+                      className="w-full py-3 tablet:py-3.5 bg-lime-500 hover:bg-lime-600 dark:bg-[rgb(129,255,0)] dark:hover:bg-[rgb(110,230,0)] text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
                     >
                       {loading ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span className="hidden sm:inline">Processing...</span>
-                          <span className="sm:hidden">Processing</span>
+                          <span className="hidden tablet:inline">Processing...</span>
+                          <span className="tablet:hidden">Processing</span>
                         </>
                       ) : (
                         <>
-                          <span className="hidden sm:inline">Proceed to Payment</span>
-                          <span className="sm:hidden">Proceed</span>
+                          <span className="hidden tablet:inline">Proceed to Payment</span>
+                          <span className="tablet:hidden">Proceed</span>
                           <ArrowRight className="w-4 h-4" />
                         </>
                       )}

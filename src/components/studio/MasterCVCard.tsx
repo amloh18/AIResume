@@ -227,7 +227,7 @@ const MasterCVCard: React.FC<MasterCVCardProps> = ({
       </div>
 
       {/* Action Buttons */}
-      <div className={`grid gap-3 ${isMasterCV ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}>
+      <div className={`grid gap-3 ${isMasterCV ? 'grid-cols-1 tablet:grid-cols-2' : 'grid-cols-1'}`}>
         <motion.button
           onClick={handleEdit}
           disabled={actionLoading === 'edit'}

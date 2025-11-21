@@ -399,7 +399,7 @@ const CareerTrajectoryGraph: React.FC<CareerTrajectoryGraphProps> = ({
       </div>
 
       {/* Career Path Steps */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4 mt-4">
         {[
           { ...careerPath.step1, step: 1, icon: Target },
           { ...careerPath.step2, step: 2, icon: TrendingUp },

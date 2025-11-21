@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createPortal } from 'react-dom';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import {
@@ -10,9 +9,12 @@ import {
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone
 } from 'lucide-react';
-import JourneyTimelineCard from './JourneyTimelineCard';
-import JobInfoContent from './JobInfoContent';
-import EditJobModal from '../modals/EditJobModal';
+
+// Ensure all icons are properly tree-shaken and available
+// This prevents HMR issues with missing icon exports
+import JourneyTimelineCard from '../JourneyTimelineCard';
+import JobInfoContent from '../JobInfoContent';
+import EditJobSidebar from './EditJobSidebar';
 import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
@@ -59,14 +61,14 @@ interface JobApplication {
 
 
 
-interface JobModalProps {
+interface JobSidebarProps {
   job: JobApplication;
   journeys: CVJourney[];
   onClose: () => void;
   onRefresh: () => void;
 }
 
-const JobModal: React.FC<JobModalProps> = ({
+const JobSidebar: React.FC<JobSidebarProps> = ({
   job,
   journeys: initialJourneys,
   onClose,
@@ -85,8 +87,8 @@ const JobModal: React.FC<JobModalProps> = ({
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
   
-  // EditJobModal state for layered modal
-  const [showEditJobModal, setShowEditJobModal] = useState(false);
+  // EditJobSidebar state for layered sidebar
+  const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
   
   // Email sent confirmation state
   const [showEmailSentDialog, setShowEmailSentDialog] = useState(false);
@@ -579,15 +581,15 @@ ${userName}`
     }
   };
 
-  // Handler for opening EditJobModal
+  // Handler for opening EditJobSidebar
   const handleOpenEditModal = () => {
-    setShowEditJobModal(true);
+    setShowEditJobSidebar(true);
   };
 
-  // Handler for when job is saved in EditJobModal
+  // Handler for when job is saved in EditJobSidebar
   const handleEditJobSaved = (updatedJob: any) => {
-    // Close the EditJobModal
-    setShowEditJobModal(false);
+    // Close the EditJobSidebar
+    setShowEditJobSidebar(false);
     
     // Refresh the parent component to get updated data
     onRefresh();
@@ -664,13 +666,62 @@ ${userName}`
         return;
       }
 
-      const response = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+      // Use job._id if available, otherwise fall back to job.id
+      const jobId = job._id || job.id;
+      
+      if (!jobId) {
+        toast.error('Job ID not found. Please refresh and try again.');
+        return;
+      }
+
+      console.log('🔍 JobSidebar - Deleting job with ID:', jobId);
+      console.log('🔍 JobSidebar - Job object:', { id: job.id, _id: job._id });
+
+      const response = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
         method: 'DELETE',
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to delete job');
+        let errorMessage = 'Failed to delete job';
+        try {
+          // Check if response has content before parsing
+          const contentType = response.headers.get('content-type');
+          const hasJsonContent = contentType && contentType.includes('application/json');
+          
+          if (hasJsonContent) {
+            const text = await response.text();
+            if (text && text.trim()) {
+              const errorData = JSON.parse(text);
+              console.error('❌ JobSidebar - Delete failed:', errorData);
+              
+              // Check if errorData has meaningful content
+              if (errorData && Object.keys(errorData).length > 0) {
+                errorMessage = errorData.error || errorData.message || errorMessage;
+              } else {
+                // If empty object, use status text or status code
+                errorMessage = response.statusText || `Server returned status ${response.status}`;
+              }
+            } else {
+              // Empty response body
+              errorMessage = response.statusText || `Server returned status ${response.status}`;
+            }
+          } else {
+            // Not JSON response
+            errorMessage = response.statusText || `Server returned status ${response.status}`;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use status text
+          console.error('❌ JobSidebar - Failed to parse error response:', parseError);
+          errorMessage = response.statusText || `Server returned status ${response.status}`;
+        }
+        
+        console.error('❌ JobSidebar - Delete error details:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorMessage
+        });
+        
+        throw new Error(errorMessage);
       }
 
       toast.success('Job deleted successfully!');
@@ -679,7 +730,7 @@ ${userName}`
       
     } catch (error) {
       console.error('❌ Error deleting job:', error);
-      toast.error('Failed to delete job. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete job. Please try again.');
     }
   };
 
@@ -727,21 +778,113 @@ ${userName}`
     return new Date(date).toLocaleDateString();
   };
 
+  const sidebarRef = React.useRef<HTMLDivElement>(null);
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
 
-  const modalContent = (
+  // Track window width for responsive sidebar
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate sidebar width
+  const sidebarWidth = useMemo(() => {
+    return windowWidth >= 768 ? '50vw' : '100%';
+  }, [windowWidth]);
+
+  // Swipe gesture handling for mobile
+  useEffect(() => {
+    if (!sidebarRef.current) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchStartX.current === null || touchStartY.current === null) return;
+
+      const touchEndX = e.touches[0].clientX;
+      const touchEndY = e.touches[0].clientY;
+      const deltaX = touchEndX - touchStartX.current;
+      const deltaY = touchEndY - touchStartY.current;
+
+      // Only handle horizontal swipes (swipe left to close)
+      if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX < -50) {
+        onClose();
+        touchStartX.current = null;
+        touchStartY.current = null;
+      }
+    };
+
+    const sidebar = sidebarRef.current;
+    sidebar.addEventListener('touchstart', handleTouchStart);
+    sidebar.addEventListener('touchmove', handleTouchMove);
+
+    return () => {
+      sidebar.removeEventListener('touchstart', handleTouchStart);
+      sidebar.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [onClose]);
+
+  // Prevent body scroll when sidebar is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
     <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[1100] bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto"
-        onClick={onClose}
-      >
+      <>
+        {/* Backdrop */}
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.9, opacity: 0 }}
-          className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 w-full max-w-[min(90vw,1200px)] max-h-[min(90vh,900px)] overflow-hidden flex flex-col mx-auto lg:my-8 lg:mx-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          className="fixed bg-black/50 backdrop-blur-sm z-40"
+          style={{
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh'
+          }}
+          onClick={onClose}
+        />
+
+        {/* Sidebar */}
+        <motion.div
+          ref={sidebarRef}
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-50 flex flex-col"
+          style={{ width: sidebarWidth }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -754,18 +897,28 @@ ${userName}`
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               <motion.button
                 onClick={handleOpenEditModal}
-                className="flex items-center gap-2 px-3 py-2 bg-lime-100 dark:bg-[#80FF00]/20 hover:bg-lime-200 dark:hover:bg-[#80FF00]/30 border border-lime-300 dark:border-[#80FF00]/30 text-lime-700 dark:text-[#80FF00] rounded-full transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Edit Job"
               >
-                <Edit size={16} />
-                Edit
+                <Edit size={20} className="text-gray-600 dark:text-white/60" />
+              </motion.button>
+              <motion.button
+                onClick={handleDeleteJob}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Delete Job"
+              >
+                <Trash2 size={20} className="text-gray-600 dark:text-white/60" />
               </motion.button>
               <motion.button
                 onClick={onClose}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Close"
               >
                 <X size={20} className="text-gray-600 dark:text-white/60" />
               </motion.button>
@@ -1196,26 +1349,12 @@ ${userName}`
                         </div>
                       </div>
                     </div>
-
-                    {/* Delete Application Button */}
-                    <div className="flex justify-end min-w-0">
-                      <motion.button
-                        onClick={handleDeleteJob}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs transition-colors whitespace-nowrap"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Trash2 size={14} />
-                        <span className="truncate">Delete</span>
-                      </motion.button>
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </motion.div>
-      </motion.div>
 
       {/* Delete Confirmation Dialog */}
       {showDeleteConfirm && (
@@ -1287,11 +1426,11 @@ ${userName}`
         </motion.div>
       )}
 
-      {/* EditJobModal - Layered on top */}
-      {showEditJobModal && (
-        <EditJobModal
-          isOpen={showEditJobModal}
-          onClose={() => setShowEditJobModal(false)}
+      {/* EditJobSidebar - Layered on top */}
+      {showEditJobSidebar && (
+        <EditJobSidebar
+          isOpen={showEditJobSidebar}
+          onClose={() => setShowEditJobSidebar(false)}
           onJobSaved={handleEditJobSaved}
           editingJob={{
             id: job.id,
@@ -1368,15 +1507,9 @@ ${userName}`
           </motion.div>
         </motion.div>
       )}
+      </>
     </AnimatePresence>
   );
-
-  // Use portal to render modal at document body level to avoid overflow clipping
-  if (typeof window !== 'undefined') {
-    return createPortal(modalContent, document.body);
-  }
-
-  return modalContent;
 };
 
-export default JobModal;
+export default JobSidebar;

@@ -178,8 +178,13 @@ export async function POST(request: NextRequest) {
     if (!source && bodySource) {
       source = bodySource;
     } else if (!source) {
-      // Fallback: if auth method is token, assume extension; otherwise web
-      source = auth.method === 'token' ? 'extension' : 'web';
+      // Fallback: if auth method is token, assume extension; otherwise manual (web -> manual)
+      source = auth.method === 'token' ? 'extension' : 'manual';
+    }
+    
+    // Map 'web' to 'manual' for compatibility (web is not a valid enum value)
+    if (source === 'web') {
+      source = 'manual';
     }
     
     console.log(`🔍 Jobs API - Source determined: ${source} (from auth: ${auth.source}, method: ${auth.method}, body: ${bodySource})`);
@@ -200,6 +205,11 @@ export async function POST(request: NextRequest) {
     
     await getConnection();
     
+    // Normalize userId to ObjectId to ensure consistent storage and querying
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
+      : userId;
+    
     // ATOMIC OPERATION: Wrap job creation + credit check + credit spending in transaction (only for 'created' status)
     // Draft jobs don't spend credits, so we can create them without transaction
     let jobApplication: any;
@@ -209,14 +219,14 @@ export async function POST(request: NextRequest) {
         // This prevents race conditions where multiple requests could bypass credit limits
         jobApplication = await withTransaction(async (session) => {
           // 1. CREDIT CHECK: Check credits WITHIN transaction (locks user record to prevent race conditions)
-          const user = await User.findById(userId).session(session);
+          const user = await User.findById(normalizedUserId).session(session);
           if (!user) {
             throw new Error('User not found');
           }
           
           const usageLimitsService = await import('@/lib/services/usageLimitsService');
           const creditCheck = await usageLimitsService.default.checkUsageLimit({
-            userId,
+            userId: normalizedUserId.toString(),
             action: 'job_create'
           });
 
@@ -233,11 +243,24 @@ export async function POST(request: NextRequest) {
           }
           
           // 2. Create the job application within transaction (only if credits are available)
+          // Validate and clean jobUrl - must be valid URL or undefined (not empty string)
+          let cleanedJobUrl: string | undefined = undefined;
+          if (jobUrl && jobUrl.trim()) {
+            // Basic URL validation
+            try {
+              new URL(jobUrl);
+              cleanedJobUrl = jobUrl.trim();
+            } catch {
+              // Invalid URL - set to undefined to let model validation handle it
+              cleanedJobUrl = undefined;
+            }
+          }
+          
           const jobData = {
-            userId,
+            userId: normalizedUserId,
             jobTitle,
             company,
-            jobUrl: jobUrl || '',
+            jobUrl: cleanedJobUrl,
             jobDescription: jobDescription || '',
             location: location || '',
             source,
@@ -294,22 +317,35 @@ export async function POST(request: NextRequest) {
           
           // Update user credits within transaction
           await User.findByIdAndUpdate(
-            userId,
+            normalizedUserId,
             updateData,
             { session, new: true, runValidators: true }
           );
           
-          console.log(`✅ [${source.toUpperCase()}] Credit spent in transaction for user: ${userId}`);
+          console.log(`✅ [${source.toUpperCase()}] Credit spent in transaction for user: ${normalizedUserId.toString()}`);
           
           return createdJob;
         });
       } else {
         // For 'draft' status: create job without spending credits (no transaction needed)
+        // Validate and clean jobUrl - must be valid URL or undefined (not empty string)
+        let cleanedJobUrl: string | undefined = undefined;
+        if (jobUrl && jobUrl.trim()) {
+          // Basic URL validation
+          try {
+            new URL(jobUrl);
+            cleanedJobUrl = jobUrl.trim();
+          } catch {
+            // Invalid URL - set to undefined to let model validation handle it
+            cleanedJobUrl = undefined;
+          }
+        }
+        
         const jobData = {
-          userId,
+          userId: normalizedUserId,
           jobTitle,
           company,
-          jobUrl: jobUrl || '',
+          jobUrl: cleanedJobUrl,
           jobDescription: jobDescription || '',
           location: location || '',
           source,
@@ -344,7 +380,7 @@ export async function POST(request: NextRequest) {
         // Check if credits are low and send notification (non-blocking) - only for 'created' jobs
         try {
           const creditService = await import('@/lib/services/creditService');
-          const updatedUser = await User.findById(userId).select('credits currentPlanKey');
+          const updatedUser = await User.findById(normalizedUserId).select('credits currentPlanKey');
           if (updatedUser && updatedUser.credits?.jobCredits !== undefined && updatedUser.credits.jobCredits >= 0) {
             const remainingCredits = updatedUser.credits.jobCredits;
             const planCredits = await creditService.default.getPlanCredits(updatedUser.currentPlanKey || 'free');
@@ -354,7 +390,7 @@ export async function POST(request: NextRequest) {
             if (limit !== -1 && remainingCredits <= 2 && remainingCredits > 0) {
               const notificationService = (await import('@/lib/services/notificationService')).default;
               await notificationService.createNotification({
-                userId: userId,
+                userId: normalizedUserId.toString(),
                 type: 'system_update',
                 title: remainingCredits === 1 ? '⚠️ Last Credit Remaining!' : '💡 Credits Running Low',
                 message: remainingCredits === 1 
@@ -406,7 +442,7 @@ export async function POST(request: NextRequest) {
         let creditInfo: any = {};
         try {
           const creditCheck = await usageLimitsService.default.checkUsageLimit({
-            userId,
+            userId: normalizedUserId.toString(),
             action: 'job_create'
           });
           creditInfo = {
@@ -487,7 +523,7 @@ export async function POST(request: NextRequest) {
         
         const journeyData = {
           journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userId: new mongoose.Types.ObjectId(userId),
+          userId: normalizedUserId,
           jobId: jobApplication._id.toString(),
           cvId: null,
           coverLetterId: null,
@@ -552,7 +588,7 @@ export async function POST(request: NextRequest) {
           setImmediate(async () => {
             try {
               console.log('🚀 Jobs API - Starting document creation for journey:', newJourney._id);
-              const result = await createJourneyDocuments(newJourney._id.toString(), userId);
+              const result = await createJourneyDocuments(newJourney._id.toString(), normalizedUserId.toString());
               
               if (result.success) {
                 console.log('✅ Jobs API - Document creation completed successfully:', {

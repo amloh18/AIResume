@@ -44,11 +44,23 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
 
 export default function ClientProviders({ children, session }: ClientProvidersProps) {
   useEffect(() => {
-    // Setup global error handling for Event object errors
-    const cleanup = setupEventErrorHandling();
+    // Delay error handler setup to avoid race conditions with React initialization
+    const timeoutId = setTimeout(() => {
+      try {
+        // Setup global error handling for Event object errors
+        const cleanup = setupEventErrorHandling();
+
+        // Store cleanup function for unmount
+        return cleanup;
+      } catch (error) {
+        console.warn('Failed to setup error handling:', error);
+      }
+    }, 100);
 
     // Cleanup on unmount
-    return cleanup;
+    return () => {
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   return (

@@ -17,6 +17,7 @@ import {
   Settings,
   Download,
   Eye,
+  EyeOff,
   Calendar,
   DollarSign,
   CreditCard as CardIcon,
@@ -35,13 +36,14 @@ import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import RouteGuard from '@/components/auth/RouteGuard';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
-import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 // TwoFactorModal removed - 2FA not implemented yet
 import CalendarSyncSettings from '@/components/settings/CalendarSyncSettings';
 import { uploadToS3 } from '@/lib/utils/upload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PageHeader from '@/components/dashboard/PageHeader';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import { useUserData } from '@/lib/hooks/useUserData';
+import { getPlanName } from '@/lib/utils/userPlanUtils';
 
 // --- TYPES ---
 
@@ -1042,24 +1044,158 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   
-  // Modal states
-  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
-  // Two-factor modal removed - feature not implemented
+  // Password change form state
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordErrors, setPasswordErrors] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
   
-  // Toast notification state
+  // Load initial settings from user data
+  useEffect(() => {
+    if (user?.settings?.notifications) {
+      setEmailNotifications(user.settings.notifications.email?.enabled ?? true);
+      setPushNotifications(user.settings.notifications.push?.enabled ?? true);
+    }
+    if (user?.settings?.security) {
+      setTwoFactorEnabled(user.settings.security.twoFactorEnabled ?? false);
+    }
+  }, [user]);
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
-    // Notification removed
+    // Notification removed - can be implemented with toast library
+    console.log(`${type}: ${message}`);
   };
 
-  const handlePasswordChanged = () => {
+  const handleNotificationToggle = async (type: 'email' | 'push', value: boolean) => {
+    if (type === 'email') {
+      setEmailNotifications(value);
+    } else {
+      setPushNotifications(value);
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            detailedNotifications: {
+              [type]: {
+                enabled: value
+              }
+            }
+          }
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showToastNotification('success', `${type === 'email' ? 'Email' : 'Push'} notifications ${value ? 'enabled' : 'disabled'}`);
+      } else {
+        // Revert on error
+        if (type === 'email') {
+          setEmailNotifications(!value);
+        } else {
+          setPushNotifications(!value);
+        }
+        showToastNotification('error', 'Failed to update notification preferences');
+      }
+    } catch (error) {
+      console.error('Error updating notifications:', error);
+      // Revert on error
+      if (type === 'email') {
+        setEmailNotifications(!value);
+      } else {
+        setPushNotifications(!value);
+      }
+      showToastNotification('error', 'Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePasswordInputChange = (field: 'currentPassword' | 'newPassword' | 'confirmPassword', value: string) => {
+    setPasswordForm(prev => ({ ...prev, [field]: value }));
+    if (passwordErrors) setPasswordErrors(null);
+  };
+
+  const validatePasswordForm = () => {
+    if (!passwordForm.currentPassword) {
+      return 'Please enter your current password';
+    }
+    if (!passwordForm.newPassword) {
+      return 'Please enter a new password';
+    }
+    if (passwordForm.newPassword.length < 8) {
+      return 'New password must be at least 8 characters long';
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      return 'New passwords do not match';
+    }
+    if (passwordForm.currentPassword === passwordForm.newPassword) {
+      return 'New password must be different from current password';
+    }
+    return null;
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const validationError = validatePasswordForm();
+    if (validationError) {
+      setPasswordErrors(validationError);
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordErrors(null);
+
+    try {
+      const response = await fetch('/api/user/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
     showToastNotification('success', 'Password changed successfully!');
+        setPasswordForm({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setShowPasswordForm(false);
+      } else {
+        setPasswordErrors(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Error changing password:', error);
+      setPasswordErrors('Network error. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
   };
 
   const handleTwoFactorToggled = () => {
-    setTwoFactorEnabled(!twoFactorEnabled);
-    showToastNotification('success', `Two-factor authentication ${twoFactorEnabled ? 'disabled' : 'enabled'} successfully!`);
+    showToastNotification('info', 'Two-factor authentication coming soon!');
   };
 
   return (
@@ -1087,17 +1223,137 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               </button>
             </div>
             
-            <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="py-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-4">
               <div>
                 <div className="text-sm font-medium text-gray-900 dark:text-white">Change Password</div>
                 <div className="text-xs text-gray-500 dark:text-gray-300">Update your account password</div>
               </div>
               <button 
-                onClick={() => setIsChangePasswordModalOpen(true)}
+                  onClick={() => setShowPasswordForm(!showPasswordForm)}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
               >
-                Change Password
+                  {showPasswordForm ? 'Cancel' : 'Change Password'}
               </button>
+              </div>
+              
+              {showPasswordForm && (
+                <form onSubmit={handlePasswordSubmit} className="mt-4 space-y-4 p-4 bg-gray-50 dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10">
+                  {/* Current Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                      Current Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.current ? 'text' : 'password'}
+                        value={passwordForm.currentPassword}
+                        onChange={(e) => handlePasswordInputChange('currentPassword', e.target.value)}
+                        placeholder="Enter your current password"
+                        className="w-full px-3 py-2 pr-10 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/60 hover:text-gray-600 dark:hover:text-white/80 transition-colors"
+                      >
+                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* New Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.new ? 'text' : 'password'}
+                        value={passwordForm.newPassword}
+                        onChange={(e) => handlePasswordInputChange('newPassword', e.target.value)}
+                        placeholder="Enter your new password"
+                        className="w-full px-3 py-2 pr-10 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/60 hover:text-gray-600 dark:hover:text-white/80 transition-colors"
+                      >
+                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {passwordForm.newPassword && passwordForm.newPassword.length < 8 && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">Password must be at least 8 characters</p>
+                    )}
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPasswords.confirm ? 'text' : 'password'}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => handlePasswordInputChange('confirmPassword', e.target.value)}
+                        placeholder="Confirm your new password"
+                        className="w-full px-3 py-2 pr-10 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/60 hover:text-gray-600 dark:hover:text-white/80 transition-colors"
+                      >
+                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">Passwords do not match</p>
+                    )}
+                  </div>
+
+                  {/* Error Message */}
+                  {passwordErrors && (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
+                        <p className="text-sm text-red-700 dark:text-red-300">{passwordErrors}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Submit Button */}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPasswordForm(false);
+                        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                        setPasswordErrors(null);
+                      }}
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-white/70 bg-white dark:bg-[#1A201A] rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={passwordLoading || passwordForm.newPassword.length < 8 || passwordForm.newPassword !== passwordForm.confirmPassword}
+                      className="flex-1 px-4 py-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 disabled:bg-blue-300 dark:disabled:bg-blue-800/50 disabled:text-blue-100 dark:disabled:text-white/30 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                    >
+                      {passwordLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Changing...
+                        </>
+                      ) : (
+                        'Change Password'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>
@@ -1113,10 +1369,11 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 <div className="text-xs text-gray-500 dark:text-gray-300">Receive updates via email</div>
               </div>
               <button
-                onClick={() => setEmailNotifications(!emailNotifications)}
+                onClick={() => handleNotificationToggle('email', !emailNotifications)}
+                disabled={saving}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
+                } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
                   emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
@@ -1130,10 +1387,11 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 <div className="text-xs text-gray-500 dark:text-gray-300">Receive push notifications in your browser</div>
               </div>
               <button
-                onClick={() => setPushNotifications(!pushNotifications)}
+                onClick={() => handleNotificationToggle('push', !pushNotifications)}
+                disabled={saving}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   pushNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
+                } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
                   pushNotifications ? 'translate-x-6' : 'translate-x-0.5'
@@ -1144,15 +1402,6 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
         </div>
       </div>
 
-      {/* Change Password Modal */}
-      <ChangePasswordModal
-        isOpen={isChangePasswordModalOpen}
-        onClose={() => setIsChangePasswordModalOpen(false)}
-        onSuccess={handlePasswordChanged}
-      />
-
-      {/* Two-Factor Authentication Modal - Coming Soon */}
-
       {/* Toast Notifications */}
     </div>
   );
@@ -1162,6 +1411,9 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 const MembershipBilling = ({ user }: { user: User }) => {
   // Use consolidated billing data hook (fetches subscription, payment methods, invoices in parallel)
   const { data: billingData, isLoading: billingLoading, error: billingErrors, refetch: refetchBillingData } = useBillingData();
+  
+  // Get user data to access currentPlanKey
+  const { userData } = useUserData();
   
   // Use the shared pricing hook - get full result to pass to modal
   const pricingHookResult = usePricingPlans({ excludeFree: true });
@@ -1188,6 +1440,10 @@ const MembershipBilling = ({ user }: { user: User }) => {
   const subscriptionError = billingErrors.subscription;
   const paymentMethodsError = billingErrors.paymentMethods;
   const invoicesError = billingErrors.invoices;
+
+  // Determine the current plan key - use subscription planKey if available, otherwise use user's currentPlanKey
+  const currentPlanKey = subscription?.planKey || userData?.currentPlanKey || 'free';
+  const currentPlanName = subscription?.planName || getPlanName(currentPlanKey as any);
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -1263,7 +1519,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 </div>
                 <div>
                   <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    {subscription?.planName || 'Free Plan'}
+                    {currentPlanName}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-300">
                     Status: <span className={`font-medium ${subscription?.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>
@@ -1583,7 +1839,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
       <UniversalPaymentModal
         isOpen={isMembershipModalOpen}
         onClose={() => setIsMembershipModalOpen(false)}
-        currentUserPlan={subscription?.planKey || 'free'}
+        currentUserPlan={currentPlanKey}
         onSuccess={() => {
           setIsMembershipModalOpen(false);
           refetchBillingData();

@@ -64,33 +64,33 @@ export function measureSectionHeights(
 
   // Find all section elements
   const sectionElements = container.querySelectorAll('.section-content, [class*="section"]');
-  
+
   sectionElements.forEach((sectionEl, index) => {
     const element = sectionEl as HTMLElement;
     const sectionId = element.getAttribute('data-section-id') || `section-${index}`;
     const sectionType = element.getAttribute('data-section-type') || '';
-    
+
     // Measure section header
     const headerEl = element.querySelector('.section-header, h2, h3') as HTMLElement;
     const headerHeight = headerEl ? headerEl.offsetHeight : 0;
-    
+
     // Measure entries within section
     const entries: EntryMeasurement[] = [];
     const entrySelector = sectionSelectors[sectionType] || '.experience-item, .education-item, .project-item, .certificate-item';
     const entryElements = element.querySelectorAll(entrySelector);
-    
+
     entryElements.forEach((entryEl, entryIndex) => {
       const entry = entryEl as HTMLElement;
       const headerEl = entry.querySelector('.item-header, .entry-header') as HTMLElement;
       const contentEl = entry.querySelector('.item-summary, .item-content, .entry-content') as HTMLElement;
-      
+
       const entryHeaderHeight = headerEl ? headerEl.offsetHeight : 0;
-      const entryContentHeight = contentEl ? contentEl.offsetHeight : entry.offsetHeight - entryHeaderHeight : 0;
+      const entryContentHeight = contentEl ? contentEl.offsetHeight : (entry.offsetHeight - entryHeaderHeight);
       const entryTotalHeight = entry.offsetHeight;
-      
+
       // Determine if entry can be split (has content that can be broken)
       const canSplit = entryContentHeight > 0 && contentEl !== null;
-      
+
       entries.push({
         index: entryIndex,
         headerHeight: entryHeaderHeight,
@@ -99,7 +99,7 @@ export function measureSectionHeights(
         canSplit
       });
     });
-    
+
     // If no entries found, treat entire section as one block
     if (entries.length === 0) {
       const sectionHeight = element.offsetHeight;
@@ -111,14 +111,14 @@ export function measureSectionHeights(
         canSplit: false
       });
     }
-    
+
     // Measure spacing after section
     const computedStyle = window.getComputedStyle(element);
     const marginBottom = parseInt(computedStyle.marginBottom) || 0;
     const spacing = marginBottom;
-    
+
     const sectionTotalHeight = element.offsetHeight + spacing;
-    
+
     measurements.push({
       id: sectionId,
       type: sectionType,
@@ -127,7 +127,7 @@ export function measureSectionHeights(
       spacing,
       totalHeight: sectionTotalHeight
     });
-    
+
     totalHeight += sectionTotalHeight;
   });
 
@@ -147,7 +147,7 @@ export function calculateSmartPageBreaks(
   const pageAssignments: PageAssignment[] = [];
   let currentPage = 1;
   let currentPageHeight = 0;
-  
+
   // Initialize first page
   pageAssignments[currentPage] = {
     pageNumber: currentPage,
@@ -157,10 +157,10 @@ export function calculateSmartPageBreaks(
   for (const section of measurements.sections) {
     const sectionHeaderHeight = section.headerHeight;
     const sectionSpacing = section.spacing;
-    
+
     // Priority 1: Try to break between sections
     const sectionFitsOnCurrentPage = currentPageHeight + section.totalHeight <= config.maxPageHeight;
-    
+
     if (!sectionFitsOnCurrentPage && pageAssignments[currentPage].sections.length > 0) {
       // Section doesn't fit, start new page
       currentPage++;
@@ -170,25 +170,25 @@ export function calculateSmartPageBreaks(
         sections: []
       };
     }
-    
+
     // Check if section header alone fits
     const headerFits = sectionHeaderHeight <= config.maxPageHeight;
     if (!headerFits) {
       console.warn(`⚠️ Section header too tall: ${section.id} (${sectionHeaderHeight}px)`);
     }
-    
+
     // Priority 2: Try to keep entries together, break between entries
     let sectionStartHeight = currentPageHeight;
     let entriesForCurrentPage: number[] = [];
     let sectionStarted = false;
-    
+
     for (const entry of section.entries) {
       const entryWithHeader = sectionStarted ? entry.totalHeight : sectionHeaderHeight + entry.totalHeight + sectionSpacing;
       const wouldFit = currentPageHeight + entryWithHeader <= config.maxPageHeight;
-      
+
       if (!wouldFit && (entriesForCurrentPage.length > 0 || sectionStarted)) {
         // Entry doesn't fit, need to break
-        
+
         // If we haven't started the section yet, start it on new page
         if (!sectionStarted) {
           currentPage++;
@@ -211,7 +211,7 @@ export function calculateSmartPageBreaks(
               });
             }
           }
-          
+
           // Start new page
           currentPage++;
           currentPageHeight = 0;
@@ -221,25 +221,25 @@ export function calculateSmartPageBreaks(
           };
           entriesForCurrentPage = [];
         }
-        
+
         // Add section header on new page if not started
         if (!sectionStarted) {
           currentPageHeight += sectionHeaderHeight;
           sectionStarted = true;
         }
       }
-      
+
       // Priority 3: If entry doesn't fit, try to split it
       if (!wouldFit && entry.canSplit && entry.contentHeight > 0) {
         // Calculate minimum content height (header + 2 lines minimum)
         const minContentHeight = entry.headerHeight + (config.minLinesTogether * 20); // ~20px per line
         const remainingHeight = config.maxPageHeight - currentPageHeight;
-        
+
         if (remainingHeight >= entry.headerHeight + minContentHeight) {
           // Can split entry - header + some content on current page
           const linesOnCurrentPage = Math.floor((remainingHeight - entry.headerHeight) / 20);
           const totalLines = Math.ceil(entry.contentHeight / 20);
-          
+
           // Add partial entry to current page
           entriesForCurrentPage.push(entry.index);
           if (!sectionStarted) {
@@ -265,7 +265,7 @@ export function calculateSmartPageBreaks(
             }
             currentPageHeight += entry.headerHeight + (linesOnCurrentPage * 20);
           }
-          
+
           // Remaining content goes to next page
           currentPage++;
           currentPageHeight = entry.headerHeight + ((totalLines - linesOnCurrentPage) * 20);
@@ -292,20 +292,20 @@ export function calculateSmartPageBreaks(
               pageAssignments[currentPage].sections[lastSectionIndex].entries = entriesForCurrentPage;
             }
           }
-          
+
           currentPage++;
           currentPageHeight = sectionStarted ? 0 : sectionHeaderHeight;
           pageAssignments[currentPage] = {
             pageNumber: currentPage,
             sections: []
           };
-          
+
           if (!sectionStarted) {
             sectionStarted = true;
           }
         }
       }
-      
+
       // Entry fits, add it to current page
       if (!sectionStarted) {
         pageAssignments[currentPage].sections.push({
@@ -315,11 +315,11 @@ export function calculateSmartPageBreaks(
         currentPageHeight += sectionHeaderHeight;
         sectionStarted = true;
       }
-      
+
       entriesForCurrentPage.push(entry.index);
       currentPageHeight += entry.totalHeight;
     }
-    
+
     // Save entries for this section on current page
     if (entriesForCurrentPage.length > 0) {
       const lastSectionIndex = pageAssignments[currentPage].sections.length - 1;
@@ -332,7 +332,7 @@ export function calculateSmartPageBreaks(
         });
       }
     }
-    
+
     // Add section spacing
     currentPageHeight += sectionSpacing;
   }
@@ -349,19 +349,19 @@ export function measureEntryHeights(
 ): EntryMeasurement[] {
   const entries: EntryMeasurement[] = [];
   const entryElements = sectionElement.querySelectorAll(entrySelector);
-  
+
   entryElements.forEach((entryEl, index) => {
     const entry = entryEl as HTMLElement;
     const headerEl = entry.querySelector('.item-header, .entry-header, [class*="header"]') as HTMLElement;
     const contentEl = entry.querySelector('.item-summary, .item-content, .entry-content, [class*="content"]') as HTMLElement;
-    
+
     const headerHeight = headerEl ? headerEl.offsetHeight : 0;
     const contentHeight = contentEl ? contentEl.offsetHeight : (entry.offsetHeight - headerHeight);
     const totalHeight = entry.offsetHeight;
-    
+
     // Entry can be split if it has substantial content
     const canSplit = contentHeight > 40; // At least 40px of content to split
-    
+
     entries.push({
       index,
       headerHeight,
@@ -370,7 +370,7 @@ export function measureEntryHeights(
       canSplit
     });
   });
-  
+
   return entries;
 }
 

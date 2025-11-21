@@ -88,13 +88,38 @@ class CreditService {
 
       // For paid plans (monthly/quarterly/yearly), check subscription status
       if (['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(user.currentPlanKey)) {
-        // Dynamic import to avoid circular dependency
+        // Check if user actually has an active subscription
+        const subscription = user.subscription;
+        const hasActiveSubscription = subscription && 
+          subscription.status === 'active' && 
+          (subscription.currentPeriodEnd || subscription.accessExpiresAt);
+        
+        if (!hasActiveSubscription) {
+          // User has paid plan key but no active subscription - treat as free tier
+          const currentCredits = user.credits?.jobCredits ?? 0;
+          const freeLimit = (await this.getPlanCredits('free')).jobCredits;
+          return {
+            available: currentCredits > 0,
+            creditsRemaining: currentCredits,
+            limit: freeLimit
+          };
+        }
+        
+        // Verify subscription hasn't expired by checking time-based access
         const { default: usageLimitsService } = await import('./usageLimitsService');
         const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);
         if (!timeCheck.hasAccess) {
-          return { available: false, creditsRemaining: 0, limit: 0 };
+          // Subscription expired - treat as free tier
+          const currentCredits = user.credits?.jobCredits ?? 0;
+          const freeLimit = (await this.getPlanCredits('free')).jobCredits;
+          return {
+            available: currentCredits > 0,
+            creditsRemaining: currentCredits,
+            limit: freeLimit
+          };
         }
-        // Unlimited for active paid plans
+        
+        // Unlimited for active paid plans with valid subscription
         return { available: true, creditsRemaining: -1, limit: -1 };
       }
 

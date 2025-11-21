@@ -28,7 +28,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
       <div className="flex h-screen">
         {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
         {/* Always render sidebar shell for layout stability */}
-        <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-50 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible">
+        <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible pointer-events-auto">
           <OptimizedNavigation />
         </div>
 
@@ -40,7 +40,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-50 bg-white dark:bg-[#141810] lg:hidden"
+              className="fixed inset-0 z-40 bg-white dark:bg-[#141810] lg:hidden"
             >
               <OptimizedNavigation />
             </motion.div>
@@ -48,10 +48,11 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
         </AnimatePresence>
 
         {/* Main Content - Always render shell to prevent CLS */}
-        <div className="flex flex-col flex-1 lg:pl-[108px] xl:pl-[108px] 2xl:pl-[335px] layout-stable">
+        {/* pointer-events-none allows clicks to pass through to sidebar, pointer-events-auto on children restores interactivity */}
+        <div className="flex flex-col flex-1 lg:pl-[108px] xl:pl-[108px] 2xl:pl-[335px] layout-stable relative z-0 pointer-events-none">
           {/* Page Content */}
-          <main className="flex-1 overflow-auto">
-            <div className="p-6 pb-[10px]">
+          <main className="flex-1 overflow-auto relative z-0 pointer-events-auto">
+            <div className="px-6 pb-[10px] h-full flex flex-col">
               <CVCheckRedirect>
                 {children}
               </CVCheckRedirect>

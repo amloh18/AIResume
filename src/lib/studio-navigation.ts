@@ -45,8 +45,8 @@ export function navigateToStudioFromJourney(
     params.set('userId', userId);
   }
 
-  // Set return URL to application tracker page
-  params.set('returnUrl', `/dashboard/application-tracker?journeyId=${journeyId}`);
+  // Set return URL to jobs page
+  params.set('returnUrl', `/dashboard/jobs?journeyId=${journeyId}`);
 
   return `/studio?${params.toString()}`;
 }
@@ -290,12 +290,12 @@ export function generateStudioBreadcrumbs(params: StudioNavigationParams): Array
   
   if (params.journeyId) {
     breadcrumbs.push({
-      label: 'Application Tracker',
-      href: '/dashboard/application-tracker'
+      label: 'Jobs',
+      href: '/dashboard/jobs'
     });
     breadcrumbs.push({
       label: `Journey ${params.journeyId.slice(-6)}`,
-      href: `/dashboard/application-tracker?journeyId=${params.journeyId}`
+      href: `/dashboard/jobs?journeyId=${params.journeyId}`
     });
   }
   

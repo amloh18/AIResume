@@ -2,17 +2,17 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Briefcase, 
-  FileText, 
-  CheckCircle, 
-  Download, 
-  Play,
+import {
+  Briefcase,
+  FileText,
+  CheckCircle,
+  Download,
   Calendar,
   Building,
   Clock,
   Star,
   ChevronDown,
+  Trash2,
   ChevronUp,
   Eye,
   Settings,
@@ -29,6 +29,8 @@ import {
   DollarSign,
   Target
 } from 'lucide-react';
+// @ts-ignore
+import Play from 'lucide-react/dist/esm/icons/play';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useSession } from 'next-auth/react';
@@ -95,6 +97,7 @@ interface JourneyTimelineCardProps {
   onDownload: (journey: Journey) => void;
   onRefresh?: () => void;
   onUpdateJourney?: (journeyId: string, updates: Partial<Journey>) => void;
+  onDelete?: (journey: Journey) => void;
 }
 
 const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
@@ -102,7 +105,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   onResume,
   onDownload,
   onRefresh,
-  onUpdateJourney
+  onUpdateJourney,
+  onDelete
 }) => {
   const { isDark } = useTheme();
   const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
@@ -134,7 +138,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const [hasMasterCV, setHasMasterCV] = React.useState(false);
   const hasAttemptedRecreateFromMaster = React.useRef(false);
   const [isRecreatingFromMaster, setIsRecreatingFromMaster] = React.useState(false);
-  
+
   // New state for Step 5 functionality
   const [showMoveToAppliedModal, setShowMoveToAppliedModal] = React.useState(false);
   const [fileSizeEstimates, setFileSizeEstimates] = React.useState<{
@@ -150,11 +154,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const [showDownloadDropdown, setShowDownloadDropdown] = React.useState(false);
   const [downloadModalOpen, setDownloadModalOpen] = React.useState(false);
   const [isDownloading, setIsDownloading] = React.useState(false);
-  
+
   // Job details state
   const [jobDetails, setJobDetails] = React.useState<any | null>(null);
   const [jobDetailsLoading, setJobDetailsLoading] = React.useState(false);
-  
+
   // Helper function to resolve MongoDB user ID
   const resolveMongoDBUserId = async (sessionUserId: string): Promise<string | null> => {
     try {
@@ -179,7 +183,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
     return null;
   };
-  
+
   // Always use database values to ensure consistency with actual data
   const liveProgress = {
     currentStep: journey.currentStep,
@@ -216,24 +220,24 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           userIdLength: userId?.length,
           isMongoDbFormat: /^[0-9a-fA-F]{24}$/.test(userId)
         });
-        
+
         // Load CVs
         const cvsResponse = await fetch(`/api/cvs?userId=${userId}`);
         if (cvsResponse.ok) {
           const cvsData = await cvsResponse.json();
           if (cvsData.success) {
             const cvs = cvsData.data.cvs || [];
-            
+
             // Debug: Check for duplicate CV IDs
             const cvIds = cvs.map((cv: any) => cv.id);
             const duplicateCvIds = cvIds.filter((id: any, index: number) => cvIds.indexOf(id) !== index);
             if (duplicateCvIds.length > 0) {
               console.warn('⚠️ JourneyTimelineCard - Found duplicate CV IDs:', duplicateCvIds);
             }
-            
+
             // CVs loaded successfully
             setUserCVs(cvs);
-            
+
             // Check if master CV exists
             const masterCVExists = cvs.some((cv: CV) => {
               const isMasterAtRoot = cv.isMaster === true;
@@ -242,18 +246,18 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
             });
             setHasMasterCV(masterCVExists);
-            
+
             // Filter freestanding CVs (not master CVs and not linked to other journeys)
             const freestanding = cvs.filter((cv: CV) => {
               const isMasterAtRoot = cv.isMaster === true;
               const isMasterInMetadata = cv.metadata?.isMaster === true;
               const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
               const isMasterCV = isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
-              
+
               return !isMasterCV && (cv.journeyId === null || cv.journeyId === undefined);
             });
             setFreestandingCVs(freestanding);
-            
+
             // Find and set the linked CV
             if (journey.cvId) {
               console.log('🔍 JourneyTimelineCard - Looking for CV with ID:', journey.cvId);
@@ -280,16 +284,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           const coverLettersData = await coverLettersResponse.json();
           if (coverLettersData.success) {
             const coverLetters = coverLettersData.data.coverLetters || [];
-            
+
             // Debug: Check for duplicate IDs
             const ids = coverLetters.map((cl: any) => cl.id);
             const duplicateIds = ids.filter((id: any, index: number) => ids.indexOf(id) !== index);
             if (duplicateIds.length > 0) {
               console.warn('⚠️ JourneyTimelineCard - Found duplicate cover letter IDs:', duplicateIds);
             }
-            
+
             setUserCoverLetters(coverLetters);
-            
+
             // Find and set the linked cover letter
             if (journey.coverLetterId) {
               const linked = coverLetters.find((cl: CoverLetter) => String(cl.id) === String(journey.coverLetterId));
@@ -393,12 +397,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     ) {
       hasAttemptedRecreateFromMaster.current = true;
       setIsRecreatingFromMaster(true);
-      
+
       // Auto-duplicate master CV to recreate the missing CV
       const recreateFromMaster = async () => {
         try {
           // Find the master CV
-          const masterCV = userCVs.find(cv => 
+          const masterCV = userCVs.find(cv =>
             (() => {
               const isMasterAtRoot = cv.isMaster === true;
               const isMasterInMetadata = cv.metadata?.isMaster === true;
@@ -406,7 +410,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
             })()
           );
-          
+
           if (!masterCV || !masterCV.id) {
             setIsRecreatingFromMaster(false);
             return;
@@ -417,15 +421,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             const cleanJobTitle = jobTitle?.trim() || 'Job';
             const cleanCompany = company?.trim() || 'Company';
             const baseCVName = `${cleanCompany}_${cleanJobTitle} | CV`;
-            
+
             let finalName = baseCVName;
             let counter = 1;
-            
+
             while (userCVs.some(cv => cv.title === finalName)) {
               finalName = `${baseCVName} ${counter}`;
               counter++;
             }
-            
+
             return finalName;
           };
 
@@ -443,13 +447,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               jobId: journey.jobId
             })
           });
-          
+
           if (response.ok) {
             const result = await response.json();
-            
+
             if (result.data?.cv?.id || result.cvId) {
               const duplicatedCVId = result.data?.cv?.id || result.cvId;
-              
+
               // Update journey via API
               const journeyUpdateResponse = await fetch(`/api/application-journey`, {
                 method: 'POST',
@@ -462,14 +466,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   status: 'in-progress'
                 })
               });
-              
+
               if (journeyUpdateResponse.ok) {
                 // Update local state
                 updateCVId(duplicatedCVId);
                 updateCurrentStep(3);
                 updateJourneyStatus('cv-created');
                 setCvNotFound(false);
-                
+
                 // Update parent component
                 if (onUpdateJourney) {
                   onUpdateJourney(journey.id, {
@@ -477,7 +481,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     currentStep: 3
                   });
                 }
-                
+
                 // Refresh journey data
                 if (onRefresh) {
                   setTimeout(() => {
@@ -493,7 +497,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           setIsRecreatingFromMaster(false);
         }
       };
-      
+
       recreateFromMaster();
     }
   }, [journey.cvId, cvNotFound, hasMasterCV, journey.status, mongoDBUserId, userCVs, journey.jobTitle, journey.company, journey.id, journey.jobId, onRefresh, onUpdateJourney, updateCVId, updateCurrentStep, updateJourneyStatus]);
@@ -517,7 +521,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     ) {
       hasAttemptedAutoCreateCV.current = true;
       setIsAutoCreatingCV(true);
-      
+
       // Auto-create CV via journey documents API
       const createCV = async () => {
         try {
@@ -526,9 +530,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ journeyId: journey.id })
           });
-          
+
           const result = await response.json();
-          
+
           if (response.ok && result.success) {
             // Refresh journey data
             if (onRefresh) {
@@ -536,7 +540,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 onRefresh();
               }, 1000);
             }
-            
+
             // Update local state if CV ID is returned
             if (result.data?.cvId) {
               updateCVId(result.data.cvId);
@@ -554,7 +558,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           setIsAutoCreatingCV(false);
         }
       };
-      
+
       createCV();
     }
   }, [journey.cvId, journey.id, journey.status, mongoDBUserId, onRefresh, onUpdateJourney, updateCVId]);
@@ -586,7 +590,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       const delayTimeout = setTimeout(() => {
         hasAttemptedAutoCreateCoverLetter.current = true;
         setIsAutoCreatingCoverLetter(true);
-        
+
         // Auto-create Cover Letter via journey documents API
         // This will generate cover letter with AI using cvData and jobData
         const createCoverLetter = async () => {
@@ -596,9 +600,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ journeyId: journey.id })
             });
-            
+
             const result = await response.json();
-            
+
             if (response.ok && result.success) {
               // Refresh journey data
               if (onRefresh) {
@@ -606,7 +610,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   onRefresh();
                 }, 1000);
               }
-              
+
               // Update local state if cover letter ID is returned
               if (result.data?.coverLetterId) {
                 updateCoverLetterId(result.data.coverLetterId);
@@ -624,10 +628,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             setIsAutoCreatingCoverLetter(false);
           }
         };
-        
+
         createCoverLetter();
       }, 500); // Small delay to ensure CV is ready
-      
+
       return () => clearTimeout(delayTimeout);
     }
   }, [journey.cvId, journey.coverLetterId, journey.id, journey.status, mongoDBUserId, cvNotFound, isAutoCreatingCV, onRefresh, onUpdateJourney, updateCoverLetterId]);
@@ -642,7 +646,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       hasAttemptedATSCalculation.current = true; // Mark as attempted
       return;
     }
-    
+
     // Only auto-fetch if we don't have a score, CV is linked, haven't attempted before, and not currently loading
     if (journey.cvId && journey.jobId && atsScore === null && !atsScoreLoading && !hasAttemptedATSCalculation.current) {
       console.log('🔍 JourneyTimelineCard - Auto-fetching ATS score for linked CV');
@@ -654,16 +658,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   // Polling for document creation status
   React.useEffect(() => {
     // Poll if status is processing_documents OR if we're missing cvId or coverLetterId but status isn't failed
-    const needsPolling = journey.status === 'processing_documents' || 
-                         (journey.status !== 'creation_failed' && (!journey.cvId || !journey.coverLetterId));
-    
+    const needsPolling = journey.status === 'processing_documents' ||
+      (journey.status !== 'creation_failed' && (!journey.cvId || !journey.coverLetterId));
+
     if (needsPolling) {
       console.log('🔄 JourneyTimelineCard - Starting polling for journey:', journey.id, {
         status: journey.status,
         hasCvId: !!journey.cvId,
         hasCoverLetterId: !!journey.coverLetterId
       });
-      
+
       // Poll every 2 seconds
       pollingIntervalRef.current = setInterval(async () => {
         try {
@@ -676,20 +680,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 // Check if documents were created (by checking cvId and coverLetterId)
                 const hasBothDocuments = updatedJourney.cvId && updatedJourney.coverLetterId;
                 const statusChanged = updatedJourney.status !== 'processing_documents';
-                
+
                 if (hasBothDocuments || statusChanged) {
                   console.log('✅ JourneyTimelineCard - Documents created or status changed:', {
                     status: updatedJourney.status,
                     cvId: updatedJourney.cvId,
                     coverLetterId: updatedJourney.coverLetterId
                   });
-                  
+
                   // Stop polling and refresh
                   if (pollingIntervalRef.current) {
                     clearInterval(pollingIntervalRef.current);
                     pollingIntervalRef.current = null;
                   }
-                  
+
                   // Trigger refresh to update the component
                   if (onRefresh) {
                     console.log('🔄 JourneyTimelineCard - Triggering refresh');
@@ -703,7 +707,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           console.error('❌ JourneyTimelineCard - Error polling journey status:', error);
         }
       }, 2000);
-      
+
       return () => {
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
@@ -722,7 +726,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   // Handle retry for document creation
   const handleRetryDocuments = async () => {
     if (isRetryingDocuments) return;
-    
+
     setIsRetryingDocuments(true);
     try {
       const response = await fetch('/api/journey-documents/retry', {
@@ -730,7 +734,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ journeyId: journey.id })
       });
-      
+
       if (response.ok) {
         toast.success('Document creation retry triggered');
         // Start polling again
@@ -753,26 +757,26 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     switch (stepId) {
       case 1: // Job Added
         return journey.jobTitle && journey.company ? 'completed' : 'pending';
-      
+
       case 2: // CV Created/Linked
-        return (liveProgress.cvId && !cvNotFound) ? 'completed' : 
-               (liveProgress.currentStep >= 2 ? 'active' : 'pending');
-      
+        return (liveProgress.cvId && !cvNotFound) ? 'completed' :
+          (liveProgress.currentStep >= 2 ? 'active' : 'pending');
+
       case 3: // ATS Score Checked
         // Only completed if we have a valid ATS score (not -1) AND CV is linked and available
         return (atsScore !== null && atsScore !== -1 && liveProgress.cvId && !cvNotFound) ? 'completed' :
-               (liveProgress.currentStep >= 3 && liveProgress.cvId && !cvNotFound ? 'active' : 'pending');
-      
+          (liveProgress.currentStep >= 3 && liveProgress.cvId && !cvNotFound ? 'active' : 'pending');
+
       case 4: // Cover Letter Created
         // Only completed if cover letter is explicitly linked to this journey and available
         return (liveProgress.coverLetterId && liveProgress.coverLetterId.trim() !== '' && !coverLetterNotFound) ? 'completed' :
-               (liveProgress.currentStep >= 4 && atsScore !== null && atsScore !== -1 && !cvNotFound ? 'active' : 'pending');
-      
+          (liveProgress.currentStep >= 4 && atsScore !== null && atsScore !== -1 && !cvNotFound ? 'active' : 'pending');
+
       case 5: // Download/Apply
         // Only completed if journey status is explicitly 'completed'
         return liveProgress.status === 'completed' ? 'completed' :
-               (liveProgress.currentStep >= 5 && liveProgress.coverLetterId ? 'active' : 'pending');
-      
+          (liveProgress.currentStep >= 5 && liveProgress.coverLetterId ? 'active' : 'pending');
+
       default:
         return 'pending';
     }
@@ -825,7 +829,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const handleCreateCV = async () => {
     if (isRetryingDocuments) return;
-    
+
     setIsRetryingDocuments(true);
     try {
       // Auto-create CV via journey documents API
@@ -834,9 +838,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ journeyId: journey.id })
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         // Refresh journey data
         if (onRefresh) {
@@ -844,7 +848,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             onRefresh();
           }, 1000);
         }
-        
+
         // Update local state if CV ID is returned
         if (result.data?.cvId) {
           updateCVId(result.data.cvId);
@@ -870,10 +874,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const handleSelectCV = async (cvId: string) => {
     try {
       console.log('🔍 JourneyTimelineCard - Selecting CV:', cvId, 'for journey:', journey.id);
-      
+
       const selectedCV = userCVs.find(cv => String(cv.id) === String(cvId));
       setLinkedCV(selectedCV || null);
-      
+
       // Update journey with selected CV
       const response = await fetch(`/api/application-journey`, {
         method: 'POST',
@@ -885,20 +889,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           currentStep: 3 // Move to next step after CV selection
         })
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('✅ JourneyTimelineCard - CV linked successfully:', result);
-        
+
         // Update local journey state
         journey.cvId = cvId;
         journey.currentStep = 3;
-        
+
         // Update journey context
         updateCVId(cvId);
         updateCurrentStep(3);
         updateJourneyStatus('cv-created');
-        
+
         // Update parent component's journey state directly instead of full refresh
         // This prevents modal from closing and page from refreshing
         if (onUpdateJourney) {
@@ -911,7 +915,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           // Fallback to full refresh if targeted update not available
           onRefresh();
         }
-        
+
         // Show success toast based on result
         if (result.message === 'Journey updated successfully') {
           toast.success('CV linked to journey successfully!');
@@ -920,11 +924,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         } else {
           toast.success('CV linked to journey successfully!');
         }
-        
+
         // Reset ATS score and trigger calculation for the newly linked CV
         setAtsScore(null);
         hasAttemptedATSCalculation.current = false;
-        
+
         if (journey.jobId) {
           console.log('🔍 JourneyTimelineCard - Triggering ATS calculation for newly linked CV');
           fetchATSScore(cvId, journey.jobId);
@@ -939,23 +943,23 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       console.error('❌ JourneyTimelineCard - Error linking CV:', error);
       toast.error('Failed to link CV. Please try again.');
     }
-    
+
     setExpandedStep(null);
   };
 
   const handleDuplicateMasterCV = async () => {
     try {
       console.log('🔍 JourneyTimelineCard - Duplicating master CV for CV change');
-      
+
       // Check if we have a valid user ID
       if (!mongoDBUserId) {
         console.error('❌ JourneyTimelineCard - No MongoDB user ID available');
         toast.error('User session not found. Please refresh the page and try again.');
         return;
       }
-      
+
       // Find the master CV
-      const masterCV = userCVs.find(cv => 
+      const masterCV = userCVs.find(cv =>
         (() => {
           const isMasterAtRoot = cv.isMaster === true;
           const isMasterInMetadata = cv.metadata?.isMaster === true;
@@ -967,7 +971,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         toast.error('No master CV found. Please create a master CV first.');
         return;
       }
-      
+
       // Validate CV ID format
       if (!masterCV.id || typeof masterCV.id !== 'string') {
         console.error('❌ JourneyTimelineCard - Invalid CV ID:', masterCV.id);
@@ -980,15 +984,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         const cleanJobTitle = jobTitle?.trim() || 'Job';
         const cleanCompany = company?.trim() || 'Company';
         const baseCVName = `${cleanCompany}_${cleanJobTitle} | CV`;
-        
+
         let finalName = baseCVName;
         let counter = 1;
-        
+
         while (userCVs.some(cv => cv.title === finalName)) {
           finalName = `${baseCVName} ${counter}`;
           counter++;
         }
-        
+
         return finalName;
       };
 
@@ -1008,15 +1012,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestData)
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('✅ JourneyTimelineCard - Master CV duplicated successfully:', result);
-        
+
         if (result.data?.cv?.id || result.cvId) {
           const duplicatedCVId = result.data?.cv?.id || result.cvId;
           const duplicatedCVTitle = result.data?.cv?.title || result.title || smartCVName;
-          
+
           // Update journey via API to ensure database persistence
           const journeyUpdateResponse = await fetch(`/api/application-journey`, {
             method: 'POST',
@@ -1029,10 +1033,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               status: 'in-progress'
             })
           });
-          
+
           if (journeyUpdateResponse.ok) {
             console.log('✅ JourneyTimelineCard - Journey updated with duplicated CV');
-            
+
             // Update local state
             setLinkedCV({
               id: duplicatedCVId,
@@ -1043,16 +1047,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               updatedAt: new Date().toISOString()
             });
             setCvNotFound(false);
-            
+
             // Update journey object
             journey.cvId = duplicatedCVId;
             journey.currentStep = 3;
-            
+
             // Update contexts
             updateCVId(duplicatedCVId);
             updateCurrentStep(3);
             updateJourneyStatus('cv-created');
-            
+
             // Update parent component
             if (onUpdateJourney) {
               onUpdateJourney(journey.id, {
@@ -1060,14 +1064,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 currentStep: 3
               });
             }
-            
+
             setShowCVSelector(false);
             toast.success('Master CV duplicated and linked to journey!');
-            
+
             // Reset and fetch ATS score with a small delay to ensure CV data is fully processed
             setAtsScore(null);
             hasAttemptedATSCalculation.current = false;
-            
+
             if (journey.jobId) {
               // Add a small delay to ensure the duplicated CV data is fully processed
               setTimeout(() => {
@@ -1075,7 +1079,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 fetchATSScore(duplicatedCVId, journey.jobId);
               }, 1000); // 1 second delay
             }
-            
+
             // Refresh to ensure UI is in sync
             if (onRefresh) {
               onRefresh();
@@ -1101,45 +1105,45 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const handleDuplicateRegularCV = async (cvId: string) => {
     try {
       console.log('🔍 JourneyTimelineCard - Duplicating regular CV:', cvId);
-      
+
       // Check if we have a valid user ID
       if (!mongoDBUserId) {
         console.error('❌ JourneyTimelineCard - No MongoDB user ID available');
         toast.error('User session not found. Please refresh the page and try again.');
         return;
       }
-      
+
       // Find the selected CV
       const selectedCV = userCVs.find(cv => String(cv.id) === String(cvId));
       if (!selectedCV) {
         toast.error('Selected CV not found. Please try again.');
         return;
       }
-      
+
       console.log('🔍 JourneyTimelineCard - Selected CV found:', {
         id: selectedCV.id,
         title: selectedCV.title
       });
-      
+
       // Generate smart CV name: "Company_JobTitle | CV" with number suffix if needed
       const generateCVName = (jobTitle: string, company: string) => {
         // Clean the inputs
         const cleanJobTitle = jobTitle?.trim() || 'Job';
         const cleanCompany = company?.trim() || 'Company';
-        
+
         // Create the base name in new format: "Company_JobTitle | CV"
         const baseCVName = `${cleanCompany}_${cleanJobTitle} | CV`;
-        
+
         // Check if this name already exists and find the next available number
         let finalName = baseCVName;
         let counter = 1;
-        
+
         // Check against all existing CVs to avoid conflicts
         while (userCVs.some(cv => cv.title === finalName)) {
           finalName = `${baseCVName} ${counter}`;
           counter++;
         }
-        
+
         return finalName;
       };
 
@@ -1154,7 +1158,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         jobId: journey.jobId,
         journeyId: journey.id
       };
-      
+
       console.log('🔍 JourneyTimelineCard - Making duplication request with data:', requestData);
 
       // Call the duplicate CV API
@@ -1165,15 +1169,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       });
 
       console.log('🔍 JourneyTimelineCard - Duplication response status:', response.status, response.statusText);
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('✅ JourneyTimelineCard - CV duplicated successfully:', result);
-        
+
         if (result.data?.cv?.id || result.cvId) {
           const duplicatedCVId = result.data?.cv?.id || result.cvId;
           const duplicatedCVTitle = result.data?.cv?.title || result.title || smartCVName;
-          
+
           // Update journey via API to ensure database persistence
           const journeyUpdateResponse = await fetch(`/api/application-journey`, {
             method: 'POST',
@@ -1186,10 +1190,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               status: 'in-progress'
             })
           });
-          
+
           if (journeyUpdateResponse.ok) {
             console.log('✅ JourneyTimelineCard - Journey updated with duplicated CV');
-            
+
             // Update local state
             setLinkedCV({
               id: duplicatedCVId,
@@ -1200,16 +1204,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               updatedAt: new Date().toISOString()
             });
             setCvNotFound(false);
-            
+
             // Update journey object
             journey.cvId = duplicatedCVId;
             journey.currentStep = 3;
-            
+
             // Update contexts
             updateCVId(duplicatedCVId);
             updateCurrentStep(3);
             updateJourneyStatus('cv-created');
-            
+
             // Update parent component
             if (onUpdateJourney) {
               onUpdateJourney(journey.id, {
@@ -1217,13 +1221,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 currentStep: 3
               });
             }
-            
+
             toast.success('CV duplicated and linked to journey!');
-            
+
             // Reset and fetch ATS score with a small delay to ensure CV data is fully processed
             setAtsScore(null);
             hasAttemptedATSCalculation.current = false;
-            
+
             if (journey.jobId) {
               // Add a small delay to ensure the duplicated CV data is fully processed
               setTimeout(() => {
@@ -1231,7 +1235,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 fetchATSScore(duplicatedCVId, journey.jobId);
               }, 1000); // 1 second delay
             }
-            
+
             // Refresh to ensure UI is in sync
             if (onRefresh) {
               onRefresh();
@@ -1252,7 +1256,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           console.error('❌ JourneyTimelineCard - Failed to parse error response:', parseError);
           errorData = { error: 'Failed to parse server response' };
         }
-        
+
         const errorMessage = errorData.error || errorData.message || `Failed to duplicate CV (${response.status}). Please try again.`;
         console.error('❌ JourneyTimelineCard - Duplication failed:', {
           status: response.status,
@@ -1276,11 +1280,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       });
       return;
     }
-    
+
     setAtsScoreLoading(true);
     try {
       console.log('🔍 JourneyTimelineCard - Fetching ATS score for CV:', cvId, 'Job:', jobId);
-      
+
       // Use real ATS API endpoint
       const response = await fetch('/api/ats/calculate-score', {
         method: 'POST',
@@ -1293,22 +1297,22 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           userId: mongoDBUserId
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log('✅ JourneyTimelineCard - ATS score fetched:', result);
-      
+
       if (result.success && result.data) {
         const score = result.data.score || result.data.atsScore;
         if (score !== undefined && score !== null) {
           setAtsScore(score);
-          
+
           // Update journey context
           updateAtsScore(score);
-          
+
           // Update journey with ATS score using PUT endpoint with journey.id
           const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
             method: 'PUT',
@@ -1321,13 +1325,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               }
             })
           });
-          
+
           if (journeyResponse.ok) {
             console.log('✅ JourneyTimelineCard - ATS score saved to journey');
           } else {
             console.error('❌ JourneyTimelineCard - Failed to save ATS score to journey');
           }
-          
+
           // Update parent component with new score
           if (onUpdateJourney) {
             onUpdateJourney(journey.id, {
@@ -1335,7 +1339,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               currentStep: score >= 80 ? 4 : 3
             });
           }
-          
+
           // Update journey status based on score
           if (score >= 80) {
             updateJourneyStatus('ats-checked');
@@ -1352,7 +1356,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       } else {
         throw new Error(result.error || 'Failed to calculate ATS score');
       }
-      
+
     } catch (error) {
       console.error('❌ JourneyTimelineCard - Error fetching ATS score:', error);
       setAtsScore(-1); // Use -1 to indicate failed calculation
@@ -1364,11 +1368,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const handleATSCheck = async () => {
     if (!journey.cvId) return;
-    
+
     setIsRunningATSCheck(true);
     try {
       console.log('🔍 JourneyTimelineCard - Running ATS check for CV:', journey.cvId, 'Job:', journey.jobId);
-      
+
       // Use real ATS API endpoint
       const response = await fetch('/api/ats/calculate-score', {
         method: 'POST',
@@ -1379,22 +1383,22 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           userId: mongoDBUserId
         })
       });
-      
+
       console.log('🔍 JourneyTimelineCard - ATS check response status:', response.status);
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('✅ JourneyTimelineCard - ATS check result:', result);
-        
+
         if (result.success && result.data) {
           const score = result.data.score || result.data.atsScore;
           if (score !== undefined && score !== null) {
             // Update local state first
             setAtsScore(score);
-            
+
             // Update journey context
             updateAtsScore(score);
-            
+
             // Update journey with ATS score using PUT endpoint with journey.id
             const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
               method: 'PUT',
@@ -1407,13 +1411,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 }
               })
             });
-            
+
             if (journeyResponse.ok) {
               console.log('✅ JourneyTimelineCard - ATS score saved to journey');
             } else {
               console.error('❌ JourneyTimelineCard - Failed to save ATS score to journey');
             }
-            
+
             // Update parent component with new score
             if (onUpdateJourney) {
               onUpdateJourney(journey.id, {
@@ -1421,7 +1425,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 currentStep: score >= 80 ? 4 : 3
               });
             }
-            
+
             // Update journey status based on score
             if (score >= 80) {
               updateJourneyStatus('ats-checked');
@@ -1453,11 +1457,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const handleCreateCoverLetter = async () => {
     if (isCreatingCoverLetter) return;
-    
+
     setIsCreatingCoverLetter(true);
     try {
       console.log('🔍 JourneyTimelineCard - Creating cover letter for journey:', journey.id);
-      
+
       // Call the same API endpoint used when journey is created
       // This will automatically create and link the cover letter to the journey
       const response = await fetch('/api/journey-documents/create', {
@@ -1465,13 +1469,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ journeyId: journey.id })
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         toast.success('Cover letter created and linked successfully!');
         console.log('✅ JourneyTimelineCard - Cover letter created:', result.data);
-        
+
         // Refresh journey data to show the new cover letter
         // The useEffect will automatically reload when journey.coverLetterId changes
         if (onRefresh) {
@@ -1479,7 +1483,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             onRefresh();
           }, 1000);
         }
-        
+
         // Update local state if cover letter ID is returned
         if (result.data?.coverLetterId) {
           updateCoverLetterId(result.data.coverLetterId);
@@ -1522,7 +1526,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const handleChangeCV = async (newCvId: string) => {
     try {
       console.log('🔄 JourneyTimelineCard - Changing CV from', journey.cvId, 'to', newCvId);
-      
+
       // Update the journey with the new CV ID using POST method
       // The application-journey POST endpoint handles updates to existing journeys
       const response = await fetch('/api/application-journey', {
@@ -1546,12 +1550,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           setLinkedCV(selectedCV);
           setCvNotFound(false);
         }
-        
+
         // Update the journey object
         onUpdateJourney?.(journey.id, {
           cvId: newCvId
         });
-        
+
         toast.success('CV updated successfully');
         console.log('✅ CV changed successfully');
       } else {
@@ -1568,7 +1572,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const handleMoveToApplied = async () => {
     try {
       setIsCompletingJourney(true);
-      
+
       const response = await fetch(`/api/application-journey/${journey.id}/complete`, {
         method: 'PATCH',
         headers: {
@@ -1579,13 +1583,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       if (response.ok) {
         const result = await response.json();
         toast.success('Journey completed! Job moved to Applied stage');
-        
+
         // Journey completed - showing toast notification
-        
+
         // Show undo toast for 5 seconds
         setShowUndoToast(true);
         setTimeout(() => setShowUndoToast(false), 5000);
-        
+
         // Refresh the journey data
         if (onRefresh) {
           onRefresh();
@@ -1614,15 +1618,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           // Get CV data and template
           const cvResponse = await fetch(`/api/cvs/${journey.cvId}`);
           if (!cvResponse.ok) throw new Error('Failed to fetch CV data');
-          
+
           const cvResult = await cvResponse.json();
           if (!cvResult.success || !cvResult.data) throw new Error('CV data not found');
-          
+
           const cv = cvResult.data.cv;
-          
+
           // Get template data - try multiple sources
           let template = cv.templateData || cv.template || {};
-          
+
           // If template is just an ID, fetch the full template
           if (cv.templateId && (!template || typeof template === 'string')) {
             try {
@@ -1637,10 +1641,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               console.warn('Could not fetch template, using defaults:', templateError);
             }
           }
-          
+
           // Use DOCX format for both DOC and DOCX (DOC is legacy, DOCX is compatible)
           const exportFormat = format === 'doc' ? 'docx' : format;
-          
+
           // Use CV export API for DOC/DOCX
           const exportResponse = await fetch('/api/cv/export', {
             method: 'POST',
@@ -1654,19 +1658,19 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               jobId: journey.jobId
             })
           });
-          
+
           if (!exportResponse.ok) {
             const errorData = await exportResponse.json().catch(() => ({ error: 'Export failed' }));
             throw new Error(errorData.error || `Export failed: ${exportResponse.status} ${exportResponse.statusText}`);
           }
-          
+
           const blob = await exportResponse.blob();
-          
+
           // Check if blob is valid
           if (!blob || blob.size === 0) {
             throw new Error('Exported file is empty');
           }
-          
+
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -1675,13 +1679,13 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           a.download = `${journey.jobTitle} - CV.${exportFormat}`;
           document.body.appendChild(a);
           a.click();
-          
+
           // Clean up after a delay
           setTimeout(() => {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
           }, 100);
-          
+
           toast.success('CV downloaded successfully');
           return;
         } catch (error: any) {
@@ -1690,53 +1694,53 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           throw error;
         }
       }
-      
+
       // For PDF or other formats, use the journey download endpoint
       const url = `/api/application-journey/${journey.id}/download?type=${downloadType}${format !== 'pdf' ? `&format=${format}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': downloadType === 'all' ? 'application/zip' : format === 'pdf' ? 'application/pdf' : format === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/msword',
         },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Download failed' }));
         throw new Error(errorData.error || `Download failed: ${response.status} ${response.statusText}`);
       }
-      
+
       const blob = await response.blob();
-      
+
       // Check if blob is valid
       if (!blob || blob.size === 0) {
         throw new Error('Downloaded file is empty');
       }
-      
+
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.style.display = 'none';
-      
+
       const extension = downloadType === 'all' ? 'zip' : format === 'pdf' ? 'pdf' : format;
       const filename = `${journey.jobTitle} - ${downloadType === 'all' ? 'Application Files' : downloadType === 'cv' ? 'CV' : downloadType === 'coverLetter' ? 'Cover Letter' : 'Job Description'}.${extension}`;
       link.download = filename;
-      
+
       document.body.appendChild(link);
       link.click();
-      
+
       // Clean up after a delay to ensure download starts
       setTimeout(() => {
         window.URL.revokeObjectURL(downloadUrl);
         document.body.removeChild(link);
       }, 100);
-      
+
       toast.success('Files downloaded successfully');
     } catch (error: any) {
       console.error('Error downloading files:', error);
       const errorMessage = error.message || 'Error downloading files';
       toast.error(errorMessage);
-      
+
       // Show retry option with better UX
       const shouldRetry = window.confirm(`Download failed: ${errorMessage}\n\nWould you like to retry?`);
       if (shouldRetry) {
@@ -1762,7 +1766,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       if (response.ok) {
         toast.success('Journey completion undone');
         setShowUndoToast(false);
-        
+
         // Refresh the journey data
         if (onRefresh) {
           onRefresh();
@@ -1799,7 +1803,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const handleRefreshATS = async () => {
     try {
       setAtsScoreLoading(true);
-      
+
       const response = await fetch(`/api/application-journey/${journey.id}/refresh-ats`, {
         method: 'POST',
         headers: {
@@ -1811,7 +1815,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         const result = await response.json();
         setAtsScore(result.atsScore);
         toast.success(`ATS score updated: ${result.atsScore}%`);
-        
+
         // Refresh the journey data to get updated history
         if (onRefresh) {
           onRefresh();
@@ -1827,7 +1831,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       setAtsScoreLoading(false);
     }
   };
-  
+
   const steps = [
     { id: 1, label: 'Add Job', icon: Briefcase, color: 'blue' },
     { id: 2, label: 'Create CV', icon: FileText, color: 'green' },
@@ -1870,48 +1874,48 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const handleDuplicateCoverLetter = async (coverLetterId?: string) => {
     try {
       console.log('🔍 JourneyTimelineCard - Duplicating cover letter:', coverLetterId);
-      
+
       // Check if we have a valid user ID
       if (!mongoDBUserId) {
         console.error('❌ JourneyTimelineCard - No MongoDB user ID available');
         toast.error('User session not found. Please refresh the page and try again.');
         return;
       }
-      
+
       // Ensure we have a default cover letter to duplicate from
       const defaultCoverLetterId = await defaultCoverLetterService.ensureDefaultCoverLetter(mongoDBUserId);
-      
+
       // Find the selected cover letter (use provided ID or default)
       const targetCoverLetterId = coverLetterId || defaultCoverLetterId;
       const selectedCoverLetter = userCoverLetters.find(cl => String(cl.id) === String(targetCoverLetterId));
-      
+
       if (!selectedCoverLetter) {
         // If we can't find the cover letter in our list, we might need to refresh the list
         console.log('🔄 JourneyTimelineCard - Cover letter not in current list, refreshing...');
         // For now, proceed with the ID we have
         console.log('🔍 JourneyTimelineCard - Using cover letter ID:', targetCoverLetterId);
       }
-      
+
       console.log('🔍 JourneyTimelineCard - Using cover letter ID:', targetCoverLetterId);
-      
+
       // Generate cover letter name: "Company_JobTitle | Cover_Letter" with number suffix if needed
       const generateCoverLetterName = (jobTitle: string, company: string) => {
         const cleanJobTitle = jobTitle?.trim() || 'Job';
         const cleanCompany = company?.trim() || 'Company';
-        
+
         // Create the base name in new format: "Company_JobTitle | Cover_Letter"
         const baseCoverLetterName = `${cleanCompany}_${cleanJobTitle} | Cover_Letter`;
-        
+
         // Check if this name already exists and find the next available number
         let finalName = baseCoverLetterName;
         let counter = 1;
-        
+
         // Check against all existing cover letters to avoid conflicts
         while (userCoverLetters.some(cl => cl.title === finalName)) {
           finalName = `${baseCoverLetterName} ${counter}`;
           counter++;
         }
-        
+
         return finalName;
       };
 
@@ -1926,7 +1930,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         jobId: journey.jobId,
         journeyId: journey.id
       };
-      
+
       console.log('🔍 JourneyTimelineCard - Making duplication request with data:', requestData);
 
       // Call the duplicate cover letter API
@@ -1937,15 +1941,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       });
 
       console.log('🔍 JourneyTimelineCard - Duplication response status:', response.status, response.statusText);
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('✅ JourneyTimelineCard - Cover letter duplicated successfully:', result);
-        
+
         if (result.success && result.data?.coverLetter?.id) {
           const duplicatedCoverLetterId = result.data.coverLetter.id;
           const duplicatedCoverLetterTitle = result.data.coverLetter.title || smartCoverLetterName;
-          
+
           // Update journey via API to ensure database persistence
           const journeyUpdateResponse = await fetch(`/api/application-journey`, {
             method: 'POST',
@@ -1958,10 +1962,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               status: 'in-progress'
             })
           });
-          
+
           if (journeyUpdateResponse.ok) {
             console.log('✅ JourneyTimelineCard - Journey updated with duplicated cover letter');
-            
+
             // Update local state
             setLinkedCoverLetter({
               id: duplicatedCoverLetterId,
@@ -1971,16 +1975,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               lastModified: new Date().toISOString()
             });
             setCoverLetterNotFound(false);
-            
+
             // Update journey object
             journey.coverLetterId = duplicatedCoverLetterId;
             journey.currentStep = 5;
-            
+
             // Update contexts
             updateCoverLetterId(duplicatedCoverLetterId);
             updateCurrentStep(5);
             updateJourneyStatus('cover-letter-created');
-            
+
             // Update parent component
             if (onUpdateJourney) {
               onUpdateJourney(journey.id, {
@@ -1988,9 +1992,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 currentStep: 5
               });
             }
-            
+
             toast.success('Cover letter duplicated and linked to journey!');
-            
+
             // Refresh to ensure UI is in sync
             if (onRefresh) {
               onRefresh();
@@ -2011,7 +2015,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           console.error('❌ JourneyTimelineCard - Failed to parse error response:', parseError);
           errorData = { error: 'Failed to parse server response' };
         }
-        
+
         const errorMessage = errorData.error || errorData.message || `Failed to duplicate cover letter (${response.status}). Please try again.`;
         console.error('❌ JourneyTimelineCard - Duplication failed:', {
           status: response.status,
@@ -2028,11 +2032,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   const fetchJobDetails = async (jobId: string) => {
     if (jobDetails || jobDetailsLoading) return; // Don't fetch if already loaded or loading
-    
+
     setJobDetailsLoading(true);
     try {
       console.log('🔍 JourneyTimelineCard - Fetching job details for:', jobId);
-      
+
       const response = await fetch(`/api/jobs/${jobId}`);
       if (response.ok) {
         const result = await response.json();
@@ -2049,8 +2053,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           console.warn('⚠️ JourneyTimelineCard - Job details response missing data:', result);
         }
       } else {
-          console.warn('⚠️ JourneyTimelineCard - Failed to fetch job details:', response.status);
-        }
+        console.warn('⚠️ JourneyTimelineCard - Failed to fetch job details:', response.status);
+      }
     } catch (error) {
       console.error('❌ JourneyTimelineCard - Error fetching job details:', error);
     } finally {
@@ -2060,11 +2064,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   return (
     <motion.div
-      className={`journey-card ${
-        liveProgress.status === 'completed' 
-          ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/50' 
-          : 'bg-[#24320f] border border-lime-500/30'
-      } rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group`}
+      className={`journey-card ${liveProgress.status === 'completed'
+        ? 'bg-blue-100 dark:bg-blue-900/20 border border-blue-300 dark:border-blue-500/50'
+        : 'bg-[#24320f] border border-lime-500/30'
+        } rounded-xl overflow-hidden hover:shadow-lg dark:hover:shadow-gray-900/20 transition-all duration-300 group`}
       whileHover={{ y: -2 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -2076,43 +2079,24 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         <div className="block md:hidden">
           <div className="flex items-center justify-between mb-3">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Building className={`h-4 w-4 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
-                <h3 className={`text-sm font-medium truncate ${
-                  liveProgress.status === 'completed' 
-                    ? 'text-gray-900 dark:text-white' 
-                    : 'text-white'
-                }`}>
+              <div className="flex items-center gap-2">
+                <Building className={`h-4 w-4 flex-shrink-0 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
+                <h3 className={`text-sm font-medium truncate ${liveProgress.status === 'completed'
+                  ? 'text-gray-900 dark:text-white'
+                  : 'text-white'
+                  }`}>
                   {journey.jobTitle}
                 </h3>
-              </div>
-              <div className={`flex items-center gap-2 text-xs ${
-                liveProgress.status === 'completed' 
-                  ? 'text-gray-600 dark:text-white/60' 
+                <span className={`text-xs flex-shrink-0 ${liveProgress.status === 'completed'
+                  ? 'text-gray-600 dark:text-white/60'
                   : 'text-white/60'
-              }`}>
-                <span>{journey.company}</span>
-                {liveProgress.status !== 'completed' && (() => {
-                  const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
-                    journey as any,
-                    []
-                  );
-                  const formattedTime = JourneyAnalyticsService.formatEstimatedTime(estimatedTime);
-                  
-                  return (
-                    <>
-                      <span>•</span>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-white/40" />
-                        <span>Est. {formattedTime} remaining</span>
-                      </div>
-                    </>
-                  );
-                })()}
+                  }`}>
+                  {journey.company}
+                </span>
               </div>
             </div>
           </div>
-          
+
           {/* Mobile: Steps Status, ATS Score, and Details */}
           <div className="flex items-center justify-between">
             {/* Steps Status */}
@@ -2120,17 +2104,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               {steps.map((step) => {
                 const stepId = step.id;
                 const status = getStepStatus(stepId);
-                
+
                 return (
                   <motion.button
                     key={stepId}
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200 ${
-                      status === 'completed' 
-                        ? 'bg-lime-500 text-white' 
-                        : status === 'active'
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200 ${status === 'completed'
+                      ? 'bg-lime-500 text-white'
+                      : status === 'active'
                         ? 'bg-lime-500/20 text-lime-400 border border-lime-500/30'
                         : 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
-                    }`}
+                      }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
                     animate={status === 'active' ? {
@@ -2148,11 +2131,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <CheckCircle className="h-3 w-3" />
                     ) : status === 'active' ? (
                       <motion.div
-                        className={`w-2 h-2 rounded-full ${
-                          liveProgress.status === 'completed' 
-                            ? 'bg-blue-300' 
-                            : 'bg-lime-300'
-                        }`}
+                        className={`w-2 h-2 rounded-full ${liveProgress.status === 'completed'
+                          ? 'bg-blue-300'
+                          : 'bg-lime-300'
+                          }`}
                         animate={{
                           scale: [1, 1.2, 1],
                           opacity: [0.7, 1, 0.7]
@@ -2175,34 +2157,30 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             <div className="flex items-center gap-3">
               {/* ATS Score */}
               {atsScore !== null && atsScore !== -1 && (
-                <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${
-                  liveProgress.status === 'completed' 
-                    ? 'bg-blue-200 dark:bg-white/10' 
-                    : 'bg-white/10'
-                }`}>
-                  <Target className={`h-3 w-3 ${
-                    liveProgress.status === 'completed' 
-                      ? 'text-blue-700 dark:text-white/60' 
-                      : 'text-white/60'
-                  }`} />
-                  <span className={`text-xs font-medium ${
-                    liveProgress.status === 'completed' 
-                      ? 'text-blue-900 dark:text-white/80' 
-                      : 'text-white/80'
+                <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${liveProgress.status === 'completed'
+                  ? 'bg-blue-200 dark:bg-white/10'
+                  : 'bg-white/10'
                   }`}>
+                  <Target className={`h-3 w-3 ${liveProgress.status === 'completed'
+                    ? 'text-blue-700 dark:text-white/60'
+                    : 'text-white/60'
+                    }`} />
+                  <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                    ? 'text-blue-900 dark:text-white/80'
+                    : 'text-white/80'
+                    }`}>
                     {atsScore}%
                   </span>
                 </div>
               )}
-              
+
               {/* Details Dropdown */}
               <motion.button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className={`p-1 rounded transition-colors ${
-                  liveProgress.status === 'completed' 
-                    ? 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-blue-200 dark:hover:bg-white/10' 
-                    : 'text-white/60 hover:text-white hover:bg-white/10'
-                }`}
+                className={`p-1 rounded transition-colors ${liveProgress.status === 'completed'
+                  ? 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-blue-200 dark:hover:bg-white/10'
+                  : 'text-white/60 hover:text-white hover:bg-white/10'
+                  }`}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -2215,48 +2193,28 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         {/* Desktop View - Original Layout */}
         <div className="hidden md:flex items-center justify-between">
           {/* Left: Job Info and Progress */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Building className={`h-5 w-5 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
-              <div>
-                <h3 className={`text-sm font-medium ${
-                  liveProgress.status === 'completed' 
-                    ? 'text-gray-900 dark:text-white' 
-                    : 'text-white'
-                }`}>
+          <div className="flex items-center gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <Building className={`h-5 w-5 flex-shrink-0 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className={`text-sm font-medium truncate ${liveProgress.status === 'completed'
+                  ? 'text-gray-900 dark:text-white'
+                  : 'text-white'
+                  }`}>
                   {journey.jobTitle}
                 </h3>
-                <p className={`text-xs ${
-                  liveProgress.status === 'completed' 
-                    ? 'text-gray-600 dark:text-white/60' 
-                    : 'text-white/60'
-                }`}>{journey.company}</p>
+                <p className={`text-xs flex-shrink-0 ${liveProgress.status === 'completed'
+                  ? 'text-gray-600 dark:text-white/60'
+                  : 'text-white/60'
+                  }`}>{journey.company}</p>
                 {journey.lastWorkedOn && (
-                  <p className={`text-xs ${
-                    liveProgress.status === 'completed' 
-                      ? 'text-gray-500 dark:text-white/40' 
-                      : 'text-white/40'
-                  }`}>
+                  <p className={`text-xs ${liveProgress.status === 'completed'
+                    ? 'text-gray-500 dark:text-white/40'
+                    : 'text-white/40'
+                    }`}>
                     Last worked {formatRelativeTime(journey.lastWorkedOn)}
                   </p>
                 )}
-                {liveProgress.status !== 'completed' && (() => {
-                  // Calculate estimated time to completion
-                  const estimatedTime = JourneyAnalyticsService.calculateEstimatedTimeToCompletion(
-                    journey as any,
-                    [] // We'll need to pass all journeys from parent component
-                  );
-                  const formattedTime = JourneyAnalyticsService.formatEstimatedTime(estimatedTime);
-                  
-                  return (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3 text-white/40" />
-                      <p className="text-xs text-white/40">
-                        Est. {formattedTime} remaining
-                      </p>
-                    </div>
-                  );
-                })()}
               </div>
             </div>
 
@@ -2267,15 +2225,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 return (
                   <motion.button
                     key={`step-${stepId}-${index}`}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
-                      status === 'completed' 
-                        ? liveProgress.status === 'completed' 
-                          ? 'bg-blue-500 text-white' 
-                          : 'bg-lime-500 text-white'
-                        : status === 'active' 
-                        ? 'bg-lime-500/20 text-lime-400 border border-lime-500/30' 
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-all ${status === 'completed'
+                      ? liveProgress.status === 'completed'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-lime-500 text-white'
+                      : status === 'active'
+                        ? 'bg-lime-500/20 text-lime-400 border border-lime-500/30'
                         : 'bg-gray-300 dark:bg-white/20 text-gray-500 dark:text-white hover:bg-gray-400 dark:hover:bg-white/30'
-                    }`}
+                      }`}
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                     animate={status === 'active' ? {
@@ -2293,11 +2250,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <CheckCircle className="h-4 w-4" />
                     ) : status === 'active' ? (
                       <motion.div
-                        className={`w-3 h-3 rounded-full ${
-                          liveProgress.status === 'completed' 
-                            ? 'bg-blue-300' 
-                            : 'bg-lime-300'
-                        }`}
+                        className={`w-3 h-3 rounded-full ${liveProgress.status === 'completed'
+                          ? 'bg-blue-300'
+                          : 'bg-lime-300'
+                          }`}
                         animate={{
                           scale: [1, 1.2, 1],
                           opacity: [0.7, 1, 0.7]
@@ -2317,19 +2273,17 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             </div>
 
             {/* Next Step Info */}
-            <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${
-              liveProgress.status === 'completed' 
-                ? 'bg-blue-100 dark:bg-blue-500/20' 
-                : 'bg-lime-100 dark:bg-lime-500/20'
-            }`}>
-              {steps.find(s => s.id === liveProgress.currentStep + 1)?.icon && 
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${liveProgress.status === 'completed'
+              ? 'bg-blue-100 dark:bg-blue-500/20'
+              : 'bg-lime-100 dark:bg-lime-500/20'
+              }`}>
+              {steps.find(s => s.id === liveProgress.currentStep + 1)?.icon &&
                 React.createElement(steps.find(s => s.id === liveProgress.currentStep + 1)!.icon, { className: "h-4 w-4" })
               }
-              <span className={`text-xs font-medium ${
-                liveProgress.status === 'completed' 
-                  ? 'text-blue-600 dark:text-blue-400' 
-                  : 'text-lime-600 dark:text-lime-400'
-              }`}>
+              <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-lime-600 dark:text-lime-400'
+                }`}>
                 {steps.find(s => s.id === liveProgress.currentStep + 1)?.label}
               </span>
             </div>
@@ -2346,7 +2300,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               <Eye className="h-3 w-3" />
               {isExpanded ? 'Hide' : 'Details'}
             </motion.button>
-            
+
             {liveProgress.status === 'completed' ? (
               <motion.button
                 onClick={() => handleDownloadFiles('all')}
@@ -2359,16 +2313,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 <span className="hidden sm:inline">Download</span>
               </motion.button>
             ) : (
-              <motion.button
-                onClick={() => onResume(journey)}
-                className="flex items-center gap-2 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-medium rounded-xl transition-colors text-sm"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                title="Resume Journey"
-              >
-                <Play className="h-4 w-4" />
-                <span className="hidden sm:inline">Resume</span>
-              </motion.button>
+              onDelete && (
+                <motion.button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(journey);
+                  }}
+                  className="flex items-center justify-center p-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 hover:text-red-300 rounded-xl transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Delete Journey"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </motion.button>
+              )
             )}
           </div>
         </div>
@@ -2383,27 +2341,24 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className={`border-t ${
-              liveProgress.status === 'completed' 
-                ? 'border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/10' 
-                : 'border-lime-500/20 bg-[#24320f]'
-            } overflow-hidden`}
+            className={`border-t ${liveProgress.status === 'completed'
+              ? 'border-blue-300 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-900/10'
+              : 'border-lime-500/20 bg-[#24320f]'
+              } overflow-hidden`}
           >
             <div className="px-6 py-4">
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Step 1: Job */}
-                <div className={`p-3 rounded-lg border ${
-                  liveProgress.status === 'completed' 
-                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
-                    : 'bg-[#24320f] border-white/20 text-white'
-                }`}>
+                <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
+                  ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
+                  : 'bg-[#24320f] border-white/20 text-white'
+                  }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Briefcase className="h-4 w-4 text-blue-400" />
-                    <span className={`text-xs font-medium ${
-                      liveProgress.status === 'completed' 
-                        ? 'text-gray-900 dark:text-white' 
-                        : 'text-white'
-                    }`}>Job</span>
+                    <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-white'
+                      }`}>Job</span>
                     {getStepStatus(1) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
@@ -2429,18 +2384,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 </div>
 
                 {/* Step 2: CV */}
-                <div className={`p-3 rounded-lg border ${
-                  liveProgress.status === 'completed' 
-                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
-                    : 'bg-[#24320f] border-white/20 text-white'
-                }`}>
+                <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
+                  ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
+                  : 'bg-[#24320f] border-white/20 text-white'
+                  }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-4 w-4 text-green-400" />
-                    <span className={`text-xs font-medium ${
-                      liveProgress.status === 'completed' 
-                        ? 'text-gray-900 dark:text-white' 
-                        : 'text-white'
-                    }`}>CV</span>
+                    <span className={`text-xs font-medium ${liveProgress.status === 'completed'
+                      ? 'text-gray-900 dark:text-white'
+                      : 'text-white'
+                      }`}>CV</span>
                     {getStepStatus(2) === 'completed' && (
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
@@ -2537,11 +2490,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 </div>
 
                 {/* Step 3: ATS Analysis */}
-                <div className={`p-3 rounded-lg border ${
-                  liveProgress.status === 'completed' 
-                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
-                    : 'bg-[#24320f] border-white/20 text-white'
-                }`}>
+                <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
+                  ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
+                  : 'bg-[#24320f] border-white/20 text-white'
+                  }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Settings className="h-4 w-4 text-purple-400" />
                     <span className="text-xs font-medium text-white">ATS Analysis</span>
@@ -2549,7 +2501,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <CheckCircle className={`h-3 w-3 ${liveProgress.status === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     )}
                   </div>
-                  
+
                   {/* Comprehensive ATS Analyzer */}
                   <div className="max-h-96 overflow-y-auto">
                     {/* ATS Score Display */}
@@ -2564,23 +2516,22 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {/* Score Display */}
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className={`w-8 h-8 min-w-8 min-h-8 aspect-square rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                                atsScore >= 80 ? 'bg-green-500 text-white' :
+                              <div className={`w-8 h-8 min-w-8 min-h-8 aspect-square rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${atsScore >= 80 ? 'bg-green-500 text-white' :
                                 atsScore >= 60 ? 'bg-yellow-500 text-white' :
-                                'bg-red-500 text-white'
-                              }`}>
+                                  'bg-red-500 text-white'
+                                }`}>
                                 {atsScore}%
                               </div>
                               <div>
                                 <p className="text-xs font-medium text-white">
                                   {atsScore >= 80 ? 'Excellent Match' :
-                                   atsScore >= 60 ? 'Good Match' :
-                                   'Needs Improvement'}
+                                    atsScore >= 60 ? 'Good Match' :
+                                      'Needs Improvement'}
                                 </p>
                                 <p className="text-xs text-gray-400">ATS Score</p>
                               </div>
                             </div>
-                            
+
                             {/* Refresh Button */}
                             <motion.button
                               onClick={() => fetchATSScore(journey.cvId!, journey.jobId)}
@@ -2592,7 +2543,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               <RefreshCw className={`h-3 w-3 ${atsScoreLoading ? 'animate-spin' : ''}`} />
                             </motion.button>
                           </div>
-                          
+
                           {/* Improve Score Button */}
                           <motion.button
                             onClick={() => {
@@ -2630,11 +2581,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 </div>
 
                 {/* Step 4: Cover Letter */}
-                <div className={`p-3 rounded-lg border ${
-                  liveProgress.status === 'completed' 
-                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
-                    : 'bg-[#24320f] border-white/20 text-white'
-                }`}>
+                <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
+                  ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
+                  : 'bg-[#24320f] border-white/20 text-white'
+                  }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Mail className="h-4 w-4 text-orange-400" />
                     <span className="text-xs font-medium text-white">Cover Letter</span>
@@ -2666,11 +2616,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <div className="flex items-center gap-2 mt-1">
                             <motion.button
                               onClick={() => router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit`)}
-                              className={`text-xs flex items-center gap-1 ${
-                                liveProgress.status === 'completed' 
-                                  ? 'text-blue-400 hover:text-blue-300' 
-                                  : 'text-lime-400 hover:text-lime-300'
-                              }`}
+                              className={`text-xs flex items-center gap-1 ${liveProgress.status === 'completed'
+                                ? 'text-blue-400 hover:text-blue-300'
+                                : 'text-lime-400 hover:text-lime-300'
+                                }`}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -2707,11 +2656,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 </div>
 
                 {/* Step 5: Ready to Apply */}
-                <div className={`p-3 rounded-lg border ${
-                  liveProgress.status === 'completed' 
-                    ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white' 
-                    : 'bg-[#24320f] border-white/20 text-white'
-                }`}>
+                <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
+                  ? 'bg-blue-100 dark:bg-blue-800/20 border-blue-300 dark:border-blue-500/30 text-gray-900 dark:text-white'
+                  : 'bg-[#24320f] border-white/20 text-white'
+                  }`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Download className={`h-4 w-4 ${getStepStatus(5) === 'completed' ? 'text-blue-400' : 'text-lime-400'}`} />
                     <span className="text-xs font-medium text-white">Ready</span>
@@ -2719,7 +2667,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <CheckCircle className="h-3 w-3 text-blue-400" />
                     )}
                   </div>
-                  
+
                   {getStepStatus(5) === 'completed' ? (
                     <div>
                       <p className="text-xs text-white font-medium">Complete</p>
@@ -2732,7 +2680,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         const hasCoverLetter = journey.coverLetterId && !coverLetterNotFound;
                         const hasGoodATS = atsScore !== null && atsScore >= 70;
                         const canMoveToApplied = hasCV && hasCoverLetter && hasGoodATS;
-                        
+
                         return canMoveToApplied ? (
                           /* Action buttons for Step 5 - All conditions met */
                           <div className="flex flex-col gap-2 w-full">
@@ -2749,24 +2697,24 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">Move to Applied</span>
                             </motion.button>
-                        
-                          <motion.button
-                          onClick={() => setDownloadModalOpen(true)}
-                          className="w-full px-2 py-1 bg-lime-600 hover:bg-lime-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center min-w-0"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Download className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">Download</span>
-                          </motion.button>
-                      </div>
+
+                            <motion.button
+                              onClick={() => setDownloadModalOpen(true)}
+                              className="w-full px-2 py-1 bg-lime-600 hover:bg-lime-700 text-white text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center min-w-0"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Download className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">Download</span>
+                            </motion.button>
+                          </div>
                         ) : (
                           /* Conditions not met - Show message */
                           <div className="flex items-center gap-2 p-3 bg-orange-500/10 border border-orange-500/30 rounded-lg">
                             <AlertTriangle className="h-4 w-4 text-orange-400" />
                             <div className="flex-1">
                               <p className="text-xs text-orange-400 font-medium">
-                                {!hasCV || !hasCoverLetter 
+                                {!hasCV || !hasCoverLetter
                                   ? "Please link CV and Cover Letter"
                                   : "ATS score below 70%. Please improve your CV to continue."}
                               </p>
@@ -2774,7 +2722,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               {(!hasCV || !hasCoverLetter) && (
                                 <p className="text-xs text-orange-300 mt-1">
                                   {!hasCV ? "Complete Step 2 to add a CV" :
-                                   !hasCoverLetter ? "Complete Step 4 to add a Cover Letter" : ""}
+                                    !hasCoverLetter ? "Complete Step 4 to add a Cover Letter" : ""}
                                 </p>
                               )}
                             </div>
@@ -2801,7 +2749,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               <Clock className="h-4 w-4 text-blue-400" />
               <h4 className="text-sm font-medium text-white">Application Timeline</h4>
             </div>
-            
+
             <div className="space-y-3">
               {/* Journey Started */}
               <div className="flex items-center gap-3">
@@ -2811,7 +2759,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   <p className="text-xs text-white/60">{formatDate(journey.createdAt)}</p>
                 </div>
               </div>
-              
+
               {/* CV Created/Linked */}
               {journey.cvId && (
                 <div className="flex items-center gap-3">
@@ -2824,7 +2772,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* ATS Score Calculated */}
               {journey.atsScore && journey.atsScore !== -1 && (
                 <div className="flex items-center gap-3">
@@ -2832,7 +2780,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   <div className="flex-1">
                     <p className="text-xs text-white font-medium">ATS Score: {journey.atsScore}%</p>
                     <p className="text-xs text-white/60">
-                      {journey.atsScoreHistory && journey.atsScoreHistory.length > 0 
+                      {journey.atsScoreHistory && journey.atsScoreHistory.length > 0
                         ? `First calculated ${formatDate(journey.atsScoreHistory[0].calculatedAt)}`
                         : 'Score calculated'
                       }
@@ -2840,7 +2788,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Cover Letter Created */}
               {journey.coverLetterId && (
                 <div className="flex items-center gap-3">
@@ -2853,7 +2801,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Journey Completed */}
               {journey.completedAt && (
                 <div className="flex items-center gap-3">
@@ -2871,7 +2819,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   </div>
                 </div>
               )}
-              
+
               {/* Files Downloaded */}
               {journey.downloadHistory && journey.downloadHistory.length > 0 && (
                 <div className="flex items-center gap-3">
@@ -2925,9 +2873,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <div className="flex items-center gap-1">
                             <DollarSign className="h-3 w-3 text-green-400" />
                             <span>
-                              {job.salary.min && job.salary.max 
+                              {job.salary.min && job.salary.max
                                 ? `$${job.salary.min.toLocaleString()}-$${job.salary.max.toLocaleString()}`
-                                : job.salary.min 
+                                : job.salary.min
                                   ? `$${job.salary.min.toLocaleString()}+`
                                   : `Up to $${job.salary.max.toLocaleString()}`
                               }
@@ -2937,10 +2885,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         )}
                         {job?.priority && (
                           <div className="flex items-center gap-1">
-                            <Star className={`h-3 w-3 ${
-                              job.priority === 'high' ? 'text-red-400' : 
+                            <Star className={`h-3 w-3 ${job.priority === 'high' ? 'text-red-400' :
                               job.priority === 'medium' ? 'text-yellow-400' : 'text-gray-400'
-                            }`} />
+                              }`} />
                             <span className="capitalize">{job.priority}</span>
                           </div>
                         )}
@@ -3040,7 +2987,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             <div className="space-y-2 max-h-40 overflow-y-auto">
               {/* Duplicate Master CV Option */}
               {(() => {
-                const hasMasterCV = userCVs.some(cv => 
+                const hasMasterCV = userCVs.some(cv =>
                   (() => {
                     const isMasterAtRoot = cv.isMaster === true;
                     const isMasterInMetadata = cv.metadata?.isMaster === true;
@@ -3050,20 +2997,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 );
                 return hasMasterCV;
               })() && (
-                <motion.button
-                  onClick={handleDuplicateMasterCV}
-                  className="w-full p-2 text-left bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Copy className="h-4 w-4 text-blue-400" />
-                    <div>
-                      <p className="text-xs font-medium text-blue-400">Duplicate Master CV</p>
-                      <p className="text-xs text-blue-300">Create a copy of your master CV</p>
+                  <motion.button
+                    onClick={handleDuplicateMasterCV}
+                    className="w-full p-2 text-left bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Copy className="h-4 w-4 text-blue-400" />
+                      <div>
+                        <p className="text-xs font-medium text-blue-400">Duplicate Master CV</p>
+                        <p className="text-xs text-blue-300">Create a copy of your master CV</p>
+                      </div>
                     </div>
-                  </div>
-                </motion.button>
-              )}
-              
+                  </motion.button>
+                )}
+
               {/* Existing CVs */}
               {freestandingCVs.length > 0 ? (
                 freestandingCVs.map((cv, index) => (
@@ -3132,7 +3079,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   </div>
                 </div>
               </motion.button>
-              
+
               {/* Existing Cover Letters */}
               {userCoverLetters.map((cl, index) => (
                 <motion.button
@@ -3158,39 +3105,39 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         )}
       </AnimatePresence>
 
-        {/* Inline CV Change Selector */}
-        {showCVSelector && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mt-3 p-3 bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-lg text-gray-900 dark:text-white"
-          >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Select a different CV</h4>
-                <button
-                  onClick={() => setShowCVSelector(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-              
-              {userCVs.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {/* Duplicate Master CV Option */}
-                  {(() => {
-                    const hasMasterCV = userCVs.some(cv => 
-                      (() => {
-                        const isMasterAtRoot = cv.isMaster === true;
-                        const isMasterInMetadata = cv.metadata?.isMaster === true;
-                        const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-                        return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
-                      })()
-                    );
-                    return hasMasterCV;
-                  })() && (
+      {/* Inline CV Change Selector */}
+      {showCVSelector && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="mt-3 p-3 bg-gray-300 dark:bg-white/5 border border-gray-400 dark:border-white/10 rounded-lg text-gray-900 dark:text-white"
+        >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white">Select a different CV</h4>
+              <button
+                onClick={() => setShowCVSelector(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {userCVs.length > 0 ? (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {/* Duplicate Master CV Option */}
+                {(() => {
+                  const hasMasterCV = userCVs.some(cv =>
+                    (() => {
+                      const isMasterAtRoot = cv.isMaster === true;
+                      const isMasterInMetadata = cv.metadata?.isMaster === true;
+                      const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                      return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                    })()
+                  );
+                  return hasMasterCV;
+                })() && (
                     <motion.button
                       onClick={handleDuplicateMasterCV}
                       className="w-full p-3 text-left bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg transition-colors"
@@ -3204,160 +3151,159 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       </div>
                     </motion.button>
                   )}
-                  
-                  {/* Regular CVs (excluding master CVs) */}
-                  {userCVs
-                    .filter(cv => 
-                      !(() => {
-                        const isMasterAtRoot = cv.isMaster === true;
-                        const isMasterInMetadata = cv.metadata?.isMaster === true;
-                        const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-                        return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
-                      })()
-                    )
-                    .map((cv, index) => (
-                      <motion.button
-                        key={`cv-selector-${cv.id || 'empty'}-${index}`}
-                        onClick={() => {
-                          handleChangeCV(cv.id);
-                          setShowCVSelector(false);
-                        }}
-                        className={`w-full p-3 rounded-lg border text-left transition-all ${
-                          String(cv.id) === String(journey.cvId)
-                            ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+
+                {/* Regular CVs (excluding master CVs) */}
+                {userCVs
+                  .filter(cv =>
+                    !(() => {
+                      const isMasterAtRoot = cv.isMaster === true;
+                      const isMasterInMetadata = cv.metadata?.isMaster === true;
+                      const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
+                      return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
+                    })()
+                  )
+                  .map((cv, index) => (
+                    <motion.button
+                      key={`cv-selector-${cv.id || 'empty'}-${index}`}
+                      onClick={() => {
+                        handleChangeCV(cv.id);
+                        setShowCVSelector(false);
+                      }}
+                      className={`w-full p-3 rounded-lg border text-left transition-all ${String(cv.id) === String(journey.cvId)
+                        ? 'border-lime-500 bg-lime-50 dark:bg-lime-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                         }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <FileText className="h-4 w-4 text-gray-500" />
-                              <h5 className="font-medium text-gray-900 dark:text-white truncate">
-                                {cv.title}
-                              </h5>
-                              {String(cv.id) === String(journey.cvId) && (
-                                <span className="px-2 py-1 text-xs bg-lime-100 dark:bg-lime-900/30 text-lime-800 dark:text-lime-300 rounded-full">
-                                  Current
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                              <span>Updated {new Date(cv.updatedAt).toLocaleDateString()}</span>
-                              <span>Created {new Date(cv.createdAt).toLocaleDateString()}</span>
-                            </div>
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FileText className="h-4 w-4 text-gray-500" />
+                            <h5 className="font-medium text-gray-900 dark:text-white truncate">
+                              {cv.title}
+                            </h5>
+                            {String(cv.id) === String(journey.cvId) && (
+                              <span className="px-2 py-1 text-xs bg-lime-100 dark:bg-lime-900/30 text-lime-800 dark:text-lime-300 rounded-full">
+                                Current
+                              </span>
+                            )}
                           </div>
-                          {String(cv.id) === String(journey.cvId) && (
-                            <CheckCircle className="h-5 w-5 text-lime-500" />
-                          )}
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
+                            <span>Updated {new Date(cv.updatedAt).toLocaleDateString()}</span>
+                            <span>Created {new Date(cv.createdAt).toLocaleDateString()}</span>
+                          </div>
                         </div>
-                      </motion.button>
-                    ))}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">No CVs found</p>
-                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
-                    Create a CV first to link it to this journey
-                  </p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* Move to Applied Modal */}
-        <MoveToAppliedModal
-          isOpen={showMoveToAppliedModal}
-          onClose={() => setShowMoveToAppliedModal(false)}
-          onConfirm={handleMoveToApplied}
-          journey={{
-            jobTitle: journey.jobTitle,
-            company: journey.company,
-            id: journey.id
-          }}
-          fileSizeEstimates={fileSizeEstimates}
-          isLoading={isCompletingJourney}
-        />
-
-        {/* Undo Toast */}
-        {showUndoToast && (
-          <div className="fixed bottom-4 right-4 z-50">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 50 }}
-              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 max-w-sm"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Journey Completed!
-                  </p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Undo available for 5 seconds
-                  </p>
-                </div>
-                <button
-                  onClick={handleUndoComplete}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
-                >
-                  Undo
-                </button>
+                        {String(cv.id) === String(journey.cvId) && (
+                          <CheckCircle className="h-5 w-5 text-lime-500" />
+                        )}
+                      </div>
+                    </motion.button>
+                  ))}
               </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Keyboard Shortcuts Help Modal */}
-        {showKeyboardShortcuts && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Keyboard Shortcuts
-                </h3>
-                <button
-                  onClick={() => setShowKeyboardShortcuts(false)}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Download Files</span>
-                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+D</kbd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Move to Applied</span>
-                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+A</kbd>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Show Shortcuts</span>
-                  <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+?</kbd>
-                </div>
-              </div>
-              
-              <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Shortcuts only work when this journey card is focused
+            ) : (
+              <div className="text-center py-4">
+                <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-gray-500 dark:text-gray-400 text-sm">No CVs found</p>
+                <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
+                  Create a CV first to link it to this journey
                 </p>
               </div>
-            </motion.div>
+            )}
           </div>
-        )}
+        </motion.div>
+      )}
 
-        {/* Celebration Modal - Removed for simplified UX */}
+      {/* Move to Applied Modal */}
+      <MoveToAppliedModal
+        isOpen={showMoveToAppliedModal}
+        onClose={() => setShowMoveToAppliedModal(false)}
+        onConfirm={handleMoveToApplied}
+        journey={{
+          jobTitle: journey.jobTitle,
+          company: journey.company,
+          id: journey.id
+        }}
+        fileSizeEstimates={fileSizeEstimates}
+        isLoading={isCompletingJourney}
+      />
+
+      {/* Undo Toast */}
+      {showUndoToast && (
+        <div className="fixed bottom-4 right-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-4 max-w-sm"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <CheckCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  Journey Completed!
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Undo available for 5 seconds
+                </p>
+              </div>
+              <button
+                onClick={handleUndoComplete}
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+              >
+                Undo
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Keyboard Shortcuts Help Modal */}
+      {showKeyboardShortcuts && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Keyboard Shortcuts
+              </h3>
+              <button
+                onClick={() => setShowKeyboardShortcuts(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Download Files</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+D</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Move to Applied</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+A</kbd>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Show Shortcuts</span>
+                <kbd className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded">Ctrl+?</kbd>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Shortcuts only work when this journey card is focused
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Celebration Modal - Removed for simplified UX */}
 
       {/* Download Modal */}
       <DownloadModal

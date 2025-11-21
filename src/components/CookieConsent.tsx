@@ -111,9 +111,9 @@ const CookieConsent: React.FC<CookieConsentProps> = ({
         {/* Glow effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-lime-400/5 via-blue-400/5 to-lime-400/5" />
         
-        <div className="relative px-4 sm:px-6 lg:px-8 py-3">
+        <div className="relative px-4 tablet:px-6 desktop:px-8 py-3">
           <div className="max-w-7xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col tablet:flex-row items-center justify-between gap-3">
               {/* Content */}
               <div className="flex items-center gap-3 flex-1">
                 <motion.div

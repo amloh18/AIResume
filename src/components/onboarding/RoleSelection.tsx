@@ -75,7 +75,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+        <h1 className="text-4xl tablet:text-5xl font-bold text-white mb-4">
           Welcome to <span className="text-lime-400">CVCircle</span>
         </h1>
         <p className="text-xl text-white/60 max-w-2xl mx-auto">
@@ -84,7 +84,7 @@ export default function RoleSelection({ onRoleSelect }: RoleSelectionProps) {
       </motion.div>
 
       {/* Role Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6 max-w-4xl mx-auto">
         {roles.map((role, index) => {
           const isFlipped = flippedCards.has(role.id);
           

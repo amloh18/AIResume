@@ -225,7 +225,7 @@ const SystemHealth: React.FC = () => {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Health</h1>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 animate-pulse">
               <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4 mb-4"></div>
@@ -289,7 +289,7 @@ const SystemHealth: React.FC = () => {
       </div>
 
       {/* System Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
         {systemComponents.map((component, index) => {
           const Icon = component.icon;
           const StatusIcon = getStatusIcon(component.data.status);
@@ -321,7 +321,7 @@ const SystemHealth: React.FC = () => {
       </div>
 
       {/* Performance Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         {/* Response Times Chart */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Response Times (24h)</h3>
@@ -423,7 +423,7 @@ const SystemHealth: React.FC = () => {
           </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
           <div className="text-center">
             <div className="text-2xl font-bold text-gray-900 dark:text-white">{systemStatus.uptime || 'Unknown'}</div>
             <div className="text-sm text-gray-600 dark:text-gray-400">Total Uptime</div>
@@ -440,7 +440,7 @@ const SystemHealth: React.FC = () => {
       </div>
 
       {/* Additional Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         {/* Requests Per Hour */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Requests Per Hour</h3>
@@ -549,7 +549,7 @@ const SystemHealth: React.FC = () => {
       </div>
 
       {/* Performance Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Response Times</h3>
           <div className="space-y-4">

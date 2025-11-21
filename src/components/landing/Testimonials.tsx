@@ -293,7 +293,7 @@ const Testimonials = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-2 tablet:px-6 desktop:px-8 w-full h-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div 
           className="text-center mb-16"
@@ -302,20 +302,20 @@ const Testimonials = () => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6 text-center">
             The new way to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               build Tailored CV
             </span>
           </h2>
-          <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle</span>.
           </p>
         </motion.div>
 
         {/* Enhanced Testimonials Carousel - Continuous Scroll */}
         <motion.div 
-          className="relative mb-20 -mx-2 sm:-mx-6 lg:-mx-8"
+          className="relative mb-20 -mx-2 tablet:-mx-6 desktop:-mx-8"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -329,7 +329,7 @@ const Testimonials = () => {
           <div className="relative overflow-hidden">
             <div 
               ref={scrollContainerRef}
-              className="flex items-stretch space-x-4 sm:space-x-6 lg:space-x-8 whitespace-nowrap"
+              className="flex items-stretch space-x-4 tablet:space-x-6 desktop:space-x-8 whitespace-nowrap"
               style={{ willChange: 'transform' }}
             >
               {/* First set of testimonials */}
@@ -337,11 +337,11 @@ const Testimonials = () => {
                 <motion.div
                   key={testimonial._id}
                   data-testimonial-card
-                  className="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px]"
+                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
                     style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{ 
                       scale: 1.02,
@@ -358,7 +358,7 @@ const Testimonials = () => {
                     
                     {/* Quote Icon */}
                     <motion.div 
-                      className="text-2xl sm:text-3xl lg:text-4xl text-lime-400 mb-3 sm:mb-4"
+                      className="text-2xl tablet:text-3xl desktop:text-4xl text-lime-400 mb-3 tablet:mb-4"
                       whileHover={{ 
                         scale: 1.2,
                         rotateY: 15,
@@ -373,12 +373,12 @@ const Testimonials = () => {
                     </motion.div>
                     
                     {/* Quote Text */}
-                    <p className="text-white/80 text-xs sm:text-sm lg:text-base leading-relaxed mb-4 sm:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                    <p className="text-white/80 text-xs tablet:text-sm desktop:text-base leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
                       {renderMessageWithAccents(testimonial.message)}
                     </p>
                     
                     {/* Rating */}
-                    <div className="flex items-center gap-1 mb-3 sm:mb-4 relative z-10">
+                    <div className="flex items-center gap-1 mb-3 tablet:mb-4 relative z-10">
                       {[...Array(testimonial.starRating)].map((_, i) => (
                         <motion.div
                           key={i}
@@ -387,20 +387,20 @@ const Testimonials = () => {
                           transition={{ delay: 0.5 + i * 0.1 }}
                           whileHover={{ scale: 1.2 }}
                         >
-                          <Star size={14} className="text-yellow-400 fill-current sm:w-4 sm:h-4" />
+                          <Star size={14} className="text-yellow-400 fill-current tablet:w-4 tablet:h-4" />
                         </motion.div>
                       ))}
                     </div>
                     
                     {/* Author Info */}
-                    <div className="flex items-center gap-2 sm:gap-3 relative z-10 mt-auto">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-black font-bold text-sm sm:text-base">
+                    <div className="flex items-center gap-2 tablet:gap-3 relative z-10 mt-auto">
+                      <div className="w-9 h-9 tablet:w-10 tablet:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-sm tablet:text-base">
                           {testimonial.username.charAt(0)}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-white font-semibold text-xs sm:text-sm truncate">
+                        <div className="text-white font-semibold text-xs tablet:text-sm truncate">
                           {testimonial.username}
                         </div>
                         <div className="text-white/60 text-xs truncate">
@@ -417,11 +417,11 @@ const Testimonials = () => {
                 <motion.div
                   key={`${testimonial._id}-duplicate`}
                   data-testimonial-card
-                  className="group relative flex-shrink-0 w-[280px] sm:w-[320px] lg:w-[360px]"
+                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 sm:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
                     style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{ 
                       scale: 1.02,
@@ -438,7 +438,7 @@ const Testimonials = () => {
                     
                     {/* Quote Icon */}
                     <motion.div 
-                      className="text-2xl sm:text-3xl lg:text-4xl text-lime-400 mb-3 sm:mb-4"
+                      className="text-2xl tablet:text-3xl desktop:text-4xl text-lime-400 mb-3 tablet:mb-4"
                       whileHover={{ 
                         scale: 1.2,
                         rotateY: 15,
@@ -453,12 +453,12 @@ const Testimonials = () => {
                     </motion.div>
                     
                     {/* Quote Text */}
-                    <p className="text-white/80 text-xs sm:text-sm lg:text-base leading-relaxed mb-4 sm:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                    <p className="text-white/80 text-xs tablet:text-sm desktop:text-base leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
                       {renderMessageWithAccents(testimonial.message)}
                     </p>
                     
                     {/* Rating */}
-                    <div className="flex items-center gap-1 mb-3 sm:mb-4 relative z-10">
+                    <div className="flex items-center gap-1 mb-3 tablet:mb-4 relative z-10">
                       {[...Array(testimonial.starRating)].map((_, i) => (
                         <motion.div
                           key={i}
@@ -467,20 +467,20 @@ const Testimonials = () => {
                           transition={{ delay: 0.5 + i * 0.1 }}
                           whileHover={{ scale: 1.2 }}
                         >
-                          <Star size={14} className="text-yellow-400 fill-current sm:w-4 sm:h-4" />
+                          <Star size={14} className="text-yellow-400 fill-current tablet:w-4 tablet:h-4" />
                         </motion.div>
                       ))}
                     </div>
                     
                     {/* Author Info */}
-                    <div className="flex items-center gap-2 sm:gap-3 relative z-10 mt-auto">
-                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-black font-bold text-sm sm:text-base">
+                    <div className="flex items-center gap-2 tablet:gap-3 relative z-10 mt-auto">
+                      <div className="w-9 h-9 tablet:w-10 tablet:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-sm tablet:text-base">
                           {testimonial.username.charAt(0)}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-white font-semibold text-xs sm:text-sm truncate">
+                        <div className="text-white font-semibold text-xs tablet:text-sm truncate">
                           {testimonial.username}
                         </div>
                         <div className="text-white/60 text-xs truncate">

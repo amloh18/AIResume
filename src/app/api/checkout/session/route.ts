@@ -8,6 +8,7 @@ import { stripe } from '@/lib/payment/stripe';
 import { razorpay } from '@/lib/payment/razorpay';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { getPricingForPlan } from '@/lib/services/countryPricingService';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 // Helper to get country pricing for a plan using CountryPricing collection
 // Returns full CountryPricing data including stripePriceIds and razorpayPlanIds
@@ -88,6 +89,93 @@ async function getCountryPricingForPlan(
 }
 import Coupon from '@/models/Coupon';
 import DiscountCode from '@/models/DiscountCode';
+
+type PaidPlanKey = 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+
+interface ZeroAmountActivationParams {
+  user: any;
+  planKey: PaidPlanKey;
+  interval?: 'monthly' | 'quarterly' | 'yearly' | 'one-time';
+  regionInfo?: any;
+  currency?: string;
+  couponDiscount?: any;
+  priceInMinorUnits?: number;
+}
+
+async function activatePlanWithCoupon({
+  user,
+  planKey,
+  interval = 'monthly',
+  regionInfo,
+  currency = 'INR',
+  couponDiscount,
+  priceInMinorUnits = 0
+}: ZeroAmountActivationParams) {
+  if (!user?._id) {
+    return NextResponse.json(
+      { error: 'User not found for zero-amount activation' },
+      { status: 400 }
+    );
+  }
+
+  const regionCode = regionInfo?.countryCode || 'IN';
+  const normalizedCurrency = (currency || 'INR').toUpperCase();
+  const paymentReference = `coupon-${couponDiscount?.code || 'zero'}-${Date.now()}`;
+  const priceInPrimaryUnits = Math.max(0, priceInMinorUnits) / 100;
+
+  let activationResult;
+
+  if (planKey === 'day_pass') {
+    activationResult = await subscriptionService.activateDayPass(
+      user._id.toString(),
+      paymentReference,
+      regionCode,
+      normalizedCurrency,
+      priceInPrimaryUnits
+    );
+  } else {
+    const normalizedInterval: 'monthly' | 'quarterly' | 'yearly' =
+      interval === 'quarterly' ? 'quarterly' : interval === 'yearly' ? 'yearly' : 'monthly';
+
+    const proPlanKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' =
+      planKey === 'pro_quarterly'
+        ? 'pro_quarterly'
+        : planKey === 'pro_yearly'
+          ? 'pro_yearly'
+          : 'pro_monthly';
+
+    activationResult = await subscriptionService.activateProPlan(
+      user._id.toString(),
+      proPlanKey,
+      normalizedInterval,
+      paymentReference,
+      regionCode,
+      normalizedCurrency,
+      priceInPrimaryUnits
+    );
+  }
+
+  if (!activationResult.success) {
+    return NextResponse.json(
+      { error: activationResult.error || 'Failed to activate plan with coupon' },
+      { status: 400 }
+    );
+  }
+
+  const updatedUser = await User.findById(user._id).select('currentPlanKey subscription').lean();
+
+  return NextResponse.json({
+    success: true,
+    zero_amount: true,
+    provider: 'coupon',
+    planKey: updatedUser?.currentPlanKey || planKey,
+    subscription: updatedUser?.subscription || null,
+    message: couponDiscount
+      ? `Coupon ${couponDiscount.code} covered the full amount. Plan activated without payment.`
+      : 'Plan activated without payment.',
+    coupon: couponDiscount ? { code: couponDiscount.code, id: couponDiscount.id } : null
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -676,7 +764,33 @@ async function handleDayPassPayment(
     console.log('No coupon discount applied to Day Pass Razorpay order');
   }
 
+  if (amount <= 0) {
+    console.log('Coupon covered full day pass cost. Activating plan without payment.');
+    return activatePlanWithCoupon({
+      user,
+      planKey: 'day_pass',
+      interval: 'one-time',
+      regionInfo,
+      currency,
+      couponDiscount,
+      priceInMinorUnits: amount
+    });
+  }
+
   if (provider === 'stripe') {
+    if (amount <= 0) {
+      console.log('Coupon covered full pro plan cost (Stripe). Activating subscription without payment.');
+      return activatePlanWithCoupon({
+        user,
+        planKey,
+        interval: interval as 'monthly' | 'quarterly' | 'yearly',
+        regionInfo,
+        currency,
+        couponDiscount,
+        priceInMinorUnits: amount
+      });
+    }
+
     if (!stripe) {
       return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
     }
@@ -1323,8 +1437,16 @@ async function handleProPlanPayment(
     
     // Validate amount
     if (!razorpayAmount || razorpayAmount <= 0) {
-      console.error('Invalid amount for Razorpay:', razorpayAmount);
-      return NextResponse.json({ error: 'Invalid payment amount' }, { status: 400 });
+      console.error('Invalid amount for Razorpay - activating plan without payment:', razorpayAmount);
+      return activatePlanWithCoupon({
+        user,
+        planKey,
+        interval: interval as 'monthly' | 'quarterly' | 'yearly',
+        regionInfo,
+        currency: razorpayCurrency,
+        couponDiscount,
+        priceInMinorUnits: razorpayAmount || 0
+      });
     }
     
     // Apply coupon discount BEFORE creating order
@@ -1410,8 +1532,16 @@ async function handleProPlanPayment(
       }
       
       if (isNaN(finalAmount) || finalAmount <= 0) {
-        console.error('Invalid amount for Razorpay order:', finalAmount);
-        return NextResponse.json({ error: 'Invalid payment amount' }, { status: 400 });
+        console.error('Invalid amount for Razorpay order - activating plan without payment:', finalAmount);
+        return activatePlanWithCoupon({
+          user,
+          planKey,
+          interval: interval as 'monthly' | 'quarterly' | 'yearly',
+          regionInfo,
+          currency: razorpayCurrency,
+          couponDiscount,
+          priceInMinorUnits: isNaN(finalAmount) ? 0 : finalAmount
+        });
       }
       
       // Razorpay minimum amount validation (minimum 1 INR = 100 paise)

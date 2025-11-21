@@ -466,7 +466,7 @@ export function useStudio(): UseStudioReturn {
 
   const navigateToJourney = useCallback(() => {
     if (state.sessionContext.mode === 'journey' && state.sessionContext.journeyId) {
-      router.push(`/dashboard/application-tracker?journeyId=${state.sessionContext.journeyId}`);
+      router.push(`/dashboard/jobs?journeyId=${state.sessionContext.journeyId}`);
     }
   }, [state.sessionContext, router]);
 

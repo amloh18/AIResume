@@ -402,7 +402,7 @@ const AdminKPIs: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
         {kpiCards.map((card, index) => {
           const Icon = card.icon;
           return (
@@ -444,7 +444,7 @@ const AdminKPIs: React.FC = () => {
       </div>
 
       {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         {/* Growth Chart */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -540,7 +540,7 @@ const AdminKPIs: React.FC = () => {
       </div>
 
       {/* Additional Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         {/* Line Chart for Trends */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
@@ -635,7 +635,7 @@ const AdminKPIs: React.FC = () => {
               
               {/* Custom Legend with better spacing and styling */}
               <div className="mt-4 w-full">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
                   {pieChartData.map((entry, index) => (
                     <div key={index} className="flex items-center space-x-2">
                       <div 

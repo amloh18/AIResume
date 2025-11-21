@@ -59,11 +59,14 @@ class UsageLimitsService {
       }
       
       // For paid plans, check subscription status
+      // If user has a paid plan key but no active subscription, treat them as free tier
       if (!subscription || subscription.status === 'cancelled' || subscription.status === 'inactive') {
+        // User has paid plan key but no active subscription - treat as free tier
+        // This allows them to use free tier credits instead of blocking access completely
         return {
-          hasAccess: false,
-          reason: 'No active subscription',
-          requiresRenewal: true
+          hasAccess: true,
+          subscription,
+          reason: 'No active subscription, using free tier access'
         };
       }
 

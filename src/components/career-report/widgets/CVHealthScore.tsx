@@ -89,7 +89,7 @@ const CVHealthScore: React.FC<CVHealthScoreProps> = ({
 
       <div className="space-y-4">
         {/* Row 1: Gauge and Score Breakdown in 2 columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
           {/* Column 1: Circular Gauge */}
           <div className="flex items-center justify-center">
             <div className="relative w-32 h-32 flex-shrink-0">
@@ -174,20 +174,20 @@ const CVHealthScore: React.FC<CVHealthScoreProps> = ({
 
         {/* Row 3: Quick Stats - Full Width */}
         <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-start">
+          <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
+            <div className="flex items-center justify-between tablet:flex-col tablet:items-start">
               <span className="text-sm text-gray-600 dark:text-gray-400">Quantifiable Statements</span>
               <span className="font-semibold text-gray-900 dark:text-white text-lg">
                 {impactScore?.quantifiableStatements || 0}/15
               </span>
             </div>
-            <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-start">
+            <div className="flex items-center justify-between tablet:flex-col tablet:items-start">
               <span className="text-sm text-gray-600 dark:text-gray-400">High-Impact Verbs</span>
               <span className="font-semibold text-gray-900 dark:text-white text-lg">
                 {impactScore?.highImpactVerbs || 0}/30
               </span>
             </div>
-            <div className="flex items-center justify-between sm:flex-col sm:items-start sm:justify-start">
+            <div className="flex items-center justify-between tablet:flex-col tablet:items-start tablet:justify-start">
               <span className="text-sm text-gray-600 dark:text-gray-400">CV Length</span>
               <span className="font-semibold text-gray-900 dark:text-white text-lg">
                 {cvOptimization?.totalLength || 'N/A'}

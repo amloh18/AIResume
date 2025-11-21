@@ -25,7 +25,7 @@ const SupportContent: React.FC = () => {
           Quick Help
         </h3>
         
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid tablet:grid-cols-2 gap-4">
           <Link 
             href="/legal#terms" 
             className="bg-white/5 hover:bg-white/10 rounded-lg p-4 border border-white/10 transition-all"
@@ -87,7 +87,7 @@ const SupportContent: React.FC = () => {
 
           <div>
             <h4 className="text-xl font-medium mb-3 text-lime-400">Response Times</h4>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid tablet:grid-cols-3 gap-4">
               <div className="bg-green-500/10 rounded-lg p-4 border border-green-500/20">
                 <CheckCircle className="w-5 h-5 text-green-400 mb-2" />
                 <h5 className="font-medium mb-1 text-green-400">General Inquiries</h5>
@@ -236,7 +236,7 @@ const SupportContent: React.FC = () => {
           Helpful Resources
         </h3>
         
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid tablet:grid-cols-2 gap-4">
           <div className="bg-white/5 rounded-lg p-4 border border-white/10">
             <FileText className="w-5 h-5 text-lime-400 mb-2" />
             <h4 className="font-medium mb-2">Documentation</h4>

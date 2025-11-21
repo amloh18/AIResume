@@ -280,7 +280,7 @@ const DiscountCodeManager: React.FC = () => {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 tablet:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{discountCodes.length}</div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Total Codes</div>
@@ -306,7 +306,7 @@ const DiscountCodeManager: React.FC = () => {
       </div>
 
       {/* Discount Codes Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
         {discountCodes.map((code) => (
           <div
             key={code._id}
@@ -425,7 +425,7 @@ const DiscountCodeManager: React.FC = () => {
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Basic Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Code
@@ -472,7 +472,7 @@ const DiscountCodeManager: React.FC = () => {
                 </div>
 
                 {/* Discount Details */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Discount Type
@@ -514,7 +514,7 @@ const DiscountCodeManager: React.FC = () => {
                 </div>
 
                 {/* Validity Period */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       Valid From

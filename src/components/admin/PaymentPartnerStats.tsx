@@ -205,7 +205,7 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
@@ -264,7 +264,7 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
         {/* Revenue Distribution Pie Chart */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Revenue Distribution</h3>
@@ -330,7 +330,7 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
       </div>
 
       {/* Detailed Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
         {/* Stripe Statistics */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">

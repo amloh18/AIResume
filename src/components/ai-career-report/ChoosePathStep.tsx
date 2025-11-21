@@ -283,7 +283,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
 
   return (
     <div 
-      className="h-screen bg-[#1A201A] flex items-center justify-center p-4 pt-4 lg:pt-8 overflow-hidden"
+      className="h-screen bg-[#1A201A] flex items-center justify-center p-4 pt-4 desktop:pt-8 overflow-hidden"
       onClick={handleClickOutside}
     >
       <div className="w-full max-w-7xl h-full flex flex-col justify-center">
@@ -300,14 +300,14 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
         )}
         
         {/* Header Section */}
-        <div className="text-center mb-4 lg:mb-8">
+        <div className="text-center mb-4 desktop:mb-8">
           
           {/* Step Information */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="mb-4 lg:mb-6"
+            className="mb-4 desktop:mb-6"
           >
             <div className="text-[#80FF00] font-bold text-lg mb-2">Step 1 of 3</div>
           </motion.div>
@@ -316,7 +316,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 lg:mb-6"
+            className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-4 desktop:mb-6"
           >
             Choose Your Path to Success
           </motion.h1>
@@ -325,7 +325,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg lg:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed"
+            className="text-lg desktop:text-xl text-white/70 max-w-2xl mx-auto leading-relaxed"
           >
             Get personalized career insights and recommendations tailored to your experience level and goals.
           </motion.p>
@@ -333,7 +333,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
 
         {/* Main Content Cards */}
         <div className={`grid gap-8 max-w-5xl mx-auto transition-all duration-500 ${
-          selectedOption === 'upload' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'
+          selectedOption === 'upload' ? 'grid-cols-1' : 'grid-cols-1 desktop:grid-cols-2'
         }`}>
           {/* Upload CV Card */}
           <motion.div
@@ -344,7 +344,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             }}
             transition={{ duration: 0.6, delay: 0.3 }}
             className={`upload-card-container relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${
-              selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20 lg:col-span-2' : 'hover:shadow-xl hover:shadow-black/20'
+              selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20 desktop:col-span-2' : 'hover:shadow-xl hover:shadow-black/20'
             }`}
             whileHover={selectedOption !== 'upload' ? { scale: 1.02, y: -5 } : {}}
             whileTap={{ scale: 0.98 }}
@@ -499,7 +499,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-center mt-8 lg:mt-12"
+            className="text-center mt-8 desktop:mt-12"
           >
             <p className="text-white/50 text-sm">
               Both options will lead to the same comprehensive AI career analysis

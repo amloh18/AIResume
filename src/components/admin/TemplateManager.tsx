@@ -864,7 +864,7 @@ ${indexContent}`;
       </div>
 
       {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
         {filteredTemplates.map((template) => (
           <div key={template.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-start justify-between mb-4">
@@ -959,7 +959,7 @@ ${indexContent}`;
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
                 {/* Left Column - JSON Input */}
                 <div className="space-y-4">
                   <div>
@@ -1097,7 +1097,7 @@ ${indexContent}`;
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
                 {/* Bigger Preview */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Template Preview</h3>

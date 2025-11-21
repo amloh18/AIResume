@@ -529,7 +529,7 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
                     <step.icon className="h-4 w-4" />
                   )}
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden tablet:block">
                   <div className="text-sm font-medium text-white">{step.title}</div>
                   <div className="text-xs text-white/60">{step.description}</div>
                 </div>
@@ -647,7 +647,7 @@ const PersonalDetailsStep: React.FC = () => {
         <p className="text-white/60">Let's start with your basic details</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-white mb-2">Full Name</label>
           <input
@@ -800,7 +800,7 @@ const ExperienceStep: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Company</label>
               <input
@@ -822,7 +822,7 @@ const ExperienceStep: React.FC = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Start Date</label>
               <input
@@ -965,7 +965,7 @@ const EducationStep: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Institution</label>
               <input
@@ -987,7 +987,7 @@ const EducationStep: React.FC = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Field of Study</label>
               <input
@@ -1009,7 +1009,7 @@ const EducationStep: React.FC = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Start Date</label>
               <input
@@ -1138,7 +1138,7 @@ const ProjectsStep: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Project Name</label>
               <input
@@ -1160,7 +1160,7 @@ const ProjectsStep: React.FC = () => {
               />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Start Date</label>
               <input
@@ -1422,7 +1422,7 @@ const SkillsStep: React.FC = () => {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Category Name</label>
               <input

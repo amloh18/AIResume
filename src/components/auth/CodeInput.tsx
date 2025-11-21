@@ -117,7 +117,7 @@ export default function CodeInput({
         }
       }
     } catch (error) {
-      console.log('Paste not supported or failed');
+      // Paste not supported or failed - silently handle
     }
   };
 

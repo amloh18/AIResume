@@ -17,7 +17,7 @@ const PrivacyPolicy: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <Logo size="md" className="text-white" />
@@ -57,7 +57,7 @@ const PrivacyPolicy: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 tablet:px-6 desktop:px-8 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -147,7 +147,7 @@ const PrivacyPolicy: React.FC = () => {
               How We Use Your Information
             </h2>
             
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid tablet:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <h3 className="text-xl font-medium text-lime-400">Service Provision</h3>
                 <ul className="list-disc list-inside space-y-2 text-white/80">
@@ -224,7 +224,7 @@ const PrivacyPolicy: React.FC = () => {
               Your Rights and Choices
             </h2>
             
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid tablet:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <h3 className="text-xl font-medium text-lime-400">Access and Control</h3>
                 <ul className="list-disc list-inside space-y-2 text-white/80">

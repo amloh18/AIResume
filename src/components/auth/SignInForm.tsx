@@ -31,8 +31,6 @@ export default function SignInForm() {
     setError('');
 
     try {
-      console.log('🔐 Attempting credentials sign-in...');
-      
       // Use NextAuth credentials provider
       const result = await signIn('credentials', {
         email: formData.email,
@@ -41,10 +39,8 @@ export default function SignInForm() {
       });
 
       if (result?.error) {
-        console.error('❌ Sign-in failed:', result.error);
         setError(result.error);
       } else if (result?.ok) {
-        console.log('✅ Sign-in successful, redirecting to dashboard...');
         // Redirect to dashboard
         window.location.href = '/dashboard';
       } else {
@@ -52,7 +48,6 @@ export default function SignInForm() {
       }
 
     } catch (error: any) {
-      console.error('❌ Sign in error:', error);
       setError(error.message || 'Failed to sign in. Please try again.');
     } finally {
       setLoading(false);
@@ -64,8 +59,6 @@ export default function SignInForm() {
     setError('');
 
     try {
-      console.log('🔐 Attempting Google sign-in...');
-      
       // Use NextAuth Google provider directly
       const result = await signIn('google', {
         callbackUrl: '/dashboard',

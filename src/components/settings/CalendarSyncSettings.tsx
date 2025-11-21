@@ -266,7 +266,7 @@ export default function CalendarSyncSettings({ userSettings, onUpdateSettings }:
                         Sync Settings
                       </h4>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                         <div className="flex items-center justify-between">
                           <Label htmlFor="include-interviews" className="text-sm">
                             Include Interviews

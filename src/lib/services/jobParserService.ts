@@ -366,6 +366,132 @@ export class JobParserService {
     }
   }
 
+  /**
+   * Parse job description text using LLM (Gemini)
+   * Extracts structured job data from raw text or URL
+   */
+  public async parseJobDescription(
+    textOrUrl: string,
+    isUrl: boolean = false
+  ): Promise<JobDetails> {
+    try {
+      let jobText = textOrUrl;
+      
+      // If URL, try to fetch content first
+      if (isUrl) {
+        try {
+          const page = await this.createPage();
+          await page.goto(textOrUrl, { 
+            waitUntil: 'networkidle2',
+            timeout: 30000 
+          });
+          await this.waitForContent(page);
+          jobText = await page.evaluate(() => document.body.innerText);
+          await page.close();
+        } catch (error) {
+          console.warn('Failed to fetch URL, using LLM parsing directly:', error);
+          // Continue with URL as text for LLM to parse
+        }
+      }
+
+      // Use LLM to extract structured data
+      const { callGeminiWithFallback } = await import('@/lib/utils/gemini-api-helper');
+      
+      const systemPrompt = `You are a job description parser. Extract structured information from job postings. Return ONLY valid JSON, no markdown, no code fences.`;
+      
+      const userPrompt = `Parse this job description and extract:
+- title: Job title
+- company: Company name
+- location: Location (city, state, country, or remote)
+- salary: Object with min, max (numbers), currency (string), period ("yearly"|"monthly"|"hourly")
+- description: Full job description text
+- requirements: Array of required skills/qualifications
+- benefits: Array of benefits mentioned
+- jobType: "full-time"|"part-time"|"contract"|"internship"
+- experience: Required experience level
+- education: Education requirements
+- skills: Array of technical skills mentioned
+- postedDate: Date posted (if mentioned)
+- applicationDeadline: Application deadline (if mentioned)
+- sourceUrl: The URL or source (use provided URL if available, otherwise "manual")
+
+Job Description:
+${jobText}
+
+Return JSON matching this structure:
+{
+  "title": "...",
+  "company": "...",
+  "location": "...",
+  "salary": {"min": 0, "max": 0, "currency": "USD", "period": "yearly"},
+  "description": "...",
+  "requirements": [],
+  "benefits": [],
+  "jobType": "...",
+  "experience": "...",
+  "education": "...",
+  "skills": [],
+  "postedDate": "...",
+  "applicationDeadline": "...",
+  "sourceUrl": "${isUrl ? textOrUrl : 'manual'}"
+}`;
+
+      const result = await callGeminiWithFallback({
+        prompt: userPrompt,
+        systemPrompt,
+        temperature: 0.3, // Lower temperature for more consistent extraction
+        maxTokens: 2048,
+        model: 'gemini-2.5-flash-lite'
+      });
+
+      // Parse JSON from response
+      let jsonText = result.content;
+      
+      // Remove code fences if present
+      jsonText = jsonText
+        .replace(/```json[\s\S]*?\n/g, '')
+        .replace(/```[\s\S]*?\n/g, '')
+        .replace(/```/g, '')
+        .trim();
+      
+      // Extract JSON object
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('Could not parse LLM response as JSON');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+      
+      // Map to JobDetails interface
+      return {
+        title: parsed.title || '',
+        company: parsed.company || '',
+        location: parsed.location,
+        salary: parsed.salary ? {
+          min: parsed.salary.min,
+          max: parsed.salary.max,
+          currency: parsed.salary.currency || 'USD',
+          period: (parsed.salary.period === 'hourly' || parsed.salary.period === 'monthly' || parsed.salary.period === 'yearly')
+            ? parsed.salary.period
+            : 'yearly'
+        } : undefined,
+        description: parsed.description || jobText, // Fallback to original text
+        requirements: parsed.requirements || [],
+        benefits: parsed.benefits || [],
+        jobType: parsed.jobType,
+        experience: parsed.experience,
+        education: parsed.education,
+        skills: parsed.skills || [],
+        postedDate: parsed.postedDate,
+        applicationDeadline: parsed.applicationDeadline,
+        sourceUrl: parsed.sourceUrl || (isUrl ? textOrUrl : 'manual')
+      };
+    } catch (error) {
+      console.error('Error parsing job description with LLM:', error);
+      throw new Error(`Failed to parse job description: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   public async close(): Promise<void> {
     if (this.browser) {
       await this.browser.close();

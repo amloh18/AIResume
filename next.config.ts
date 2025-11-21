@@ -1,4 +1,5 @@
-import type { NextConfig } from 'next'
+import type { NextConfig } from "next";
+// Force rebuild'
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -14,21 +15,21 @@ const nextConfig: NextConfig = {
   webpack: (config, { dev, isServer }) => {
     // Import webpack once
     const webpack = require('webpack');
-    
+
     // Load environment variables at build time
     require('dotenv').config({ path: '.env.local' });
-    
+
     // CRITICAL: Ensure Next.js internal loaders are preserved
     // Don't modify module.rules that might affect Next.js internal loaders
     if (!config.resolve) {
       config.resolve = {};
     }
-    
+
     // Fix webpack chunk resolution issues
     if (!config.resolve.alias) {
       config.resolve.alias = {};
     }
-    
+
     // Ensure proper chunk loading
     // Use 'named' in dev for better HMR, 'deterministic' in production for caching
     config.optimization = config.optimization || {};
@@ -39,7 +40,7 @@ const nextConfig: NextConfig = {
       config.optimization.moduleIds = 'deterministic';
       config.optimization.chunkIds = 'deterministic';
     }
-    
+
     // Add webpack plugins for Node.js polyfills
     config.plugins.push(
       new webpack.ProvidePlugin({
@@ -78,13 +79,13 @@ const nextConfig: NextConfig = {
       tls: false,
       'farmhash-modern': false,
     };
-    
+
     // Ensure Next.js internal loaders can be resolved
     // Preserve existing resolveLoader configuration from Next.js
     if (!config.resolveLoader) {
       config.resolveLoader = {};
     }
-    
+
     // Preserve Next.js loader resolution - don't override, just ensure it exists
     if (!config.resolveLoader.modules) {
       config.resolveLoader.modules = ['node_modules'];
@@ -113,11 +114,36 @@ const nextConfig: NextConfig = {
     if (!config.resolve.alias) {
       config.resolve.alias = {};
     }
-    
+
+    // Fix for stale JobModal/EditJobModal references - alias them to correct components to prevent HMR errors
+    // This handles any cached references to the old component names
+    // JobModal -> JobSidebar (comprehensive aliases for all possible import paths)
+    config.resolve.alias['@/components/dashboard/JobModal'] = '@/components/dashboard/jobs/JobSidebar';
+    config.resolve.alias['@/components/dashboard/JobModal.tsx'] = '@/components/dashboard/jobs/JobSidebar';
+    config.resolve.alias['@/components/dashboard/JobModal.js'] = '@/components/dashboard/jobs/JobSidebar';
+    config.resolve.alias['./JobModal'] = './jobs/JobSidebar';
+    config.resolve.alias['./JobModal.tsx'] = './jobs/JobSidebar';
+    config.resolve.alias['./JobModal.js'] = './jobs/JobSidebar';
+    config.resolve.alias['../JobModal'] = '../jobs/JobSidebar';
+    config.resolve.alias['../JobModal.tsx'] = '../jobs/JobSidebar';
+    config.resolve.alias['../JobModal.js'] = '../jobs/JobSidebar';
+    config.resolve.alias['JobModal'] = '@/components/dashboard/jobs/JobSidebar';
+    // EditJobModal -> EditJobSidebar (comprehensive aliases for all possible import paths)
+    config.resolve.alias['@/components/dashboard/EditJobModal'] = '@/components/dashboard/jobs/EditJobSidebar';
+    config.resolve.alias['@/components/dashboard/EditJobModal.tsx'] = '@/components/dashboard/jobs/EditJobSidebar';
+    config.resolve.alias['@/components/dashboard/EditJobModal.js'] = '@/components/dashboard/jobs/EditJobSidebar';
+    config.resolve.alias['./EditJobModal'] = './jobs/EditJobSidebar';
+    config.resolve.alias['./EditJobModal.tsx'] = './jobs/EditJobSidebar';
+    config.resolve.alias['./EditJobModal.js'] = './jobs/EditJobSidebar';
+    config.resolve.alias['../EditJobModal'] = '../jobs/EditJobSidebar';
+    config.resolve.alias['../EditJobModal.tsx'] = '../jobs/EditJobSidebar';
+    config.resolve.alias['../EditJobModal.js'] = '../jobs/EditJobSidebar';
+    config.resolve.alias['EditJobModal'] = '@/components/dashboard/jobs/EditJobSidebar';
+
     // Apply Sentry exclusions (but ensure React/React-DOM are NEVER excluded)
     // React must always be available for client components
     Object.assign(config.resolve.alias, sentryAliases);
-    
+
     // Explicitly ensure React is never aliased to false or excluded
     // This is critical - React must always be available
     if (config.resolve.alias.react === false) {
@@ -126,18 +152,18 @@ const nextConfig: NextConfig = {
     if (config.resolve.alias['react-dom'] === false) {
       delete config.resolve.alias['react-dom'];
     }
-    
+
     // CRITICAL: Ensure React is properly resolved and never externalized
     // This fixes "Cannot read properties of null (reading 'useState')" errors
     // For client builds, React must ALWAYS be bundled, never externalized
 
     // For Edge Runtime builds (middleware), exclude instrumentation and Sentry completely
     // Vercel's Edge bundler analyzes all files, so we need to be aggressive
-    const isMiddlewareBuild = config.entry && typeof config.entry === 'object' && 
-      Object.keys(config.entry).some(key => 
+    const isMiddlewareBuild = config.entry && typeof config.entry === 'object' &&
+      Object.keys(config.entry).some(key =>
         key.includes('middleware') || key.includes('edge')
       );
-    
+
     if (isMiddlewareBuild || !isServer) {
       // Exclude instrumentation from Edge builds
       config.resolve.alias['./instrumentation'] = false;
@@ -146,7 +172,7 @@ const nextConfig: NextConfig = {
       config.resolve.alias['instrumentation'] = false;
       config.resolve.alias['instrumentation.js'] = false;
       config.resolve.alias['instrumentation.ts'] = false;
-      
+
       // Exclude Sentry and monitoring modules from Edge builds
       config.resolve.alias['@/lib/monitoring'] = false;
       config.resolve.alias['@/lib/error-tracking'] = false;
@@ -154,7 +180,7 @@ const nextConfig: NextConfig = {
       config.resolve.alias['./src/lib/error-tracking'] = false;
       config.resolve.alias['@/lib/structured-logger'] = '@/lib/edge-logger';
       config.resolve.alias['./src/lib/structured-logger'] = './src/lib/edge-logger';
-      
+
       // CRITICAL: Ensure React is NEVER excluded, even in Edge builds
       // React must always be available for client components
       if (config.resolve.alias.react === false) {
@@ -163,7 +189,7 @@ const nextConfig: NextConfig = {
       if (config.resolve.alias['react-dom'] === false) {
         delete config.resolve.alias['react-dom'];
       }
-      
+
       // For Edge builds, let Next.js handle React resolution naturally
       // Don't alias React to preserve subpath exports (react/jsx-runtime, etc.)
       // if (!isServer) {
@@ -191,8 +217,8 @@ const nextConfig: NextConfig = {
           const originalExternals = config.externals;
           config.externals = (context: any, request: string, callback: any) => {
             // Never externalize React or React-DOM or their subpaths
-            if (request === 'react' || request === 'react-dom' || 
-                request.startsWith('react/') || request.startsWith('react-dom/')) {
+            if (request === 'react' || request === 'react-dom' ||
+              request.startsWith('react/') || request.startsWith('react-dom/')) {
               return callback(); // Don't externalize - bundle it
             }
             return originalExternals(context, request, callback);
@@ -261,25 +287,25 @@ const nextConfig: NextConfig = {
   },
   // Turbopack configuration - use webpack for now due to custom webpack config
   turbopack: {},
-  
+
   // Force dynamic rendering for all pages to prevent SSR issues
   // Disable static optimization to prevent build errors with React hooks
   staticPageGenerationTimeout: 1000,
-  
+
   // Handle API routes properly
   // Note: chrome-extension:// origins are handled dynamically in route handlers via setCorsHeaders()
   // Static headers here are for web origins only
   async headers() {
-    const allowedOrigins = process.env.NODE_ENV === 'production' 
+    const allowedOrigins = process.env.NODE_ENV === 'production'
       ? [
-          'https://cvcircle.io',
-          'https://www.cvcircle.io',
-          'https://app.cvcircle.io',
-        ]
+        'https://cvcircle.io',
+        'https://www.cvcircle.io',
+        'https://app.cvcircle.io',
+      ]
       : [
-          'http://localhost:3000',
-          'http://127.0.0.1:3000',
-        ];
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+      ];
 
     return [
       {
@@ -364,13 +390,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Vercel deployment optimizations
   trailingSlash: false,
-  
+
   // External packages for server-side rendering
   serverExternalPackages: [
-    'mongoose', 
-    'firebase-admin', 
-    'next-auth', 
-    'openid-client', 
+    'mongoose',
+    'firebase-admin',
+    'next-auth',
+    'openid-client',
     'pdf2pic',
     'pdf-parse',
     'pdfjs-dist',

@@ -420,7 +420,7 @@ const PromotionalOfferManager: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {/* Basic Information */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Title *
@@ -478,7 +478,7 @@ const PromotionalOfferManager: React.FC = () => {
                   </div>
 
                   {/* Date Range */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Valid From *
@@ -506,7 +506,7 @@ const PromotionalOfferManager: React.FC = () => {
                   </div>
 
                   {/* Banner Settings */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Banner Text
@@ -561,7 +561,7 @@ const PromotionalOfferManager: React.FC = () => {
                           </button>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Plan

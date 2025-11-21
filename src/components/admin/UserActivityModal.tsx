@@ -125,7 +125,7 @@ export default function UserActivityModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
+        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 tablet:p-6"
         onClick={onClose}
       >
         <motion.div
@@ -171,7 +171,7 @@ export default function UserActivityModal({
             ) : data ? (
               <div className="space-y-6">
                 {/* Metrics Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
                   <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <FileText className="w-5 h-5 text-blue-400" />
@@ -218,7 +218,7 @@ export default function UserActivityModal({
                 </div>
 
                 {/* Additional Metrics */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 tablet:grid-cols-3 gap-4">
                   <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Briefcase className="w-5 h-5 text-lime-400" />

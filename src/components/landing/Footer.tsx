@@ -84,9 +84,9 @@ const Footer = () => {
         <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-20">
         <motion.div 
-          className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6"
+          className="grid grid-cols-2 tablet:grid-cols-2 desktop:grid-cols-4 gap-4 tablet:gap-6"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
@@ -94,23 +94,23 @@ const Footer = () => {
         >
           {/* Column 1: Contact Details (Mobile: Column 1) */}
           <motion.div 
-            className="space-y-4 sm:space-y-8"
+            className="space-y-4 tablet:space-y-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Contact Us</h3>
+            <h3 className="text-lg tablet:text-xl font-bold text-white mb-4 tablet:mb-6">Contact Us</h3>
             
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 tablet:space-y-6">
               {/* Email */}
               <motion.div 
-                className="flex items-center space-x-2 sm:space-x-4 group"
+                className="flex items-center space-x-2 tablet:space-x-4 group"
                 whileHover={{ x: 5 }}
                 transition={{ duration: 0.3 }}
               >
                 <motion.div 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                   whileHover={{ 
                     scale: 1.1,
                     rotateY: 15,
@@ -121,13 +121,13 @@ const Footer = () => {
                     perspective: '1000px'
                   }}
                 >
-                  <Mail className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] text-black" />
+                  <Mail className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-black" />
                 </motion.div>
                 <div>
-                  <p className="text-white/60 text-xs sm:text-sm">Email</p>
+                  <p className="text-white/60 text-xs tablet:text-sm">Email</p>
                   <a 
                     href="mailto:support@cvcircle.io" 
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs sm:text-base break-all"
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs tablet:text-base break-all"
                   >
                     support@cvcircle.io
                   </a>
@@ -136,12 +136,12 @@ const Footer = () => {
 
               {/* Phone */}
               <motion.div 
-                className="flex items-center space-x-2 sm:space-x-4 group"
+                className="flex items-center space-x-2 tablet:space-x-4 group"
                 whileHover={{ x: 5 }}
                 transition={{ duration: 0.3 }}
               >
                 <motion.div 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                   whileHover={{ 
                     scale: 1.1,
                     rotateY: 15,
@@ -152,13 +152,13 @@ const Footer = () => {
                     perspective: '1000px'
                   }}
                 >
-                  <Phone className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] text-white" />
+                  <Phone className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-white" />
                 </motion.div>
                 <div>
-                  <p className="text-white/60 text-xs sm:text-sm">Phone</p>
+                  <p className="text-white/60 text-xs tablet:text-sm">Phone</p>
                   <a 
                     href="tel:+447879768984" 
-                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs sm:text-base"
+                    className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs tablet:text-base"
                   >
                     +44 7879768984
                   </a>
@@ -167,12 +167,12 @@ const Footer = () => {
 
               {/* Address */}
               <motion.div 
-                className="flex items-center space-x-2 sm:space-x-4 group"
+                className="flex items-center space-x-2 tablet:space-x-4 group"
                 whileHover={{ x: 5 }}
                 transition={{ duration: 0.3 }}
               >
                 <motion.div 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
+                  className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
                   whileHover={{ 
                     scale: 1.1,
                     rotateY: 15,
@@ -183,11 +183,11 @@ const Footer = () => {
                     perspective: '1000px'
                   }}
                 >
-                  <MapPin className="w-3.5 h-3.5 sm:w-[18px] sm:h-[18px] text-white" />
+                  <MapPin className="w-3.5 h-3.5 tablet:w-[18px] tablet:h-[18px] text-white" />
                 </motion.div>
                 <div>
-                  <p className="text-white/60 text-xs sm:text-sm">Address</p>
-                  <p className="text-white font-medium text-xs sm:text-base">
+                  <p className="text-white/60 text-xs tablet:text-sm">Address</p>
+                  <p className="text-white font-medium text-xs tablet:text-base">
                     London, England
                   </p>
                 </div>
@@ -197,13 +197,13 @@ const Footer = () => {
 
           {/* Column 2: Quick Links (Mobile: Column 2) */}
           <motion.div 
-            className="space-y-4 sm:space-y-8"
+            className="space-y-4 tablet:space-y-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Quick Links</h3>
+            <h3 className="text-lg tablet:text-xl font-bold text-white mb-4 tablet:mb-6">Quick Links</h3>
             <ul className="space-y-3">
               {quickLinks.map((link, index) => (
                 <motion.li 
@@ -236,7 +236,7 @@ const Footer = () => {
 
           {/* Column 3: Logo + Mission (Mobile: Full width below) */}
           <motion.div 
-            className="space-y-8 col-span-2 md:col-span-1"
+            className="space-y-8 col-span-2 tablet:col-span-1"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
@@ -290,7 +290,7 @@ const Footer = () => {
 
           {/* Column 4: Newsletter */}
           <motion.div 
-            className="space-y-8 col-span-2 md:col-span-1"
+            className="space-y-8 col-span-2 tablet:col-span-1"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.6 }}
@@ -385,7 +385,7 @@ const Footer = () => {
 
         {/* Enhanced Bottom Bar */}
         <motion.div 
-          className="border-t border-white/10 mt-16 pt-12 flex flex-col md:flex-row justify-between items-center gap-4"
+          className="border-t border-white/10 mt-16 pt-12 flex flex-col tablet:flex-row justify-between items-center gap-4"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}

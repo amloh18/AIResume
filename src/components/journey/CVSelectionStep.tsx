@@ -139,7 +139,7 @@ const CVSelectionStep: React.FC<CVSelectionStepProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
         {/* Option 1: Duplicate Master CV (if available) */}
         {masterCV && (
           <motion.div

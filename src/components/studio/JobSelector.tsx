@@ -18,7 +18,7 @@ import {
   RefreshCw,
   CheckCircle
 } from 'lucide-react';
-import EditJobModal from '@/components/modals/EditJobModal';
+import EditJobSidebar from '@/components/dashboard/jobs/EditJobSidebar';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 
 interface Job {
@@ -545,8 +545,8 @@ const JobSelector: React.FC<JobSelectorProps> = ({
         )}
       </AnimatePresence>
       
-      {/* Add/Edit Job Modal */}
-      <EditJobModal
+      {/* Add/Edit Job Sidebar */}
+      <EditJobSidebar
         isOpen={showJobModal}
         onClose={() => setShowJobModal(false)}
         onJobSaved={handleJobSaved}

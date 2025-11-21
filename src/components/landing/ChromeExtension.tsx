@@ -13,7 +13,7 @@ const ChromeExtension = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Header */}
         <motion.div
           className="mb-12"
@@ -22,22 +22,22 @@ const ChromeExtension = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 mb-4">
+          <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4 tablet:gap-6 mb-4">
             <div className="flex-1">
-              <h2 className="text-3xl sm:text-3xl lg:text-4xl font-bold text-white mb-4 text-left">
+              <h2 className="text-3xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-4 text-left">
                 Our Browser Extension Works on
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
                   100+ Job Sites
                 </span>
               </h2>
-              <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-2xl text-left">
+              <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-2xl text-left">
                 Seamlessly integrate with all major job boards and career platforms
               </p>
             </div>
             <motion.button
-              onClick={() => window.location.href = '/chrome-extension'}
-              className="bg-lime-400 hover:bg-lime-500 text-black font-semibold px-6 py-3 sm:px-8 sm:py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-lime-400/20 whitespace-nowrap flex-shrink-0"
+              onClick={() => window.open('https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb', '_blank')}
+              className="bg-lime-400 hover:bg-lime-500 text-black font-semibold px-6 py-3 tablet:px-8 tablet:py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-lime-400/20 whitespace-nowrap flex-shrink-0"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               initial={{ opacity: 0, x: 20 }}
@@ -52,7 +52,7 @@ const ChromeExtension = () => {
 
         {/* Job Sites Ticker */}
         <motion.div
-          className="relative overflow-hidden -mx-4 sm:-mx-6 lg:-mx-8"
+          className="relative overflow-hidden -mx-4 tablet:-mx-6 desktop:-mx-8"
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
@@ -82,11 +82,11 @@ const ChromeExtension = () => {
             ].map((site, index) => (
               <motion.div
                 key={site.name}
-                className="rounded-xl px-4 py-3 sm:px-6 sm:py-4 text-white text-xs sm:text-sm font-medium shadow-lg flex items-center space-x-2 sm:space-x-3 flex-shrink-0"
+                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
+                <div className="relative w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0">
                   <Image
                     src={site.logoUrl}
                     alt={site.name}
@@ -119,11 +119,11 @@ const ChromeExtension = () => {
             ].map((site, index) => (
               <motion.div
                 key={`${site.name}-duplicate`}
-                className="rounded-xl px-4 py-3 sm:px-6 sm:py-4 text-white text-xs sm:text-sm font-medium shadow-lg flex items-center space-x-2 sm:space-x-3 flex-shrink-0"
+                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <div className="relative w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
+                <div className="relative w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0">
                   <Image
                     src={site.logoUrl}
                     alt={site.name}

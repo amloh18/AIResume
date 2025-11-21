@@ -15,8 +15,8 @@ import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/ap
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import PageHeader from './PageHeader';
-import JobModal from './JobModal';
-import EditJobModal from '@/components/modals/EditJobModal';
+import JobSidebar from './jobs/JobSidebar';
+import EditJobSidebar from './jobs/EditJobSidebar';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
@@ -1811,9 +1811,9 @@ ${userName}`
       </div>
     </div>
 
-      {/* Application Journey Modal */}
+      {/* Application Journey Sidebar */}
       {showModal && selectedJob && (
-        <JobModal
+        <JobSidebar
           job={selectedJob}
           journeys={getJobJourneys(selectedJob.id)}
           onClose={handleCloseModal}
@@ -1821,8 +1821,8 @@ ${userName}`
         />
       )}
 
-      {/* Add/Edit Job Modal */}
-      <EditJobModal
+      {/* Add/Edit Job Sidebar */}
+      <EditJobSidebar
         isOpen={showAddJobModal}
         onClose={() => {
           setShowAddJobModal(false);

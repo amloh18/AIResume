@@ -52,8 +52,6 @@ export default function SignUpForm() {
     setSuccess('');
 
     try {
-      console.log('🔐 Starting registration...');
-      
       // Validate form
       if (formData.password !== formData.confirmPassword) {
         throw new Error('Passwords do not match');
@@ -94,8 +92,6 @@ export default function SignUpForm() {
         throw new Error(data.message || 'Failed to create account');
       }
 
-      console.log('✅ Registration successful');
-      
       setSuccess('Account created successfully! Please check your email to verify your account before signing in.');
       
       // Reset form
@@ -115,7 +111,6 @@ export default function SignUpForm() {
       });
 
     } catch (error: any) {
-      console.error('❌ Sign up error:', error);
       setError(error.message || 'Failed to create account. Please check your information and try again.');
     } finally {
       setLoading(false);
@@ -128,8 +123,6 @@ export default function SignUpForm() {
     setSuccess('');
 
     try {
-      console.log('🔐 Attempting Google sign-up/sign-in...');
-      
       // Use NextAuth Google provider directly
       // This will create a new user if they don't exist, or sign in if they do
       const result = await signIn('google', {

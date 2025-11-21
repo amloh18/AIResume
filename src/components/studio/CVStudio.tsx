@@ -4555,7 +4555,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   </button>
               </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 tablet:grid-cols-3 gap-4">
                     {getAvailableSectionsToAdd().map((section) => {
                       const IconComponent = section.icon;
                 
