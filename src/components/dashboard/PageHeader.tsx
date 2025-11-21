@@ -63,7 +63,7 @@ const PageHeader: React.FC<PageHeaderProps> = ({
   };
 
   return (
-    <div className="mb-3 sm:mb-4">
+    <div className="mb-3 sm:mb-4 mt-2 sm:mt-3">
       {/* Responsive Header - Visible on all screen sizes */}
       <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 pt-3 sm:pt-4 lg:pt-4 xl:pt-6 pb-2 sm:pb-2 lg:pb-2 xl:pb-3">
         {/* Title and Description */}

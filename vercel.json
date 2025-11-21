@@ -101,6 +101,10 @@
     {
       "path": "/api/cron/sponsorship/update-us-registry",
       "schedule": "0 3 1 * *"
+    },
+    {
+      "path": "/api/cron/daily-summary",
+      "schedule": "0 8 * * *"
     }
   ]
 }

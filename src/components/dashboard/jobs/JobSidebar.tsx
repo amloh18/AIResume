@@ -7,7 +7,7 @@ import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/ap
 import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
-  Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone
+  Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -15,6 +15,8 @@ import {
 import JourneyTimelineCard from '../JourneyTimelineCard';
 import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
+import SkillGapAnalysisSidebar from './SkillGapAnalysisSidebar';
+import InterviewPrepSidebar from './InterviewPrepSidebar';
 import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
@@ -86,6 +88,8 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
+  const [skillGapAnalysisOpen, setSkillGapAnalysisOpen] = useState(false);
+  const [interviewPrepOpen, setInterviewPrepOpen] = useState(false);
   
   // EditJobSidebar state for layered sidebar
   const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
@@ -415,23 +419,166 @@ ${userName}`
   };
 
   const getFollowUpTimeline = (job: JobApplication) => {
-    const timelines = {
-      applied: [
-        { day: 'Day 3-5', action: 'Send initial follow-up email' },
-        { day: 'Day 7-10', action: 'Connect with hiring manager on LinkedIn' },
-        { day: 'Day 14', action: 'Send second follow-up if no response' }
-      ],
-      interview: [
-        { day: 'Within 24 hours', action: 'Send thank-you email' },
-        { day: 'Day 5-7', action: 'Follow up on timeline if not provided' },
-        { day: 'Day 14', action: 'Send polite status inquiry if no update' }
-      ],
+    // Helper to format date
+    const formatDate = (date: Date): string => {
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+      } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow';
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric',
+          year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+        });
+      }
+    };
+
+    // Get deadline date
+    const deadlineDate = job.deadline 
+      ? (typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline)
+      : null;
+    
+    // Get application date (use updatedAt if applicationDate doesn't exist)
+    const applicationDate = job.applicationDate
+      ? (typeof job.applicationDate === 'string' ? new Date(job.applicationDate) : job.applicationDate)
+      : (job.updatedAt ? (typeof job.updatedAt === 'string' ? new Date(job.updatedAt) : job.updatedAt) : new Date());
+
+    const timelines: Record<string, Array<{ day: string; action: string; date?: Date }>> = {
+      applied: [],
+      interview: [],
       offer: [
         { day: 'Within 48 hours', action: 'Acknowledge receipt and express interest' },
         { day: 'Day 3-5', action: 'Ask clarifying questions or negotiate' },
         { day: 'Before deadline', action: 'Provide final decision' }
       ]
     };
+
+    // Applied stage - calculate dates based on deadline
+    if (job.status === 'applied') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Right after application (today)
+      timelines.applied.push({
+        day: formatDate(today),
+        action: 'Connect with hiring manager on LinkedIn & send DM and email',
+        date: today
+      });
+
+      // Day 3-5: Calculate 4 days after application (middle of 3-5 range)
+      const day4Date = new Date(applicationDate);
+      day4Date.setDate(day4Date.getDate() + 4);
+      day4Date.setHours(0, 0, 0, 0);
+      
+      // If deadline exists, ensure we don't go past it
+      if (deadlineDate) {
+        const deadline = new Date(deadlineDate);
+        deadline.setHours(0, 0, 0, 0);
+        if (day4Date > deadline) {
+          // Use 2 days before deadline instead
+          day4Date.setTime(deadline.getTime());
+          day4Date.setDate(day4Date.getDate() - 2);
+        }
+      }
+      
+      if (day4Date >= today) {
+        timelines.applied.push({
+          day: formatDate(day4Date),
+          action: 'Send initial follow-up email',
+          date: day4Date
+        });
+      }
+
+      // Day 14: 14 days after application
+      const day14Date = new Date(applicationDate);
+      day14Date.setDate(day14Date.getDate() + 14);
+      day14Date.setHours(0, 0, 0, 0);
+      
+      // If deadline exists, ensure we don't go past it
+      if (deadlineDate) {
+        const deadline = new Date(deadlineDate);
+        deadline.setHours(0, 0, 0, 0);
+        if (day14Date > deadline) {
+          // Use 1 day before deadline instead
+          day14Date.setTime(deadline.getTime());
+          day14Date.setDate(day14Date.getDate() - 1);
+        }
+      }
+      
+      if (day14Date >= today && day14Date.getTime() !== day4Date.getTime()) {
+        timelines.applied.push({
+          day: formatDate(day14Date),
+          action: 'Send second follow-up if no response',
+          date: day14Date
+        });
+      }
+    }
+
+    // Interview stage - calculate dates based on deadline
+    if (job.status === 'interview') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Get interview date (prefer actual interview date, fallback to deadline)
+      let interviewDate: Date;
+      if (job.interviews && job.interviews.length > 0) {
+        const firstInterview = job.interviews[0];
+        interviewDate = typeof firstInterview.date === 'string' 
+          ? new Date(firstInterview.date) 
+          : firstInterview.date;
+      } else if (deadlineDate) {
+        interviewDate = new Date(deadlineDate);
+      } else {
+        interviewDate = new Date();
+        interviewDate.setDate(interviewDate.getDate() + 1); // Default to tomorrow
+      }
+      interviewDate.setHours(0, 0, 0, 0);
+
+      // Before interview: 1 day before interview date (or today if interview is today/tomorrow)
+      const prepDate = new Date(interviewDate);
+      prepDate.setDate(prepDate.getDate() - 1);
+      if (prepDate < today) {
+        prepDate.setTime(today.getTime());
+      }
+      
+      timelines.interview.push({
+        day: formatDate(prepDate),
+        action: 'View Prep - Practice interview questions',
+        date: prepDate
+      });
+
+      // Day 5-7: Calculate 6 days after interview (middle of 5-7 range)
+      const day6Date = new Date(interviewDate);
+      day6Date.setDate(day6Date.getDate() + 6);
+      day6Date.setHours(0, 0, 0, 0);
+      
+      if (day6Date >= today) {
+        timelines.interview.push({
+          day: formatDate(day6Date),
+          action: 'Follow up on timeline if not provided',
+          date: day6Date
+        });
+      }
+
+      // Day 14: 14 days after interview
+      const day14Date = new Date(interviewDate);
+      day14Date.setDate(day14Date.getDate() + 14);
+      day14Date.setHours(0, 0, 0, 0);
+      
+      if (day14Date >= today && day14Date.getTime() !== day6Date.getTime()) {
+        timelines.interview.push({
+          day: formatDate(day14Date),
+          action: 'Send polite status inquiry if no update',
+          date: day14Date
+        });
+      }
+    }
+
     return timelines[job.status as keyof typeof timelines] || [];
   };
 
@@ -453,8 +600,31 @@ ${userName}`
       const existingJourney = journeys.find(j => j.jobId === job.id);
       
       if (existingJourney) {
-        toast.success('A CV journey already exists for this job. You can continue with the existing journey.');
-        return;
+        // If journey exists but job is still in draft, move it to created
+        if (job.status === 'draft') {
+          try {
+            const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                status: 'created'
+              }),
+            });
+
+            if (statusResponse.ok) {
+              toast.success('Job moved to created stage!');
+              await onRefresh();
+              return;
+            }
+          } catch (error) {
+            console.error('Error updating job status:', error);
+          }
+        } else {
+          toast.success('A CV journey already exists for this job. You can continue with the existing journey.');
+          return;
+        }
       }
 
       const response = await authenticatedFetchWithUserId('/api/application-journey', user.id, {
@@ -482,6 +652,29 @@ ${userName}`
         } else {
           toast.success('CV journey created successfully!');
         }
+        
+        // If job is in draft status, move it to created stage
+        if (job.status === 'draft') {
+          try {
+            const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                status: 'created'
+              }),
+            });
+
+            if (statusResponse.ok) {
+              toast.success('Job automatically moved to created stage!');
+            }
+          } catch (error) {
+            console.error('Error updating job status:', error);
+            // Don't fail the whole operation if status update fails
+          }
+        }
+        
         // Reload journeys immediately to show the new journey card
         await loadJourneysForJob();
         // Also refresh parent component
@@ -501,12 +694,13 @@ ${userName}`
   const handleContinueJourney = (journey: any) => {
     // Navigate to studio with journey context (new architecture)
     // The studio will automatically determine document type and load appropriate data
+    const returnUrl = `/dashboard/tracker?journeyId=${journey.id}`;
     if (journey.atsScore && journey.atsScore >= 80 && journey.coverLetterId) {
       // If ATS score is good and cover letter exists, open cover letter
-      router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit`);
+      router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit&returnUrl=${encodeURIComponent(returnUrl)}`);
     } else {
       // Default to CV editing
-      router.push(`/studio?journeyId=${journey.id}&documentType=cv&mode=cvedit`);
+      router.push(`/studio?journeyId=${journey.id}&documentType=cv&mode=cvedit&returnUrl=${encodeURIComponent(returnUrl)}`);
     }
   };
 
@@ -895,6 +1089,17 @@ ${userName}`
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              {(job.jobDescription || job.description) && (
+                <motion.button
+                  onClick={() => setSkillGapAnalysisOpen(true)}
+                  className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Skill Gap Analysis"
+                >
+                  <TrendingUp size={20} className="text-purple-600 dark:text-purple-400" />
+                </motion.button>
+              )}
               <motion.button
                 onClick={handleOpenEditModal}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -1039,7 +1244,18 @@ ${userName}`
                                   </div>
                                 </div>
                               </div>
-                              {getEmailTemplate(job) && (
+                              {/* Action Button - Email or View Prep */}
+                              {job.status === 'interview' && timeline.action.includes('View Prep') ? (
+                                <motion.button
+                                  onClick={() => setInterviewPrepOpen(true)}
+                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/80 dark:bg-purple-600/60 hover:bg-purple-600/80 dark:hover:bg-purple-700/70 text-white rounded-lg text-xs font-medium transition-colors"
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                >
+                                  <Target size={14} />
+                                  View Prep
+                                </motion.button>
+                              ) : getEmailTemplate(job) ? (
                                 <motion.button
                                   onClick={() => handleOpenEmail(index)}
                                   className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-lime-500/80 dark:bg-[#80FF00]/60 hover:bg-lime-600/80 dark:hover:bg-[#80FF00]/70 text-white rounded-lg text-xs font-medium transition-colors"
@@ -1049,7 +1265,7 @@ ${userName}`
                                   <Mail size={14} />
                                   Send Email
                                 </motion.button>
-                              )}
+                              ) : null}
                             </div>
                           );
                         })}
@@ -1506,6 +1722,26 @@ ${userName}`
             </div>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* Skill Gap Analysis Sidebar */}
+      <SkillGapAnalysisSidebar
+        isOpen={skillGapAnalysisOpen}
+        onClose={() => setSkillGapAnalysisOpen(false)}
+        jobId={job.id || job._id}
+        jobTitle={job.jobTitle || job.title}
+        company={job.company}
+      />
+
+      {/* Interview Prep Sidebar */}
+      {job.status === 'interview' && (
+        <InterviewPrepSidebar
+          isOpen={interviewPrepOpen}
+          onClose={() => setInterviewPrepOpen(false)}
+          jobId={job.id || job._id}
+          jobTitle={job.jobTitle || job.title || ''}
+          company={job.company}
+        />
       )}
       </>
     </AnimatePresence>

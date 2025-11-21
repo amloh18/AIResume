@@ -370,7 +370,7 @@ export async function PUT(
           
           const updatedJob = await JobApplication.findOneAndUpdate(
             {
-              _id: resolvedParams.id,
+              _id: new mongoose.Types.ObjectId(resolvedParams.id),
               userId: normalizedUserId
             },
             statusUpdateData,
@@ -424,6 +424,52 @@ export async function PUT(
           );
           
           console.log(`✅ Job Update API - Credit spent in transaction for user: ${normalizedUserId.toString()}`);
+          
+          // Log job status change and credit usage
+          try {
+            const { ActivityLogService } = await import('@/lib/services/activityLogService');
+            await ActivityLogService.logUserAction({
+              userId: normalizedUserId.toString(),
+              userEmail: user.email,
+              action: 'job_status_changed',
+              resourceType: 'job',
+              resourceId: resolvedParams.id,
+              resourceName: job ? `${job.jobTitle} at ${job.company}` : undefined,
+              status: 'success',
+              ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                        request.headers.get('x-real-ip') || 
+                        undefined,
+              metadata: {
+                oldStatus: 'draft',
+                newStatus: 'created',
+                isUnlimited: isUnlimited
+              }
+            });
+            
+            // Log credit usage if credit was spent
+            if (!isUnlimited) {
+              await ActivityLogService.logUserAction({
+                userId: normalizedUserId.toString(),
+                userEmail: user.email,
+                action: 'credit_used',
+                status: 'success',
+                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                          request.headers.get('x-real-ip') || 
+                          undefined,
+                metadata: {
+                  creditType: 'job_credit',
+                  creditsUsed: 1,
+                  creditsRemaining: (user.credits?.jobCredits ?? 0) - 1,
+                  planKey: user.currentPlanKey || 'free',
+                  resourceType: 'job',
+                  resourceId: resolvedParams.id
+                }
+              });
+            }
+          } catch (logError) {
+            console.error('Failed to log job status change activity:', logError);
+            // Don't fail the request if logging fails
+          }
         });
       } catch (creditError: any) {
         console.error('❌ Job Update API - Transaction failed:', creditError);
@@ -486,19 +532,29 @@ export async function PUT(
       }
     } else {
       // For non-draft-to-created updates, update job normally
+      // Use normalizedUserId to match the initial findOne query
       job = await JobApplication.findOneAndUpdate(
         {
-          _id: resolvedParams.id,
-          userId: userId
+          _id: new mongoose.Types.ObjectId(resolvedParams.id),
+          userId: normalizedUserId
         },
         updateData,
         { new: true }
       );
 
       console.log('🔍 Job Update API - Job update result:', !!job);
+      console.log('🔍 Job Update API - Query used:', {
+        _id: resolvedParams.id,
+        userId: normalizedUserId.toString(),
+        userIdType: typeof normalizedUserId
+      });
       
       if (!job) {
         console.log('❌ Job Update API - Job not found for user:', userId);
+        console.log('❌ Job Update API - Tried to update with:', {
+          jobId: resolvedParams.id,
+          userId: normalizedUserId.toString()
+        });
         return NextResponse.json({ error: 'Job not found' }, { status: 404 });
       }
     }
@@ -642,6 +698,37 @@ export async function PUT(
           }
         } else {
           console.log(`ℹ️ Job Update API - Journey already exists for job ${resolvedParams.id}, skipping creation`);
+          
+          // If existing journey doesn't have documents yet, trigger document creation
+          if (!existingJourney.cvId && !existingJourney.coverLetterId && existingJourney.status !== 'processing_documents') {
+            console.log(`🚀 Job Update API - Existing journey found without documents, triggering document creation for journey: ${existingJourney._id}`);
+            
+            // Update journey status to processing_documents
+            await ApplicationJourney.updateOne(
+              { _id: existingJourney._id },
+              { $set: { status: 'processing_documents' } }
+            );
+            
+            // Trigger document creation in background
+            setImmediate(async () => {
+              try {
+                console.log('🚀 Job Update API - Starting document creation for existing journey:', existingJourney._id);
+                const result = await createJourneyDocuments(existingJourney._id.toString(), userId);
+                
+                if (result.success) {
+                  console.log('✅ Job Update API - Document creation completed successfully for existing journey:', {
+                    journeyId: existingJourney._id,
+                    cvId: result.cvId,
+                    coverLetterId: result.coverLetterId
+                  });
+                } else {
+                  console.error('❌ Job Update API - Document creation failed for existing journey:', result.error);
+                }
+              } catch (error) {
+                console.error('❌ Job Update API - Error in document creation for existing journey:', error);
+              }
+            });
+          }
         }
       } catch (journeyError) {
         console.error('⚠️ Job Update API - Failed to create ApplicationJourney (non-critical):', journeyError);
@@ -749,7 +836,7 @@ export async function PUT(
           },
           interactive: true,
           priority: 'high',
-          channels: ['in-app', 'email'],
+          channels: ['in-app'],
           persistent: false,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
           metadata: {

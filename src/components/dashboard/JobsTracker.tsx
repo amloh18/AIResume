@@ -143,6 +143,7 @@ const JobsTracker: React.FC = () => {
   const [showPaywall, setShowPaywall] = useState(false);
   const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
+  const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
 
   // Load data on component mount
   useEffect(() => {
@@ -179,14 +180,20 @@ const JobsTracker: React.FC = () => {
       const jobsResponse = await authenticatedFetchWithUserId('/api/jobs', userId || undefined);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
-        const transformedJobs = jobsResult.data.jobs.map((job: any) => ({
+        const transformedJobs = jobsResult.data.jobs.map((job: any) => {
+          // Preserve optimistic updates for jobs that are currently being updated
+          const existingJob = jobs.find(j => j.id === job.id);
+          const isBeingUpdated = isUpdatingJobStatus.has(job.id);
+          
+          return {
           id: job.id,
           _id: job.id,
           userId: job.userId,
           jobTitle: job.jobTitle,
           title: job.jobTitle,
           company: job.company,
-          status: job.status,
+            // Preserve optimistic status if job is being updated
+            status: (isBeingUpdated && existingJob) ? existingJob.status : job.status,
           jobDescription: job.jobDescription,
           description: job.jobDescription,
           location: job.location,
@@ -211,7 +218,8 @@ const JobsTracker: React.FC = () => {
           isArchived: job.isArchived || false,
           createdAt: job.createdAt,
           updatedAt: job.updatedAt
-        }));
+          };
+        });
         setJobs(transformedJobs);
       }
 
@@ -384,15 +392,15 @@ const JobsTracker: React.FC = () => {
     return filteredAndSortedJobs;
   }, [filteredAndSortedJobs, isFocusMode]);
 
-  // Group jobs by status
-  const jobsByStatus = {
+  // Group jobs by status - memoized to ensure reactivity
+  const jobsByStatus = React.useMemo(() => ({
     draft: filteredJobsForView.filter(job => job.status === 'draft'),
     created: filteredJobsForView.filter(job => job.status === 'created'),
     applied: filteredJobsForView.filter(job => job.status === 'applied'),
     interview: filteredJobsForView.filter(job => job.status === 'interview'),
     offer: filteredJobsForView.filter(job => job.status === 'offer'),
     rejected: filteredJobsForView.filter(job => job.status === 'rejected')
-  };
+  }), [filteredJobsForView]);
 
   // Handlers
   const handleAddJob = () => {
@@ -406,12 +414,19 @@ const JobsTracker: React.FC = () => {
 
   const handleParseComplete = async (parsedData: any, status: 'draft' | 'created') => {
     try {
+      // Helper function to get date string in YYYY-MM-DD format (15 days from now)
+      const getDateString = (daysFromNow: number): string => {
+        const date = new Date();
+        date.setDate(date.getDate() + daysFromNow);
+        return date.toISOString().split('T')[0];
+      };
+
       // Map parsed data to EditJobSidebar format
       // Preserve the selected status (draft or created)
       const mappedStatus = status;
 
-      // Convert deadline Date to string if present
-      let deadlineString: string | undefined = undefined;
+      // Convert deadline Date to string if present, otherwise default to 15 days from now
+      let deadlineString: string = getDateString(15); // Default to 15 days from now
       if (parsedData.deadline) {
         try {
           if (parsedData.deadline instanceof Date) {
@@ -425,7 +440,7 @@ const JobsTracker: React.FC = () => {
           }
         } catch (error) {
           console.warn('Error parsing deadline:', error);
-          // Leave deadlineString as undefined if parsing fails
+          // Use default deadline if parsing fails
         }
       }
 
@@ -449,6 +464,23 @@ const JobsTracker: React.FC = () => {
         cleanedSource = 'other';
       }
 
+      // Ensure salary structure matches new format (with currency and period)
+      let salaryData: {
+        min?: number;
+        max?: number;
+        currency?: string;
+        period?: 'hourly' | 'monthly' | 'yearly';
+      } | undefined = undefined;
+      
+      if (parsedData.salary) {
+        salaryData = {
+          min: parsedData.salary.min,
+          max: parsedData.salary.max,
+          currency: parsedData.salary.currency || 'USD', // Default to USD
+          period: parsedData.salary.period || 'yearly' // Default to yearly
+        };
+      }
+
       // Pre-fill EditJobSidebar with parsed data
       // Close parser dialog first, then open edit modal to prevent state conflicts
       setShowJobParserDialog(false);
@@ -466,13 +498,13 @@ const JobsTracker: React.FC = () => {
           jobDescription: parsedData.jobDescription || '',
           jobDescriptionRaw: parsedData.jobDescriptionRaw || parsedData.jobDescription || '',
           notes: parsedData.notes || '',
-          priority: 'medium' as const,
+          priority: 'medium' as const, // Default priority
           status: mappedStatus as 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn',
-          deadline: deadlineString,
-          applicationDate: undefined,
-          sponsorship: 'unknown' as const,
+          deadline: deadlineString, // Always set (defaults to 15 days from now)
+          // applicationDate is removed - no longer used in the form
+          sponsorship: 'unknown' as const, // Default sponsorship
           tags: parsedData.tags || [],
-          salary: parsedData.salary || undefined,
+          salary: salaryData, // Properly structured salary with currency and period
           source: cleanedSource as 'extension' | 'manual' | 'import' | 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
           sourceUrl: parsedData.sourceUrl || '',
           contactDetails: {
@@ -618,7 +650,41 @@ const JobsTracker: React.FC = () => {
 
   const handleCreateJourney = async (job: JobApplication) => {
     try {
-      // Update job status to 'created'
+      // First, check if journey already exists
+      const checkJourneyResponse = await fetch(`/api/application-journey?jobId=${job.id || job._id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      let journeyExists = false;
+      if (checkJourneyResponse.ok) {
+        const journeyData = await checkJourneyResponse.json();
+        journeyExists = journeyData && journeyData.length > 0;
+      }
+
+      // Create journey if it doesn't exist
+      if (!journeyExists) {
+        const journeyResponse = await fetch('/api/application-journey', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            jobId: job.id || job._id,
+            jobTitle: job.jobTitle || job.title,
+            company: job.company,
+            journeyType: 'standard'
+          }),
+        });
+
+        if (!journeyResponse.ok) {
+          throw new Error('Failed to create journey');
+        }
+      }
+
+      // Update job status to 'created' (this will trigger journey creation if needed via API route)
       const response = await fetch(`/api/jobs/${job.id || job._id}`, {
         method: 'PUT',
         headers: {
@@ -631,24 +697,6 @@ const JobsTracker: React.FC = () => {
 
       if (!response.ok) {
         throw new Error('Failed to update job status');
-      }
-
-      // Create journey
-      const journeyResponse = await fetch('/api/application-journey', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          jobId: job.id || job._id,
-          jobTitle: job.jobTitle || job.title,
-          company: job.company,
-          journeyType: 'standard'
-        }),
-      });
-
-      if (!journeyResponse.ok) {
-        throw new Error('Failed to create journey');
       }
 
       // Refresh data
@@ -685,11 +733,14 @@ const JobsTracker: React.FC = () => {
 
   // Drag and drop handlers
   const isJobDraggable = (job: JobApplication) => {
-    return job.status !== 'draft' && job.status !== 'created';
+    // Allow dragging from draft and created stages to further stages
+    return true; // All jobs can be dragged
   };
 
   const isDraggableStage = (stage: string) => {
-    return stage !== 'draft' && stage !== 'created';
+    // Allow dropping on all stages except draft (can move forward from draft)
+    // Allow moving from draft to created, applied, interview, offer, rejected
+    return stage !== 'draft';
   };
 
   const handleDragStart = (e: React.DragEvent, jobId: string) => {
@@ -729,6 +780,9 @@ const JobsTracker: React.FC = () => {
 
     const originalStatus = job.status;
 
+    // Mark job as being updated to prevent data refresh from overwriting
+    setIsUpdatingJobStatus(prev => new Set(prev).add(currentDraggedJob));
+
     setJobs(prevJobs =>
       prevJobs.map(j =>
         j.id === currentDraggedJob ? { ...j, status: newStatus as any } : j
@@ -742,24 +796,91 @@ const JobsTracker: React.FC = () => {
       },
       body: JSON.stringify({ status: newStatus }),
     })
-      .then(response => {
+      .then(async response => {
+        // Check both response status and body
         if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Failed to update job status:', response.status, errorData);
+          // Revert on failure
           setJobs(prevJobs =>
             prevJobs.map(j =>
               j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
             )
           );
           toast.error('Failed to update job status. Please try again.');
+          setIsUpdatingJobStatus(prev => {
+            const next = new Set(prev);
+            next.delete(currentDraggedJob);
+            return next;
+          });
+          return;
+        }
+
+        // Parse response to check for success
+        try {
+          const result = await response.json();
+          if (result.error || (result.success === false)) {
+            console.error('API returned error:', result);
+            // Revert on failure
+            setJobs(prevJobs =>
+              prevJobs.map(j =>
+                j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
+              )
+            );
+            toast.error(result.message || 'Failed to update job status. Please try again.');
+            setIsUpdatingJobStatus(prev => {
+              const next = new Set(prev);
+              next.delete(currentDraggedJob);
+              return next;
+            });
+            return;
+          }
+          // Success - update with server response to ensure consistency
+          console.log('✅ Job status updated successfully:', newStatus);
+          if (result.job || result.data) {
+            const updatedJob = result.job || result.data;
+            setJobs(prevJobs => 
+              prevJobs.map(j => 
+                j.id === currentDraggedJob 
+                  ? { ...j, status: updatedJob.status || newStatus, updatedAt: updatedJob.updatedAt || new Date().toISOString() }
+                  : j
+              )
+            );
+          }
+          // Remove from updating set after a short delay to allow any pending updates to complete
+          setTimeout(() => {
+            setIsUpdatingJobStatus(prev => {
+              const next = new Set(prev);
+              next.delete(currentDraggedJob);
+              return next;
+            });
+          }, 2000);
+        } catch (parseError) {
+          // If response is ok but we can't parse JSON, assume success
+          console.log('✅ Job status updated (response ok, JSON parse skipped)');
+          setTimeout(() => {
+            setIsUpdatingJobStatus(prev => {
+              const next = new Set(prev);
+              next.delete(currentDraggedJob);
+              return next;
+            });
+          }, 2000);
         }
       })
       .catch(error => {
         console.error('Error updating job status:', error);
+        // Revert on error
         setJobs(prevJobs =>
           prevJobs.map(j =>
             j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
           )
         );
         toast.error('Failed to update job status. Please try again.');
+        setIsUpdatingJobStatus(prev => {
+          const next = new Set(prev);
+          next.delete(currentDraggedJob);
+          return next;
+        });
       });
   };
 
@@ -776,7 +897,7 @@ const JobsTracker: React.FC = () => {
       <div className="h-full flex flex-col min-w-0 w-full max-w-full overflow-hidden">
         <div className="w-full h-full flex flex-col min-w-0 max-w-full overflow-hidden">
           {/* Enhanced Header - Fixed Width Container */}
-          <div className="flex-shrink-0 w-full px-4 sm:px-6">
+          <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
             <JobsHeader
               onAddJob={handleAddJob}
               onQuickAdd={handleQuickAdd}
@@ -800,7 +921,7 @@ const JobsTracker: React.FC = () => {
 
           {/* CV Context Banner - Fixed Width Container */}
           {cvContext && (
-            <div className="flex-shrink-0 w-full px-4 sm:px-6">
+            <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -821,7 +942,7 @@ const JobsTracker: React.FC = () => {
                   <button
                     onClick={() => {
                       setCvContext(null);
-                      window.history.replaceState({}, '', '/dashboard/jobs');
+                      window.history.replaceState({}, '', '/dashboard/tracker');
                     }}
                     className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 text-sm font-medium flex-shrink-0 whitespace-nowrap"
                   >
@@ -833,7 +954,7 @@ const JobsTracker: React.FC = () => {
           )}
 
           {/* Filters Panel - Fixed Width Container */}
-          <div className="flex-shrink-0 w-full px-4 sm:px-6">
+          <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
             <AnimatePresence>
               {showFilters && (
                 <JobsFilters
@@ -856,7 +977,7 @@ const JobsTracker: React.FC = () => {
           </div>
 
           {/* Bulk Actions Bar - Fixed Width Container */}
-          <div className="flex-shrink-0 w-full px-4 sm:px-6">
+          <div className="flex-shrink-0 w-full px-0 sm:px-4 md:px-6">
             <AnimatePresence>
               {showBulkActions && (
                 <motion.div
@@ -937,7 +1058,7 @@ const JobsTracker: React.FC = () => {
 
           {/* View Content - Kanban or List */}
           <div className="flex-1 min-h-0 w-full relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 bottom-0 mt-4 px-4 sm:px-6 pb-6 overflow-x-auto overflow-y-hidden">
+            <div className="absolute inset-x-0 top-0 bottom-0 mt-4 px-0 sm:px-4 md:px-6 overflow-x-auto overflow-y-hidden">
               {viewMode === 'kanban' ? (
                 <div className="h-full w-full overflow-x-auto overflow-y-hidden rounded-lg">
                   <JobsKanbanView

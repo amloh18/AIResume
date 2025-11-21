@@ -1044,6 +1044,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
+  const [dailySummaryEmail, setDailySummaryEmail] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
@@ -1067,6 +1068,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
     if (user?.settings?.notifications) {
       setEmailNotifications(user.settings.notifications.email?.enabled ?? true);
       setPushNotifications(user.settings.notifications.push?.enabled ?? true);
+      setDailySummaryEmail(user.settings.notifications.email?.dailySummary ?? true);
     }
     if (user?.settings?.security) {
       setTwoFactorEnabled(user.settings.security.twoFactorEnabled ?? false);
@@ -1121,6 +1123,40 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
       } else {
         setPushNotifications(!value);
       }
+      showToastNotification('error', 'Network error. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDailySummaryToggle = async (value: boolean) => {
+    setDailySummaryEmail(value);
+    setSaving(true);
+    try {
+      const response = await fetch('/api/user/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          settings: {
+            detailedNotifications: {
+              email: {
+                dailySummary: value
+              }
+            }
+          }
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        showToastNotification('success', `Daily summary email ${value ? 'enabled' : 'disabled'}`);
+      } else {
+        setDailySummaryEmail(!value);
+        showToastNotification('error', 'Failed to update daily summary preference');
+      }
+    } catch (error) {
+      console.error('Error updating daily summary:', error);
+      setDailySummaryEmail(!value);
       showToastNotification('error', 'Network error. Please try again.');
     } finally {
       setSaving(false);
@@ -1377,6 +1413,24 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
                   emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
+                }`} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <div className="text-sm font-medium text-gray-900 dark:text-white">Daily Summary Email</div>
+                <div className="text-xs text-gray-500 dark:text-gray-300">Receive a daily summary of your job search activity</div>
+              </div>
+              <button
+                onClick={() => handleDailySummaryToggle(!dailySummaryEmail)}
+                disabled={saving || !emailNotifications}
+                className={`w-12 h-6 rounded-full transition-colors ${
+                  dailySummaryEmail && emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                } ${saving || !emailNotifications ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  dailySummaryEmail && emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
                 }`} />
               </button>
             </div>

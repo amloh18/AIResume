@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
-import type { MyJwtPayload } from '@/types/jwt-payload';
 import { getPlanConfig, getCampaignFilterPlans } from '@/lib/config/adminConfig';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -10,25 +8,8 @@ export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication using cookie
-    const cookieStore = await cookies();
-    const adminToken = cookieStore.get('admin-token');
-
-    if (!adminToken) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized. Admin access required.' },
-        { status: 401 }
-      );
-    }
-
-    try {
-      jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
-    } catch (jwtError) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid admin token' },
-        { status: 401 }
-      );
-    }
+    // Verify admin authentication using NextAuth session
+    await requireAdmin(request);
 
     const { searchParams } = new URL(request.url);
     const forCampaigns = searchParams.get('forCampaigns') === 'true';
@@ -51,6 +32,21 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Get plan config error:', error);
+    
+    // Handle authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         success: false, 

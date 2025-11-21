@@ -324,6 +324,55 @@ export async function POST(request: NextRequest) {
           
           console.log(`✅ [${source.toUpperCase()}] Credit spent in transaction for user: ${normalizedUserId.toString()}`);
           
+          // Log job creation activity
+          try {
+            const { ActivityLogService } = await import('@/lib/services/activityLogService');
+            await ActivityLogService.logUserAction({
+              userId: normalizedUserId.toString(),
+              userEmail: user.email,
+              action: 'job_created',
+              resourceType: 'job',
+              resourceId: createdJob._id.toString(),
+              resourceName: `${createdJob.jobTitle} at ${createdJob.company}`,
+              status: 'success',
+              ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                        request.headers.get('x-real-ip') || 
+                        undefined,
+              metadata: {
+                source: source,
+                status: jobStatus,
+                priority: priority,
+                hasUrl: !!cleanedJobUrl,
+                isUnlimited: isUnlimited,
+                creditsRemaining: isUnlimited ? -1 : (user.credits?.jobCredits ?? 0) - 1
+              }
+            });
+            
+            // Log credit usage if credit was spent
+            if (jobStatus === 'created' && !isUnlimited) {
+              await ActivityLogService.logUserAction({
+                userId: normalizedUserId.toString(),
+                userEmail: user.email,
+                action: 'credit_used',
+                status: 'success',
+                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                          request.headers.get('x-real-ip') || 
+                          undefined,
+                metadata: {
+                  creditType: 'job_credit',
+                  creditsUsed: 1,
+                  creditsRemaining: (user.credits?.jobCredits ?? 0) - 1,
+                  planKey: user.currentPlanKey || 'free',
+                  resourceType: 'job',
+                  resourceId: createdJob._id.toString()
+                }
+              });
+            }
+          } catch (logError) {
+            console.error('Failed to log job creation activity:', logError);
+            // Don't fail the request if logging fails
+          }
+          
           return createdJob;
         });
       } else {
@@ -372,6 +421,33 @@ export async function POST(request: NextRequest) {
           company: jobApplication.company,
           userId: jobApplication.userId
         });
+        
+        // Log draft job creation activity
+        try {
+          const { ActivityLogService } = await import('@/lib/services/activityLogService');
+          await ActivityLogService.logUserAction({
+            userId: normalizedUserId.toString(),
+            userEmail: user.email,
+            action: 'job_created_draft',
+            resourceType: 'job',
+            resourceId: jobApplication._id.toString(),
+            resourceName: `${jobApplication.jobTitle} at ${jobApplication.company}`,
+            status: 'success',
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      request.headers.get('x-real-ip') || 
+                      undefined,
+            metadata: {
+              source: source,
+              status: jobStatus,
+              priority: priority,
+              hasUrl: !!cleanedJobUrl,
+              isDraft: true
+            }
+          });
+        } catch (logError) {
+          console.error('Failed to log draft job creation activity:', logError);
+          // Don't fail the request if logging fails
+        }
       }
       
       if (jobStatus === 'created') {

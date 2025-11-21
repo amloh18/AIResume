@@ -37,7 +37,7 @@ class DeadlineNotificationService {
             actionType: 'review_job',
             actionData: {
               jobId: job._id.toString(),
-              url: `/dashboard/jobs/${job._id}`,
+              url: `/dashboard/tracker/${job._id}`,
             },
             interactive: true,
             priority: 'high',
@@ -68,7 +68,7 @@ class DeadlineNotificationService {
             actionType: 'review_job',
             actionData: {
               jobId: job._id.toString(),
-              url: `/dashboard/jobs/${job._id}`,
+              url: `/dashboard/tracker/${job._id}`,
             },
             interactive: true,
             priority: 'urgent',
@@ -99,7 +99,7 @@ class DeadlineNotificationService {
             actionType: 'review_job',
             actionData: {
               jobId: job._id.toString(),
-              url: `/dashboard/jobs/${job._id}`,
+              url: `/dashboard/tracker/${job._id}`,
             },
             interactive: true,
             priority: 'high',

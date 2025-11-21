@@ -4,7 +4,7 @@ import { GoogleGenAI } from '@google/genai';
 // Get API key with fallback
 function getGeminiApiKey(): string | null {
   return (
-    process.env.gemini_api_key || 
+    process.env.gemini_api_key ||
     process.env.GEMINI_API_KEY ||
     process.env.gemini_api_key1 ||
     process.env.GEMINI_API_KEY1 ||
@@ -14,7 +14,7 @@ function getGeminiApiKey(): string | null {
 
 function getGeminiApiKey2(): string | null {
   return (
-    process.env.gemini_api_key2 || 
+    process.env.gemini_api_key2 ||
     process.env.GEMINI_API_KEY2 ||
     process.env['GEMINI_API-KEY2'] ||
     process.env['gemini_api-key2'] ||
@@ -44,7 +44,7 @@ async function callGeminiWithFallback(prompt: string): Promise<string> {
         contents: prompt
       });
       const text = result.text || '';
-      
+
       if (text) {
         console.log(`✅ Gemini API call successful with ${name}`);
         return text;
@@ -53,7 +53,7 @@ async function callGeminiWithFallback(prompt: string): Promise<string> {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`❌ ${name} failed:`, errorMessage);
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
         throw lastError;
       }
@@ -66,11 +66,11 @@ async function callGeminiWithFallback(prompt: string): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      cvData, 
-      jobData, 
-      recipientName, 
-      companyName 
+    const {
+      cvData,
+      jobData,
+      recipientName,
+      companyName
     } = await request.json();
 
     if (!cvData || !jobData) {
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
  */
 function cleanupCoverLetterContent(content: string, cvData: any): string {
   let cleaned = content.trim();
-  
+
   // STEP 1: Remove name if it appears at the start (all caps or Title Case)
   if (cvData?.basics?.name) {
     const nameUpper = cvData.basics.name.toUpperCase();
@@ -130,7 +130,7 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
     cleaned = cleaned.replace(new RegExp(`^${nameUpper}\\s*\\n`, 'mi'), '');
     cleaned = cleaned.replace(new RegExp(`^${nameTitle}\\s*\\n`, 'mi'), '');
   }
-  
+
   // STEP 2: Remove any contact information lines (name, phone, email, location patterns)
   // This handles lines with pipes separating contact info (e.g., "location | phone | email")
   const contactPatterns = [
@@ -140,15 +140,15 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
     /^.*[+\d]{10,}.*@.*\..+\n/m, // Phone and email on same line
     /^.*@.*\.\w+.*\n/m, // Email line
   ];
-  
+
   contactPatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
   });
-  
+
   // STEP 3: Remove date lines at the start or after header
   cleaned = cleaned.replace(/^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}\s*\n/mi, '');
   cleaned = cleaned.replace(/^\d{1,2}\/\d{1,2}\/\d{4}\s*\n/m, '');
-  
+
   // STEP 4: Remove recipient info lines (Hiring Manager, Company Name, etc.)
   cleaned = cleaned.replace(/^(Hiring Manager|Recruitment Team|Human Resources|Dear Hiring Manager)\s*\n/mi, '');
   // Remove company name lines (typically after date)
@@ -156,10 +156,10 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
   cleaned = cleaned.replace(/^Company Address.*\n/mi, '');
   // Remove location lines (city, state patterns)
   cleaned = cleaned.replace(/^[A-Z][a-z]+,\s*[A-Z]{2}\s*\n/m, ''); // e.g., "Chicago, IL"
-  
+
   // STEP 5: Remove "Dear..." greeting if present (including any variation)
   cleaned = cleaned.replace(/^Dear\s+[^,\n]+,?\s*\n*/mi, '');
-  
+
   // STEP 6: Remove closing signatures
   const closingPatterns = [
     /\n*Sincerely,?\s*\n*.*/gi,
@@ -169,32 +169,32 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
     /\n*Thank you for (your consideration|considering my application)[.,]?\s*\n*/gi,
     /\n*I look forward to (hearing from you|speaking with you)[.,]?\s*\n*.*/gi
   ];
-  
+
   closingPatterns.forEach(pattern => {
     cleaned = cleaned.replace(pattern, '');
   });
-  
+
   // STEP 7: Remove any remaining header artifacts at the beginning
   // Keep removing lines that look like headers until we hit actual content
   const lines = cleaned.split('\n');
   let startIndex = 0;
-  
+
   for (let i = 0; i < Math.min(lines.length, 10); i++) {
     const line = lines[i].trim();
-    
+
     // Skip empty lines
     if (!line) {
       startIndex = i + 1;
       continue;
     }
-    
+
     // Check if this line looks like content (starts with "I" or has multiple words and punctuation)
-    const isContent = /^I\s+/i.test(line) || 
-                     (/\w+.*\w+/.test(line) && line.length > 50) ||
-                     line.startsWith('With') ||
-                     line.startsWith('As') ||
-                     line.startsWith('Having');
-    
+    const isContent = /^I\s+/i.test(line) ||
+      (/\w+.*\w+/.test(line) && line.length > 50) ||
+      line.startsWith('With') ||
+      line.startsWith('As') ||
+      line.startsWith('Having');
+
     if (isContent) {
       startIndex = i;
       break;
@@ -202,12 +202,12 @@ function cleanupCoverLetterContent(content: string, cvData: any): string {
       startIndex = i + 1;
     }
   }
-  
+
   cleaned = lines.slice(startIndex).join('\n');
-  
+
   // STEP 8: Clean up excessive newlines (more than 2 consecutive)
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
-  
+
   return cleaned.trim();
 }
 
@@ -219,20 +219,20 @@ function calculateExperienceLevel(cvData: any): 'Senior' | 'Mid-Level' | 'Junior
   // Calculate total years of experience
   let totalMonths = 0;
   const currentDate = new Date();
-  
+
   cvData.work.forEach((job: any) => {
     if (job.startDate) {
       try {
         const startDate = new Date(job.startDate);
         let endDate = currentDate;
-        
+
         if (job.endDate && job.endDate !== 'Present' && job.endDate !== 'Current') {
           endDate = new Date(job.endDate);
         }
-        
-        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
-                          (endDate.getMonth() - startDate.getMonth());
-        
+
+        const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
+          (endDate.getMonth() - startDate.getMonth());
+
         if (monthsDiff > 0) {
           totalMonths += monthsDiff;
         }
@@ -262,25 +262,25 @@ function createCoverLetterPrompt({
 }) {
   // Calculate experience level
   const experienceLevel = calculateExperienceLevel(cvData);
-  
+
   const jobDescription = jobData?.jobDescription || jobData?.description || '';
   const jobTitle = jobData?.title || jobData?.jobTitle || 'Position';
   const company = companyName || jobData?.company || 'Company';
   const basics = cvData?.basics || {};
-  
+
   // Extract CV metadata (career report analysis)
   const aiAnalysis = cvData?.metadata?.aiAnalysis || {};
   const impactScore = aiAnalysis?.impactScore || {};
   const skillsGap = aiAnalysis?.skillsGap || {};
   const industrySpecialization = aiAnalysis?.industrySpecialization || {};
   const cvOptimization = aiAnalysis?.cvOptimization || {};
-  
+
   // Extract relevant CV sections
   const workExperience = cvData?.work || [];
   const projects = cvData?.projects || [];
   const education = cvData?.education || [];
   const skills = cvData?.skills || [];
-  
+
   // Format work experience for prompt
   const workExperienceText = workExperience.map((work: any, idx: number) => {
     return `Work Experience ${idx + 1}:
@@ -290,7 +290,7 @@ function createCoverLetterPrompt({
 - Summary: ${work.summary || 'N/A'}
 - Highlights: ${work.highlights?.join(', ') || 'N/A'}`;
   }).join('\n\n');
-  
+
   // Format projects for prompt
   const projectsText = projects.map((project: any, idx: number) => {
     return `Project ${idx + 1}:
@@ -299,7 +299,7 @@ function createCoverLetterPrompt({
 - Technologies: ${project.keywords?.join(', ') || 'N/A'}
 - URL: ${project.url || 'N/A'}`;
   }).join('\n\n');
-  
+
   // Format education for prompt
   const educationText = education.map((edu: any, idx: number) => {
     return `Education ${idx + 1}:
@@ -308,7 +308,7 @@ function createCoverLetterPrompt({
 - Study Type: ${edu.studyType || 'N/A'}
 - GPA: ${edu.gpa || 'N/A'}`;
   }).join('\n\n');
-  
+
   // Format skills for prompt
   const skillsText = skills.map((skill: any) => {
     if (typeof skill === 'string') return skill;
@@ -316,7 +316,7 @@ function createCoverLetterPrompt({
   }).join(', ');
 
   // Experience level-specific guidance
-  const experienceGuidance = experienceLevel === 'Senior' 
+  const experienceGuidance = experienceLevel === 'Senior'
     ? `CANDIDATE EXPERIENCE LEVEL: SENIOR (7+ years)
 - Emphasize strategic leadership, cross-functional collaboration, and business impact
 - Highlight experience managing teams, budgets, or large-scale projects
@@ -326,7 +326,7 @@ function createCoverLetterPrompt({
 - Show depth of expertise and thought leadership`
 
     : experienceLevel === 'Mid-Level'
-    ? `CANDIDATE EXPERIENCE LEVEL: MID-LEVEL (3-7 years)
+      ? `CANDIDATE EXPERIENCE LEVEL: MID-LEVEL (3-7 years)
 - Balance technical expertise with growing leadership responsibilities
 - Emphasize problem-solving, project ownership, and measurable contributions
 - Highlight ability to work independently and mentor others
@@ -334,7 +334,7 @@ function createCoverLetterPrompt({
 - Use action verbs: "developed," "implemented," "optimized," "delivered"
 - Show progression and increasing responsibility over time`
 
-    : `CANDIDATE EXPERIENCE LEVEL: JUNIOR/ENTRY-LEVEL (0-3 years)
+      : `CANDIDATE EXPERIENCE LEVEL: JUNIOR/ENTRY-LEVEL (0-3 years)
 - Emphasize learning agility, enthusiasm, and foundational skills
 - Highlight relevant projects, internships, or academic achievements
 - Focus on potential, growth mindset, and eagerness to contribute
@@ -342,90 +342,50 @@ function createCoverLetterPrompt({
 - Connect education and projects to job requirements
 - Show passion and commitment to the field`;
 
-  return `You are an expert career marketing specialist and content strategist. Your primary goal is to draft the body (EXACTLY 3 paragraphs) of a highly personalized and persuasive cover letter designed to sell the candidate as the single best and most eligible fit for the specified job role.
+  return `You are an expert Senior HR Recruiter and Career Marketing Specialist. Your goal is to write a highly persuasive, tailored cover letter that positions the candidate as the ideal fit for the role.
 
 ${experienceGuidance}
 
-CONSTRAINTS AND OUTPUT DIRECTIVES (STRICTLY ENFORCE):
-
-OUTPUT FOCUS: Generate EXACTLY 3 paragraphs - no more, no less. Do not include a salutation (e.g., "Dear Hiring Manager,"), a subject line, or a closing/sign-off (e.g., "Sincerely,").
-
-PARAGRAPH STRUCTURE: Each paragraph must be substantial (3-5 sentences) and serve a distinct purpose:
-- Paragraph 1: Hook and immediate value proposition
-- Paragraph 2: Concrete evidence and proof of capabilities
-- Paragraph 3: Forward-looking statement and fit
-
-FLUFF REMOVAL: Eliminate all generic, filler language, platitudes, and clichés (e.g., "I am writing to express my interest," "highly motivated," "excellent communication skills").
-
-ALIGNMENT MANDATE: Every sentence must directly link a specific piece of the candidate's Work Experience, Projects, or Education to a core duty, required skill, or objective listed in the Job Description. If a detail from the CV is not relevant to the JD, do not include it.
-
-TONE: Maintain a confident, professional, and results-oriented tone appropriate for ${experienceLevel} level. Use strong, measurable action verbs and focus on quantifiable achievements (metrics, scale, impact).
-
 --- JOB DESCRIPTION (JD) ---
+Job Title: ${jobTitle}
+Company: ${company}
+Description: ${jobDescription}
 
-Job Title: ${jobTitle || 'Not specified'}
-Company: ${company || 'Not specified'}
+--- CANDIDATE PROFILE ---
+Name: ${basics.name || 'Candidate'}
+Summary: ${basics.summary || 'N/A'}
 
-${jobDescription || 'No job description provided'}
+--- WORK EXPERIENCE ---
+${workExperienceText}
 
---- CANDIDATE CV/EXPERIENCE DATA ---
+--- PROJECTS ---
+${projectsText}
 
-CANDIDATE PROFILE:
-- Name: ${basics.name || 'Not specified'}
-- Summary: ${basics.summary || 'N/A'}
-- Location: ${basics.location ? (typeof basics.location === 'string' ? basics.location : `${basics.location.city || ''}, ${basics.location.state || ''}`) : 'N/A'}
+--- EDUCATION ---
+${educationText}
 
-WORK EXPERIENCE:
-${workExperienceText || 'No work experience provided'}
+--- SKILLS ---
+${skillsText}
 
-PROJECTS:
-${projectsText || 'No projects provided'}
+--- SKILL GAP ANALYSIS (USE TO STRATEGIZE) ---
+${skillsGap.skills ? skillsGap.skills.map((skill: any) => `- ${skill.name}: ${skill.gapInsight || 'N/A'}`).join('\n') : 'No specific gaps identified.'}
 
-EDUCATION:
-${educationText || 'No education provided'}
+INSTRUCTIONS:
+1. **HR Perspective**: Write from the perspective of what a recruiter wants to see: immediate value, cultural fit, and specific problem-solving abilities.
+2. **Address Skill Gaps**: If the analysis identifies a gap (e.g., missing a specific tool), do NOT highlight the lack of it. Instead, emphasize *transferable skills* or *related experience* that demonstrates the ability to quickly learn or adapt. If the candidate has the skill but it wasn't explicitly listed, infer it from their experience if reasonable.
+3. **Filter & Prioritize**: Do not just summarize the CV. Select only the 2-3 most relevant experiences or projects that directly address the top requirements in the JD. Ignore irrelevant experience.
+4. **Quantifiable Impact**: Use numbers and metrics from the CV to prove claims (e.g., "Increased revenue by 20%").
+5. **Structure (EXACTLY 3 Paragraphs)**:
+   - **Para 1 (The Hook)**: State enthusiasm for the role/company and link a major achievement to the company's goals.
+   - **Para 2 (The Proof)**: Deep dive into relevant experience. Connect past actions to future value for *this* company. Address key JD requirements.
+   - **Para 3 (The Close)**: Reiterate fit, express confidence, and include a call to action.
 
-SKILLS:
-${skillsText || 'No skills provided'}
+CONSTRAINTS:
+- EXACTLY 3 paragraphs.
+- NO salutations (e.g., "Dear Hiring Manager") or closings (e.g., "Sincerely").
+- NO placeholders like "[Your Name]".
+- NO generic fluff ("I am a hard worker").
+- Tone: Professional, confident, ${experienceLevel}.
 
---- AI CAREER ANALYSIS INSIGHTS (from CV metadata) ---
-
-${aiAnalysis ? `IMPACT SCORE ANALYSIS:
-- Quantifiable Statements: ${impactScore.quantifiableStatements || 0}
-- High Impact Verbs: ${impactScore.highImpactVerbs || 0}
-- Industry Keywords: ${impactScore.industryKeywords || 0}
-${impactScore.insights ? `- Insights: ${JSON.stringify(impactScore.insights)}` : ''}
-
-SKILLS GAP ANALYSIS:
-${skillsGap.skills ? skillsGap.skills.map((skill: any) => `- ${skill.name}: ${skill.gapInsight || 'N/A'}`).join('\n') : 'N/A'}
-
-INDUSTRY SPECIALIZATION:
-- Specialization: ${industrySpecialization.specialization || 'N/A'}
-- Keywords: ${industrySpecialization.keywords?.join(', ') || 'N/A'}
-
-CV OPTIMIZATION:
-- Total Length: ${cvOptimization.totalLength || 'N/A'}
-- Bullet Point Length: ${cvOptimization.bulletPointLength || 'N/A'}` : 'No AI analysis available'}
-
-GENERATION TASK:
-
-Draft the cover letter body using EXACTLY 3 paragraphs tailored to ${experienceLevel} level:
-
-Paragraph 1 (The Hook - 3-5 sentences): ${experienceLevel === 'Senior' ? 'Lead with your most significant strategic achievement that demonstrates leadership and business impact. Connect it directly to the company\'s main objectives or challenges mentioned in the job description.' : experienceLevel === 'Mid-Level' ? 'Open with your most relevant professional achievement that showcases your ability to deliver measurable results. Connect it to the job\'s primary requirements.' : 'Start with your most relevant project, internship, or academic achievement that demonstrates your potential and alignment with the role.'} Use specific metrics and quantifiable results.
-
-Paragraph 2 (The Proof - 3-5 sentences): ${experienceLevel === 'Senior' ? 'Detail 1-2 major initiatives where you led cross-functional teams or managed significant resources. Highlight scale (budget, team size, impact scope) and reference specific technologies from the job description.' : experienceLevel === 'Mid-Level' ? 'Provide concrete examples from your work experience or projects that demonstrate mastery of the key skills required. Highlight the scale of your work (e.g., "improved performance by Y%," "supported Z users").' : 'Detail relevant projects, coursework, or internships that demonstrate your skills and eagerness to learn. Connect specific technologies or methodologies from your experience to the job requirements.'}
-
-Paragraph 3 (The Close - 3-5 sentences): ${experienceLevel === 'Senior' ? 'Position yourself as a strategic leader who can drive transformation. Conclude with a forward-looking statement about how you will deliver measurable business outcomes and exceed expectations.' : experienceLevel === 'Mid-Level' ? 'Connect your growing expertise and proven track record to the role. Express confidence in your ability to deliver immediate value and contribute to the team\'s success.' : 'Connect your educational background, passion for the field, and eagerness to learn to the role\'s requirements. Express enthusiasm about contributing and growing with the company.'}
-
-CRITICAL REQUIREMENTS:
-- EXACTLY 3 paragraphs (no more, no less)
-- Each paragraph must be 3-5 sentences
-- NO salutations, greetings, or closings
-- NO generic filler language
-- Every claim must be backed by specific examples from the CV data
-- Use quantifiable metrics wherever possible (adjust expectations for ${experienceLevel} level)
-- Reference specific technologies, tools, or methodologies from the job description
-- Maintain professional, confident tone appropriate for ${experienceLevel} level
-- Focus on what you will achieve for the company, not why you are applying
-
-Output ONLY the 3 body paragraphs. Nothing else.`;
+Output ONLY the 3 body paragraphs.`;
 }

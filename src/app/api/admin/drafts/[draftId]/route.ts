@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
-import type { MyJwtPayload } from '@/types/jwt-payload';
 import { getConnection } from '@/lib/database';
 import TemporaryCVDraft from '@/models/TemporaryCVDraft';
 import CV from '@/models/CV';
 import User from '@/models/User';
 import mongoose from 'mongoose';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 /**
  * GET /api/admin/drafts/[draftId]
@@ -18,20 +16,8 @@ export async function GET(
 ) {
   try {
     const { draftId } = await params;
-    // Verify admin authentication
-    const cookieStore = await cookies();
-    const adminToken = cookieStore.get('admin-token');
-
-    if (!adminToken) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    let adminUser: MyJwtPayload;
-    try {
-      adminUser = jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
-    } catch (jwtError) {
-      return NextResponse.json({ success: false, error: 'Invalid admin token' }, { status: 401 });
-    }
+    // Verify admin authentication using NextAuth session
+    const session = await requireAdmin(request);
 
     await getConnection();
 
@@ -83,6 +69,21 @@ export async function GET(
 
   } catch (error: any) {
     console.error('❌ Admin draft detail error:', error);
+    
+    // Handle authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to fetch draft' },
       { status: 500 }
@@ -100,20 +101,9 @@ export async function POST(
 ) {
   try {
     const { draftId } = await params;
-    // Verify admin authentication
-    const cookieStore = await cookies();
-    const adminToken = cookieStore.get('admin-token');
-
-    if (!adminToken) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    let adminUser: MyJwtPayload;
-    try {
-      adminUser = jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
-    } catch (jwtError) {
-      return NextResponse.json({ success: false, error: 'Invalid admin token' }, { status: 401 });
-    }
+    // Verify admin authentication using NextAuth session
+    const session = await requireAdmin(request);
+    const adminUser = session.user as any;
 
     await getConnection();
 
@@ -189,7 +179,7 @@ export async function POST(
 
     // Mark draft as converted
     draft.convertedAt = new Date();
-    draft.convertedBy = new mongoose.Types.ObjectId(adminUser.id);
+    draft.convertedBy = new mongoose.Types.ObjectId(adminUser.id || session.user.id);
     draft.conversionMethod = 'admin';
     await draft.save();
 
@@ -208,6 +198,21 @@ export async function POST(
 
   } catch (error: any) {
     console.error('❌ Admin convert draft error:', error);
+    
+    // Handle authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to convert draft' },
       { status: 500 }
@@ -225,19 +230,8 @@ export async function DELETE(
 ) {
   try {
     const { draftId } = await params;
-    // Verify admin authentication
-    const cookieStore = await cookies();
-    const adminToken = cookieStore.get('admin-token');
-
-    if (!adminToken) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    try {
-      jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
-    } catch (jwtError) {
-      return NextResponse.json({ success: false, error: 'Invalid admin token' }, { status: 401 });
-    }
+    // Verify admin authentication using NextAuth session
+    await requireAdmin(request);
 
     await getConnection();
 
@@ -257,6 +251,21 @@ export async function DELETE(
 
   } catch (error: any) {
     console.error('❌ Admin delete draft error:', error);
+    
+    // Handle authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+    
     return NextResponse.json(
       { success: false, error: error.message || 'Failed to delete draft' },
       { status: 500 }
