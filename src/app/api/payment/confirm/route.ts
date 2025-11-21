@@ -3,9 +3,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import Invoice from '@/models/Invoice';
+import InvoiceItem from '@/models/InvoiceItem';
 import { getAdminPricingPlan, getAdminDiscountCode, getAdminSubscription } from '@/models/admin-models';
 import StripeService from '@/lib/payment/stripe';
 import RazorpayService from '@/lib/payment/razorpay';
+import { createTransaction } from '@/lib/services/transactionService';
 import mongoose from 'mongoose';
 
 export async function POST(request: NextRequest) {
@@ -215,6 +218,73 @@ export async function POST(request: NextRequest) {
     });
 
     await subscription.save();
+
+    // Create invoice for payment confirmation
+    try {
+      const invoice = await Invoice.create({
+        userId: user._id,
+        subtotal: paymentDetails.amount - (discountAmount || 0),
+        taxAmount: 0, // Tax not calculated in this route
+        amount: paymentDetails.amount,
+        currency: paymentDetails.currency || plan.currency || 'USD',
+        status: 'paid',
+        planName: plan.name,
+        planId: plan._id,
+        billingCycle: plan.billingCycle,
+        paymentMethodType: paymentMethod === 'stripe' ? 'stripe' : paymentMethod === 'razorpay' ? 'razorpay' : 'unknown',
+        paymentMethodLast4: '****',
+        paidAt: new Date(),
+        invoiceDate: new Date(),
+        dueDate: endDate,
+        description: `${plan.name} - ${plan.billingCycle} subscription`,
+        metadata: {
+          subscriptionId: subscription._id.toString(),
+          paymentProviderId: paymentDetails.paymentProviderId,
+          discountCodeId: discountCodeId || null,
+          discountAmount: discountAmount || 0
+        }
+      });
+
+      // Create invoice items
+      await InvoiceItem.create({
+        invoiceId: invoice._id,
+        description: `${plan.name} - ${plan.billingCycle} subscription`,
+        quantity: 1,
+        unitPrice: paymentDetails.amount - (discountAmount || 0),
+        amount: paymentDetails.amount - (discountAmount || 0),
+        type: 'subscription'
+      });
+
+      if (discountAmount > 0) {
+        await InvoiceItem.create({
+          invoiceId: invoice._id,
+          description: 'Discount',
+          quantity: 1,
+          unitPrice: -discountAmount,
+          amount: -discountAmount,
+          type: 'discount'
+        });
+      }
+
+      // Create transaction record
+      await createTransaction({
+        invoiceId: invoice._id.toString(),
+        amount: paymentDetails.amount,
+        status: 'success',
+        gatewayReferenceId: paymentDetails.paymentProviderId,
+        gateway: paymentMethod === 'stripe' ? 'stripe' : 'razorpay',
+        metadata: {
+          subscriptionId: subscription._id.toString(),
+          discountCodeId: discountCodeId || null,
+          discountAmount: discountAmount || 0
+        }
+      });
+
+      console.log(`✅ Invoice created for payment confirmation: ${invoice.invoiceNumber}`);
+    } catch (invoiceError) {
+      // Log error but don't fail the payment confirmation
+      console.error('Error creating invoice for payment confirmation:', invoiceError);
+    }
 
     // Update user subscription
     user.subscription = {

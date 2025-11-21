@@ -115,7 +115,19 @@ export async function getPricingForPlan(
   planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly'
 ): Promise<{ price: number; currency: string; currencySymbol: string; planId: string } | null> {
   try {
-    const countryPricing = await getCountryPricing(countryCode);
+    let countryPricing = await getCountryPricing(countryCode);
+    
+    // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
+    // This ensures Stripe works for all eligible countries
+    if (!countryPricing && countryCode !== 'IN') {
+      console.log('No pricing found for non-India country, falling back to GB (Stripe-compatible):', {
+        countryCode,
+        planKey,
+        fallbackTo: 'GB'
+      });
+      countryPricing = await getCountryPricing('GB');
+    }
+    
     if (!countryPricing) {
       return null;
     }

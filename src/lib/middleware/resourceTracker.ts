@@ -45,8 +45,8 @@ export async function getSubscriptionLimitsFromPlan(planKey: string): Promise<Su
       // Fallback to default free plan limits
       return {
         credits: {
-          cvCredits: 3,
-          exportCredits: 3,
+          cvCredits: 1,
+          exportCredits: 1,
           atsCheckCredits: 0,
           jobCredits: 1,
           resetSchedule: 'monthly'
@@ -75,8 +75,8 @@ export async function getSubscriptionLimitsFromPlan(planKey: string): Promise<Su
     // Fallback if credits not found
     return {
       credits: {
-        cvCredits: 3,
-        exportCredits: 3,
+        cvCredits: 1,
+        exportCredits: 1,
         atsCheckCredits: 0,
         jobCredits: 1,
         resetSchedule: 'monthly'
@@ -87,8 +87,8 @@ export async function getSubscriptionLimitsFromPlan(planKey: string): Promise<Su
     // Fallback to default
     return {
       credits: {
-        cvCredits: 3,
-        exportCredits: 3,
+        cvCredits: 1,
+        exportCredits: 1,
         atsCheckCredits: 0,
         jobCredits: 1,
         resetSchedule: 'monthly'
@@ -106,10 +106,10 @@ export function getSubscriptionLimits(plan: string): SubscriptionLimits {
   switch (plan) {
     case 'free':
       return {
-        maxCVs: 3,
-        maxCoverLetters: 3,
-        maxJobs: 5,
-        maxJourneys: 5
+        maxCVs: 1,
+        maxCoverLetters: 0,
+        maxJobs: 1,
+        maxJourneys: 1
       };
     case 'basic':
       return {
@@ -134,10 +134,10 @@ export function getSubscriptionLimits(plan: string): SubscriptionLimits {
       };
     default:
       return {
-        maxCVs: 3,
-        maxCoverLetters: 3,
-        maxJobs: 5,
-        maxJourneys: 5
+        maxCVs: 1,
+        maxCoverLetters: 0,
+        maxJobs: 1,
+        maxJourneys: 1
       };
   }
 }
@@ -234,11 +234,11 @@ export async function canCreateResource(
       switch (resourceType) {
         case 'cv':
           currentCount = counts.cvs;
-          maxLimit = limits.maxCVs || 3;
+          maxLimit = limits.maxCVs || 1;
           break;
         case 'coverLetter':
           currentCount = counts.coverLetters;
-          maxLimit = limits.maxCoverLetters || 3;
+          maxLimit = limits.maxCoverLetters || 0;
           break;
         case 'job':
           currentCount = counts.jobs;

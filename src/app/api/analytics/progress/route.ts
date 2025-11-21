@@ -26,10 +26,19 @@ export async function GET(request: NextRequest) {
 
     await getConnection();
 
-    // Calculate date range
+    // Calculate date range - use UTC to avoid timezone issues
     const now = new Date();
     const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
-    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    
+    // Create start date at midnight UTC
+    const startDateUTC = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() - days
+    ));
+    
+    // Also create a startDate for MongoDB queries (MongoDB stores dates in UTC anyway)
+    const startDate = new Date(startDateUTC);
 
     // JobApplication uses Mixed type for userId, so we need to handle both ObjectId and string
     // Support both ObjectId and string userId formats
@@ -42,7 +51,9 @@ export async function GET(request: NextRequest) {
 
     console.log('Progress API: Using userId from authenticated user', { 
       userId: authResult.userId,
-      userIdQuery 
+      userIdQuery,
+      startDate: startDate.toISOString(),
+      startDateUTC: startDateUTC.toISOString()
     });
 
     // OPTIMIZED: Use MongoDB aggregation pipeline to do counting in database
@@ -58,21 +69,15 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Initialize date range
-    const startDateUTC = new Date(Date.UTC(
-      startDate.getUTCFullYear(),
-      startDate.getUTCMonth(),
-      startDate.getUTCDate()
-    ));
     
     // Use aggregation pipelines to count by date - much faster than fetching all documents
     const [jobsData, cvsData, coverLettersData] = await Promise.all([
-      // Jobs aggregation
+      // Jobs aggregation - exclude draft jobs as they're not meaningful progress
       JobApplication.aggregate([
         {
           $match: {
             userId: userIdQuery,
+            status: { $ne: 'draft' }, // Exclude draft jobs - they're not active progress
             $or: [
               { createdAt: { $gte: startDate } },
               { updatedAt: { $gte: startDate } }
@@ -216,31 +221,48 @@ export async function GET(request: NextRequest) {
     }
 
     // Populate counts from aggregation results
+    console.log('Progress API: Processing aggregation results', {
+      jobsDataCount: jobsData.length,
+      cvsDataCount: cvsData.length,
+      coverLettersDataCount: coverLettersData.length,
+      sampleJobsData: jobsData.slice(0, 3),
+      dateKeysCount: Object.keys(dataByDate).length,
+      sampleDateKeys: Object.keys(dataByDate).slice(0, 3)
+    });
+
     jobsData.forEach((item: any) => {
       if (dataByDate[item._id]) {
         dataByDate[item._id].jobs = item.count;
+      } else {
+        console.warn('Progress API: Jobs data date not found in range:', item._id);
       }
     });
 
     cvsData.forEach((item: any) => {
       if (dataByDate[item._id]) {
         dataByDate[item._id].cvs = item.count;
+      } else {
+        console.warn('Progress API: CVs data date not found in range:', item._id);
       }
     });
 
     coverLettersData.forEach((item: any) => {
       if (dataByDate[item._id]) {
         dataByDate[item._id].coverLetters = item.count;
+      } else {
+        console.warn('Progress API: Cover letters data date not found in range:', item._id);
       }
     });
 
-    // Convert to array format
-    const progressData = Object.entries(dataByDate).map(([date, counts]) => ({
-      date,
-      jobs: counts.jobs,
-      cvs: counts.cvs,
-      coverLetters: counts.coverLetters
-    }));
+    // Convert to array format and sort by date
+    const progressData = Object.entries(dataByDate)
+      .map(([date, counts]) => ({
+        date,
+        jobs: counts.jobs,
+        cvs: counts.cvs,
+        coverLetters: counts.coverLetters
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date)); // Sort by date ascending
 
     // Calculate totals
     const totalJobs = jobsData.reduce((sum: number, item: any) => sum + item.count, 0);
@@ -251,8 +273,15 @@ export async function GET(request: NextRequest) {
       totalJobs,
       totalCVs,
       totalCoverLetters,
-      progressDataPoints: progressData.length
+      progressDataPoints: progressData.length,
+      sampleData: progressData.slice(0, 3),
+      dateRange: { start: startDate.toISOString(), end: now.toISOString() }
     });
+
+    // Ensure we always return data, even if empty
+    if (progressData.length === 0) {
+      console.warn('Progress API: No data points generated, this should not happen');
+    }
 
     return NextResponse.json({
       success: true,

@@ -94,6 +94,14 @@ class PricingValidationService {
         };
       }
 
+      // Special case: LAUNCH100 should only work for pro_monthly
+      if (coupon.code === 'LAUNCH100' && planKey !== 'pro_monthly') {
+        return {
+          valid: false,
+          error: 'This coupon is only applicable to the monthly plan'
+        };
+      }
+
       // Check if coupon is applicable to the selected plan
       const hasApplicablePlans = 
         (coupon.applicablePlans && coupon.applicablePlans.length > 0) ||

@@ -110,6 +110,7 @@ const StageView: React.FC<StageViewProps> = ({
             jobs={jobs}
             onJobClick={onJobClick}
             onJobStatusUpdate={onJobStatusUpdate}
+            isFullScreen={true}
           />
         );
       case 'interview':
@@ -120,6 +121,7 @@ const StageView: React.FC<StageViewProps> = ({
             getJobJourneys={getJobJourneys}
             onJobClick={onJobClick}
             onJobStatusUpdate={onJobStatusUpdate}
+            isFullScreen={true}
           />
         );
       case 'offer':
@@ -128,6 +130,7 @@ const StageView: React.FC<StageViewProps> = ({
             jobs={jobs}
             onJobClick={onJobClick}
             onJobStatusUpdate={onJobStatusUpdate}
+            isFullScreen={true}
           />
         );
       case 'rejected':
@@ -135,6 +138,7 @@ const StageView: React.FC<StageViewProps> = ({
           <RejectedStageView
             jobs={jobs}
             onJobClick={onJobClick}
+            isFullScreen={true}
           />
         );
       default:

@@ -106,7 +106,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
       type: Number,
       required: [true, 'CV credits are required'],
       min: [-1, 'CV credits cannot be less than -1 (unlimited)'],
-      default: 3
+      default: 1
     },
     exportCredits: {
       type: Number,

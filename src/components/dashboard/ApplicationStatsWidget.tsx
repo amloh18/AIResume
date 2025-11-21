@@ -45,20 +45,32 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
   }, [userId, timeRange]);
 
   const fetchApplicationStats = async () => {
+    if (!userId) {
+      console.warn('ApplicationStatsWidget: No userId provided');
+      setStats(generateMockStats());
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      // Note: userId is passed but API uses authentication - keeping for backward compatibility
       const response = await fetch(`/api/analytics/applications?userId=${userId}&range=${timeRange}`);
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.data) {
           console.log('Application Stats API Response:', result.data);
+          // Always use real data, even if all values are zero - this is the actual user data
           setStats(result.data);
         } else {
-          console.warn('Application Stats API returned unsuccessful response, using mock data');
+          console.warn('Application Stats API returned unsuccessful response:', result);
+          // Only use mock data if API explicitly failed
           setStats(generateMockStats());
         }
       } else {
-        console.error('Failed to fetch application stats:', response.status);
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('Failed to fetch application stats:', response.status, errorText);
+        // Only use mock data on actual API failure
         setStats(generateMockStats());
       }
     } catch (error) {

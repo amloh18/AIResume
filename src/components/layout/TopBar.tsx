@@ -63,7 +63,8 @@ const TopBar: React.FC<TopBarProps> = ({
                 height={32}
                 className="w-full h-full object-contain"
                 priority
-                unoptimized
+                quality={85}
+                sizes="32px"
               />
             </div>
             <span className="text-white dark:text-gray-100 font-semibold text-lg hidden tablet:block">

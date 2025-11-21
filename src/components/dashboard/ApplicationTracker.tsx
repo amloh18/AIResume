@@ -8,7 +8,7 @@ import {
   CheckCircle, Clock, AlertCircle, Target, FileText,
   ArrowRight, ChevronDown, ChevronUp, Star, Zap,
   TrendingUp, Users, Building2, Globe, Bookmark,
-  Archive, Copy, Share2, Download, Upload, X, Mail, Linkedin
+  Archive, Copy, Share2, Download, Upload, X, Mail, Linkedin, GraduationCap
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -27,6 +27,7 @@ import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import { CVJourney } from '@/types/cv';
 import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
+import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 
 interface JobApplication {
   id: string;
@@ -175,6 +176,9 @@ const ApplicationTracker: React.FC = () => {
 
   // Focus mode
   const { isFocusMode, toggleFocusMode } = useFocusMode();
+  
+  // Credit exhaustion handler
+  const { showExhaustionModal } = useCreditExhaustionHandler();
 
   // Reset zoomed stage if it's filtered out by focus mode
   useEffect(() => {
@@ -906,15 +910,46 @@ ${userName}`
       .then(async response => {
         // Check both response status and body
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          let errorData: any = {};
+          try {
+            const text = await response.text();
+            errorData = text ? JSON.parse(text) : {};
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+          
           console.error('Failed to update job status:', response.status, errorData);
+          
+          // Check if this is a credit-related error (403 or 500 with credit error message)
+          const isCreditError = 
+            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits'))) ||
+            (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
+            (originalStatus === 'draft' && newStatus === 'created' && (errorData.requiresUpgrade || errorData.error?.includes('limit') || errorData.error?.includes('credit')));
+          
+          // Handle insufficient credits error - show paywall
+          if (isCreditError) {
+            const limit = errorData.limit || 1;
+            const currentUsage = errorData.currentUsage || limit;
+            const creditsRemaining = Math.max(0, limit - currentUsage);
+            
+            showExhaustionModal(
+              {
+                creditsRemaining,
+                limit,
+                reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+              },
+              'pro_monthly'
+            );
+          } else {
+            toast.error(errorData.message || errorData.error || `Failed to update job status (${response.status}). Please try again.`);
+          }
+          
           // Revert on failure
           setJobs(prevJobs => 
             prevJobs.map(j => 
               j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
             )
           );
-          toast.error('Failed to update job status. Please try again.');
           setIsUpdatingJobStatus(prev => {
             const next = new Set(prev);
             next.delete(currentDraggedJob);
@@ -928,13 +963,39 @@ ${userName}`
           const result = await response.json();
           if (result.error || (result.success === false)) {
             console.error('API returned error:', result);
+            
+            // Check if this is a credit-related error
+            const isCreditError = 
+              result.requiresUpgrade ||
+              result.error?.includes('limit exceeded') ||
+              result.error?.includes('insufficient credits') ||
+              result.error?.includes('Plan limit exceeded') ||
+              (originalStatus === 'draft' && newStatus === 'created' && (result.error?.includes('limit') || result.error?.includes('credit')));
+            
+            // Handle insufficient credits error - show paywall
+            if (isCreditError) {
+              const limit = result.limit || 1;
+              const currentUsage = result.currentUsage || limit;
+              const creditsRemaining = Math.max(0, limit - currentUsage);
+              
+              showExhaustionModal(
+                {
+                  creditsRemaining,
+                  limit,
+                  reason: result.message || result.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+                },
+                'pro_monthly'
+              );
+            } else {
+              toast.error(result.message || result.error || 'Failed to update job status. Please try again.');
+            }
+            
             // Revert on failure
             setJobs(prevJobs => 
               prevJobs.map(j => 
                 j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
               )
             );
-            toast.error(result.message || 'Failed to update job status. Please try again.');
             setIsUpdatingJobStatus(prev => {
               const next = new Set(prev);
               next.delete(currentDraggedJob);
@@ -944,6 +1005,12 @@ ${userName}`
           }
           // Success - update with server response to ensure consistency
           console.log('✅ Job status updated successfully:', newStatus);
+          
+          // Dispatch credit update event if moving from draft to created
+          if (originalStatus === 'draft' && newStatus === 'created') {
+            window.dispatchEvent(new CustomEvent('creditsUpdated'));
+          }
+          
           if (result.job || result.data) {
             const updatedJob = result.job || result.data;
             setJobs(prevJobs => 
@@ -976,13 +1043,34 @@ ${userName}`
       })
       .catch(error => {
         console.error('Error updating job status:', error);
+        
+        // Check if error is credit-related
+        const errorMessage = error?.message || error?.toString() || '';
+        const isCreditError = 
+          errorMessage.includes('limit exceeded') ||
+          errorMessage.includes('insufficient credits') ||
+          errorMessage.includes('Plan limit exceeded') ||
+          (originalStatus === 'draft' && newStatus === 'created' && (errorMessage.includes('limit') || errorMessage.includes('credit')));
+        
+        if (isCreditError) {
+          showExhaustionModal(
+            {
+              creditsRemaining: 0,
+              limit: 1,
+              reason: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+            },
+            'pro_monthly'
+          );
+        } else {
+          toast.error('Failed to update job status. Please try again.');
+        }
+        
         // Revert on error
         setJobs(prevJobs => 
           prevJobs.map(j => 
             j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
           )
         );
-        toast.error('Failed to update job status. Please try again.');
         setIsUpdatingJobStatus(prev => {
           const next = new Set(prev);
           next.delete(currentDraggedJob);
@@ -1827,13 +1915,30 @@ ${userName}`
                             </div>
                           ) : job.status !== 'draft' ? (
                             <motion.button
-                              className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJobClick(job);
+                              }}
+                              className={`w-full mt-3 px-3 py-2 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm ${
+                                job.status === 'interview'
+                                  ? 'bg-gradient-to-r from-purple-500/80 to-purple-600/80 hover:from-purple-500 hover:to-purple-600'
+                                  : 'bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600'
+                              }`}
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                             >
-                              <Eye size={12} />
-                              Manage Applications
-                              <ArrowRight size={12} />
+                              {job.status === 'interview' ? (
+                                <>
+                                  <GraduationCap size={12} />
+                                  Interview Prep
+                                </>
+                              ) : (
+                                <>
+                                  <Eye size={12} />
+                                  Manage Applications
+                                  <ArrowRight size={12} />
+                                </>
+                              )}
                             </motion.button>
                           ) : null}
                         </div>
