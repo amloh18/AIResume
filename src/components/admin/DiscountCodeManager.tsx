@@ -61,6 +61,7 @@ const DiscountCodeManager: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCode, setEditingCode] = useState<DiscountCode | null>(null);
+  const [showInactive, setShowInactive] = useState(false);
   const [formData, setFormData] = useState<DiscountCodeFormData>({
     code: '',
     description: '',
@@ -100,11 +101,14 @@ const DiscountCodeManager: React.FC = () => {
   useEffect(() => {
     fetchDiscountCodes();
     fetchPricingPlans();
-  }, []);
+  }, [showInactive]);
 
   const fetchDiscountCodes = async () => {
     try {
-      const response = await fetch('/api/admin/discount-codes');
+      const url = showInactive 
+        ? '/api/admin/discount-codes?includeInactive=true'
+        : '/api/admin/discount-codes';
+      const response = await fetch(url);
       if (response.ok) {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -270,13 +274,24 @@ const DiscountCodeManager: React.FC = () => {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Discount Codes</h2>
           <p className="text-gray-600 dark:text-gray-400">Manage promotional codes and discounts</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-        >
-          <Plus size={16} />
-          Add Discount Code
-        </button>
+        <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">Show Inactive</span>
+          </label>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus size={16} />
+            Add Discount Code
+          </button>
+        </div>
       </div>
 
       {/* Summary Stats */}
@@ -573,13 +588,16 @@ const DiscountCodeManager: React.FC = () => {
                         }}
                         className="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">All Plans</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        All Plans (Sitewide) {formData.applicablePlans.length === 0 && <span className="text-green-600">✓</span>}
+                      </span>
                     </label>
                     {pricingPlans.map((plan) => (
                       <label key={plan._id} className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={formData.applicablePlans.includes(plan._id)}
+                          disabled={formData.applicablePlans.length === 0}
                           onChange={(e) => {
                             if (e.target.checked) {
                               setFormData(prev => ({ 
@@ -593,7 +611,7 @@ const DiscountCodeManager: React.FC = () => {
                               }));
                             }
                           }}
-                          className="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
+                          className="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {plan.name} ({plan.currency} {plan.price})

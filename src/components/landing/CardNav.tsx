@@ -80,8 +80,8 @@ const CardNav = ({
                 height={32}
                 className="logo-image"
                 priority
-                quality={90}
-                unoptimized={true}
+                quality={85}
+                sizes="32px"
                 onError={() => {
                   console.error('Logo image failed to load');
                 }}

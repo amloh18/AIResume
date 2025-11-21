@@ -30,7 +30,7 @@ interface ParsedJobData {
 interface JobParserDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onParseComplete: (data: ParsedJobData, status: 'draft' | 'created') => void;
+  onParseComplete: (data: ParsedJobData) => void;
 }
 
 const JobParserDialog: React.FC<JobParserDialogProps> = ({
@@ -41,7 +41,6 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
   const [inputText, setInputText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedJobData | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<'draft' | 'created'>('draft');
   const [error, setError] = useState<string | null>(null);
 
   // Reset form when dialog closes
@@ -51,7 +50,6 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       setInputText('');
       setParsedData(null);
       setError(null);
-      setSelectedStatus('draft');
       setIsParsing(false);
     }
   }, [isOpen]);
@@ -101,7 +99,8 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
 
   const handleSave = () => {
     if (parsedData) {
-      onParseComplete(parsedData, selectedStatus);
+      // Always save as draft - credit check will happen when moving to 'created' stage
+      onParseComplete(parsedData);
       handleClose();
     }
   };
@@ -284,40 +283,10 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
                 </div>
               </div>
 
-              {/* Status Selector */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-900 dark:text-white">
-                  Save as:
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setSelectedStatus('draft')}
-                    className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
-                      selectedStatus === 'draft'
-                        ? 'bg-gray-200 dark:bg-[#2a3a1f] border-gray-400 dark:border-lime-500/40 text-gray-900 dark:text-white'
-                        : 'bg-white dark:bg-[#1A201A] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#232f1c]'
-                    }`}
-                  >
-                    <div className="text-sm font-medium">Draft</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      No CV journey (saved for later)
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setSelectedStatus('created')}
-                    className={`flex-1 px-4 py-2 rounded-lg border transition-colors ${
-                      selectedStatus === 'created'
-                        ? 'bg-lime-100 dark:bg-lime-900/30 border-lime-400 dark:border-[#80FF00]/50 text-gray-900 dark:text-white'
-                        : 'bg-white dark:bg-[#1A201A] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#232f1c]'
-                    }`}
-                  >
-                    <div className="text-sm font-medium">Create</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      With CV journey (ready to tailor)
-                    </div>
-                  </button>
-                </div>
-              </div>
+              {/* Info Message */}
+              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                Job will be saved as draft. Move it to "Created" stage to start CV journey (requires credit).
+              </p>
 
               {/* Action Buttons */}
               <div className="flex gap-2">

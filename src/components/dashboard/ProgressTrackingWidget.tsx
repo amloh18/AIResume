@@ -53,16 +53,32 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       if (response.ok) {
         const result = await response.json();
         console.log('ProgressTrackingWidget: API response:', result);
-        if (result.success && result.data && result.data.length > 0) {
+        if (result.success && result.data) {
+          // Always use real data, even if it's all zeros - this is the actual user data
+          console.log('ProgressTrackingWidget: Received data from API', {
+            dataLength: result.data.length,
+            sampleData: result.data.slice(0, 3),
+            summary: result.summary
+          });
           setData(result.data);
           console.log('ProgressTrackingWidget: Using real data, points:', result.data.length);
         } else {
-          console.log('ProgressTrackingWidget: No real data, using mock data');
+          console.warn('ProgressTrackingWidget: API returned unsuccessful response:', result);
+          // Only use mock data if API explicitly failed
           setData(generateMockData());
         }
       } else {
-        console.error('ProgressTrackingWidget: Failed to fetch progress data:', response.status);
-        setData(generateMockData());
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('ProgressTrackingWidget: Failed to fetch progress data:', response.status, errorText);
+        
+        // If unauthorized, don't use mock data - show empty state
+        if (response.status === 401) {
+          console.warn('ProgressTrackingWidget: Unauthorized - user not authenticated');
+          setData([]);
+        } else {
+          // Only use mock data on other API failures
+          setData(generateMockData());
+        }
       }
     } catch (error) {
       // Safely handle error - check if it's an Event object
@@ -125,7 +141,20 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
   const renderChart = () => {
     const filteredData = getFilteredData();
     
-    if (filteredData.length === 0) return null;
+    console.log('ProgressTrackingWidget: renderChart called', {
+      dataLength: data.length,
+      filteredDataLength: filteredData.length,
+      sampleData: filteredData.slice(0, 3)
+    });
+    
+    if (filteredData.length === 0) {
+      console.warn('ProgressTrackingWidget: No data to render');
+      return (
+        <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+          <p>No data available for the selected time range</p>
+        </div>
+      );
+    }
 
     // Calculate domain to center current day
     const today = new Date().toISOString().split('T')[0];

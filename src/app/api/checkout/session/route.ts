@@ -39,14 +39,43 @@ async function getCountryPricingForPlan(
 
     // Get full CountryPricing data (not just the plan-specific pricing)
     const { getCountryPricing } = await import('@/lib/services/countryPricingService');
-    const countryPricing = await getCountryPricing(countryCode);
+    let countryPricing = await getCountryPricing(countryCode);
     
-    if (!countryPricing) {
-      console.log('No country pricing found:', {
+    // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
+    // This ensures Stripe works for all eligible countries
+    if (!countryPricing && countryCode !== 'IN') {
+      console.log('No country pricing found for non-India country, falling back to GB (Stripe-compatible):', {
         countryCode,
-        planKey: finalPlanKey
+        planKey: finalPlanKey,
+        fallbackTo: 'GB'
       });
-      return null;
+      countryPricing = await getCountryPricing('GB');
+    }
+    
+    // For India, if pricing not found, return null (should use Razorpay with INR)
+    if (!countryPricing) {
+      if (countryCode === 'IN') {
+        console.log('No INR pricing found for India:', {
+          countryCode,
+          planKey: finalPlanKey
+        });
+        return null;
+      }
+      // Final fallback for non-India: try US pricing (USD/Stripe)
+      console.log('No GB pricing found, trying US as final fallback:', {
+        countryCode,
+        planKey: finalPlanKey,
+        fallbackTo: 'US'
+      });
+      countryPricing = await getCountryPricing('US');
+      
+      if (!countryPricing) {
+        console.error('No country pricing found (including GB and US fallbacks):', {
+          countryCode,
+          planKey: finalPlanKey
+        });
+        return null;
+      }
     }
 
     // Map planKey to planPrices key
@@ -314,26 +343,53 @@ export async function POST(request: NextRequest) {
             const plan = await PricingPlan.findOne({ key: planKey });
             
             let isApplicable = true;
+            
+            // If applicablePlans is empty, code works sitewide (all plans)
+            // If applicablePlans has entries, code only works for those specific plans
             if (discountCodeDoc.applicablePlans && discountCodeDoc.applicablePlans.length > 0) {
+              isApplicable = false; // Default to false, will be true if plan matches
+              
               if (plan) {
-                // Check if code applies to plan ID or plan key
-                // applicablePlans can be ObjectIds (when not populated) or plan objects (when populated)
-                isApplicable = 
-                  discountCodeDoc.applicablePlans.some((planRef: any) => {
-                    // If populated, planRef will be an object with _id and key
-                    if (planRef && typeof planRef === 'object' && planRef._id) {
-                      return planRef._id.toString() === plan._id.toString() || planRef.key === plan.key;
-                    }
-                    // If not populated, planRef is an ObjectId
-                    const planIdStr = planRef.toString ? planRef.toString() : String(planRef);
-                    return planIdStr === plan._id.toString();
-                  });
+                // Special case: LAUNCH100 should only work for pro_monthly
+                if (discountCodeDoc.code === 'LAUNCH100' && planKey !== 'pro_monthly') {
+                  isApplicable = false;
+                } else {
+                  // Populate applicablePlans to check both IDs and keys
+                  const populatedDiscount = await DiscountCode.findById(discountCodeDoc._id).populate('applicablePlans', 'key _id');
+                  
+                  if (populatedDiscount && populatedDiscount.applicablePlans) {
+                    // Check if code applies to plan ID or plan key
+                    isApplicable = populatedDiscount.applicablePlans.some((planRef: any) => {
+                      // If populated, planRef will be an object with _id and key
+                      if (planRef && typeof planRef === 'object') {
+                        // Check by plan key (preferred for plan-specific codes)
+                        if (planRef.key && planRef.key === plan.key) return true;
+                        // Check by plan ID
+                        if (planRef._id) {
+                          const planRefId = planRef._id.toString ? planRef._id.toString() : String(planRef._id);
+                          if (planRefId === plan._id.toString()) return true;
+                        }
+                      }
+                      // If not populated, planRef is an ObjectId
+                      const planIdStr = planRef.toString ? planRef.toString() : String(planRef);
+                      return planIdStr === plan._id.toString();
+                    });
+                  } else {
+                    // Fallback: check without population
+                    isApplicable = discountCodeDoc.applicablePlans.some((planRef: any) => {
+                      const planIdStr = planRef.toString ? planRef.toString() : String(planRef);
+                      return planIdStr === plan._id.toString();
+                    });
+                  }
+                }
               } else {
                 isApplicable = false;
               }
             }
+            // If applicablePlans is empty or undefined, code works sitewide (isApplicable remains true)
             
             console.log('Discount code applicability check:', {
+              code: discountCodeDoc.code,
               applicablePlans: discountCodeDoc.applicablePlans,
               planKey,
               planId: plan?._id.toString(),
@@ -447,17 +503,39 @@ export async function POST(request: NextRequest) {
     
     // Get country pricing for user's region (primary source for currency and pricing)
     // This ensures currency and pricing are properly initialized from region
-    const userCountryPricing = await getCountryPricingForPlan(
+    let userCountryPricing = await getCountryPricingForPlan(
       regionInfo.countryCode, 
       planKey as any, 
       interval as any
     );
     
+    // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
+    if (!userCountryPricing && regionInfo.countryCode !== 'IN') {
+      console.log('No pricing found for non-India country, falling back to GB for Stripe:', {
+        countryCode: regionInfo.countryCode,
+        planKey,
+        interval,
+        fallbackTo: 'GB'
+      });
+      userCountryPricing = await getCountryPricingForPlan('GB', planKey as any, interval as any);
+    }
+    
     // Determine currency from region-based CountryPricing
     // Priority: 1. User's country pricing, 2. Region info, 3. Default (GBP)
-    const detectedCurrency = userCountryPricing?.currency?.toUpperCase() 
+    // For non-India countries, ensure currency is not INR
+    let detectedCurrency = userCountryPricing?.currency?.toUpperCase() 
       || regionInfo?.currency?.toUpperCase() 
       || 'GBP';
+    
+    // Ensure non-India countries don't use INR currency
+    if (detectedCurrency === 'INR' && regionInfo.countryCode !== 'IN') {
+      console.warn('Non-India country detected with INR currency, using region currency instead:', {
+        countryCode: regionInfo.countryCode,
+        detectedCurrency,
+        regionCurrency: regionInfo.currency
+      });
+      detectedCurrency = regionInfo?.currency?.toUpperCase() || 'GBP';
+    }
     
     console.log('Region and currency detection:', {
       countryCode: regionInfo.countryCode,
@@ -467,16 +545,40 @@ export async function POST(request: NextRequest) {
       regionPaymentPartner: regionInfo.paymentPartner
     });
     
-    // ENFORCE: Razorpay = INR only, Stripe = all other currencies
-    // Determine payment provider based on currency (not just region)
+    // ENFORCE: Razorpay = INR only (India), Stripe = all other currencies (all other countries)
+    // Determine payment provider based on country code and currency
     let paymentProvider = provider;
     
     if (!paymentProvider) {
-      // Auto-select provider based on currency
-      if (detectedCurrency === 'INR') {
+      // Auto-select provider based on country code first, then currency
+      // India (IN) = Razorpay, all other countries = Stripe
+      if (regionInfo.countryCode === 'IN' && detectedCurrency === 'INR') {
         paymentProvider = 'razorpay';
       } else {
+        // All non-India countries use Stripe
         paymentProvider = 'stripe';
+        // Ensure currency is not INR for non-India countries
+        if (detectedCurrency === 'INR' && regionInfo.countryCode !== 'IN') {
+          console.warn('Non-India country detected with INR currency, using region currency instead:', {
+            countryCode: regionInfo.countryCode,
+            detectedCurrency,
+            regionCurrency: regionInfo.currency
+          });
+          // Use region currency instead of INR
+          const correctedCurrency = regionInfo.currency || 'GBP';
+          // Update userCountryPricing if needed
+          if (userCountryPricing && userCountryPricing.currency === 'INR') {
+            const { getCountryPricing } = await import('@/lib/services/countryPricingService');
+            const fallbackPricing = await getCountryPricing(regionInfo.countryCode);
+            if (fallbackPricing) {
+              userCountryPricing = await getCountryPricingForPlan(
+                regionInfo.countryCode,
+                planKey as any,
+                interval as any
+              );
+            }
+          }
+        }
       }
     }
     
@@ -631,11 +733,22 @@ async function handleDayPassPayment(
     }
   } else {
     // Stripe: Use region-based pricing (supports all currencies)
+    // For non-India countries, ensure we get Stripe-compatible pricing
+    const countryCode = regionInfo?.countryCode || 'GB';
     countryPricing = await getCountryPricingForPlan(
-      regionInfo?.countryCode || 'GB', 
+      countryCode, 
       'day_pass', 
       'one-time'
     );
+    
+    // If no pricing found for non-India country, fallback to GB (Stripe-compatible)
+    if (!countryPricing && countryCode !== 'IN') {
+      console.log('No pricing found for country, falling back to GB for Stripe:', {
+        countryCode,
+        fallbackTo: 'GB'
+      });
+      countryPricing = await getCountryPricingForPlan('GB', 'day_pass', 'one-time');
+    }
   }
   
   // All prices MUST come from CountryPricing - no legacy fallbacks
@@ -1012,7 +1125,7 @@ async function handleDayPassPayment(
         order_id: order.id,
         amount: order.amount,
         currency: order.currency,
-        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key_id: process.env.RAZORPAY_KEY_ID,
         checkout: true, // Use Razorpay Checkout
         coupon: couponDiscount ? {
           code: couponDiscount.code,
@@ -1105,7 +1218,20 @@ async function handleProPlanPayment(
   const planKey = intervalToPlanKey[interval] || 'pro_monthly';
   
   // Get country pricing from CountryPricing collection
-  const countryPricing = await getCountryPricingForPlan(regionInfo?.countryCode || 'US', planKey, interval as any);
+  // For Stripe (non-India), ensure we get pricing or fallback to GB
+  const countryCode = regionInfo?.countryCode || 'GB';
+  let countryPricing = await getCountryPricingForPlan(countryCode, planKey, interval as any);
+  
+  // If no pricing found for non-India country, fallback to GB (Stripe-compatible)
+  if (!countryPricing && countryCode !== 'IN' && provider === 'stripe') {
+    console.log('No pricing found for country, falling back to GB for Stripe:', {
+      countryCode,
+      planKey,
+      interval,
+      fallbackTo: 'GB'
+    });
+    countryPricing = await getCountryPricingForPlan('GB', planKey, interval as any);
+  }
   
   // Determine the correct price based on interval - use CountryPricing collection
   let priceId: string | undefined;
@@ -1488,9 +1614,9 @@ async function handleProPlanPayment(
       return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
     }
 
-    // Validate NEXT_PUBLIC_RAZORPAY_KEY_ID is available
-    if (!process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID) {
-      console.error('NEXT_PUBLIC_RAZORPAY_KEY_ID is not set');
+    // Validate RAZORPAY_KEY_ID is available
+    if (!process.env.RAZORPAY_KEY_ID) {
+      console.error('RAZORPAY_KEY_ID is not set');
       return NextResponse.json({ error: 'Razorpay key ID not configured' }, { status: 500 });
     }
 
@@ -1627,7 +1753,7 @@ async function handleProPlanPayment(
         order_id: order.id,
         amount: order.amount,
         currency: order.currency,
-        key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key_id: process.env.RAZORPAY_KEY_ID,
         checkout: true, // Use Razorpay Checkout
         coupon: couponDiscount ? {
           code: couponDiscount.code,

@@ -43,6 +43,21 @@ export default function ResourceHints() {
     googleUserPrefetch.href = 'https://lh3.googleusercontent.com';
     document.head.appendChild(googleUserPrefetch);
 
+    // Preload critical images for better performance
+    const logoPreload = document.createElement('link');
+    logoPreload.rel = 'preload';
+    logoPreload.as = 'image';
+    logoPreload.href = '/images/logo.png';
+    logoPreload.fetchPriority = 'high';
+    document.head.appendChild(logoPreload);
+
+    const heroBannerPreload = document.createElement('link');
+    heroBannerPreload.rel = 'preload';
+    heroBannerPreload.as = 'image';
+    heroBannerPreload.href = '/images/herobanner.png';
+    heroBannerPreload.fetchPriority = 'high';
+    document.head.appendChild(heroBannerPreload);
+
     // Cleanup function (though these are safe to leave)
     return () => {
       // Links are safe to leave in the DOM, but we can clean up if needed

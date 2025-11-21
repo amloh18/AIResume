@@ -340,6 +340,9 @@ function AICareerReportContent() {
                   width={40} 
                   height={40}
                   className="object-contain rounded-lg"
+                  priority
+                  quality={85}
+                  sizes="40px"
                 />
                 <div className="text-2xl font-bold">
                   <span className="text-lime-400">CV</span>

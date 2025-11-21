@@ -133,38 +133,98 @@ const OptimizedNavigation: React.FC = () => {
   }, []);
 
   // Fetch credit information for membership card
-  useEffect(() => {
-    const fetchCreditInfo = async () => {
-      if (!userData?.id) {
-        setCreditInfo(null);
-        setCreditInfoLoading(false);
-        return;
-      }
+  const fetchCreditInfo = useCallback(async () => {
+    if (!userData?.id) {
+      setCreditInfo(null);
+      setCreditInfoLoading(false);
+      return;
+    }
 
-      setCreditInfoLoading(true);
+    setCreditInfoLoading(true);
 
-      try {
-        const response = await fetch('/api/user/usage-limits');
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.credits) {
-            setCreditInfo(data.credits);
-          } else {
-            setCreditInfo(null);
-          }
+    try {
+      const response = await fetch('/api/user/usage-limits');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.credits) {
+          setCreditInfo(data.credits);
         } else {
           setCreditInfo(null);
         }
-      } catch (error) {
-        console.error('Error fetching credit info:', error);
+      } else {
         setCreditInfo(null);
-      } finally {
-        setCreditInfoLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching credit info:', error);
+      setCreditInfo(null);
+    } finally {
+      setCreditInfoLoading(false);
+    }
+  }, [userData?.id]);
+
+  // Initial fetch and refetch when user data changes
+  useEffect(() => {
+    fetchCreditInfo();
+  }, [fetchCreditInfo, userData?.currentPlanKey, userData?.subscription?.planKey]);
+
+  // Listen for credit update events (real-time updates when credits are used)
+  useEffect(() => {
+    const handleCreditUpdate = () => {
+      console.log('🔄 OptimizedNavigation - Credit update event received, refreshing credit info');
+      fetchCreditInfo();
+    };
+
+    window.addEventListener('creditsUpdated', handleCreditUpdate);
+    
+    return () => {
+      window.removeEventListener('creditsUpdated', handleCreditUpdate);
+    };
+  }, [fetchCreditInfo]);
+
+  // Poll for credit updates every 30 seconds when tab is visible
+  useEffect(() => {
+    if (!userData?.id) return;
+
+    const isDocumentVisible = () => !document.hidden;
+    const POLL_INTERVAL = 30000; // 30 seconds
+
+    let pollInterval: NodeJS.Timeout | null = null;
+
+    const startPolling = () => {
+      if (pollInterval) return;
+      
+      pollInterval = setInterval(() => {
+        if (isDocumentVisible()) {
+          fetchCreditInfo();
+        }
+      }, POLL_INTERVAL);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
       }
     };
 
-    fetchCreditInfo();
-  }, [userData?.id, userData?.currentPlanKey, userData?.subscription?.planKey]);
+    startPolling();
+
+    const handleVisibilityChange = () => {
+      if (isDocumentVisible()) {
+        startPolling();
+        fetchCreditInfo(); // Immediate fetch when tab becomes visible
+      } else {
+        stopPolling();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [userData?.id, fetchCreditInfo]);
 
   // Check if user is admin
   const isAdmin = userData?.role === 'admin';
@@ -296,7 +356,8 @@ const OptimizedNavigation: React.FC = () => {
               height={32}
               className="w-full h-full object-contain"
               priority
-              unoptimized
+              quality={85}
+              sizes="32px"
             />
           </div>
           {/* Logo Text - Hidden on lg/xl, visible on sm/md (hamburger) and 2xl+ */}

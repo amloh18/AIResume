@@ -26,6 +26,7 @@ interface InterviewStageViewProps {
   getJobJourneys: (jobId: string) => CVJourney[];
   onJobClick: (job: JobApplication) => void;
   onJobStatusUpdate: (jobId: string, newStatus: string) => Promise<void>;
+  isFullScreen?: boolean; // Indicates if this is in full screen/zoomed mode
 }
 
 const InterviewStageView: React.FC<InterviewStageViewProps> = ({
@@ -33,7 +34,8 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
   journeys,
   getJobJourneys,
   onJobClick,
-  onJobStatusUpdate
+  onJobStatusUpdate,
+  isFullScreen = false
 }) => {
 
   const getDaysSinceApplication = (applicationDate?: Date | string): number => {
@@ -84,7 +86,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
 
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className={isFullScreen ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
         {jobs.map((job) => {
           const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
           const nextInterview = getNextInterviewDate(job);
@@ -92,6 +94,74 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
           const needsFollowUp = isFollowUpNeeded(job);
           const jobJourneys = getJobJourneys(job.id || job._id);
 
+          // COMPACT FULL SCREEN LAYOUT
+          if (isFullScreen) {
+            return (
+              <motion.div
+                key={job.id || job._id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${
+                  daysUntilInterview !== null && daysUntilInterview <= 3
+                    ? 'border-orange-300 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-900/10'
+                    : 'border-gray-200 dark:border-white/10'
+                }`}
+              >
+                {/* Left: Compact Job Info */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                    <Building className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                      {job.jobTitle || job.title}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      <span>{job.company}</span>
+                      {nextInterview && (
+                        <>
+                          <span>•</span>
+                          <span className={daysUntilInterview !== null && daysUntilInterview <= 3 ? 'text-orange-600 dark:text-orange-400 font-semibold' : 'text-blue-600 dark:text-blue-400'}>
+                            {daysUntilInterview === 0 
+                              ? 'Today!' 
+                              : daysUntilInterview === 1 
+                                ? 'Tomorrow' 
+                                : `${daysUntilInterview} days away`}
+                          </span>
+                          <span>•</span>
+                          <span>{nextInterview.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                        </>
+                      )}
+                      {!nextInterview && (
+                        <>
+                          <span>•</span>
+                          <span>Applied {daysSinceApplication} days ago</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: CTA Buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJobClick(job);
+                    }}
+                    className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <GraduationCap className="w-3 h-3" />
+                    Interview Prep
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          }
+
+          // EXISTING VERTICAL LAYOUT
           return (
             <motion.div
               key={job.id || job._id}

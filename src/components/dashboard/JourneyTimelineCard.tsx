@@ -638,20 +638,37 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
   // Initialize ATS score from journey data or auto-fetch if needed
   React.useEffect(() => {
-    // First, check if journey already has an ATS score
-    if (journey.atsScore !== undefined && journey.atsScore !== null) {
-      console.log('🔍 JourneyTimelineCard - Using existing ATS score from journey:', journey.atsScore);
-      setAtsScore(journey.atsScore);
-      setAtsScoreLoading(false); // Ensure loading state is false when using cached score
-      hasAttemptedATSCalculation.current = true; // Mark as attempted
-      return;
-    }
-
-    // Only auto-fetch if we don't have a score, CV is linked, haven't attempted before, and not currently loading
-    if (journey.cvId && journey.jobId && atsScore === null && !atsScoreLoading && !hasAttemptedATSCalculation.current) {
-      console.log('🔍 JourneyTimelineCard - Auto-fetching ATS score for linked CV');
-      hasAttemptedATSCalculation.current = true; // Mark as attempted
-      fetchATSScore(journey.cvId, journey.jobId);
+    // Only use journey.atsScore if CV is linked and score is valid (not a placeholder/default)
+    // ATS score should only be displayed if it was calculated for the current CV-Job pair
+    const hasValidCV = journey.cvId && journey.cvId.trim() !== '';
+    const hasValidJob = journey.jobId && journey.jobId.trim() !== '';
+    const hasScoreInDB = journey.atsScore !== undefined && journey.atsScore !== null;
+    
+    // If we have a CV and Job, we should verify/recalculate the score
+    // Don't trust database score if CV or Job might have changed
+    if (hasValidCV && hasValidJob) {
+      // Always recalculate if we don't have a score in state, or if the CV/Job might have changed
+      if (atsScore === null && !atsScoreLoading && !hasAttemptedATSCalculation.current) {
+        console.log('🔍 JourneyTimelineCard - Auto-fetching ATS score for linked CV');
+        hasAttemptedATSCalculation.current = true; // Mark as attempted
+        fetchATSScore(journey.cvId, journey.jobId);
+      } else if (hasScoreInDB && atsScore === null && !atsScoreLoading) {
+        // If database has a score but we haven't set it in state, use it as initial value
+        // but still verify it's correct by checking if CV matches
+        console.log('🔍 JourneyTimelineCard - Using existing ATS score from journey as initial value:', journey.atsScore);
+        setAtsScore(journey.atsScore);
+        setAtsScoreLoading(false);
+        // Don't mark as attempted - allow recalculation if needed
+      }
+    } else if (hasScoreInDB && atsScore === null) {
+      // If no CV is linked but database has a score, it's likely stale - don't use it
+      console.log('🔍 JourneyTimelineCard - Database has ATS score but no CV linked, ignoring stale score');
+      setAtsScore(null);
+      setAtsScoreLoading(false);
+    } else if (!hasValidCV && atsScore === null) {
+      // No CV linked, no score to show
+      setAtsScore(null);
+      setAtsScoreLoading(false);
     }
   }, [journey.cvId, journey.jobId, journey.atsScore, atsScore, atsScoreLoading]);
 
@@ -763,9 +780,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           (liveProgress.currentStep >= 2 ? 'active' : 'pending');
 
       case 3: // ATS Score Checked
-        // Only completed if we have a valid ATS score (not -1) AND CV is linked and available
-        return (atsScore !== null && atsScore !== -1 && liveProgress.cvId && !cvNotFound) ? 'completed' :
-          (liveProgress.currentStep >= 3 && liveProgress.cvId && !cvNotFound ? 'active' : 'pending');
+        // Only completed if we have a valid ATS score (not -1, not null, not undefined) AND CV is linked and available
+        // Also verify that the score was actually calculated (not just a stale database value)
+        const hasValidScore = atsScore !== null && atsScore !== undefined && atsScore !== -1 && atsScore >= 0 && atsScore <= 100;
+        const hasValidCV = liveProgress.cvId && liveProgress.cvId.trim() !== '' && !cvNotFound;
+        return (hasValidScore && hasValidCV) ? 'completed' :
+          (liveProgress.currentStep >= 3 && hasValidCV ? 'active' : 'pending');
 
       case 4: // Cover Letter Created
         // Only completed if cover letter is explicitly linked to this journey and available
@@ -2156,7 +2176,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             {/* ATS Score and Details */}
             <div className="flex items-center gap-3">
               {/* ATS Score */}
-              {atsScore !== null && atsScore !== -1 && (
+              {atsScore !== null && atsScore !== -1 && atsScore !== undefined && journey.cvId ? (
                 <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${liveProgress.status === 'completed'
                   ? 'bg-blue-200 dark:bg-white/10'
                   : 'bg-white/10'
@@ -2172,7 +2192,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     {atsScore}%
                   </span>
                 </div>
-              )}
+              ) : null}
 
               {/* Details Dropdown */}
               <motion.button
@@ -2511,7 +2531,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <RefreshCw className="h-3 w-3 animate-spin" />
                           <span className="text-xs">Calculating ATS score...</span>
                         </div>
-                      ) : atsScore !== null && atsScore !== undefined ? (
+                      ) : atsScore !== null && atsScore !== undefined && atsScore !== -1 && journey.cvId ? (
                         <div className="space-y-2">
                           {/* Score Display */}
                           <div className="flex items-center justify-between">

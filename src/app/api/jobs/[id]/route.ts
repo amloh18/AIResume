@@ -334,6 +334,10 @@ export async function PUT(
         const { withTransaction } = await import('@/lib/utils/db-transaction');
         const User = (await import('@/models/User')).default;
         const creditService = await import('@/lib/services/creditService');
+        const { getAdminPricingPlan } = await import('@/models/admin-models');
+        
+        // Pre-load pricing plan data outside transaction for better performance
+        const PricingPlan = await getAdminPricingPlan();
         
         await withTransaction(async (session) => {
           // 1. CREDIT CHECK: Check credits WITHIN transaction (locks user record to prevent race conditions)
@@ -342,22 +346,56 @@ export async function PUT(
             throw new Error('User not found');
           }
           
-          const usageLimitsService = await import('@/lib/services/usageLimitsService');
-          const creditCheck = await usageLimitsService.default.checkUsageLimit({
-            userId: normalizedUserId.toString(),
-            action: 'job_create'
-          });
+          // Fast credit check using already-fetched user (avoid redundant queries)
+          const plan = await PricingPlan.findOne({ key: user.currentPlanKey }).session(session).lean();
+          if (!plan) {
+            throw new Error('Plan not found');
+          }
+          
+          // Check time-based access quickly
+          const now = new Date();
+          let hasTimeAccess = true;
+          if (user.subscription?.accessExpiresAt) {
+            hasTimeAccess = new Date(user.subscription.accessExpiresAt) > now;
+          } else if (user.subscription?.currentPeriodEnd) {
+            hasTimeAccess = new Date(user.subscription.currentPeriodEnd) > now;
+          }
+          
+          if (!hasTimeAccess && user.currentPlanKey !== 'free') {
+            throw new Error('Subscription access expired');
+          }
+          
+          // Quick credit availability check using user data
+          const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(user.currentPlanKey);
+          const hasActiveSubscription = user.subscription?.status === 'active' && hasTimeAccess;
+          
+          let creditsRemaining = 0;
+          let limit = 1;
+          
+          if (isUnlimitedPlan && hasActiveSubscription) {
+            creditsRemaining = -1;
+            limit = -1;
+          } else {
+            // Get plan credits
+            const planCredits = await creditService.default.getPlanCredits(user.currentPlanKey || 'free');
+            limit = planCredits.jobCredits;
+            creditsRemaining = user.credits?.jobCredits ?? 0;
+          }
+          
+          const allowed = limit === -1 || creditsRemaining > 0;
+          const currentUsage = limit === -1 ? -1 : limit - creditsRemaining;
 
           console.log(`🔍 Job Update API - Credit check result (in transaction):`, {
-            allowed: creditCheck.allowed,
-            reason: creditCheck.reason,
-            currentUsage: creditCheck.currentUsage,
-            limit: creditCheck.limit
+            allowed,
+            currentUsage,
+            limit,
+            creditsRemaining
           });
 
-          if (!creditCheck.allowed) {
-            console.log(`❌ Job Update API - Credit check failed (in transaction):`, creditCheck.reason);
-            throw new Error(creditCheck.reason || 'Insufficient credits to create job application');
+          if (!allowed) {
+            const reason = `Plan limit exceeded. You have used ${currentUsage}/${limit === -1 ? 'unlimited' : limit} job creates`;
+            console.log(`❌ Job Update API - Credit check failed (in transaction):`, reason);
+            throw new Error(reason);
           }
           
           // 2. Update job status within transaction (only if credits are available)
@@ -385,8 +423,7 @@ export async function PUT(
           job = updatedJob;
           
           // 3. Spend credit within same transaction (atomic with status update)
-          const planCredits = await creditService.default.getPlanCredits(user.currentPlanKey || 'free');
-          const isUnlimited = planCredits.jobCredits === -1;
+          const isUnlimited = limit === -1;
           
           // Build update operation for credit spending
           const creditUpdateData: any = {
@@ -424,33 +461,39 @@ export async function PUT(
           );
           
           console.log(`✅ Job Update API - Credit spent in transaction for user: ${normalizedUserId.toString()}`);
+        });
+        
+        // Log job status change and credit usage OUTSIDE transaction for better performance
+        try {
+          const updatedJobForLog = await JobApplication.findById(resolvedParams.id).lean();
+          const userForLog = await User.findById(normalizedUserId).lean();
           
-          // Log job status change and credit usage
-          try {
+          if (updatedJobForLog && userForLog) {
             const { ActivityLogService } = await import('@/lib/services/activityLogService');
-            await ActivityLogService.logUserAction({
-              userId: normalizedUserId.toString(),
-              userEmail: user.email,
-              action: 'job_status_changed',
-              resourceType: 'job',
-              resourceId: resolvedParams.id,
-              resourceName: job ? `${job.jobTitle} at ${job.company}` : undefined,
-              status: 'success',
-              ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                        request.headers.get('x-real-ip') || 
-                        undefined,
-              metadata: {
-                oldStatus: 'draft',
-                newStatus: 'created',
-                isUnlimited: isUnlimited
-              }
-            });
+            const isUnlimited = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(userForLog.currentPlanKey || 'free');
             
-            // Log credit usage if credit was spent
-            if (!isUnlimited) {
-              await ActivityLogService.logUserAction({
+            // Log asynchronously - don't wait for it
+            Promise.all([
+              ActivityLogService.logUserAction({
                 userId: normalizedUserId.toString(),
-                userEmail: user.email,
+                userEmail: userForLog.email || '',
+                action: 'job_status_changed',
+                resourceType: 'job',
+                resourceId: resolvedParams.id,
+                resourceName: `${updatedJobForLog.jobTitle} at ${updatedJobForLog.company}`,
+                status: 'success',
+                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                          request.headers.get('x-real-ip') || 
+                          undefined,
+                metadata: {
+                  oldStatus: 'draft',
+                  newStatus: 'created',
+                  isUnlimited: isUnlimited
+                }
+              }),
+              !isUnlimited && ActivityLogService.logUserAction({
+                userId: normalizedUserId.toString(),
+                userEmail: userForLog.email || '',
                 action: 'credit_used',
                 status: 'success',
                 ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
@@ -459,18 +502,21 @@ export async function PUT(
                 metadata: {
                   creditType: 'job_credit',
                   creditsUsed: 1,
-                  creditsRemaining: (user.credits?.jobCredits ?? 0) - 1,
-                  planKey: user.currentPlanKey || 'free',
+                  creditsRemaining: (userForLog.credits?.jobCredits ?? 0),
+                  planKey: userForLog.currentPlanKey || 'free',
                   resourceType: 'job',
                   resourceId: resolvedParams.id
                 }
-              });
-            }
-          } catch (logError) {
-            console.error('Failed to log job status change activity:', logError);
-            // Don't fail the request if logging fails
+              })
+            ]).catch(logError => {
+              console.error('Failed to log job status change activity:', logError);
+              // Don't fail the request if logging fails
+            });
           }
-        });
+        } catch (logError) {
+          console.error('Failed to set up activity logging:', logError);
+          // Don't fail the request if logging fails
+        }
       } catch (creditError: any) {
         console.error('❌ Job Update API - Transaction failed:', creditError);
         console.error('❌ Job Update API - Error details:', {
@@ -502,8 +548,52 @@ export async function PUT(
               reason: creditCheck.reason
             };
           } catch (e) {
-            // Fallback if credit check fails
+            // Fallback if credit check fails - use defaults
             console.error('⚠️ Job Update API - Failed to get credit info:', e);
+            creditInfo = {
+              currentUsage: 1,
+              limit: 1,
+              reason: creditError.message
+            };
+          }
+          
+          const errorResponse = {
+            success: false,
+            error: creditError.message || 'Insufficient credits to create job application',
+            requiresUpgrade: true,
+            currentUsage: creditInfo.currentUsage ?? 1,
+            limit: creditInfo.limit ?? 1,
+            message: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+          };
+          
+          console.log('🔍 Job Update API - Returning credit error response:', errorResponse);
+          
+          return NextResponse.json(
+            errorResponse,
+            { status: 403 }
+          );
+        }
+        
+        // For other transaction errors, check if they might be credit-related
+        const mightBeCreditError = creditError.message?.includes('limit') || 
+                                   creditError.message?.includes('credit') ||
+                                   creditError.message?.includes('Plan limit');
+        
+        if (mightBeCreditError) {
+          // Try to get credit info even if transaction failed
+          const usageLimitsService = await import('@/lib/services/usageLimitsService');
+          let creditInfo: any = { currentUsage: 1, limit: 1 };
+          try {
+            const creditCheck = await usageLimitsService.default.checkUsageLimit({
+              userId,
+              action: 'job_create'
+            });
+            creditInfo = {
+              currentUsage: creditCheck.currentUsage,
+              limit: creditCheck.limit
+            };
+          } catch (e) {
+            console.error('⚠️ Job Update API - Failed to get credit info after transaction error:', e);
           }
           
           return NextResponse.json(
@@ -511,11 +601,11 @@ export async function PUT(
               success: false,
               error: creditError.message || 'Insufficient credits to create job application',
               requiresUpgrade: true,
-              currentUsage: creditInfo.currentUsage,
-              limit: creditInfo.limit,
+              currentUsage: creditInfo.currentUsage ?? 1,
+              limit: creditInfo.limit ?? 1,
               message: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
             },
-            { status: 403 }
+            { status: 403 } // Return 403 instead of 500 for credit errors
           );
         }
         
@@ -524,7 +614,6 @@ export async function PUT(
           {
             success: false,
             error: creditError.message || 'Failed to process credit transaction. Please try again.',
-            requiresUpgrade: true,
             details: process.env.NODE_ENV === 'development' ? creditError.message : undefined
           },
           { status: 500 }

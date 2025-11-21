@@ -13,7 +13,7 @@ export interface CreateTransactionParams {
   amount: number;
   status: 'success' | 'failed' | 'refunded' | 'pending' | 'chargeback' | 'dispute';
   gatewayReferenceId: string;
-  gateway: 'stripe' | 'razorpay';
+  gateway: 'stripe' | 'razorpay' | 'admin';
   failureReason?: string;
   metadata?: Record<string, any>;
 }

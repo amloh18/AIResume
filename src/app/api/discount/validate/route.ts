@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if code applies to this plan
-    // Support both plan IDs and plan keys
+    // If applicablePlans is empty, code works sitewide (all plans)
+    // If applicablePlans has entries, code only works for those specific plans
     if (discountCode.applicablePlans && discountCode.applicablePlans.length > 0) {
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findById(planId);
@@ -94,10 +95,24 @@ export async function POST(request: NextRequest) {
         });
       }
       
+      // Populate applicablePlans to check both IDs and keys
+      const populatedDiscount = await DiscountCode.populate(discountCode, { path: 'applicablePlans', select: 'key _id' });
+      
       // Check if code applies to plan ID or plan key
-      const isApplicable = 
-        discountCode.applicablePlans.includes(plan._id.toString()) ||
-        discountCode.applicablePlans.includes(plan.key);
+      const isApplicable = populatedDiscount.applicablePlans.some((planRef: any) => {
+        if (planRef && typeof planRef === 'object') {
+          // Check by plan ID
+          if (planRef._id) {
+            const planRefId = planRef._id.toString ? planRef._id.toString() : String(planRef._id);
+            if (planRefId === plan._id.toString()) return true;
+          }
+          // Check by plan key
+          if (planRef.key && planRef.key === plan.key) return true;
+        }
+        // If not populated, check as ObjectId string
+        const planRefStr = planRef.toString ? planRef.toString() : String(planRef);
+        return planRefStr === plan._id.toString();
+      });
       
       if (!isApplicable) {
         return NextResponse.json({

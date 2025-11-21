@@ -106,7 +106,9 @@ async function testStripe(): Promise<DiagnosticResult> {
 async function testRazorpay(): Promise<DiagnosticResult> {
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
-  const publicKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+  // Note: We no longer use NEXT_PUBLIC_RAZORPAY_KEY_ID
+  // The key_id is now returned from the server in checkout responses
+  const publicKeyId = null; // Deprecated - key_id is now server-side only
 
   console.log('\n🔍 Testing Razorpay Configuration...\n');
 
@@ -127,13 +129,8 @@ async function testRazorpay(): Promise<DiagnosticResult> {
     };
   }
 
-  if (!publicKeyId) {
-    return {
-      provider: 'razorpay',
-      status: 'invalid',
-      message: 'NEXT_PUBLIC_RAZORPAY_KEY_ID is not set in environment variables',
-    };
-  }
+  // Note: NEXT_PUBLIC_RAZORPAY_KEY_ID is no longer used
+  // The key_id is now returned from the server in checkout responses
 
   // Validate key format
   if (!keyId.startsWith('rzp_')) {
@@ -160,12 +157,7 @@ async function testRazorpay(): Promise<DiagnosticResult> {
   console.log(`  Key Type: ${isTestMode ? 'TEST' : isLiveMode ? 'LIVE' : 'UNKNOWN'}`);
   console.log(`  Key ID: ${keyId}`);
   console.log(`  Key Secret: ${keySecret.substring(0, 10)}...${keySecret.substring(keySecret.length - 5)} (${keySecret.length} chars)`);
-  console.log(`  Public Key ID: ${publicKeyId}`);
-
-  // Check if key IDs match
-  if (keyId !== publicKeyId) {
-    console.warn(`  ⚠️  WARNING: RAZORPAY_KEY_ID and NEXT_PUBLIC_RAZORPAY_KEY_ID do not match!`);
-  }
+  console.log(`  Note: Key ID is returned server-side in checkout responses (no longer using NEXT_PUBLIC_RAZORPAY_KEY_ID)`);
 
   // Test API connection
   try {
