@@ -162,7 +162,7 @@ const HowItWorks = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full">
         {/* Header Section */}
         <motion.div
           className="text-center mb-16"
@@ -172,7 +172,7 @@ const HowItWorks = () => {
           viewport={{ once: true, margin: "-50px" }}
         >
           <motion.h3
-            className="text-3xl sm:text-3xl lg:text-5xl font-bold text-white mb-6 text-center"
+            className="text-3xl tablet:text-3xl desktop:text-5xl font-bold text-white mb-6 text-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -193,7 +193,7 @@ const HowItWorks = () => {
           transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
           viewport={{ once: true }}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="grid grid-cols-1 desktop:grid-cols-2 gap-12 items-center">
             {/* Left Column - Text Content */}
             <motion.div
               className="space-y-6"
@@ -215,7 +215,7 @@ const HowItWorks = () => {
               
               {/* Main Title */}
               <motion.h4 
-                className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white"
+                className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.5 }}
@@ -226,7 +226,7 @@ const HowItWorks = () => {
               
               {/* Description */}
               <motion.p
-                className="text-white/80 leading-relaxed text-sm sm:text-base lg:text-lg font-light"
+                className="text-white/80 leading-relaxed text-sm tablet:text-base desktop:text-lg font-light"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
@@ -322,7 +322,7 @@ const HowItWorks = () => {
 
           {/* Steps Navigator - Bottom Row */}
           <motion.div
-            className="flex flex-nowrap justify-center gap-4 sm:gap-8 mt-12 pt-8 border-t border-white/10 overflow-x-auto pb-2 scrollbar-hide"
+            className="flex flex-nowrap justify-center gap-4 tablet:gap-8 mt-12 pt-8 border-t border-white/10 overflow-x-auto pb-2 scrollbar-hide"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.5 }}
@@ -346,7 +346,7 @@ const HowItWorks = () => {
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg sm:text-xl transition-all duration-300 ${
+                    className={`w-12 h-12 tablet:w-16 tablet:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg tablet:text-xl transition-all duration-300 ${
                       isActive 
                         ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50' 
                         : 'bg-gray-800 border-2 border-white/20'

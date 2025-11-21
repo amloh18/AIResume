@@ -572,7 +572,7 @@ function ComprehensiveATSAnalyzer({
 
           {/* Main Content */}
           <div className="p-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            <div className="grid grid-cols-1 desktop:grid-cols-2 gap-12">
               {/* Left Column */}
               <div className="space-y-4">
                 {/* Overall Match Score */}

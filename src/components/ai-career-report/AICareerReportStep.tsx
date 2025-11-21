@@ -793,7 +793,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
 
             {/* Key Insights */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               {impactScore?.insights?.map((insight: any, index: number) => (
                 <div key={index} className={`bg-gray-50 rounded-lg p-4 border ${
                   insight.type === 'Critical Gap' ? 'border-red-500/20' : 
@@ -1020,7 +1020,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             {seniorTranslation?.translations && seniorTranslation.translations.length > 0 ? (
               seniorTranslation.translations.map((item: any, index: number) => (
               <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-red-400 font-semibold mb-2">Current (Mid-Level)</h4>
                     <p className="text-gray-900/70 text-sm italic">"{item.current}"</p>
@@ -1157,7 +1157,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               <h3 className="text-lg font-bold text-gray-900 mb-4">
                 Critical {industrySpecialization?.specialization || 'Industry'} Keywords to Emphasize
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 tablet:grid-cols-4 gap-3">
                 {industrySpecialization?.keywords && industrySpecialization.keywords.length > 0 ? (
                   industrySpecialization.keywords.map((keyword: any, index: number) => {
                     // Handle both string and object formats

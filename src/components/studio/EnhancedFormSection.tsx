@@ -246,7 +246,7 @@ export const PersonalInfoSection: React.FC<{
     >
       <div className="space-y-6">
         {/* ATS Score and Personal Info Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
           {/* ATS Score Column */}
           <div className="flex flex-col items-center justify-center space-y-4">
             <div className="text-center">

@@ -55,7 +55,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/70 dark:bg-black/80 backdrop-blur-sm z-[99999] flex items-center justify-center p-4"
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <motion.div
@@ -63,7 +63,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-lg w-full overflow-hidden"
+          className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 max-w-lg w-full overflow-hidden relative z-[99999]"
         >
           {/* Header with gradient accent */}
           <div className="relative bg-gradient-to-r from-[#80FF00] to-lime-500 p-6">
@@ -184,7 +184,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col tablet:flex-row gap-3">
               <button
                 onClick={onClose}
                 className="flex-1 px-6 py-3 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium"

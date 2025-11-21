@@ -139,7 +139,7 @@ const PreviewStep: React.FC<PreviewStepProps> = ({
           <h1 className="text-3xl font-bold mb-2">{data.fullName}</h1>
           <p className="text-xl opacity-90 mb-4">{data.professionalTitle}</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 text-sm">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
               <span>{data.email}</span>

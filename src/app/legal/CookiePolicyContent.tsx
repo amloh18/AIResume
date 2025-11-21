@@ -212,7 +212,7 @@ const CookiePolicyContent: React.FC = () => {
           Cookie Duration
         </h3>
         
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid tablet:grid-cols-2 gap-6">
           <div>
             <h4 className="text-xl font-medium mb-3 text-lime-400">Session Cookies</h4>
             <p className="text-white/80 mb-3">
@@ -324,7 +324,7 @@ const CookiePolicyContent: React.FC = () => {
           While you can disable cookies, doing so may affect your experience on our website:
         </p>
 
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid tablet:grid-cols-2 gap-6">
           <div>
             <h4 className="text-xl font-medium mb-3 text-lime-400">Essential Functions</h4>
             <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">

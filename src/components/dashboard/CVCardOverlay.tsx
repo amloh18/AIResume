@@ -12,7 +12,8 @@ import {
   Link,
   FileText,
   ExternalLink,
-  Loader2
+  Loader2,
+  BarChart3
 } from 'lucide-react';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { CVProgressService } from '@/lib/services/cvProgressService';
@@ -52,7 +53,7 @@ interface CVCardOverlayProps {
   onToggleStar: (cvId: string) => void;
   onRename: (cvId: string, newTitle: string) => void;
   onLinkedJourney?: (cv: CV) => void; // Navigate to application tracker
-  onEditJourney?: (cv: CV, journey: any) => void | Promise<void>; // Open JobModal
+  onEditJourney?: (cv: CV, journey: any) => void | Promise<void>; // Open JobSidebar
   onTitleEdit?: (cvId: string, newTitle: string) => void;
   editingCVId?: string | null;
   editingTitle?: string;
@@ -60,6 +61,7 @@ interface CVCardOverlayProps {
   onSaveTitle?: (cvId: string) => void | Promise<void>;
   onCancelEditing?: () => void;
   linkedJourney?: any | null; // Pre-fetched journey data to avoid API calls
+  onViewReport?: (cv: CV) => void | Promise<void>; // View career report
 }
 
 const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
@@ -77,7 +79,8 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
   onStartEditing,
   onSaveTitle,
   onCancelEditing,
-  linkedJourney: linkedJourneyProp
+  linkedJourney: linkedJourneyProp,
+  onViewReport
 }) => {
   const { data: session } = useSession();
   const [isHovered, setIsHovered] = useState(false);
@@ -279,9 +282,9 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           }}
           onClick={(e) => {
             e.stopPropagation();
-            // If CV is linked to a journey, open job modal
-            if (linkedJourney && onEditJourney) {
-              onEditJourney(cv, linkedJourney);
+            // Open career report when clicking thumbnail
+            if (onViewReport) {
+              onViewReport(cv);
             }
           }}
         >
@@ -294,9 +297,9 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               loading="lazy"
               onClick={(e) => {
                 e.stopPropagation();
-                // If CV is linked to a journey, open job modal
-                if (linkedJourney && onEditJourney) {
-                  onEditJourney(cv, linkedJourney);
+                // Open career report when clicking thumbnail
+                if (onViewReport) {
+                  onViewReport(cv);
                 }
               }}
               onError={(e) => {
@@ -335,9 +338,9 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                // If CV is linked to a journey, open job modal
-                if (linkedJourney && onEditJourney) {
-                  onEditJourney(cv, linkedJourney);
+                // Open career report when clicking thumbnail
+                if (onViewReport) {
+                  onViewReport(cv);
                 }
               }}
             >
@@ -353,15 +356,15 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
-                // If CV is linked to a journey, open job modal
-                if (linkedJourney && onEditJourney) {
-                  onEditJourney(cv, linkedJourney);
+                // Open career report when clicking thumbnail
+                if (onViewReport) {
+                  onViewReport(cv);
                 }
               }}
             >
-              <div className="text-center text-gray-500">
+              <div className="text-center text-gray-500 px-2">
                 <FileText size={48} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm font-medium">{cv.title}</p>
+                <p className="text-sm font-medium truncate">{cv.title}</p>
                 <p className="text-xs opacity-75">No preview available</p>
               </div>
             </div>
@@ -423,7 +426,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
               </motion.button>
             </div>
           ) : (
-            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal">
+            <p className="text-gray-800 dark:text-white text-base font-medium leading-normal truncate">
               {cv.title}
             </p>
           )}
@@ -448,6 +451,21 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           >
             <Pencil size={16} />
           </motion.button>
+
+          {onViewReport && (
+            <motion.button
+              onClick={(e) => {
+                e.stopPropagation();
+                onViewReport(cv);
+              }}
+              className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="View Career Report"
+            >
+              <BarChart3 size={16} />
+            </motion.button>
+          )}
 
           <motion.button
             onClick={(e) => {

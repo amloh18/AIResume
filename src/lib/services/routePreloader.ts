@@ -56,7 +56,7 @@ class RoutePreloader {
 
     const routes = [
       'analytics',
-      'application-tracker', 
+      'jobs',
       'canvas',
       'application-journey',
       'settings'
@@ -81,8 +81,8 @@ class RoutePreloader {
         case 'analytics':
           component = await import('@/components/dashboard/Analytics');
           break;
-        case 'application-tracker':
-          component = await import('@/components/dashboard/ApplicationTracker');
+        case 'jobs':
+          component = await import('@/components/dashboard/JobsTracker');
           break;
         case 'canvas':
           component = await import('@/components/dashboard/Canvas');

@@ -113,7 +113,7 @@ export default function TemplatesPage() {
         {/* Hero Section */}
         <section className="relative pt-32 pb-20 px-4">
           <div className="max-w-7xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
+            <h1 className="text-5xl tablet:text-6xl font-bold text-white mb-6">
               Professional CV Templates
             </h1>
             <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
@@ -147,7 +147,7 @@ export default function TemplatesPage() {
             <h2 className="text-4xl font-bold text-white text-center mb-12">
               Why Our Templates Work
             </h2>
-            <div className="grid md:grid-cols-3 gap-8">
+            <div className="grid tablet:grid-cols-3 gap-8">
               <div className="bg-gray-800/50 p-8 rounded-xl border border-gray-700">
                 <FileText className="w-12 h-12 text-[#80FF00] mb-4" />
                 <h3 className="text-2xl font-bold text-white mb-4">ATS-Optimized</h3>

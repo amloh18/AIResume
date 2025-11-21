@@ -91,7 +91,7 @@ const PrivacyPolicyContent: React.FC = () => {
           How We Use Your Information
         </h3>
         
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid tablet:grid-cols-2 gap-6">
           <div className="space-y-4">
             <h4 className="text-xl font-medium text-lime-400">Service Provision</h4>
             <ul className="list-disc list-inside space-y-2 text-white/80">

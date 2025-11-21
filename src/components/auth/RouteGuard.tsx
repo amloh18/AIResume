@@ -33,18 +33,11 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
       // Check NextAuth session (Firebase-based authentication)
       const isNextAuthAuthenticated = status === 'authenticated' && session;
       
-      console.log('🔍 RouteGuard - Authentication check', { 
-        nextAuthStatus: status, 
-        isNextAuthAuthenticated,
-        sessionExists: !!session
-      });
-      
       if (isNextAuthAuthenticated) {
         setIsAuthorized(true);
         setIsLoading(false);
       } else if (status === 'unauthenticated') {
         // Not authenticated, redirect to login
-        console.log('❌ RouteGuard - User not authenticated, redirecting to auth');
         setHasRedirected(true);
         const callbackUrl = encodeURIComponent(pathname);
         router.push(`${redirectTo}?callbackUrl=${callbackUrl}`);

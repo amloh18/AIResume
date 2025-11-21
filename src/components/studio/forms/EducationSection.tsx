@@ -161,7 +161,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
               <input
@@ -184,7 +184,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4 mt-4">
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Degree Type</label>
               <input

@@ -47,7 +47,7 @@ const TopBar: React.FC<TopBarProps> = ({
           {showMenuButton && (
             <button
               onClick={onMenuToggle}
-              className={`${topBarClasses.button} xl:hidden`}
+              className={`${topBarClasses.button} desktop:hidden`}
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -66,7 +66,7 @@ const TopBar: React.FC<TopBarProps> = ({
                 unoptimized
               />
             </div>
-            <span className="text-white dark:text-gray-100 font-semibold text-lg hidden sm:block">
+            <span className="text-white dark:text-gray-100 font-semibold text-lg hidden tablet:block">
               <span className="text-lime-400 dark:text-[rgb(129,255,0)]">CV</span><span className="text-gray-300 dark:text-gray-200">Circle</span>
             </span>
           </div>

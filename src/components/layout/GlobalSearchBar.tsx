@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { formatCardTime } from '@/lib/utils/timeUtils';
-import JobModal from '@/components/dashboard/JobModal';
+import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
 import CVPreviewModal from '@/components/ai-career-report/CVPreviewModal';
 import CoverLetterPreviewModal from '@/components/notifications/CoverLetterPreviewModal';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
@@ -345,7 +345,7 @@ const GlobalSearchBar: React.FC = () => {
       initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="absolute top-full left-0 mt-2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] max-h-[600px] overflow-y-auto w-[300px] md:w-[350px] lg:w-[400px] xl:w-[450px]"
+      className="absolute top-full left-0 mt-2 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl overflow-hidden z-[100] max-h-[600px] overflow-y-auto w-[300px] tablet:w-[350px] desktop:w-[400px] desktop:w-[450px]"
     >
       {isLoading ? (
         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -478,7 +478,7 @@ const GlobalSearchBar: React.FC = () => {
   return (
     <>
       {/* Desktop/Tablet Search Bar */}
-      <div ref={searchRef} className="relative hidden md:block flex-shrink-0">
+      <div ref={searchRef} className="relative hidden tablet:block shrink min-w-[220px] max-w-full">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 z-10" />
           <input
@@ -503,7 +503,7 @@ const GlobalSearchBar: React.FC = () => {
                 e.preventDefault();
               }
             }}
-            className="w-[300px] md:w-[350px] lg:w-[400px] xl:w-[450px] pl-10 pr-10 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all text-sm"
+            className="w-[clamp(220px,28vw,450px)] max-w-full pl-10 pr-10 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all text-sm"
           />
           {query && (
             <button
@@ -524,7 +524,7 @@ const GlobalSearchBar: React.FC = () => {
       </div>
 
       {/* Mobile Search Icon */}
-      <div className="md:hidden relative" ref={searchRef}>
+      <div className="tablet:hidden relative" ref={searchRef}>
         <button
           onClick={() => setIsMobileOverlayOpen(true)}
           className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -609,9 +609,9 @@ const GlobalSearchBar: React.FC = () => {
         </AnimatePresence>
       </div>
 
-      {/* Job Modal */}
+      {/* Job Sidebar */}
       {showJobModal && selectedJob && (
-        <JobModal
+        <JobSidebar
           job={selectedJob}
           journeys={journeysForJob}
           onClose={() => {

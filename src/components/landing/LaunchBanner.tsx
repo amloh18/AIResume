@@ -120,9 +120,9 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
                 damping: 30,
                 duration: 0.5
               }}
-              className="w-[95%] sm:w-[90%] md:w-[600px] lg:w-[650px] max-w-2xl pointer-events-auto"
+              className="w-[95%] tablet:w-[90%] tablet:w-[600px] desktop:w-[650px] max-w-2xl pointer-events-auto"
             >
-              <div className="relative bg-gradient-to-br from-lime-400 via-lime-500 to-lime-400 rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl border-4 border-lime-600/50">
+              <div className="relative bg-gradient-to-br from-lime-400 via-lime-500 to-lime-400 rounded-2xl tablet:rounded-3xl overflow-hidden shadow-2xl border-4 border-lime-600/50">
                 {/* Animated background pattern */}
                 <div className="absolute inset-0 opacity-20">
                   <motion.div
@@ -144,37 +144,37 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
                 {/* Close button */}
                 <button
                   onClick={handleClose}
-                  className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 text-black/70 hover:text-black transition-colors p-1.5 sm:p-2 rounded-full hover:bg-black/10 flex-shrink-0 bg-white/20 backdrop-blur-sm"
+                  className="absolute top-3 right-3 tablet:top-4 tablet:right-4 z-10 text-black/70 hover:text-black transition-colors p-1.5 tablet:p-2 rounded-full hover:bg-black/10 flex-shrink-0 bg-white/20 backdrop-blur-sm"
                   aria-label="Close banner"
                 >
-                  <X className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <X className="w-4 h-4 tablet:w-5 tablet:h-5" />
                 </button>
 
-                <div className="relative px-6 sm:px-8 lg:px-10 py-6 sm:py-8 lg:py-10">
+                <div className="relative px-6 tablet:px-8 desktop:px-10 py-6 tablet:py-8 desktop:py-10">
                   {/* Header with Sparkle */}
                   <div className="flex items-center justify-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-black animate-pulse" />
-                    <h2 className="text-black font-extrabold text-lg sm:text-xl lg:text-2xl text-center">
+                    <Sparkles className="w-5 h-5 tablet:w-6 tablet:h-6 text-black animate-pulse" />
+                    <h2 className="text-black font-extrabold text-lg tablet:text-xl desktop:text-2xl text-center">
                       🎉 LAUNCH OFFER 🎉
                     </h2>
-                    <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-black animate-pulse" />
+                    <Sparkles className="w-5 h-5 tablet:w-6 tablet:h-6 text-black animate-pulse" />
                   </div>
 
                   {/* Main Offer Text */}
                   <div className="text-center mb-6">
-                    <p className="text-black font-bold text-base sm:text-lg lg:text-xl mb-2">
+                    <p className="text-black font-bold text-base tablet:text-lg desktop:text-xl mb-2">
                       Get 1 Month Free!
                     </p>
-                    <p className="text-black/90 font-medium text-sm sm:text-base mb-4">
+                    <p className="text-black/90 font-medium text-sm tablet:text-base mb-4">
                       Be one of our first 500 users
                     </p>
 
                     {/* Coupon Code */}
                     <div className="mb-6">
-                      <p className="text-black/80 text-xs sm:text-sm font-medium mb-2">Use Code:</p>
+                      <p className="text-black/80 text-xs tablet:text-sm font-medium mb-2">Use Code:</p>
                       <div className="flex items-center justify-center gap-2">
                         <motion.div
-                          className="bg-black text-lime-400 px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl font-mono font-extrabold text-lg sm:text-xl lg:text-2xl tracking-wider border-4 border-black/30 shadow-lg"
+                          className="bg-black text-lime-400 px-4 tablet:px-6 py-2 tablet:py-3 rounded-lg tablet:rounded-xl font-mono font-extrabold text-lg tablet:text-xl desktop:text-2xl tracking-wider border-4 border-black/30 shadow-lg"
                           whileHover={{ scale: 1.05 }}
                           transition={{ type: "spring", stiffness: 400 }}
                         >
@@ -182,15 +182,15 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
                         </motion.div>
                         <motion.button
                           onClick={handleCopyCode}
-                          className="bg-black/80 hover:bg-black text-lime-400 p-2 sm:p-3 rounded-lg sm:rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
+                          className="bg-black/80 hover:bg-black text-lime-400 p-2 tablet:p-3 rounded-lg tablet:rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           title="Copy code"
                         >
                           {copied ? (
-                            <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <Check className="w-4 h-4 tablet:w-5 tablet:h-5" />
                           ) : (
-                            <Copy className="w-4 h-4 sm:w-5 sm:h-5" />
+                            <Copy className="w-4 h-4 tablet:w-5 tablet:h-5" />
                           )}
                         </motion.button>
                       </div>
@@ -198,7 +198,7 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
                         <motion.p
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="text-black/80 text-xs sm:text-sm font-medium mt-2"
+                          className="text-black/80 text-xs tablet:text-sm font-medium mt-2"
                         >
                           Code copied! 🎉
                         </motion.p>
@@ -207,17 +207,17 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
 
                     {/* Countdown Timer */}
                     <div className="mb-6">
-                      <p className="text-black/80 font-medium text-xs sm:text-sm mb-3">Offer ends in:</p>
-                      <div className="flex items-center justify-center gap-2 sm:gap-3 font-bold">
-                        <div className="bg-black/20 text-black px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-mono min-w-[55px] sm:min-w-[65px] text-center border-2 border-black/30">
+                      <p className="text-black/80 font-medium text-xs tablet:text-sm mb-3">Offer ends in:</p>
+                      <div className="flex items-center justify-center gap-2 tablet:gap-3 font-bold">
+                        <div className="bg-black/20 text-black px-3 tablet:px-4 py-2 rounded-lg tablet:rounded-xl text-sm tablet:text-base font-mono min-w-[55px] tablet:min-w-[65px] text-center border-2 border-black/30">
                           {String(timeLeft.days).padStart(2, '0')}d
                         </div>
-                        <span className="text-black text-lg sm:text-xl">:</span>
-                        <div className="bg-black/20 text-black px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-mono min-w-[55px] sm:min-w-[65px] text-center border-2 border-black/30">
+                        <span className="text-black text-lg tablet:text-xl">:</span>
+                        <div className="bg-black/20 text-black px-3 tablet:px-4 py-2 rounded-lg tablet:rounded-xl text-sm tablet:text-base font-mono min-w-[55px] tablet:min-w-[65px] text-center border-2 border-black/30">
                           {String(timeLeft.hours).padStart(2, '0')}h
                         </div>
-                        <span className="text-black text-lg sm:text-xl">:</span>
-                        <div className="bg-black/20 text-black px-3 sm:px-4 py-2 rounded-lg sm:rounded-xl text-sm sm:text-base font-mono min-w-[55px] sm:min-w-[65px] text-center border-2 border-black/30">
+                        <span className="text-black text-lg tablet:text-xl">:</span>
+                        <div className="bg-black/20 text-black px-3 tablet:px-4 py-2 rounded-lg tablet:rounded-xl text-sm tablet:text-base font-mono min-w-[55px] tablet:min-w-[65px] text-center border-2 border-black/30">
                           {String(timeLeft.minutes).padStart(2, '0')}m
                         </div>
                       </div>
@@ -226,7 +226,7 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
                     {/* CTA Button */}
                     <motion.button
                       onClick={handleClaimClick}
-                      className="w-full bg-black text-lime-400 font-extrabold px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-sm sm:text-base lg:text-lg whitespace-nowrap flex items-center justify-center gap-2 sm:gap-3 hover:bg-gray-900 transition-all duration-300 shadow-2xl hover:shadow-3xl border-4 border-black/30 hover:border-lime-400/50"
+                      className="w-full bg-black text-lime-400 font-extrabold px-6 tablet:px-8 py-3 tablet:py-4 rounded-xl tablet:rounded-2xl text-sm tablet:text-base desktop:text-lg whitespace-nowrap flex items-center justify-center gap-2 tablet:gap-3 hover:bg-gray-900 transition-all duration-300 shadow-2xl hover:shadow-3xl border-4 border-black/30 hover:border-lime-400/50"
                       whileHover={{ 
                         scale: 1.02,
                         boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.6)"
@@ -234,7 +234,7 @@ const LaunchBanner: React.FC<LaunchBannerProps> = ({ onClose }) => {
                       whileTap={{ scale: 0.98 }}
                     >
                       <span>Claim My Free Month Now</span>
-                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+                      <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5 animate-pulse" />
                     </motion.button>
                   </div>
                 </div>

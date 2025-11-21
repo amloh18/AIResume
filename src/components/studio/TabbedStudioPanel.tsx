@@ -43,7 +43,7 @@ const TabbedStudioPanel: React.FC<TabbedStudioPanelProps> = ({
       content: (
         <div className="space-y-6">
           {/* Dynamic Layout for Job & ATS and CV Parser */}
-          <div className={`grid gap-4 ${parserContent ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
+          <div className={`grid gap-4 ${parserContent ? 'grid-cols-1 desktop:grid-cols-2' : 'grid-cols-1'}`}>
             {/* Job & ATS Section - HIDE for cover letter mode */}
             {jobATSContent && documentType === 'cv' && (
               <div className="space-y-4">

@@ -326,9 +326,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 tablet:p-6"
     >
-      <div className="w-full max-w-7xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3rem)] flex flex-col bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-7xl max-h-[calc(100vh-2rem)] tablet:max-h-[calc(100vh-3rem)] flex flex-col bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-700">
             <div>
@@ -409,7 +409,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
+                      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4 max-h-96 overflow-y-auto">
                         {filteredTemplates.map((template) => (
                           <Card
                             key={template.id}

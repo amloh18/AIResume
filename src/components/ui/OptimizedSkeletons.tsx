@@ -23,9 +23,9 @@ const BaseSkeleton: React.FC<{
 }> = ({ className = '', width, height, rounded = 'md' }) => {
   const roundedClasses = {
     none: 'rounded-none',
-    sm: 'rounded-sm',
-    md: 'rounded-md',
-    lg: 'rounded-lg',
+    tablet: 'rounded-sm',
+    tablet: 'rounded-md',
+    desktop: 'rounded-lg',
     full: 'rounded-full'
   };
 
@@ -61,7 +61,7 @@ export const AnalyticsSkeleton: React.FC = () => (
     </div>
 
     {/* Stats Grid */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="glass-widget-premium rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
@@ -75,13 +75,13 @@ export const AnalyticsSkeleton: React.FC = () => (
     </div>
 
     {/* Main Content Grid */}
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 desktop:grid-cols-3 gap-6">
       {/* Left Column */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="desktop:col-span-2 space-y-6">
         {/* CV Health Score */}
         <div className="glass-widget-premium rounded-xl p-6">
           <BaseSkeleton height={24} width={150} className="mb-6" />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
             <div className="text-center">
               <BaseSkeleton height={128} width={128} rounded="full" className="mx-auto mb-4" />
               <BaseSkeleton height={16} width={80} className="mx-auto mb-2" />
@@ -151,15 +151,15 @@ export const CanvasSkeleton: React.FC = () => (
     </div>
 
     {/* Main Grid */}
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 desktop:grid-cols-3 gap-6">
       {/* Left Column - CV Cards */}
-      <div className="xl:col-span-2">
+      <div className="desktop:col-span-2">
         <div className="flex items-center justify-between mb-6">
           <BaseSkeleton height={24} width={150} />
           <BaseSkeleton height={32} width={100} />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="glass-widget-premium rounded-xl p-6">
               <BaseSkeleton height={200} width="100%" className="mb-4" />
@@ -236,7 +236,7 @@ export const ApplicationJourneySkeleton: React.FC = () => (
     </div>
 
     {/* Journey Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="glass-widget-premium rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
@@ -277,7 +277,7 @@ export const ApplicationTrackerSkeleton: React.FC = () => (
     </div>
 
     {/* Stats Cards */}
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 tablet:grid-cols-4 gap-6">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="glass-widget-premium rounded-xl p-6 text-center">
           <BaseSkeleton height={32} width={32} rounded="full" className="mx-auto mb-3" />

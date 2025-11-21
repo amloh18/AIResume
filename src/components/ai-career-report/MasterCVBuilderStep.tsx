@@ -791,14 +791,14 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   return (
     <div className="flex h-[calc(100vh-5rem)] bg-[#1A201A]">
       {/* Sticky Sidebar */}
-      <div className="w-20 md:w-80 flex-shrink-0 p-2 md:p-4">
+      <div className="w-20 tablet:w-80 flex-shrink-0 p-2 tablet:p-4">
         <div className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl">
           {/* Sidebar Header with Step Info */}
-          <div className="p-3 md:p-6 border-b border-white/10">
+          <div className="p-3 tablet:p-6 border-b border-white/10">
             <div className="text-center mb-4">
-              <div className="text-[#80FF00] font-bold text-sm md:text-lg mb-1">Step 2 of 3</div>
-              <div className="text-lg md:text-xl font-bold text-white mb-2 hidden md:block">Details Sections</div>
-              <div className="text-white/70 text-xs md:text-sm leading-relaxed hidden md:block">
+              <div className="text-[#80FF00] font-bold text-sm tablet:text-lg mb-1">Step 2 of 3</div>
+              <div className="text-lg tablet:text-xl font-bold text-white mb-2 hidden tablet:block">Details Sections</div>
+              <div className="text-white/70 text-xs tablet:text-sm leading-relaxed hidden tablet:block">
                 Review and edit your CV sections.<br />
                 Click on a section title to navigate.
               </div>
@@ -806,7 +806,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           </div>
           
           {/* Section Navigation - Using visible sections from selector */}
-          <div className="flex-1 p-2 md:p-4 space-y-2 overflow-y-auto">
+          <div className="flex-1 p-2 tablet:p-4 space-y-2 overflow-y-auto">
             {sidebarSections.map((section) => {
               const IconComponent = section.icon;
               const isActive = state.activeSection === section.id;
@@ -818,7 +818,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                     dispatch({ type: 'SET_ACTIVE_SECTION', payload: section.id });
                     scrollToSection(section.id);
                   }}
-                  className={`w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-4 py-3 rounded-xl transition-all duration-200 ${
+                  className={`w-full flex items-center justify-center tablet:justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3 rounded-xl transition-all duration-200 ${
                     isActive
                       ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
                       : 'text-white/70 hover:text-white hover:bg-white/5'
@@ -828,21 +828,21 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                   title={section.title}
                 >
                   {React.createElement(IconComponent, { size: 18 })}
-                  <span className="font-medium text-xs md:text-sm hidden md:block">{section.title}</span>
+                  <span className="font-medium text-xs tablet:text-sm hidden tablet:block">{section.title}</span>
                 </motion.button>
               );
             })}
           </div>
           
           {/* Sidebar Footer */}
-          <div className="p-2 md:p-4 border-t border-white/10">
+          <div className="p-2 tablet:p-4 border-t border-white/10">
             <button 
               onClick={() => setShowAddSectionModal(true)}
-              className="w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-2 md:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
+              className="w-full flex items-center justify-center tablet:justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
               title="Add New Section"
             >
               <Plus size={18} />
-              <span className="font-medium text-xs md:text-sm hidden md:block">Add New Section</span>
+              <span className="font-medium text-xs tablet:text-sm hidden tablet:block">Add New Section</span>
             </button>
           </div>
         </div>
@@ -898,7 +898,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
               </button>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 tablet:grid-cols-3 gap-4">
               {addableSections.map((section) => {
                 const IconComponent = section.icon;
                 const isAlreadyAdded = sidebarSections.some(s => s.type === section.id);

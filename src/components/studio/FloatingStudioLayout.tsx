@@ -98,14 +98,14 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
     // The actual generation will be handled by the studio component's cleanup
     
     try {
-      console.log('🏠 Navigating to application tracker...');
-      // Route to application tracker instead of general dashboard
+      console.log('🏠 Navigating to jobs page...');
+      // Route to jobs page instead of general dashboard
       // Use replace to avoid back button issues and ensure immediate navigation
-      router.replace('/dashboard/application-tracker');
+      router.replace('/dashboard/jobs');
     } catch (error) {
       console.error('Navigation error:', error);
       // Fallback: try direct navigation
-      window.location.href = '/dashboard/application-tracker';
+      window.location.href = '/dashboard/jobs';
     } finally {
       // Reset navigation state after a short delay
       setTimeout(() => setIsNavigating(false), 1000);
@@ -393,7 +393,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
                       whileTap={{ scale: 0.98 }}
                     >
                       <Download size={14} />
-                    <span className="hidden sm:inline text-xs font-medium">Download</span>
+                    <span className="hidden tablet:inline text-xs font-medium">Download</span>
                             </motion.button>
                 )}
 
@@ -463,7 +463,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
-            className="fixed inset-0 z-50 lg:hidden"
+            className="fixed inset-0 z-50 desktop:hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

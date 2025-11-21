@@ -280,7 +280,7 @@ export default function LogsViewer() {
 
       {/* Metrics Cards */}
       {metrics && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-4">
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-4">
               <div className="text-sm text-gray-400 mb-1">Total Logs</div>
@@ -315,7 +315,7 @@ export default function LogsViewer() {
 
       {/* Filters */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 tablet:grid-cols-4 gap-4">
           <div>
             <label className="block text-sm text-gray-400 mb-2">Log Type</label>
             <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>

@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { 
   BarChart3, Target, FileText,
-  Sparkles, Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -16,6 +16,9 @@ import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
 import PaymentPastDueBanner from './PaymentPastDueBanner';
+import { getPlanName } from '@/lib/utils/userPlanUtils';
+import { useBillingData } from '@/lib/hooks/useBillingData';
+import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 
 const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
@@ -23,12 +26,23 @@ const OptimizedNavigation: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { isOpen: isMobileMenuOpen, toggleSidebar, setIsOpen } = useMobileSidebar();
   const { userData } = useUserData();
+  const { data: billingData, refetch: refetchBillingData } = useBillingData();
   const { preloadOnHover } = useRoutePreloader();
+  // Use pricing plans hook to pass data to modal (avoid duplicate API calls)
+  const pricingHookResult = usePricingPlans({ excludeFree: true });
   const [activeSection, setActiveSection] = useState('analytics');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [creditInfo, setCreditInfo] = useState<{ remaining: number; limit: number } | null>(null);
+  const [creditInfo, setCreditInfo] = useState<{
+    remaining: number;
+    limit: number;
+    used?: number;
+    totalCreated?: number;
+    planKey?: string;
+    nextResetDate?: string | Date;
+    resetSchedule?: string;
+  } | null>(null);
   const [creditInfoLoading, setCreditInfoLoading] = useState(true);
   const [isAnyPaymentModalOpen, setIsAnyPaymentModalOpen] = useState(false);
   
@@ -44,15 +58,15 @@ const OptimizedNavigation: React.FC = () => {
   // Check if any UniversalPaymentModal is open (from sidebar or settings)
   useEffect(() => {
     const checkModalOpen = () => {
-      // Check for the modal backdrop/overlay - UniversalPaymentModal uses z-[1200]
-      // Look for elements with z-index 1200 or the specific backdrop classes
+      // Check for the modal backdrop/overlay - UniversalPaymentModal uses z-[9999]
+      // Look for elements with z-index 9999 or the specific backdrop classes
       const modalBackdrop = 
-        document.querySelector('[class*="z-[1200]"]') || 
-        document.querySelector('[style*="z-index: 1200"]') ||
-        document.querySelector('[style*="z-index:1200"]') ||
+        document.querySelector('[class*="z-[9999]"]') || 
+        document.querySelector('[style*="z-index: 9999"]') ||
+        document.querySelector('[style*="z-index:9999"]') ||
         // Also check for the specific backdrop blur class used by UniversalPaymentModal
         (document.querySelector('.backdrop-blur-sm') && 
-         document.querySelector('.fixed.inset-0')?.getAttribute('style')?.includes('z-index: 1200'));
+         document.querySelector('.fixed.inset-0')?.getAttribute('style')?.includes('z-index: 9999'));
       
       setIsAnyPaymentModalOpen(!!modalBackdrop);
     };
@@ -78,61 +92,39 @@ const OptimizedNavigation: React.FC = () => {
     };
   }, []);
 
-  // Fetch credit information for free and day pass plan users
+  // Fetch credit information for membership card
   useEffect(() => {
     const fetchCreditInfo = async () => {
-      const planKey = userData?.currentPlanKey || 'free';
-      
-      // Only fetch credits for free and day_pass plans
-      if ((planKey === 'free' || planKey === 'day_pass') && userData?.id) {
-        setCreditInfoLoading(true);
-        try {
-          // Fetch credit status from the new credit system
-          const response = await fetch('/api/user/usage-limits');
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success && data.credits) {
-              // Only set credit info if we have actual data from API
-              const limit = data.credits.limit;
-              const remaining = data.credits.remaining;
-              
-              // Verify we have valid credit data (not fallback values)
-              if (limit !== undefined && remaining !== undefined) {
-                setCreditInfo({ remaining, limit });
-                setCreditInfoLoading(false);
-              } else {
-                // Invalid data, don't show card
-                setCreditInfo(null);
-                setCreditInfoLoading(false);
-              }
-            } else {
-              // No credit data in response, don't show card
-              setCreditInfo(null);
-              setCreditInfoLoading(false);
-            }
-          } else {
-            // API error, don't show card
-            setCreditInfo(null);
-            setCreditInfoLoading(false);
-          }
-        } catch (error) {
-          console.error('Error fetching credit info:', error);
-          // Don't show card on error
-          setCreditInfo(null);
-          setCreditInfoLoading(false);
-        }
-      } else if (planKey !== 'free' && planKey !== 'day_pass') {
-        // Clear credit info for pro plans (unlimited)
+      if (!userData?.id) {
         setCreditInfo(null);
         setCreditInfoLoading(false);
-      } else {
-        // No user data yet, still loading
-        setCreditInfoLoading(true);
+        return;
+      }
+
+      setCreditInfoLoading(true);
+
+      try {
+        const response = await fetch('/api/user/usage-limits');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.credits) {
+            setCreditInfo(data.credits);
+          } else {
+            setCreditInfo(null);
+          }
+        } else {
+          setCreditInfo(null);
+        }
+      } catch (error) {
+        console.error('Error fetching credit info:', error);
+        setCreditInfo(null);
+      } finally {
+        setCreditInfoLoading(false);
       }
     };
 
     fetchCreditInfo();
-  }, [userData?.currentPlanKey, userData?.id]);
+  }, [userData?.id, userData?.currentPlanKey, userData?.subscription?.planKey]);
 
   // Check if user is admin
   const isAdmin = userData?.role === 'admin';
@@ -141,8 +133,7 @@ const OptimizedNavigation: React.FC = () => {
   useEffect(() => {
     const routesToPrefetch = [
       '/dashboard',
-      '/dashboard/career-report',
-      '/dashboard/application-tracker',
+      '/dashboard/jobs',
       '/dashboard/canvas',
       '/dashboard/settings'
     ];
@@ -157,10 +148,8 @@ const OptimizedNavigation: React.FC = () => {
   useEffect(() => {
     if (pathname === '/dashboard') {
       setActiveSection('analytics');
-    } else if (pathname.includes('/career-report')) {
-      setActiveSection('career-report');
-    } else if (pathname.includes('/application-tracker')) {
-      setActiveSection('application-tracker');
+    } else if (pathname.includes('/jobs')) {
+      setActiveSection('jobs');
     } else if (pathname.includes('/canvas')) {
       setActiveSection('canvas');
     } else if (pathname.includes('/settings')) {
@@ -181,8 +170,7 @@ const OptimizedNavigation: React.FC = () => {
     // Navigate immediately
     const routes = {
       'analytics': '/dashboard',
-      'career-report': '/dashboard/career-report',
-      'application-tracker': '/dashboard/application-tracker',
+      'jobs': '/dashboard/jobs',
       'canvas': '/dashboard/canvas',
       'settings': '/dashboard/settings'
     };
@@ -229,30 +217,23 @@ const OptimizedNavigation: React.FC = () => {
       route: '/dashboard'
     },
     { 
-      id: 'career-report', 
-      name: 'Career Report', 
-      icon: Sparkles, 
-      description: 'AI Career Insights',
-      route: '/dashboard/career-report'
-    },
-    { 
-      id: 'application-tracker', 
-      name: 'Application Tracker', 
-      icon: Target, 
-      description: 'Manage jobs with integrated CV journeys',
-      route: '/dashboard/application-tracker'
+      id: 'jobs', 
+      name: 'Jobs', 
+      icon: Briefcase, 
+      description: 'Enhanced job tracking with tabs',
+      route: '/dashboard/jobs'
     },
     { 
       id: 'canvas', 
       name: 'CV Studio', 
       icon: FileText, 
-      description: 'Saved CV/Cover Letters',
+      description: 'Saved CVs/ CL and Reports',
       route: '/dashboard/canvas'
     }
   ];
 
   return (
-    <div className="flex flex-col h-full m-0 lg:m-1 2xl:m-2 bg-white dark:bg-[#141810] rounded-none lg:rounded-2xl shadow-none lg:shadow-lg overflow-visible">
+    <div className="flex flex-col h-full m-0 lg:m-1 2xl:m-2 bg-white dark:bg-[#141810] rounded-none lg:rounded-2xl shadow-none lg:shadow-lg overflow-visible pointer-events-auto relative">
       {/* Header */}
       <div className="flex items-center justify-between p-6 lg:p-4 lg:justify-center 2xl:p-6 2xl:justify-start border-b border-gray-200 dark:border-gray-700 lg:border-b-0">
         <motion.button
@@ -313,7 +294,7 @@ const OptimizedNavigation: React.FC = () => {
               }}
               className={`w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start ${
                 isActive
-                  ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
+                  ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] border border-[rgb(129,255,0)] dark:border-[rgb(129,255,0)] text-black dark:text-black shadow-[0_0_10px_rgba(129,255,0,0.5)] dark:shadow-[0_0_10px_rgba(129,255,0,0.5)]'
                   : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
               }`}
               whileHover={{ scale: 1.02 }}
@@ -323,11 +304,12 @@ const OptimizedNavigation: React.FC = () => {
               <div className="flex-1 min-w-0 lg:hidden 2xl:block">
                 <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                   {section.name}
-                  {section.id === 'career-report' && (
-                    <span className="text-[10px] font-normal text-gray-500 dark:text-gray-400 leading-none align-super">(beta)</span>
-                  )}
                 </div>
-                <div className="text-sm lg:text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                <div className={`text-sm lg:text-xs truncate mt-0.5 ${
+                  isActive
+                    ? 'text-black dark:text-black'
+                    : 'text-gray-500 dark:text-gray-400'
+                }`}>
                   {section.description}
                 </div>
               </div>
@@ -384,18 +366,15 @@ const OptimizedNavigation: React.FC = () => {
       {!showSubscriptionModal && !isAnyPaymentModalOpen && (
         <div className="px-4 pb-3">
           {(() => {
-            const currentPlan = userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
-            const planStatus = userData?.subscription?.status || 'active';
+            // Use billing data subscription as source of truth, fallback to userData
+            const subscription = billingData?.subscription;
+            const currentPlan = subscription?.planKey || userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
+            const planStatus = subscription?.status || userData?.subscription?.status || 'active';
             
             // Don't show membership card if subscription is past_due (PaymentPastDueBanner handles that)
             if (planStatus === 'past_due' || planStatus === 'unpaid') {
               return null;
             }
-          
-          // Only show for free and day_pass plans
-          if (currentPlan !== 'free' && currentPlan !== 'day_pass') {
-            return null;
-          }
           
           // Don't show card if credit info is still loading or not available
           if (creditInfoLoading || !creditInfo) {
@@ -427,12 +406,23 @@ const OptimizedNavigation: React.FC = () => {
           // Urgency indicators
           const isUrgent = isDayPass && timeRemaining && timeRemaining.hours < 3;
           
+          // Use the utility function to get plan display name
+          const planDisplayName = (planKey: string) => {
+            return getPlanName(planKey as any);
+          };
+
           // Free plan card
           if (currentPlan === 'free') {
             const remaining = creditInfo.remaining;
             const limit = creditInfo.limit;
             const isUnlimited = limit === -1;
             const hasCredits = isUnlimited || remaining > 0;
+            const used = creditInfo.used !== undefined
+              ? creditInfo.used
+              : Math.max(0, (limit > -1 ? limit - remaining : 0));
+            const progressPercent = !isUnlimited && limit > 0
+              ? Math.min(100, (used / limit) * 100)
+              : 0;
             
             return (
               <div className="hidden 2xl:block rounded-2xl p-3 text-white border-2 border-white/20" style={{ backgroundColor: '#603a86' }}>
@@ -444,9 +434,28 @@ const OptimizedNavigation: React.FC = () => {
                   {isUnlimited ? (
                     <span>You have <span className="font-bold">Unlimited</span> job credits.</span>
                   ) : (
-                    <span>You have <span className="font-bold">{remaining}</span> of <span className="font-bold">{limit}</span> job credit{limit !== 1 ? 's' : ''} left this month.</span>
+                    <span>
+                      You have <span className="font-bold">{remaining}</span> of <span className="font-bold">{limit}</span> job credit{limit !== 1 ? 's' : ''} left this month.
+                    </span>
                   )}
                 </div>
+
+                {!isUnlimited && limit > 0 && (
+                  <div className="mb-3">
+                    <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
+                      <span>Credits used</span>
+                      <span>{used}/{limit}</span>
+                    </div>
+                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progressPercent}%` }}
+                        transition={{ duration: 0.5 }}
+                        className="h-2 bg-white rounded-full"
+                      />
+                    </div>
+                  </div>
+                )}
                 
                 {!hasCredits && (
                   <div className="text-xs text-yellow-300 mb-2 font-medium">
@@ -479,11 +488,22 @@ const OptimizedNavigation: React.FC = () => {
             );
           }
           
+          // Only show Day Pass card if the current plan is actually day_pass
+          if (currentPlan !== 'day_pass') {
+            return null;
+          }
+          
           // Day pass card
           const dayPassRemaining = creditInfo.remaining;
           const dayPassLimit = creditInfo.limit;
           const dayPassIsUnlimited = dayPassLimit === -1;
           const dayPassHasCredits = dayPassIsUnlimited || dayPassRemaining > 0;
+          const dayPassUsed = creditInfo.used !== undefined
+            ? creditInfo.used
+            : Math.max(0, (dayPassLimit > -1 ? dayPassLimit - dayPassRemaining : 0));
+          const dayPassProgress = !dayPassIsUnlimited && dayPassLimit > 0
+            ? Math.min(100, (dayPassUsed / dayPassLimit) * 100)
+            : 0;
           
           return (
             <motion.div 
@@ -519,6 +539,23 @@ const OptimizedNavigation: React.FC = () => {
                   <span>You have <span className="font-bold">{dayPassRemaining}</span> of <span className="font-bold">{dayPassLimit}</span> job credit{dayPassLimit !== 1 ? 's' : ''} left.</span>
                 )}
               </div>
+
+              {!dayPassIsUnlimited && dayPassLimit > 0 && (
+                <div className="mb-3">
+                  <div className="flex items-center justify-between text-[11px] text-white/85 mb-1">
+                    <span>Credits used</span>
+                    <span>{dayPassUsed}/{dayPassLimit}</span>
+                  </div>
+                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${dayPassProgress}%` }}
+                      transition={{ duration: 0.5 }}
+                      className="h-2 bg-white rounded-full"
+                    />
+                  </div>
+                </div>
+              )}
               
               {!dayPassHasCredits && !isExpired && (
                 <div className="text-xs text-yellow-200 mb-2 font-medium">
@@ -548,6 +585,45 @@ const OptimizedNavigation: React.FC = () => {
                 {isUrgent ? 'Upgrade Now' : 'Upgrade'}
               </motion.button>
             </motion.div>
+          );
+
+          // Pro plans - show usage summary
+          const proUsed = creditInfo.totalCreated ?? creditInfo.used ?? 0;
+          const nextReset = creditInfo.nextResetDate ? new Date(creditInfo.nextResetDate) : null;
+          const proPlanName = planDisplayName(currentPlan);
+
+          return (
+            <div className="hidden 2xl:block rounded-2xl p-4 bg-gradient-to-br from-gray-900 to-gray-800 text-white border border-white/10">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="text-sm font-semibold">{proPlanName}</div>
+                  <div className="text-xs text-white/60 capitalize">
+                    {currentPlan.replace('_', ' ')}
+                  </div>
+                </div>
+                {nextReset && (
+                  <div className="text-[11px] text-white/60">
+                    Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-white/10 rounded-xl p-4 mb-3">
+                <div className="text-xs text-white/60 mb-1">
+                  Jobs created
+                </div>
+                <div className="text-2xl font-bold">
+                  {proUsed}
+                </div>
+                <div className="text-[11px] text-white/70 mt-1">
+                  Unlimited credits included
+                </div>
+              </div>
+
+              <p className="text-xs text-white/70">
+                You're on the Pro plan. Keep creating and we'll track your usage here.
+              </p>
+            </div>
           );
         })()}
         </div>
@@ -723,7 +799,7 @@ const OptimizedNavigation: React.FC = () => {
               <UserAvatar
                 src={getUserAvatar(userData)}
                 name={getUserDisplayName(userData)}
-                size="md"
+                size="sm"
                 className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0 lg:mx-auto 2xl:mx-0"
               />
               {/* User Info - Only show when sidebar is fully expanded (2xl) */}
@@ -752,8 +828,28 @@ const OptimizedNavigation: React.FC = () => {
       <UniversalPaymentModal
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
-        // Don't preselect - let users freely choose any plan (same as settings modal)
-        currentUserPlan={userData?.subscription?.planKey || 'free'}
+        // Use billing data subscription as source of truth, fallback to userData
+        currentUserPlan={billingData?.subscription?.planKey || userData?.subscription?.planKey || userData?.currentPlanKey || 'free'}
+        onSuccess={() => {
+          setShowSubscriptionModal(false);
+          refetchBillingData();
+          // Refresh user data to update plan info
+          if (userData) {
+            window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
+              detail: { refreshUserData: true } 
+            }));
+          }
+        }}
+        // Pass pricing data to avoid duplicate API calls
+        plans={pricingHookResult.plans}
+        promotionalOffers={pricingHookResult.promotionalOffers}
+        locationData={pricingHookResult.locationData}
+        regionalPricing={pricingHookResult.regionalPricing}
+        getRegionalPrice={pricingHookResult.getRegionalPrice}
+        getMonthlyEquivalent={pricingHookResult.getMonthlyEquivalent}
+        getCurrencySymbol={pricingHookResult.getCurrencySymbol}
+        getEffectivePrice={pricingHookResult.getEffectivePrice}
+        hasPromotionalPricing={pricingHookResult.hasPromotionalPricing}
       />
     </div>
   );

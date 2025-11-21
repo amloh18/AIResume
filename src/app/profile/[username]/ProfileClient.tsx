@@ -82,9 +82,9 @@ const ProfileClient: React.FC<ProfileClientProps> = ({ profile }) => {
           </div>
           
           {/* Profile Info */}
-          <div className="relative px-4 sm:px-6 lg:px-8 -mt-16">
+          <div className="relative px-4 tablet:px-6 desktop:px-8 -mt-16">
             <div className="max-w-4xl mx-auto">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6">
+              <div className="flex flex-col tablet:flex-row items-start tablet:items-end gap-4 tablet:gap-6">
                 {/* Profile Picture */}
                 <div className="relative">
                   <div className="w-32 h-32 rounded-full border-4 border-gray-900 overflow-hidden bg-gray-800">
@@ -101,7 +101,7 @@ const ProfileClient: React.FC<ProfileClientProps> = ({ profile }) => {
                 
                 {/* Profile Details */}
                 <div className="flex-1 space-y-2">
-                  <h1 className="text-3xl sm:text-4xl font-bold text-white">
+                  <h1 className="text-3xl tablet:text-4xl font-bold text-white">
                     {fullName}
                   </h1>
                   {profile.jobTitle && (
@@ -149,7 +149,7 @@ const ProfileClient: React.FC<ProfileClientProps> = ({ profile }) => {
         </div>
 
         {/* Content Sections */}
-        <div className="px-4 sm:px-6 lg:px-8 py-8">
+        <div className="px-4 tablet:px-6 desktop:px-8 py-8">
           <div className="max-w-4xl mx-auto space-y-8">
             {/* Profile Editor (only for owner) */}
             <ProfileEditor
@@ -208,7 +208,7 @@ const ProfileClient: React.FC<ProfileClientProps> = ({ profile }) => {
             {profile.portfolioProjects.length > 0 && (
               <section className="bg-gray-800/20 border border-gray-700 rounded-xl p-6">
                 <h2 className="text-2xl font-bold text-white mb-6">Recent Work</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
                   {profile.portfolioProjects.map((project) => (
                     <div key={project.id} className="border border-gray-700 rounded-lg overflow-hidden hover:border-lime-500 transition-colors duration-200">
                       {project.imageUrl && (

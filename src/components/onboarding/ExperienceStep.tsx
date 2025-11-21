@@ -125,7 +125,7 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
         transition={{ duration: 0.5 }}
         className="text-center"
       >
-        <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+        <h2 className="text-3xl tablet:text-4xl font-bold text-white mb-4">
           Work Experience & Projects
         </h2>
         <p className="text-xl text-white/60">
@@ -173,7 +173,7 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                                         <label className="block text-white/80 text-xs font-medium mb-2">
                         Company Name
@@ -307,7 +307,7 @@ export default function ExperienceStep({ onNext, onBack }: ExperienceStepProps) 
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-xs font-medium mb-2">
                     Project Name
