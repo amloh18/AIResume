@@ -101,10 +101,10 @@ const Hero = () => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 w-full max-w-7xl mx-auto" style={{ paddingTop: 'var(--navbar-height, 80px)' }}>
+      <div className="relative z-10 text-center px-4 tablet:px-6 desktop:px-8 w-full max-w-7xl mx-auto" style={{ paddingTop: 'var(--navbar-height, 80px)' }}>
         {/* Main Heading with 3D Effect - Optimized */}
         <motion.h1
-          className="text-3xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 gpu-accelerated"
+          className="text-3xl tablet:text-5xl desktop:text-7xl font-bold text-white mb-6 gpu-accelerated"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
@@ -135,7 +135,7 @@ const Hero = () => {
 
         {/* Subheading - Optimized */}
         <motion.p
-          className="text-base sm:text-xl lg:text-2xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed"
+          className="text-base tablet:text-xl desktop:text-2xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
@@ -146,7 +146,7 @@ const Hero = () => {
 
         {/* Enhanced CTA Buttons - Optimized */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16"
+          className="flex flex-col tablet:flex-row gap-6 justify-center items-center mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
@@ -154,7 +154,7 @@ const Hero = () => {
         >
           <motion.a
             href="/sign-up"
-            className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-full font-semibold text-sm sm:text-base lg:text-lg shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden btn-hover"
+            className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-sm tablet:text-base desktop:text-lg shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden btn-hover"
             whileHover={{ 
               scale: 1.02,
               boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
@@ -167,7 +167,7 @@ const Hero = () => {
               style={{ filter: 'blur(20px)' }}
             />
             <motion.div
-              className="relative flex items-center gap-2 sm:gap-3"
+              className="relative flex items-center gap-2 tablet:gap-3"
               whileHover={{ x: 5 }}
             >
               <span>Get Started</span>
@@ -175,14 +175,14 @@ const Hero = () => {
                 whileHover={{ rotate: 45 }}
                 transition={{ duration: 0.3 }}
               >
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
               </motion.div>
             </motion.div>
           </motion.a>
           
           <motion.a
             href="/ai-career-report"
-            className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 rounded-full font-semibold text-sm sm:text-base lg:text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 sm:gap-3"
+            className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-sm tablet:text-base desktop:text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 tablet:gap-3"
             whileHover={{ 
               scale: 1.05,
               borderColor: 'rgba(132, 204, 22, 0.8)',
@@ -194,16 +194,16 @@ const Hero = () => {
               perspective: '1000px'
             }}
           >
-            <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+            <Sparkles className="w-4 h-4 tablet:w-5 tablet:h-5" />
             <span>AI Career Guide</span>
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
           </motion.a>
           
         </motion.div>
 
         {/* Hero Banner with Parallax Effect */}
         <motion.div
-          className="relative w-full mx-auto mt-8 sm:mt-12 -mb-16 sm:-mb-32"
+          className="relative w-full mx-auto mt-8 tablet:mt-12 -mb-16 tablet:-mb-32"
           initial={{ opacity: 0, y: 40, scale: 0.9 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}

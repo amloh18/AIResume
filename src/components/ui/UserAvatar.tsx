@@ -13,20 +13,20 @@ interface UserAvatarProps {
   showFallback?: boolean;
 }
 
-const sizeMap = {
+const sizeMap: Record<NonNullable<UserAvatarProps['size']>, string> = {
   xs: 'w-6 h-6',
   sm: 'w-8 h-8',
   md: 'w-10 h-10',
   lg: 'w-16 h-16',
-  xl: 'w-32 h-32'
+  xl: 'w-24 h-24',
 };
 
-const iconSizeMap = {
+const iconSizeMap: Record<NonNullable<UserAvatarProps['size']>, number> = {
   xs: 12,
   sm: 16,
   md: 20,
-  lg: 24,
-  xl: 48
+  lg: 28,
+  xl: 40,
 };
 
 /**

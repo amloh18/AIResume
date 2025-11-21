@@ -163,15 +163,15 @@ const CVManagementSection: React.FC<{
   jobs?: any[];
 }> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal, userId, jobs = [] }) => {
   
-  // Function to navigate to studio with master CV (new architecture)
+  // Function to navigate to canvas page and open report sidepanel for master CV
   const router = useRouter();
   const handleShowATSAnalysis = () => {
     if (masterCV) {
-      // Navigate to master CV mode
-      router.push(`/studio?master=true`);
+      // Navigate to canvas page with openReport param to open the report sidepanel
+      router.push(`/dashboard/canvas?openReport=true&cvId=${masterCV.id}`);
     } else {
-      // If no master CV, navigate to studio (will prompt to create master CV)
-      router.push('/studio?master=true');
+      // If no master CV, navigate to canvas page (will show empty state)
+      router.push('/dashboard/canvas?openReport=true');
     }
   };
 
@@ -338,7 +338,18 @@ const CVManagementSection: React.FC<{
                   <span className="text-lg font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
                 </div>
               </div>
-              <p className="text-gray-600 dark:text-white/60 text-xs mb-1">{masterCV?.title || 'Master CV Health'}</p>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <p className="text-gray-600 dark:text-white/60 text-xs">{masterCV?.title || 'Master CV Health'}</p>
+                <motion.button
+                  onClick={handleEditMasterCV}
+                  className="text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Edit Master CV"
+                >
+                  <Edit size={14} />
+                </motion.button>
+              </div>
               <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
               
             </div>
@@ -375,12 +386,6 @@ const CVManagementSection: React.FC<{
                 Quick Actions
               </h3>
               <div className="space-y-2">
-                <motion.button 
-                  onClick={handleEditMasterCV}
-                  className="w-full p-3 bg-lime-400/20 text-lime-400 rounded-lg text-sm font-medium hover:bg-lime-400/30 transition-all duration-300 flex items-center gap-2"
-                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <FileText size={16} /> Edit Master CV
-                </motion.button>
                 <motion.button 
                   onClick={handleShowATSAnalysis}
                   className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
@@ -1078,7 +1083,7 @@ const RecentJobsWidget: React.FC<{
           {/* View All Link */}
           <div className="mt-6 text-center">
             <button
-              onClick={() => window.location.href = '/dashboard/application-tracker'}
+              onClick={() => window.location.href = '/dashboard/jobs'}
               className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
             >
               View All
@@ -1359,12 +1364,12 @@ const Analytics: React.FC = () => {
                 console.error('Error creating CV:', error);
               }
             }}
-            onAddJob={() => router.push('/dashboard/application-tracker')}
-            // For new cover letters, navigate to dashboard tracker to create a journey first
+            onAddJob={() => router.push('/dashboard/jobs')}
+            // For new cover letters, navigate to dashboard jobs to create a journey first
             // Or create cover letter via API then navigate
-            onWriteCoverLetter={() => router.push('/dashboard/application-tracker')}
-            onCreateCoverLetter={() => router.push('/dashboard/application-tracker')}
-            onCreateJob={() => router.push('/dashboard/application-tracker')}
+            onWriteCoverLetter={() => router.push('/dashboard/jobs')}
+            onCreateCoverLetter={() => router.push('/dashboard/jobs')}
+            onCreateJob={() => router.push('/dashboard/jobs')}
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}
             onUpdateGoal={handleUpdateMonthlyGoal}
@@ -1375,8 +1380,8 @@ const Analytics: React.FC = () => {
         <div className="flex w-full min-h-[320px]">
           <RecentJobsWidget
             jobs={jobs}
-            onViewJob={(jobId) => router.push(`/dashboard/application-tracker?job=${jobId}`)}
-            onCreateJob={() => router.push('/dashboard/application-tracker')}
+            onViewJob={(jobId) => router.push(`/dashboard/jobs?job=${jobId}`)}
+            onCreateJob={() => router.push('/dashboard/jobs')}
             analyticsData={analyticsData}
           />
         </div>
@@ -1403,15 +1408,15 @@ const Analytics: React.FC = () => {
         <div className="flex-1 h-full">
           <AnalyticsJourneyWidget
             onResumeJourney={(journey) => {
-              // Navigate to Application Tracker to view the journey
-              router.push(`/dashboard/application-tracker?journeyId=${journey.id}`);
+              // Navigate to Jobs page to view the journey
+              router.push(`/dashboard/jobs?journeyId=${journey.id}`);
             }}
             onDeleteJourney={(journeyId) => {
               // TODO: Implement delete journey functionality
             }}
             onViewJourney={(journey) => {
-              // Navigate to Application Tracker to view the journey
-              router.push(`/dashboard/application-tracker?journeyId=${journey.id}`);
+              // Navigate to Jobs page to view the journey
+              router.push(`/dashboard/jobs?journeyId=${journey.id}`);
             }}
           />
         </div>

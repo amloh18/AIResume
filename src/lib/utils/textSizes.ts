@@ -7,57 +7,57 @@
 export const textSizes = {
   // Display sizes - for hero sections and major headings
   display: {
-    '2xl': 'text-6xl sm:text-7xl lg:text-8xl', // 4.5rem (72px) → 5rem (80px) → 6rem (96px)
-    'xl': 'text-5xl sm:text-6xl lg:text-7xl',   // 3rem (48px) → 4rem (64px) → 4.5rem (72px)
-    'lg': 'text-4xl sm:text-5xl lg:text-6xl',  // 2.5rem (40px) → 3rem (48px) → 4rem (64px)
+    '2xl': 'text-6xl tablet:text-7xl desktop:text-8xl', // 4.5rem (72px) → 5rem (80px) → 6rem (96px)
+    'xl': 'text-5xl tablet:text-6xl desktop:text-7xl',   // 3rem (48px) → 4rem (64px) → 4.5rem (72px)
+    'lg': 'text-4xl tablet:text-5xl desktop:text-6xl',  // 2.5rem (40px) → 3rem (48px) → 4rem (64px)
   },
 
   // Heading sizes - for page and section titles
   heading: {
-    'xl': 'text-2xl sm:text-3xl lg:text-4xl',   // 1.5rem (24px) → 2rem (32px) → 2.5rem (40px)
-    'lg': 'text-xl sm:text-2xl lg:text-3xl',    // 1.25rem (20px) → 1.5rem (24px) → 2rem (32px)
-    'md': 'text-lg sm:text-xl lg:text-2xl',     // 1.125rem (18px) → 1.25rem (20px) → 1.5rem (24px)
-    'sm': 'text-base sm:text-lg lg:text-xl',    // 1rem (16px) → 1.125rem (18px) → 1.25rem (20px)
+    'xl': 'text-2xl tablet:text-3xl desktop:text-4xl',   // 1.5rem (24px) → 2rem (32px) → 2.5rem (40px)
+    'lg': 'text-xl tablet:text-2xl desktop:text-3xl',    // 1.25rem (20px) → 1.5rem (24px) → 2rem (32px)
+    'md': 'text-lg tablet:text-xl desktop:text-2xl',     // 1.125rem (18px) → 1.25rem (20px) → 1.5rem (24px)
+    'sm': 'text-base tablet:text-lg desktop:text-xl',    // 1rem (16px) → 1.125rem (18px) → 1.25rem (20px)
   },
 
   // Body text sizes - for content and descriptions
   body: {
-    'lg': 'text-lg sm:text-xl',                 // 1.125rem (18px) → 1.25rem (20px)
-    'md': 'text-base sm:text-lg',               // 1rem (16px) → 1.125rem (18px)
-    'sm': 'text-sm sm:text-base',               // 0.875rem (14px) → 1rem (16px)
+    'lg': 'text-lg tablet:text-xl',                 // 1.125rem (18px) → 1.25rem (20px)
+    'md': 'text-base tablet:text-lg',               // 1rem (16px) → 1.125rem (18px)
+    'sm': 'text-sm tablet:text-base',               // 0.875rem (14px) → 1rem (16px)
   },
 
   // Label sizes - for form labels and small text
   label: {
     'lg': 'text-sm',                            // 0.875rem (14px)
-    'md': 'text-sm sm:text-base',               // 0.875rem (14px) → 1rem (16px)
+    'md': 'text-sm tablet:text-base',               // 0.875rem (14px) → 1rem (16px)
     'sm': 'text-xs',                            // 0.75rem (12px)
   },
 
   // Button sizes - for interactive elements
   button: {
-    'lg': 'text-base sm:text-lg',               // 1rem (16px) → 1.125rem (18px)
+    'lg': 'text-base tablet:text-lg',               // 1rem (16px) → 1.125rem (18px)
     'md': 'text-base',                          // 1rem (16px)
     'sm': 'text-sm',                            // 0.875rem (14px)
   },
 
   // Caption sizes - for metadata and small info
   caption: {
-    'lg': 'text-sm sm:text-base',               // 0.875rem (14px) → 1rem (16px)
-    'md': 'text-xs sm:text-sm',                 // 0.75rem (12px) → 0.875rem (14px)
+    'lg': 'text-sm tablet:text-base',               // 0.875rem (14px) → 1rem (16px)
+    'md': 'text-xs tablet:text-sm',                 // 0.75rem (12px) → 0.875rem (14px)
     'sm': 'text-xs',                            // 0.75rem (12px)
   },
 
   // Special sizes for specific use cases
   special: {
-    kpi: 'text-xl sm:text-2xl lg:text-3xl',     // 1.25rem (20px) → 1.5rem (24px) → 2rem (32px)
+    kpi: 'text-xl tablet:text-2xl desktop:text-3xl',     // 1.25rem (20px) → 1.5rem (24px) → 2rem (32px)
     logo: {
-      sm: 'text-lg',                            // 1.125rem (18px)
-      md: 'text-2xl',                           // 1.5rem (24px)
-      lg: 'text-4xl',                           // 2.5rem (40px)
+      tablet: 'text-lg',                            // 1.125rem (18px)
+      tablet: 'text-2xl',                           // 1.5rem (24px)
+      desktop: 'text-4xl',                           // 2.5rem (40px)
     },
     badge: 'text-xs',                           // 0.75rem (12px)
-    tooltip: 'text-xs sm:text-sm',              // 0.75rem (12px) → 0.875rem (14px)
+    tooltip: 'text-xs tablet:text-sm',              // 0.75rem (12px) → 0.875rem (14px)
   }
 };
 

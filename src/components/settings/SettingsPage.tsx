@@ -301,7 +301,7 @@ export default function SettingsPage() {
               <CardDescription>Update your personal details and professional information</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
                   <Input
@@ -416,7 +416,7 @@ export default function SettingsPage() {
 
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Social Links</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="website">Website</Label>
                     <Input
@@ -822,7 +822,7 @@ export default function SettingsPage() {
                 <Separator />
 
                 <h3 className="font-semibold">Language & Region</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="language">Language</Label>
                     <Select

@@ -190,7 +190,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
       {/* Name and Title */}
       <div>
         <label className="block text-white/80 text-sm font-medium mb-2">Full Name</label>
@@ -272,7 +272,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       </div>
 
       {/* Professional Summary */}
-      <div className="md:col-span-2">
+      <div className="tablet:col-span-2">
         <div className="flex items-center justify-between mb-2">
           <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
           <WYSIWYGToolbar

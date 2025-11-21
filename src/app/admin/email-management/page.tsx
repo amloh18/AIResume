@@ -184,7 +184,7 @@ export default function EmailManagementPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 tablet:grid-cols-4 gap-6 mb-8">
           <div className="bg-gray-800 border-gray-700 p-6 rounded-lg shadow-sm border">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
@@ -291,7 +291,7 @@ export default function EmailManagementPage() {
           </div>
 
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
               {filteredTemplates.map((template) => (
                 <div key={template.id} className="border border-gray-700 bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
                   <div className="flex items-start justify-between mb-4">
@@ -441,7 +441,7 @@ export default function EmailManagementPage() {
         {/* Quick Actions */}
         <div className="mt-8 bg-gray-800 border-gray-700 rounded-lg shadow-sm border p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
             <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-750 transition-colors">
               <Send className="w-5 h-5 text-blue-400" />
               <div className="text-left">

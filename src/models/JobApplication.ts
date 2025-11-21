@@ -59,6 +59,42 @@ export interface IJobApplication extends Document {
   sourceUrl?: string;
   atsScore?: number;
   isArchived: boolean;
+  // Phase 4: Intelligence & Automation fields
+  matchScore?: number; // 0-100, job-specific match score (NULL for draft jobs)
+  missingKeywords?: string[]; // Job-specific missing keywords
+  matchedSkills?: string[]; // Skills that match THIS job
+  skillGapAnalysis?: {
+    // Legacy format (backward compatibility)
+    critical?: string[];
+    important?: string[];
+    recommendations?: string[];
+    // Enhanced format
+    overallMatchScore?: number;
+    lastAnalyzed?: Date;
+    jobDescriptionHash?: string;
+    masterCVUpdatedAt?: Date;
+    categories?: Array<{
+      name: string;
+      requiredSkills: number;
+      matchedSkills: number;
+      skills: Array<{
+        name: string;
+        status: 'mastered' | 'transferable' | 'critical-gap';
+        priority: 'critical' | 'high' | 'medium';
+        jdContext: string;
+        cvEvidence?: string;
+        courseRecommendation?: {
+          provider: string;
+          title: string;
+          url: string;
+          estimatedHours: number;
+        };
+        cvRephraseSuggestion?: string;
+      }>;
+    }>;
+  }; // For THIS specific job
+  jobDescriptionRaw?: string; // Original job description text for future analysis
+  advocateId?: string; // Reference to Advocate (referral contact)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -213,6 +249,27 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: Number,
     min: 0,
     max: 100
+  },
+  // Phase 4: Intelligence & Automation fields
+  matchScore: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
+  missingKeywords: [{ type: String, trim: true }],
+  matchedSkills: [{ type: String, trim: true }],
+  skillGapAnalysis: {
+    type: Schema.Types.Mixed, // Allow both legacy and enhanced formats
+    default: {}
+  },
+  jobDescriptionRaw: {
+    type: String,
+    trim: true,
+    maxlength: [50000, 'Raw job description cannot exceed 50000 characters']
+  },
+  advocateId: {
+    type: String,
+    trim: true
   },
   isArchived: {
     type: Boolean,

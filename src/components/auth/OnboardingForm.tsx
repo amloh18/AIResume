@@ -123,8 +123,6 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
 
   useEffect(() => {
     if (cvData) {
-      console.log('OnboardingForm received cvData:', cvData);
-      
       // Handle the data structure properly
       const updatedFormData = { ...formData };
       
@@ -158,7 +156,6 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
   }, [cvData]);
 
   const handleCVParsed = (parsedData: any) => {
-    console.log('OnboardingForm: handleCVParsed called with:', parsedData);
     setCvData(parsedData);
     setCurrentStep('form');
   };
@@ -271,7 +268,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
 
   const renderPersonalInfo = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">First Name</label>
           <input
@@ -338,7 +335,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Website (Optional)</label>
           <input
@@ -390,7 +387,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
         <>
           {formData.education.map((edu, index) => (
             <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
                   <input
@@ -520,7 +517,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
         <>
           {formData.experience.map((exp, index) => (
             <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
                   <input
@@ -735,7 +732,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
         <>
           {formData.projects.map((project, index) => (
             <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">Project Title</label>
                   <input

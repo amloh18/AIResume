@@ -146,7 +146,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full h-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full h-full flex flex-col justify-center">
         {/* Header */}
         <motion.div 
           className="text-center mb-16"
@@ -155,13 +155,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6 text-center">
             Simple,{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               Transparent Pricing
             </span>
           </h2>
-          <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Choose the plan that fits your career goals. No hidden fees, no surprises.
           </p>
         </motion.div>
@@ -196,7 +196,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             
             <button
               onClick={() => setSelectedCategory('essential')}
-              className={`relative z-10 min-w-[140px] px-6 py-3 sm:min-w-[160px] sm:px-8 sm:py-4 rounded-full font-medium text-sm sm:text-base transition-colors duration-300 ${
+              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-sm tablet:text-base transition-colors duration-300 ${
                 selectedCategory === 'essential'
                   ? 'text-black'
                   : 'text-white/70 hover:text-white'
@@ -206,7 +206,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             </button>
             <button
               onClick={() => setSelectedCategory('professional')}
-              className={`relative z-10 min-w-[140px] px-6 py-3 sm:min-w-[160px] sm:px-8 sm:py-4 rounded-full font-medium text-sm sm:text-base transition-colors duration-300 ${
+              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-sm tablet:text-base transition-colors duration-300 ${
                 selectedCategory === 'professional'
                   ? 'text-black'
                   : 'text-white/70 hover:text-white'
@@ -222,8 +222,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
         <motion.div 
           className={`grid gap-6 ${
             filteredPlans.length === 2
-              ? 'grid-cols-1 md:grid-cols-2 max-w-3xl mx-auto'
-              : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+              ? 'grid-cols-1 tablet:grid-cols-2 max-w-3xl mx-auto'
+              : 'grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3'
           }`}
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -296,27 +296,27 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 </motion.div>
 
                 {/* Plan Name */}
-                <h3 className="text-lg sm:text-xl font-bold mb-3 text-white relative z-10">{plan.name}</h3>
+                <h3 className="text-lg tablet:text-xl font-bold mb-3 text-white relative z-10">{plan.name}</h3>
 
                 {/* Plan Description */}
-                <p className="text-white/80 mb-4 text-xs sm:text-sm leading-relaxed relative z-10">
+                <p className="text-white/80 mb-4 text-xs tablet:text-sm leading-relaxed relative z-10">
                   {plan.description}
                 </p>
 
                 {/* Pricing */}
                 <div className="mb-6 relative z-10">
                   {plan.key === 'free' ? (
-                    <div className="text-2xl sm:text-3xl font-bold text-white">Free</div>
+                    <div className="text-2xl tablet:text-3xl font-bold text-white">Free</div>
                   ) : (
                     <div>
                       {hasPromo ? (
                         <div>
                           <div className="flex flex-col gap-1">
                             <div className="flex items-baseline gap-2 flex-wrap">
-                              <span className="text-2xl sm:text-3xl font-bold text-white">
+                              <span className="text-2xl tablet:text-3xl font-bold text-white">
                                 {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
                               </span>
-                              <span className="text-base sm:text-lg text-white/50 line-through">
+                              <span className="text-base tablet:text-lg text-white/50 line-through">
                                 {currencySymbol}{plan.price_one_time || plan.price_monthly}
                               </span>
                             </div>
@@ -326,13 +326,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                               </div>
                             )}
                           </div>
-                          <div className="text-xs sm:text-sm text-lime-400 font-medium mt-1">
+                          <div className="text-xs tablet:text-sm text-lime-400 font-medium mt-1">
                             {plan.promotionDescription || 'Limited Time Offer!'}
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div className="text-2xl sm:text-3xl font-bold text-white">
+                          <div className="text-2xl tablet:text-3xl font-bold text-white">
                             {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
                           </div>
                           {monthlyEquivalent.showMonthly && (
@@ -342,7 +342,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                           )}
                         </div>
                       )}
-                      <div className="text-white/60 text-xs sm:text-sm mt-1">
+                      <div className="text-white/60 text-xs tablet:text-sm mt-1">
                         {plan.key === 'day_pass' 
                           ? 'one-time' 
                           : monthlyEquivalent.showMonthly 
@@ -365,7 +365,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                       >
                         <Check size={18} className="text-lime-400 flex-shrink-0 mt-0.5" />
                       </motion.div>
-                      <span className="text-white/80 text-sm sm:text-base leading-relaxed">{feature}</span>
+                      <span className="text-white/80 text-sm tablet:text-base leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>

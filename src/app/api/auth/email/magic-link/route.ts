@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
               }
             }
             
-            @media only screen and (max-width: 480px) {
+            @media only screen and (max-width: 767px) {
               .container {
                 padding: 20px;
               }

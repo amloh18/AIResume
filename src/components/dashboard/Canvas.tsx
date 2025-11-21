@@ -1,19 +1,20 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+// Force HMR update
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { safeJsonParse } from '@/lib/utils/safeJsonParse';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
-import { 
-  FileText, 
+import {
+  FileText,
   Plus,
-  Edit, 
-  Copy, 
-  Download, 
-  Share2, 
-  Trash2, 
+  Edit,
+  Copy,
+  Download,
+  Share2,
+  Trash2,
   Eye,
   Star,
   Calendar,
@@ -56,12 +57,13 @@ import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import MasterCVCardOverlay from './MasterCVCardOverlay';
 import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
-import JobModal from './JobModal';
+import JobSidebar from './jobs/JobSidebar';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { filterMasterCVs, filterRegularCVs } from '@/lib/utils/cvFilterUtils';
+import CareerReportSidebar from './CareerReportSidebar';
 
 interface CV {
   id: string;
@@ -139,15 +141,15 @@ interface ModalProps {
   cancelText?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  title, 
-  message, 
-  type, 
-  onConfirm, 
-  confirmText = 'Confirm', 
-  cancelText = 'Cancel' 
+const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  message,
+  type,
+  onConfirm,
+  confirmText = 'Confirm',
+  cancelText = 'Cancel'
 }) => {
   if (!isOpen) return null;
 
@@ -188,7 +190,7 @@ const Modal: React.FC<ModalProps> = ({
           className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           onClick={onClose}
         />
-        
+
         {/* Modal */}
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -202,15 +204,15 @@ const Modal: React.FC<ModalProps> = ({
             <h3 className="text-lg font-semibold text-white">{title}</h3>
             <button
               onClick={onClose}
-                className="ml-auto p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
+              className="ml-auto p-1 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-white/60" />
             </button>
           </div>
-          
+
           {/* Content */}
           <p className="text-white/80 mb-6">{message}</p>
-          
+
           {/* Actions */}
           <div className="flex gap-3 justify-end">
             {type === 'confirmation' && (
@@ -246,12 +248,12 @@ interface CleanUnlinkedButtonProps {
   className?: string;
 }
 
-const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({ 
-  type, 
-  items, 
+const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
+  type,
+  items,
   journeys,
-  onClean, 
-  className = '' 
+  onClean,
+  className = ''
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [unlinkedItems, setUnlinkedItems] = useState<any[]>([]);
@@ -259,7 +261,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
   const checkUnlinkedItems = () => {
     // Get all CV/cover letter IDs that are linked to journeys
     const linkedItemIds = new Set<string>();
-    
+
     journeys.forEach(journey => {
       if (type === 'cv' && journey.cvId) {
         linkedItemIds.add(String(journey.cvId));
@@ -274,7 +276,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
       if (type === 'cv' && item.isMaster) {
         return false;
       }
-      
+
       // Check if item is linked to any journey
       // Convert item.id or item._id to string for comparison
       const itemId = item.id || item._id;
@@ -284,7 +286,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
       }
       return !linkedItemIds.has(String(itemId));
     });
-    
+
     setUnlinkedItems(unlinked);
     setShowModal(true);
   };
@@ -335,7 +337,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
                 <p className="text-gray-600 dark:text-gray-300 mb-4">
                   This will permanently delete {unlinkedItems.length} {type === 'cv' ? 'CVs' : 'cover letters'} that are not linked to any application journeys.
                 </p>
-                
+
                 {unlinkedItems.length > 0 && (
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 max-h-32 overflow-y-auto">
                     <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
@@ -386,6 +388,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
 const Canvas: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
@@ -393,21 +396,25 @@ const Canvas: React.FC = () => {
   const [masterCVs, setMasterCVs] = useState<CV[]>([]);
   const [journeys, setJourneys] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // CRITICAL: Define loading state early, before functions that use it
-  
+
   // Track if CVs have been loaded to prevent re-fetching on tab switch
   const hasLoadedCVsRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
-  
-  // JobModal state
+
+  // JobSidebar state (for viewing job details and journeys)
   const [showJourneyModal, setShowJourneyModal] = useState(false);
   const [selectedJobForJourney, setSelectedJobForJourney] = useState<any>(null);
   const [journeysForSelectedJob, setJourneysForSelectedJob] = useState<any[]>([]);
-  
+
   // Search and sort state
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'lastModified' | 'title' | 'status'>('lastModified');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  
+
+  // Career Report Sidebar state
+  const [showCareerReportSidebar, setShowCareerReportSidebar] = useState(false);
+  const [selectedCVForReport, setSelectedCVForReport] = useState<CV | null>(null);
+
   // CVs state monitoring
   useEffect(() => {
     // CVs loaded successfully
@@ -450,93 +457,93 @@ const Canvas: React.FC = () => {
   const calculatePersonalInfoScore = (basics: any): number => {
     let score = 0;
     let maxScore = 5;
-    
+
     if (basics.name && basics.name.trim()) score += 1;
     if (basics.email && basics.email.trim()) score += 1;
     if (basics.phone && basics.phone.trim()) score += 1;
     if (basics.location && (basics.location.city || basics.location.address)) score += 1;
     if (basics.summary && basics.summary.trim()) score += 1;
-    
+
     return (score / maxScore) * 100;
   };
-  
+
   const calculateExperienceScore = (work: any[]): number => {
     if (!Array.isArray(work) || work.length === 0) return 0;
-    
+
     let totalScore = 0;
     const maxEntries = 3; // Consider up to 3 most recent experiences
-    
+
     work.slice(0, maxEntries).forEach(entry => {
       let entryScore = 0;
       let maxEntryScore = 4;
-      
+
       if (entry.name && entry.name.trim()) entryScore += 1;
       if (entry.position && entry.position.trim()) entryScore += 1;
       if (entry.startDate && entry.startDate.trim()) entryScore += 1;
       if (entry.summary && entry.summary.trim()) entryScore += 1;
-      
+
       totalScore += (entryScore / maxEntryScore) * 100;
     });
-    
+
     return Math.min(100, totalScore / Math.min(work.length, maxEntries));
   };
-  
+
   const calculateEducationScore = (education: any[]): number => {
     if (!Array.isArray(education) || education.length === 0) return 0;
-    
+
     let totalScore = 0;
     const maxEntries = 2; // Consider up to 2 most recent education entries
-    
+
     education.slice(0, maxEntries).forEach(entry => {
       let entryScore = 0;
       let maxEntryScore = 3;
-      
+
       if (entry.institution && entry.institution.trim()) entryScore += 1;
       if (entry.area && entry.area.trim()) entryScore += 1;
       if (entry.startDate && entry.startDate.trim()) entryScore += 1;
-      
+
       totalScore += (entryScore / maxEntryScore) * 100;
     });
-    
+
     return Math.min(100, totalScore / Math.min(education.length, maxEntries));
   };
-  
+
   const calculateSkillsScore = (skills: any[]): number => {
     if (!Array.isArray(skills) || skills.length === 0) return 0;
     return Math.min(100, (skills.length / 10) * 100); // 10 skills = 100%
   };
-  
+
   const calculateProjectsScore = (projects: any[]): number => {
     if (!Array.isArray(projects) || projects.length === 0) return 0;
-    
+
     let totalScore = 0;
     const maxEntries = 2; // Consider up to 2 most recent projects
-    
+
     projects.slice(0, maxEntries).forEach(project => {
       let projectScore = 0;
       let maxProjectScore = 3;
-      
+
       if (project.name && project.name.trim()) projectScore += 1;
       if (project.description && project.description.trim()) projectScore += 1;
       if (project.url && project.url.trim()) projectScore += 1;
-      
+
       totalScore += (projectScore / maxProjectScore) * 100;
     });
-    
+
     return Math.min(100, totalScore / Math.min(projects.length, maxEntries));
   };
 
   const calculateCompletionPercentage = (cv: any): number => {
     // If CV is published, it's considered complete
     if (cv.status === 'published') return 100;
-    
+
     // If CV is archived, return 0
     if (cv.status === 'archived') return 0;
-    
+
     // Calculate completion based on CV sections
     let totalScore = 0;
     let maxScore = 0;
-    
+
     // Section weights (total = 100)
     const sectionWeights = {
       personalInfo: 25,    // Name, email, phone, location, summary
@@ -545,7 +552,7 @@ const Canvas: React.FC = () => {
       skills: 15,          // Skills and competencies
       projects: 10         // Projects and achievements
     };
-    
+
     // Check personal info section
     if (cv.cvData?.basics) {
       const basics = cv.cvData.basics;
@@ -553,38 +560,38 @@ const Canvas: React.FC = () => {
       totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
     }
     maxScore += sectionWeights.personalInfo;
-    
+
     // Check experience section
     if (cv.cvData?.work) {
       const experienceScore = calculateExperienceScore(cv.cvData.work);
       totalScore += (experienceScore * sectionWeights.experience) / 100;
     }
     maxScore += sectionWeights.experience;
-    
+
     // Check education section
     if (cv.cvData?.education) {
       const educationScore = calculateEducationScore(cv.cvData.education);
       totalScore += (educationScore * sectionWeights.education) / 100;
     }
     maxScore += sectionWeights.education;
-    
+
     // Check skills section
     if (cv.cvData?.skills) {
       const skillsScore = calculateSkillsScore(cv.cvData.skills);
       totalScore += (skillsScore * sectionWeights.skills) / 100;
     }
     maxScore += sectionWeights.skills;
-    
+
     // Check projects section
     if (cv.cvData?.projects) {
       const projectsScore = calculateProjectsScore(cv.cvData.projects);
       totalScore += (projectsScore * sectionWeights.projects) / 100;
     }
     maxScore += sectionWeights.projects;
-    
+
     // Calculate final percentage
     const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-    
+
     // Ensure percentage is between 0 and 100
     return Math.max(0, Math.min(100, completionPercentage));
   };
@@ -594,7 +601,7 @@ const Canvas: React.FC = () => {
   const loadAllCVData = useCallback(async (userId?: string) => {
     try {
       const userIdToUse = userId || getUserIdForAPI(user);
-      
+
       if (!userIdToUse) {
         setCvs([]);
         setMasterCVs([]);
@@ -612,13 +619,13 @@ const Canvas: React.FC = () => {
       lastUserIdRef.current = userIdToUse;
 
       setLoading(true);
-      
+
       // Load CVs and cover letters in parallel for better performance
       const [cvsResult, coverLettersResponse] = await Promise.allSettled([
         UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' }),
         authenticatedFetch(`/api/cover-letters?userId=${userIdToUse}`)
       ]);
-      
+
       // Process CVs
       if (cvsResult.status === 'fulfilled' && cvsResult.value && Array.isArray(cvsResult.value) && cvsResult.value.length > 0) {
         // Process CVs with unified data structure
@@ -642,23 +649,23 @@ const Canvas: React.FC = () => {
             completionPercentage: calculateCompletionPercentage(cv),
             // Include master flag - Master CV: isMaster: true OR createdVia: 'ai-career-report'
             // Regular CV: isMaster: false (and if createdVia: 'journey', it's definitely a regular CV)
-            isMaster: cv.metadata?.isMaster === true || 
-                     cv.metadata?.isMaster === 'true' || 
-                     cv.isMaster === true || 
-                     cv.metadata?.createdVia === 'ai-career-report',
+            isMaster: cv.metadata?.isMaster === true ||
+              cv.metadata?.isMaster === 'true' ||
+              cv.isMaster === true ||
+              cv.metadata?.createdVia === 'ai-career-report',
             atsScore: cv.metadata?.atsScore, // Include ATS score
             metadata: cv.metadata // Include full metadata
           } as CV;
         });
-        
+
         // Use utility functions to filter Master CVs and regular CVs
         const masterCVs = filterMasterCVs(enrichedCVs);
         const regularCVs = filterRegularCVs(enrichedCVs);
-        
+
         // Store both Master CVs and regular CVs
         setCvs(regularCVs);
         setMasterCVs(masterCVs);
-        
+
         // Performance optimization: Load journeys in batch for all CVs
         // This eliminates N+1 query problem (one API call instead of N calls)
         if (regularCVs.length > 0 || masterCVs.length > 0) {
@@ -680,17 +687,17 @@ const Canvas: React.FC = () => {
         setCvs([]);
         setMasterCVs([]);
       }
-      
+
       // Process Cover Letters
       if (coverLettersResponse.status === 'fulfilled' && coverLettersResponse.value) {
         try {
           const result = await coverLettersResponse.value.json();
-          
+
           if (result.success && result.data?.coverLetters) {
-            const coverLettersArray = Array.isArray(result.data.coverLetters) 
-              ? result.data.coverLetters 
+            const coverLettersArray = Array.isArray(result.data.coverLetters)
+              ? result.data.coverLetters
               : [];
-            
+
             const enrichedCoverLetters = coverLettersArray.map((cl: any) => {
               const rawDate = new Date(cl.metadata?.lastModified || cl.updatedAt || cl.createdAt);
               return {
@@ -708,7 +715,7 @@ const Canvas: React.FC = () => {
                 completionPercentage: cl.completionPercentage || 0
               };
             });
-            
+
             setCoverLetters(enrichedCoverLetters);
           } else {
             setCoverLetters([]);
@@ -733,7 +740,7 @@ const Canvas: React.FC = () => {
 
   // Available Jobs state
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
-  
+
   // Load Available Jobs function
   const fetchAvailableJobs = useCallback(async () => {
     try {
@@ -744,7 +751,7 @@ const Canvas: React.FC = () => {
 
       const response = await authenticatedFetch(`/api/jobs?userId=${userId}`);
       const result = await response.json();
-      
+
       if (result.success && result.data?.jobs) {
         setAvailableJobs(result.data.jobs);
       } else {
@@ -779,7 +786,7 @@ const Canvas: React.FC = () => {
     setIsDownloading(true);
     try {
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
-      
+
       if (selectedCVForDownload) {
         // CV download
         if (documentType === 'cv') {
@@ -855,7 +862,7 @@ const Canvas: React.FC = () => {
           }
         }
       }
-      
+
       setDownloadModalOpen(false);
     } catch (error) {
       console.error('Download error:', error);
@@ -879,10 +886,10 @@ const Canvas: React.FC = () => {
   const handleDeleteCV = async (cv: CV) => {
     // Store original state for rollback
     const originalCvs = [...cvs];
-    
+
     // Optimistic update: Remove from UI immediately
     setCvs(cvs.filter(c => c.id !== cv.id));
-    
+
     try {
       await deleteCV(cv.id);
     } catch (error) {
@@ -900,14 +907,14 @@ const Canvas: React.FC = () => {
         console.error('User not authenticated');
         return;
       }
-      
+
       // Fetch the job details for the journey using authenticatedFetch
       const jobResponse = await authenticatedFetch(`/api/jobs/${journey.jobId}`);
       if (jobResponse.ok) {
         const jobResult = await jobResponse.json();
         if (jobResult.success) {
           setSelectedJobForJourney(jobResult.data);
-          
+
           // Fetch journeys for this job using authenticatedFetch
           const journeysResponse = await authenticatedFetch(`/api/application-journey?jobId=${journey.jobId}`);
           if (journeysResponse.ok) {
@@ -916,7 +923,7 @@ const Canvas: React.FC = () => {
               setJourneysForSelectedJob(journeysResult.data.journeys || []);
             }
           }
-          
+
           setShowJourneyModal(true);
         } else {
           console.error('Failed to load job details:', jobResult.error);
@@ -934,7 +941,7 @@ const Canvas: React.FC = () => {
   const [editingCVId, setEditingCVId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [deletingCVId, setDeletingCVId] = useState<string | null>(null);
-  
+
   // Cover Letter editing states
   const [editingCoverLetterId, setEditingCoverLetterId] = useState<string | null>(null);
   const [editingCoverLetterTitle, setEditingCoverLetterTitle] = useState('');
@@ -942,7 +949,7 @@ const Canvas: React.FC = () => {
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   // availableJobs is already defined above (line 850) before fetchAvailableJobs
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
-  
+
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -979,7 +986,7 @@ const Canvas: React.FC = () => {
     if (fromOnboarding) {
       sessionStorage.removeItem('fromOnboarding'); // Clear the flag
     }
-    
+
     // Use unified authentication
     const userId = getUserIdForAPI(user);
     if (!userId) {
@@ -1000,14 +1007,14 @@ const Canvas: React.FC = () => {
     // Load data for this user with error handling
     // Use Promise.allSettled to prevent one failure from blocking others
     let isMounted = true;
-    
+
     const loadData = async () => {
       try {
         // Load CVs, journeys, and cover letters together (unified function)
         await loadAllCVData(userId).catch(err => {
           console.error('Error loading document data:', err);
         });
-        
+
         // Load jobs in parallel
         if (isMounted) {
           await fetchAvailableJobs().catch(err => {
@@ -1023,12 +1030,80 @@ const Canvas: React.FC = () => {
     };
 
     loadData();
-    
+
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted = false;
     };
   }, [user?.id, loadAllCVData, fetchAvailableJobs]);
+
+  // Handle URL parameters to open report sidebar for master CV
+  useEffect(() => {
+    const openReport = searchParams.get('openReport');
+    const cvId = searchParams.get('cvId');
+
+    // Only proceed if openReport is true and CVs have been loaded
+    if (openReport === 'true' && (masterCVs.length > 0 || cvs.length > 0) && !loading) {
+      let targetCV: CV | null = null;
+
+      // If cvId is specified, find that CV
+      if (cvId) {
+        targetCV = [...masterCVs, ...cvs].find(cv => cv.id === cvId) || null;
+      } else {
+        // Otherwise, use the master CV
+        targetCV = masterCVs.length > 0 ? masterCVs[0] : null;
+      }
+
+      if (targetCV) {
+        // Open the report sidebar for the target CV
+        // Use the handleViewCareerReport function logic directly here to avoid dependency issues
+        const openReportForCV = async (cv: CV) => {
+          try {
+            console.log('🔍 Canvas - Opening career report for CV from URL param:', cv.id, cv.title);
+
+            // Fetch full CV data with metadata first (before opening sidebar)
+            const cvResponse = await fetch(`/api/cvs/${cv.id}`);
+            const cvResult = await cvResponse.json();
+
+            if (cvResult.success && cvResult.data?.cv) {
+              const fullCV: CV = {
+                ...cv,
+                ...cvResult.data.cv,
+                metadata: {
+                  ...cv.metadata,
+                  ...cvResult.data.cv.metadata,
+                  // Ensure aiAnalysis is included
+                  aiAnalysis: cvResult.data.cv.metadata?.aiAnalysis || cv.metadata?.aiAnalysis
+                },
+                cvData: cvResult.data.cv.cvData || cv.cvData
+              };
+
+              // Set CV and open sidebar with complete data
+              setSelectedCVForReport(fullCV);
+              setShowCareerReportSidebar(true);
+            } else {
+              // Use basic CV data and open sidebar
+              setSelectedCVForReport(cv);
+              setShowCareerReportSidebar(true);
+            }
+          } catch (error) {
+            console.error('❌ Canvas - Error loading CV for report:', error);
+            // Use basic CV data and open sidebar (FullCareerReport will try to fetch)
+            setSelectedCVForReport(cv);
+            setShowCareerReportSidebar(true);
+          }
+        };
+
+        openReportForCV(targetCV);
+
+        // Clean up URL parameters
+        const url = new URL(window.location.href);
+        url.searchParams.delete('openReport');
+        url.searchParams.delete('cvId');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  }, [searchParams, masterCVs, cvs, loading]);
 
   // Handle CV creation (moved after load functions to avoid initialization issues)
   const handleCreateCV = async () => {
@@ -1055,7 +1130,7 @@ const Canvas: React.FC = () => {
 
   const handleDuplicateMasterCV = async (masterCV: any) => {
     try {
-      
+
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
         // Removed notification:'error', 'User not authenticated');
@@ -1071,10 +1146,10 @@ const Canvas: React.FC = () => {
 
       if (duplicateResult.success && duplicateResult.data?.cvId) {
         const duplicatedCVId = duplicateResult.data.cvId;
-        
+
         // Navigate to studio with duplicated CV (standalone mode, ready for job linking)
         router.push(`/studio?cvId=${duplicatedCVId}`);
-        
+
         // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
       } else {
         throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
@@ -1087,7 +1162,7 @@ const Canvas: React.FC = () => {
   // CV Card handlers (moved after load functions and wrapped in useCallback to ensure loadCVs is available)
   const handleDuplicateCV = useCallback(async (cv: CV) => {
     try {
-      
+
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
         // Removed notification:'error', 'User not authenticated');
@@ -1105,7 +1180,7 @@ const Canvas: React.FC = () => {
         // Refresh CVs list to show the new freestanding duplicate
         loadAllCVData();
         // Removed notification:'success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
-        
+
         // If the source CV was linked to a journey, inform user about the duplication principle
         if (cv.journeyId) {
           // Removed notification:'info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
@@ -1130,12 +1205,12 @@ const Canvas: React.FC = () => {
     const originalCvs = [...cvs];
     const cv = cvs.find(c => c.id === id);
     const newStarredState = !cv?.isStarred;
-    
+
     // Optimistic update: Update UI immediately
-    setCvs(cvs.map(cv => 
+    setCvs(cvs.map(cv =>
       cv.id === id ? { ...cv, isStarred: newStarredState } : cv
     ));
-    
+
     try {
       // Execute the actual API call
       const response = await authenticatedFetch(`/api/cvs/${id}/star`, {
@@ -1143,7 +1218,7 @@ const Canvas: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isStarred: newStarredState })
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to update star status');
       }
@@ -1187,7 +1262,7 @@ const Canvas: React.FC = () => {
     try {
       // Find the journey associated with this CV
       const associatedJourney = journeys.find(journey => journey.cvId === cv.id);
-      
+
       if (associatedJourney && associatedJourney.journeyId) {
         // Navigate directly to studio in journey mode (new architecture)
         router.push(`/studio?journeyId=${associatedJourney.journeyId}&documentType=cv&mode=cvedit`);
@@ -1200,6 +1275,52 @@ const Canvas: React.FC = () => {
       // Fallback: navigate to standalone mode
       router.push(`/studio?cvId=${cv.id}`);
     }
+  };
+
+  const handleViewCareerReport = async (cv: CV) => {
+    try {
+      console.log('🔍 Canvas - Opening career report for CV:', cv.id, cv.title);
+
+      // Fetch full CV data with metadata first (before opening sidebar)
+      const cvResponse = await fetch(`/api/cvs/${cv.id}`);
+      const cvResult = await cvResponse.json();
+
+      if (cvResult.success && cvResult.data?.cv) {
+        const fullCV: CV = {
+          ...cv,
+          ...cvResult.data.cv,
+          metadata: {
+            ...cv.metadata,
+            ...cvResult.data.cv.metadata,
+            // Ensure aiAnalysis is included
+            aiAnalysis: cvResult.data.cv.metadata?.aiAnalysis || cv.metadata?.aiAnalysis
+          },
+          cvData: cvResult.data.cv.cvData || cv.cvData
+        };
+        console.log('✅ Canvas - CV data loaded successfully with metadata:', {
+          id: fullCV.id,
+          hasAiAnalysis: !!fullCV.metadata?.aiAnalysis
+        });
+
+        // Set CV and open sidebar with complete data
+        setSelectedCVForReport(fullCV);
+        setShowCareerReportSidebar(true);
+      } else {
+        console.warn('⚠️ Canvas - CV fetch returned no data, using basic CV');
+        // Use basic CV data and open sidebar
+        setSelectedCVForReport(cv);
+        setShowCareerReportSidebar(true);
+      }
+    } catch (error) {
+      console.error('❌ Canvas - Error loading CV for report:', error);
+      // Use basic CV data and open sidebar (FullCareerReport will try to fetch)
+      setSelectedCVForReport(cv);
+      setShowCareerReportSidebar(true);
+    }
+  };
+
+  const handleCVSelectForReport = async (cv: CV) => {
+    await handleViewCareerReport(cv);
   };
 
   const startEditing = (cv: CV) => {
@@ -1224,7 +1345,7 @@ const Canvas: React.FC = () => {
           }
         }
       }
-      
+
       if (!userId) {
         console.error('No user ID available for title update');
         showModalDialog({
@@ -1246,7 +1367,7 @@ const Canvas: React.FC = () => {
 
       if (response.ok) {
         // Update local state only after successful API call
-        setCvs(cvs.map(cv => 
+        setCvs(cvs.map(cv =>
           cv.id === cvId ? { ...cv, title: editingTitle } : cv
         ));
         setEditingCVId(null);
@@ -1298,7 +1419,7 @@ const Canvas: React.FC = () => {
           }
         }
       }
-      
+
       if (!userId) {
         console.error('No user ID available for title update');
         // Removed notification:'error', 'Please log in again to continue.');
@@ -1316,7 +1437,7 @@ const Canvas: React.FC = () => {
 
       if (response.ok) {
         // Update local state only after successful API call
-        setCoverLetters(coverLetters.map(cl => 
+        setCoverLetters(coverLetters.map(cl =>
           cl.id === coverLetterId ? { ...cl, title: editingCoverLetterTitle } : cl
         ));
         setEditingCoverLetterId(null);
@@ -1342,10 +1463,10 @@ const Canvas: React.FC = () => {
   const handleDeleteCoverLetter = async (coverLetter: CoverLetter) => {
     // Store original state for rollback
     const originalCoverLetters = [...coverLetters];
-    
+
     // Optimistic update: Remove from UI immediately
     setCoverLetters(coverLetters.filter(cl => cl.id !== coverLetter.id));
-    
+
     try {
       const userId = getUserIdForAPI(user);
       if (!userId) {
@@ -1359,12 +1480,12 @@ const Canvas: React.FC = () => {
       if (!response.ok) {
         throw new Error('Failed to delete cover letter');
       }
-      
-        const result = await response.json().catch(() => ({}));
+
+      const result = await response.json().catch(() => ({}));
       if (!result.success) {
         throw new Error(result.error || 'Unknown error');
-        }
-      
+      }
+
       console.log(`Successfully deleted cover letter: ${coverLetter.title}`);
     } catch (error) {
       // Rollback on error
@@ -1405,7 +1526,7 @@ const Canvas: React.FC = () => {
         // Ensure we have a valid ID - check both id and _id fields
         const cvId = cv.id || cv._id;
         const cvTitle = cv.title || cv.name || 'Unknown CV';
-        
+
         try {
           if (!cvId) {
             console.error(`CV missing ID: ${cvTitle}`, {
@@ -1471,7 +1592,7 @@ const Canvas: React.FC = () => {
 
       // Refresh CVs list
       await loadAllCVData(userId);
-      
+
       if (deletedCount > 0) {
         console.log(`✅ Successfully deleted ${deletedCount} unlinked CV(s)`);
       }
@@ -1509,11 +1630,11 @@ const Canvas: React.FC = () => {
       // Delete each unlinked cover letter
       for (const coverLetter of unlinkedCoverLetters) {
         // Ensure we have a valid ID - check both id and _id fields (declared outside try for catch block access)
-          const coverLetterId = coverLetter.id || coverLetter._id;
-          const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
-        
+        const coverLetterId = coverLetter.id || coverLetter._id;
+        const coverLetterTitle = coverLetter.title || coverLetter.name || 'Unknown Cover Letter';
+
         try {
-          
+
           if (!coverLetterId) {
             console.error(`Cover letter missing ID: ${coverLetterTitle}`, {
               hasTitle: !!coverLetter.title,
@@ -1607,7 +1728,7 @@ const Canvas: React.FC = () => {
 
       // Refresh cover letters list
       await loadAllCVData();
-      
+
       if (deletedCount > 0) {
         console.log(`Successfully deleted ${deletedCount} unlinked cover letter(s)`);
       }
@@ -1623,16 +1744,16 @@ const Canvas: React.FC = () => {
   const toggleCoverLetterStar = async (coverLetterId: string) => {
     // Store original state for rollback
     const originalCoverLetters = [...coverLetters];
-      const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
-      if (!coverLetter) return;
+    const coverLetter = coverLetters.find(cl => cl.id === coverLetterId);
+    if (!coverLetter) return;
 
     const newStarredState = !coverLetter.isStarred;
-    
+
     // Optimistic update: Update UI immediately
-    setCoverLetters(coverLetters.map(cl => 
+    setCoverLetters(coverLetters.map(cl =>
       cl.id === coverLetterId ? { ...cl, isStarred: newStarredState } : cl
     ));
-    
+
     try {
       const response = await authenticatedFetch(`/api/cover-letters/${coverLetterId}`, {
         method: 'PUT',
@@ -1656,12 +1777,12 @@ const Canvas: React.FC = () => {
   const deleteCV = async (cvId: string) => {
     try {
       setDeletingCVId(cvId);
-      
+
       // Get user ID from unified authentication
       let userId = getUserIdForAPI(user);
       console.log('🔍 Delete - User ID:', getUserIdForAPI(user));
       console.log('🔍 Delete - User data:', user);
-      
+
       if (!userId) {
         const userData = localStorage.getItem('user');
         console.log('🔍 Delete - localStorage user data:', userData);
@@ -1677,7 +1798,7 @@ const Canvas: React.FC = () => {
           }
         }
       }
-      
+
       if (!userId) {
         console.error('No user ID available for delete operation');
         console.error('User:', user);
@@ -1689,9 +1810,9 @@ const Canvas: React.FC = () => {
         });
         return;
       }
-      
+
       console.log('Deleting CV:', cvId, 'Type:', typeof cvId, 'for user:', userId);
-      
+
       // Check if this is a mock CV (for demo purposes)
       const mockCVIds = ['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012', '507f1f77bcf86cd799439013'];
       if (mockCVIds.includes(cvId)) {
@@ -1699,7 +1820,7 @@ const Canvas: React.FC = () => {
         setCvs(cvs.filter(cv => cv.id !== cvId));
         return;
       }
-      
+
       // Check if CV ID is a valid ObjectId format
       const objectIdRegex = /^[0-9a-fA-F]{24}$/;
       if (!objectIdRegex.test(cvId)) {
@@ -1711,16 +1832,16 @@ const Canvas: React.FC = () => {
         });
         return;
       }
-      
+
       console.log('Making DELETE request to:', `/api/cvs/${cvId}?userId=${userId}`);
-      
+
       const response = await authenticatedFetch(`/api/cvs/${cvId}?userId=${userId}`, {
         method: 'DELETE',
       });
-      
+
       console.log('Delete response status:', response.status);
       console.log('Delete response headers:', Object.fromEntries(response.headers.entries()));
-      
+
       // Check if response is JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
@@ -1728,10 +1849,10 @@ const Canvas: React.FC = () => {
         console.error('Non-JSON response received:', textResponse.substring(0, 500));
         throw new Error(`Server returned non-JSON response: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log('Delete response:', result);
-      
+
       if (result.success) {
         // Remove the CV from the local state
         setCvs(cvs.filter(cv => cv.id !== cvId));
@@ -1797,16 +1918,16 @@ const Canvas: React.FC = () => {
     if (percentage >= 40) return 'from-orange-400 to-orange-500';
     return 'from-red-400 to-red-500';
   };
-  
+
   const getCompletionFeedback = (cv: any): string[] => {
     const feedback: string[] = [];
-    
+
     // Check personal info
     if (!cv.cvData?.basics?.name?.trim()) feedback.push('Add your full name');
     if (!cv.cvData?.basics?.email?.trim()) feedback.push('Add your email address');
     if (!cv.cvData?.basics?.phone?.trim()) feedback.push('Add your phone number');
     if (!cv.cvData?.basics?.summary?.trim()) feedback.push('Add a professional summary');
-    
+
     // Check experience
     if (!cv.cvData?.work || cv.cvData.work.length === 0) {
       feedback.push('Add work experience');
@@ -1815,25 +1936,25 @@ const Canvas: React.FC = () => {
       if (!work.position?.trim()) feedback.push('Add job titles to experience');
       if (!work.summary?.trim()) feedback.push('Add descriptions to work experience');
     }
-    
+
     // Check education
     if (!cv.cvData?.education || cv.cvData.education.length === 0) {
       feedback.push('Add education history');
     }
-    
+
     // Check skills
     if (!cv.cvData?.skills || cv.cvData.skills.length === 0) {
       feedback.push('Add skills and competencies');
     }
-    
+
     // Check projects
     if (!cv.cvData?.projects || cv.cvData.projects.length === 0) {
       feedback.push('Add projects or achievements');
     }
-    
+
     return feedback.slice(0, 3); // Return top 3 suggestions
   };
-  
+
   const getSectionCompletion = (cv: any) => {
     const sections = {
       personalInfo: {
@@ -1862,7 +1983,7 @@ const Canvas: React.FC = () => {
         icon: '🚀'
       }
     };
-    
+
     return sections;
   };
 
@@ -1874,12 +1995,12 @@ const Canvas: React.FC = () => {
       sortBy,
       cvs: cvs.map(cv => ({ id: cv.id, title: cv.title }))
     });
-    
+
     let filtered = cvs.filter(cv => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return cv.title.toLowerCase().includes(query) || 
-               (cv.description && cv.description.toLowerCase().includes(query));
+        return cv.title.toLowerCase().includes(query) ||
+          (cv.description && cv.description.toLowerCase().includes(query));
       }
       return true;
     });
@@ -1895,13 +2016,13 @@ const Canvas: React.FC = () => {
           return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
       }
     });
-    
+
     console.log('🔍 Canvas - filteredAndSortedCVs result:', {
       filteredLength: filtered.length,
       sortedLength: sorted.length,
       sorted: sorted.map(cv => ({ id: cv.id, title: cv.title }))
     });
-    
+
     return sorted;
   }, [cvs, searchQuery, sortBy]);
 
@@ -1910,8 +2031,8 @@ const Canvas: React.FC = () => {
     let filtered = coverLetters.filter(cl => {
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
-        return cl.title.toLowerCase().includes(query) || 
-               (cl.description && cl.description.toLowerCase().includes(query));
+        return cl.title.toLowerCase().includes(query) ||
+          (cl.description && cl.description.toLowerCase().includes(query));
       }
       return true;
     });
@@ -1937,7 +2058,7 @@ const Canvas: React.FC = () => {
       {/* Page Header - Always show immediately */}
       <PageHeader
         title="CV Studio"
-        description="Create, edit, and manage professional CVs"
+        description="Saved CVs/ Cover Letter and Career Reports"
         user={{
           name: getUserDisplayName(userData),
           email: getUserEmail(userData),
@@ -1958,29 +2079,39 @@ const Canvas: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setActiveTab('cv')}
-                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${
-                  activeTab === 'cv'
+                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'cv'
                     ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
                     : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 CVs
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === 'cv'
+                    ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  }`}>
+                  {cvs.length}
+                </span>
               </button>
               <button
                 onClick={() => setActiveTab('coverLetter')}
-                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${
-                  activeTab === 'coverLetter'
+                className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'coverLetter'
                     ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
                     : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 <PenTool className="h-4 w-4 mr-2" />
                 Cover Letters
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === 'coverLetter'
+                    ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  }`}>
+                  {coverLetters.length}
+                </span>
               </button>
             </div>
           </div>
-          </div>
+        </div>
 
         {/* Right Side - Sort and Clean Unlinked Buttons */}
         <div className="flex items-center gap-2">
@@ -1992,12 +2123,12 @@ const Canvas: React.FC = () => {
             >
               <SortAsc className="h-4 w-4" />
               <span className="hidden sm:inline">
-                {sortBy === 'lastModified' ? 'Last Modified' : 
-                 sortBy === 'title' ? 'Title' : 
-                 sortBy === 'status' ? 'Status' : 'Sort By'}
+                {sortBy === 'lastModified' ? 'Last Modified' :
+                  sortBy === 'title' ? 'Title' :
+                    sortBy === 'status' ? 'Status' : 'Sort By'}
               </span>
             </button>
-            
+
             {/* Sort Dropdown */}
             <AnimatePresence>
               {showSortDropdown && (
@@ -2019,11 +2150,10 @@ const Canvas: React.FC = () => {
                         setSortBy(option.value as any);
                         setShowSortDropdown(false);
                       }}
-                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${
-                        sortBy === option.value
+                      className={`w-full px-4 py-2 text-left text-sm transition-colors ${sortBy === option.value
                           ? 'bg-lime-500/10 text-lime-700 dark:text-lime-300'
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
+                        }`}
                     >
                       {option.label}
                     </button>
@@ -2031,410 +2161,191 @@ const Canvas: React.FC = () => {
                 </motion.div>
               )}
             </AnimatePresence>
-        </div>
+          </div>
 
           {/* Clean Unlinked Button - Inline with sort button */}
-        {activeTab === 'cv' && (
-          <CleanUnlinkedButton
-            type="cv"
-            items={cvs}
-            journeys={journeys}
-            onClean={handleCleanUnlinkedCVs}
-            className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-          />
-        )}
-        {activeTab === 'coverLetter' && (
-          <CleanUnlinkedButton
-            type="cover-letter"
-            items={coverLetters}
-            journeys={journeys}
-            onClean={handleCleanUnlinkedCoverLetters}
-            className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
-          />
-        )}
+          {activeTab === 'cv' && (
+            <CleanUnlinkedButton
+              type="cv"
+              items={cvs}
+              journeys={journeys}
+              onClean={handleCleanUnlinkedCVs}
+              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+            />
+          )}
+          {activeTab === 'coverLetter' && (
+            <CleanUnlinkedButton
+              type="cover-letter"
+              items={coverLetters}
+              journeys={journeys}
+              onClean={handleCleanUnlinkedCoverLetters}
+              className="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30"
+            />
+          )}
         </div>
       </div>
 
       {/* Main Content Based on Active Tab */}
       {activeTab === 'cv' ? (
         /* CV Content */
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Left Column - Main Content */}
-          <div className="xl:col-span-3 space-y-6">
-
-
-      {/* CV Grid */}
-      <div className="space-y-6">
-
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-          {/* Master CV Card - Always First */}
-          <MasterCVCardOverlay
-            onEditMasterCV={handleEditMasterCV}
-            onDuplicateMasterCV={handleDuplicateMasterCV}
-            userId={getUserIdForAPI(user) || ''}
-            onToggleStar={toggleStar}
-            masterCVData={masterCVs.length > 0 ? {
-              id: masterCVs[0].id,
-              title: masterCVs[0].title,
-              lastModified: masterCVs[0].lastModified,
-              status: masterCVs[0].status,
-              isMaster: true,
-              cvData: masterCVs[0].cvData,
-              // Use templateData if available (from API summary projection), otherwise use template object
-              template: masterCVs[0].templateData || (masterCVs[0].template && typeof masterCVs[0].template === 'object' 
-                ? masterCVs[0].template 
-                : (masterCVs[0].templateId ? { 
-                    _id: masterCVs[0].templateId, 
-                    name: masterCVs[0].templateName || 'Default Template',
-                    globalStyles: {},
-                    availableSections: []
-                  } : null)),
-              templateId: masterCVs[0].templateId,
-              templateName: masterCVs[0].templateName,
-              isStarred: masterCVs[0].isStarred,
-              thumbnail: masterCVs[0].thumbnail || '',
-              metadata: masterCVs[0].metadata
-            } : null}
-          />
-
-          {loading ? (
-            // Loading skeleton
-            Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl p-6 animate-pulse border border-gray-200 dark:border-gray-700">
-                <div className="h-48 bg-gray-200 dark:bg-white/10 rounded-lg mb-4"></div>
-                <div className="h-4 bg-gray-200 dark:bg-white/10 rounded mb-2"></div>
-                <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3"></div>
-              </div>
-            ))
-          ) : (
-            // CV Cards with Overlay Design
-            filteredAndSortedCVs.length > 0 ? (
-              filteredAndSortedCVs.map((cv, index) => {
-                // Find linked journey for this CV (performance optimization - no API call per card)
-                const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
-                return (
-                  <CVCardOverlay
-                    key={cv.id || `cv-${index}`}
-                    cv={{
-                      id: cv.id,
-                      title: cv.title,
-                      lastModified: cv.lastModified,
-                      status: cv.status,
-                      views: cv.views,
-                      isStarred: cv.isStarred,
-                      thumbnail: cv.thumbnail,
-                      description: cv.description,
-                      cvData: cv.cvData,
-                      template: cv.template,
-                      completionPercentage: cv.completionPercentage,
-                      isMaster: cv.isMaster,
-                      journeyId: cv.journeyId,
-                      atsScore: cv.atsScore,
-                      metadata: cv.metadata
-                    }}
-                    linkedJourney={linkedJourney}
-                    onEdit={(cv) => { handleCVClick(cv as any); }}
-                    onDownload={(cv) => { handleDownloadCV(cv as any); }}
-                    onDelete={(cv) => { handleDeleteCV(cv as any); }}
-                    onToggleStar={toggleStar}
-                    onRename={(cvId, newTitle) => {
-                      setEditingTitle(newTitle);
-                      saveTitle(cvId);
-                    }}
-                    onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
-                    onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
-                    editingCVId={editingCVId}
-                    editingTitle={editingTitle}
-                    onStartEditing={(cv) => startEditing(cv as any)}
-                    onSaveTitle={saveTitle}
-                    onCancelEditing={cancelEditing}
-                  />
-                );
-              })
-            ) : searchQuery ? (
-              // Only show empty state if there's a search query (filtered out all results)
-              <div className="col-span-full flex flex-col items-center justify-center py-12 px-4">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
-                  <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    No CVs found.
-                  </p>
-                </div>
-              </div>
-            ) : null
-          )}
-        </div>
-        </div>
-      </div>
-
-        {/* Right Column - Sidebar */}
         <div className="space-y-6">
-          {/* KPI Metrics - 2x2 Grid */}
-          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-black" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">CV Metrics</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <motion.div
-                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-black" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">Total CVs</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.length}</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                    <Eye className="w-5 h-5 text-black" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">Views</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.reduce((sum, cv) => sum + cv.views, 0)}</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                    <Star className="w-5 h-5 text-black" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">Starred</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.isStarred).length}</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-black" />
-                  </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-400 text-xs">Published</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">{cvs.filter(cv => cv.status === 'published').length}</p>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-
-          {/* CV Tips */}
-          <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                <Lightbulb className="w-5 h-5 text-black" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 dark:text-white">CV Tips</h3>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                <p className="text-[#80FF00] text-sm font-bold mb-2">Keep it concise</p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Limit your CV to 1-2 pages for better readability</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                <p className="text-[#80FF00] text-sm font-bold mb-2">Use action verbs</p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Start bullet points with strong action verbs</p>
-              </div>
-              <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                <p className="text-[#80FF00] text-sm font-bold mb-2">Quantify achievements</p>
-                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Include specific numbers and metrics when possible</p>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-      ) : (
-        /* Cover Letter Content */
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Left Column - Main Content */}
-          <div className="xl:col-span-3 space-y-6">
 
 
-            {/* Cover Letter Grid */}
-            <div className="space-y-6">
+          {/* CV Grid */}
+          <div className="space-y-6">
 
-              {filteredAndSortedCoverLetters.length > 0 ? (
-                <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-                  {filteredAndSortedCoverLetters.map((coverLetter) => (
-                    <CoverLetterCardOverlay
-                      key={coverLetter.id}
-                      coverLetter={{
-                        id: coverLetter.id,
-                        title: coverLetter.title,
-                        lastModified: coverLetter.lastModified,
-                        status: coverLetter.status,
-                        content: coverLetter.content || '',
-                        isStarred: coverLetter.isStarred,
-                        views: coverLetter.views || 0,
-                        thumbnail: coverLetter.thumbnail || '',
-                        metadata: coverLetter.metadata
-                      }}
-                      onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}`); }}
-                      onDownload={handleDownloadCoverLetter}
-                      onDelete={handleDeleteCoverLetter}
-                      onToggleStar={toggleCoverLetterStar}
-                      onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
-                      editingCoverLetterId={editingCoverLetterId}
-                      editingTitle={editingCoverLetterTitle}
-                      onStartEditing={startEditingCoverLetter}
-                      onSaveTitle={saveCoverLetterTitle}
-                      onCancelEditing={cancelEditingCoverLetter}
-                    />
-                  ))}
-                </div>
+            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+              {/* Master CV Card - Always First */}
+              <MasterCVCardOverlay
+                onEditMasterCV={handleEditMasterCV}
+                onDuplicateMasterCV={handleDuplicateMasterCV}
+                userId={getUserIdForAPI(user) || ''}
+                onToggleStar={toggleStar}
+                onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
+                masterCVData={masterCVs.length > 0 ? {
+                  id: masterCVs[0].id,
+                  title: masterCVs[0].title,
+                  lastModified: masterCVs[0].lastModified,
+                  status: masterCVs[0].status,
+                  isMaster: true,
+                  cvData: masterCVs[0].cvData,
+                  // Use templateData if available (from API summary projection), otherwise use template object
+                  template: masterCVs[0].templateData || (masterCVs[0].template && typeof masterCVs[0].template === 'object'
+                    ? masterCVs[0].template
+                    : (masterCVs[0].templateId ? {
+                      _id: masterCVs[0].templateId,
+                      name: masterCVs[0].templateName || 'Default Template',
+                      globalStyles: {},
+                      availableSections: []
+                    } : null)),
+                  templateId: masterCVs[0].templateId,
+                  templateName: masterCVs[0].templateName,
+                  isStarred: masterCVs[0].isStarred,
+                  thumbnail: masterCVs[0].thumbnail || '',
+                  metadata: masterCVs[0].metadata
+                } : null}
+              />
+
+              {loading ? (
+                // Loading skeleton
+                Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl p-6 animate-pulse border border-gray-200 dark:border-gray-700">
+                    <div className="h-48 bg-gray-200 dark:bg-white/10 rounded-lg mb-4"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-white/10 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3"></div>
+                  </div>
+                ))
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 px-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
-                    <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-6">
-                      Create your first cover letter to get started.
-                    </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Cover letters are typically created when you start a job application journey.
+                // CV Cards with Overlay Design
+                filteredAndSortedCVs.length > 0 ? (
+                  filteredAndSortedCVs.map((cv, index) => {
+                    // Find linked journey for this CV (performance optimization - no API call per card)
+                    const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
+                    return (
+                      <CVCardOverlay
+                        key={cv.id || `cv-${index}`}
+                        cv={{
+                          id: cv.id,
+                          title: cv.title,
+                          lastModified: cv.lastModified,
+                          status: cv.status,
+                          views: cv.views,
+                          isStarred: cv.isStarred,
+                          thumbnail: cv.thumbnail,
+                          description: cv.description,
+                          cvData: cv.cvData,
+                          template: cv.template,
+                          completionPercentage: cv.completionPercentage,
+                          isMaster: cv.isMaster,
+                          journeyId: cv.journeyId,
+                          atsScore: cv.atsScore,
+                          metadata: cv.metadata
+                        }}
+                        linkedJourney={linkedJourney}
+                        onEdit={(cv) => { handleCVClick(cv as any); }}
+                        onDownload={(cv) => { handleDownloadCV(cv as any); }}
+                        onDelete={(cv) => { handleDeleteCV(cv as any); }}
+                        onToggleStar={toggleStar}
+                        onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
+                        onRename={(cvId, newTitle) => {
+                          setEditingTitle(newTitle);
+                          saveTitle(cvId);
+                        }}
+                        onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
+                        onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                        editingCVId={editingCVId}
+                        editingTitle={editingTitle}
+                        onStartEditing={(cv) => startEditing(cv as any)}
+                        onSaveTitle={saveTitle}
+                        onCancelEditing={cancelEditing}
+                      />
+                    );
+                  })
+                ) : searchQuery ? (
+                  // Only show empty state if there's a search query (filtered out all results)
+                  <div className="col-span-full flex flex-col items-center justify-center py-12 px-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
+                      <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        No CVs found.
                       </p>
+                    </div>
                   </div>
-                </div>
+                ) : null
               )}
             </div>
           </div>
-
-          {/* Right Column - Sidebar */}
+        </div>
+      ) : (
+        /* Cover Letter Content */
+        <div className="space-y-6">
+          {/* Cover Letter Grid */}
           <div className="space-y-6">
-            {/* KPI Metrics - 2x2 Grid */}
-            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-black" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Cover Letter Metrics</h3>
+
+            {filteredAndSortedCoverLetters.length > 0 ? (
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+                {filteredAndSortedCoverLetters.map((coverLetter) => (
+                  <CoverLetterCardOverlay
+                    key={coverLetter.id}
+                    coverLetter={{
+                      id: coverLetter.id,
+                      title: coverLetter.title,
+                      lastModified: coverLetter.lastModified,
+                      status: coverLetter.status,
+                      content: coverLetter.content || '',
+                      isStarred: coverLetter.isStarred,
+                      views: coverLetter.views || 0,
+                      thumbnail: coverLetter.thumbnail || '',
+                      metadata: coverLetter.metadata
+                    }}
+                    onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}`); }}
+                    onDownload={handleDownloadCoverLetter}
+                    onDelete={handleDeleteCoverLetter}
+                    onToggleStar={toggleCoverLetterStar}
+                    onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
+                    editingCoverLetterId={editingCoverLetterId}
+                    editingTitle={editingCoverLetterTitle}
+                    onStartEditing={startEditingCoverLetter}
+                    onSaveTitle={saveCoverLetterTitle}
+                    onCancelEditing={cancelEditingCoverLetter}
+                  />
+                ))}
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <motion.div
-                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                      <PenTool className="w-5 h-5 text-black" />
-                    </div>
-                    <div>
-                      <p className="text-gray-600 dark:text-gray-400 text-xs">Total</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.length}</p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                      <Eye className="w-5 h-5 text-black" />
-                    </div>
-                    <div>
-                      <p className="text-gray-600 dark:text-gray-400 text-xs">Views</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.reduce((sum, cl) => sum + (cl.views || 0), 0)}</p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                      <Star className="w-5 h-5 text-black" />
-                    </div>
-                    <div>
-                      <p className="text-gray-600 dark:text-gray-400 text-xs">Starred</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.filter(cl => cl.isStarred).length}</p>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5 text-black" />
-                    </div>
-                    <div>
-                      <p className="text-gray-600 dark:text-gray-400 text-xs">Published</p>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">{coverLetters.filter(cl => cl.status === 'final').length}</p>
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-
-            {/* Cover Letter Tips */}
-            <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                  <Lightbulb className="w-5 h-5 text-black" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Cover Letter Tips</h3>
-              </div>
-              <div className="space-y-4">
-                <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                  <p className="text-[#80FF00] text-sm font-bold mb-2">Personalize it</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Address the hiring manager by name when possible</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                  <p className="text-[#80FF00] text-sm font-bold mb-2">Show enthusiasm</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Express genuine interest in the company and role</p>
-                </div>
-                <div className="bg-gray-50 dark:bg-[#313a28] border border-gray-200 dark:border-white/10 rounded-lg p-4">
-                  <p className="text-[#80FF00] text-sm font-bold mb-2">Keep it concise</p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Limit to one page and focus on key achievements</p>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
+                  <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
+                  <p className="text-gray-600 dark:text-gray-400 mb-6">
+                    Create your first cover letter to get started.
+                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Cover letters are typically created when you start a job application journey.
+                  </p>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
@@ -2451,6 +2362,21 @@ const Canvas: React.FC = () => {
         cancelText={modalConfig.cancelText}
       />
 
+      {/* Career Report Sidebar */}
+      {user?.id && (
+        <CareerReportSidebar
+          isOpen={showCareerReportSidebar}
+          onClose={() => {
+            setShowCareerReportSidebar(false);
+            setSelectedCVForReport(null);
+          }}
+          selectedCV={selectedCVForReport}
+          allCVs={cvs}
+          userId={getUserIdForAPI(user) || user.id}
+          onCVSelect={handleCVSelectForReport}
+        />
+      )}
+
       {/* Download Modal */}
       <DownloadModal
         isOpen={downloadModalOpen}
@@ -2464,9 +2390,9 @@ const Canvas: React.FC = () => {
         isDownloading={isDownloading}
       />
 
-      {/* JobModal */}
+      {/* JobSidebar */}
       {showJourneyModal && selectedJobForJourney && (
-        <JobModal
+        <JobSidebar
           job={selectedJobForJourney}
           journeys={journeysForSelectedJob}
           onClose={() => {
@@ -2494,8 +2420,8 @@ const Canvas: React.FC = () => {
   );
 };
 
-// Export component with memo for performance, but ensure React is available
-const MemoizedCanvas = React.memo(Canvas);
-MemoizedCanvas.displayName = 'Canvas';
+// Export component directly - React.memo can cause hook resolution issues with dynamic imports
+// If memoization is needed, it should be done at the usage site, not here
+Canvas.displayName = 'Canvas';
 
-export default MemoizedCanvas;
+export default Canvas;

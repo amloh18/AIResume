@@ -27,18 +27,18 @@ export function wrapPromiseExecutor<T>(
           const targetInfo = target ?
             ((target as HTMLElement).tagName || (target as HTMLElement).nodeName || 'unknown') :
             'unknown';
-          
+
           // Extract URL if it's a link element
           const linkElement = (reason as Event).target as HTMLLinkElement;
           const resourceUrl = linkElement?.href || 'unknown';
-          
+
           const error = new Error(
             `Promise rejected with Event object from ${targetInfo} element (${resourceUrl}). ` +
             `This is a bug - promises should reject with Error objects, not Events. ` +
             `Fix: Use reject(new Error('Failed to load resource')) instead of reject(event). ` +
             `See src/lib/utils/resourceLoader.ts for safe resource loading utilities.`
           );
-          
+
           // Add helpful debugging info
           (error as any).originalEvent = {
             type: (reason as Event).type || 'unknown',
@@ -46,17 +46,17 @@ export function wrapPromiseExecutor<T>(
             url: resourceUrl,
             timestamp: (reason as Event).timeStamp || Date.now()
           };
-          
+
           reject(error);
           return;
         }
-        
+
         // Check if it's an empty object
         try {
           const keys = Object.keys(reason);
           const ownProps = Object.getOwnPropertyNames(reason);
           if (keys.length === 0 && ownProps.length === 0 &&
-              Object.getPrototypeOf(reason) === Object.prototype) {
+            Object.getPrototypeOf(reason) === Object.prototype) {
             reject(new Error('Promise rejected with empty object. This is likely a bug.'));
             return;
           }
@@ -64,11 +64,11 @@ export function wrapPromiseExecutor<T>(
           // If we can't check, continue with original rejection
         }
       }
-      
+
       // If it's already an Error or something else, reject normally
       reject(reason);
     };
-    
+
     executor(resolve, safeReject);
   });
 }
@@ -79,11 +79,11 @@ export function wrapPromiseExecutor<T>(
  */
 const patchPromiseConstructor = () => {
   if (typeof window === 'undefined' || typeof Promise === 'undefined') return;
-  
+
   // Only in development to avoid performance impact
   if (process.env.NODE_ENV === 'development') {
     const OriginalPromise = Promise;
-    
+
     // Note: We don't actually replace Promise globally as it could break things
     // Instead, we provide utilities and catch errors at the unhandled rejection level
   }
@@ -102,32 +102,32 @@ export const setupEventErrorHandling = () => {
       event.message.includes('[object Event]') ||
       event.message.includes('Event object')
     );
-    
+
     // Also check if the error itself is an Event object
     const errorIsEvent = event.error && typeof event.error === 'object' &&
       (event.error instanceof Event || ('target' in event.error && 'preventDefault' in event.error));
-    
+
     if (isEventObjectError || errorIsEvent) {
       // Use original console to avoid recursion
       const originalConsole = (window as any).__originalConsole__ || {
         error: console.error.bind(console)
       };
-      
+
       try {
         const errorInfo = {
           message: event.message || '[No message]',
           filename: event.filename || '[Unknown]',
           lineno: event.lineno || 0,
           colno: event.colno || 0,
-          error: errorIsEvent 
-            ? '[Event object]' 
+          error: errorIsEvent
+            ? '[Event object]'
             : (event.error instanceof Error ? event.error.message : '[Error object]')
         };
         originalConsole.error('Event object error caught:', JSON.stringify(errorInfo, null, 2));
       } catch (e) {
         originalConsole.error('Event object error caught (handled safely)');
       }
-      
+
       // Prevent the error from crashing the app
       event.preventDefault();
       return true;
@@ -139,24 +139,24 @@ export const setupEventErrorHandling = () => {
   const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
     try {
       const reason = event.reason;
-      
+
       // Check if reason is null or undefined
       if (reason === null || reason === undefined) {
         return false;
       }
-      
+
       // Check if reason is an Event object by checking for Event-like properties
-      const isEventObject = typeof reason === 'object' && 
-        (reason instanceof Event || 
-         ('target' in reason && 'preventDefault' in reason) ||
-         ('type' in reason && 'timeStamp' in reason));
-      
+      const isEventObject = typeof reason === 'object' &&
+        (reason instanceof Event ||
+          ('target' in reason && 'preventDefault' in reason) ||
+          ('type' in reason && 'timeStamp' in reason));
+
       // Check if reason stringifies to Event object
       const reasonString = String(reason);
-      const stringifiesToEvent = reasonString.includes('[object Event]') || 
-                                  reasonString === '[object Object]' ||
-                                  reasonString === '{}';
-      
+      const stringifiesToEvent = reasonString.includes('[object Event]') ||
+        reasonString === '[object Object]' ||
+        reasonString === '{}';
+
       // Check if reason is an empty plain object
       // More robust check - check for enumerable and non-enumerable keys
       let isEmptyPlainObject = false;
@@ -171,19 +171,19 @@ export const setupEventErrorHandling = () => {
           isEmptyPlainObject = false;
         }
       }
-      
+
       if (isEventObject || isEmptyPlainObject || stringifiesToEvent) {
         // Safely serialize the reason for logging
         let reasonInfo: any;
         try {
           if (isEventObject) {
             const target = (reason as Event).target;
-            const targetInfo = target ? 
+            const targetInfo = target ?
               ((target as any)?.tagName || (target as any)?.nodeName || 'unknown') :
               'no target';
             const linkElement = target as HTMLLinkElement;
             const resourceUrl = linkElement?.href || 'unknown';
-            
+
             reasonInfo = {
               type: 'Event',
               eventType: (reason as Event).type || 'unknown',
@@ -212,35 +212,36 @@ export const setupEventErrorHandling = () => {
             errorMessage: e instanceof Error ? e.message : String(e)
           };
         }
-        
+
         // Use original console.error to bypass consoleLogger and prevent recursion
         // Get the original console.error before any wrappers
         const originalConsole = (window as any).__originalConsole__ || {
           error: console.error.bind(console)
         };
-        
+
         try {
           // Check if it's a CSS loading error (common in Next.js, can be safely ignored)
-          const isCSSError = reasonInfo.type === 'Event' && 
+          const isCSSError = reasonInfo.type === 'Event' &&
             (reasonInfo.url?.includes('.css') || reasonInfo.target === 'LINK');
-          
+
           if (isCSSError) {
-            // CSS loading errors are often harmless in Next.js - just suppress or log quietly
-            if (process.env.NODE_ENV === 'development') {
-              originalConsole.warn('CSS resource loading issue (usually harmless):', reasonInfo.url || 'stylesheet');
-            }
+            // CSS loading errors are often harmless in Next.js - just suppress completely
+            // No logging needed as these are expected in Next.js hot reload
           } else {
-            // For other Event object rejections, log with safe stringification
-            const message = typeof reasonInfo === 'object' 
-              ? JSON.stringify(reasonInfo, null, 2)
-              : String(reasonInfo);
-            originalConsole.error('Event object error in promise rejection:', message);
+            // For other Event object rejections, only log in development
+            if (process.env.NODE_ENV === 'development') {
+              const message = typeof reasonInfo === 'object'
+                ? JSON.stringify(reasonInfo, null, 2)
+                : String(reasonInfo);
+              originalConsole.warn('Event object in promise rejection (suppressed in production):', message);
+            }
+            // In production, silently handle these errors
           }
         } catch (e) {
           // Fallback - just log a safe message
           originalConsole.error('Event object error in promise rejection (handled safely)');
         }
-        
+
         event.preventDefault();
         return true;
       }
@@ -292,15 +293,15 @@ export const safeWrapper = <T extends any[], R>(
   return (...args: T): R | undefined => {
     try {
       // Check if any argument is an Event object
-      const hasEventObject = args.some(arg => 
+      const hasEventObject = args.some(arg =>
         arg && typeof arg === 'object' && 'target' in arg && 'preventDefault' in arg
       );
-      
+
       if (hasEventObject) {
         console.error(`Event object passed to ${context}:`, args);
         return undefined;
       }
-      
+
       return fn(...args);
     } catch (error) {
       console.error(`Error in ${context}:`, error);
@@ -317,17 +318,17 @@ export const setupDevelopmentErrorDetection = () => {
     // Override console.error to detect Event object errors
     const originalConsoleError = console.error;
     console.error = (...args) => {
-      const hasEventObject = args.some(arg => 
-        String(arg).includes('[object Event]') || 
+      const hasEventObject = args.some(arg =>
+        String(arg).includes('[object Event]') ||
         (arg && typeof arg === 'object' && 'target' in arg)
       );
-      
+
       if (hasEventObject) {
         console.warn('🚨 Event object error detected:', args);
         // Add breakpoint for debugging
         debugger;
       }
-      
+
       originalConsoleError.apply(console, args);
     };
   }
@@ -339,6 +340,6 @@ export const setupDevelopmentErrorDetection = () => {
 export const initializeErrorHandling = () => {
   const cleanup = setupEventErrorHandling();
   setupDevelopmentErrorDetection();
-  
+
   return cleanup;
 };

@@ -200,7 +200,7 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-900">
       {/* Header */}
       <header className="bg-gray-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
           <div className="flex justify-between items-center py-6 mb-0">
             <div className="flex items-center">
               <Shield className="h-8 w-8 text-red-500 mr-3" />
@@ -293,22 +293,22 @@ export default function AdminDashboard() {
       <Tabs defaultValue="overview" className="w-full">
         {/* Navbar Tabs - Full Width */}
         <div className="bg-gray-800">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0">
-              <TabsList className="flex w-max min-w-full bg-transparent border-0 md:grid md:w-full md:grid-cols-4">
-                <TabsTrigger value="overview" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 md:flex-shrink">
+          <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
+            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 tablet:mx-0 tablet:px-0">
+              <TabsList className="flex w-max min-w-full bg-transparent border-0 tablet:grid tablet:w-full tablet:grid-cols-4">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
                   <BarChart3 className="h-4 w-4 mr-2" />
                   Overview
                 </TabsTrigger>
-                <TabsTrigger value="analytics" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 md:flex-shrink">
+                <TabsTrigger value="analytics" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
                   <Activity className="h-4 w-4 mr-2" />
                   Analytics
                 </TabsTrigger>
-                <TabsTrigger value="management" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 md:flex-shrink">
+                <TabsTrigger value="management" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
                   <Users className="h-4 w-4 mr-2" />
                   Management
                 </TabsTrigger>
-                <TabsTrigger value="pricing" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 md:flex-shrink">
+                <TabsTrigger value="pricing" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
                   <DollarSign className="h-4 w-4 mr-2" />
                   Pricing
                 </TabsTrigger>
@@ -318,8 +318,8 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 sm:px-0">
+        <main className="max-w-7xl mx-auto py-6 tablet:px-6 desktop:px-8">
+          <div className="px-4 tablet:px-0">
             {/* Overview Tab */}
             <TabsContent value="overview" className="mt-0">
               <AdminKPIs />
@@ -440,7 +440,7 @@ export default function AdminDashboard() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-400">Email</p>
                     <p className="text-sm text-white">{user.email}</p>

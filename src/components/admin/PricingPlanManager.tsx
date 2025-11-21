@@ -399,7 +399,7 @@ const PricingPlanManager: React.FC = () => {
                 </Button>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-6">
                     <div className="text-3xl font-bold text-white mb-2">{activePlans}</div>
@@ -540,7 +540,7 @@ const PricingPlanManager: React.FC = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
                   {allPromotionalOffers.map((offer) => {
                     const status = getOfferStatus(offer);
                     const discountText = formatOfferDiscount(offer);

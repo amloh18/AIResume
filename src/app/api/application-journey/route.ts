@@ -713,9 +713,39 @@ export async function DELETE(request: NextRequest) {
 
     console.log('✅ CV Journey DELETE API - Journey deleted successfully');
 
+    // Step 4: Move the job back to draft stage
+    if (journey.jobId) {
+      try {
+        console.log('🔍 CV Journey DELETE API - Moving job to draft stage:', journey.jobId);
+        const { JobApplication } = await import('@/models');
+        
+        const jobUpdateResult = await JobApplication.updateOne(
+          { 
+            _id: journey.jobId,
+            userId: new mongoose.Types.ObjectId(userId)
+          },
+          { 
+            $set: { 
+              status: 'draft',
+              updatedAt: new Date()
+            } 
+          }
+        );
+
+        if (jobUpdateResult.matchedCount > 0) {
+          console.log('✅ CV Journey DELETE API - Job moved to draft stage successfully');
+        } else {
+          console.warn('⚠️ CV Journey DELETE API - Job not found or not updated');
+        }
+      } catch (error) {
+        console.error('❌ CV Journey DELETE API - Error updating job status:', error);
+        // Continue even if job update fails - journey is already deleted
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'CV journey and associated documents deleted successfully'
+      message: 'CV journey and associated documents deleted successfully. Job moved to draft stage.'
     });
 
   } catch (error: any) {

@@ -150,7 +150,7 @@ const TermsContent: React.FC = () => {
             We offer a 7-day money-back guarantee for Pro plan subscriptions (Monthly, Quarterly, Yearly), subject to the following conditions:
           </p>
           
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid tablet:grid-cols-2 gap-6">
             <div>
               <h5 className="text-lg font-medium mb-3 text-lime-400">Eligibility Requirements</h5>
               <ul className="list-disc list-inside space-y-2 text-white/80">

@@ -179,7 +179,7 @@ const PricingPlanEditModal: React.FC<PricingPlanEditModalProps> = ({
 
             {/* Content */}
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 desktop:grid-cols-2 gap-8">
                 {/* Basic Information */}
                 <div className="space-y-6">
                   <div>

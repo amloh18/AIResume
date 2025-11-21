@@ -81,13 +81,6 @@ export default function AuthErrorPage() {
             </Link>
           </div>
 
-          {/* Debug Info (only in development) */}
-          {process.env.NODE_ENV === 'development' && error && (
-            <div className="mt-6 p-3 bg-gray-800/50 rounded-lg">
-              <p className="text-xs text-gray-400 mb-2">Debug Info:</p>
-              <p className="text-xs text-gray-500 font-mono">Error: {error}</p>
-            </div>
-          )}
         </div>
       </div>
     </div>

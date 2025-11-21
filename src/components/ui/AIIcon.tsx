@@ -20,9 +20,9 @@ const AIIcon: React.FC<AIIconProps> = ({
   tooltip
 }) => {
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6'
+    tablet: 'w-4 h-4',
+    tablet: 'w-5 h-5',
+    desktop: 'w-6 h-6'
   };
 
   const iconVariants = {

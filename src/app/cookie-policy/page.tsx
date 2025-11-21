@@ -17,7 +17,7 @@ const CookiePolicy: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <Logo size="md" className="text-white" />
@@ -57,7 +57,7 @@ const CookiePolicy: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-4xl mx-auto px-4 tablet:px-6 desktop:px-8 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -200,7 +200,7 @@ const CookiePolicy: React.FC = () => {
               Cookie Duration
             </h2>
             
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid tablet:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-xl font-medium mb-3 text-lime-400">Session Cookies</h3>
                 <p className="text-white/80 mb-3">
@@ -288,7 +288,7 @@ const CookiePolicy: React.FC = () => {
               While you can disable cookies, doing so may affect your experience on our website:
             </p>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid tablet:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-xl font-medium mb-3 text-lime-400">Essential Functions</h3>
                 <ul className="list-disc list-inside space-y-2 text-white/80">

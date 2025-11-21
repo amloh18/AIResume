@@ -115,7 +115,7 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Title</label>
               <input

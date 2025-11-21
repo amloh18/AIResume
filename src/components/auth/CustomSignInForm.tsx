@@ -35,8 +35,6 @@ export default function CustomSignInForm() {
     setSuccess('')
 
     try {
-      console.log('🔐 Attempting credentials sign-in...')
-      
       // Use NextAuth credentials provider
       const result = await signIn('credentials', {
         email: formData.email,
@@ -45,10 +43,8 @@ export default function CustomSignInForm() {
       })
 
       if (result?.error) {
-        console.error('❌ Sign-in failed:', result.error)
         setError(result.error === 'CredentialsSignin' ? 'Invalid email or password' : result.error)
       } else if (result?.ok) {
-        console.log('✅ Sign-in successful, redirecting to dashboard...')
         setSuccess('Sign in successful! Redirecting...')
         setTimeout(() => {
           router.push('/dashboard')
@@ -65,7 +61,7 @@ export default function CustomSignInForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#141810] py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[#141810] py-12 px-4 tablet:px-6 desktop:px-8">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <h2 className="mt-6 text-3xl font-extrabold text-white">

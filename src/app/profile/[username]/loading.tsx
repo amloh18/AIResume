@@ -7,9 +7,9 @@ export default function ProfileLoading() {
         <div className="h-64 bg-gray-800 animate-pulse" />
         
         {/* Profile Info Skeleton */}
-        <div className="relative px-4 sm:px-6 lg:px-8 -mt-16">
+        <div className="relative px-4 tablet:px-6 desktop:px-8 -mt-16">
           <div className="max-w-4xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4 sm:gap-6">
+            <div className="flex flex-col tablet:flex-row items-start tablet:items-end gap-4 tablet:gap-6">
               {/* Avatar Skeleton */}
               <div className="w-32 h-32 rounded-full bg-gray-700 animate-pulse border-4 border-gray-900" />
               
@@ -31,7 +31,7 @@ export default function ProfileLoading() {
       </div>
 
       {/* Content Sections Skeleton */}
-      <div className="px-4 sm:px-6 lg:px-8 py-8">
+      <div className="px-4 tablet:px-6 desktop:px-8 py-8">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* About Section Skeleton */}
           <div className="bg-gray-800/20 border border-gray-700 rounded-xl p-6">
@@ -66,7 +66,7 @@ export default function ProfileLoading() {
           {/* Recent Work Section Skeleton */}
           <div className="bg-gray-800/20 border border-gray-700 rounded-xl p-6">
             <div className="h-6 bg-gray-700 rounded animate-pulse w-32 mb-6" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="border border-gray-700 rounded-lg overflow-hidden">
                   <div className="h-48 bg-gray-700 animate-pulse" />

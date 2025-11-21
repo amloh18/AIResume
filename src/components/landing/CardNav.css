@@ -4,7 +4,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: 95%;
-  max-width: 1200px;
+  max-width: 1023px;
   z-index: 999;
   box-sizing: border-box;
 }
@@ -285,7 +285,7 @@
 }
 
 /* Mobile breakpoint - ensure it works on all browsers */
-@media screen and (max-width: 640px) {
+@media screen and (max-width: 767px) {
   .nav-links {
     display: none;
   }

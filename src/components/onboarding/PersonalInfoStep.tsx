@@ -153,7 +153,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
           transition={{ duration: 0.5 }}
           className="text-center mb-8"
         >
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-3">
+          <h2 className="text-3xl tablet:text-4xl font-bold text-white mb-3">
             Personal Information
           </h2>
           <p className="text-xl text-white/60">
@@ -286,7 +286,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                     {/* Name */}
                     <div>
                                     <label className="block text-white/80 text-xs font-medium mb-2">

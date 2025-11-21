@@ -337,14 +337,14 @@ export async function PUT(
         
         await withTransaction(async (session) => {
           // 1. CREDIT CHECK: Check credits WITHIN transaction (locks user record to prevent race conditions)
-          const user = await User.findById(userId).session(session);
+          const user = await User.findById(normalizedUserId).session(session);
           if (!user) {
             throw new Error('User not found');
           }
           
           const usageLimitsService = await import('@/lib/services/usageLimitsService');
           const creditCheck = await usageLimitsService.default.checkUsageLimit({
-            userId,
+            userId: normalizedUserId.toString(),
             action: 'job_create'
           });
 
@@ -371,7 +371,7 @@ export async function PUT(
           const updatedJob = await JobApplication.findOneAndUpdate(
             {
               _id: resolvedParams.id,
-              userId: userId
+              userId: normalizedUserId
             },
             statusUpdateData,
             { session, new: true }
@@ -418,12 +418,12 @@ export async function PUT(
           
           // Update user credits within transaction
           await User.findByIdAndUpdate(
-            userId,
+            normalizedUserId,
             creditUpdateData,
             { session, new: true, runValidators: true }
           );
           
-          console.log(`✅ Job Update API - Credit spent in transaction for user: ${userId}`);
+          console.log(`✅ Job Update API - Credit spent in transaction for user: ${normalizedUserId.toString()}`);
         });
       } catch (creditError: any) {
         console.error('❌ Job Update API - Transaction failed:', creditError);
@@ -949,11 +949,25 @@ export async function DELETE(
     const jobId = resolvedParams.id;
 
     console.log('🔍 Job DELETE API - Starting cascade deletion for job:', jobId);
+    console.log('🔍 Job DELETE API - User ID:', userId);
+    console.log('🔍 Job DELETE API - Job ID type:', typeof jobId);
+    console.log('🔍 Job DELETE API - User ID type:', typeof userId);
+
+    // Convert jobId and userId to ObjectId for proper querying
+    const normalizedJobId = mongoose.Types.ObjectId.isValid(jobId) 
+      ? new mongoose.Types.ObjectId(jobId) 
+      : jobId;
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId) 
+      ? new mongoose.Types.ObjectId(userId) 
+      : userId;
+
+    console.log('🔍 Job DELETE API - Normalized Job ID:', normalizedJobId.toString());
+    console.log('🔍 Job DELETE API - Normalized User ID:', normalizedUserId.toString());
 
     // First, find the job to ensure it exists and user owns it
     const job = await JobApplication.findOne({
-      _id: jobId,
-      userId: userId
+      _id: normalizedJobId,
+      userId: normalizedUserId
     });
 
     if (!job) {
@@ -966,8 +980,13 @@ export async function DELETE(
 
     // Step 1: Find all journeys associated with this job
     console.log('🔍 Job DELETE API - Finding associated journeys for job:', jobId);
+    // Try both string and ObjectId formats for jobId matching
     const journeys = await ApplicationJourney.find({ 
-      jobId: jobId.toString() 
+      $or: [
+        { jobId: jobId.toString() },
+        { jobId: normalizedJobId },
+        { jobId: normalizedJobId.toString() }
+      ]
     });
 
     console.log(`🔍 Job DELETE API - Found ${journeys.length} journey(s) associated with job`);
@@ -1001,7 +1020,8 @@ export async function DELETE(
           if (cv) {
             // Verify CV belongs to the user before deletion (check CV object reference only)
             const cvUserId = cv.userId.toString();
-            if (cvUserId === userId) {
+            const normalizedUserIdStr = normalizedUserId.toString();
+            if (cvUserId === userId || cvUserId === normalizedUserIdStr) {
               console.log('🔍 Job DELETE API - Deleting CV:', journey.cvId);
               const cvResult = await CV.findByIdAndDelete(journey.cvId);
               if (cvResult) {
@@ -1066,8 +1086,8 @@ export async function DELETE(
     // Step 5: Finally, delete the job itself
     console.log('🔍 Job DELETE API - Deleting job:', jobId);
     const deletedJob = await JobApplication.findOneAndDelete({
-      _id: jobId,
-      userId: userId
+      _id: normalizedJobId,
+      userId: normalizedUserId
     });
 
     if (!deletedJob) {

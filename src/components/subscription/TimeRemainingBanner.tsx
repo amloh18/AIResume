@@ -61,7 +61,7 @@ export function TimeRemainingBanner() {
               ) : (
                 <Clock className="w-5 h-5" />
               )}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+              <div className="flex flex-col tablet:flex-row tablet:items-center tablet:gap-2">
                 <span className="font-medium">
                   {isDayPass ? 'Day Pass' : 'Pro Subscription'} 
                   {timeAccess?.isInGracePeriod && ' (Grace Period)'}

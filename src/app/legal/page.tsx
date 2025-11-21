@@ -79,7 +79,7 @@ const LegalCenter: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black text-white">
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-white/10 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-6">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center">
               <Logo size="md" className="text-white" />
@@ -112,7 +112,7 @@ const LegalCenter: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -120,7 +120,7 @@ const LegalCenter: React.FC = () => {
         >
           {/* Tabs Navigation */}
           <div className="bg-white/5 backdrop-blur-sm rounded-xl p-2 mb-8 border border-white/10">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 tablet:grid-cols-4 gap-2">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;

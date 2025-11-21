@@ -15,7 +15,7 @@ const Features = () => {
       color: 'from-lime-400 to-lime-500',
       bgColor: 'from-lime-400/10 to-lime-500/10',
       cta: 'Download Extension',
-      ctaLink: '/chrome-extension',
+      ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
       image: '/images/never_miss_a_role.png'
     },
     {
@@ -74,7 +74,7 @@ const Features = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col justify-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div
           className="text-center mb-16"
@@ -83,20 +83,20 @@ const Features = () => {
           transition={{ duration: 0.8, ease: "easeOut" }}
           viewport={{ once: true, margin: "-50px" }}
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6 text-center">
             Everything you need to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               succeed
             </span>
           </h2>
-          <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
             Powerful tools designed to streamline your job search process and help you stand out from the competition.
           </p>
         </motion.div>
 
         {/* Three Cards Layout */}
         <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
+          className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-8 max-w-6xl mx-auto"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -177,18 +177,20 @@ const Features = () => {
 
                 {/* Content */}
                 <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-xl sm:text-2xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300 mb-4">
+                  <h3 className="text-xl tablet:text-2xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300 mb-4">
                     {feature.title}
                   </h3>
                   
-                  <p className="text-white/70 leading-relaxed text-sm sm:text-base lg:text-lg flex-grow">
+                  <p className="text-white/70 leading-relaxed text-sm tablet:text-base desktop:text-lg flex-grow">
                     {feature.description}
                   </p>
                   
                   {/* CTA Button */}
                   <motion.a
                     href={feature.ctaLink}
-                    className="group/btn relative inline-flex items-center gap-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 sm:px-6 sm:py-3 rounded-full font-semibold text-sm sm:text-base shadow-lg hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden mt-6 w-fit"
+                    target={feature.ctaLink.startsWith('http') ? '_blank' : undefined}
+                    rel={feature.ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
+                    className="group/btn relative inline-flex items-center gap-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-6 tablet:py-3 rounded-full font-semibold text-sm tablet:text-base shadow-lg hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden mt-6 w-fit"
                     whileHover={{ 
                       scale: 1.05,
                       boxShadow: "0 15px 30px -8px rgba(132, 204, 22, 0.5)"

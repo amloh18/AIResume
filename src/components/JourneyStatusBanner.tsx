@@ -563,7 +563,7 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
                   {/* Active Journey Steps */}
                   {isJourneyActive && (
                     <div className="mb-6">
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-1 tablet:grid-cols-5 gap-4">
                         {[1, 2, 3, 4, 5].map((stepId) => {
                           const status = getStepStatus(stepId);
                           const details = getStepDetails(stepId);

@@ -253,7 +253,7 @@ export default function PricingPlansPage() {
               {/* Default Prices */}
               <div>
                 <h3 className="text-lg font-semibold text-white mb-3">Default Prices</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
                   {plan.price_one_time !== undefined && (
                     <div className="bg-gray-700/50 p-3 rounded-lg">
                       <div className="text-xs text-gray-400">Day Pass</div>
