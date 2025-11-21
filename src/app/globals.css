@@ -893,9 +893,26 @@ nav {
 
 
 
-/* Reduce global transitions to prevent flashing */
+/* Optimize image loading for better performance */
+img[src*="/images/"] {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+/* Optimize Next.js Image components */
+.next-image-wrapper {
+  contain: layout style paint;
+}
+
+/* Reduce global transitions to prevent flashing - but allow smooth animations */
 * {
-  transition: none;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
 
 /* Fix for Framer Motion animations not triggering */

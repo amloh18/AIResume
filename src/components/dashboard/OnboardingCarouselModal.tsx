@@ -181,6 +181,12 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
                 src="/images/logo.png" 
                 alt="CVCircle Logo" 
                 className="w-8 h-8 object-contain"
+                loading="eager"
+                decoding="async"
+                onError={(e) => {
+                  console.error('Logo image failed to load in onboarding modal');
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
             </div>
             <div>

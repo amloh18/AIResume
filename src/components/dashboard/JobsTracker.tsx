@@ -27,6 +27,7 @@ import { useJobsPersistence } from '@/lib/hooks/useJobsPersistence';
 import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 
 interface JobApplication {
   id: string;
@@ -103,6 +104,9 @@ const JobsTracker: React.FC = () => {
 
   // Focus mode
   const { isFocusMode, toggleFocusMode } = useFocusMode();
+  
+  // Credit exhaustion handler
+  const { showExhaustionModal } = useCreditExhaustionHandler();
 
   // Initialize from persisted preferences
   useEffect(() => {
@@ -412,7 +416,7 @@ const JobsTracker: React.FC = () => {
     setShowJobParserDialog(true);
   };
 
-  const handleParseComplete = async (parsedData: any, status: 'draft' | 'created') => {
+  const handleParseComplete = async (parsedData: any) => {
     try {
       // Helper function to get date string in YYYY-MM-DD format (15 days from now)
       const getDateString = (daysFromNow: number): string => {
@@ -422,8 +426,8 @@ const JobsTracker: React.FC = () => {
       };
 
       // Map parsed data to EditJobSidebar format
-      // Preserve the selected status (draft or created)
-      const mappedStatus = status;
+      // Always use 'draft' status - credit check will happen when moving to 'created' stage
+      const mappedStatus = 'draft';
 
       // Convert deadline Date to string if present, otherwise default to 15 days from now
       let deadlineString: string = getDateString(15); // Default to 15 days from now
@@ -650,59 +654,116 @@ const JobsTracker: React.FC = () => {
 
   const handleCreateJourney = async (job: JobApplication) => {
     try {
-      // First, check if journey already exists
-      const checkJourneyResponse = await fetch(`/api/application-journey?jobId=${job.id || job._id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      let journeyExists = false;
-      if (checkJourneyResponse.ok) {
-        const journeyData = await checkJourneyResponse.json();
-        journeyExists = journeyData && journeyData.length > 0;
-      }
-
-      // Create journey if it doesn't exist
-      if (!journeyExists) {
-        const journeyResponse = await fetch('/api/application-journey', {
-          method: 'POST',
+      // IMPORTANT: Move job to 'created' status FIRST (this checks credits and creates journey automatically)
+      // The API route will automatically create the journey when moving from draft to created
+      if (job.status === 'draft') {
+        const response = await authenticatedFetchWithUserId(`/api/jobs/${job.id || job._id}`, userId || undefined, {
+          method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            jobId: job.id || job._id,
-            jobTitle: job.jobTitle || job.title,
-            company: job.company,
-            journeyType: 'standard'
+            status: 'created'
           }),
         });
 
-        if (!journeyResponse.ok) {
-          throw new Error('Failed to create journey');
+        if (!response.ok) {
+          let errorData: any = {};
+          try {
+            const text = await response.text();
+            errorData = text ? JSON.parse(text) : {};
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+          
+          // Check if this is a credit-related error
+          const isCreditError = 
+            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits'))) ||
+            (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
+            (errorData.error?.includes('limit') || errorData.error?.includes('credit'));
+          
+          if (isCreditError) {
+            const limit = errorData.limit || 1;
+            const currentUsage = errorData.currentUsage || limit;
+            const creditsRemaining = Math.max(0, limit - currentUsage);
+            
+            showExhaustionModal(
+              {
+                creditsRemaining,
+                limit,
+                reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+              },
+              'pro_monthly'
+            );
+            throw new Error('Insufficient credits to create journey');
+          }
+          
+          throw new Error(errorData.error || errorData.message || 'Failed to move job to created stage');
+        }
+
+        // Job status updated successfully - API route automatically creates journey
+        toast.success('CV and Cover Letter journey created!');
+        
+        // Dispatch credit update event to refresh membership card
+        window.dispatchEvent(new CustomEvent('creditsUpdated'));
+        
+        // Refresh data
+        await loadData();
+      } else {
+        // Job is already in 'created' or later stage, check if journey exists
+        const checkJourneyResponse = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id || job._id}`, userId || undefined, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        let journeyExists = false;
+        if (checkJourneyResponse.ok) {
+          const journeyData = await checkJourneyResponse.json();
+          journeyExists = journeyData && journeyData.length > 0;
+        }
+
+        // Create journey if it doesn't exist
+        if (!journeyExists) {
+          const journeyResponse = await authenticatedFetchWithUserId('/api/application-journey', userId || undefined, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              jobId: job.id || job._id,
+              jobTitle: job.jobTitle || job.title,
+              company: job.company,
+              journeyType: 'standard'
+            }),
+          });
+
+          if (!journeyResponse.ok) {
+            let errorData: any = {};
+            try {
+              const text = await journeyResponse.text();
+              errorData = text ? JSON.parse(text) : {};
+            } catch (parseError) {
+              console.error('Failed to parse error response:', parseError);
+            }
+            throw new Error(errorData.error || errorData.message || 'Failed to create journey');
+          }
+          
+          toast.success('CV and Cover Letter journey created!');
+          await loadData();
+        } else {
+          toast.success('Journey already exists for this job');
         }
       }
-
-      // Update job status to 'created' (this will trigger journey creation if needed via API route)
-      const response = await fetch(`/api/jobs/${job.id || job._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'created'
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update job status');
-      }
-
-      // Refresh data
-      await loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating journey:', error);
+      
+      // Don't show toast if it's a credit error (paywall already shown)
+      if (!error?.message?.includes('Insufficient credits')) {
+        toast.error(error?.message || 'Failed to create journey. Please try again.');
+      }
+      
       throw error;
     }
   };
@@ -799,15 +860,46 @@ const JobsTracker: React.FC = () => {
       .then(async response => {
         // Check both response status and body
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
+          let errorData: any = {};
+          try {
+            const text = await response.text();
+            errorData = text ? JSON.parse(text) : {};
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+          
           console.error('Failed to update job status:', response.status, errorData);
+          
+          // Check if this is a credit-related error (403 or 500 with credit error message)
+          const isCreditError = 
+            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits'))) ||
+            (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
+            (originalStatus === 'draft' && newStatus === 'created' && (errorData.requiresUpgrade || errorData.error?.includes('limit') || errorData.error?.includes('credit')));
+          
+          // Handle insufficient credits error - show paywall
+          if (isCreditError) {
+            const limit = errorData.limit || 1;
+            const currentUsage = errorData.currentUsage || limit;
+            const creditsRemaining = Math.max(0, limit - currentUsage);
+            
+            showExhaustionModal(
+              {
+                creditsRemaining,
+                limit,
+                reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+              },
+              'pro_monthly'
+            );
+          } else {
+            toast.error(errorData.message || errorData.error || `Failed to update job status (${response.status}). Please try again.`);
+          }
+          
           // Revert on failure
           setJobs(prevJobs =>
             prevJobs.map(j =>
               j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
             )
           );
-          toast.error('Failed to update job status. Please try again.');
           setIsUpdatingJobStatus(prev => {
             const next = new Set(prev);
             next.delete(currentDraggedJob);
@@ -821,13 +913,39 @@ const JobsTracker: React.FC = () => {
           const result = await response.json();
           if (result.error || (result.success === false)) {
             console.error('API returned error:', result);
+            
+            // Check if this is a credit-related error
+            const isCreditError = 
+              result.requiresUpgrade ||
+              result.error?.includes('limit exceeded') ||
+              result.error?.includes('insufficient credits') ||
+              result.error?.includes('Plan limit exceeded') ||
+              (originalStatus === 'draft' && newStatus === 'created' && (result.error?.includes('limit') || result.error?.includes('credit')));
+            
+            // Handle insufficient credits error - show paywall
+            if (isCreditError) {
+              const limit = result.limit || 1;
+              const currentUsage = result.currentUsage || limit;
+              const creditsRemaining = Math.max(0, limit - currentUsage);
+              
+              showExhaustionModal(
+                {
+                  creditsRemaining,
+                  limit,
+                  reason: result.message || result.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+                },
+                'pro_monthly'
+              );
+            } else {
+              toast.error(result.message || result.error || 'Failed to update job status. Please try again.');
+            }
+            
             // Revert on failure
             setJobs(prevJobs =>
               prevJobs.map(j =>
                 j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
               )
             );
-            toast.error(result.message || 'Failed to update job status. Please try again.');
             setIsUpdatingJobStatus(prev => {
               const next = new Set(prev);
               next.delete(currentDraggedJob);
@@ -837,6 +955,12 @@ const JobsTracker: React.FC = () => {
           }
           // Success - update with server response to ensure consistency
           console.log('✅ Job status updated successfully:', newStatus);
+          
+          // Dispatch credit update event if moving from draft to created
+          if (originalStatus === 'draft' && newStatus === 'created') {
+            window.dispatchEvent(new CustomEvent('creditsUpdated'));
+          }
+          
           if (result.job || result.data) {
             const updatedJob = result.job || result.data;
             setJobs(prevJobs => 
@@ -869,13 +993,34 @@ const JobsTracker: React.FC = () => {
       })
       .catch(error => {
         console.error('Error updating job status:', error);
+        
+        // Check if error is credit-related
+        const errorMessage = error?.message || error?.toString() || '';
+        const isCreditError = 
+          errorMessage.includes('limit exceeded') ||
+          errorMessage.includes('insufficient credits') ||
+          errorMessage.includes('Plan limit exceeded') ||
+          (originalStatus === 'draft' && newStatus === 'created' && (errorMessage.includes('limit') || errorMessage.includes('credit')));
+        
+        if (isCreditError) {
+          showExhaustionModal(
+            {
+              creditsRemaining: 0,
+              limit: 1,
+              reason: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+            },
+            'pro_monthly'
+          );
+        } else {
+          toast.error('Failed to update job status. Please try again.');
+        }
+        
         // Revert on error
         setJobs(prevJobs =>
           prevJobs.map(j =>
             j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
           )
         );
-        toast.error('Failed to update job status. Please try again.');
         setIsUpdatingJobStatus(prev => {
           const next = new Set(prev);
           next.delete(currentDraggedJob);

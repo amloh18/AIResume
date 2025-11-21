@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
 import { useRouter } from 'next/navigation';
+import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 
 interface JobApplication {
   id: string;
@@ -78,7 +79,9 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
 }) => {
   const { user } = useUnifiedAuth();
   const router = useRouter();
+  const { showExhaustionModal } = useCreditExhaustionHandler();
   const [isCreatingJourney, setIsCreatingJourney] = useState(false);
+  const [isMovingToCreated, setIsMovingToCreated] = useState(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
   const [loadingJourneys, setLoadingJourneys] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -627,6 +630,36 @@ ${userName}`
         }
       }
 
+      // IMPORTANT: Move job to 'created' status BEFORE creating journey
+      // Journeys and documents should only be created for jobs in 'created' status or later
+      if (job.status === 'draft') {
+        try {
+          const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              status: 'created'
+            }),
+          });
+
+          if (!statusResponse.ok) {
+            const errorData = await statusResponse.json();
+            toast.error(errorData.error || 'Failed to move job to created stage. Please try again.');
+            return;
+          }
+
+          toast.success('Job moved to created stage!');
+          // Refresh job data to get updated status
+          await onRefresh();
+        } catch (error) {
+          console.error('Error updating job status:', error);
+          toast.error('Failed to move job to created stage. Please try again.');
+          return;
+        }
+      }
+
       const response = await authenticatedFetchWithUserId('/api/application-journey', user.id, {
         method: 'POST',
         headers: {
@@ -651,28 +684,6 @@ ${userName}`
           toast.success('CV journey already exists with current data');
         } else {
           toast.success('CV journey created successfully!');
-        }
-        
-        // If job is in draft status, move it to created stage
-        if (job.status === 'draft') {
-          try {
-            const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                status: 'created'
-              }),
-            });
-
-            if (statusResponse.ok) {
-              toast.success('Job automatically moved to created stage!');
-            }
-          } catch (error) {
-            console.error('Error updating job status:', error);
-            // Don't fail the whole operation if status update fails
-          }
         }
         
         // Reload journeys immediately to show the new journey card
@@ -721,6 +732,92 @@ ${userName}`
     ));
     
     console.log('✅ ApplicationJourneyModal - Journey updated in local state');
+  };
+
+  const handleMoveToCreated = async () => {
+    if (isMovingToCreated || !user?.id) return;
+    
+    try {
+      setIsMovingToCreated(true);
+      
+      const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'created'
+        }),
+      });
+
+      if (!statusResponse.ok) {
+        let errorData: any = {};
+        try {
+          errorData = await statusResponse.json();
+          console.log('🔍 JobSidebar - Error response data:', errorData);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+        
+        // Handle insufficient credits error (403) - show paywall
+        if (statusResponse.status === 403) {
+          const limit = errorData.limit || 1;
+          const currentUsage = errorData.currentUsage || limit;
+          const creditsRemaining = Math.max(0, limit - currentUsage);
+          
+          console.log('🔍 JobSidebar - Credit error detected:', {
+            requiresUpgrade: errorData.requiresUpgrade,
+            limit,
+            currentUsage,
+            creditsRemaining,
+            error: errorData.error
+          });
+          
+          // Show paywall if requiresUpgrade is true OR if it's a 403 (credit error)
+          if (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits')) {
+            console.log('🔍 JobSidebar - Showing paywall modal');
+            showExhaustionModal(
+              {
+                creditsRemaining,
+                limit,
+                reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+              },
+              'pro_monthly'
+            );
+            return;
+          }
+        }
+        
+        toast.error(errorData.error || errorData.message || 'Failed to move job to created stage. Please try again.');
+        return;
+      }
+
+      toast.success('Job moved to created stage!');
+      
+      // Dispatch credit update event to refresh membership card
+      window.dispatchEvent(new CustomEvent('creditsUpdated'));
+      
+      // Refresh job data to get updated status
+      await onRefresh();
+    } catch (error: any) {
+      console.error('Error updating job status:', error);
+      
+      // Check if error message indicates credit issue
+      if (error?.message?.includes('limit exceeded') || error?.message?.includes('insufficient credits')) {
+        showExhaustionModal(
+          {
+            creditsRemaining: 0,
+            limit: 1,
+            reason: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+          },
+          'pro_monthly'
+        );
+      } else {
+        toast.error('Failed to move job to created stage. Please try again.');
+      }
+    } finally {
+      setIsMovingToCreated(false);
+    }
   };
 
 
@@ -1089,7 +1186,7 @@ ${userName}`
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {(job.jobDescription || job.description) && (
+              {(job.jobDescription || job.description) && job.status !== 'draft' && (
                 <motion.button
                   onClick={() => setSkillGapAnalysisOpen(true)}
                   className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
@@ -1133,63 +1230,105 @@ ${userName}`
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             <div className="space-y-6 px-6 py-4">
-              {/* Row 1: CV Journeys Section */}
+              {/* Row 1: CV Journeys Section or Move to Created Button (for draft jobs) */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
-                
-                {journeys.length > 0 ? (
-                  <div className="space-y-4">
-                    {journeys
-                      .filter(cvJourney => cvJourney.id)
-                      .map((cvJourney, index) => {
-                      const journey = {
-                        id: cvJourney.id,
-                        jobId: cvJourney.jobId,
-                        jobTitle: cvJourney.jobTitle,
-                        company: cvJourney.company,
-                        status: cvJourney.status as 'in-progress' | 'completed',
-                        currentStep: cvJourney.currentStep,
-                        totalSteps: cvJourney.totalSteps,
-                        createdAt: cvJourney.metadata.createdAt instanceof Date 
-                          ? cvJourney.metadata.createdAt.toISOString()
-                          : new Date(cvJourney.metadata.createdAt).toISOString(),
-                        updatedAt: cvJourney.metadata.updatedAt instanceof Date 
-                          ? cvJourney.metadata.updatedAt.toISOString()
-                          : new Date(cvJourney.metadata.updatedAt).toISOString(),
-                        atsScore: cvJourney.atsScore,
-                        cvId: cvJourney.cvId,
-                        coverLetterId: cvJourney.coverLetterId
-                      };
-                      
-                      return (
-                        <JourneyTimelineCard
-                          key={journey.id || `journey-${index}`}
-                          journey={journey}
-                          onResume={handleContinueJourney}
-                          onDownload={handleApplyNow}
-                          onRefresh={onRefresh}
-                          onUpdateJourney={handleUpdateJourney}
-                        />
-                      );
-                    })}
+                {job.status === 'draft' ? (
+                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-6">
+                    <div className="text-center">
+                      <Target size={48} className="text-gray-400 dark:text-white/40 mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        Start CV Journey
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-white/70 mb-4 max-w-md mx-auto">
+                        Move this job to the "Created" stage to start your CV journey. This will:
+                      </p>
+                      <ul className="text-left text-sm text-gray-600 dark:text-white/70 mb-6 space-y-2 max-w-md mx-auto">
+                        <li className="flex items-start gap-2">
+                          <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
+                          <span>Create a tailored CV and cover letter for this job</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
+                          <span>Run ATS analysis to optimize your application</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
+                          <span>Track your application progress</span>
+                        </li>
+                      </ul>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        This action requires 1 job credit.
+                      </p>
+                      <motion.button
+                        onClick={handleMoveToCreated}
+                        disabled={isMovingToCreated}
+                        className="px-6 py-3 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                        whileHover={{ scale: isMovingToCreated ? 1 : 1.02 }}
+                        whileTap={{ scale: isMovingToCreated ? 1 : 0.98 }}
+                      >
+                        {isMovingToCreated ? 'Moving to Created...' : 'Move to Created Stage'}
+                      </motion.button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <Target size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No CV Journeys Started</h4>
-                    <p className="text-gray-600 dark:text-white/70 text-xs mb-3">
-                      Create your first CV journey to start preparing for this job application.
-                    </p>
-                    <motion.button
-                      onClick={handleCreateJourney}
-                      disabled={isCreatingJourney}
-                      className="px-4 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
-                      whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
-                    >
-                      {isCreatingJourney ? 'Creating Journey...' : 'Create New CV Journey'}
-                    </motion.button>
-                  </div>
+                  <>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
+                    
+                    {journeys.length > 0 ? (
+                      <div className="space-y-4">
+                        {journeys
+                          .filter(cvJourney => cvJourney.id)
+                          .map((cvJourney, index) => {
+                          const journey = {
+                            id: cvJourney.id,
+                            jobId: cvJourney.jobId,
+                            jobTitle: cvJourney.jobTitle,
+                            company: cvJourney.company,
+                            status: cvJourney.status as 'in-progress' | 'completed',
+                            currentStep: cvJourney.currentStep,
+                            totalSteps: cvJourney.totalSteps,
+                            createdAt: cvJourney.metadata.createdAt instanceof Date 
+                              ? cvJourney.metadata.createdAt.toISOString()
+                              : new Date(cvJourney.metadata.createdAt).toISOString(),
+                            updatedAt: cvJourney.metadata.updatedAt instanceof Date 
+                              ? cvJourney.metadata.updatedAt.toISOString()
+                              : new Date(cvJourney.metadata.updatedAt).toISOString(),
+                            atsScore: cvJourney.atsScore,
+                            cvId: cvJourney.cvId,
+                            coverLetterId: cvJourney.coverLetterId
+                          };
+                          
+                          return (
+                            <JourneyTimelineCard
+                              key={journey.id || `journey-${index}`}
+                              journey={journey}
+                              onResume={handleContinueJourney}
+                              onDownload={handleApplyNow}
+                              onRefresh={onRefresh}
+                              onUpdateJourney={handleUpdateJourney}
+                            />
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Target size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No CV Journeys Started</h4>
+                        <p className="text-gray-600 dark:text-white/70 text-xs mb-3">
+                          Create your first CV journey to start preparing for this job application.
+                        </p>
+                        <motion.button
+                          onClick={handleCreateJourney}
+                          disabled={isCreatingJourney}
+                          className="px-4 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
+                          whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
+                        >
+                          {isCreatingJourney ? 'Creating Journey...' : 'Create New CV Journey'}
+                        </motion.button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

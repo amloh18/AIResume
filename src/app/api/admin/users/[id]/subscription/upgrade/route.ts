@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import Invoice from '@/models/Invoice';
+import InvoiceItem from '@/models/InvoiceItem';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import { ActivityLogService } from '@/lib/services/activityLogService';
 import creditService from '@/lib/services/creditService';
 import { invalidateConfigCache } from '@/lib/config/adminConfig';
 import { requireAdmin } from '@/lib/middleware/admin-auth';
+import { createTransaction } from '@/lib/services/transactionService';
 
 export async function POST(
   request: NextRequest,
@@ -121,6 +124,71 @@ export async function POST(
       const creditStatus = await creditService.getCreditStatus(userId);
       if (!creditStatus || creditStatus.jobCredits === 0) {
         await creditService.initializeCredits(userId, planKey);
+      }
+    }
+
+    // Create invoice for admin-granted subscription
+    // Only create invoice if plan is not free (free plans don't need invoices)
+    if (planKey !== 'free') {
+      try {
+        // Get plan pricing - use 0 for admin-granted plans or get from country pricing
+        const amount = 0; // Admin-granted plans are typically free
+        const currency = 'USD'; // Default currency
+        
+        const invoice = await Invoice.create({
+          userId: userId,
+          subtotal: amount,
+          taxAmount: 0,
+          amount: amount,
+          currency: currency,
+          status: 'paid',
+          planName: plan.name,
+          planId: plan._id,
+          billingCycle: interval || (planKey === 'day_pass' ? 'one-time' : 'monthly'),
+          paymentMethodType: 'admin',
+          paymentMethodLast4: 'ADMIN',
+          paidAt: new Date(),
+          invoiceDate: new Date(),
+          dueDate: endDate,
+          description: `${plan.name} - ${interval || 'monthly'} subscription (Admin granted)`,
+          metadata: {
+            adminUserId: adminContext.adminUserId,
+            adminEmail: adminContext.adminEmail,
+            reason: reason || 'Admin granted subscription',
+            previousPlan: oldPlanKey
+          }
+        });
+
+        // Create invoice items
+        await InvoiceItem.create({
+          invoiceId: invoice._id,
+          description: `${plan.name} - ${interval || 'monthly'} subscription`,
+          quantity: 1,
+          unitPrice: amount,
+          amount: amount,
+          type: 'subscription'
+        });
+
+        // Create transaction record for admin-granted subscription
+        await createTransaction({
+          invoiceId: invoice._id.toString(),
+          amount: amount,
+          status: 'success',
+          gatewayReferenceId: `admin_${userId}_${Date.now()}`,
+          gateway: 'admin',
+          metadata: {
+            adminUserId: adminContext.adminUserId,
+            adminEmail: adminContext.adminEmail,
+            reason: reason || 'Admin granted subscription',
+            planKey: planKey,
+            interval: interval
+          }
+        });
+
+        console.log(`✅ Invoice created for admin-granted subscription: ${invoice.invoiceNumber}`);
+      } catch (invoiceError) {
+        // Log error but don't fail the subscription upgrade
+        console.error('Error creating invoice for admin-granted subscription:', invoiceError);
       }
     }
 

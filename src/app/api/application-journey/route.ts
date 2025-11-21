@@ -365,6 +365,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if the job exists and verify it's not in 'draft' status
+    // Journeys and documents should only be created for jobs in 'created' status or later
+    const { JobApplication } = await import('@/models');
+    const job = await JobApplication.findOne({
+      _id: new mongoose.Types.ObjectId(jobId),
+      userId: new mongoose.Types.ObjectId(userId)
+    });
+
+    if (!job) {
+      return NextResponse.json(
+        { success: false, error: 'Job not found' },
+        { status: 404 }
+      );
+    }
+
+    // Prevent journey creation for draft jobs
+    if (job.status === 'draft') {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Cannot create journey for draft jobs. Please move the job to "created" status first.' 
+        },
+        { status: 400 }
+      );
+    }
+
     // Check if journey already exists for this job
     const existingJourneyQuery: Record<string, any> = { 
       jobId,

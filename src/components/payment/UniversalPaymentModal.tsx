@@ -495,7 +495,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       const currency = (checkoutData.currency || 'INR').toUpperCase();
       
       const options = {
-        key: checkoutData.key_id || (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID as string),
+        key: checkoutData.key_id || '',
         amount: amount, // Amount in currency subunits (paise for INR)
         currency: currency, // Razorpay checkout expects uppercase currency (e.g., 'INR')
         name: 'CV Circle',
@@ -630,7 +630,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
       // Validate required fields per Razorpay documentation
       if (!options.key) {
-        throw new Error('Razorpay key ID is missing');
+        console.error('Razorpay key ID is missing from checkout response:', checkoutData);
+        throw new Error('Razorpay key ID is missing. Please contact support or try again.');
       }
       if (!options.order_id) {
         throw new Error('Order ID is missing');
@@ -1397,6 +1398,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                           src="/images/logo.png"
                           alt="CVCircle Logo"
                           className="w-6 h-6 tablet:w-8 tablet:h-8 object-contain"
+                          loading="eager"
+                          decoding="async"
+                          onError={(e) => {
+                            console.error('Logo image failed to load in payment modal');
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
                         />
                         <span className="text-white font-bold text-sm tablet:text-lg drop-shadow-lg">
                           CVCircle
@@ -1589,11 +1596,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                     <button
                       onClick={handlePayment}
                       disabled={loading || providerHealth[paymentProvider] === false || providerHealthLoading}
-                      className="w-full py-3 tablet:py-3.5 bg-lime-500 hover:bg-lime-600 dark:bg-[rgb(129,255,0)] dark:hover:bg-[rgb(110,230,0)] text-white font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
+                      className="w-full py-3 tablet:py-3.5 bg-lime-500 hover:bg-lime-600 dark:bg-[rgb(129,255,0)] dark:hover:bg-[rgb(110,230,0)] text-black font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
                     >
                       {loading ? (
                         <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
                           <span className="hidden tablet:inline">Processing...</span>
                           <span className="tablet:hidden">Processing</span>
                         </>

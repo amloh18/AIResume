@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, X, ChevronDown, MapPin, DollarSign, Calendar, Clock,
-  Target, Eye, ArrowRight, AlertCircle, TrendingUp, Mail, Linkedin
+  Target, Eye, ArrowRight, AlertCircle, TrendingUp, Mail, Linkedin, GraduationCap
 } from 'lucide-react';
 import JourneyTimelineCard from '../JourneyTimelineCard';
 import { CVJourney } from '@/types/cv';
@@ -216,6 +216,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                         jobs={stageJobs}
                         onJobClick={onJobClick}
                         onJobStatusUpdate={onJobStatusUpdate}
+                        isFullScreen={!!zoomedStage}
                       />
                     )}
                     {stage.status === 'interview' && onJobStatusUpdate && (
@@ -225,6 +226,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                         getJobJourneys={getJobJourneys}
                         onJobClick={onJobClick}
                         onJobStatusUpdate={onJobStatusUpdate}
+                        isFullScreen={!!zoomedStage}
                       />
                     )}
                     {stage.status === 'offer' && onJobStatusUpdate && (
@@ -232,12 +234,14 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                         jobs={stageJobs}
                         onJobClick={onJobClick}
                         onJobStatusUpdate={onJobStatusUpdate}
+                        isFullScreen={!!zoomedStage}
                       />
                     )}
                     {stage.status === 'rejected' && (
                       <RejectedStageView
                         jobs={stageJobs}
                         onJobClick={onJobClick}
+                        isFullScreen={!!zoomedStage}
                       />
                     )}
                   </div>
@@ -564,13 +568,26 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                         e.stopPropagation();
                                         onJobClick(job);
                                       }}
-                                      className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2"
+                                      className={`flex-1 px-3 py-2 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
+                                        job.status === 'interview'
+                                          ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+                                          : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
+                                      }`}
                                       whileHover={{ scale: 1.02 }}
                                       whileTap={{ scale: 0.98 }}
                                     >
-                                      <Eye size={12} />
-                                      Manage Applications
-                                      <ArrowRight size={12} />
+                                      {job.status === 'interview' ? (
+                                        <>
+                                          <GraduationCap size={12} />
+                                          Interview Prep
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Eye size={12} />
+                                          Manage Applications
+                                          <ArrowRight size={12} />
+                                        </>
+                                      )}
                                     </motion.button>
                                   ) : null}
 

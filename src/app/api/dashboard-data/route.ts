@@ -120,11 +120,11 @@ export async function GET(request: NextRequest) {
       usageLimits: {
         cvs: {
           used: cvCount,
-          limit: user.subscription?.planKey === 'free' ? 3 : -1
+          limit: user.subscription?.planKey === 'free' ? 1 : -1
         },
         jobs: {
           used: jobCount,
-          limit: user.subscription?.planKey === 'free' ? 5 : -1
+          limit: user.subscription?.planKey === 'free' ? 1 : -1
         }
       },
       cvs: includeCVs ? cvs.map(cv => ({

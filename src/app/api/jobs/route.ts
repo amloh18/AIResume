@@ -425,9 +425,11 @@ export async function POST(request: NextRequest) {
         // Log draft job creation activity
         try {
           const { ActivityLogService } = await import('@/lib/services/activityLogService');
+          // Fetch user for email (draft jobs don't have user in scope)
+          const userForLogging = await User.findById(normalizedUserId).select('email').lean();
           await ActivityLogService.logUserAction({
             userId: normalizedUserId.toString(),
-            userEmail: user.email,
+            userEmail: userForLogging?.email || undefined,
             action: 'job_created_draft',
             resourceType: 'job',
             resourceId: jobApplication._id.toString(),

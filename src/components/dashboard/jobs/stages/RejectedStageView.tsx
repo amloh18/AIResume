@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { XCircle, Building, Calendar, TrendingUp, Archive, RefreshCw, BarChart3 } from 'lucide-react';
+import { XCircle, Building, Calendar, TrendingUp, Archive, RefreshCw, BarChart3, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface JobApplication {
@@ -21,11 +21,13 @@ interface JobApplication {
 interface RejectedStageViewProps {
   jobs: JobApplication[];
   onJobClick: (job: JobApplication) => void;
+  isFullScreen?: boolean;
 }
 
 const RejectedStageView: React.FC<RejectedStageViewProps> = ({
   jobs,
-  onJobClick
+  onJobClick,
+  isFullScreen = false
 }) => {
   const getDaysBetween = (startDate?: Date | string, endDate?: Date | string): number | null => {
     if (!startDate || !endDate) return null;
@@ -82,39 +84,41 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Insights Section */}
-      <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-lg p-4 md:p-6 border border-gray-200 dark:border-white/10">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <BarChart3 className="w-5 h-5" />
-          Insights
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              {jobs.length}
+      {/* Insights Section - Only show when NOT full screen */}
+      {!isFullScreen && (
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900/50 dark:to-gray-800/50 rounded-lg p-4 md:p-6 border border-gray-200 dark:border-white/10">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5" />
+            Insights
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                {jobs.length}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Total Rejections
+              </div>
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Total Rejections
+            <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                {avgMatchScore}%
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Avg Match Score
+              </div>
             </div>
-          </div>
-          <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              {avgMatchScore}%
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Avg Match Score
-            </div>
-          </div>
-          <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-              {avgDaysToRejection}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Avg Days to Rejection
+            <div className="bg-white dark:bg-[#1a2015] rounded-lg p-4">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                {avgDaysToRejection}
+              </div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Avg Days to Rejection
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Jobs List */}
       <div className="space-y-4">
@@ -122,6 +126,77 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
           const daysToRejection = getDaysBetween(job.applicationDate, job.updatedAt);
           const matchScore = job.matchScore || job.atsScore || 0;
 
+          // COMPACT FULL SCREEN LAYOUT
+          if (isFullScreen) {
+            return (
+              <motion.div
+                key={job.id || job._id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border border-gray-200 dark:border-white/10 rounded-lg hover:shadow-md transition-all"
+              >
+                {/* Left: Compact Job Info */}
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-red-500 to-pink-500 rounded-lg flex items-center justify-center">
+                    <Building className="w-5 h-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                      {job.jobTitle || job.title}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
+                      <span>{job.company}</span>
+                      {daysToRejection !== null && (
+                        <>
+                          <span>•</span>
+                          <span>{daysToRejection} days to rejection</span>
+                        </>
+                      )}
+                      {matchScore > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className={`font-semibold ${
+                            matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                            matchScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                            'text-red-600 dark:text-red-400'
+                          }`}>
+                            {matchScore}% match
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right: CTA Buttons */}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <motion.button
+                    onClick={(e) => handleViewAnalysis(job, e)}
+                    className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <BarChart3 className="w-3 h-3" />
+                    Analysis
+                  </motion.button>
+                  <motion.button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJobClick(job);
+                    }}
+                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Eye className="w-3 h-3" />
+                    Details
+                  </motion.button>
+                </div>
+              </motion.div>
+            );
+          }
+
+          // EXISTING VERTICAL LAYOUT
           return (
             <motion.div
               key={job.id || job._id}

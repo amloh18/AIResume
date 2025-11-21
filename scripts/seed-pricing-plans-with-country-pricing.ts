@@ -33,24 +33,22 @@ const pricingPlansData = [
     billingCycle: 'one-time', // Free plan uses one-time (but price is 0)
     status: 'active',
     features: [
-      '3 CVs',
+      '1 CVs',
       'Basic templates',
       'PDF export',
       'Email support'
     ],
     notIncludedFeatures: [
       'Cover letters',
-      'Job tracking',
-      'ATS optimization',
-      'Priority support'
+      'Job tracking'
     ],
     isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',
     credits: {
-      cvCredits: 3,
-      exportCredits: 3,
+      cvCredits: 1,
+      exportCredits: 1,
       atsCheckCredits: 0,
       jobCredits: 1,
       resetSchedule: 'monthly'
@@ -80,10 +78,10 @@ const pricingPlansData = [
     displayOnLanding: true,
     targetAudience: 'all',
     credits: {
-      cvCredits: 5, // 5 CVs for day pass
-      exportCredits: 5,
-      atsCheckCredits: 5,
-      jobCredits: 5,
+      cvCredits: -1, // Unlimited for 24 hours
+      exportCredits: -1, // Unlimited for 24 hours
+      atsCheckCredits: -1, // Unlimited for 24 hours
+      jobCredits: -1, // Unlimited for 24 hours
       resetSchedule: 'one-time' // No reset for day pass
     },
     storageLimit: 1000,
@@ -108,7 +106,7 @@ const pricingPlansData = [
       'Advanced analytics'
     ],
     notIncludedFeatures: [],
-    isPopular: true,
+    isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',
@@ -140,8 +138,8 @@ const pricingPlansData = [
       'Advanced analytics'
     ],
     notIncludedFeatures: [],
-    isPopular: false,
-    isBestValue: true,
+    isPopular: true,
+    isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',
     credits: {

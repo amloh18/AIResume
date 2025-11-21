@@ -12,9 +12,16 @@ interface FocusModeToggleProps {
 const FocusModeToggle: React.FC<FocusModeToggleProps> = ({ className }) => {
   const { isFocusMode, toggleFocusMode } = useFocusMode();
 
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFocusMode();
+  };
+
   return (
     <motion.button
-      onClick={toggleFocusMode}
+      type="button"
+      onClick={handleClick}
       className={`p-2 tablet:px-3 tablet:py-2 rounded-lg text-sm font-medium border transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px] ${
         isFocusMode
           ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-400 dark:border-blue-500 text-blue-900 dark:text-blue-100'

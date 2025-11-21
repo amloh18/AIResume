@@ -6,7 +6,7 @@ export interface ITransaction extends Document {
   amount: number; // Can be negative for refunds
   status: 'success' | 'failed' | 'refunded' | 'pending' | 'chargeback' | 'dispute';
   gatewayReferenceId: string; // Stripe/Razorpay transaction ID
-  gateway: 'stripe' | 'razorpay';
+  gateway: 'stripe' | 'razorpay' | 'admin';
   failureReason?: string;
   metadata?: Record<string, any>;
   createdAt: Date;
@@ -41,7 +41,7 @@ const transactionSchema = new Schema<ITransaction>({
   gateway: {
     type: String,
     required: [true, 'Gateway is required'],
-    enum: ['stripe', 'razorpay']
+    enum: ['stripe', 'razorpay', 'admin']
   },
   failureReason: {
     type: String,

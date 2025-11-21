@@ -52,6 +52,12 @@ export default function UnifiedAuthLayout({
                 src="/images/logo.png" 
                 alt="CVCircle Logo" 
                 className="w-10 h-10 object-contain"
+                loading="eager"
+                decoding="async"
+                onError={(e) => {
+                  console.error('Logo image failed to load in auth layout');
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
               />
               <div className="text-3xl font-bold">
                 <span className="text-[#80FF00]">CV</span><span className="text-white">Circle</span>

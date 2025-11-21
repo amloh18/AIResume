@@ -696,14 +696,27 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
       console.log('🔍 EditJobSidebar - Response status:', response.status);
 
-      // Handle insufficient credits error (403)
-      if (response.status === 403) {
-        const errorResult = await response.json();
-        console.log('🔍 EditJobSidebar - Credit check failed:', errorResult);
+      // Handle insufficient credits error (403 or 500 with credit error)
+      if (!response.ok) {
+        let errorResult: any = {};
+        try {
+          const text = await response.text();
+          errorResult = text ? JSON.parse(text) : {};
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
         
-        if (errorResult.requiresUpgrade) {
+        console.log('🔍 EditJobSidebar - Error response:', errorResult);
+        
+        // Check if this is a credit-related error
+        const isCreditError = 
+          (response.status === 403 && (errorResult.requiresUpgrade || errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits'))) ||
+          (response.status === 500 && (errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits') || errorResult.error?.includes('Plan limit exceeded'))) ||
+          ((isCreatingAsCreated || isMovingToCreated) && (errorResult.requiresUpgrade || errorResult.error?.includes('limit') || errorResult.error?.includes('credit')));
+        
+        if (isCreditError) {
           // Show credit exhaustion modal with custom message
-          const customMessage = errorResult.message || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs';
+          const customMessage = errorResult.message || errorResult.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs';
           const limit = errorResult.limit || 1;
           const currentUsage = errorResult.currentUsage || limit;
           const creditsRemaining = Math.max(0, limit - currentUsage);
@@ -737,6 +750,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           setShowUnsavedWarning(false);
           setErrorMessage('');
           setFieldErrors({});
+
+          // Dispatch credit update event if job was created with 'created' status or moved from draft to created
+          if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave) {
+            window.dispatchEvent(new CustomEvent('creditsUpdated'));
+          }
 
           // Step 2: If this is a new job, implement the "Job First" workflow
           // Create an Application Package automatically

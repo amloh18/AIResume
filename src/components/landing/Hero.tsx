@@ -79,10 +79,18 @@ const Hero = () => {
 
   useEffect(() => {
     let ticking = false;
+    let lastScrollY = 0;
     const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      // Throttle scroll updates - only update if scroll changed significantly
+      if (Math.abs(currentScrollY - lastScrollY) < 5) {
+        return;
+      }
+      lastScrollY = currentScrollY;
+      
       if (!ticking) {
         requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
+          setScrollY(currentScrollY);
           ticking = false;
         });
         ticking = true;
@@ -110,7 +118,7 @@ const Hero = () => {
           transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
           style={{
             textShadow: '0 0 20px rgba(132, 204, 22, 0.2)',
-            willChange: 'transform, opacity'
+            willChange: 'auto'
           }}
         >
           <motion.span
@@ -120,7 +128,7 @@ const Hero = () => {
               textShadow: '0 0 30px rgba(132, 204, 22, 0.4)'
             }}
             transition={{ duration: 0.2 }}
-            style={{ willChange: 'transform' }}
+            style={{ willChange: 'auto' }}
           >
             <span className="text-white">{currentAction}</span>
             {currentAction.length > 0 && <span className="text-white"> </span>}
@@ -139,7 +147,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
-          style={{ willChange: 'transform, opacity' }}
+          style={{ willChange: 'auto' }}
         >
           One-click CV creation, cover letter generation, and job application tracking made effortless.
         </motion.p>
@@ -150,7 +158,7 @@ const Hero = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
-          style={{ willChange: 'transform, opacity' }}
+          style={{ willChange: 'auto' }}
         >
           <motion.a
             href="/sign-up"
@@ -160,7 +168,7 @@ const Hero = () => {
               boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
             }}
             whileTap={{ scale: 0.98 }}
-            style={{ willChange: 'transform' }}
+            style={{ willChange: 'auto' }}
           >
             <motion.div
               className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -202,25 +210,23 @@ const Hero = () => {
         </motion.div>
 
         {/* Hero Banner with Parallax Effect */}
-        <motion.div
-          className="relative w-full mx-auto mt-8 tablet:mt-12 -mb-16 tablet:-mb-32"
-          initial={{ opacity: 0, y: 40, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
-          style={{ willChange: 'transform, opacity' }}
-        >
+          <motion.div
+            className="relative w-full mx-auto mt-8 tablet:mt-12 -mb-16 tablet:-mb-32"
+            initial={{ opacity: 0, y: 40, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.8, delay: 0.7, ease: "easeOut" }}
+            style={{ willChange: 'auto' }}
+          >
           <motion.div
             className="relative shadow-2xl"
             whileHover={{
               scale: 1.01,
-              rotateY: 1,
-              boxShadow: "0 30px 60px -20px rgba(0, 0, 0, 0.6)"
             }}
             style={{
-              transformStyle: 'preserve-3d',
-              perspective: '1000px',
-              transform: `translateY(${Math.min(scrollY * 0.15, 100)}px)`,
-              willChange: 'transform'
+              transform: `translate3d(0, ${Math.min(scrollY * 0.15, 100)}px, 0)`,
+              willChange: scrollY > 0 ? 'transform' : 'auto',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden'
             }}
           >
             <div className="relative w-full h-[600px] rounded-2xl overflow-hidden bg-gradient-to-br from-gray-800 to-gray-900">
@@ -228,7 +234,8 @@ const Hero = () => {
                 <div 
                   className="absolute inset-0"
                   style={{
-                    transform: `translateY(${Math.min(scrollY * 0.3, 200)}px)`,
+                    transform: `translate3d(0, ${Math.min(scrollY * 0.3, 200)}px, 0)`,
+                    willChange: scrollY > 0 ? 'transform' : 'auto'
                   }}
                 >
                   <Image
@@ -237,8 +244,8 @@ const Hero = () => {
                     fill
                     className="object-cover object-top"
                     priority
-                    quality={90}
-                    unoptimized={true}
+                    quality={85}
+                    sizes="100vw"
                     style={{
                       filter: 'drop-shadow(0 10px 20px rgba(132, 204, 22, 0.2))',
                     }}

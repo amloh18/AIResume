@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, CheckCircle, Building } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface JobApplication {
@@ -20,12 +20,14 @@ interface AppliedStageViewProps {
   jobs: JobApplication[];
   onJobClick: (job: JobApplication) => void;
   onJobStatusUpdate: (jobId: string, newStatus: string) => Promise<void>;
+  isFullScreen?: boolean;
 }
 
 const AppliedStageView: React.FC<AppliedStageViewProps> = ({
   jobs,
   onJobClick,
-  onJobStatusUpdate
+  onJobStatusUpdate,
+  isFullScreen = false
 }) => {
   const getDaysSinceApplication = (applicationDate?: Date | string): number => {
     if (!applicationDate) return 0;
@@ -106,6 +108,87 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
               ? 'approaching' 
               : 'normal';
 
+        // COMPACT FULL SCREEN LAYOUT
+        if (isFullScreen) {
+          return (
+            <motion.div
+              key={job.id || job._id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${
+                deadlineStatus === 'overdue' 
+                  ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' 
+                  : deadlineStatus === 'approaching'
+                    ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
+                    : 'border-gray-200 dark:border-white/10'
+              }`}
+            >
+              {/* Left: Compact Job Info */}
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                  <Building className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
+                    {job.jobTitle || job.title}
+                  </h3>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    <span>{job.company}</span>
+                    <span>•</span>
+                    <span>{daysSinceApplication} days ago</span>
+                    {job.deadline && (
+                      <>
+                        <span>•</span>
+                        <span className={deadlineStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-semibold' : deadlineStatus === 'approaching' ? 'text-yellow-600 dark:text-yellow-400' : ''}>
+                          {deadlineStatus === 'overdue' 
+                            ? `Overdue ${Math.abs(daysUntilDeadline!)}d`
+                            : deadlineStatus === 'approaching'
+                              ? `${daysUntilDeadline}d left`
+                              : `Deadline: ${(typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                        </span>
+                      </>
+                    )}
+                    {needsFollowUp && (
+                      <>
+                        <span>•</span>
+                        <span className="text-orange-600 dark:text-orange-400 font-semibold">Follow-up needed</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: CTA Buttons */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {needsFollowUp && (
+                  <motion.button
+                    onClick={(e) => handleMarkFollowUpComplete(job, e)}
+                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <CheckCircle className="w-3 h-3" />
+                    Mark Complete
+                  </motion.button>
+                )}
+                <motion.button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onJobClick(job);
+                  }}
+                  className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Eye className="w-3 h-3" />
+                  View Details
+                </motion.button>
+              </div>
+            </motion.div>
+          );
+        }
+
+        // EXISTING VERTICAL LAYOUT (when not full screen)
         return (
           <motion.div
             key={job.id || job._id}

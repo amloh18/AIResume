@@ -92,7 +92,8 @@ const ChromeExtension = () => {
                     alt={site.name}
                     fill
                     className="object-contain"
-                    unoptimized
+                    quality={75}
+                    sizes="32px"
                   />
                 </div>
                 <span className="font-semibold">{site.name}</span>
@@ -129,7 +130,8 @@ const ChromeExtension = () => {
                     alt={site.name}
                     fill
                     className="object-contain"
-                    unoptimized
+                    quality={75}
+                    sizes="32px"
                   />
                 </div>
                 <span className="font-semibold">{site.name}</span>

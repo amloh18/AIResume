@@ -38,23 +38,21 @@ const fallbackPlans = [
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      '3 CVs',
+      '1 CVs',
       'Basic templates',
       'PDF export',
       'Email support'
     ],
     notIncludedFeatures: [
       'Cover letters',
-      'Job tracking',
-      'ATS optimization',
-      'Priority support'
+      'Job tracking'
     ],
     isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',
-    maxCVs: 3,
-    maxExports: 3,
+    maxCVs: 1,
+    maxExports: 1,
     maxCoverLetters: 0,
     maxJobs: 0,
     maxJourneys: 0,
@@ -113,7 +111,7 @@ const fallbackPlans = [
       'Advanced analytics'
     ],
     notIncludedFeatures: [],
-    isPopular: true,
+    isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',
@@ -145,7 +143,7 @@ const fallbackPlans = [
       'Advanced analytics'
     ],
     notIncludedFeatures: [],
-    isPopular: false,
+    isPopular: true,
     isBestValue: false,
     displayOnLanding: true,
     targetAudience: 'all',

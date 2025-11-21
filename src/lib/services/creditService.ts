@@ -20,18 +20,29 @@ export interface PlanCreditAllocation {
 class CreditService {
   /**
    * Get credit allocation for a specific plan
+   * Reads from database plan, falls back to hardcoded values if plan not found
    * Free: 1 job credit per month
-   * Day Pass: 5 job credits (24 hours, no reset)
+   * Day Pass: Unlimited (-1) for 24 hours
    * Monthly/Quarterly/Yearly: Unlimited (-1) as long as subscription is active
    */
   async getPlanCredits(planKey: string): Promise<PlanCreditAllocation> {
     try {
-      // Credit allocation based on plan
+      await connectToDatabase();
+      
+      // Try to get plan from database first
+      const PricingPlan = await getAdminPricingPlan();
+      const plan = await PricingPlan.findOne({ key: planKey, status: 'active' }).lean();
+      
+      if (plan && plan.credits && plan.credits.jobCredits !== undefined) {
+        return { jobCredits: plan.credits.jobCredits };
+      }
+      
+      // Fallback to hardcoded values if plan not found in database
       switch (planKey) {
         case 'free':
           return { jobCredits: 1 }; // 1 credit per month
         case 'day_pass':
-          return { jobCredits: 5 }; // 5 credits (24 hours)
+          return { jobCredits: -1 }; // Unlimited for 24 hours
         case 'pro_monthly':
         case 'pro_quarterly':
         case 'pro_yearly':
@@ -41,6 +52,10 @@ class CreditService {
       }
     } catch (error) {
       console.error('Error getting plan credits:', error);
+      // Fallback on error
+      if (planKey === 'day_pass') {
+        return { jobCredits: -1 }; // Unlimited for day pass
+      }
       return { jobCredits: 1 }; // Default to free plan on error
     }
   }
@@ -131,9 +146,17 @@ class CreditService {
         if (!timeCheck.hasAccess) {
           return { available: false, creditsRemaining: 0, limit: 0 };
         }
+        
+        // Day pass is unlimited - return unlimited regardless of stored credits
+        const planCredits = await this.getPlanCredits('day_pass');
+        return {
+          available: true,
+          creditsRemaining: planCredits.jobCredits === -1 ? -1 : planCredits.jobCredits,
+          limit: planCredits.jobCredits
+        };
       }
 
-      // For free and day pass, check job credits
+      // For free plan, check job credits
       const currentCredits = user.credits?.jobCredits ?? 0;
       const limit = (await this.getPlanCredits(user.currentPlanKey || 'free')).jobCredits;
 
