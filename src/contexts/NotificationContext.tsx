@@ -344,11 +344,10 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
       const isRecent = isRecentNotification(notification.createdAt, now, INITIAL_FETCH_TOAST_WINDOW_MS);
 
-      if (!initialToastHydrationRef.current && !isRecent) {
-        return;
+      // Show toast for recent notifications or if we've already hydrated (for new notifications via SSE)
+      if (initialToastHydrationRef.current || isRecent) {
+        showToastForNotification(notification);
       }
-
-      showToastForNotification(notification);
     });
 
     initialToastHydrationRef.current = true;

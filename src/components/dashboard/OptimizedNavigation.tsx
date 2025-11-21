@@ -33,6 +33,7 @@ const OptimizedNavigation: React.FC = () => {
   const [activeSection, setActiveSection] = useState('analytics');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [creditInfo, setCreditInfo] = useState<{
     remaining: number;
@@ -53,6 +54,45 @@ const OptimizedNavigation: React.FC = () => {
     }, 60000); // Update every minute
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Handle hover to open user menu
+  const handleUserMenuMouseEnter = () => {
+    // Clear any pending close timeout
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setIsUserMenuExpanded(true);
+  };
+
+  const handleUserMenuMouseLeave = () => {
+    // Add a small delay before closing to allow moving mouse to menu
+    hoverTimeoutRef.current = setTimeout(() => {
+      setIsUserMenuExpanded(false);
+    }, 200);
+  };
+
+  const handleMenuContentMouseEnter = () => {
+    // Clear timeout when mouse enters menu content
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+  };
+
+  const handleMenuContentMouseLeave = () => {
+    // Close menu when mouse leaves menu content
+    setIsUserMenuExpanded(false);
+  };
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Check if any UniversalPaymentModal is open (from sidebar or settings)
@@ -133,7 +173,7 @@ const OptimizedNavigation: React.FC = () => {
   useEffect(() => {
     const routesToPrefetch = [
       '/dashboard',
-      '/dashboard/jobs',
+      '/dashboard/tracker',
       '/dashboard/canvas',
       '/dashboard/settings'
     ];
@@ -148,7 +188,7 @@ const OptimizedNavigation: React.FC = () => {
   useEffect(() => {
     if (pathname === '/dashboard') {
       setActiveSection('analytics');
-    } else if (pathname.includes('/jobs')) {
+    } else if (pathname.includes('/tracker')) {
       setActiveSection('jobs');
     } else if (pathname.includes('/canvas')) {
       setActiveSection('canvas');
@@ -170,7 +210,7 @@ const OptimizedNavigation: React.FC = () => {
     // Navigate immediately
     const routes = {
       'analytics': '/dashboard',
-      'jobs': '/dashboard/jobs',
+      'jobs': '/dashboard/tracker',
       'canvas': '/dashboard/canvas',
       'settings': '/dashboard/settings'
     };
@@ -218,10 +258,10 @@ const OptimizedNavigation: React.FC = () => {
     },
     { 
       id: 'jobs', 
-      name: 'Jobs', 
+      name: 'Tracker', 
       icon: Briefcase, 
-      description: 'Enhanced job tracking with tabs',
-      route: '/dashboard/jobs'
+      description: 'Application tracking with CV journeys',
+      route: '/dashboard/tracker'
     },
     { 
       id: 'canvas', 
@@ -699,6 +739,8 @@ const OptimizedNavigation: React.FC = () => {
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
+                onMouseEnter={handleMenuContentMouseEnter}
+                onMouseLeave={handleMenuContentMouseLeave}
               >
                 <div className="p-2 xl:p-3 2xl:p-4 space-y-1">
                   {/* View Profile - Only show on 2xl+ */}
@@ -792,6 +834,8 @@ const OptimizedNavigation: React.FC = () => {
           <div className="p-4 xl:p-3 2xl:p-4">
             <motion.button
               onClick={() => setIsUserMenuExpanded(!isUserMenuExpanded)}
+              onMouseEnter={handleUserMenuMouseEnter}
+              onMouseLeave={handleUserMenuMouseLeave}
               className="w-full flex items-center gap-3 lg:justify-center lg:gap-0 2xl:justify-start 2xl:gap-3 focus:outline-none rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors p-2"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

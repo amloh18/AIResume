@@ -115,30 +115,7 @@ const nextConfig: NextConfig = {
       config.resolve.alias = {};
     }
 
-    // Fix for stale JobModal/EditJobModal references - alias them to correct components to prevent HMR errors
-    // This handles any cached references to the old component names
-    // JobModal -> JobSidebar (comprehensive aliases for all possible import paths)
-    config.resolve.alias['@/components/dashboard/JobModal'] = '@/components/dashboard/jobs/JobSidebar';
-    config.resolve.alias['@/components/dashboard/JobModal.tsx'] = '@/components/dashboard/jobs/JobSidebar';
-    config.resolve.alias['@/components/dashboard/JobModal.js'] = '@/components/dashboard/jobs/JobSidebar';
-    config.resolve.alias['./JobModal'] = './jobs/JobSidebar';
-    config.resolve.alias['./JobModal.tsx'] = './jobs/JobSidebar';
-    config.resolve.alias['./JobModal.js'] = './jobs/JobSidebar';
-    config.resolve.alias['../JobModal'] = '../jobs/JobSidebar';
-    config.resolve.alias['../JobModal.tsx'] = '../jobs/JobSidebar';
-    config.resolve.alias['../JobModal.js'] = '../jobs/JobSidebar';
-    config.resolve.alias['JobModal'] = '@/components/dashboard/jobs/JobSidebar';
-    // EditJobModal -> EditJobSidebar (comprehensive aliases for all possible import paths)
-    config.resolve.alias['@/components/dashboard/EditJobModal'] = '@/components/dashboard/jobs/EditJobSidebar';
-    config.resolve.alias['@/components/dashboard/EditJobModal.tsx'] = '@/components/dashboard/jobs/EditJobSidebar';
-    config.resolve.alias['@/components/dashboard/EditJobModal.js'] = '@/components/dashboard/jobs/EditJobSidebar';
-    config.resolve.alias['./EditJobModal'] = './jobs/EditJobSidebar';
-    config.resolve.alias['./EditJobModal.tsx'] = './jobs/EditJobSidebar';
-    config.resolve.alias['./EditJobModal.js'] = './jobs/EditJobSidebar';
-    config.resolve.alias['../EditJobModal'] = '../jobs/EditJobSidebar';
-    config.resolve.alias['../EditJobModal.tsx'] = '../jobs/EditJobSidebar';
-    config.resolve.alias['../EditJobModal.js'] = '../jobs/EditJobSidebar';
-    config.resolve.alias['EditJobModal'] = '@/components/dashboard/jobs/EditJobSidebar';
+    // Legacy component aliases removed - components have been migrated
 
     // Apply Sentry exclusions (but ensure React/React-DOM are NEVER excluded)
     // React must always be available for client components

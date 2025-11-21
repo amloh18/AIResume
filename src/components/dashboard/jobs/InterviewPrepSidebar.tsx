@@ -2,14 +2,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Lightbulb, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Sparkles, Loader2, Lightbulb, MessageSquare, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface InterviewQuestion {
   question: string;
   category: 'technical' | 'behavioral' | 'situational' | 'company-specific';
-  suggestedPoints: string[];
+  suggestedPoints?: string[]; // Legacy field for backward compatibility
+  suggestedAnswer?: string;
+  keyPoints?: string[];
+  painPoints?: string[];
+  improvementTips?: string[];
   whyAsked: string;
+  starExample?: string;
 }
 
 interface InterviewPrepSidebarProps {
@@ -32,7 +37,7 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  const sidebarWidth = 480;
+  const sidebarWidth = 640;
 
   useEffect(() => {
     if (isOpen && jobId) {
@@ -89,6 +94,175 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
       toast.error(error instanceof Error ? error.message : 'Failed to generate interview questions');
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set font
+      doc.setFont('helvetica');
+      
+      // Title
+      doc.setFontSize(20);
+      doc.setTextColor(50, 50, 50);
+      doc.text('Interview Preparation Questions', 20, 20);
+      
+      // Job info
+      doc.setFontSize(12);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`${jobTitle} at ${company}`, 20, 30);
+      
+      let yPos = 45;
+      const pageHeight = 280;
+      const margin = 20;
+      const lineHeight = 7;
+      const spacing = 5;
+
+      questions.forEach((q, index) => {
+        // Check if we need a new page
+        if (yPos > pageHeight - 40) {
+          doc.addPage();
+          yPos = 20;
+        }
+
+        // Question number and category
+        doc.setFontSize(14);
+        doc.setTextColor(50, 50, 50);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`Question ${index + 1}: ${q.category}`, margin, yPos);
+        yPos += lineHeight + 2;
+
+        // Question text
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(30, 30, 30);
+        const questionLines = doc.splitTextToSize(q.question, 170);
+        doc.text(questionLines, margin, yPos);
+        yPos += questionLines.length * lineHeight + spacing;
+
+        // Suggested Answer
+        if (q.suggestedAnswer) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(50, 50, 50);
+          doc.text('Suggested Answer:', margin, yPos);
+          yPos += lineHeight;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(40, 40, 40);
+          const answerLines = doc.splitTextToSize(q.suggestedAnswer, 170);
+          doc.text(answerLines, margin, yPos);
+          yPos += answerLines.length * lineHeight + spacing;
+        }
+
+        // Key Points
+        if (q.keyPoints && q.keyPoints.length > 0) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(50, 50, 50);
+          doc.text('Key Points:', margin, yPos);
+          yPos += lineHeight;
+          
+          doc.setFont('helvetica', 'normal');
+          q.keyPoints.forEach((point) => {
+            if (yPos > pageHeight - 20) {
+              doc.addPage();
+              yPos = 20;
+            }
+            const pointLines = doc.splitTextToSize(`• ${point}`, 170);
+            doc.text(pointLines, margin + 5, yPos);
+            yPos += pointLines.length * lineHeight;
+          });
+          yPos += spacing;
+        }
+
+        // Pain Points
+        if (q.painPoints && q.painPoints.length > 0) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(150, 50, 50);
+          doc.text('Potential Weaknesses:', margin, yPos);
+          yPos += lineHeight;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 50, 50);
+          q.painPoints.forEach((point) => {
+            if (yPos > pageHeight - 20) {
+              doc.addPage();
+              yPos = 20;
+            }
+            const pointLines = doc.splitTextToSize(`• ${point}`, 170);
+            doc.text(pointLines, margin + 5, yPos);
+            yPos += pointLines.length * lineHeight;
+          });
+          yPos += spacing;
+        }
+
+        // Improvement Tips
+        if (q.improvementTips && q.improvementTips.length > 0) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(50, 100, 50);
+          doc.text('How to Improve:', margin, yPos);
+          yPos += lineHeight;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(40, 80, 40);
+          q.improvementTips.forEach((tip) => {
+            if (yPos > pageHeight - 20) {
+              doc.addPage();
+              yPos = 20;
+            }
+            const tipLines = doc.splitTextToSize(`• ${tip}`, 170);
+            doc.text(tipLines, margin + 5, yPos);
+            yPos += tipLines.length * lineHeight;
+          });
+          yPos += spacing;
+        }
+
+        // Star Example
+        if (q.starExample) {
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(100, 50, 150);
+          doc.text('Star Example Answer:', margin, yPos);
+          yPos += lineHeight;
+          
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(80, 40, 120);
+          const starLines = doc.splitTextToSize(q.starExample, 170);
+          doc.text(starLines, margin, yPos);
+          yPos += starLines.length * lineHeight + spacing;
+        }
+
+        // Why Asked
+        if (q.whyAsked) {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(120, 120, 120);
+          const whyLines = doc.splitTextToSize(`Why asked: ${q.whyAsked}`, 170);
+          doc.text(whyLines, margin, yPos);
+          yPos += whyLines.length * lineHeight + spacing * 2;
+        }
+
+        // Add spacing between questions
+        yPos += spacing;
+      });
+
+      // Save PDF
+      const filename = `Interview-Prep-${jobTitle.replace(/[^a-z0-9]/gi, '-')}-${company.replace(/[^a-z0-9]/gi, '-')}.pdf`;
+      doc.save(filename);
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF. Please try again.');
     }
   };
 
@@ -165,7 +339,7 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Generate Button */}
+              {/* Generate Button and Download */}
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -175,25 +349,38 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
                     Tailored for this position
                   </p>
                 </div>
-                <motion.button
-                  onClick={generateQuestions}
-                  disabled={isGenerating}
-                  className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      Generate
-                    </>
+                <div className="flex items-center gap-2">
+                  {questions.length > 0 && (
+                    <motion.button
+                      onClick={handleDownloadPDF}
+                      className="px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg transition-all flex items-center gap-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Download className="w-4 h-4" />
+                      Download PDF
+                    </motion.button>
                   )}
-                </motion.button>
+                  <motion.button
+                    onClick={generateQuestions}
+                    disabled={isGenerating}
+                    className="px-3 py-2 bg-purple-500 hover:bg-purple-600 text-white text-sm font-medium rounded-lg transition-all flex items-center gap-2 disabled:opacity-50"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        Generate
+                      </>
+                    )}
+                  </motion.button>
+                </div>
               </div>
 
               {/* Loading State */}
@@ -236,31 +423,86 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: 'auto' }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="mt-3 space-y-3"
+                                className="mt-3 space-y-4"
                               >
-                                {/* Suggested Talking Points */}
-                                {q.suggestedPoints && q.suggestedPoints.length > 0 && (
+                                {/* Suggested Answer */}
+                                {q.suggestedAnswer && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                                      <MessageSquare className="w-3 h-3" />
+                                      Suggested Answer:
+                                    </p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                      {q.suggestedAnswer}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {/* Key Points */}
+                                {(q.keyPoints || q.suggestedPoints) && (q.keyPoints || q.suggestedPoints)!.length > 0 && (
                                   <div>
                                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                      Suggested talking points:
+                                      Key Points to Cover:
                                     </p>
                                     <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                                      {q.suggestedPoints.map((point, i) => (
+                                      {(q.keyPoints || q.suggestedPoints)!.map((point, i) => (
                                         <li key={i}>{point}</li>
                                       ))}
                                     </ul>
                                   </div>
                                 )}
 
+                                {/* Pain Points */}
+                                {q.painPoints && q.painPoints.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                      ⚠️ Potential Weaknesses:
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                      {q.painPoints.map((point, i) => (
+                                        <li key={i}>{point}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Improvement Tips */}
+                                {q.improvementTips && q.improvementTips.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                                      <Lightbulb className="w-3 h-3" />
+                                      How to Improve:
+                                    </p>
+                                    <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                                      {q.improvementTips.map((tip, i) => (
+                                        <li key={i}>{tip}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+
+                                {/* Star Example */}
+                                {q.starExample && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                                      <Sparkles className="w-3 h-3" />
+                                      Star Example Answer:
+                                    </p>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                                      {q.starExample}
+                                    </p>
+                                  </div>
+                                )}
+
                                 {/* Why Asked */}
                                 {q.whyAsked && (
-                                  <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                                    <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                                  <div className="flex items-start gap-2">
+                                    <Lightbulb className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 flex-shrink-0" />
                                     <div>
-                                      <p className="text-xs font-medium text-yellow-800 dark:text-yellow-300 mb-1">
+                                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                                         Why this question is asked:
                                       </p>
-                                      <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                                      <p className="text-xs text-gray-600 dark:text-gray-400">
                                         {q.whyAsked}
                                       </p>
                                     </div>

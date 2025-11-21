@@ -5,6 +5,7 @@ import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import { AdminPricingPlanSkeleton } from './AdminSkeletons';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   Plus, 
   Edit, 

@@ -14,7 +14,7 @@ import {
   FileText,
   File
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getStudioLayoutClasses } from '@/lib/utils/themeUtils';
 import { useSession } from 'next-auth/react';
 import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
@@ -50,6 +50,7 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
   hasCoverLetter = false
 }) => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session } = useSession();
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -98,14 +99,33 @@ const FloatingStudioLayout: React.FC<FloatingStudioLayoutProps> = ({
     // The actual generation will be handled by the studio component's cleanup
     
     try {
-      console.log('🏠 Navigating to jobs page...');
-      // Route to jobs page instead of general dashboard
+      // Get returnUrl from search params, or determine based on context
+      const returnUrl = searchParams?.get('returnUrl');
+      const journeyId = searchParams?.get('journeyId');
+      
+      let targetUrl = '/dashboard/tracker'; // Default fallback
+      
+      if (returnUrl) {
+        // Use the returnUrl if provided
+        targetUrl = returnUrl;
+      } else if (journeyId) {
+        // If coming from a journey (tracker page), return to tracker page
+        targetUrl = `/dashboard/tracker?journeyId=${journeyId}`;
+      } else {
+        // If no journeyId, likely came from canvas page, return to canvas
+        targetUrl = '/dashboard/canvas';
+      }
+      
+      console.log('🏠 Navigating back to:', targetUrl);
       // Use replace to avoid back button issues and ensure immediate navigation
-      router.replace('/dashboard/jobs');
+      router.replace(targetUrl);
     } catch (error) {
       console.error('Navigation error:', error);
       // Fallback: try direct navigation
-      window.location.href = '/dashboard/jobs';
+      const returnUrl = searchParams?.get('returnUrl') || null;
+      const journeyId = searchParams?.get('journeyId') || null;
+      const fallbackUrl = returnUrl || (journeyId ? `/dashboard/tracker?journeyId=${journeyId}` : '/dashboard/canvas');
+      window.location.href = fallbackUrl;
     } finally {
       // Reset navigation state after a short delay
       setTimeout(() => setIsNavigating(false), 1000);

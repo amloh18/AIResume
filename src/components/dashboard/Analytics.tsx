@@ -1083,7 +1083,7 @@ const RecentJobsWidget: React.FC<{
           {/* View All Link */}
           <div className="mt-6 text-center">
             <button
-              onClick={() => window.location.href = '/dashboard/jobs'}
+              onClick={() => window.location.href = '/dashboard/tracker'}
               className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
             >
               View All
@@ -1364,12 +1364,12 @@ const Analytics: React.FC = () => {
                 console.error('Error creating CV:', error);
               }
             }}
-            onAddJob={() => router.push('/dashboard/jobs')}
-            // For new cover letters, navigate to dashboard jobs to create a journey first
+            onAddJob={() => router.push('/dashboard/tracker')}
+            // For new cover letters, navigate to dashboard tracker to create a journey first
             // Or create cover letter via API then navigate
-            onWriteCoverLetter={() => router.push('/dashboard/jobs')}
-            onCreateCoverLetter={() => router.push('/dashboard/jobs')}
-            onCreateJob={() => router.push('/dashboard/jobs')}
+            onWriteCoverLetter={() => router.push('/dashboard/tracker')}
+            onCreateCoverLetter={() => router.push('/dashboard/tracker')}
+            onCreateJob={() => router.push('/dashboard/tracker')}
             onSetMasterCV={handleSetMasterCV}
             predictions={analyticsData?.predictions}
             onUpdateGoal={handleUpdateMonthlyGoal}
@@ -1380,8 +1380,8 @@ const Analytics: React.FC = () => {
         <div className="flex w-full min-h-[320px]">
           <RecentJobsWidget
             jobs={jobs}
-            onViewJob={(jobId) => router.push(`/dashboard/jobs?job=${jobId}`)}
-            onCreateJob={() => router.push('/dashboard/jobs')}
+            onViewJob={(jobId) => router.push(`/dashboard/tracker?job=${jobId}`)}
+            onCreateJob={() => router.push('/dashboard/tracker')}
             analyticsData={analyticsData}
           />
         </div>
@@ -1408,15 +1408,15 @@ const Analytics: React.FC = () => {
         <div className="flex-1 h-full">
           <AnalyticsJourneyWidget
             onResumeJourney={(journey) => {
-              // Navigate to Jobs page to view the journey
-              router.push(`/dashboard/jobs?journeyId=${journey.id}`);
+              // Navigate to Tracker page to view the journey
+              router.push(`/dashboard/tracker?journeyId=${journey.id}`);
             }}
             onDeleteJourney={(journeyId) => {
               // TODO: Implement delete journey functionality
             }}
             onViewJourney={(journey) => {
-              // Navigate to Jobs page to view the journey
-              router.push(`/dashboard/jobs?journeyId=${journey.id}`);
+              // Navigate to Tracker page to view the journey
+              router.push(`/dashboard/tracker?journeyId=${journey.id}`);
             }}
           />
         </div>

@@ -6,18 +6,19 @@
 import { NextRequest } from 'next/server';
 
 interface JWTPayload {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  type: string;
-  iat: number;
-  exp: number;
+  id?: string;
+  email?: string;
+  name?: string;
+  role?: string;
+  type?: string;
+  iat?: number;
+  exp?: number;
 }
 
 /**
  * Parse JWT token without external dependencies
  * This is a simplified JWT parser for Edge Runtime compatibility
+ * Note: This does not verify the signature, only decodes the payload
  */
 function parseJWT(token: string): JWTPayload | null {
   try {
@@ -30,11 +31,13 @@ function parseJWT(token: string): JWTPayload | null {
     // Decode the payload (middle part)
     const payload = parts[1];
     
-    // Add padding if needed
+    // Add padding if needed (base64 padding)
     const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
     
-    // Decode base64
-    const decodedPayload = atob(paddedPayload.replace(/-/g, '+').replace(/_/g, '/'));
+    // Decode base64url to base64, then decode
+    // NextAuth uses base64url encoding (RFC 4648)
+    const base64Payload = paddedPayload.replace(/-/g, '+').replace(/_/g, '/');
+    const decodedPayload = atob(base64Payload);
     
     // Parse JSON
     const parsed = JSON.parse(decodedPayload);
@@ -45,14 +48,18 @@ function parseJWT(token: string): JWTPayload | null {
       return null;
     }
     
-    // Validate required fields
-    if (!parsed.id || !parsed.email) {
+    // Validate required fields - at least id or email must be present
+    if (!parsed.id && !parsed.email) {
       return null;
     }
     
     return parsed as JWTPayload;
   } catch (error) {
-    console.error('JWT parsing error:', error);
+    // Silently fail - token might be encrypted or invalid format
+    // Don't log in production to avoid noise
+    if (process.env.NODE_ENV === 'development') {
+      console.error('JWT parsing error:', error);
+    }
     return null;
   }
 }
@@ -89,8 +96,8 @@ export function verifyToken(request: NextRequest): JWTPayload | null {
       return null;
     }
 
-    // Basic validation
-    if (!payload.id || !payload.email) {
+    // Basic validation - at least id or email must be present
+    if (!payload.id && !payload.email) {
       return null;
     }
 
@@ -102,9 +109,18 @@ export function verifyToken(request: NextRequest): JWTPayload | null {
 
 /**
  * Check if user has admin role
+ * Checks both role and type fields to support admin authentication
  */
 export function isAdmin(payload: JWTPayload | null): boolean {
-  return payload?.role === 'admin' || payload?.role === 'superadmin';
+  if (!payload) return false;
+  
+  // Check role field
+  const hasAdminRole = payload.role === 'admin' || payload.role === 'superadmin';
+  
+  // Check type field (set by admin-credentials provider)
+  const hasAdminType = payload.type === 'admin';
+  
+  return hasAdminRole || hasAdminType;
 }
 
 /**
@@ -119,6 +135,13 @@ export function isAuthenticated(payload: JWTPayload | null): boolean {
  */
 export function getUserId(payload: JWTPayload | null): string | null {
   return payload?.id || null;
+}
+
+/**
+ * Get user type from token payload
+ */
+export function getUserType(payload: JWTPayload | null): string | null {
+  return payload?.type || null;
 }
 
 /**

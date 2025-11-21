@@ -8,16 +8,18 @@ import {
   CheckCircle, Clock, AlertCircle, Target, FileText,
   ArrowRight, ChevronDown, ChevronUp, Star, Zap,
   TrendingUp, Users, Building2, Globe, Bookmark,
-  Archive, Copy, Share2, Download, Upload, X, Mail
+  Archive, Copy, Share2, Download, Upload, X, Mail, Linkedin
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
+import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import PageHeader from './PageHeader';
 import JobSidebar from './jobs/JobSidebar';
 import EditJobSidebar from './jobs/EditJobSidebar';
 import JourneyTimelineCard from './JourneyTimelineCard';
+import FocusModeToggle from './jobs/FocusModeToggle';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import toast from 'react-hot-toast';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
@@ -169,6 +171,17 @@ const ApplicationTracker: React.FC = () => {
   const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
   const [emailSentStatus, setEmailSentStatus] = useState<Record<string, Record<number, boolean>>>({});
+  const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
+
+  // Focus mode
+  const { isFocusMode, toggleFocusMode } = useFocusMode();
+
+  // Reset zoomed stage if it's filtered out by focus mode
+  useEffect(() => {
+    if (isFocusMode && zoomedStage && (zoomedStage === 'draft' || zoomedStage === 'rejected')) {
+      setZoomedStage(null);
+    }
+  }, [isFocusMode, zoomedStage]);
 
   // Check for paywall trigger from URL (e.g., from extension)
   useEffect(() => {
@@ -265,14 +278,20 @@ const ApplicationTracker: React.FC = () => {
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
         // Transform jobs to match our interface - include ALL fields
-        const transformedJobs = jobsResult.data.jobs.map((job: any) => ({
+        const transformedJobs = jobsResult.data.jobs.map((job: any) => {
+          // Preserve optimistic updates for jobs that are currently being updated
+          const existingJob = jobs.find(j => j.id === job.id);
+          const isBeingUpdated = isUpdatingJobStatus.has(job.id);
+          
+          return {
           id: job.id,
           _id: job.id,
           userId: job.userId,
           jobTitle: job.jobTitle,
           title: job.jobTitle, // For compatibility
           company: job.company,
-          status: job.status,
+            // Preserve optimistic status if job is being updated
+            status: (isBeingUpdated && existingJob) ? existingJob.status : job.status,
           jobDescription: job.jobDescription,
           description: job.jobDescription, // For compatibility
           location: job.location,
@@ -297,7 +316,8 @@ const ApplicationTracker: React.FC = () => {
           isArchived: job.isArchived || false,
           createdAt: job.createdAt,
           updatedAt: job.updatedAt
-        }));
+          };
+        });
         setJobs(transformedJobs);
       }
 
@@ -521,8 +541,8 @@ ${userName}`
   const getFollowUpTimeline = (job: JobApplication) => {
     const timelines = {
       applied: [
+        { day: 'Right after application', action: 'Connect with hiring manager on LinkedIn & send DM and email' },
         { day: 'Day 3-5', action: 'Send initial follow-up email' },
-        { day: 'Day 7-10', action: 'Connect with hiring manager on LinkedIn' },
         { day: 'Day 14', action: 'Send second follow-up if no response' }
       ],
       interview: [
@@ -652,15 +672,41 @@ ${userName}`
     return filtered;
   }, [jobs, searchQuery, filterStatus, sortBy, lastUpdatedFilter, followUpFilter, salaryRangeFilter, priorityFilter]);
 
-  // Group jobs by status
-  const jobsByStatus = {
-    draft: filteredAndSortedJobs.filter(job => job.status === 'draft'),
-    created: filteredAndSortedJobs.filter(job => job.status === 'created'),
-    applied: filteredAndSortedJobs.filter(job => job.status === 'applied'),
-    interview: filteredAndSortedJobs.filter(job => job.status === 'interview'),
-    offer: filteredAndSortedJobs.filter(job => job.status === 'offer'),
-    rejected: filteredAndSortedJobs.filter(job => job.status === 'rejected')
-  };
+  // Apply focus mode filter (hide draft and rejected stages)
+  const filteredJobsForView = React.useMemo(() => {
+    if (isFocusMode) {
+      return filteredAndSortedJobs.filter(job =>
+        job.status !== 'draft' && job.status !== 'rejected'
+      );
+    }
+    return filteredAndSortedJobs;
+  }, [filteredAndSortedJobs, isFocusMode]);
+
+  // Group jobs by status - memoized to ensure reactivity
+  const jobsByStatus = React.useMemo(() => ({
+    draft: filteredJobsForView.filter(job => job.status === 'draft'),
+    created: filteredJobsForView.filter(job => job.status === 'created'),
+    applied: filteredJobsForView.filter(job => job.status === 'applied'),
+    interview: filteredJobsForView.filter(job => job.status === 'interview'),
+    offer: filteredJobsForView.filter(job => job.status === 'offer'),
+    rejected: filteredJobsForView.filter(job => job.status === 'rejected')
+  }), [filteredJobsForView]);
+
+  // Memoize stages array based on focus mode
+  const stages = React.useMemo(() => {
+    const allStages = [
+      { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white' },
+      { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white' },
+      { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white' },
+      { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white' },
+      { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white' },
+      { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white' }
+    ];
+    // Filter stages based on focus mode
+    return isFocusMode
+      ? allStages.filter(stage => stage.status !== 'draft' && stage.status !== 'rejected')
+      : allStages;
+  }, [isFocusMode]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -680,15 +726,21 @@ ${userName}`
       // Ctrl/Cmd + A to select all visible jobs
       if ((e.ctrlKey || e.metaKey) && e.key === 'a' && !showModal) {
         e.preventDefault();
-        const visibleJobIds = filteredAndSortedJobs.map(job => job.id);
+        const visibleJobIds = filteredJobsForView.map(job => job.id);
         setSelectedJobs(new Set(visibleJobIds));
         setShowBulkActions(visibleJobIds.length > 0);
+      }
+
+      // Shift + F to toggle focus mode
+      if (e.shiftKey && e.key === 'F' && !showModal && !showAddJobModal) {
+        e.preventDefault();
+        toggleFocusMode();
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showModal, filteredAndSortedJobs]);
+  }, [showModal, filteredJobsForView, showAddJobModal, toggleFocusMode]);
 
   const handleJobClick = (job: JobApplication) => {
     setSelectedJob(job);
@@ -779,12 +831,15 @@ ${userName}`
 
   // Helper function to check if a stage allows drag operations
   const isDraggableStage = (stage: string) => {
-    return ['draft', 'applied', 'interview', 'offer', 'rejected'].includes(stage);
+    // Allow dropping on all stages except draft (can move forward from draft)
+    // Allow moving from draft to created, applied, interview, offer, rejected
+    return stage !== 'draft';
   };
 
   // Helper function to check if a job can be dragged
   const isJobDraggable = (job: JobApplication) => {
-    return isDraggableStage(job.status);
+    // Allow dragging all jobs, including draft jobs
+    return true;
   };
 
   // Drag and drop handlers
@@ -830,6 +885,9 @@ ${userName}`
     // Store original status for potential rollback
     const originalStatus = job.status;
 
+    // Mark job as being updated to prevent data refresh from overwriting
+    setIsUpdatingJobStatus(prev => new Set(prev).add(currentDraggedJob));
+
     // Optimistic update: Update UI immediately for instant feedback
     setJobs(prevJobs => 
       prevJobs.map(j => 
@@ -837,7 +895,7 @@ ${userName}`
       )
     );
 
-    // Update in background (fire and forget for better UX)
+    // Update in background with proper error handling
     authenticatedFetchWithUserId(`/api/jobs/${currentDraggedJob}`, userId || undefined, {
       method: 'PUT',
       headers: {
@@ -845,8 +903,11 @@ ${userName}`
       },
       body: JSON.stringify({ status: newStatus }),
     })
-      .then(response => {
+      .then(async response => {
+        // Check both response status and body
         if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('Failed to update job status:', response.status, errorData);
           // Revert on failure
           setJobs(prevJobs => 
             prevJobs.map(j => 
@@ -854,6 +915,63 @@ ${userName}`
             )
           );
           toast.error('Failed to update job status. Please try again.');
+          setIsUpdatingJobStatus(prev => {
+            const next = new Set(prev);
+            next.delete(currentDraggedJob);
+            return next;
+          });
+          return;
+        }
+
+        // Parse response to check for success
+        try {
+          const result = await response.json();
+          if (result.error || (result.success === false)) {
+            console.error('API returned error:', result);
+            // Revert on failure
+            setJobs(prevJobs => 
+              prevJobs.map(j => 
+                j.id === currentDraggedJob ? { ...j, status: originalStatus } : j
+              )
+            );
+            toast.error(result.message || 'Failed to update job status. Please try again.');
+            setIsUpdatingJobStatus(prev => {
+              const next = new Set(prev);
+              next.delete(currentDraggedJob);
+              return next;
+            });
+            return;
+          }
+          // Success - update with server response to ensure consistency
+          console.log('✅ Job status updated successfully:', newStatus);
+          if (result.job || result.data) {
+            const updatedJob = result.job || result.data;
+            setJobs(prevJobs => 
+              prevJobs.map(j => 
+                j.id === currentDraggedJob 
+                  ? { ...j, status: updatedJob.status || newStatus, updatedAt: updatedJob.updatedAt || new Date().toISOString() }
+                  : j
+              )
+            );
+          }
+          // Remove from updating set after a short delay to allow any pending updates to complete
+          setTimeout(() => {
+            setIsUpdatingJobStatus(prev => {
+              const next = new Set(prev);
+              next.delete(currentDraggedJob);
+              return next;
+            });
+          }, 2000);
+        } catch (parseError) {
+          // If response is ok but we can't parse JSON, assume success
+          console.log('✅ Job status updated (response ok, JSON parse skipped)');
+          setTimeout(() => {
+            setIsUpdatingJobStatus(prev => {
+              const next = new Set(prev);
+              next.delete(currentDraggedJob);
+              return next;
+            });
+          }, 1000);
         }
       })
       .catch(error => {
@@ -865,6 +983,11 @@ ${userName}`
           )
         );
         toast.error('Failed to update job status. Please try again.');
+        setIsUpdatingJobStatus(prev => {
+          const next = new Set(prev);
+          next.delete(currentDraggedJob);
+          return next;
+        });
       });
   };
 
@@ -1013,6 +1136,9 @@ ${userName}`
               <span className="hidden sm:inline">Add Job</span>
             </motion.button>
             
+            {/* Focus Mode Toggle */}
+            <FocusModeToggle />
+            
             {/* View Mode Toggle */}
             <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-0.5 flex-shrink-0 h-[36px]">
               <motion.button
@@ -1131,39 +1257,40 @@ ${userName}`
           >
           {viewMode === 'kanban' ? (
             zoomedStage ? (
-              // Zoomed stage - single column
-              [
-                { status: zoomedStage, title: zoomedStage.charAt(0).toUpperCase() + zoomedStage.slice(1), color: 
+              // Zoomed stage - single column (only show if not filtered by focus mode)
+              (() => {
+                // Don't show zoomed stage if it's filtered out by focus mode
+                if (isFocusMode && (zoomedStage === 'draft' || zoomedStage === 'rejected')) {
+                  return null;
+                }
+                const stage = { 
+                  status: zoomedStage, 
+                  title: zoomedStage.charAt(0).toUpperCase() + zoomedStage.slice(1), 
+                  color: 
                   zoomedStage === 'draft' ? 'bg-gray-600 dark:bg-gray-500/20 border-gray-700 dark:border-gray-500/30 text-white' :
                   zoomedStage === 'created' ? 'bg-purple-600 dark:bg-purple-500/20 border-purple-700 dark:border-purple-500/30 text-white' :
                   zoomedStage === 'applied' ? 'bg-blue-600 dark:bg-blue-500/20 border-blue-700 dark:border-blue-500/30 text-white' :
                   zoomedStage === 'interview' ? 'bg-orange-600 dark:bg-orange-500/20 border-orange-700 dark:border-orange-500/30 text-white' :
                   zoomedStage === 'offer' ? 'bg-green-600 dark:bg-green-500/20 border-green-700 dark:border-green-500/30 text-white' :
                   'bg-red-600 dark:bg-red-500/20 border-red-700 dark:border-red-500/30 text-white'
-                }
-              ].map((stage) => (
+                };
+                return (
                 <div key={stage.status} className="space-y-4">
                   {/* Zoomed stage - will use same rendering as regular stages */}
-                  <div className={`p-3 rounded-xl border-2 ${stage.status === 'draft' || stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center`}>
+                  <div className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center`}>
                     <h3 className="text-base font-bold">{stage.title}</h3>
                   </div>
                 </div>
-              ))
+                );
+              })()
             ) : (
               // All stages - horizontal scrollable
-              <div className="flex flex-row gap-4 h-full pb-4" style={{ width: 'max-content' }}>
-                {[
-                  { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-800 dark:text-white' },
-                  { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-800 dark:text-white' },
-                  { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-800 dark:text-white' },
-                  { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-800 dark:text-white' },
-                  { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-800 dark:text-white' },
-                  { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-800 dark:text-white' }
-                ].map((stage) => (
-              <div key={stage.status} className={`space-y-4 min-w-[280px] flex-shrink-0`}>
+              <div className="flex flex-row gap-4 h-full pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4" style={{ width: 'max-content' }}>
+                {stages.map((stage) => (
+              <div key={stage.status} className={`space-y-4 w-[320px] flex-shrink-0`}>
             {/* Stage Header */}
             <div 
-              className={`p-3 rounded-xl border-2 ${stage.status === 'draft' || stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
+              className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
               onClick={() => handleStageClick(stage.status)}
             >
               <div className="flex items-center justify-between w-full">
@@ -1374,7 +1501,7 @@ ${userName}`
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, stage.status)}
                     onClick={() => handleJobClick(job)}
-                    className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${
+                    className={`group relative overflow-hidden cursor-pointer transition-all duration-300 w-full max-w-full ${
                       isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                     } ${isDragging ? 'opacity-50' : ''} ${
                       !canDrag && stage.status !== 'draft' && stage.status !== 'created' ? 'opacity-60 cursor-not-allowed' : ''
@@ -1393,16 +1520,16 @@ ${userName}`
                     <div className="absolute inset-0 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/20 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
                     
                     {/* Card Content */}
-                    <div className="relative z-10 p-4">
+                    <div className="relative z-10 p-4 w-full">
                        {/* Collapsed View - Always Visible */}
-                       <div className="space-y-3">
-                         <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                             <div className="flex-1 min-w-0">
-                               <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                                 {job.jobTitle}
+                       <div className="space-y-3 w-full">
+                         <div className="flex items-center justify-between w-full">
+                           <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
+                             <div className="flex-1 min-w-0 w-full max-w-full">
+                               <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-full">
+                                 {job.jobTitle || job.title || 'Untitled Job'}
                                </h4>
-                               <p className="text-gray-600 dark:text-gray-400 text-xs truncate">{job.company}</p>
+                               <p className="text-gray-600 dark:text-gray-400 text-xs truncate max-w-full">{job.company}</p>
                              </div>
                            </div>
                            <div className="flex items-center gap-2">
@@ -1660,16 +1787,55 @@ ${userName}`
                           </div>
                         )}
 
-                          {/* Action Button */}
-                          <motion.button
-                            className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <Eye size={12} />
-                            Manage Applications
-                            <ArrowRight size={12} />
-                          </motion.button>
+                          {/* Follow-up Actions for Applied Stage */}
+                          {job.status === 'applied' ? (
+                            <div className="w-full mt-3 space-y-2">
+                              {getFollowUpTimeline(job).slice(0, 1).map((timeline, idx) => (
+                                <div key={idx} className="space-y-2">
+                                  <div className="text-xs text-gray-600 dark:text-gray-400 font-medium px-1">
+                                    {timeline.day}
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <motion.button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const searchQuery = encodeURIComponent(`${job.company} hiring manager`);
+                                        window.open(`https://www.linkedin.com/search/results/people/?keywords=${searchQuery}`, '_blank');
+                                      }}
+                                      className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600/80 to-blue-700/80 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                      <Linkedin size={12} />
+                                      LinkedIn
+                                    </motion.button>
+                                    <motion.button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEmail(job, 0);
+                                      }}
+                                      className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-500/80 to-lime-600/80 hover:from-lime-500 hover:to-lime-600 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                      <Mail size={12} />
+                                      Email
+                                    </motion.button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : job.status !== 'draft' ? (
+                            <motion.button
+                              className="w-full mt-3 px-3 py-2 bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Eye size={12} />
+                              Manage Applications
+                              <ArrowRight size={12} />
+                            </motion.button>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -1700,7 +1866,7 @@ ${userName}`
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAndSortedJobs.map((job) => {
+                  {filteredJobsForView.map((job) => {
                     const jobJourneys = getJobJourneys(job.id);
                     const journeyStatusText = getJourneyStatusText(jobJourneys);
                     const avgProgress = jobJourneys.length > 0 

@@ -350,6 +350,44 @@ export class ActivityLogService {
   }
 
   /**
+   * Log credit usage
+   */
+  static async logCreditUsage(params: {
+    userId: string;
+    userEmail?: string;
+    creditType: 'job_credit' | 'cv_credit' | 'export_credit' | 'ats_credit';
+    creditsUsed: number;
+    creditsRemaining: number;
+    planKey: string;
+    resourceType?: 'cv' | 'cover_letter' | 'job' | 'journey';
+    resourceId?: string;
+    status: LogStatus;
+    ipAddress?: string;
+    metadata?: Record<string, any>;
+  }): Promise<void> {
+    await this.log({
+      logType: 'user_action',
+      userId: params.userId,
+      userEmail: params.userEmail,
+      action: 'credit_used',
+      status: params.status,
+      ipAddress: params.ipAddress,
+      resource: params.resourceType && params.resourceId ? {
+        type: params.resourceType,
+        id: params.resourceId
+      } : undefined,
+      metadata: {
+        creditType: params.creditType,
+        creditsUsed: params.creditsUsed,
+        creditsRemaining: params.creditsRemaining,
+        planKey: params.planKey,
+        ...params.metadata
+      },
+      tags: ['credit_usage', params.creditType, params.planKey]
+    });
+  }
+
+  /**
    * Log payment
    */
   static async logPayment(params: {

@@ -32,7 +32,7 @@ class JobStatusNotificationService {
           actionType: 'review_job',
           actionData: {
             jobId: job._id.toString(),
-            url: `/dashboard/jobs/${job._id}`,
+            url: `/dashboard/tracker/${job._id}`,
           },
           interactive: true,
           priority: 'medium',
@@ -67,7 +67,7 @@ class JobStatusNotificationService {
           actionType: 'move_to_next_stage',
           actionData: {
             jobId: job._id.toString(),
-            url: `/dashboard/jobs/${job._id}`,
+            url: `/dashboard/tracker/${job._id}`,
           },
           interactive: true,
           priority: 'medium',
@@ -102,7 +102,7 @@ class JobStatusNotificationService {
           actionType: 'move_to_next_stage',
           actionData: {
             jobId: job._id.toString(),
-            url: `/dashboard/jobs/${job._id}`,
+            url: `/dashboard/tracker/${job._id}`,
           },
           interactive: true,
           priority: 'high',

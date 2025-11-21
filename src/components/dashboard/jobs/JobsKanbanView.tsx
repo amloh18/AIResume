@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, X, ChevronDown, MapPin, DollarSign, Calendar, Clock,
-  Target, Eye, ArrowRight, AlertCircle, TrendingUp
+  Target, Eye, ArrowRight, AlertCircle, TrendingUp, Mail, Linkedin
 } from 'lucide-react';
 import JourneyTimelineCard from '../JourneyTimelineCard';
 import { CVJourney } from '@/types/cv';
@@ -110,12 +110,12 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   onRefresh
 }) => {
   const allStages = [
-    { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500 border-gray-300 dark:border-gray-500 text-gray-800 dark:text-white' },
-    { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500 border-purple-300 dark:border-purple-500 text-purple-800 dark:text-white' },
-    { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500 border-blue-300 dark:border-blue-500 text-blue-800 dark:text-white' },
-    { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500 border-orange-300 dark:border-orange-500 text-orange-800 dark:text-white' },
-    { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500 border-green-300 dark:border-green-500 text-green-800 dark:text-white' },
-    { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500 border-red-300 dark:border-red-500 text-red-800 dark:text-white' }
+    { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white' },
+    { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white' },
+    { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white' },
+    { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white' },
+    { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white' },
+    { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white' }
   ];
 
   // Filter stages based on focus mode
@@ -134,6 +134,37 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
     return ['applied', 'interview', 'offer'].includes(job.status) && (days >= 3 || days >= 7);
   };
 
+  // Get follow-up timeline for applied jobs
+  const getFollowUpTimeline = (job: JobApplication) => {
+    if (job.status !== 'applied') return [];
+    return [
+      { day: 'Right after application', action: 'Connect with hiring manager on LinkedIn & send DM and email' },
+      { day: 'Day 3-5', action: 'Send initial follow-up email' },
+      { day: 'Day 14', action: 'Send second follow-up if no response' }
+    ];
+  };
+
+  // Handle email action
+  const handleEmailAction = (job: JobApplication, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const recipientEmail = (job as any).contactDetails?.email || '';
+    const subject = encodeURIComponent(`Follow-up: ${job.jobTitle} at ${job.company}`);
+    const body = encodeURIComponent(`Dear Hiring Manager,\n\nI wanted to follow up on my application for the ${job.jobTitle} position at ${job.company}.\n\n[Your message here]\n\nBest regards,\n[Your name]`);
+    
+    if (recipientEmail) {
+      window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
+    } else {
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+  };
+
+  // Handle LinkedIn action
+  const handleLinkedInAction = (job: JobApplication, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const searchQuery = encodeURIComponent(`${job.company} hiring manager`);
+    window.open(`https://www.linkedin.com/search/results/people/?keywords=${searchQuery}`, '_blank');
+  };
+
   return (
     <div className="h-full w-full">
       {zoomedStage ? (
@@ -148,7 +179,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                 <div key={stage.status} className="space-y-4 py-4">
                   {/* Stage Header */}
                   <div 
-                    className={`p-3 rounded-xl border-2 ${stage.status === 'draft' || stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer hover:opacity-80 transition-opacity duration-200 opacity-100`}
+                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer hover:opacity-80 transition-opacity duration-200 opacity-100`}
                     onClick={(e) => {
                       e.stopPropagation();
                       onStageClick(stage.status);
@@ -216,14 +247,14 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
         </div>
       ) : (
         // All stages - horizontal scrollable with proper width
-        <div className="flex flex-row gap-4 h-full min-w-max pb-4 px-4">
+        <div className="flex flex-row gap-4 h-full min-w-max pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4">
           {stages.map((stage) => {
             const stageJobs = jobsByStatus[stage.status as keyof typeof jobsByStatus];
             return (
-              <div key={stage.status} className="space-y-4 min-w-[280px] flex-shrink-0">
+              <div key={stage.status} className="space-y-4 w-[320px] flex-shrink-0">
                 {/* Stage Header */}
                 <div
-                  className={`p-3 rounded-xl border-2 ${stage.status === 'draft' || stage.status === 'created' ? 'border-solid' : 'border-dashed'} ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200 opacity-100`}
+                  className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200 opacity-100`}
                   onClick={(e) => {
                     e.stopPropagation();
                     onStageClick(stage.status);
@@ -321,16 +352,16 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                             <div className="absolute inset-0 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/20 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
 
                             {/* Card Content */}
-                            <div className="relative z-10 p-4">
+                            <div className="relative z-10 p-4 w-full">
                               {/* Collapsed View */}
-                              <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
-                                        {job.jobTitle}
+                              <div className="space-y-3 w-full">
+                                <div className="flex items-center justify-between w-full">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
+                                    <div className="flex-1 min-w-0 w-full max-w-full">
+                                      <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-full">
+                                        {job.jobTitle || job.title || 'Untitled Job'}
                                       </h4>
-                                      <p className="text-gray-600 dark:text-gray-400 text-xs truncate">{job.company}</p>
+                                      <p className="text-gray-600 dark:text-gray-400 text-xs truncate max-w-full">{job.company}</p>
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2">
@@ -496,20 +527,52 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                                   {/* Action Buttons */}
                                   <div className="flex items-center gap-2 mt-3">
-                                  {/* Action Button */}
-                                  <motion.button
+                                  {/* Follow-up Actions for Applied Stage */}
+                                  {job.status === 'applied' ? (
+                                    <div className="flex flex-col gap-2 w-full">
+                                      {getFollowUpTimeline(job).slice(0, 1).map((timeline, idx) => (
+                                        <div key={idx} className="space-y-2">
+                                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
+                                            {timeline.day}
+                                          </div>
+                                          <div className="flex gap-2">
+                                            <motion.button
+                                              onClick={(e) => handleLinkedInAction(job, e)}
+                                              className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2"
+                                              whileHover={{ scale: 1.02 }}
+                                              whileTap={{ scale: 0.98 }}
+                                            >
+                                              <Linkedin size={12} />
+                                              LinkedIn
+                                            </motion.button>
+                                            <motion.button
+                                              onClick={(e) => handleEmailAction(job, e)}
+                                              className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2"
+                                              whileHover={{ scale: 1.02 }}
+                                              whileTap={{ scale: 0.98 }}
+                                            >
+                                              <Mail size={12} />
+                                              Email
+                                            </motion.button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : job.status !== 'draft' ? (
+                                    <motion.button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         onJobClick(job);
                                       }}
                                       className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2"
-                                    whileHover={{ scale: 1.02 }}
-                                    whileTap={{ scale: 0.98 }}
-                                  >
-                                    <Eye size={12} />
-                                    Manage Applications
-                                    <ArrowRight size={12} />
-                                  </motion.button>
+                                      whileHover={{ scale: 1.02 }}
+                                      whileTap={{ scale: 0.98 }}
+                                    >
+                                      <Eye size={12} />
+                                      Manage Applications
+                                      <ArrowRight size={12} />
+                                    </motion.button>
+                                  ) : null}
 
                                     {/* Skill Gap Analysis Button */}
                                     {(job.jobDescription || job.description) && onSkillGapAnalysis && (

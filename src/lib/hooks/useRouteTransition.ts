@@ -30,10 +30,10 @@ const ROUTE_TRANSITIONS: RouteTransitionConfig[] = [
   // No loading for all dashboard navigation - smooth transitions
   { from: '/dashboard', to: '/dashboard/cv-journey', type: 'none' },
   { from: '/dashboard', to: '/dashboard/settings', type: 'none' },
-  { from: '/dashboard', to: '/dashboard/jobs', type: 'none' },
+  { from: '/dashboard', to: '/dashboard/tracker', type: 'none' },
   { from: '/dashboard/cv-journey', to: '/dashboard', type: 'none' },
   { from: '/dashboard/settings', to: '/dashboard', type: 'none' },
-  { from: '/dashboard/jobs', to: '/dashboard', type: 'none' },
+  { from: '/dashboard/tracker', to: '/dashboard', type: 'none' },
 ];
 
 export const useRouteTransition = () => {

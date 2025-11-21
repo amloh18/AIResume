@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Filter, ChevronDown, Sparkles, Menu, X, Columns3, List } from 'lucide-react';
+import { Filter, ChevronDown, Plus, Menu, X, Columns3, List } from 'lucide-react';
 import FocusModeToggle from './FocusModeToggle';
 import PageHeader from '@/components/dashboard/PageHeader';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
@@ -68,13 +68,13 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
           {onQuickAdd && (
             <motion.button
               onClick={onQuickAdd}
-              className="px-3 tablet:px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg h-[36px]"
+              className="p-2 tablet:px-3 tablet:px-4 tablet:py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg h-[36px]"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               title="Quick Add (Magic Paste)"
             >
-              <Sparkles size={16} />
-              <span>Quick Add</span>
+              <Plus size={16} />
+              <span className="hidden tablet:inline">Quick Add</span>
             </motion.button>
           )}
 
@@ -113,18 +113,19 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
 
           <motion.button
             onClick={onToggleFilters}
-            className={`px-3 tablet:px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px] min-w-0 ${showFilters
+            className={`p-2 tablet:px-3 tablet:px-4 tablet:py-2 rounded-lg text-sm font-medium border transition-all duration-200 flex items-center gap-2 flex-shrink-0 h-[36px] min-w-0 ${showFilters
               ? 'bg-gray-200 dark:bg-[#2a3a1f] border-gray-400 dark:border-lime-500/40 text-gray-900 dark:text-white'
               : 'bg-gray-100 dark:bg-[#232f1c] border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f]'
               }`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            title="Sort & Filter"
           >
             <Filter size={16} className="flex-shrink-0" />
-            <span className="truncate">Sort & Filter</span>
+            <span className="hidden tablet:inline truncate">Sort & Filter</span>
             <ChevronDown
               size={16}
-              className={`flex-shrink-0 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`}
+              className={`hidden tablet:inline flex-shrink-0 transition-transform duration-200 ${showFilters ? 'rotate-180' : ''}`}
             />
           </motion.button>
         </div>

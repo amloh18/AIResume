@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import jwt from 'jsonwebtoken';
-import type { MyJwtPayload } from '@/types/jwt-payload';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import { ActivityLogService } from '@/lib/services/activityLogService';
-import { getAdminContext } from '@/lib/utils/adminAuth';
 import creditService from '@/lib/services/creditService';
 import { invalidateConfigCache } from '@/lib/config/adminConfig';
+import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 export async function POST(
   request: NextRequest,
@@ -18,30 +15,14 @@ export async function POST(
   let adminContext: { adminUserId?: string; adminEmail?: string; adminRole?: string } | null = null;
 
   try {
-    // Verify admin authentication
-    const cookieStore = await cookies();
-    const adminToken = cookieStore.get('admin-token');
-
-    if (!adminToken) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    try {
-      const decoded = jwt.verify(adminToken.value, process.env.NEXTAUTH_SECRET || 'fallback-secret') as MyJwtPayload;
-      adminContext = {
-        adminUserId: decoded.id,
-        adminEmail: decoded.email,
-        adminRole: decoded.role
-      };
-    } catch (jwtError) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid admin token' },
-        { status: 401 }
-      );
-    }
+    // Verify admin authentication using NextAuth session
+    const session = await requireAdmin(request);
+    const adminUser = session.user as any;
+    adminContext = {
+      adminUserId: adminUser.id || session.user.id as string,
+      adminEmail: adminUser.email || session.user.email || undefined,
+      adminRole: adminUser.role || 'admin'
+    };
 
     await getConnection();
 
@@ -186,22 +167,41 @@ export async function POST(
     const responseTime = Date.now() - startTime;
     console.error('Error granting plan:', error);
 
+    // Handle authentication errors
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    if (error.message === 'FORBIDDEN') {
+      return NextResponse.json(
+        { success: false, error: 'Admin access required' },
+        { status: 403 }
+      );
+    }
+
     // Log failed admin action
     if (adminContext) {
-      const { id } = await params;
-      await ActivityLogService.logAdminAction({
-        adminUserId: adminContext.adminUserId!,
-        adminEmail: adminContext.adminEmail,
-        action: 'grant_plan_failed',
-        targetUserId: id,
-        actionType: 'subscription_upgrade',
-        resourceType: 'user',
-        resourceId: id,
-        status: 'failed',
-        metadata: {
-          error: error.message
-        }
-      });
+      try {
+        const { id } = await params;
+        await ActivityLogService.logAdminAction({
+          adminUserId: adminContext.adminUserId!,
+          adminEmail: adminContext.adminEmail,
+          action: 'grant_plan_failed',
+          targetUserId: id,
+          actionType: 'subscription_upgrade',
+          resourceType: 'user',
+          resourceId: id,
+          status: 'failed',
+          metadata: {
+            error: error.message
+          }
+        });
+      } catch (logError) {
+        // Don't fail if logging fails
+        console.error('Failed to log admin action:', logError);
+      }
     }
 
     return NextResponse.json(

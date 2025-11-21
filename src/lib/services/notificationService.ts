@@ -53,8 +53,8 @@ class NotificationService {
       discount_offer: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       system_update: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       achievement: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
-      documents_ready: { enabled: true, channels: { 'in-app': true, email: true, push: false } },
-      interview_follow_up: { enabled: true, channels: { 'in-app': true, email: true, push: false } },
+      documents_ready: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      interview_follow_up: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       job_applied: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
     };
 
@@ -98,23 +98,30 @@ class NotificationService {
   async createNotification(params: CreateNotificationParams): Promise<INotification> {
     await getConnection();
 
-    // Get user preferences
-    const preferences = await this.getUserPreferences(params.userId, params.type);
+    // Use provided channels if available, otherwise use user preferences
+    let channels: NotificationChannel[] = [];
+    
+    if (params.channels && params.channels.length > 0) {
+      // Use explicitly provided channels
+      channels = params.channels;
+    } else {
+      // Get user preferences
+      const preferences = await this.getUserPreferences(params.userId, params.type);
 
-    // If notification type is disabled, don't create it
-    if (!preferences.enabled) {
-      throw new Error(`Notification type ${params.type} is disabled for user`);
-    }
+      // If notification type is disabled, don't create it
+      if (!preferences.enabled) {
+        throw new Error(`Notification type ${params.type} is disabled for user`);
+      }
 
-    // Determine which channels to use based on preferences
-    const channels: NotificationChannel[] = [];
-    if (preferences.channels['in-app']) channels.push('in-app');
-    if (preferences.channels.email) channels.push('email');
-    if (preferences.channels.push) channels.push('push');
+      // Determine which channels to use based on preferences
+      if (preferences.channels['in-app']) channels.push('in-app');
+      if (preferences.channels.email) channels.push('email');
+      if (preferences.channels.push) channels.push('push');
 
-    // If no channels are enabled, don't create notification
-    if (channels.length === 0) {
-      throw new Error(`No delivery channels enabled for notification type ${params.type}`);
+      // If no channels are enabled, don't create notification
+      if (channels.length === 0) {
+        throw new Error(`No delivery channels enabled for notification type ${params.type}`);
+      }
     }
 
     // Create notification

@@ -257,6 +257,10 @@ const userSettingsSchema = new Schema<IUserSettings>({
       weeklyDigest: {
         type: Boolean,
         default: false
+      },
+      dailySummary: {
+        type: Boolean,
+        default: true
       }
     },
     push: {

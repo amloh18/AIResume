@@ -11,11 +11,46 @@ import { UnifiedAuthService } from '@/lib/auth/unified-auth-service';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get session to invalidate cache
+    // Get session to invalidate cache and log logout
     const session = await getServerSession(authConfig);
     
-    // Invalidate user cache if session exists
+    // Log logout activity before invalidating cache
     if (session?.user?.id) {
+      try {
+        const { ActivityLogService } = await import('@/lib/services/activityLogService');
+        const user = session.user as any;
+        const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
+        
+        if (isAdmin) {
+          await ActivityLogService.logAdminAction({
+            adminUserId: session.user.id as string,
+            adminEmail: session.user.email || undefined,
+            action: 'admin_logout',
+            actionType: 'authentication',
+            status: 'success',
+            metadata: {
+              logoutMethod: 'api'
+            }
+          });
+        } else {
+          await ActivityLogService.logUserAction({
+            userId: session.user.id as string,
+            userEmail: session.user.email || undefined,
+            action: 'user_logout',
+            status: 'success',
+            ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      request.headers.get('x-real-ip') || 
+                      undefined,
+            metadata: {
+              logoutMethod: 'api'
+            }
+          });
+        }
+      } catch (logError) {
+        // Don't fail signout if logging fails
+        console.error('Failed to log logout activity:', logError);
+      }
+      
       await UnifiedAuthService.invalidateUserCache(session.user.id as string);
     }
 

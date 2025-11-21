@@ -10,7 +10,7 @@ const JobsTracker = dynamic(() => import('@/components/dashboard/JobsTracker'), 
   loading: () => <ApplicationTrackerSkeleton />
 });
 
-const JobsPage: React.FC = () => {
+const TrackerPage: React.FC = () => {
   return (
     <Suspense fallback={<ApplicationTrackerSkeleton />}>
       <JobsTracker />
@@ -18,5 +18,5 @@ const JobsPage: React.FC = () => {
   );
 };
 
-export default JobsPage;
+export default TrackerPage;
 

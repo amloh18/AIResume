@@ -53,8 +53,12 @@ export default function AdminDashboard() {
     }
 
     if (status === 'authenticated' && !isAdmin) {
-      console.warn('Non-admin user attempted to access admin dashboard');
-      router.push('/sign-in');
+      console.warn('Non-admin user attempted to access admin dashboard', {
+        userType: user?.type,
+        userRole: user?.role,
+        userId: user?.id
+      });
+      router.push('/admin/signin');
       return;
     }
 

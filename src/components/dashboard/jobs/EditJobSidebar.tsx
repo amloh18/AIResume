@@ -31,6 +31,8 @@ import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { v4 as uuidv4 } from 'uuid';
 import { ApplicationPackageService } from '@/lib/services/applicationPackageService';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
+import { getCountryFlag } from '@/lib/config/adminConstants';
+import { LocationService } from '@/lib/payment/locationService';
 
 interface Job {
   id?: string;
@@ -132,6 +134,139 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+  const [locationFlag, setLocationFlag] = useState<string>('');
+  const [userCurrency, setUserCurrency] = useState<string>('USD');
+
+  // Helper function to get date string in YYYY-MM-DD format
+  const getDateString = (daysFromNow: number): string => {
+    const date = new Date();
+    date.setDate(date.getDate() + daysFromNow);
+    return date.toISOString().split('T')[0];
+  };
+
+  // Helper function to get currency symbol
+  const getCurrencySymbol = (currency: string): string => {
+    const currencySymbols: Record<string, string> = {
+      'USD': '$', 'CAD': '$', 'AUD': '$', 'NZD': '$', 'SGD': '$', 'MXN': '$',
+      'EUR': '€',
+      'GBP': '£',
+      'INR': '₹',
+      'JPY': '¥',
+      'CNY': '¥',
+      'CHF': 'CHF',
+      'SEK': 'kr', 'NOK': 'kr', 'DKK': 'kr',
+      'BRL': 'R$',
+      'AED': 'AED',
+      'SAR': 'SAR',
+      'ILS': '₪',
+      'TRY': '₺',
+      'RUB': '₽',
+      'THB': '฿',
+      'IDR': 'Rp',
+      'PHP': '₱',
+      'VND': '₫',
+      'MYR': 'RM',
+      'HKD': 'HK$',
+      'TWD': 'NT$',
+      'PLN': 'zł',
+      'CZK': 'Kč',
+      'HUF': 'Ft',
+      'RON': 'lei',
+      'BGN': 'лв',
+      'HRK': 'kn',
+      'ISK': 'kr'
+    };
+    return currencySymbols[currency] || currency;
+  };
+
+  // Helper function to extract country code from location string
+  const extractCountryFromLocation = (location: string): string | null => {
+    if (!location) return null;
+    
+    // Common country name to code mapping
+    const countryMap: Record<string, string> = {
+      'united states': 'US', 'usa': 'US', 'america': 'US',
+      'united kingdom': 'GB', 'uk': 'GB', 'england': 'GB', 'britain': 'GB',
+      'canada': 'CA',
+      'australia': 'AU',
+      'germany': 'DE', 'deutschland': 'DE',
+      'france': 'FR',
+      'italy': 'IT',
+      'spain': 'ES',
+      'netherlands': 'NL', 'holland': 'NL',
+      'belgium': 'BE',
+      'switzerland': 'CH',
+      'sweden': 'SE',
+      'norway': 'NO',
+      'denmark': 'DK',
+      'finland': 'FI',
+      'poland': 'PL',
+      'india': 'IN',
+      'japan': 'JP',
+      'china': 'CN',
+      'south korea': 'KR', 'korea': 'KR',
+      'singapore': 'SG',
+      'new zealand': 'NZ',
+      'ireland': 'IE',
+      'portugal': 'PT',
+      'greece': 'GR',
+      'austria': 'AT',
+      'brazil': 'BR',
+      'mexico': 'MX',
+      'argentina': 'AR',
+      'south africa': 'ZA',
+      'uae': 'AE', 'united arab emirates': 'AE',
+      'saudi arabia': 'SA',
+      'israel': 'IL',
+      'turkey': 'TR',
+      'russia': 'RU',
+      'thailand': 'TH',
+      'indonesia': 'ID',
+      'philippines': 'PH',
+      'vietnam': 'VN',
+      'malaysia': 'MY',
+      'hong kong': 'HK',
+      'taiwan': 'TW'
+    };
+
+    const locationLower = location.toLowerCase().trim();
+    
+    // Check for exact country name matches
+    for (const [countryName, code] of Object.entries(countryMap)) {
+      if (locationLower.includes(countryName)) {
+        return code;
+      }
+    }
+
+    // Check for country code pattern (2-3 letter codes)
+    const codeMatch = location.match(/\b([A-Z]{2,3})\b/i);
+    if (codeMatch) {
+      const code = codeMatch[1].toUpperCase();
+      if (code.length === 2) {
+        return code;
+      }
+    }
+
+    return null;
+  };
+
+  // Get user's currency from geolocation on mount
+  useEffect(() => {
+    const fetchUserCurrency = async () => {
+      try {
+        const locationData = await LocationService.getLocationData();
+        if (locationData?.currency) {
+          setUserCurrency(locationData.currency);
+        }
+      } catch (error) {
+        console.warn('Failed to get user currency from geolocation:', error);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      fetchUserCurrency();
+    }
+  }, []); // Only run once on mount
 
   // Form state
   const [formData, setFormData] = useState<Partial<Job>>({
@@ -143,8 +278,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     notes: '',
     priority: 'medium',
     status: 'created',
-    deadline: '',
-    applicationDate: '',
+    deadline: getDateString(15), // Default to 15 days from now
     sponsorship: 'unknown',
     tags: [],
     salary: {
@@ -170,6 +304,62 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     createdAt: undefined,
     updatedAt: undefined
   });
+
+  // Set currency from geolocation when userCurrency is available and no location/currency set
+  useEffect(() => {
+    if (userCurrency) {
+      setFormData(prev => {
+        // Only update if no location and no currency is set
+        if (!prev.location && !prev.salary?.currency) {
+          return {
+            ...prev,
+            salary: { 
+              ...prev.salary, 
+              currency: userCurrency,
+              period: prev.salary?.period || 'yearly'
+            }
+          };
+        }
+        return prev;
+      });
+    }
+  }, [userCurrency]);
+
+  // Update location flag when location changes
+  useEffect(() => {
+    const location = formData?.location;
+    if (location) {
+      const countryCode = extractCountryFromLocation(location);
+      if (countryCode) {
+        setLocationFlag(getCountryFlag(countryCode));
+        
+        // Update currency based on location
+        const countryCurrencies: Record<string, string> = {
+          'US': 'USD', 'CA': 'CAD', 'GB': 'GBP', 'AU': 'AUD',
+          'DE': 'EUR', 'FR': 'EUR', 'IT': 'EUR', 'ES': 'EUR', 'NL': 'EUR',
+          'BE': 'EUR', 'AT': 'EUR', 'PT': 'EUR', 'GR': 'EUR', 'IE': 'EUR',
+          'CH': 'CHF', 'SE': 'SEK', 'NO': 'NOK', 'DK': 'DKK',
+          'IN': 'INR', 'JP': 'JPY', 'CN': 'CNY', 'KR': 'KRW',
+          'SG': 'SGD', 'NZ': 'NZD', 'BR': 'BRL', 'MX': 'MXN',
+          'AE': 'AED', 'SA': 'SAR', 'IL': 'ILS', 'TR': 'TRY',
+          'RU': 'RUB', 'TH': 'THB', 'ID': 'IDR', 'PH': 'PHP',
+          'VN': 'VND', 'MY': 'MYR', 'HK': 'HKD', 'TW': 'TWD'
+        };
+        
+        const currency = countryCurrencies[countryCode];
+        if (currency) {
+          setFormData(prev => ({
+            ...prev,
+            salary: { ...prev.salary, currency, period: prev.salary?.period || 'yearly' }
+          }));
+        }
+      } else {
+        setLocationFlag('');
+      }
+    } else {
+      setLocationFlag('');
+    }
+  }, [formData?.location]);
 
   // Character counters
   const [jobTitleCount, setJobTitleCount] = useState(0);
@@ -258,11 +448,12 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   // Initialize form data when editingJob changes or modal opens
   useEffect(() => {
     if (editingJob) {
-      // Editing existing job - populate with job data
+      // Editing existing job - populate with job data (exclude applicationDate)
+      const { applicationDate, ...jobDataWithoutAppDate } = editingJob;
       const data = {
-        ...editingJob,
+        ...jobDataWithoutAppDate,
         tags: editingJob.tags || [],
-        salary: editingJob.salary || { min: undefined, max: undefined, currency: 'USD', period: 'yearly' as 'hourly' | 'monthly' | 'yearly' },
+        salary: editingJob.salary || { min: undefined, max: undefined, currency: userCurrency || 'USD', period: 'yearly' as 'hourly' | 'monthly' | 'yearly' },
         contactDetails: editingJob.contactDetails || { name: '', email: '', phone: '', role: '' },
         interviews: editingJob.interviews || [],
         followUps: editingJob.followUps || [],
@@ -271,7 +462,9 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         sourceUrl: editingJob.sourceUrl || '',
         atsScore: editingJob.atsScore || undefined,
         atsAnalysis: editingJob.atsAnalysis || undefined,
-        statusHistory: editingJob.statusHistory || []
+        statusHistory: editingJob.statusHistory || [],
+        // Set default deadline if not present
+        deadline: editingJob.deadline || getDateString(15)
       };
       setFormData(data);
       lastSavedDataRef.current = data;
@@ -287,14 +480,13 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         notes: '',
         priority: 'medium' as 'low' | 'medium' | 'high',
         status: 'created' as 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn',
-        deadline: '',
-        applicationDate: '',
+        deadline: getDateString(15), // Default to 15 days from now
         sponsorship: 'unknown' as 'yes' | 'no' | 'unknown',
         tags: [],
         salary: {
           min: undefined,
           max: undefined,
-          currency: 'USD',
+          currency: userCurrency || 'USD',
           period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
         },
         contactDetails: { name: '', email: '', phone: '', role: '' },
@@ -357,11 +549,25 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   }, [formData, isOpen, editingJob]);
 
   const getFormData = () => {
-    return {
+    const data: any = {
       ...formData,
       userId: userId || user?.id,
       updatedAt: new Date().toISOString()
     };
+    
+    // Remove id, _id, createdAt for new jobs (let server generate them)
+    const isNewJob = !editingJob?.id && !editingJob?._id;
+    if (isNewJob) {
+      delete data.id;
+      delete data._id;
+      delete data.createdAt;
+      // Keep updatedAt as it's set above
+    }
+    
+    // Remove applicationDate as it's no longer used in the form
+    delete data.applicationDate;
+    
+    return data;
   };
 
   const handleFormChange = (field: string, value: any) => {
@@ -384,12 +590,24 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         setIsSaving(true);
       }
 
+      // Determine if this is a new job - check both id and _id fields
+      const isNewJob = !editingJob?.id && !editingJob?._id;
       const jobData = getFormData();
-      const isNewJob = !editingJob?.id;
-      const url = editingJob?.id ? `/api/jobs/${editingJob.id}` : '/api/jobs';
-      const method = editingJob?.id ? 'PUT' : 'POST';
+      
+      // Ensure we're using the correct ID for updates
+      const jobId = editingJob?.id || editingJob?._id;
+      const url = jobId ? `/api/jobs/${jobId}` : '/api/jobs';
+      const method = jobId ? 'PUT' : 'POST';
 
-      console.log('🔍 EditJobSidebar - Saving job:', { method, url, jobData, isNewJob });
+      console.log('🔍 EditJobSidebar - Saving job:', { 
+        method, 
+        url, 
+        isNewJob, 
+        hasEditingJob: !!editingJob,
+        editingJobId: editingJob?.id || editingJob?._id,
+        jobId,
+        jobDataKeys: Object.keys(jobData)
+      });
 
       // Clear previous errors
       setErrorMessage('');
@@ -508,10 +726,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         console.log('🔍 EditJobSidebar - Save response:', result);
 
         // Check if the API returned a job object directly (for updates) or success/data structure (for creates)
-        if (result.job || result.success !== false) {
-          const savedJob = result.job || {
+        if (result.job || result.success !== false || result.data) {
+          const savedJob = result.job || result.data || {
             ...jobData,
-            id: result.data?.id || result.data?._id || editingJob?.id
+            id: result.data?.id || result.data?._id || result.id || result._id || editingJob?.id || editingJob?._id
           };
 
           lastSavedDataRef.current = savedJob;
@@ -524,19 +742,33 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           // Create an Application Package automatically
           if (isNewJob && !isAutoSave && user?.id) {
             try {
-              console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id);
+              console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id || savedJob._id);
               
-              const packageResult = await ApplicationPackageService.createNewPackage({
-                userId: user.id,
-                jobId: savedJob.id,
-                journeyName: `Application for ${savedJob.jobTitle} at ${savedJob.company}`
-              });
-
-              if (packageResult.success) {
-                console.log('✅ EditJobSidebar - Application Package created:', packageResult.data?.journeyId);
+              // Use the job ID from savedJob (could be id or _id)
+              const jobId = savedJob.id || savedJob._id;
+              
+              if (!jobId) {
+                console.warn('⚠️ EditJobSidebar - No job ID available, skipping package creation');
               } else {
-                console.warn('⚠️ EditJobSidebar - Failed to create Application Package:', packageResult.message);
-                // Don't fail the job creation if package creation fails
+                const packageResult = await ApplicationPackageService.createNewPackage({
+                  userId: user.id,
+                  jobId: jobId,
+                  journeyName: `Application for ${savedJob.jobTitle || savedJob.title} at ${savedJob.company}`,
+                  // Pass the job data we already have to avoid refetching
+                  jobData: {
+                    jobTitle: savedJob.jobTitle || savedJob.title,
+                    title: savedJob.jobTitle || savedJob.title,
+                    company: savedJob.company,
+                    ...savedJob
+                  }
+                });
+
+                if (packageResult.success) {
+                  console.log('✅ EditJobSidebar - Application Package created:', packageResult.data?.journeyId);
+                } else {
+                  console.warn('⚠️ EditJobSidebar - Failed to create Application Package:', packageResult.message);
+                  // Don't fail the job creation if package creation fails
+                }
               }
             } catch (packageError) {
               console.error('❌ EditJobSidebar - Error creating Application Package:', packageError);
@@ -556,8 +788,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
               notes: '',
               priority: 'medium',
               status: 'created',
-              deadline: '',
-              applicationDate: '',
+              deadline: getDateString(15), // Default to 15 days from now
               sponsorship: 'unknown',
               tags: [],
               salary: {
@@ -590,6 +821,50 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       } else {
         const errorText = await response.text();
         console.error('❌ EditJobSidebar - Save failed with status:', response.status, 'Error:', errorText);
+        
+        // Handle 404 error - job not found (might be trying to update a non-existent job)
+        if (response.status === 404 && method === 'PUT') {
+          console.log('⚠️ EditJobSidebar - Job not found on PUT, retrying as new job creation (POST)');
+          // Remove any ID fields and retry as POST
+          const newJobData = { ...jobData };
+          delete newJobData.id;
+          delete newJobData._id;
+          
+          try {
+            const retryResponse = await authenticatedFetchWithUserId('/api/jobs', user?.id, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(newJobData),
+            });
+            
+            if (retryResponse.ok) {
+              const retryResult = await retryResponse.json();
+              const savedJob = retryResult.job || retryResult.data || { 
+                ...newJobData, 
+                id: retryResult.data?.id || retryResult.data?._id || retryResult.id || retryResult._id 
+              };
+              lastSavedDataRef.current = savedJob;
+              setHasUnsavedChanges(false);
+              setShowUnsavedWarning(false);
+              setErrorMessage('');
+              setFieldErrors({});
+              onJobSaved(savedJob);
+              if (!isAutoSave) {
+                setIsSaving(false);
+                toast.success('Job saved successfully!');
+              }
+              return;
+            } else {
+              const retryErrorText = await retryResponse.text();
+              console.error('❌ EditJobSidebar - Retry POST also failed:', retryErrorText);
+            }
+          } catch (retryError) {
+            console.error('❌ EditJobSidebar - Error during retry POST:', retryError);
+          }
+        }
+        
         if (!isAutoSave) {
           try {
             const errorJson = JSON.parse(errorText);
@@ -654,8 +929,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       notes: '',
       priority: 'medium',
       status: 'created',
-      deadline: '',
-      applicationDate: '',
+      deadline: getDateString(15), // Default to 15 days from now
       sponsorship: 'unknown',
       tags: [],
       salary: {
@@ -719,18 +993,18 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             {/* Header */}
             <div className="border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] sticky top-0 z-10">
               <div className="flex items-center justify-between p-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
-                </h2>
-                <motion.button
-                  onClick={handleClose}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a2015] rounded-lg transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  title="Close (Esc)"
-                >
-                  <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                </motion.button>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
+              </h2>
+              <motion.button
+                onClick={handleClose}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a2015] rounded-lg transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Close (Esc)"
+              >
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </motion.button>
               </div>
               
               {/* Non-intrusive Unsaved Changes Banner */}
@@ -864,13 +1138,20 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       </div>
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Location</label>
-                        <input
-                          type="text"
-                          value={formData.location || ''}
-                          onChange={(e) => handleFormChange('location', e.target.value)}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
-                          placeholder="Enter location"
-                        />
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={formData.location || ''}
+                            onChange={(e) => handleFormChange('location', e.target.value)}
+                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            placeholder="Enter location"
+                          />
+                          {locationFlag && (
+                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg pointer-events-none">
+                              {locationFlag}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     
@@ -901,52 +1182,65 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">App Date</label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={formData.applicationDate || ''}
-                            onChange={(e) => handleFormChange('applicationDate', e.target.value)}
-                            className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
-                            placeholder="mm/dd/yyyy"
-                          />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
-                        </div>
+                    {/* Deadline and Priority */}
+                    <div>
+                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-2">Deadline</label>
+                      
+                      {/* Quick Options */}
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {[5, 10, 15, 30].map((days) => {
+                          const dateStr = getDateString(days);
+                          const isSelected = formData.deadline === dateStr;
+                          return (
+                            <motion.button
+                              key={days}
+                              type="button"
+                              onClick={() => handleFormChange('deadline', dateStr)}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                                isSelected
+                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black'
+                                  : 'bg-gray-100 dark:bg-[#232f1c] text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/20'
+                              }`}
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {days} days
+                            </motion.button>
+                          );
+                        })}
                       </div>
                       
-                      <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Deadline</label>
-                        <div className="relative">
+                      {/* Date Input and Priority - Inline */}
+                      <div className="flex gap-3 items-end">
+                        <div className="relative flex-1">
                           <input
                             type="date"
                             value={formData.deadline || ''}
                             onChange={(e) => handleFormChange('deadline', e.target.value)}
                             className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
-                            placeholder="mm/dd/yyyy"
+                            placeholder="Select date"
                           />
                           <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
                         </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Priority</label>
-                      <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
-                        {['low', 'medium', 'high'].map((priority) => (
-                          <button
-                            key={priority}
-                            onClick={() => handleFormChange('priority', priority)}
-                            className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
-                              formData.priority === priority
-                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
-                                : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
-                            }`}
-                          >
-                            {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                          </button>
-                        ))}
+                        
+                        <div className="flex-shrink-0">
+                          <label className="block text-gray-700 dark:text-white/80 text-xs font-medium mb-1">Priority</label>
+                          <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
+                            {['low', 'medium', 'high'].map((priority) => (
+                              <button
+                                key={priority}
+                                onClick={() => handleFormChange('priority', priority)}
+                                className={`px-3 py-2 text-xs font-medium transition-all ${
+                                  formData.priority === priority
+                                    ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-lg'
+                                    : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
+                                }`}
+                              >
+                                {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -954,64 +1248,53 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
                 {/* Salary Information */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Salary Information</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Salary Information</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Period:</span>
+                      <select
+                        value={formData.salary?.period || 'yearly'}
+                        onChange={(e) => handleFormChange('salary', { ...formData.salary, period: e.target.value as 'yearly' | 'monthly' | 'hourly' })}
+                        className="px-2 py-1 text-xs bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded text-gray-700 dark:text-white focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
+                      >
+                        <option value="yearly">Yearly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="hourly">Hourly</option>
+                      </select>
+                    </div>
+                  </div>
                   
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
-                        <input
-                          type="number"
-                          value={formData.salary?.min || ''}
-                          onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
-                          placeholder="e.g. 80000"
-                        />
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
+                            {getCurrencySymbol(formData.salary?.currency || userCurrency || 'USD')}
+                          </span>
+                          <input
+                            type="number"
+                            value={formData.salary?.min || ''}
+                            onChange={(e) => handleFormChange('salary', { ...formData.salary, min: e.target.value ? parseInt(e.target.value) : undefined })}
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            placeholder="e.g. 80000"
+                          />
+                        </div>
                       </div>
                       
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
-                        <input
-                          type="number"
-                          value={formData.salary?.max || ''}
-                          onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
-                          placeholder="e.g. 120000"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Currency</label>
-                        <select
-                          value={formData.salary?.currency || 'USD'}
-                          onChange={(e) => handleFormChange('salary', { ...formData.salary, currency: e.target.value })}
-                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
-                        >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="GBP">GBP</option>
-                          <option value="CAD">CAD</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Period</label>
-                        <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
-                          {['yearly', 'monthly', 'hourly'].map((period) => (
-                            <button
-                              key={period}
-                              onClick={() => handleFormChange('salary', { ...formData.salary, period })}
-                              className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                                formData.salary?.period === period
-                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
-                                  : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white'
-                              }`}
-                            >
-                              {period.charAt(0).toUpperCase() + period.slice(1)}
-                            </button>
-                          ))}
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
+                            {getCurrencySymbol(formData.salary?.currency || userCurrency || 'USD')}
+                          </span>
+                          <input
+                            type="number"
+                            value={formData.salary?.max || ''}
+                            onChange={(e) => handleFormChange('salary', { ...formData.salary, max: e.target.value ? parseInt(e.target.value) : undefined })}
+                            className="w-full pl-8 pr-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md"
+                            placeholder="e.g. 120000"
+                          />
                         </div>
                       </div>
                     </div>
@@ -1043,35 +1326,38 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h3>
                   
                   <div className="space-y-4">
-                    <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Sponsorship</label>
-                      <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
-                        {['unknown', 'yes', 'no'].map((sponsorship) => (
-                          <button
-                            key={sponsorship}
-                            onClick={() => handleFormChange('sponsorship', sponsorship)}
-                            className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
-                              formData.sponsorship === sponsorship
-                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
-                                : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
-                            }`}
-                          >
-                            {sponsorship.charAt(0).toUpperCase() + sponsorship.slice(1)}
-                          </button>
-                        ))}
+                    {/* Sponsorship and Tags - Inline */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Sponsorship</label>
+                        <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
+                          {['unknown', 'yes', 'no'].map((sponsorship) => (
+                            <button
+                              key={sponsorship}
+                              onClick={() => handleFormChange('sponsorship', sponsorship)}
+                              className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
+                                formData.sponsorship === sponsorship
+                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
+                                  : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
+                              }`}
+                            >
+                              {sponsorship.charAt(0).toUpperCase() + sponsorship.slice(1)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
-                      <input
-                        type="text"
-                        value={formData.tags?.join(', ') || ''}
-                        onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
-                        className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
-                        placeholder="Remote, Full-time, FinTech"
-                      />
-                      <div className="text-gray-500 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
+                      
+                      <div>
+                        <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
+                        <input
+                          type="text"
+                          value={formData.tags?.join(', ') || ''}
+                          onChange={(e) => handleFormChange('tags', e.target.value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0))}
+                          className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-lg"
+                          placeholder="Remote, Full-time, FinTech"
+                        />
+                        <div className="text-gray-500 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
+                      </div>
                     </div>
                     
                     <div>
