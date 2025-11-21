@@ -95,15 +95,7 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/sponsorship/update-uk-registry",
-      "schedule": "0 2 * * 1"
-    },
-    {
-      "path": "/api/cron/sponsorship/update-us-registry",
-      "schedule": "0 3 1 * *"
-    },
-    {
-      "path": "/api/cron/daily-summary",
+      "path": "/api/cron/unified",
       "schedule": "0 8 * * *"
     }
   ]
