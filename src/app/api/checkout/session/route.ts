@@ -5,7 +5,7 @@ import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
-import { razorpay } from '@/lib/payment/razorpay';
+import { getRazorpay } from '@/lib/payment/razorpay';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { getPricingForPlan } from '@/lib/services/countryPricingService';
 import subscriptionService from '@/lib/services/subscriptionService';
@@ -1000,7 +1000,8 @@ async function handleDayPassPayment(
     }
 
   } else if (provider === 'razorpay') {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpay();
+    if (!razorpayInstance) {
       return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
     }
     try {
@@ -1009,7 +1010,7 @@ async function handleDayPassPayment(
       
       if (razorpayPlanId) {
         // Create Razorpay subscription for one-time payment (total_count: 1)
-        const subscription = await razorpay.subscriptions.create({
+        const subscription = await razorpayInstance.subscriptions.create({
           plan_id: razorpayPlanId,
           total_count: 1, // One-time payment
           customer_notify: 1,
@@ -1108,7 +1109,11 @@ async function handleDayPassPayment(
       });
       console.log('Full order params JSON (day pass):', JSON.stringify(orderParams, null, 2));
       
-      const order = await razorpay.orders.create(orderParams);
+      const razorpayInstance = getRazorpay();
+      if (!razorpayInstance) {
+        return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+      }
+      const order = await razorpayInstance.orders.create(orderParams);
       
       // Verify the order was created with the correct amount
       console.log('Razorpay order created (day pass) - verification:', {
@@ -1734,7 +1739,11 @@ async function handleProPlanPayment(
       });
       console.log('Full order params JSON:', JSON.stringify(orderParams, null, 2));
       
-      const order = await razorpay.orders.create(orderParams);
+      const razorpayInstance = getRazorpay();
+      if (!razorpayInstance) {
+        return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+      }
+      const order = await razorpayInstance.orders.create(orderParams);
       
       // Verify the order was created with the correct amount
       console.log('Razorpay order created - verification:', {
