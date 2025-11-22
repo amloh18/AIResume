@@ -2,7 +2,7 @@ import subscriptionService from '@/lib/services/subscriptionService';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { stripe } from '@/lib/payment/stripe';
-import { razorpay } from '@/lib/payment/razorpay';
+import { getRazorpay } from '@/lib/payment/razorpay';
 
 /**
  * Background job to process subscription auto-renewals
@@ -66,9 +66,14 @@ export async function processAutoRenewals() {
             });
             console.warn(`⚠️ Subscription ${subscription.providerSubscriptionId} is past due`);
           }
-        } else if (subscription.provider === 'razorpay' && razorpay) {
+        } else if (subscription.provider === 'razorpay') {
           // Check Razorpay subscription status
-          const razorpaySubscription = await razorpay.subscriptions.fetch(
+          const razorpayInstance = getRazorpay();
+          if (!razorpayInstance) {
+            console.warn(`Razorpay not configured, skipping renewal for user ${user._id}`);
+            continue;
+          }
+          const razorpaySubscription = await razorpayInstance.subscriptions.fetch(
             subscription.providerSubscriptionId
           );
           

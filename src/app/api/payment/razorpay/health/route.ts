@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { razorpay } from '@/lib/payment/razorpay';
+import { getRazorpay } from '@/lib/payment/razorpay';
 
 /**
  * Razorpay Health Check Endpoint
@@ -9,6 +9,9 @@ import { razorpay } from '@/lib/payment/razorpay';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Use runtime getter to ensure env vars are available
+    const razorpay = getRazorpay();
+    
     if (!razorpay) {
       return NextResponse.json(
         { 
