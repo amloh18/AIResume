@@ -1404,7 +1404,7 @@ ${userName}`
                       e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center transition-all duration-200 group`;
                     }}
                   >
-                    <h3 className="text-base font-bold">{stage.title}</h3>
+                    <h3 className="text-base font-bold text-black dark:text-white">{stage.title}</h3>
                   </div>
                 </div>
                 );
@@ -1438,13 +1438,13 @@ ${userName}`
                       <ArrowRight className="w-4 h-4 rotate-180" />
                     </button>
                   )}
-                  <h3 className={`text-base font-bold ${
-                    stage.status === 'draft' ? 'text-gray-800 dark:text-gray-400' :
-                    stage.status === 'created' ? 'text-purple-800 dark:text-purple-400' :
-                    stage.status === 'applied' ? 'text-blue-800 dark:text-blue-400' :
-                    stage.status === 'interview' ? 'text-orange-800 dark:text-orange-400' :
-                    stage.status === 'offer' ? 'text-green-800 dark:text-green-400' :
-                    'text-red-800 dark:text-red-400'
+                  <h3 className={`text-base font-bold text-black ${
+                    stage.status === 'draft' ? 'dark:text-gray-400' :
+                    stage.status === 'created' ? 'dark:text-purple-400' :
+                    stage.status === 'applied' ? 'dark:text-blue-400' :
+                    stage.status === 'interview' ? 'dark:text-orange-400' :
+                    stage.status === 'offer' ? 'dark:text-green-400' :
+                    'dark:text-red-400'
                   }`}>{stage.title}</h3>
                 </div>
                 <span className={`text-sm ${
