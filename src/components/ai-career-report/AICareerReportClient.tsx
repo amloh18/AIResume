@@ -5,12 +5,13 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AICareerReportProvider, useAICareerReport } from '@/contexts/AICareerReportContext';
 import ChoosePathStep from '@/components/ai-career-report/ChoosePathStep';
+import ChooseTemplateStep from '@/components/ai-career-report/ChooseTemplateStep';
 import MasterCVBuilderStep from '@/components/ai-career-report/MasterCVBuilderStep';
-import AICareerReportStep from '@/components/ai-career-report/AICareerReportStep';
-import CVPreviewModal from '@/components/ai-career-report/CVPreviewModal';
+import CVPreviewSidePanel from '@/components/ai-career-report/CVPreviewSidePanel';
+import CareerReportSidePanel from '@/components/ai-career-report/CareerReportSidePanel';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { ArrowLeft, Sparkles, Eye, Save, CheckCircle, LogOut } from 'lucide-react';
+import { ArrowLeft, Sparkles, Eye, Save, CheckCircle, LogOut, FileText } from 'lucide-react';
 
 // Main Content Component
 function AICareerReportContent() {
@@ -25,6 +26,7 @@ function AICareerReportContent() {
   const masterCVIdParam = searchParams.get('masterCVId');
   const [showSavedIndicator, setShowSavedIndicator] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [showReport, setShowReport] = useState(false);
 
   // Sync URL with current step to maintain state on refresh
   useEffect(() => {
@@ -82,11 +84,11 @@ function AICareerReportContent() {
     
     // Priority: Flow 3 (editMaster) > URL step param > Saved step (if has data) > Mode param > Default
     if (editMasterParam) {
-      // Flow 3: Master CV Edit - start at step 2 (skip step 1)
+      // Flow 3: Master CV Edit - start at step 3 (skip step 1 and 2)
       // Context already handles this, but ensure it's set correctly
-      if (state.currentStep !== 2) {
-        console.log('📍 Flow 3 detected: Setting step to 2 (Master CV Edit)');
-        dispatch({ type: 'SET_CURRENT_STEP', payload: 2 });
+      if (state.currentStep !== 3) {
+        console.log('📍 Flow 3 detected: Setting step to 3 (Master CV Edit)');
+        dispatch({ type: 'SET_CURRENT_STEP', payload: 3 });
       }
     } else if (stepParam) {
       // URL explicitly specifies step - use it only if different from current
@@ -158,9 +160,9 @@ function AICareerReportContent() {
     loadJobData();
   }, [state.jobId, session?.user?.id, dispatch]);
 
-  // Show saved indicator when data is saved (only for steps 1 and 2)
+  // Show saved indicator when data is saved (only for steps 1, 2, and 3)
   useEffect(() => {
-    if (state.currentStep <= 2) {
+    if (state.currentStep <= 3) {
       setShowSavedIndicator(true);
       const timer = setTimeout(() => {
         setShowSavedIndicator(false);
@@ -236,9 +238,9 @@ function AICareerReportContent() {
 
   // Safe back handler that checks authentication
   const handleSafeBack = () => {
-    // Flow 3 (Edit Master): Don't allow going back to step 1
-    if (editMasterParam && state.currentStep === 2) {
-      // In Flow 3, step 2 is the first step, so back should go to dashboard
+    // Flow 3 (Edit Master): Don't allow going back to step 1 or 2
+    if (editMasterParam && state.currentStep === 3) {
+      // In Flow 3, step 3 is the first step, so back should go to dashboard
       router.push('/dashboard');
       return;
     }
@@ -283,9 +285,9 @@ function AICareerReportContent() {
       case 1:
         return <ChoosePathStep onNext={nextStep} />;
       case 2:
-        return <MasterCVBuilderStep onNext={nextStep} onBack={handleSafeBack} />;
+        return <ChooseTemplateStep onNext={nextStep} onBack={handleSafeBack} />;
       case 3:
-        return <AICareerReportStep onComplete={handleSafeComplete} onBack={handleSafeBack} session={session} />;
+        return <MasterCVBuilderStep onNext={nextStep} onBack={handleSafeBack} />;
       default:
         return <ChoosePathStep onNext={nextStep} />;
     }
@@ -356,10 +358,6 @@ function AICareerReportContent() {
               {/* Step Information - Inline after logo */}
               <div className="flex items-center gap-4 ml-8">
                 <div className="flex flex-col">
-                  {state.currentStep === 3 && (
-                    <>
-                    </>
-                  )}
                 </div>
               </div>
             </div>
@@ -367,7 +365,7 @@ function AICareerReportContent() {
             {/* Right side - Authentication buttons */}
             <div className="flex items-center gap-4">
               {/* Data Saved Indicator */}
-              {showSavedIndicator && state.currentStep <= 2 && (
+              {showSavedIndicator && state.currentStep <= 3 && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -379,17 +377,26 @@ function AICareerReportContent() {
                 </motion.div>
               )}
               
-              {/* CV Preview and Authentication buttons */}
+              {/* Report, CV Preview and Authentication buttons */}
               {session?.user ? (
                 <>
-                  {(state.currentStep === 2 || state.currentStep === 3) && (
+                  {state.currentStep === 3 && (
+                    <>
+                      <button
+                        onClick={() => setShowReport(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                      >
+                        <FileText size={16} />
+                        Report
+                      </button>
                     <button
                       onClick={() => setShowPreview(true)}
                       className="flex items-center gap-2 px-4 py-2 bg-[#80FF00] text-black rounded-lg font-medium transition-colors hover:bg-[#70e600]"
                     >
                       <Eye size={16} />
-                      CV Preview
+                        CV
                     </button>
+                    </>
                   )}
                   <button
                     onClick={() => signOut({ callbackUrl: '/' })}
@@ -399,14 +406,7 @@ function AICareerReportContent() {
                     Logout
                   </button>
                 </>
-              ) : state.currentStep === 3 && (
-                <button
-                  onClick={() => router.push(`/sign-in?callbackUrl=${encodeURIComponent('/ai-career-report?step=3')}`)}
-                  className="bg-[#80FF00] text-black px-4 py-2 rounded-lg font-medium transition-colors hover:bg-[#70e600]"
-                >
-                  Sign In
-                </button>
-              )}
+              ) : null}
             </div>
           </div>
         </div>
@@ -429,6 +429,18 @@ function AICareerReportContent() {
             </div>
           </div>
         ) : state.currentStep === 2 ? (
+          <div className="min-h-[calc(100vh-5rem)]">
+            <motion.div
+              key={state.currentStep}
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              {renderStep()}
+            </motion.div>
+          </div>
+        ) : state.currentStep === 3 ? (
           <div className="h-[calc(100vh-5rem)]">
             <motion.div
               key={state.currentStep}
@@ -440,29 +452,24 @@ function AICareerReportContent() {
               {renderStep()}
             </motion.div>
           </div>
-        ) : (
-          <div className="min-h-[calc(100vh-5rem)] p-4">
-            <motion.div
-              key={state.currentStep}
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-            >
-              {renderStep()}
-            </motion.div>
-          </div>
-        )}
+        ) : null}
       </div>
 
-      {/* CV Preview Modal */}
-      {showPreview && (
-        <CVPreviewModal
+      {/* CV Preview Side Panel */}
+      <CVPreviewSidePanel
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
           cvData={state.cvData}
         />
-      )}
+
+      {/* Career Report Side Panel */}
+      <CareerReportSidePanel
+        isOpen={showReport}
+        onClose={() => setShowReport(false)}
+        onComplete={handleSafeComplete}
+        onBack={handleSafeBack}
+        session={session}
+      />
     </div>
   );
 }

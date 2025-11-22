@@ -255,7 +255,7 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
   onClean,
   className = ''
 }) => {
-  const [showModal, setShowModal] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [unlinkedItems, setUnlinkedItems] = useState<any[]>([]);
 
   const checkUnlinkedItems = () => {
@@ -288,100 +288,75 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
     });
 
     setUnlinkedItems(unlinked);
-    setShowModal(true);
+    setIsExpanded(true);
   };
 
   const handleConfirmClean = () => {
     onClean(unlinkedItems);
-    setShowModal(false);
+    setIsExpanded(false);
+    setUnlinkedItems([]);
+  };
+
+  const handleCancel = () => {
+    setIsExpanded(false);
+    setUnlinkedItems([]);
   };
 
   return (
-    <>
+    <div className="flex items-center gap-2">
       <motion.button
         onClick={checkUnlinkedItems}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${className}`}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        disabled={items.length === 0}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${className} ${
+          isExpanded ? 'bg-red-500 text-white hover:bg-red-600' : ''
+        }`}
+        whileHover={!isExpanded ? { scale: 1.05 } : {}}
+        whileTap={!isExpanded ? { scale: 0.95 } : {}}
+        disabled={items.length === 0 || isExpanded}
+        animate={isExpanded ? { width: 'auto' } : { width: 'auto' }}
       >
         <Trash size={16} />
         <span className="hidden md:inline">Clean Unlinked</span>
+        {isExpanded && unlinkedItems.length > 0 && (
+          <motion.span
+            initial={{ opacity: 0, width: 0 }}
+            animate={{ opacity: 1, width: 'auto' }}
+            exit={{ opacity: 0, width: 0 }}
+            className="ml-1"
+          >
+            ({unlinkedItems.length})
+          </motion.span>
+        )}
       </motion.button>
 
-      {/* Clean Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50"
+      {isExpanded && unlinkedItems.length > 0 && (
+        <>
+          <motion.button
+            onClick={handleConfirmClean}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-all duration-200 flex items-center gap-2"
+            initial={{ opacity: 0, scale: 0.8, width: 0 }}
+            animate={{ opacity: 1, scale: 1, width: 'auto' }}
+            exit={{ opacity: 0, scale: 0.8, width: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md mx-4 shadow-2xl"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Clean Unlinked {type === 'cv' ? 'CVs' : 'Cover Letters'}
-                </h3>
-              </div>
-
-              <div className="mb-6">
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  This will permanently delete {unlinkedItems.length} {type === 'cv' ? 'CVs' : 'cover letters'} that are not linked to any application journeys.
-                </p>
-
-                {unlinkedItems.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 max-h-32 overflow-y-auto">
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                      Items to be deleted:
-                    </h4>
-                    <ul className="space-y-1">
-                      {unlinkedItems.slice(0, 5).map((item, index) => (
-                        <li key={index} className="text-sm text-gray-600 dark:text-gray-300 truncate">
-                          • {item.title}
-                        </li>
-                      ))}
-                      {unlinkedItems.length > 5 && (
-                        <li className="text-sm text-gray-500 dark:text-gray-400">
-                          ... and {unlinkedItems.length - 5} more
-                        </li>
-                      )}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-3">
-                <motion.button
-                  onClick={() => setShowModal(false)}
-                  className="flex-1 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  onClick={handleConfirmClean}
-                  className="flex-1 px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Delete {unlinkedItems.length} Items
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+            <Check size={16} />
+            <span>Confirm</span>
+          </motion.button>
+          <motion.button
+            onClick={handleCancel}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-all duration-200 flex items-center gap-2"
+            initial={{ opacity: 0, scale: 0.8, width: 0 }}
+            animate={{ opacity: 1, scale: 1, width: 'auto' }}
+            exit={{ opacity: 0, scale: 0.8, width: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <X size={16} />
+            <span>Cancel</span>
+          </motion.button>
+        </>
+      )}
+    </div>
   );
 };
 
@@ -1590,7 +1565,9 @@ const Canvas: React.FC = () => {
         }
       }
 
-      // Refresh CVs list
+      // Refresh CVs list - reset refs to force fresh fetch
+      hasLoadedCVsRef.current = false;
+      lastUserIdRef.current = null;
       await loadAllCVData(userId);
 
       if (deletedCount > 0) {
@@ -1726,7 +1703,9 @@ const Canvas: React.FC = () => {
         }
       }
 
-      // Refresh cover letters list
+      // Refresh cover letters list - reset refs to force fresh fetch
+      hasLoadedCVsRef.current = false;
+      lastUserIdRef.current = null;
       await loadAllCVData();
 
       if (deletedCount > 0) {

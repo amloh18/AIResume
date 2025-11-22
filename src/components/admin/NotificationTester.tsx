@@ -27,6 +27,7 @@ export default function NotificationTester() {
   const [actionType, setActionType] = useState('');
   const [actionUrl, setActionUrl] = useState('');
   const [interactive, setInteractive] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
   
   useEffect(() => {
     setMounted(true);
@@ -93,6 +94,52 @@ export default function NotificationTester() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendAllTypes = async () => {
+    if (!userId) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a user ID first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSendingAll(true);
+    try {
+      const response = await fetch('/api/notifications/send-all-types', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: 'Success',
+          description: `Sent ${data.summary.success} notifications successfully! They will appear as toasts and be saved to the notification center.`,
+        });
+        setResult({ success: true, message: `Sent ${data.summary.success} notifications successfully!` });
+      } else {
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to send notifications',
+          variant: 'destructive',
+        });
+        setResult({ success: false, message: data.error || 'Failed to send notifications' });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send notifications',
+        variant: 'destructive',
+      });
+      setResult({ success: false, message: error.message || 'Failed to send notifications' });
+    } finally {
+      setSendingAll(false);
     }
   };
 
@@ -170,6 +217,32 @@ export default function NotificationTester() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Send All Types Button */}
+          <div className="mb-4">
+            <Button
+              onClick={handleSendAllTypes}
+              disabled={sendingAll || !userId}
+              variant="default"
+              className="w-full"
+              size="lg"
+            >
+              {sendingAll ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Sending All Types...
+                </>
+              ) : (
+                <>
+                  <Bell className="h-4 w-4 mr-2" />
+                  Send All Notification Types (13 types)
+                </>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              This will send all 13 notification types as toasts and save them to the notification center
+            </p>
+          </div>
+
           {/* Quick Test Templates */}
           <div>
             <Label className="mb-2 block">Quick Test Templates</Label>

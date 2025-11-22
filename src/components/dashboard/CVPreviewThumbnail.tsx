@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useEffect, useState, useCallback } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { TemplateRenderer } from '@/lib/templates/template-renderer';
 
@@ -25,126 +25,87 @@ const CVPreviewThumbnail: React.FC<CVPreviewThumbnailProps> = ({
   className = ''
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.15);
-  const isCalculatingRef = useRef(false);
-  const lastScaleRef = useRef(0.15);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
-  // Calculate scale based on container size - memoized callback to prevent recreations
-  const updateScale = useCallback(() => {
-    if (!containerRef.current || isCalculatingRef.current) return;
+  // Measure container and calculate render dimensions
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-    isCalculatingRef.current = true;
-    
-    try {
+    const updateDimensions = () => {
       const container = containerRef.current;
+      if (!container) return;
+
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
-      // Skip if container has no dimensions yet
-      if (containerWidth === 0 || containerHeight === 0) {
-        isCalculatingRef.current = false;
-        return;
+      if (containerWidth === 0 || containerHeight === 0) return;
+
+      // Calculate dimensions maintaining A4 aspect ratio
+      const aspectRatio = A4_WIDTH / A4_HEIGHT;
+      let renderWidth = containerWidth;
+      let renderHeight = containerWidth / aspectRatio;
+
+      // If height doesn't fit, scale by height instead
+      if (renderHeight > containerHeight) {
+        renderHeight = containerHeight;
+        renderWidth = containerHeight * aspectRatio;
       }
 
-      // Calculate scale to fit container while maintaining A4 aspect ratio
-      // Leave some padding (5% on each side)
-      const padding = 0.1;
-      const availableWidth = containerWidth * (1 - padding * 2);
-      const availableHeight = containerHeight * (1 - padding * 2);
+      setDimensions({ width: renderWidth, height: renderHeight });
+    };
 
-      // Calculate scale based on both width and height, use the smaller one to fit
-      const widthScale = availableWidth / A4_WIDTH;
-      const heightScale = availableHeight / A4_HEIGHT;
-      const calculatedScale = Math.min(widthScale, heightScale);
-      const clampedScale = Math.max(0.05, Math.min(0.25, calculatedScale)); // Clamp between 5% and 25%
+    updateDimensions();
 
-      // Only update if scale has changed significantly (prevent micro-updates)
-      if (Math.abs(lastScaleRef.current - clampedScale) >= 0.001) {
-        lastScaleRef.current = clampedScale;
-        setScale(clampedScale);
-      }
-    } finally {
-      // Use requestAnimationFrame to ensure state updates don't cause immediate re-renders
-      requestAnimationFrame(() => {
-        isCalculatingRef.current = false;
-      });
-    }
-  }, []);
-
-  // Effect to set up ResizeObserver - only runs when cvData/template change
-  useEffect(() => {
-    if (!cvData || !template) return;
-
-    // Initial scale calculation with a small delay to ensure DOM is ready
-    const initialTimeout = setTimeout(() => {
-      updateScale();
-    }, 50);
-
-    // Update on resize with debouncing
-    let resizeTimeout: NodeJS.Timeout;
     const resizeObserver = new ResizeObserver(() => {
-      clearTimeout(resizeTimeout);
-      resizeTimeout = setTimeout(() => {
-        updateScale();
-      }, 150); // Increased debounce time to prevent loops
+      updateDimensions();
     });
 
-    const container = containerRef.current;
-    if (container) {
-      resizeObserver.observe(container);
-    }
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      clearTimeout(initialTimeout);
-      clearTimeout(resizeTimeout);
       resizeObserver.disconnect();
-      isCalculatingRef.current = false;
     };
-  }, [cvData, template, updateScale]);
+  }, []);
 
   const previewContent = useMemo(() => {
     if (!cvData || !template) {
       return null;
     }
 
+    // Calculate font size based on dimensions
+    const baseFontSize = Math.max(6, Math.min(10, (dimensions.width / A4_WIDTH) * 10));
+
     return (
       <div 
         ref={containerRef}
         className="w-full h-full flex items-center justify-center relative overflow-hidden"
-        style={{ 
-          backgroundColor: '#f8f9fa'
-        }}
       >
-        {/* A4 Document Preview - Render at full size, then scale and center */}
-        <div 
-          className="bg-white shadow-lg border border-gray-300"
-          style={{ 
-            width: `${A4_WIDTH}px`,
-            height: `${A4_HEIGHT}px`,
-            overflow: 'hidden',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: `translate(-50%, -50%) scale(${scale})`,
-            transformOrigin: 'center center'
-          }}
-        >
-          <TemplateRenderer
-            cvData={cvData}
-            template={template as any}
-            className="template-preview-content"
-            customStyles={{
-              width: `${A4_WIDTH}px`,
-              height: `${A4_HEIGHT}px`,
-              overflow: 'hidden',
-              fontSize: `${Math.max(8, Math.round(10 * scale))}px`, // Scale font size proportionally
-              lineHeight: '1.4'
+        {dimensions.width > 0 && dimensions.height > 0 ? (
+          <div 
+            className="bg-white shadow-lg border border-gray-300"
+            style={{ 
+              width: `${dimensions.width}px`,
+              height: `${dimensions.height}px`,
+              overflow: 'hidden'
             }}
-          />
-        </div>
+          >
+            <TemplateRenderer
+              cvData={cvData}
+              template={template as any}
+              className="template-preview-content"
+              customStyles={{
+                width: `${dimensions.width}px`,
+                height: `${dimensions.height}px`,
+                overflow: 'hidden',
+                fontSize: `${baseFontSize}px`,
+                lineHeight: '1.4'
+              }}
+            />
+          </div>
+        ) : null}
       </div>
     );
-  }, [cvData, template, scale]);
+  }, [cvData, template, dimensions]);
 
   if (!previewContent) {
     return (

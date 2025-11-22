@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import { useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   User, 
   Briefcase, 
@@ -87,7 +88,9 @@ function ToolbarWrapper({ showAIButton, fieldType, onAIGenerate, isGenerating }:
 
 export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderStepProps) {
   const context = useAICareerReport();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   
   if (!context) {
     return <div className="min-h-screen bg-[#1A261A] flex items-center justify-center">
@@ -399,6 +402,147 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       setGeneratingAI(prev => ({ ...prev, [fieldId]: false }));
     }
   };
+
+  // Flow Detection: Check if this is Flow 3 (Master CV Edit)
+  const editMaster = searchParams?.get('editMaster') === 'true';
+  const masterCVId = searchParams?.get('masterCVId') || (typeof window !== 'undefined' ? sessionStorage.getItem('masterCVId') : null);
+  const isEditingMasterCV = editMaster && masterCVId;
+  const authStatus = sessionStatus;
+  const currentSession = session;
+
+  // Handle Save Master CV
+  const handleSaveMasterCV = useCallback(async () => {
+    // CRITICAL SECURITY: Check if user is authenticated before saving
+    if (authStatus === 'loading') {
+      alert('Please wait while we verify your authentication...');
+      return;
+    }
+
+    if (authStatus !== 'authenticated' || !currentSession?.user?.id) {
+      alert('Please sign in to save your Master CV');
+      return;
+    }
+
+    try {
+      console.log('🚀 Starting Master CV creation from database draft...');
+
+      // First, ensure latest data is saved to database
+      const saveResponse = await fetch('/api/cv-draft/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cvData: state.cvData,
+          aiAnalysis: state.aiAnalysis,
+          currentStep: state.currentStep,
+          jobId: state.jobId,
+          jobData: state.jobData,
+          completedSteps: state.completedSteps,
+          activeSection: state.activeSection,
+          availableSections: state.availableSections
+        })
+      });
+
+      if (!saveResponse.ok) {
+        console.warn('⚠️ Failed to save draft before creating Master CV, continuing anyway...');
+      }
+
+      // Convert draft to Master CV
+      const requestBody: any = {};
+      if (isEditingMasterCV && masterCVId) {
+        requestBody.masterCVId = masterCVId;
+        console.log('🔄 Flow 3: Passing explicit masterCVId for update:', masterCVId);
+      }
+      // Include selected template ID if available
+      if (state.selectedTemplate) {
+        const templateId = state.selectedTemplate.id || state.selectedTemplate._id;
+        if (templateId) {
+          requestBody.templateId = templateId;
+          console.log('✅ Passing selected templateId:', templateId);
+        }
+      }
+      
+      const response = await fetch('/api/cv-draft/convert-to-master', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('📡 Master CV creation response status:', response.status);
+      
+      if (!response.ok) {
+        let errorMessage = `Master CV creation failed: ${response.status} ${response.statusText}`;
+        
+        try {
+          const errorData = await response.json();
+          console.error('❌ Master CV creation failed with details:', errorData);
+          
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch (parseError) {
+          const errorText = await response.text();
+          console.error('❌ Master CV creation failed (text response):', errorText);
+          errorMessage = errorText || errorMessage;
+        }
+        
+        alert(errorMessage);
+        return;
+      }
+
+      const result = await response.json();
+      console.log('📥 Master CV creation result:', result);
+
+      if (result.success) {
+        const actionVerb = isEditingMasterCV ? 'updated' : 'created';
+        console.log(`✅ Master CV ${actionVerb} successfully:`, result.cv?.id);
+        
+        // Mark as created/updated
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('masterCVCreated', 'true');
+          sessionStorage.setItem('fromAICareerReport', 'true');
+          
+          // Clear masterCVId from sessionStorage after successful update
+          if (isEditingMasterCV) {
+            sessionStorage.removeItem('masterCVId');
+          }
+          
+          // Clear localStorage since data is now in database
+          try {
+            localStorage.removeItem('ai-career-report-data');
+            sessionStorage.removeItem('ai-career-report-backup');
+            console.log('✅ Cleared localStorage after saving Master CV');
+          } catch (error) {
+            console.warn('⚠️ Failed to clear localStorage:', error);
+          }
+          
+          // Dispatch custom event to notify other components
+          window.dispatchEvent(new CustomEvent('masterCVCreated'));
+        }
+
+        // CRITICAL SECURITY: Only trigger completion if user is still authenticated
+        if (authStatus === 'authenticated' && currentSession?.user?.id) {
+          console.log('✅ Master CV saved, user authenticated, redirecting to dashboard');
+          router.push('/dashboard');
+        } else {
+          console.warn('🚫 Security: User not authenticated after save, preventing dashboard redirect');
+          alert('Please sign in to complete the process');
+        }
+      } else {
+        throw new Error(result.error || result.message || 'Failed to save Master CV');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Save Master CV error:', error);
+      
+      if (error.message) {
+        alert(error.message);
+      } else if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        alert('Network error: Unable to connect to server. Please check your internet connection and try again.');
+      } else {
+        alert('Failed to save Master CV. Please try again.');
+      }
+    }
+  }, [currentSession, authStatus, state, isEditingMasterCV, masterCVId, router]);
 
   const addNewSection = (sectionType: string) => {
     console.log('Adding new section:', sectionType);
@@ -789,7 +933,8 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] bg-[#1A201A]">
+    <div className="flex flex-col h-[calc(100vh-5rem)] bg-[#1A201A]">
+      <div className="flex flex-1 overflow-hidden">
       {/* Sticky Sidebar */}
       <div className="w-20 tablet:w-80 flex-shrink-0 p-2 tablet:p-4">
         <div className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl">
@@ -849,13 +994,13 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto h-full">
+      <div className="flex-1 overflow-y-auto relative">
         <div className="p-6">
           {/* Dynamic Sections - Using visible sections from selector */}
           {sidebarSections.map((section, index) => renderSection(section, index))}
 
           {/* Bottom Navigation */}
-          <div className="flex items-center justify-between mt-12 pt-8 border-t border-white/10">
+          <div className="flex items-center justify-start mt-12 pt-8 border-t border-white/10">
             <motion.button
               onClick={onBack}
               className="flex items-center gap-2 px-6 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
@@ -865,19 +1010,37 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
               <ArrowLeft size={20} />
               Previous: Enter Details
             </motion.button>
-            
-            <motion.button
-              onClick={onNext}
-              className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black rounded-lg font-semibold hover:from-[#70e600] hover:to-[#60d600] transition-all duration-200"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Finish & Save CV
-              <ArrowRight size={20} />
-            </motion.button>
           </div>
         </div>
+        
+        {/* Finish & Save CV Button - Sticky button centered to form for unauth route OR auth route with no master CV (creating new) */}
+        {(!authStatus || authStatus !== 'authenticated' || !isEditingMasterCV) && (
+          <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
+            <button
+              onClick={handleSaveMasterCV}
+              className="bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:from-[#70e600] hover:to-[#60d600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
+            >
+              Finish & Save CV
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {/* Update Master CV Button - Sticky button centered to form for auth route with master CV edit/update */}
+        {authStatus === 'authenticated' && isEditingMasterCV && (
+          <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
+            <button
+              onClick={handleSaveMasterCV}
+              className="bg-[#80FF00] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#70e600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
+            >
+              Update Master CV
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
+        </div>
       </div>
+
 
       {/* Add Section Modal */}
       {showAddSectionModal && (
@@ -928,6 +1091,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           </motion.div>
         </div>
       )}
+
     </div>
   );
 }

@@ -80,11 +80,17 @@ class RedisClientManager {
       });
 
       client.on('connect', () => {
-        console.log('🔗 Redis connecting...');
+        // Only log in development to reduce log noise
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔗 Redis connecting...');
+        }
       });
 
       client.on('ready', () => {
-        console.log('✅ Redis connected successfully');
+        // Only log on first connection to reduce log noise
+        if (process.env.NODE_ENV === 'development') {
+          console.log('✅ Redis connected successfully');
+        }
       });
 
       await client.connect();

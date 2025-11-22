@@ -165,6 +165,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
     
     // Trigger async thumbnail generation for CVs missing thumbnails
+    // Use service function instead of HTTP call to avoid authentication issues
     cvs.forEach(async (cv) => {
       const thumbnailAge = cv.metadata?.thumbnailGeneratedAt 
         ? Date.now() - new Date(cv.metadata.thumbnailGeneratedAt).getTime()
@@ -173,12 +174,18 @@ export async function GET(request: NextRequest) {
       const needsThumbnail = !cv.metadata?.thumbnailUrl || thumbnailAge > 7 * 24 * 60 * 60 * 1000; // 7 days
       
       if (needsThumbnail) {
-        // Trigger async thumbnail generation (don't await)
-        fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/cv/${cv._id}/generate-thumbnail`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        }).catch(error => {
-          console.error(`Failed to generate thumbnail for CV ${cv._id}:`, error);
+        // Use service function for server-side thumbnail generation (no auth needed)
+        setImmediate(async () => {
+          try {
+            const { CVThumbnailService } = await import('@/lib/services/cvThumbnailService');
+            await CVThumbnailService.generateAndSaveThumbnail(
+              cv._id.toString(),
+              userId,
+              false // Don't force regenerate if recent
+            );
+          } catch (error) {
+            console.error(`Failed to generate thumbnail for CV ${cv._id}:`, error);
+          }
         });
       }
     });

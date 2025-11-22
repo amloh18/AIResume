@@ -693,14 +693,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
 
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-[#1A201A]">
-      <div className="max-w-6xl mx-auto p-8 space-y-8">
-
-        {/* Step Information */}
-        <div className="text-center mb-8">
-          <div className="text-[#80FF00] font-bold text-lg mb-2">Step 3 of 3</div>
-          <div className="text-2xl font-bold text-white mb-2">Your Career Report</div>
-          <div className="text-white/70 text-lg mb-6">AI-powered analysis and career insights.</div>
-        </div>
+      <div className="max-w-6xl mx-auto space-y-8">
 
         {/* Description Section */}
         <div className="text-center mb-12">
@@ -1221,21 +1214,6 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           </div>
         </motion.div>
 
-        {/* Call to Action */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 1.4 }}
-          className="text-center"
-        >
-          <button
-            onClick={handleSaveMasterCV}
-            className="bg-[#80FF00] text-black px-12 py-4 rounded-lg font-bold text-lg hover:bg-[#70e600] transition-colors flex items-center gap-3 mx-auto"
-          >
-            {isEditingMasterCV ? 'Update Master CV' : 'Create Master CV'}
-            <ArrowRight size={20} />
-          </button>
-        </motion.div>
 
         {/* CV Preview Modal */}
         <CVPreviewModal

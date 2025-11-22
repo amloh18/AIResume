@@ -75,6 +75,8 @@ export interface AIAnalysis {
   };
 }
 
+import { ITemplate } from '@/types/template';
+
 export interface AICareerReportState {
   currentStep: 1 | 2 | 3;
   cvData: UnifiedCVDataStructure;
@@ -90,11 +92,13 @@ export interface AICareerReportState {
   isLoadingJob: boolean;
   jobError: string | null;
   availableSections: any[];
+  selectedTemplate: ITemplate | null;
 }
 
 // Action Types
 type AICareerReportAction =
   | { type: 'SET_CURRENT_STEP'; payload: 1 | 2 | 3 }
+  | { type: 'SET_SELECTED_TEMPLATE'; payload: ITemplate | null }
   | { type: 'SET_CV_DATA'; payload: UnifiedCVDataStructure }
   | { type: 'UPDATE_CV_DATA'; payload: Partial<UnifiedCVDataStructure> }
   | { type: 'SET_UPLOADED_FILE'; payload: File | null }
@@ -377,7 +381,8 @@ const getInitialState = (): AICareerReportState => {
     jobId: savedData?.jobId || null,
     isLoadingJob: false,
     jobError: null,
-    availableSections: savedData?.availableSections || []
+    availableSections: savedData?.availableSections || [],
+    selectedTemplate: savedData?.selectedTemplate || null
   };
 };
 
@@ -518,6 +523,12 @@ function aiCareerReportReducer(
         availableSections: [...state.availableSections, action.payload]
       };
 
+    case 'SET_SELECTED_TEMPLATE':
+      return {
+        ...state,
+        selectedTemplate: action.payload
+      };
+
     case 'RESET_STATE':
       return getInitialState();
 
@@ -532,7 +543,7 @@ const AICareerReportContext = createContext<{
   dispatch: React.Dispatch<AICareerReportAction>;
   nextStep: () => void;
   prevStep: () => void;
-  goToStep: (step: 1 | 2 | 3) => void;
+  goToStep: (step: 1 | 2) => void;
 } | null>(null);
 
 // Provider
