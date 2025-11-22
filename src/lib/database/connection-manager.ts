@@ -78,28 +78,34 @@ class DatabaseConnectionManager {
       console.log('🔄 MongoDB reconnected');
     });
 
-    // Graceful shutdown
-    process.on('SIGINT', async () => {
-      try {
-        await this.gracefulShutdown();
-        console.log('🛑 MongoDB connection closed through app termination');
-        process.exit(0);
-      } catch (err) {
-        console.error('❌ Error during MongoDB shutdown:', err);
-        process.exit(1);
-      }
-    });
+    // Graceful shutdown - only set up once to prevent duplicate handlers
+    // In Next.js serverless environments, these signals may not be triggered
+    // Connection pooling handles connection lifecycle automatically
+    if (!process.env._SHUTDOWN_HANDLERS_SETUP) {
+      process.env._SHUTDOWN_HANDLERS_SETUP = 'true';
+      
+      process.on('SIGINT', async () => {
+        try {
+          await this.gracefulShutdown();
+          console.log('🛑 MongoDB connection closed through app termination (SIGINT)');
+          process.exit(0);
+        } catch (err) {
+          console.error('❌ Error during MongoDB shutdown:', err);
+          process.exit(1);
+        }
+      });
 
-    process.on('SIGTERM', async () => {
-      try {
-        await this.gracefulShutdown();
-        console.log('🛑 MongoDB connection closed through app termination');
-        process.exit(0);
-      } catch (err) {
-        console.error('❌ Error during MongoDB shutdown:', err);
-        process.exit(1);
-      }
-    });
+      process.on('SIGTERM', async () => {
+        try {
+          await this.gracefulShutdown();
+          console.log('🛑 MongoDB connection closed through app termination (SIGTERM)');
+          process.exit(0);
+        } catch (err) {
+          console.error('❌ Error during MongoDB shutdown:', err);
+          process.exit(1);
+        }
+      });
+    }
   }
 
   /**

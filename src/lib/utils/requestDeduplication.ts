@@ -14,7 +14,7 @@ interface PendingRequest {
 
 class RequestDeduplication {
   private pendingRequests: Map<string, PendingRequest> = new Map();
-  private readonly CACHE_TTL = 5000; // 5 seconds - requests within this window are deduplicated
+  private readonly CACHE_TTL = 10000; // 10 seconds - requests within this window are deduplicated (increased from 5s)
 
   /**
    * Deduplicate a fetch request
