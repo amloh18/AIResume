@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { razorpay } from '@/lib/payment/razorpay';
+import { getRazorpay } from '@/lib/payment/razorpay';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
@@ -464,12 +464,13 @@ async function handleSubscriptionActivated(subscription: any) {
     const regionCode = region || 'IN';
     
     // Get payment details if available
-    if (!razorpay) {
+    const razorpayInstance = getRazorpay();
+    if (!razorpayInstance) {
       console.error('Razorpay not configured');
       return;
     }
     
-    const invoices = await razorpay.invoices.all({
+    const invoices = await razorpayInstance.invoices.all({
       subscription_id: subscription.id,
       count: 1
     });
@@ -515,11 +516,12 @@ async function handleSubscriptionCharged(subscription: any) {
     }
 
     // Get the latest invoice for this subscription
-    if (!razorpay) {
+    const razorpayInstance = getRazorpay();
+    if (!razorpayInstance) {
       console.error('Razorpay not configured');
       return;
     }
-    const invoices = await razorpay.invoices.all({
+    const invoices = await razorpayInstance.invoices.all({
       subscription_id: subscription.id,
       count: 1
     });

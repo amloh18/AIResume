@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
-import { razorpay } from '@/lib/payment/razorpay';
+import { getRazorpay } from '@/lib/payment/razorpay';
 import User from '@/models/User';
 import Invoice from '@/models/Invoice';
 
@@ -52,7 +52,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Get payment details from Razorpay to verify status
-    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    const razorpayInstance = getRazorpay();
+    if (!razorpayInstance) {
+      return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+    }
+    const payment = await razorpayInstance.payments.fetch(razorpay_payment_id);
     
     // Get user
     const user = await User.findOne({ email: session.user.email });

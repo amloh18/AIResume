@@ -1,15 +1,43 @@
 import Razorpay from 'razorpay';
 
-// Only create Razorpay instance if API keys are available
-const razorpay = (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET)
-  ? new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-    })
-  : null;
+// Lazy initialization - check env vars at runtime, not module load time
+// This ensures Vercel serverless functions have access to env vars when they're injected
+let razorpayInstance: Razorpay | null = null;
 
-// Export the razorpay instance for direct access
-export { razorpay };
+/**
+ * Get Razorpay instance with lazy initialization
+ * Checks environment variables at runtime (when function is called)
+ * rather than at module load time (which happens before Vercel injects env vars)
+ */
+function getRazorpayInstance(): Razorpay | null {
+  // Always check at runtime - don't rely on cached value
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  
+  if (!keyId || !keySecret) {
+    return null;
+  }
+  
+  // Create instance if not already created (lazy initialization with caching)
+  if (!razorpayInstance) {
+    razorpayInstance = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+  }
+  
+  return razorpayInstance;
+}
+
+// Export getter function for explicit runtime access
+export function getRazorpay(): Razorpay | null {
+  return getRazorpayInstance();
+}
+
+// Export as a constant for backward compatibility
+// Note: This still evaluates at module load time, but we've updated all direct usages
+// to use getRazorpay() function instead for runtime access
+export const razorpay = getRazorpayInstance();
 
 export interface CreateOrderParams {
   amount: number;
@@ -34,7 +62,8 @@ export interface CreateSubscriptionParams {
 export class RazorpayService {
   // Create an order for one-time payments
   static async createOrder(params: CreateOrderParams) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
@@ -42,7 +71,7 @@ export class RazorpayService {
     }
     
     try {
-      const order = await razorpay.orders.create({
+      const order = await razorpayInstance.orders.create({
         amount: Math.round(params.amount * 100), // Convert to paise
         currency: params.currency,
         receipt: params.receipt,
@@ -67,14 +96,15 @@ export class RazorpayService {
 
   // Create a customer
   static async createCustomer(params: CreateCustomerParams) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const customer = await razorpay.customers.create({
+      const customer = await razorpayInstance.customers.create({
         name: params.name,
         email: params.email,
         contact: params.contact,
@@ -97,14 +127,15 @@ export class RazorpayService {
 
   // Create a subscription
   static async createSubscription(params: CreateSubscriptionParams) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const subscription = await razorpay.subscriptions.create({
+      const subscription = await razorpayInstance.subscriptions.create({
         plan_id: params.planId,
         customer_notify: 1,
         notes: params.notes || {},
@@ -126,14 +157,15 @@ export class RazorpayService {
 
   // Cancel a subscription
   static async cancelSubscription(subscriptionId: string) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const subscription = await razorpay.subscriptions.cancel(subscriptionId);
+      const subscription = await razorpayInstance.subscriptions.cancel(subscriptionId);
       return {
         success: true,
         subscription: subscription,
@@ -149,14 +181,15 @@ export class RazorpayService {
 
   // Get subscription details
   static async getSubscription(subscriptionId: string) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const subscription = await razorpay.subscriptions.fetch(subscriptionId);
+      const subscription = await razorpayInstance.subscriptions.fetch(subscriptionId);
       return {
         success: true,
         subscription: subscription,
@@ -182,14 +215,15 @@ export class RazorpayService {
     };
     notes?: Record<string, string>;
   }) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const plan = await razorpay.plans.create({
+      const plan = await razorpayInstance.plans.create({
         period: params.period,
         interval: params.interval,
         item: params.item,
@@ -274,14 +308,15 @@ export class RazorpayService {
 
   // Get payment details
   static async getPayment(paymentId: string) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const payment = await razorpay.payments.fetch(paymentId);
+      const payment = await razorpayInstance.payments.fetch(paymentId);
       return {
         success: true,
         payment: payment,
@@ -297,14 +332,15 @@ export class RazorpayService {
 
   // Refund payment
   static async refundPayment(paymentId: string, amount?: number, notes?: Record<string, string>) {
-    if (!razorpay) {
+    const razorpayInstance = getRazorpayInstance();
+    if (!razorpayInstance) {
       return {
         success: false,
         error: 'Razorpay is not configured',
       };
     }
     try {
-      const refund = await razorpay.payments.refund(paymentId, {
+      const refund = await razorpayInstance.payments.refund(paymentId, {
         amount: amount ? Math.round(amount * 100) : undefined,
         notes: notes,
       });
