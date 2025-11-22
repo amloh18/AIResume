@@ -15,7 +15,8 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
-// CVPreviewThumbnail removed - using S3 thumbnails only
+import CVPreviewThumbnail from './CVPreviewThumbnail';
+import { ITemplate } from '@/types/template';
 // UnifiedCVService removed - Canvas handles all data loading
 
 interface MasterCV {
@@ -270,10 +271,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
            }}>
         {/* Master CV Preview - Inner smaller preview */}
         <div 
-          className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg cursor-pointer"
-          style={{
-            backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
-          }}
+          className="w-full h-full rounded-xl relative shadow-lg cursor-pointer overflow-hidden"
           onClick={(e) => {
             e.stopPropagation();
             // Open career report when clicking thumbnail
@@ -282,8 +280,14 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             }
           }}
         >
-          {/* Master CV Preview - Prioritize S3 thumbnail for performance */}
-          {thumbnailUrl ? (
+          {/* Master CV Preview - Use live rendering with TemplateRenderer if cvData and template are available, otherwise fallback to S3 thumbnail */}
+          {masterCV?.cvData && masterCV?.template ? (
+            <CVPreviewThumbnail
+              cvData={masterCV.cvData}
+              template={masterCV.template as ITemplate}
+              className="rounded-xl"
+            />
+          ) : thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`Master CV Preview: ${masterCV.title}`}

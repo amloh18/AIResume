@@ -1310,7 +1310,7 @@ const Analytics: React.FC = () => {
     <div className="dashboard-page space-y-4 pb-0">
       {/* Page Header */}
       <PageHeader
-        title={`Hello, ${getUserDisplayName(userProfile)}`}
+        title={`Hello, ${userProfile?.firstName || getUserDisplayName(userProfile)}`}
         description="Welcome back! Here's your career progress overview."
         user={{
           name: getUserDisplayName(userProfile),

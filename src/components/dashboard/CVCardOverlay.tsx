@@ -20,7 +20,8 @@ import { CVProgressService } from '@/lib/services/cvProgressService';
 import { useSession } from 'next-auth/react';
 import { formatDetailedTime } from '@/lib/utils/timeUtils';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
-// CVPreviewThumbnail removed - using S3 thumbnails only
+import CVPreviewThumbnail from './CVPreviewThumbnail';
+import { ITemplate } from '@/types/template';
 
 interface CV {
   id: string;
@@ -276,10 +277,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
            }}>
         {/* CV Preview - Inner smaller preview */}
         <div 
-          className="w-full h-full bg-center bg-no-repeat bg-cover rounded-xl relative shadow-lg cursor-pointer"
-          style={{
-            backgroundImage: thumbnailUrl ? `url(${thumbnailUrl})` : 'none'
-          }}
+          className="w-full h-full rounded-xl relative shadow-lg cursor-pointer overflow-hidden"
           onClick={(e) => {
             e.stopPropagation();
             // Open career report when clicking thumbnail
@@ -288,8 +286,14 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             }
           }}
         >
-          {/* CV Preview - Use S3 thumbnail only (no live rendering) */}
-          {thumbnailUrl ? (
+          {/* CV Preview - Use live rendering with TemplateRenderer if cvData and template are available, otherwise fallback to S3 thumbnail */}
+          {cv.cvData && cv.template ? (
+            <CVPreviewThumbnail
+              cvData={cv.cvData}
+              template={cv.template as ITemplate}
+              className="rounded-xl"
+            />
+          ) : thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`CV Preview: ${cv.title}`}

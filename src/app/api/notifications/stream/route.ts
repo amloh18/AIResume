@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import Notification from '@/models/Notification';
+import mongoose from 'mongoose';
 
 // Store active connections
 const connections = new Map<string, ReadableStreamDefaultController>();
@@ -14,34 +15,83 @@ export async function GET(request: NextRequest) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    await getConnection();
-
-    // Get user ID from session
-    const User = (await import('@/models/User')).default;
-    const user = await User.findOne({ email: session.user.email });
-    if (!user) {
-      return new Response('User not found', { status: 404 });
+    try {
+      await getConnection();
+    } catch (dbError) {
+      console.error('Database connection error in stream route:', dbError);
+      return new Response(JSON.stringify({ error: 'Database connection failed' }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
-    const userId = user._id.toString();
+    // Get user ID from session
+    let userId: string;
+    try {
+      const User = (await import('@/models/User')).default;
+      const user = await User.findOne({ email: session.user.email });
+      if (!user) {
+        return new Response(JSON.stringify({ error: 'User not found' }), { 
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      userId = user._id.toString();
+    } catch (userError) {
+      console.error('Error finding user in stream route:', userError);
+      return new Response(JSON.stringify({ error: 'Failed to find user' }), { 
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     // Create SSE stream with timeout handling
+    // Determine if running locally (for timeout and heartbeat adjustments)
+    const isLocal = process.env.NODE_ENV === 'development' || !process.env.VERCEL;
+    
     const stream = new ReadableStream({
       start(controller) {
-        // Store connection
-        connections.set(userId, controller);
+        try {
+          // Store connection
+          connections.set(userId, controller);
 
-        // Send initial connection message
-        const encoder = new TextEncoder();
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
+          // Send initial connection message
+          const encoder = new TextEncoder();
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
+        } catch (startError) {
+          console.error('Error in stream start:', startError);
+          try {
+            controller.close();
+          } catch (closeError) {
+            console.error('Error closing controller:', closeError);
+          }
+          connections.delete(userId);
+          return;
+        }
 
         // Set up interval to check for new notifications
         const interval = setInterval(async () => {
           try {
             // Check for unread notifications created in the last 5 seconds
             const fiveSecondsAgo = new Date(Date.now() - 5000);
+            
+            // Ensure userId is a valid ObjectId string
+            if (!userId || typeof userId !== 'string') {
+              console.error('Invalid userId in stream interval:', userId);
+              return;
+            }
+
+            // Convert userId to ObjectId for query
+            let userIdObjectId: mongoose.Types.ObjectId;
+            try {
+              userIdObjectId = new mongoose.Types.ObjectId(userId);
+            } catch (objectIdError) {
+              console.error('Invalid ObjectId format for userId:', userId, objectIdError);
+              return;
+            }
+
             const newNotifications = await Notification.find({
-              userId,
+              userId: userIdObjectId,
               read: false,
               createdAt: { $gte: fiveSecondsAgo },
             })
@@ -50,18 +100,26 @@ export async function GET(request: NextRequest) {
               .lean();
 
             for (const notification of newNotifications) {
-              const data = JSON.stringify({
-                type: 'notification',
-                notification,
-              });
-              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              try {
+                const data = JSON.stringify({
+                  type: 'notification',
+                  notification,
+                });
+                controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              } catch (encodeError) {
+                console.error('Error encoding notification:', encodeError);
+              }
             }
           } catch (error) {
             console.error('Error checking for new notifications:', error);
+            // Don't throw - just log the error to prevent breaking the stream
           }
         }, 5000); // Check every 5 seconds
 
         // Set up heartbeat to keep connection alive and detect disconnects
+        // For local: every 30 seconds, for production: every 10 seconds
+        const heartbeatIntervalMs = isLocal ? 30000 : 10000;
+        
         let heartbeatCount = 0;
         const heartbeatInterval = setInterval(() => {
           try {
@@ -69,15 +127,22 @@ export async function GET(request: NextRequest) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'heartbeat', count: heartbeatCount, timestamp: Date.now() })}\n\n`));
           } catch (error) {
             // Connection closed, cleanup
-            console.log(`💔 SSE heartbeat failed for user ${userId}, connection closed`);
+            if (isLocal) {
+              console.debug(`💔 SSE heartbeat failed for user ${userId}, connection closed`);
+            } else {
+              console.log(`💔 SSE heartbeat failed for user ${userId}, connection closed`);
+            }
             clearInterval(interval);
             clearInterval(heartbeatInterval);
             clearTimeout(connectionTimeout);
             connections.delete(userId);
           }
-        }, 10000); // Send heartbeat every 10 seconds
+        }, heartbeatIntervalMs);
 
-        // Set connection timeout (25 seconds before Vercel's 30s limit)
+        // Set connection timeout
+        // For local development: 5 minutes, for production: 25 seconds (before Vercel's 30s limit)
+        const timeoutDuration = isLocal ? 300000 : 25000; // 5 minutes local, 25 seconds production
+        
         const connectionTimeout = setTimeout(() => {
           console.log(`⏱️ SSE connection timeout for user ${userId}, closing gracefully`);
           clearInterval(interval);
@@ -89,7 +154,7 @@ export async function GET(request: NextRequest) {
             // Connection may already be closed
             console.warn('Error closing SSE connection:', error);
           }
-        }, 25000); // 25 seconds
+        }, timeoutDuration);
 
         // Cleanup on close
         request.signal.addEventListener('abort', () => {
@@ -116,7 +181,17 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Error setting up SSE stream:', error);
-    return new Response('Internal Server Error', { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('SSE stream error details:', { errorMessage, errorStack, error });
+    return new Response(JSON.stringify({ 
+      error: 'Internal Server Error',
+      message: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? errorStack : undefined
+    }), { 
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 }
 

@@ -81,6 +81,7 @@ const JobsTracker: React.FC = () => {
   const { userData, loading: userLoading, error: userError } = useUserData();
   const searchParams = useSearchParams();
   const cvId = searchParams.get('cvId');
+  const stageParam = searchParams.get('stage');
 
   // Get user ID for data fetching
   const userId = getUserIdForAPI(user);
@@ -162,6 +163,13 @@ const JobsTracker: React.FC = () => {
       loadCVContext(cvId);
     }
   }, [cvId, userId]);
+
+  // Set zoomed stage from URL parameter
+  useEffect(() => {
+    if (stageParam && ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'].includes(stageParam)) {
+      setZoomedStage(stageParam);
+    }
+  }, [stageParam]);
 
   const loadCVContext = async (cvId: string) => {
     try {

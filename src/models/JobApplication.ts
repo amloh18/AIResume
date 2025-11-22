@@ -304,6 +304,9 @@ const jobApplicationSchema = new Schema<IJobApplication>({
 });
 
 // Indexes for better query performance
+// Indexes for better query performance
+// CRITICAL: Simple userId index for fast lookups (most common query pattern)
+jobApplicationSchema.index({ userId: 1 }); // Primary index for user queries - should reduce query time significantly
 jobApplicationSchema.index({ userId: 1, status: 1 });
 jobApplicationSchema.index({ userId: 1, applicationDate: -1 });
 jobApplicationSchema.index({ userId: 1, company: 1 });

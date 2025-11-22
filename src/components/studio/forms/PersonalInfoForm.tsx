@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { User, Mail, Phone, Globe, MapPin, Plus, Trash2, Sparkles, RefreshCw } from 'lucide-react';
+import { User, Mail, Phone, Globe, MapPin, Plus, Trash2, Sparkles, RefreshCw, Upload, X, Image as ImageIcon } from 'lucide-react';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '../AISuggestionsPanel';
 import { validateStringValue } from '@/lib/utils/eventHandlers';
+import { uploadToS3 } from '@/lib/utils/upload';
 
 interface PersonalInfoFormProps {
   data: {
@@ -47,6 +48,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<Array<{ method: string; content: string }>>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Debug logging to understand data structure
   console.log('🔍 PersonalInfoForm - data:', data);
@@ -189,8 +193,150 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     setShowSuggestions(false);
   };
 
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please upload an image file');
+      return;
+    }
+
+    // Check file size (5MB limit for images)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Image size must be less than 5MB');
+      return;
+    }
+
+    // Check if user is authenticated (required for upload)
+    if (!userId) {
+      setUploadError('Please sign in to upload photos');
+      return;
+    }
+
+    setIsUploadingImage(true);
+    setUploadError(null);
+
+    try {
+      const result = await uploadToS3({
+        file,
+        uploadType: 'profile-picture',
+        onProgress: (progress) => {
+          console.log('Upload progress:', progress);
+        }
+      });
+
+      if (result.success && result.publicUrl) {
+        handleFieldChange('image', result.publicUrl);
+        setUploadError(null);
+      } else {
+        const errorMsg = result.error || 'Failed to upload image';
+        console.error('Upload failed:', errorMsg);
+        setUploadError(errorMsg);
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
+        setUploadError('Network error. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('Unauthorized') || errorMessage.includes('401')) {
+        setUploadError('Please sign in to upload photos');
+      } else {
+        setUploadError(errorMessage);
+      }
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+    // Reset input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveImage = () => {
+    handleFieldChange('image', '');
+    setUploadError(null);
+  };
+
   return (
     <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
+      {/* Photo Upload Section - Full Width */}
+      <div className="tablet:col-span-2">
+        <label className="block text-white/80 text-sm font-medium mb-2">Profile Photo</label>
+        <div className="flex items-start gap-4">
+          {/* Image Preview */}
+          {safePersonalInfo.image ? (
+            <div className="relative flex-shrink-0">
+              <img
+                src={safePersonalInfo.image}
+                alt="Profile"
+                className="w-24 h-24 rounded-lg object-cover border-2 border-white/20"
+                onError={(e) => {
+                  // Handle broken image URLs
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-colors"
+                title="Remove photo"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center bg-white/5 flex-shrink-0">
+              <ImageIcon className="w-8 h-8 text-white/40" />
+            </div>
+          )}
+
+          {/* Upload Controls */}
+          <div className="flex-1">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileSelect}
+              className="hidden"
+              id="photo-upload"
+              disabled={isUploadingImage}
+            />
+            <label
+              htmlFor="photo-upload"
+              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white cursor-pointer hover:bg-white/15 transition-colors ${
+                isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {isUploadingImage ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Uploading...</span>
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" />
+                  <span>{safePersonalInfo.image ? 'Change Photo' : 'Upload Photo'}</span>
+                </>
+              )}
+            </label>
+            {uploadError && (
+              <p className="mt-2 text-sm text-red-400">{uploadError}</p>
+            )}
+            <p className="mt-2 text-xs text-white/50">
+              Recommended: Square image, max 5MB. Formats: JPG, PNG, WEBP
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Name and Title */}
       <div>
         <label className="block text-white/80 text-sm font-medium mb-2">Full Name</label>

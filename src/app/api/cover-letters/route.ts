@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import getConnection from '@/lib/database';
 import CoverLetter from '@/models/CoverLetter';
 import { toObjectId } from '@/lib/db-utils';
+import mongoose from 'mongoose';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,17 +22,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Create base query
-    let query = CoverLetter.find({ userId });
+    // Create base query - ensure userId is ObjectId for index usage
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId) 
+      ? new mongoose.Types.ObjectId(userId) 
+      : userId;
+    let query = CoverLetter.find({ userId: normalizedUserId });
 
     // Add status filter
     if (status && status !== 'all') {
-      query = query.find({ status });
+      query = query.find({ userId: normalizedUserId, status });
     }
 
     // Add search filter if provided
     if (search) {
       const searchFilter = {
+        userId: normalizedUserId,
         $or: [
           { title: { $regex: search, $options: 'i' } },
           { content: { $regex: search, $options: 'i' } },
@@ -56,12 +61,12 @@ export async function GET(request: NextRequest) {
     const coverLetters = await query.lean();
     console.log('🔍 Cover Letter API - Query executed, found cover letters:', coverLetters.length);
 
-    // Calculate counts for different statuses
+    // Calculate counts for different statuses - use normalized userId
     const counts = await Promise.all([
-      CoverLetter.countDocuments({ userId }),
-      CoverLetter.countDocuments({ userId, status: 'draft' }),
-      CoverLetter.countDocuments({ userId, status: 'final' }),
-      CoverLetter.countDocuments({ userId, status: 'archived' })
+      CoverLetter.countDocuments({ userId: normalizedUserId }),
+      CoverLetter.countDocuments({ userId: normalizedUserId, status: 'draft' }),
+      CoverLetter.countDocuments({ userId: normalizedUserId, status: 'final' }),
+      CoverLetter.countDocuments({ userId: normalizedUserId, status: 'archived' })
     ]);
 
     const [total, drafts, final, archived] = counts;

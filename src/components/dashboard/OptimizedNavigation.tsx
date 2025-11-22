@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { 
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -329,6 +329,14 @@ const OptimizedNavigation: React.FC = () => {
       icon: FileText, 
       description: 'Saved CVs/ CL and Reports',
       route: '/dashboard/canvas'
+    },
+    { 
+      id: 'extension', 
+      name: 'Chrome Extension', 
+      icon: ExternalLink, 
+      description: 'Save jobs from any site',
+      route: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
+      external: true
     }
   ];
 
@@ -383,19 +391,38 @@ const OptimizedNavigation: React.FC = () => {
         {sections.map((section) => {
           const Icon = section.icon;
           const isActive = activeSection === section.id;
+          const isExternal = (section as any).external === true;
+          
+          const Component = isExternal ? motion.a : motion.button;
+          const componentProps = isExternal 
+            ? {
+                href: section.route,
+                target: '_blank',
+                rel: 'noopener noreferrer',
+                onClick: () => {
+                  if (isMobileMenuOpen) {
+                    setIsOpen(false);
+                  }
+                }
+              }
+            : {
+                onClick: () => handleNavigation(section.id),
+                onMouseEnter: () => {
+                  // Prefetch route and preload component on hover for instant navigation (only for internal routes)
+                  if (!isExternal && section.route.startsWith('/')) {
+                    router.prefetch(section.route);
+                    preloadOnHover(section.id);
+                  }
+                }
+              };
           
           return (
-            <motion.button
+            <Component
               key={section.id}
-              onClick={() => handleNavigation(section.id)}
-              onMouseEnter={() => {
-                // Prefetch route and preload component on hover for instant navigation
-                router.prefetch(section.route);
-                preloadOnHover(section.id);
-              }}
+              {...componentProps}
               className={`w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start ${
                 isActive
-                  ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] border border-[rgb(129,255,0)] dark:border-[rgb(129,255,0)] text-black dark:text-black shadow-[0_0_10px_rgba(129,255,0,0.5)] dark:shadow-[0_0_10px_rgba(129,255,0,0.5)]'
+                  ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] text-black dark:text-black'
                   : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
               }`}
               whileHover={{ scale: 1.02 }}
@@ -405,6 +432,7 @@ const OptimizedNavigation: React.FC = () => {
               <div className="flex-1 min-w-0 lg:hidden 2xl:block">
                 <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                   {section.name}
+                  {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
                 <div className={`text-sm lg:text-xs truncate mt-0.5 ${
                   isActive
@@ -414,7 +442,7 @@ const OptimizedNavigation: React.FC = () => {
                   {section.description}
                 </div>
               </div>
-            </motion.button>
+            </Component>
           );
         })}
       </nav>
@@ -635,9 +663,9 @@ const OptimizedNavigation: React.FC = () => {
               
               <div className="text-xs text-white/95 mb-2 leading-relaxed">
                 {dayPassIsUnlimited ? (
-                  <span>You have <span className="font-bold">Unlimited</span> job credits.</span>
+                  <span>We have created tailored CVs/CLs for <span className="font-bold">{creditInfo.totalCreated || dayPassUsed || 0}</span> {creditInfo.totalCreated === 1 || dayPassUsed === 1 ? 'job' : 'jobs'} for you.</span>
                 ) : (
-                  <span>You have <span className="font-bold">{dayPassRemaining}</span> of <span className="font-bold">{dayPassLimit}</span> job credit{dayPassLimit !== 1 ? 's' : ''} left.</span>
+                  <span>We have created tailored CVs/CLs for <span className="font-bold">{creditInfo.totalCreated || dayPassUsed || 0}</span> {creditInfo.totalCreated === 1 || dayPassUsed === 1 ? 'job' : 'jobs'} for you.</span>
                 )}
               </div>
 
@@ -666,9 +694,9 @@ const OptimizedNavigation: React.FC = () => {
               
               <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
                 {isUrgent ? (
-                  <span className="font-medium">⚠️ Running out! Upgrade now for unlimited access</span>
+                  <span className="font-medium">Need your plan to last for a month? Monthly or quarterly plans keep you covered.</span>
                 ) : (
-                  <span>Upgrade for: Unlimited jobs, CVs, ATS checks & exports</span>
+                  <span>Job searching was never easier. Upgrade to monthly or quarterly plans for longer access.</span>
                 )}
               </div>
               

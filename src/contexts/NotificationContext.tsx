@@ -422,10 +422,21 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         // EventSource onerror receives an Event object, not an Error
         // Safely handle it without converting to string which causes "[object Event]"
         // Check connection state to determine error type
+        const isLocal = process.env.NODE_ENV === 'development';
+        const reconnectDelay = isLocal ? 2000 : 5000; // Faster reconnection for local
+        
         if (es.readyState === EventSource.CLOSED) {
-          console.warn('SSE connection closed. Will attempt to reconnect...');
+          if (isLocal) {
+            console.debug('SSE connection closed. Will attempt to reconnect...');
+          } else {
+            console.warn('SSE connection closed. Will attempt to reconnect...');
+          }
         } else if (es.readyState === EventSource.CONNECTING) {
-          console.warn('SSE connection lost. Reconnecting...');
+          if (isLocal) {
+            console.debug('SSE connection lost. Reconnecting...');
+          } else {
+            console.warn('SSE connection lost. Reconnecting...');
+          }
         } else {
           // Log Event object details safely without stringifying the Event
           try {
@@ -435,10 +446,18 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
               url: es.url,
               timestamp: event?.timeStamp || Date.now()
             };
-            console.warn('SSE connection error. Reconnecting in 5 seconds...', errorInfo);
+            if (isLocal) {
+              console.debug(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`, errorInfo);
+            } else {
+              console.warn(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`, errorInfo);
+            }
           } catch (e) {
             // Fallback: just log a simple message if we can't extract event details
-            console.warn('SSE connection error. Reconnecting in 5 seconds...');
+            if (isLocal) {
+              console.debug(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`);
+            } else {
+              console.warn(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`);
+            }
           }
         }
 
@@ -449,7 +468,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         if (isAuthenticated) {
           setTimeout(() => {
             setupSSE();
-          }, 5000);
+          }, reconnectDelay);
         }
       };
 

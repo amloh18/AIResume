@@ -23,11 +23,13 @@ export async function POST(request: NextRequest) {
 
     await getConnection();
     
-    // Get optional masterCVId from request body (for Flow 3: explicit update)
+    // Get optional masterCVId and templateId from request body
     let masterCVId: string | undefined;
+    let templateId: string | undefined;
     try {
       const body = await request.json();
       masterCVId = body.masterCVId;
+      templateId = body.templateId;
     } catch (error) {
       // Request body is empty or invalid - this is fine for Flow 1/2
       console.log('🔍 Convert to Master CV - No request body, will check for existing master CV');
@@ -298,6 +300,10 @@ export async function POST(request: NextRequest) {
 
       existingMasterCV.cvData = completeCVDataForUpdate;
       existingMasterCV.markModified('cvData'); // Tell Mongoose the Mixed field changed
+      if (templateId) {
+        existingMasterCV.templateId = templateId;
+        console.log('✅ Convert to Master CV - Setting templateId:', templateId);
+      }
       existingMasterCV.metadata = {
         ...existingMasterCV.metadata,
         isMaster: true, // Ensure isMaster flag is set for studio/canvas compatibility
@@ -311,15 +317,19 @@ export async function POST(request: NextRequest) {
       existingMasterCV.markModified('metadata'); // Tell Mongoose the metadata changed
       
       // Use direct MongoDB update to ensure all data is saved (more reliable than Mongoose save for Mixed types)
+      const updateData: any = {
+        cvData: completeCVDataForUpdate,
+        metadata: existingMasterCV.metadata,
+        title: `${validatedBasics.name || 'User'}'s Master CV`
+      };
+      if (templateId) {
+        updateData.templateId = templateId;
+      }
       try {
         await CV.updateOne(
           { _id: existingMasterCV._id },
           { 
-            $set: { 
-              cvData: completeCVDataForUpdate,
-              metadata: existingMasterCV.metadata,
-              title: `${validatedBasics.name || 'User'}'s Master CV`
-            }
+            $set: updateData
           }
         );
         console.log('✅ Convert to Master CV - Direct MongoDB update (existing) successful');
@@ -414,11 +424,15 @@ export async function POST(request: NextRequest) {
       cvDataSize: JSON.stringify(completeCVData).length
     });
 
+    // Use selected template or default
+    const finalTemplateId = templateId || 'default';
+    console.log('✅ Convert to Master CV - Using templateId:', finalTemplateId);
+
     let masterCV = new CV({
       userId: user._id,
       title: `${validatedBasics.name || 'User'}'s Master CV`,
       cvData: completeCVData, // Use complete CV data with all sections
-      templateId: 'default',
+      templateId: finalTemplateId,
       status: 'draft',
       metadata: {
         // CRITICAL: Master CV is identified by both createdVia AND isMaster flag for compatibility
@@ -442,7 +456,7 @@ export async function POST(request: NextRequest) {
         userId: user._id,
         title: `${validatedBasics.name || 'User'}'s Master CV`,
         cvData: completeCVData,
-        templateId: 'default',
+        templateId: finalTemplateId,
         status: 'draft',
         metadata: {
           isMaster: true,

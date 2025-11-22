@@ -49,17 +49,32 @@ export async function uploadToS3(options: UploadOptions): Promise<UploadResult> 
 
     const { uploadUrl, publicUrl, key, filename } = await response.json();
 
+    // Validate uploadUrl before attempting upload
+    if (!uploadUrl || typeof uploadUrl !== 'string') {
+      throw new Error('Invalid upload URL received from server');
+    }
+
     // Step 2: Upload file directly to S3 using presigned URL
-    const uploadResponse = await fetch(uploadUrl, {
+    let uploadResponse: Response;
+    try {
+      uploadResponse = await fetch(uploadUrl, {
       method: 'PUT',
       body: file,
       headers: {
         'Content-Type': file.type,
       },
     });
+    } catch (fetchError) {
+      // Handle network errors specifically
+      if (fetchError instanceof TypeError && fetchError.message.includes('fetch')) {
+        throw new Error('Network error: Unable to connect to upload server. Please check your internet connection.');
+      }
+      throw fetchError;
+    }
 
     if (!uploadResponse.ok) {
-      throw new Error(`File upload to S3 failed: ${uploadResponse.statusText}`);
+      const errorText = await uploadResponse.text().catch(() => uploadResponse.statusText);
+      throw new Error(`File upload to S3 failed: ${uploadResponse.status} ${errorText}`);
     }
 
     // Report progress

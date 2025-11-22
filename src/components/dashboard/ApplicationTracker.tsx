@@ -696,15 +696,48 @@ ${userName}`
     rejected: filteredJobsForView.filter(job => job.status === 'rejected')
   }), [filteredJobsForView]);
 
+  // Draft color (used as default for all stages)
+  const draftColor = 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white';
+  
   // Memoize stages array based on focus mode
   const stages = React.useMemo(() => {
     const allStages = [
-      { status: 'draft', title: 'Draft', color: 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white' },
-      { status: 'created', title: 'Created', color: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white' },
-      { status: 'applied', title: 'Applied', color: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white' },
-      { status: 'interview', title: 'Interview', color: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white' },
-      { status: 'offer', title: 'Offer', color: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white' },
-      { status: 'rejected', title: 'Rejected', color: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white' }
+      { 
+        status: 'draft', 
+        title: 'Draft', 
+        color: draftColor,
+        hoverColor: draftColor
+      },
+      { 
+        status: 'created', 
+        title: 'Created', 
+        color: draftColor,
+        hoverColor: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white'
+      },
+      { 
+        status: 'applied', 
+        title: 'Applied', 
+        color: draftColor,
+        hoverColor: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white'
+      },
+      { 
+        status: 'interview', 
+        title: 'Interview', 
+        color: draftColor,
+        hoverColor: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white'
+      },
+      { 
+        status: 'offer', 
+        title: 'Offer', 
+        color: draftColor,
+        hoverColor: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white'
+      },
+      { 
+        status: 'rejected', 
+        title: 'Rejected', 
+        color: draftColor,
+        hoverColor: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white'
+      }
     ];
     // Filter stages based on focus mode
     return isFocusMode
@@ -1351,21 +1384,26 @@ ${userName}`
                 if (isFocusMode && (zoomedStage === 'draft' || zoomedStage === 'rejected')) {
                   return null;
                 }
+                // Find the stage from stages array to get hoverColor
+                const stageData = stages.find(s => s.status === zoomedStage);
                 const stage = { 
                   status: zoomedStage, 
                   title: zoomedStage.charAt(0).toUpperCase() + zoomedStage.slice(1), 
-                  color: 
-                  zoomedStage === 'draft' ? 'bg-gray-600 dark:bg-gray-500/20 border-gray-700 dark:border-gray-500/30 text-white' :
-                  zoomedStage === 'created' ? 'bg-purple-600 dark:bg-purple-500/20 border-purple-700 dark:border-purple-500/30 text-white' :
-                  zoomedStage === 'applied' ? 'bg-blue-600 dark:bg-blue-500/20 border-blue-700 dark:border-blue-500/30 text-white' :
-                  zoomedStage === 'interview' ? 'bg-orange-600 dark:bg-orange-500/20 border-orange-700 dark:border-orange-500/30 text-white' :
-                  zoomedStage === 'offer' ? 'bg-green-600 dark:bg-green-500/20 border-green-700 dark:border-green-500/30 text-white' :
-                  'bg-red-600 dark:bg-red-500/20 border-red-700 dark:border-red-500/30 text-white'
+                  color: draftColor,
+                  hoverColor: stageData?.hoverColor || draftColor
                 };
                 return (
                 <div key={stage.status} className="space-y-4">
                   {/* Zoomed stage - will use same rendering as regular stages */}
-                  <div className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center`}>
+                  <div 
+                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center transition-all duration-200 group`}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center transition-all duration-200 group`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center transition-all duration-200 group`;
+                    }}
+                  >
                     <h3 className="text-base font-bold">{stage.title}</h3>
                   </div>
                 </div>
@@ -1378,7 +1416,13 @@ ${userName}`
               <div key={stage.status} className={`space-y-4 w-[320px] flex-shrink-0`}>
             {/* Stage Header */}
             <div 
-              className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer hover:opacity-80 transition-opacity duration-200`}
+              className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+              onMouseEnter={(e) => {
+                e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+              }}
               onClick={() => handleStageClick(stage.status)}
             >
               <div className="flex items-center justify-between w-full">

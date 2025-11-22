@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import JourneyTimelineCard from './JourneyTimelineCard';
@@ -38,6 +39,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
   onDeleteJourney,
   onViewJourney
 }) => {
+  const router = useRouter();
   const { user } = useUnifiedAuth();
   const { state } = useJobJourney();
   const [journeys, setJourneys] = useState<Journey[]>([]);
@@ -273,7 +275,7 @@ const AnalyticsJourneyWidget: React.FC<AnalyticsJourneyWidgetProps> = ({
           </motion.button>
           {incompleteJourneys.length > 0 && (
             <motion.button
-              onClick={() => window.location.href = '/dashboard/cv-journey'}
+              onClick={() => router.push('/dashboard/tracker?stage=created')}
               className="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white font-medium rounded-lg transition-colors text-sm flex items-center gap-1"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

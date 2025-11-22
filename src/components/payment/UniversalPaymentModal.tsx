@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
@@ -900,13 +900,41 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           let errorMessage = 'Failed to create checkout session';
           let shouldRetryWithStripe = false;
           
+          // Clone the response to read it multiple times if needed
+          const responseClone = response.clone();
+          const contentType = response.headers.get('content-type');
+          let errorData: any = {};
+          
           try {
-            const errorData = await response.json();
-            errorMessage = errorData.error || errorData.details || errorMessage;
+            if (contentType && contentType.includes('application/json')) {
+              errorData = await response.json();
+              
+              // Only log if errorData has meaningful content
+              if (errorData && Object.keys(errorData).length > 0) {
             console.error('Checkout session error:', errorData);
+                errorMessage = errorData.error || errorData.details || errorData.message || errorMessage;
+              } else {
+                // Empty object response
+                console.error('Checkout session error - Empty response:', {
+                  status: response.status,
+                  statusText: response.statusText,
+                  url: response.url
+                });
+                errorMessage = `Server error (${response.status}): ${response.statusText || 'Empty response received'}`;
+              }
+            } else {
+              // Not JSON, try to get text
+              const errorText = await response.text();
+              errorMessage = `Server error (${response.status}): ${errorText || response.statusText || 'Unknown error'}`;
+              console.error('Checkout session error - Non-JSON response:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText.substring(0, 200)
+              });
+            }
             
             // If currency is not supported by Razorpay, automatically retry with Stripe
-            if (errorData.unsupportedCurrency && errorData.suggestedProvider === 'stripe' && paymentProvider === 'razorpay') {
+            if (errorData && errorData.unsupportedCurrency && errorData.suggestedProvider === 'stripe' && paymentProvider === 'razorpay') {
               console.log('Currency not supported by Razorpay, switching to Stripe');
               shouldRetryWithStripe = true;
               setPaymentProvider('stripe');
@@ -938,9 +966,26 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               }
             }
           } catch (parseError) {
-            const errorText = await response.text();
-            console.error('Failed to parse error response:', errorText);
-            errorMessage = `Server error (${response.status}): ${errorText.substring(0, 100)}`;
+            // If we can't parse the response, try to get text from clone
+            try {
+              const errorText = await responseClone.text();
+              console.error('Failed to parse error response:', {
+                status: response.status,
+                statusText: response.statusText,
+                body: errorText.substring(0, 200),
+                parseError
+              });
+              errorMessage = `Server error (${response.status}): ${errorText.substring(0, 100) || response.statusText || 'Failed to parse response'}`;
+            } catch (textError) {
+              // Last resort - use status only
+              console.error('Failed to read error response:', {
+                status: response.status,
+                statusText: response.statusText,
+                parseError,
+                textError
+              });
+              errorMessage = `Server error (${response.status}): ${response.statusText || 'Unknown error'}`;
+            }
           }
           
           if (!shouldRetryWithStripe) {
@@ -1001,25 +1046,61 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     }
   };
 
+  // Track window width for responsive sidebar (matching JobSidebar)
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 768);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Calculate sidebar width (matching JobSidebar)
+  const sidebarWidth = useMemo(() => {
+    return windowWidth >= 768 ? '50vw' : '100%';
+  }, [windowWidth]);
+
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-      >
+            transition={{ duration: 0.2 }}
+            className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh'
+            }}
+            onClick={onClose}
+          />
+
+          {/* Side Panel */}
       <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-white dark:bg-[#141810] rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 w-[95%] tablet:w-[90%] max-w-6xl max-h-[95vh] tablet:max-h-[85vh] overflow-hidden flex flex-col relative z-[9999]"
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col"
+            style={{ width: sidebarWidth }}
+            onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start tablet:items-center justify-between p-4 tablet:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-start tablet:items-center justify-between p-4 tablet:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 sticky top-0 bg-white dark:bg-[#141810] z-10">
             <div className="flex-1 min-w-0 pr-2">
               <div className="flex flex-wrap items-center gap-2 tablet:gap-3">
                 <h2 className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
@@ -1056,8 +1137,52 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           <div className="p-4 tablet:p-6 overflow-y-auto flex-1 min-h-0">
             {step === 1 && (
               <>
-                {/* Selected Plan Display (if preselected) */}
-                {selectedPlan && preselectedPlanKey && (
+                {/* Current Plan Info - Displayed outside cards */}
+                {(() => {
+                  // Find current plan from pricing plans
+                  const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
+                  
+                  if (currentPlan && !adminMode) {
+                    const dbPlan = currentPlan as unknown as DatabasePricingPlan;
+                    const regionalPrice = getRegionalPrice(dbPlan);
+                    const currencySymbol = getCurrencySymbol();
+                    const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+                    const Icon = getPlanIcon(currentPlan.key);
+                    
+                    return (
+                      <div className="mb-6 p-4 tablet:p-5">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
+                              <Icon size={24} className="text-white" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-4 flex-wrap">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h3 className="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white">
+                                    {currentPlan.name}
+                                  </h3>
+                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-0.5 rounded-full">
+                                    Current Plan
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  {currentPlan.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Selected Plan Display (if preselected and different from current) */}
+                {selectedPlan && preselectedPlanKey && !isCurrentPlan(selectedPlan) && (
                   <div className="mb-6 p-4 bg-lime-50 dark:bg-lime-900/20 border border-lime-200 dark:border-lime-800 rounded-xl">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1103,9 +1228,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                 {/* Plans - Horizontal Scrollable */}
                 {(() => {
-                  // Filter out free plan and show all other plans
+                  // Filter out free plan and current plan, show all other plans
                   const filteredPlans = Array.isArray(pricingPlans) && pricingPlans.length > 0 
-                    ? pricingPlans.filter(plan => plan.key !== 'free')
+                    ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
                     : [];
                   
                   return (
@@ -1208,14 +1333,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               }}
                             >
                               
-                              {/* Current Plan Badge */}
-                              {isCurrent && (
-                                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
-                                  <span className="bg-lime-400 text-black text-xs font-medium px-2 py-0.5 rounded-full shadow-lg">
-                                    Current Plan
-                                  </span>
-                                </div>
-                              )}
+                              {/* Current Plan Badge - Removed since it's shown above cards */}
                               
                               {/* Popular Badge */}
                               {plan.isPopular && !isCurrent && (
@@ -1335,12 +1453,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 </div>
                               )}
 
-                              {/* Current Plan Indicator */}
-                              {isCurrent && (
-                                <div className="w-full py-2 px-3 bg-lime-100 dark:bg-lime-900/20 text-lime-700 dark:text-lime-300 rounded-lg text-center text-xs font-semibold relative z-10">
-                                  Current Plan
-                                </div>
-                              )}
+                              {/* Current Plan Indicator - Removed since it's shown above cards */}
                             </motion.div>
                           );
                         })
@@ -1381,39 +1494,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   <span className="tablet:hidden">← Back</span>
                 </button>
 
-                {/* Two Column Layout */}
-                <div className="grid grid-cols-1 desktop:grid-cols-2 gap-4 tablet:gap-6">
-                  {/* Left Column - Placeholder Image */}
-                  <div className="relative order-2 desktop:order-1">
-                    {/* Placeholder Image */}
-                    <div className="relative w-full h-full min-h-[300px] tablet:min-h-[400px] desktop:min-h-[500px] rounded-xl overflow-hidden">
-                      <img
-                        src="/images/paymentsummary.png"
-                        alt="Payment Summary"
-                        className="w-full h-full object-cover rounded-xl"
-                      />
-                      {/* Logo and CVCircle Overlay - Top Left */}
-                      <div className="absolute top-3 left-3 tablet:top-4 tablet:left-4 flex items-center gap-1.5 tablet:gap-2 z-10 bg-black/30 backdrop-blur-sm px-2 tablet:px-3 py-1.5 tablet:py-2 rounded-lg">
-                        <img
-                          src="/images/logo.png"
-                          alt="CVCircle Logo"
-                          className="w-6 h-6 tablet:w-8 tablet:h-8 object-contain"
-                          loading="eager"
-                          decoding="async"
-                          onError={(e) => {
-                            console.error('Logo image failed to load in payment modal');
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                        <span className="text-white font-bold text-sm tablet:text-lg drop-shadow-lg">
-                          CVCircle
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column - Order Summary */}
-                  <div className="p-4 tablet:p-6 flex flex-col order-1 desktop:order-2 bg-gray-50 dark:bg-[rgb(20,24,16)] rounded-xl">
+                {/* Single Column Layout for Side Panel */}
+                <div className="flex flex-col gap-4 tablet:gap-6">
+                  {/* Order Summary */}
+                  <div className="p-4 tablet:p-6 flex flex-col bg-gray-50 dark:bg-[rgb(20,24,16)] rounded-xl">
                     {/* Title */}
                     <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-4 tablet:mb-6">
                       Complete Your Order
@@ -1642,7 +1726,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             )}
           </div>
         </motion.div>
-      </motion.div>
+        </>
+      )}
     </AnimatePresence>
   );
 };
