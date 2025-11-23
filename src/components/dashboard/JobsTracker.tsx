@@ -681,13 +681,16 @@ const JobsTracker: React.FC = () => {
             const text = await response.text();
             errorData = text ? JSON.parse(text) : {};
           } catch (parseError) {
+            // Only log parse errors, not the actual error response
             console.error('Failed to parse error response:', parseError);
           }
           
           // Check if this is a credit-related error
+          // When moving from draft to created, 500 errors are likely credit-related
           const isCreditError = 
-            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits'))) ||
+            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
+            (response.status === 500) || // Assume 500 errors when moving draft->created are credit issues
             (errorData.error?.includes('limit') || errorData.error?.includes('credit'));
           
           if (isCreditError) {
@@ -706,6 +709,8 @@ const JobsTracker: React.FC = () => {
             throw new Error('Insufficient credits to create journey');
           }
           
+          // Only log non-credit errors to console
+          console.error('Failed to move job to created stage:', response.status, errorData);
           throw new Error(errorData.error || errorData.message || 'Failed to move job to created stage');
         }
 
@@ -873,16 +878,18 @@ const JobsTracker: React.FC = () => {
             const text = await response.text();
             errorData = text ? JSON.parse(text) : {};
           } catch (parseError) {
+            // Only log parse errors, not the actual error response
             console.error('Failed to parse error response:', parseError);
           }
           
-          console.error('Failed to update job status:', response.status, errorData);
-          
-          // Check if this is a credit-related error (403 or 500 with credit error message)
+          // Check if this is a credit-related error
+          // When moving from draft to created, 500 errors are likely credit-related
+          const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
           const isCreditError = 
-            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits'))) ||
+            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
-            (originalStatus === 'draft' && newStatus === 'created' && (errorData.requiresUpgrade || errorData.error?.includes('limit') || errorData.error?.includes('credit')));
+            (isDraftToCreated && response.status === 500) || // Assume 500 errors when moving draft->created are credit issues
+            (isDraftToCreated && (errorData.requiresUpgrade || errorData.error?.includes('limit') || errorData.error?.includes('credit')));
           
           // Handle insufficient credits error - show paywall
           if (isCreditError) {
@@ -899,6 +906,8 @@ const JobsTracker: React.FC = () => {
               'pro_monthly'
             );
           } else {
+            // Only log non-credit errors to console
+            console.error('Failed to update job status:', response.status, errorData);
             toast.error(errorData.message || errorData.error || `Failed to update job status (${response.status}). Please try again.`);
           }
           
@@ -920,15 +929,14 @@ const JobsTracker: React.FC = () => {
         try {
           const result = await response.json();
           if (result.error || (result.success === false)) {
-            console.error('API returned error:', result);
-            
             // Check if this is a credit-related error
+            const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
             const isCreditError = 
               result.requiresUpgrade ||
               result.error?.includes('limit exceeded') ||
               result.error?.includes('insufficient credits') ||
               result.error?.includes('Plan limit exceeded') ||
-              (originalStatus === 'draft' && newStatus === 'created' && (result.error?.includes('limit') || result.error?.includes('credit')));
+              (isDraftToCreated && (result.error?.includes('limit') || result.error?.includes('credit')));
             
             // Handle insufficient credits error - show paywall
             if (isCreditError) {
@@ -945,6 +953,8 @@ const JobsTracker: React.FC = () => {
                 'pro_monthly'
               );
             } else {
+              // Only log non-credit errors to console
+              console.error('API returned error:', result);
               toast.error(result.message || result.error || 'Failed to update job status. Please try again.');
             }
             

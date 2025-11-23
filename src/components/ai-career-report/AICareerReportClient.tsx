@@ -394,7 +394,7 @@ function AICareerReportContent() {
                       className="flex items-center gap-2 px-4 py-2 bg-[#80FF00] text-black rounded-lg font-medium transition-colors hover:bg-[#70e600]"
                     >
                       <Eye size={16} />
-                        CV
+                        Preview
                     </button>
                     </>
                   )}

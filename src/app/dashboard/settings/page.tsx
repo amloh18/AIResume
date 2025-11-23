@@ -1731,15 +1731,16 @@ const MembershipBilling = ({ user }: { user: User }) => {
                     
                       <div className="space-y-2">
                         <div className="text-lg font-mono tracking-wider">
-                          •••• •••• •••• {method.last4}
+                          •••• •••• •••• <span className="text-white font-semibold">{method.last4 ? method.last4.padStart(4, '0') : '****'}</span>
                         </div>
                         <div className="flex justify-between text-sm text-gray-300">
-                          <span>{method.expiryMonth?.toString().padStart(2, '0')}/{method.expiryYear}</span>
-                          <span className="uppercase">{method.brand}</span>
+                          <span>Expires {method.expiryMonth?.toString().padStart(2, '0')}/{method.expiryYear}</span>
+                          <span className="uppercase">{method.brand || method.provider}</span>
                         </div>
-                        {method.gatewayCustomerId && (
+                        {method.type && (
                           <div className="text-xs text-gray-400 mt-1">
-                            Gateway ID: {method.gatewayCustomerId.substring(0, 12)}...
+                            {method.type === 'credit_card' ? 'Credit Card' : method.type === 'debit_card' ? 'Debit Card' : method.type}
+                            {method.provider && ` • ${method.provider.toUpperCase()}`}
                           </div>
                         )}
                       </div>
@@ -1819,32 +1820,59 @@ const MembershipBilling = ({ user }: { user: User }) => {
                       <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
                         <FileText className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                       </div>
-                      <div>
+                      <div className="flex-1">
                         <p className="font-medium text-gray-900 dark:text-white">
-                          {invoice.planName} - {invoice.billingCycle}
+                          {invoice.planName || 'Subscription'} - {invoice.billingCycle || 'One-time'}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          Invoice #{invoice.invoiceNumber} • {formatDate(invoice.invoiceDate || invoice.createdAt)}
-                        </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-300">
-                          {invoice.paymentMethodType?.toUpperCase() || 'N/A'} •••• {invoice.paymentMethodLast4 || 'N/A'}
-                        </p>
+                        <div className="mt-1 space-y-1">
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            Invoice #{invoice.invoiceNumber || invoice.id.substring(0, 8)} • {formatDate(invoice.invoiceDate || invoice.createdAt)}
+                          </p>
+                          {(invoice.paymentMethodLast4 || invoice.paymentMethodType) && (
+                            <p className="text-sm text-gray-600 dark:text-gray-300">
+                              <span className="font-medium">Payment Method:</span> {invoice.paymentMethodType?.toUpperCase() || 'CARD'}
+                              {invoice.paymentMethodLast4 && (
+                                <> ending in <span className="font-mono font-semibold text-gray-900 dark:text-white">{invoice.paymentMethodLast4.padStart(4, '0')}</span></>
+                              )}
+                            </p>
+                          )}
+                          {invoice.description && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {invoice.description}
+                            </p>
+                          )}
+                        </div>
                         {invoice.subtotal !== undefined && invoice.taxAmount !== undefined && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Subtotal: {formatCurrency(invoice.subtotal, invoice.currency)}
-                            {invoice.taxAmount > 0 && ` • Tax: ${formatCurrency(invoice.taxAmount, invoice.currency)}`}
+                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                            <div className="flex justify-between">
+                              <span>Subtotal:</span>
+                              <span className="font-medium">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
+                            </div>
+                            {invoice.taxAmount > 0 && (
+                              <div className="flex justify-between">
+                                <span>Tax:</span>
+                                <span className="font-medium">{formatCurrency(invoice.taxAmount, invoice.currency)}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700">
+                              <span className="font-medium">Total:</span>
+                              <span className="font-semibold">{formatCurrency(invoice.amount, invoice.currency)}</span>
+                            </div>
                           </div>
                         )}
                         {invoice.items && invoice.items.length > 0 && (
                           <details className="mt-2">
-                            <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                            <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 font-medium">
                               View Line Items ({invoice.items.length})
                             </summary>
-                            <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                            <div className="mt-2 space-y-1.5 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded p-2">
                               {invoice.items.map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between">
-                                  <span>{item.description}</span>
-                                  <span>{formatCurrency(item.amount, invoice.currency)}</span>
+                                <div key={idx} className="flex justify-between items-start">
+                                  <span className="flex-1">{item.description || `Item ${idx + 1}`}</span>
+                                  <span className="ml-2 font-medium">{formatCurrency(item.amount || item.unitPrice || 0, invoice.currency)}</span>
+                                  {item.quantity && item.quantity > 1 && (
+                                    <span className="ml-2 text-gray-400">x{item.quantity}</span>
+                                  )}
                                 </div>
                               ))}
                             </div>
@@ -1852,19 +1880,31 @@ const MembershipBilling = ({ user }: { user: User }) => {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {formatCurrency(invoice.amount, invoice.currency)}
-                      </p>
-                      <p className={`text-sm font-medium ${getStatusColor(invoice.status)}`}>
-                        {invoice.status.toUpperCase()}
-                      </p>
-                      <div className="flex items-center gap-2 mt-2">
+                    <div className="text-right flex flex-col items-end gap-2">
+                      <div>
+                        <p className="font-semibold text-lg text-gray-900 dark:text-white">
+                          {formatCurrency(invoice.amount, invoice.currency)}
+                        </p>
+                        <p className={`text-sm font-medium ${getStatusColor(invoice.status)}`}>
+                          {invoice.status.toUpperCase()}
+                        </p>
+                        {invoice.paidAt && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            Paid {formatDate(invoice.paidAt)}
+                          </p>
+                        )}
+                        {invoice.dueDate && invoice.status !== 'paid' && (
+                          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                            Due {formatDate(invoice.dueDate)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
                         <a
                           href={`/api/user/invoices/${invoice.id}/download`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
                           title="Download Invoice"
                         >
                           <Download className="w-4 h-4" />

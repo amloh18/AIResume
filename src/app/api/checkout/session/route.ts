@@ -1023,10 +1023,38 @@ async function handleDayPassPayment(
           }
         });
 
+        // Get subscription invoice amount for Day Pass
+        let subscriptionAmount = 0;
+        let subscriptionCurrency = 'INR';
+        
+        try {
+          const invoices = await razorpayInstance.invoices.all({
+            subscription_id: subscription.id,
+            count: 1
+          });
+          
+          if (invoices.items && invoices.items.length > 0) {
+            const invoice = invoices.items[0];
+            subscriptionAmount = invoice.amount || 0;
+            subscriptionCurrency = invoice.currency || 'INR';
+          } else {
+            subscriptionAmount = Math.round(amount);
+            subscriptionCurrency = 'INR';
+          }
+        } catch (error) {
+          console.warn('Could not fetch subscription invoice details:', error);
+          subscriptionAmount = Math.round(amount);
+          subscriptionCurrency = 'INR';
+        }
+
         return NextResponse.json({
           provider: 'razorpay',
           subscription_id: subscription.id,
-          plan_id: razorpayPlanId
+          plan_id: razorpayPlanId,
+          amount: subscriptionAmount,
+          currency: subscriptionCurrency,
+          key_id: process.env.RAZORPAY_KEY_ID,
+          checkout: true
         });
       }
 
@@ -1245,10 +1273,12 @@ async function handleProPlanPayment(
   let currency: string = 'USD';
   let paymentMode: 'payment' | 'subscription' = 'subscription'; // Default to subscription
   
-  // Monthly = recurring subscription, Quarterly/Yearly = one-time payment
-  if (interval === 'quarterly' || interval === 'yearly') {
-    paymentMode = 'payment'; // One-time payment
-  }
+  // All pro plans (monthly, quarterly, yearly) are recurring subscriptions
+  // Day Pass is one-time payment (handled separately)
+  // Monthly = recurring monthly subscription
+  // Quarterly = recurring every 3 months subscription
+  // Yearly = recurring yearly subscription
+  // All use 'subscription' mode for automatic recurring charges
 
   if (provider === 'stripe') {
     // Stripe: Use country pricing from CountryPricing collection (supports all currencies)
@@ -1397,63 +1427,48 @@ async function handleProPlanPayment(
         }
       };
 
-      // For one-time payments (quarterly/yearly), use amount directly to ensure correct currency
-      if (paymentMode === 'payment') {
+      // Use priceId if available (preferred method for subscriptions and better management)
+      // Otherwise fallback to price_data for dynamic price creation
+      if (priceId) {
+        // Use existing Stripe Price ID (preferred - better for subscription management)
+        sessionConfig.line_items = [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ];
+      } else {
+        // Fallback: Create price dynamically if price ID not available
+        // All pro plans are recurring subscriptions
+        const recurringConfig: any = {};
+        
+        if (interval === 'monthly') {
+          recurringConfig.interval = 'month';
+        } else if (interval === 'quarterly') {
+          recurringConfig.interval = 'month';
+          recurringConfig.interval_count = 3; // Every 3 months
+        } else if (interval === 'yearly') {
+          recurringConfig.interval = 'year';
+        }
+        
         sessionConfig.line_items = [
           {
             price_data: {
               currency: currency.toLowerCase(),
               product_data: {
-                name: `${plan.name} - ${interval === 'quarterly' ? '90 days' : '365 days'}`,
-                description: interval === 'quarterly' 
-                  ? 'Quarterly plan - 90 days access charged together'
-                  : 'Yearly plan - 365 days access charged together'
+                name: `${plan.name} - ${interval === 'monthly' ? 'Monthly' : interval === 'quarterly' ? 'Quarterly' : 'Yearly'}`,
+                description: interval === 'monthly' 
+                  ? 'Monthly subscription plan - automatically charged every month'
+                  : interval === 'quarterly'
+                  ? 'Quarterly subscription plan - automatically charged every 3 months'
+                  : 'Yearly subscription plan - automatically charged every year'
               },
+              recurring: recurringConfig,
               unit_amount: amount, // Already in cents
             },
             quantity: 1,
           },
         ];
-      } else {
-        // For subscriptions (monthly), try to use priceId if available and currency matches
-        // Otherwise use price_data to ensure correct currency
-        if (priceId) {
-          // Check if we can use the priceId (only if currency matches)
-          // For now, use price_data to ensure correct regional currency
-          sessionConfig.line_items = [
-            {
-              price_data: {
-                currency: currency.toLowerCase(),
-                product_data: {
-                  name: `${plan.name} - Monthly`,
-                  description: 'Monthly subscription plan'
-                },
-                recurring: {
-                  interval: 'month',
-                },
-                unit_amount: amount, // Already in cents
-              },
-              quantity: 1,
-            },
-          ];
-        } else {
-          sessionConfig.line_items = [
-            {
-              price_data: {
-                currency: currency.toLowerCase(),
-                product_data: {
-                  name: `${plan.name} - Monthly`,
-                  description: 'Monthly subscription plan'
-                },
-                recurring: {
-                  interval: 'month',
-                },
-                unit_amount: amount, // Already in cents
-              },
-              quantity: 1,
-            },
-          ];
-        }
       }
 
       // For subscriptions (monthly), add subscription_data
@@ -1615,7 +1630,9 @@ async function handleProPlanPayment(
       console.log('No coupon discount applied to Razorpay order');
     }
 
-    if (!razorpay) {
+    // Get Razorpay instance
+    const razorpayInstance = getRazorpay();
+    if (!razorpayInstance) {
       return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
     }
 
@@ -1626,6 +1643,101 @@ async function handleProPlanPayment(
     }
 
     try {
+      // Check if Razorpay plan ID exists for this interval (use subscription instead of order)
+      const intervalMap: Record<string, 'monthly' | 'quarterly' | 'yearly'> = {
+        'monthly': 'monthly',
+        'quarterly': 'quarterly',
+        'yearly': 'yearly'
+      };
+      
+      const razorpayPlanId = countryPricingRazorpay?.razorpayPlanIds?.[intervalMap[interval]];
+      
+      if (razorpayPlanId) {
+        // Create Razorpay subscription using plan ID
+        console.log('Creating Razorpay subscription with plan ID:', {
+          planId: razorpayPlanId,
+          interval: interval,
+          planKey: plan.key
+        });
+        
+        // For recurring subscriptions, set total_count to maximum allowed (100)
+        // Razorpay requires total_count when end_at is not present, max is 100
+        const subscription = await razorpayInstance.subscriptions.create({
+          plan_id: razorpayPlanId,
+          total_count: 100, // Maximum allowed by Razorpay (100 billing cycles)
+          customer_notify: 1,
+          notes: {
+            planKey: plan.key,
+            userId: user._id.toString(),
+            planId: plan._id.toString(),
+            interval: interval,
+            region: regionInfo?.countryCode || 'IN',
+            couponCode: couponDiscount?.code || '',
+            couponId: couponDiscount?.id || ''
+          }
+        });
+
+        console.log('Razorpay subscription created successfully:', {
+          subscriptionId: subscription.id,
+          planId: razorpayPlanId,
+          status: subscription.status
+        });
+
+        // Get subscription details to get the first invoice amount
+        let subscriptionAmount = 0;
+        let subscriptionCurrency = 'INR';
+        
+        try {
+          // Fetch the subscription to get invoice details
+          const subscriptionDetails = await razorpayInstance.subscriptions.fetch(subscription.id);
+          
+          // Get the first invoice for this subscription
+          const invoices = await razorpayInstance.invoices.all({
+            subscription_id: subscription.id,
+            count: 1
+          });
+          
+          if (invoices.items && invoices.items.length > 0) {
+            const invoice = invoices.items[0];
+            subscriptionAmount = invoice.amount || 0; // Amount in paise
+            subscriptionCurrency = invoice.currency || 'INR';
+          } else {
+            // Fallback to plan amount if invoice not available yet
+            subscriptionAmount = razorpayAmount;
+            subscriptionCurrency = 'INR';
+          }
+        } catch (error) {
+          console.warn('Could not fetch subscription invoice details, using plan amount:', error);
+          subscriptionAmount = razorpayAmount;
+          subscriptionCurrency = 'INR';
+        }
+
+        return NextResponse.json({
+          provider: 'razorpay',
+          subscription_id: subscription.id,
+          plan_id: razorpayPlanId,
+          amount: subscriptionAmount, // Amount in paise for display
+          currency: subscriptionCurrency,
+          key_id: process.env.RAZORPAY_KEY_ID,
+          checkout: true, // Use Razorpay Checkout
+          coupon: couponDiscount ? {
+            code: couponDiscount.code,
+            id: couponDiscount.id
+          } : null,
+          metadata: {
+            planKey: plan.key,
+            interval: interval,
+            userId: user._id.toString()
+          }
+        });
+      }
+      
+      // Fallback: Create Razorpay Order if plan ID not found
+      console.log('Razorpay plan ID not found, falling back to order creation:', {
+        interval: interval,
+        availablePlanIds: countryPricingRazorpay?.razorpayPlanIds
+      });
+      
       // ENFORCE: Razorpay = INR only - strict validation
       // Razorpay expects uppercase 'INR' (not lowercase 'inr')
       const normalizedCurrency = razorpayCurrency.toUpperCase().trim();
@@ -1739,10 +1851,7 @@ async function handleProPlanPayment(
       });
       console.log('Full order params JSON:', JSON.stringify(orderParams, null, 2));
       
-      const razorpayInstance = getRazorpay();
-      if (!razorpayInstance) {
-        return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
-      }
+      // Reuse razorpayInstance already declared above
       const order = await razorpayInstance.orders.create(orderParams);
       
       // Verify the order was created with the correct amount
