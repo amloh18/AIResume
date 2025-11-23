@@ -31,17 +31,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       razorpay_order_id,
+      razorpay_subscription_id,
       razorpay_payment_id,
       razorpay_signature
     } = body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+    // Support both order-based and subscription-based payments
+    const isSubscription = !!razorpay_subscription_id;
+    
+    if ((!razorpay_order_id && !razorpay_subscription_id) || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json({ error: 'Missing payment details' }, { status: 400 });
     }
 
     // Verify payment signature
+    // For orders: order_id|payment_id
+    // For subscriptions: subscription_id|payment_id
     const crypto = require('crypto');
-    const text = `${razorpay_order_id}|${razorpay_payment_id}`;
+    const text = isSubscription 
+      ? `${razorpay_subscription_id}|${razorpay_payment_id}`
+      : `${razorpay_order_id}|${razorpay_payment_id}`;
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
       .update(text)

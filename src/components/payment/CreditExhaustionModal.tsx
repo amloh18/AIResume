@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, X, ArrowRight, Check, Calendar, Sparkles, TrendingUp, Target, FileText, Shield, Rocket, Star, Users, Clock } from 'lucide-react';
+import { Crown, X, ArrowRight, Check, Calendar, TrendingUp, Target, FileText, Shield, Rocket, Star, Users, Clock } from 'lucide-react';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface CreditExhaustionModalProps {
@@ -96,16 +96,6 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
             <div className="p-4">
               {/* Main Message */}
               <div className="text-center mb-4">
-                <div className="relative inline-block mb-3">
-                  <div className="w-16 h-16 bg-gradient-to-r from-[#80FF00] to-lime-500 rounded-full flex items-center justify-center mx-auto shadow-lg">
-                    <Sparkles className="w-8 h-8 text-black" />
-                  </div>
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="absolute inset-0 bg-[#80FF00]/30 rounded-full blur-xl"
-                  />
-                </div>
                 <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-1.5">
                   Don't Let Limits Hold You Back
                 </h4>

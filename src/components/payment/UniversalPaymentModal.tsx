@@ -494,31 +494,53 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       // Razorpay checkout.js expects uppercase currency code (ISO 4217 format)
       const currency = (checkoutData.currency || 'INR').toUpperCase();
       
-      const options = {
+      // For subscriptions, use subscription_id; for orders, use order_id
+      const isSubscription = !!checkoutData.subscription_id;
+      
+      const options: any = {
         key: checkoutData.key_id || '',
-        amount: amount, // Amount in currency subunits (paise for INR)
-        currency: currency, // Razorpay checkout expects uppercase currency (e.g., 'INR')
         name: 'CV Circle',
         description: `${selectedPlan?.name} Subscription`,
-        order_id: checkoutData.order_id, // Mandatory: Order ID from server
+        theme: {
+          color: '#84cc16' // lime-500
+        },
+        modal: {
+          ondismiss: function() {
+            setLoading(false);
+          }
+        },
+        // Handle payment failure
+        'onPayment.failed': function(response: any) {
+          console.error('Payment failed:', response);
+          setLoading(false);
+          alert(`Payment failed: ${response.error?.description || response.error?.reason || 'Unknown error'}. Please try again.`);
+        },
         handler: async function (response: any) {
           // Payment successful - verify signature and poll for subscription activation
           try {
             setLoading(true);
             
             // Step 1: Verify payment signature
+            // For subscriptions, use subscription_id; for orders, use order_id
+            const verifyBody: any = {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              planKey: selectedPlan?.key,
+              interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
+              couponId: checkoutData.coupon?.id
+            };
+            
+            if (isSubscription) {
+              verifyBody.razorpay_subscription_id = response.razorpay_subscription_id || checkoutData.subscription_id;
+            } else {
+              verifyBody.razorpay_order_id = response.razorpay_order_id || checkoutData.order_id;
+            }
+            
             const verifyResponse = await fetch('/api/payment/razorpay/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                planKey: selectedPlan?.key,
-                interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
-                couponId: checkoutData.coupon?.id
-              })
+              body: JSON.stringify(verifyBody)
             });
 
             const verifyData = await verifyResponse.json();
@@ -611,36 +633,43 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           name: userName,
           email: userEmail,
           contact: userContact, // Phone number improves conversion rates per Razorpay docs
-        },
-        theme: {
-          color: '#84cc16' // lime-500
-        },
-        modal: {
-          ondismiss: function() {
-            setLoading(false);
-          }
-        },
-        // Handle payment failure
-        'onPayment.failed': function(response: any) {
-          console.error('Payment failed:', response);
-          setLoading(false);
-          alert(`Payment failed: ${response.error?.description || response.error?.reason || 'Unknown error'}. Please try again.`);
         }
       };
+      
+      // Set subscription_id or order_id based on what's available
+      if (isSubscription) {
+        options.subscription_id = checkoutData.subscription_id;
+        // For subscriptions, amount and currency come from the subscription plan
+        // But we can still set them for display purposes
+        if (amount > 0) {
+          options.amount = amount;
+          options.currency = currency;
+        }
+      } else {
+        options.order_id = checkoutData.order_id; // Mandatory: Order ID from server
+        options.amount = amount; // Amount in currency subunits (paise for INR)
+        options.currency = currency; // Razorpay checkout expects uppercase currency (e.g., 'INR')
+      }
 
       // Validate required fields per Razorpay documentation
       if (!options.key) {
         console.error('Razorpay key ID is missing from checkout response:', checkoutData);
         throw new Error('Razorpay key ID is missing. Please contact support or try again.');
       }
-      if (!options.order_id) {
+      if (!isSubscription && !options.order_id) {
         throw new Error('Order ID is missing');
       }
-      if (!amount || amount <= 0) {
-        throw new Error('Invalid payment amount');
+      if (isSubscription && !options.subscription_id) {
+        throw new Error('Subscription ID is missing');
       }
-      if (!options.currency || options.currency.length !== 3) {
-        throw new Error('Invalid currency code');
+      // For orders, amount and currency are required; for subscriptions, they're optional
+      if (!isSubscription) {
+        if (!amount || amount <= 0) {
+          throw new Error('Invalid payment amount');
+        }
+        if (!options.currency || options.currency.length !== 3) {
+          throw new Error('Invalid currency code');
+        }
       }
 
       const razorpay = new window.Razorpay(options);
@@ -889,8 +918,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           if (data.redirect_url) {
             // Stripe Checkout - redirect to Stripe
             window.location.href = data.redirect_url;
-          } else if (data.provider === 'razorpay' && data.checkout && data.order_id) {
-            // Razorpay Checkout - open embedded form
+          } else if (data.provider === 'razorpay' && data.checkout && (data.order_id || data.subscription_id)) {
+            // Razorpay Checkout - open embedded form (supports both orders and subscriptions)
             await handleRazorpayCheckout(data);
           } else if (data.client_secret) {
             // Handle Stripe payment intent
