@@ -601,85 +601,85 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+              className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
                   <Target className="w-5 h-5 text-black" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">Experience Level</h2>
+                <h2 className="text-2xl font-bold text-white">Experience Level</h2>
               </div>
               
-              <p className="text-gray-600 mb-6">
+              <p className="text-gray-400 mb-6">
                 We've determined your current career standing based on your work history.
               </p>
               
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
                 <h3 className="text-3xl font-bold text-[#80FF00] mb-4">{experienceLevel.level}</h3>
-                <p className="text-gray-600 leading-relaxed">{experienceLevel.rationale}</p>
+                <p className="text-gray-300 leading-relaxed">{experienceLevel.rationale}</p>
               </div>
             </motion.div>
 
             {/* Additional cards would go here but blurred */}
             <div className="space-y-6 opacity-50">
-              <div className="bg-[#222B22] border border-white/10 rounded-xl p-6">
+              <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
                     <TrendingUp className="w-4 h-4 text-black" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Impact Score Analysis</h3>
+                  <h3 className="text-lg font-bold text-white">Impact Score Analysis</h3>
                 </div>
-                <p className="text-gray-600 text-sm">Data-driven assessment of your CV's competitive strength...</p>
+                <p className="text-gray-400 text-sm">Data-driven assessment of your CV's competitive strength...</p>
               </div>
               
-              <div className="bg-[#222B22] border border-white/10 rounded-xl p-6">
+              <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
                     <RefreshCw className="w-4 h-4 text-black" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Career Trajectory Analysis</h3>
+                  <h3 className="text-lg font-bold text-white">Career Trajectory Analysis</h3>
                 </div>
-                <p className="text-gray-600 text-sm">Analysis of career progression and job duration patterns...</p>
+                <p className="text-gray-400 text-sm">Analysis of career progression and job duration patterns...</p>
               </div>
               
-              <div className="bg-[#222B22] border border-white/10 rounded-xl p-6">
+              <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
                     <Eye className="w-4 h-4 text-black" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">CV Reading Time Optimization</h3>
+                  <h3 className="text-lg font-bold text-white">CV Reading Time Optimization</h3>
                 </div>
-                <p className="text-gray-600 text-sm">Ensure your most important information is easily digestible...</p>
+                <p className="text-gray-400 text-sm">Ensure your most important information is easily digestible...</p>
               </div>
               
-              <div className="bg-[#222B22] border border-white/10 rounded-xl p-6">
+              <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
                     <Lightbulb className="w-4 h-4 text-black" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Skills Gap Analysis</h3>
+                  <h3 className="text-lg font-bold text-white">Skills Gap Analysis</h3>
                 </div>
-                <p className="text-gray-600 text-sm">Analysis of skill depth vs. frequency and focus areas...</p>
+                <p className="text-gray-400 text-sm">Analysis of skill depth vs. frequency and focus areas...</p>
               </div>
               
-              <div className="bg-[#222B22] border border-white/10 rounded-xl p-6">
+              <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-black" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Mid-Level to Senior Translation</h3>
+                  <h3 className="text-lg font-bold text-white">Mid-Level to Senior Translation</h3>
                 </div>
-                <p className="text-gray-600 text-sm">Reframe your experience using senior-level language...</p>
+                <p className="text-gray-400 text-sm">Reframe your experience using senior-level language...</p>
               </div>
               
-              <div className="bg-[#222B22] border border-white/10 rounded-xl p-6">
+              <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
                     <Target className="w-4 h-4 text-black" />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900">Industry Specialization Analysis</h3>
+                  <h3 className="text-lg font-bold text-white">Industry Specialization Analysis</h3>
                 </div>
-                <p className="text-gray-600 text-sm">FinTech specialization and critical keywords to emphasize...</p>
+                <p className="text-gray-400 text-sm">FinTech specialization and critical keywords to emphasize...</p>
               </div>
             </div>
           </div>
@@ -704,22 +704,22 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+          className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
               <Target className="w-5 h-5 text-black" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Experience Level</h2>
+            <h2 className="text-2xl font-bold text-white">Experience Level</h2>
           </div>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-400 mb-6">
             We've determined your current career standing based on your work history.
           </p>
           
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
             <h3 className="text-3xl font-bold text-[#80FF00] mb-4">{experienceLevel.level}</h3>
-            <p className="text-gray-600 leading-relaxed">{experienceLevel.rationale}</p>
+            <p className="text-gray-300 leading-relaxed">{experienceLevel.rationale}</p>
           </div>
         </motion.div>
 
@@ -728,34 +728,34 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+          className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
               <TrendingUp className="w-5 h-5 text-black" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Impact Score Analysis</h2>
+            <h2 className="text-2xl font-bold text-white">Impact Score Analysis</h2>
           </div>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-400 mb-6">
             Data-driven assessment of your CV's competitive strength based on quantifiable achievements and action-oriented language.
           </p>
           
           <div className="space-y-6">
             {/* Impact Metrics Table */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Your CV Impact Metrics</h3>
+            <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Your CV Impact Metrics</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="text-left py-3 text-gray-600">Metric</th>
-                      <th className="text-left py-3 text-gray-600">Your Score</th>
-                      <th className="text-left py-3 text-gray-600">Target</th>
-                      <th className="text-left py-3 text-gray-600">Status</th>
+                      <th className="text-left py-3 text-gray-400">Metric</th>
+                      <th className="text-left py-3 text-gray-400">Your Score</th>
+                      <th className="text-left py-3 text-gray-400">Target</th>
+                      <th className="text-left py-3 text-gray-400">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-900/70">
+                  <tbody className="text-gray-300">
                     <tr className="border-b border-white/5">
                       <td className="py-3">Quantifiable Statements</td>
                       <td className="py-3">{impactScore?.quantifiableStatements || 0}/15</td>
@@ -788,7 +788,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             {/* Key Insights */}
             <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               {impactScore?.insights?.map((insight: any, index: number) => (
-                <div key={index} className={`bg-gray-50 rounded-lg p-4 border ${
+                <div key={index} className={`bg-[#141810] rounded-lg p-4 border ${
                   insight.type === 'Critical Gap' ? 'border-red-500/20' : 
                   insight.type === 'Improvement Needed' ? 'border-yellow-500/20' : 
                   'border-green-500/20'
@@ -802,17 +802,17 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                      insight.type === 'Improvement Needed' ? '⚠️ Improvement Needed' : 
                      '✅ Strength'}
                   </h4>
-                  <p className="text-gray-600 text-sm">{insight.message}</p>
+                  <p className="text-gray-300 text-sm">{insight.message}</p>
                 </div>
               )) || (
                 <>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-red-200">
+                  <div className="bg-[#141810] rounded-lg p-4 border border-red-500/20">
                     <h4 className="text-red-400 font-semibold mb-2">🚨 Critical Gap</h4>
-                    <p className="text-gray-600 text-sm">Limited quantifiable achievements found in your CV.</p>
+                    <p className="text-gray-300 text-sm">Limited quantifiable achievements found in your CV.</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-yellow-200">
+                  <div className="bg-[#141810] rounded-lg p-4 border border-yellow-500/20">
                     <h4 className="text-yellow-400 font-semibold mb-2">⚠️ Improvement Needed</h4>
-                    <p className="text-gray-600 text-sm">Need more action-oriented language and quantifiable results.</p>
+                    <p className="text-gray-300 text-sm">Need more action-oriented language and quantifiable results.</p>
                   </div>
                 </>
               )}
@@ -839,33 +839,33 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+          className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
               <Eye className="w-5 h-5 text-black" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">CV Reading Time Optimization</h2>
+            <h2 className="text-2xl font-bold text-white">CV Reading Time Optimization</h2>
           </div>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-400 mb-6">
             Recruiters spend an average of 6 seconds on initial CV scan. Ensure your most important information is easily digestible.
           </p>
           
           <div className="space-y-4">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Your CV Structure Analysis</h3>
+            <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Your CV Structure Analysis</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="text-left py-3 text-gray-600">Metric</th>
-                      <th className="text-left py-3 text-gray-600">Your CV</th>
-                      <th className="text-left py-3 text-gray-600">Recommended</th>
-                      <th className="text-left py-3 text-gray-600">Status</th>
+                      <th className="text-left py-3 text-gray-400">Metric</th>
+                      <th className="text-left py-3 text-gray-400">Your CV</th>
+                      <th className="text-left py-3 text-gray-400">Recommended</th>
+                      <th className="text-left py-3 text-gray-400">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-900/70">
+                  <tbody className="text-gray-300">
                     <tr className="border-b border-white/5">
                       <td className="py-3">Total Length</td>
                       <td className="py-3">{cvOptimization?.totalLength || '2 Pages'}</td>
@@ -895,7 +895,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               </div>
             </div>
             
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
               <p className="text-red-400 text-sm"><strong>Critical Insight:</strong> A recruiter won't read the second page. Move your best achievements above the fold to maximize initial screen success.</p>
             </div>
           </div>
@@ -906,34 +906,34 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.8 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+          className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
               <Lightbulb className="w-5 h-5 text-black" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Skills Gap Analysis</h2>
+            <h2 className="text-2xl font-bold text-white">Skills Gap Analysis</h2>
           </div>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-400 mb-6">
             Analysis of skill depth vs. frequency and focus area distribution in your CV.
           </p>
           
           <div className="space-y-6">
             {/* Skill Depth Analysis */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Skill Depth vs. Frequency</h3>
+            <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Skill Depth vs. Frequency</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-white/10">
-                      <th className="text-left py-3 text-gray-600">Skill</th>
-                      <th className="text-left py-3 text-gray-600">Mentions</th>
-                      <th className="text-left py-3 text-gray-600">Quantified Use</th>
-                      <th className="text-left py-3 text-gray-600">Gap Insight</th>
+                      <th className="text-left py-3 text-gray-400">Skill</th>
+                      <th className="text-left py-3 text-gray-400">Mentions</th>
+                      <th className="text-left py-3 text-gray-400">Quantified Use</th>
+                      <th className="text-left py-3 text-gray-400">Gap Insight</th>
                     </tr>
                   </thead>
-                  <tbody className="text-gray-900/70">
+                  <tbody className="text-gray-300">
                     {skillsGap?.skills && skillsGap.skills.length > 0 ? (
                       skillsGap.skills.map((skill: any, index: number) => (
                         <tr key={index} className="border-b border-white/5">
@@ -961,8 +961,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
 
             {/* Focus Areas */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">CV Focus Distribution</h3>
+            <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-4">CV Focus Distribution</h3>
               <div className="space-y-3">
                 {skillsGap?.focusDistribution && skillsGap.focusDistribution.length > 0 ? (
                   skillsGap.focusDistribution.map((area: any, index: number) => {
@@ -970,12 +970,12 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                     const color = colors[index % colors.length];
                     return (
                       <div key={index} className="flex items-center justify-between">
-                        <span className="text-gray-600">{area.area}</span>
+                        <span className="text-gray-300">{area.area}</span>
                         <div className="flex items-center gap-2">
                           <div className="w-32 bg-gray-700 rounded-full h-2">
                             <div className={`${color} h-2 rounded-full`} style={{width: `${area.percentage}%`}}></div>
                           </div>
-                          <span className="text-gray-600 text-sm">{area.percentage}%</span>
+                          <span className="text-gray-300 text-sm">{area.percentage}%</span>
                         </div>
                       </div>
                     );
@@ -984,7 +984,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                   <div className="text-center py-4 text-gray-500">No focus distribution data available</div>
                 )}
               </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+              <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3 mt-4">
                 <p className="text-yellow-400 text-sm"><strong>Career Advancement Tip:</strong> To advance to Senior PM/Lead, refactor 15-20% of delivery bullets to focus on Strategy and People Management.</p>
               </div>
             </div>
@@ -996,31 +996,31 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 1.0 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+          className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
               <Sparkles className="w-5 h-5 text-black" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Mid-Level to Senior Translation</h2>
+            <h2 className="text-2xl font-bold text-white">Mid-Level to Senior Translation</h2>
           </div>
           
-          <p className="text-gray-600 mb-6">
+          <p className="text-gray-400 mb-6">
             Automatically reframe your experience using senior-level language to advance your career positioning.
           </p>
           
           <div className="space-y-4">
             {seniorTranslation?.translations && seniorTranslation.translations.length > 0 ? (
               seniorTranslation.translations.map((item: any, index: number) => (
-              <div key={index} className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div key={index} className="bg-[#141810] border border-white/10 rounded-lg p-6">
                 <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                   <div>
                     <h4 className="text-red-400 font-semibold mb-2">Current (Mid-Level)</h4>
-                    <p className="text-gray-900/70 text-sm italic">"{item.current}"</p>
+                    <p className="text-gray-300 text-sm italic">"{item.current}"</p>
                   </div>
                   <div>
                     <h4 className="text-[#80FF00] font-semibold mb-2">Senior Translation</h4>
-                    <p className="text-gray-600 text-sm">"{item.improved}"</p>
+                    <p className="text-gray-300 text-sm">"{item.improved}"</p>
                   </div>
                 </div>
                 <div className="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
@@ -1030,7 +1030,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             ))
             ) : (
               <div className="text-center py-8">
-                <p className="text-gray-600 dark:text-gray-900/60">No senior translation examples available</p>
+                <p className="text-gray-400">No senior translation examples available</p>
               </div>
             )}
           </div>
@@ -1041,30 +1041,30 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 1.2 }}
-          className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm"
+          className="bg-[#1a2015] border border-white/10 rounded-xl p-8 shadow-sm mx-4"
         >
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
               <Target className="w-5 h-5 text-black" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">Industry Specialization Analysis</h2>
+            <h2 className="text-2xl font-bold text-white">Industry Specialization Analysis</h2>
           </div>
           
           <div className="space-y-6">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Identified Specialization</h3>
+            <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-4">Identified Specialization</h3>
               <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
                 <h4 className="text-green-400 font-semibold mb-2">🎯 {
                   industrySpecialization?.specialization || 
                   (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : 'General')
                 } Specialist</h4>
-                <p className="text-gray-600 text-sm mb-3">
+                <p className="text-gray-300 text-sm mb-3">
                   {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ? 
                     `Your specialization in ${industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : '')} is a major asset!` :
                     'Consider developing a specialization to stand out to recruiters.'
                   }
                 </p>
-                <p className="text-gray-900/70 text-sm">
+                <p className="text-gray-300 text-sm">
                   {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ? 
                     'Recruiters often screen for specific industry keywords before general skills.' :
                     'Focus on building expertise in a specific industry or technology stack.'
@@ -1075,8 +1075,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                   <div className="mt-4 pt-4 border-t border-green-500/30">
                     {industrySpecialization.identified.target_industries && (
                       <div className="mb-2">
-                        <p className="text-gray-700 text-xs font-semibold mb-1">Target Industries:</p>
-                        <p className="text-gray-600 text-xs">
+                        <p className="text-gray-300 text-xs font-semibold mb-1">Target Industries:</p>
+                        <p className="text-gray-400 text-xs">
                           {Array.isArray(industrySpecialization.identified.target_industries) 
                             ? industrySpecialization.identified.target_industries.join(', ')
                             : String(industrySpecialization.identified.target_industries)}
@@ -1085,8 +1085,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                     )}
                     {industrySpecialization.identified.alignment_notes && (
                       <div>
-                        <p className="text-gray-700 text-xs font-semibold mb-1">Alignment Notes:</p>
-                        <p className="text-gray-600 text-xs">
+                        <p className="text-gray-300 text-xs font-semibold mb-1">Alignment Notes:</p>
+                        <p className="text-gray-400 text-xs">
                           {typeof industrySpecialization.identified.alignment_notes === 'string'
                             ? industrySpecialization.identified.alignment_notes
                             : String(industrySpecialization.identified.alignment_notes)}
@@ -1100,8 +1100,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                   <div className="mt-4 pt-4 border-t border-green-500/30">
                     {industrySpecialization.industryAlignment.target_industries && (
                       <div className="mb-2">
-                        <p className="text-gray-700 text-xs font-semibold mb-1">Target Industries:</p>
-                        <p className="text-gray-600 text-xs">
+                        <p className="text-gray-300 text-xs font-semibold mb-1">Target Industries:</p>
+                        <p className="text-gray-400 text-xs">
                           {Array.isArray(industrySpecialization.industryAlignment.target_industries) 
                             ? industrySpecialization.industryAlignment.target_industries.join(', ')
                             : String(industrySpecialization.industryAlignment.target_industries)}
@@ -1110,8 +1110,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                     )}
                     {industrySpecialization.industryAlignment.alignment_notes && (
                       <div>
-                        <p className="text-gray-700 text-xs font-semibold mb-1">Alignment Notes:</p>
-                        <p className="text-gray-600 text-xs">
+                        <p className="text-gray-300 text-xs font-semibold mb-1">Alignment Notes:</p>
+                        <p className="text-gray-400 text-xs">
                           {typeof industrySpecialization.industryAlignment.alignment_notes === 'string'
                             ? industrySpecialization.industryAlignment.alignment_notes
                             : String(industrySpecialization.industryAlignment.alignment_notes)}
@@ -1124,8 +1124,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 {industrySpecialization?.target_industries && (
                   <div className="mt-4 pt-4 border-t border-green-500/30">
                     <div className="mb-2">
-                      <p className="text-gray-700 text-xs font-semibold mb-1">Target Industries:</p>
-                      <p className="text-gray-600 text-xs">
+                      <p className="text-gray-300 text-xs font-semibold mb-1">Target Industries:</p>
+                      <p className="text-gray-400 text-xs">
                         {Array.isArray(industrySpecialization.target_industries) 
                           ? industrySpecialization.target_industries.join(', ')
                           : String(industrySpecialization.target_industries)}
@@ -1135,8 +1135,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 )}
                 {industrySpecialization?.alignment_notes && (
                   <div className="mt-2">
-                    <p className="text-gray-700 text-xs font-semibold mb-1">Alignment Notes:</p>
-                    <p className="text-gray-600 text-xs">
+                    <p className="text-gray-300 text-xs font-semibold mb-1">Alignment Notes:</p>
+                    <p className="text-gray-400 text-xs">
                       {typeof industrySpecialization.alignment_notes === 'string'
                         ? industrySpecialization.alignment_notes
                         : String(industrySpecialization.alignment_notes)}
@@ -1146,8 +1146,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               </div>
             </div>
 
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4">
+            <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold text-white mb-4">
                 Critical {industrySpecialization?.specialization || 'Industry'} Keywords to Emphasize
               </h3>
               <div className="grid grid-cols-2 tablet:grid-cols-4 gap-3">
@@ -1168,13 +1168,13 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
 
             {industrySpecialization?.contactIssues && industrySpecialization.contactIssues.length > 0 ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
                 <h4 className="text-red-400 font-semibold mb-2">🚨 Contact Details Check</h4>
                 <div className="space-y-2 text-sm">
                   {industrySpecialization.contactIssues.map((issue: any, index: number) => (
                     <div key={index} className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-                      <span className="text-gray-600">
+                      <span className="text-gray-300">
                         <strong>{issue.issue}</strong>
                       </span>
                     </div>
@@ -1187,14 +1187,14 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             ) : (
               <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
                 <h4 className="text-green-400 font-semibold mb-2">✅ Contact Details Look Professional</h4>
-                <p className="text-gray-600 text-sm">Your contact information appears professional and appropriate for senior roles.</p>
+                <p className="text-gray-300 text-sm">Your contact information appears professional and appropriate for senior roles.</p>
               </div>
             )}
 
             {/* Industry Recommendations */}
             {industrySpecialization?.recommendations && industrySpecialization.recommendations.length > 0 && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Industry Recommendations</h3>
+              <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
+                <h3 className="text-lg font-bold text-white mb-4">Industry Recommendations</h3>
                 <ul className="space-y-2">
                   {industrySpecialization.recommendations.map((recommendation: any, index: number) => {
                     // Handle both string and object formats
@@ -1204,7 +1204,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                     return (
                       <li key={index} className="flex items-start gap-2">
                         <span className="text-[#80FF00] mt-1">•</span>
-                        <span className="text-gray-600 text-sm">{recommendationText}</span>
+                        <span className="text-gray-300 text-sm">{recommendationText}</span>
                       </li>
                     );
                   })}

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Typewriter from '../ui/Typewriter';
-import { Play, ArrowRight, Sparkles } from 'lucide-react';
+import { Play, ArrowRight } from 'lucide-react';
 
 const Hero = () => {
   const typewriterPhrases = [
@@ -149,7 +149,7 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           style={{ willChange: 'auto' }}
         >
-          One-click CV creation, cover letter generation, and job application tracking made effortless.
+          Add a job application, and our AI handles the rest.
         </motion.p>
 
         {/* Enhanced CTA Buttons - Optimized */}
@@ -162,6 +162,24 @@ const Hero = () => {
         >
           <motion.a
             href="/sign-up"
+            className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-sm tablet:text-base desktop:text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 tablet:gap-3"
+            whileHover={{ 
+              scale: 1.05,
+              borderColor: 'rgba(132, 204, 22, 0.8)',
+              backgroundColor: 'rgba(132, 204, 22, 0.1)'
+            }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              transformStyle: 'preserve-3d',
+              perspective: '1000px'
+            }}
+          >
+            <span>Get Started</span>
+            <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
+          </motion.a>
+          
+          <motion.a
+            href="/ai-career-report"
             className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-sm tablet:text-base desktop:text-lg shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden btn-hover"
             whileHover={{ 
               scale: 1.02,
@@ -178,7 +196,7 @@ const Hero = () => {
               className="relative flex items-center gap-2 tablet:gap-3"
               whileHover={{ x: 5 }}
             >
-              <span>Get Started</span>
+              <span>AI Career Guide</span>
               <motion.div
                 whileHover={{ rotate: 45 }}
                 transition={{ duration: 0.3 }}
@@ -186,25 +204,6 @@ const Hero = () => {
                 <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
               </motion.div>
             </motion.div>
-          </motion.a>
-          
-          <motion.a
-            href="/ai-career-report"
-            className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-sm tablet:text-base desktop:text-lg hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 tablet:gap-3"
-            whileHover={{ 
-              scale: 1.05,
-              borderColor: 'rgba(132, 204, 22, 0.8)',
-              backgroundColor: 'rgba(132, 204, 22, 0.1)'
-            }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              transformStyle: 'preserve-3d',
-              perspective: '1000px'
-            }}
-          >
-            <Sparkles className="w-4 h-4 tablet:w-5 tablet:h-5" />
-            <span>AI Career Guide</span>
-            <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
           </motion.a>
           
         </motion.div>

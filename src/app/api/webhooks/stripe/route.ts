@@ -83,6 +83,10 @@ export async function POST(request: NextRequest) {
           await handleInvoicePaymentSucceeded(event.data.object);
           break;
 
+        case 'customer.subscription.created':
+          await handleSubscriptionCreated(event.data.object);
+          break;
+
         case 'customer.subscription.updated':
           await handleSubscriptionUpdated(event.data.object);
           break;
@@ -454,6 +458,112 @@ async function handleInvoicePaymentSucceeded(invoice: any) {
     console.log(`✅ Recurring payment processed for user ${userId}: ${planKey}`);
   } catch (error) {
     console.error('Error handling invoice payment succeeded:', error);
+  }
+}
+
+async function handleSubscriptionCreated(subscription: any) {
+  try {
+    const { planKey, userId, planId, interval, region } = subscription.metadata;
+
+    if (!userId || !planKey) {
+      console.error('Missing metadata in subscription creation:', subscription.id);
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error('User not found for subscription:', subscription.id);
+      return;
+    }
+
+    // If subscription is already active, activate the plan
+    if (subscription.status === 'active' || subscription.status === 'trialing') {
+      const subscriptionService = (await import('@/lib/services/subscriptionService')).default;
+      const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
+                                         planKey === 'pro_quarterly' ? 'quarterly' : 'yearly');
+      
+      // Get amount from subscription
+      const amount = subscription.items.data[0]?.price?.unit_amount 
+        ? subscription.items.data[0].price.unit_amount / 100 
+        : 0;
+      const currency = subscription.items.data[0]?.price?.currency?.toUpperCase() || 'USD';
+      
+      const result = await subscriptionService.activateProPlan(
+        userId,
+        planKey,
+        finalInterval,
+        subscription.latest_invoice?.payment_intent || subscription.id,
+        region || 'US',
+        currency,
+        amount,
+        subscription.id, // subscriptionId
+        subscription.customer as string
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate subscription:', result.error);
+        return;
+      }
+
+      console.log(`✅ Subscription created and activated for user ${userId}: ${planKey}`);
+    } else {
+      console.log(`Subscription created but not yet active (status: ${subscription.status})`);
+    }
+  } catch (error) {
+    console.error('Error handling subscription created:', error);
+  }
+}
+
+async function handleSubscriptionCreated(subscription: any) {
+  try {
+    const { planKey, userId, planId, interval, region } = subscription.metadata;
+
+    if (!userId || !planKey) {
+      console.error('Missing metadata in subscription creation:', subscription.id);
+      return;
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error('User not found for subscription:', subscription.id);
+      return;
+    }
+
+    // If subscription is already active, activate the plan
+    if (subscription.status === 'active' || subscription.status === 'trialing') {
+      const subscriptionService = (await import('@/lib/services/subscriptionService')).default;
+      const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
+                                         planKey === 'pro_quarterly' ? 'quarterly' : 'yearly');
+      
+      // Get amount from subscription
+      const amount = subscription.items.data[0]?.price?.unit_amount 
+        ? subscription.items.data[0].price.unit_amount / 100 
+        : 0;
+      const currency = subscription.items.data[0]?.price?.currency?.toUpperCase() || 'USD';
+      
+      const result = await subscriptionService.activateProPlan(
+        userId,
+        planKey,
+        finalInterval,
+        subscription.latest_invoice?.payment_intent || subscription.id,
+        region || 'US',
+        currency,
+        amount,
+        subscription.id, // subscriptionId
+        subscription.customer as string
+      );
+
+      if (!result.success) {
+        console.error('Failed to activate subscription:', result.error);
+        return;
+      }
+
+      console.log(`✅ Subscription created and activated for user ${userId}: ${planKey}`);
+    } else {
+      console.log(`Subscription created but not yet active (status: ${subscription.status})`);
+    }
+  } catch (error) {
+    console.error('Error handling subscription created:', error);
   }
 }
 
