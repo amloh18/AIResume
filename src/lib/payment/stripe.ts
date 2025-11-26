@@ -1,15 +1,70 @@
 import Stripe from 'stripe';
 
-// Only create Stripe instance if API key is available
-// Using latest stable API version (as of 2024)
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2024-11-20.acacia',
-    })
-  : null;
+// Lazy initialization - check env vars at runtime, not module load time
+// This ensures Vercel serverless functions have access to env vars when they're injected
+let stripeInstance: Stripe | null = null;
 
-// Export the stripe instance for direct access
-export { stripe };
+/**
+ * Get Stripe instance with lazy initialization
+ * Checks environment variables at runtime (when function is called)
+ * rather than at module load time (which happens before Vercel injects env vars)
+ * 
+ * CRITICAL: In production (Vercel), ensure STRIPE_SECRET_KEY is set in:
+ * - Vercel Dashboard → Project → Settings → Environment Variables
+ * - Without NEXT_PUBLIC_ prefix (server-side only)
+ * - Redeploy after adding environment variables
+ */
+function getStripeInstance(): Stripe | null {
+  // Always check at runtime - don't rely on cached value
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  
+  // Detailed validation with helpful error messages
+  if (!secretKey) {
+    console.error('❌ Stripe Configuration Error: STRIPE_SECRET_KEY is missing.');
+    console.error('   → This is the MOST COMMON issue on Vercel deployments');
+    console.error('   → Add STRIPE_SECRET_KEY to Vercel Dashboard → Project → Settings → Environment Variables');
+    console.error('   → Ensure it does NOT have NEXT_PUBLIC_ prefix (server-side only)');
+    console.error('   → Redeploy after adding environment variables');
+    return null;
+  }
+  
+  // Validate key format (helpful for detecting test vs live mode issues)
+  const isTestKey = secretKey.startsWith('sk_test_');
+  const isLiveKey = secretKey.startsWith('sk_live_');
+  
+  if (!isTestKey && !isLiveKey) {
+    console.warn('⚠️  Stripe Secret Key format may be invalid. Expected format: sk_test_... or sk_live_...');
+  }
+  
+  if (process.env.NODE_ENV === 'production' && isTestKey) {
+    console.warn('⚠️  Using Stripe TEST keys in production. Ensure this is intentional.');
+  }
+  
+  // Create instance if not already created (lazy initialization with caching)
+  if (!stripeInstance) {
+    try {
+      stripeInstance = new Stripe(secretKey, {
+        apiVersion: '2024-11-20.acacia',
+      });
+      console.log('✅ Stripe instance initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize Stripe instance:', error);
+      return null;
+    }
+  }
+  
+  return stripeInstance;
+}
+
+// Export getter function for explicit runtime access
+export function getStripe(): Stripe | null {
+  return getStripeInstance();
+}
+
+// Export as a constant for backward compatibility
+// Note: This still evaluates at module load time, but we've updated all direct usages
+// to use getStripe() function instead for runtime access
+export const stripe = getStripeInstance();
 
 export interface CreatePaymentIntentParams {
   amount: number;
@@ -34,15 +89,30 @@ export interface CreateSubscriptionParams {
 export class StripeService {
   // Create a payment intent for one-time payments
   static async createPaymentIntent(params: CreatePaymentIntentParams) {
-    if (!stripe) {
+    // Validate environment variables before attempting to create payment intent
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    
+    if (!secretKey) {
+      console.error('❌ Stripe Payment Intent Creation Failed: STRIPE_SECRET_KEY is missing');
+      console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+      console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
+      console.error('   → Redeploy after adding environment variables');
       return {
         success: false,
-        error: 'Stripe is not configured',
+        error: 'Stripe secret key is not configured. Please check server environment variables.',
+      };
+    }
+    
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
+      return {
+        success: false,
+        error: 'Stripe is not configured. Please check server environment variables.',
       };
     }
     
     try {
-      const paymentIntent = await stripe.paymentIntents.create({
+      const paymentIntent = await stripeInstance.paymentIntents.create({
         amount: Math.round(params.amount * 100), // Convert to cents
         currency: params.currency.toLowerCase(),
         customer: params.customerId,
@@ -53,6 +123,12 @@ export class StripeService {
         },
       });
 
+      console.log('✅ Stripe payment intent created successfully:', {
+        paymentIntentId: paymentIntent.id,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      });
+
       return {
         success: true,
         paymentIntentId: paymentIntent.id,
@@ -60,18 +136,43 @@ export class StripeService {
         amount: paymentIntent.amount,
         currency: paymentIntent.currency,
       };
-    } catch (error) {
-      console.error('Stripe createPaymentIntent error:', error);
+    } catch (error: any) {
+      console.error('❌ Stripe createPaymentIntent error:', error);
+      
+      // Extract detailed error information from Stripe API
+      let errorMessage = 'Failed to create Stripe payment intent';
+      if (error?.type) {
+        errorMessage = error.message || errorMessage;
+        console.error('Stripe API Error Details:', {
+          type: error.type,
+          code: error.code,
+          message: error.message,
+          param: error.param,
+          decline_code: error.decline_code,
+        });
+        
+        // Check for common errors
+        if (error.message?.toLowerCase().includes('api key') || 
+            error.message?.toLowerCase().includes('authentication')) {
+          console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+          console.error('   → Verify the secret key in Vercel Environment Variables');
+          console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+        }
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }
 
   // Create a customer
   static async createCustomer(params: CreateCustomerParams) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
@@ -79,7 +180,7 @@ export class StripeService {
     }
     
     try {
-      const customer = await stripe.customers.create({
+      const customer = await stripeInstance.customers.create({
         email: params.email,
         name: params.name,
         metadata: params.metadata,
@@ -101,7 +202,8 @@ export class StripeService {
 
   // Create a subscription
   static async createSubscription(params: CreateSubscriptionParams) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
@@ -109,7 +211,7 @@ export class StripeService {
     }
     
     try {
-      const subscription = await stripe.subscriptions.create({
+      const subscription = await stripeInstance.subscriptions.create({
         customer: params.customerId,
         items: [{ price: params.priceId }],
         metadata: params.metadata,
@@ -135,7 +237,8 @@ export class StripeService {
 
   // Cancel a subscription
   static async cancelSubscription(subscriptionId: string) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
@@ -143,7 +246,7 @@ export class StripeService {
     }
     
     try {
-      const subscription = await stripe.subscriptions.cancel(subscriptionId);
+      const subscription = await stripeInstance.subscriptions.cancel(subscriptionId);
       return {
         success: true,
         subscription: subscription,
@@ -159,7 +262,8 @@ export class StripeService {
 
   // Get subscription details
   static async getSubscription(subscriptionId: string) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
@@ -167,7 +271,7 @@ export class StripeService {
     }
     
     try {
-      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      const subscription = await stripeInstance.subscriptions.retrieve(subscriptionId);
       return {
         success: true,
         subscription: subscription,
@@ -191,7 +295,8 @@ export class StripeService {
       intervalCount?: number;
     };
   }) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
@@ -199,7 +304,7 @@ export class StripeService {
     }
     
     try {
-      const price = await stripe.prices.create({
+      const price = await stripeInstance.prices.create({
         product: params.productId,
         unit_amount: Math.round(params.unitAmount * 100),
         currency: params.currency.toLowerCase(),
@@ -226,7 +331,8 @@ export class StripeService {
     description?: string;
     metadata?: Record<string, string>;
   }) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
@@ -234,7 +340,7 @@ export class StripeService {
     }
     
     try {
-      const product = await stripe.products.create({
+      const product = await stripeInstance.products.create({
         name: params.name,
         description: params.description,
         metadata: params.metadata,
@@ -256,18 +362,28 @@ export class StripeService {
 
   // Verify webhook signature
   static verifyWebhookSignature(payload: string, signature: string) {
-    if (!stripe) {
+    const stripeInstance = getStripeInstance();
+    if (!stripeInstance) {
       return {
         success: false,
         error: 'Stripe is not configured',
       };
     }
     
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      console.error('❌ Stripe Webhook Verification Failed: STRIPE_WEBHOOK_SECRET is missing');
+      return {
+        success: false,
+        error: 'Stripe webhook secret is not configured',
+      };
+    }
+    
     try {
-      const event = stripe.webhooks.constructEvent(
+      const event = stripeInstance.webhooks.constructEvent(
         payload,
         signature,
-        process.env.STRIPE_WEBHOOK_SECRET!
+        webhookSecret
       );
       return {
         success: true,

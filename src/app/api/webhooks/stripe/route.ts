@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
-import { stripe } from '@/lib/payment/stripe';
+import { getStripe } from '@/lib/payment/stripe';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
@@ -24,8 +24,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
     }
 
+    const stripe = getStripe();
     if (!stripe) {
-      console.error('Stripe not configured');
+      console.error('❌ Stripe webhook handler: Stripe not configured');
+      console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+      console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
       return NextResponse.json({ error: 'Stripe not configured' }, { status: 500 });
     }
 
