@@ -937,28 +937,52 @@ async function handleDayPassPayment(
         let session;
         try {
           session = await stripe.checkout.sessions.create({
-          customer: user.subscription?.providerCustomerId || undefined,
-          payment_method_types: ['card'],
-          line_items: [{
-            price: stripePriceId,
-            quantity: 1,
-          }],
-          mode: 'payment', // One-time payment
-          success_url: `${process.env.NEXTAUTH_URL || ''}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${process.env.NEXTAUTH_URL || ''}/dashboard/settings?canceled=true`,
-          metadata: {
-            planKey: plan.key,
-            userId: user._id.toString(),
-            planId: plan._id.toString(),
-            type: 'day_pass',
-            region: regionInfo.countryCode
-          }
-        });
+            customer: user.subscription?.providerCustomerId || undefined,
+            payment_method_types: ['card'],
+            line_items: [{
+              price: stripePriceId,
+              quantity: 1,
+            }],
+            mode: 'payment', // One-time payment
+            success_url: `${process.env.NEXTAUTH_URL || ''}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.NEXTAUTH_URL || ''}/dashboard/settings?canceled=true`,
+            metadata: {
+              planKey: plan.key,
+              userId: user._id.toString(),
+              planId: plan._id.toString(),
+              type: 'day_pass',
+              region: regionInfo.countryCode
+            }
+          });
 
-        return NextResponse.json({
-          provider: 'stripe',
-          redirect_url: session.url
-        });
+          return NextResponse.json({
+            provider: 'stripe',
+            redirect_url: session.url
+          });
+        } catch (sessionError: any) {
+          console.error('❌ Stripe checkout session creation failed (Day Pass):', sessionError);
+          
+          // Extract detailed error information
+          if (sessionError?.type) {
+            console.error('Stripe API Error Details:', {
+              type: sessionError.type,
+              code: sessionError.code,
+              message: sessionError.message,
+              param: sessionError.param,
+              decline_code: sessionError.decline_code,
+            });
+            
+            // Check for common errors
+            if (sessionError.message?.toLowerCase().includes('api key') || 
+                sessionError.message?.toLowerCase().includes('authentication')) {
+              console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+              console.error('   → Verify the secret key in Vercel Environment Variables');
+              console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+            }
+          }
+          
+          throw sessionError; // Re-throw to be caught by outer catch block
+        }
       }
 
       // Fallback: Create PaymentIntent for one-time payment
