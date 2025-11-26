@@ -42,12 +42,17 @@ const nextConfig: NextConfig = {
     }
 
     // Add webpack plugins for Node.js polyfills
-    config.plugins.push(
-      new webpack.ProvidePlugin({
-        process: 'process/browser',
-        Buffer: ['buffer', 'Buffer'],
-      })
-    );
+    // CRITICAL: Only polyfill process/Buffer for client builds
+    // Server builds (Node.js) already have these and we MUST NOT overwrite them
+    // Overwriting process on server removes access to process.env!
+    if (!isServer) {
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          process: 'process/browser',
+          Buffer: ['buffer', 'Buffer'],
+        })
+      );
+    }
 
     // Define environment variables for webpack
     config.plugins.push(
