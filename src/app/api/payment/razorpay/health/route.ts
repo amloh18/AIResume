@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
           provider: 'razorpay',
           error: 'Razorpay secret key not configured. Check server environment variables.',
           timestamp: new Date().toISOString(),
-          debug: process.env.NODE_ENV === 'development' ? envDebug : undefined
+          debug: envDebug // Always include debug info to help diagnose
         },
         { status: 503 }
       );
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
           provider: 'razorpay',
           error: 'Razorpay key ID not configured. Check server environment variables.',
           timestamp: new Date().toISOString(),
-          debug: process.env.NODE_ENV === 'development' ? envDebug : undefined
+          debug: envDebug // Always include debug info to help diagnose
         },
         { status: 503 }
       );
