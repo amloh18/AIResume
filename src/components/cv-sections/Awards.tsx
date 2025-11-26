@@ -72,7 +72,7 @@ const Awards: React.FC<AwardsProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .awards-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

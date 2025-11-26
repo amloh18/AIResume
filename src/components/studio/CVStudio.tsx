@@ -2959,22 +2959,18 @@ const CVStudio: React.FC<CVStudioProps> = ({
         
         // Download Cover Letter (if available)
         if (coverLetterId && coverLetterData) {
-          // Switch to cover letter view temporarily
-          const originalDocType = documentType;
-          // Note: We'd need to switch document type and get cover letter preview
-          // For now, use API approach
-          const response = await fetch(`/api/cvs/${coverLetterId}/download?format=${format}`);
-          if (response.ok) {
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${baseName}-cover-letter.${format}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-          }
+          // Use correct cover letter download endpoint
+          const response = await fetch(`/api/cover-letters/${coverLetterId}/download?format=${format}`);
+          if (!response.ok) throw new Error('Cover letter download failed');
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${baseName}-cover-letter.${format}`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
         }
       } else if (documentType === 'cv') {
         // Download CV only
@@ -2995,7 +2991,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
       } else if (documentType === 'coverLetter') {
         // Download Cover Letter only
         if (coverLetterId) {
-          const response = await fetch(`/api/cvs/${coverLetterId}/download?format=${format}`);
+          const response = await fetch(`/api/cover-letters/${coverLetterId}/download?format=${format}`);
           if (!response.ok) throw new Error('Cover letter download failed');
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);

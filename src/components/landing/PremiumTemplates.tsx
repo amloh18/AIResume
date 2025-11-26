@@ -145,7 +145,7 @@ const PremiumTemplates = () => {
               {/* Left Side - Text Content */}
             <div className="flex-1 flex flex-col justify-center space-y-6 desktop:space-y-8 z-10">
                 {/* Badge */}
-                <div className="text-lime-400 uppercase tracking-wider text-xs tablet:text-sm font-semibold">
+                <div className="text-lime-400 uppercase tracking-wider text-xs tablet:text-xs font-semibold">
                   CRAFTED FOR SUCCESS
                 </div>
 
@@ -156,7 +156,7 @@ const PremiumTemplates = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 50 }}
                 transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="text-4xl tablet:text-5xl desktop:text-7xl font-bold text-white leading-tight"
+                className="text-3xl tablet:text-4xl desktop:text-6xl font-bold text-white leading-tight"
               >
                   {templates[currentIndex].name.split(' ').map((word, i) => (
                     <React.Fragment key={i}>
@@ -167,7 +167,7 @@ const PremiumTemplates = () => {
               </motion.h2>
 
                 {/* Description */}
-                <p className="text-white/70 text-base tablet:text-lg desktop:text-xl leading-relaxed max-w-lg">
+                <p className="text-white/70 text-sm tablet:text-base desktop:text-lg leading-relaxed max-w-lg">
                   A clean, modern, and straightforward design that lets your experience speak for itself. Perfect for any industry.
                 </p>
 

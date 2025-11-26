@@ -1106,7 +1106,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed bg-black/50 backdrop-blur-sm z-[9998]"
+            className="fixed bg-black/50 backdrop-blur-sm z-[99999]"
             style={{
               top: 0,
               left: 0,
@@ -1124,7 +1124,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[9999] flex flex-col"
+            className="fixed right-0 top-0 h-screen bg-white dark:bg-[#141810] shadow-2xl z-[99999] flex flex-col"
             style={{ width: sidebarWidth }}
             onClick={(e) => e.stopPropagation()}
       >

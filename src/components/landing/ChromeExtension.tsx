@@ -24,14 +24,14 @@ const ChromeExtension = () => {
         >
           <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4 tablet:gap-6 mb-4">
             <div className="flex-1">
-              <h2 className="text-3xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-4 text-left">
+              <h2 className="text-2xl tablet:text-2xl desktop:text-3xl font-bold text-white mb-4 text-left">
                 Our Browser Extension Works on
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
                   100+ Job Sites
                 </span>
               </h2>
-              <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-2xl text-left">
+              <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-2xl text-left">
                 Seamlessly integrate with all major job boards and career platforms
               </p>
             </div>
@@ -82,7 +82,7 @@ const ChromeExtension = () => {
             ].map((site, index) => (
               <motion.div
                 key={site.name}
-                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
+                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-xs font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
@@ -120,7 +120,7 @@ const ChromeExtension = () => {
             ].map((site, index) => (
               <motion.div
                 key={`${site.name}-duplicate`}
-                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
+                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-xs font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >

@@ -96,7 +96,7 @@ const Projects: React.FC<ProjectsProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .projects-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

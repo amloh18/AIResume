@@ -85,7 +85,7 @@ const WorkExperience: React.FC<WorkExperienceProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .work-experience-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

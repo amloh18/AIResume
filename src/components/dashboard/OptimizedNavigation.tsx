@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { 
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -32,6 +32,7 @@ const OptimizedNavigation: React.FC = () => {
   const pricingHookResult = usePricingPlans({ excludeFree: true });
   const [activeSection, setActiveSection] = useState('analytics');
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [preselectedPlanKey, setPreselectedPlanKey] = useState<string | undefined>(undefined);
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -98,9 +99,10 @@ const OptimizedNavigation: React.FC = () => {
   // Check if any UniversalPaymentModal is open (from sidebar or settings)
   useEffect(() => {
     const checkModalOpen = () => {
-      // Check for the modal backdrop/overlay - UniversalPaymentModal uses z-[9999]
-      // Look for elements with z-index 9999 or the specific backdrop classes
+      // Check for the modal backdrop/overlay - UniversalPaymentModal uses z-[99999]
+      // Look for elements with z-index 99999 or the specific backdrop classes
       const modalBackdrop = 
+        document.querySelector('[class*="z-[99999]"]') ||
         document.querySelector('[class*="z-[9999]"]') || 
         document.querySelector('[style*="z-index: 9999"]') ||
         document.querySelector('[style*="z-index:9999"]') ||
@@ -558,16 +560,6 @@ const OptimizedNavigation: React.FC = () => {
                 <div className="text-sm font-semibold mb-2">
                   Your Free Plan
                 </div>
-                
-                <div className="text-xs text-white/95 mb-3">
-                  {isUnlimited ? (
-                    <span>You have <span className="font-bold">Unlimited</span> job credits.</span>
-                  ) : (
-                    <span>
-                      You have <span className="font-bold">{remaining}</span> of <span className="font-bold">{limit}</span> job credit{limit !== 1 ? 's' : ''} left this month.
-                    </span>
-                  )}
-                </div>
 
                 {!isUnlimited && limit > 0 && (
                   <div className="mb-3">
@@ -604,15 +596,46 @@ const OptimizedNavigation: React.FC = () => {
                   <li>• Priority support</li>
                 </ul>
                 
-                <motion.button
-                  onClick={() => setShowSubscriptionModal(true)}
-                  className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  <Zap className="w-3 h-3" />
-                  Upgrade
-                </motion.button>
+                <div className="space-y-2">
+                  <motion.button
+                    onClick={() => {
+                      setPreselectedPlanKey('day_pass');
+                      setShowSubscriptionModal(true);
+                    }}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Star className="w-3 h-3" />
+                    Buy Day Pass
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={() => {
+                      setPreselectedPlanKey('pro_monthly');
+                      setShowSubscriptionModal(true);
+                    }}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Zap className="w-3 h-3" />
+                    Go Monthly
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={() => {
+                      setPreselectedPlanKey(undefined);
+                      setShowSubscriptionModal(true);
+                    }}
+                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Zap className="w-3 h-3" />
+                    Upgrade
+                  </motion.button>
+                </div>
               </div>
             );
           }
@@ -960,11 +983,16 @@ const OptimizedNavigation: React.FC = () => {
       {/* Subscription Modal */}
       <UniversalPaymentModal
         isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
+        onClose={() => {
+          setShowSubscriptionModal(false);
+          setPreselectedPlanKey(undefined);
+        }}
+        preselectedPlanKey={preselectedPlanKey}
         // Use billing data subscription as source of truth, fallback to userData
         currentUserPlan={billingData?.subscription?.planKey || userData?.subscription?.planKey || userData?.currentPlanKey || 'free'}
         onSuccess={() => {
           setShowSubscriptionModal(false);
+          setPreselectedPlanKey(undefined);
           refetchBillingData();
           // Refresh user data to update plan info
           if (userData) {

@@ -172,7 +172,7 @@ const HowItWorks = () => {
           viewport={{ once: true, margin: "-50px" }}
         >
           <motion.h3
-            className="text-3xl tablet:text-3xl desktop:text-5xl font-bold text-white mb-6 text-center"
+            className="text-2xl tablet:text-2xl desktop:text-4xl font-bold text-white mb-6 text-center"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
@@ -204,7 +204,7 @@ const HowItWorks = () => {
             >
               {/* Step Subtitle */}
               <motion.div
-                className="text-lime-400 font-bold text-sm uppercase tracking-wider"
+                className="text-lime-400 font-bold text-xs uppercase tracking-wider"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
@@ -215,7 +215,7 @@ const HowItWorks = () => {
               
               {/* Main Title */}
               <motion.h4 
-                className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white"
+                className="text-xl tablet:text-2xl desktop:text-3xl font-bold text-white"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.5 }}
@@ -226,7 +226,7 @@ const HowItWorks = () => {
               
               {/* Description */}
               <motion.p
-                className="text-white/80 leading-relaxed text-sm tablet:text-base desktop:text-lg font-light"
+                className="text-white/80 leading-relaxed text-xs tablet:text-sm desktop:text-base font-light"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
@@ -245,7 +245,7 @@ const HowItWorks = () => {
               >
                 <motion.a
                   href="/ai-career-report"
-                  className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-semibold text-base shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden"
+                  className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-semibold text-sm shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden"
                   whileHover={{ 
                     scale: 1.05,
                     boxShadow: "0 15px 30px -8px rgba(128, 208, 0, 0.5)"
@@ -346,7 +346,7 @@ const HowItWorks = () => {
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`w-12 h-12 tablet:w-16 tablet:h-16 rounded-full flex items-center justify-center text-white font-bold text-lg tablet:text-xl transition-all duration-300 ${
+                    className={`w-12 h-12 tablet:w-16 tablet:h-16 rounded-full flex items-center justify-center text-white font-bold text-base tablet:text-lg transition-all duration-300 ${
                       isActive 
                         ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50' 
                         : 'bg-gray-800 border-2 border-white/20'

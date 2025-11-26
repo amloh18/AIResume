@@ -83,7 +83,7 @@ const Certificates: React.FC<CertificatesProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .certificates-section {
           margin-bottom: ${template.globalStyles.spacing};
         }
