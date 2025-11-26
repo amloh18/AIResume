@@ -302,13 +302,13 @@ const Testimonials = () => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-center">
             The new way to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               build Tailored CV
             </span>
           </h2>
-          <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl mx-auto leading-relaxed">
             Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle</span>.
           </p>
         </motion.div>
@@ -358,7 +358,7 @@ const Testimonials = () => {
                     
                     {/* Quote Icon */}
                     <motion.div 
-                      className="text-2xl tablet:text-3xl desktop:text-4xl text-lime-400 mb-3 tablet:mb-4"
+                      className="text-xl tablet:text-2xl desktop:text-3xl text-lime-400 mb-3 tablet:mb-4"
                       whileHover={{ 
                         scale: 1.2,
                         rotateY: 15,
@@ -373,7 +373,7 @@ const Testimonials = () => {
                     </motion.div>
                     
                     {/* Quote Text */}
-                    <p className="text-white/80 text-xs tablet:text-sm desktop:text-base leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                    <p className="text-white/80 text-xs tablet:text-xs desktop:text-sm leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
                       {renderMessageWithAccents(testimonial.message)}
                     </p>
                     
@@ -395,12 +395,12 @@ const Testimonials = () => {
                     {/* Author Info */}
                     <div className="flex items-center gap-2 tablet:gap-3 relative z-10 mt-auto">
                       <div className="w-9 h-9 tablet:w-10 tablet:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-black font-bold text-sm tablet:text-base">
+                        <span className="text-black font-bold text-xs tablet:text-sm">
                           {testimonial.username.charAt(0)}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-white font-semibold text-xs tablet:text-sm truncate">
+                        <div className="text-white font-semibold text-xs tablet:text-xs truncate">
                           {testimonial.username}
                         </div>
                         <div className="text-white/60 text-xs truncate">
@@ -438,7 +438,7 @@ const Testimonials = () => {
                     
                     {/* Quote Icon */}
                     <motion.div 
-                      className="text-2xl tablet:text-3xl desktop:text-4xl text-lime-400 mb-3 tablet:mb-4"
+                      className="text-xl tablet:text-2xl desktop:text-3xl text-lime-400 mb-3 tablet:mb-4"
                       whileHover={{ 
                         scale: 1.2,
                         rotateY: 15,
@@ -453,7 +453,7 @@ const Testimonials = () => {
                     </motion.div>
                     
                     {/* Quote Text */}
-                    <p className="text-white/80 text-xs tablet:text-sm desktop:text-base leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                    <p className="text-white/80 text-xs tablet:text-xs desktop:text-sm leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
                       {renderMessageWithAccents(testimonial.message)}
                     </p>
                     
@@ -475,12 +475,12 @@ const Testimonials = () => {
                     {/* Author Info */}
                     <div className="flex items-center gap-2 tablet:gap-3 relative z-10 mt-auto">
                       <div className="w-9 h-9 tablet:w-10 tablet:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-black font-bold text-sm tablet:text-base">
+                        <span className="text-black font-bold text-xs tablet:text-sm">
                           {testimonial.username.charAt(0)}
                         </span>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-white font-semibold text-xs tablet:text-sm truncate">
+                        <div className="text-white font-semibold text-xs tablet:text-xs truncate">
                           {testimonial.username}
                         </div>
                         <div className="text-white/60 text-xs truncate">

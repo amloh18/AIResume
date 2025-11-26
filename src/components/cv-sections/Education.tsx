@@ -81,7 +81,7 @@ const Education: React.FC<EducationProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .education-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

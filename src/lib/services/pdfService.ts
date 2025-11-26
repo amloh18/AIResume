@@ -1,21 +1,194 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
+import { templateRendererService } from './templateRendererService';
+import { rendererHealthService } from './rendererHealthService';
+import { pdfCacheService } from './pdfCacheService';
+import { fileProtectionService } from './fileProtectionService';
+import { BaseService } from './baseService';
+import { puppeteerPoolService } from './puppeteerPoolService';
+import { configService } from './configService';
+import { metricsService } from './metricsService';
 
-export class PDFService {
-  static async generatePDF(cvData: UnifiedCVDataStructure, template: ITemplate): Promise<Blob> {
-    // For now, we'll create a simple PDF using jsPDF
-    // In a real implementation, you would use @react-pdf/renderer
+export interface PDFGenerationOptions {
+  paperSize?: 'A4' | 'Letter';
+  orientation?: 'portrait' | 'landscape';
+  format?: 'pdf' | 'docx' | 'doc';
+  password?: string;
+  sectionOrder?: string[];
+  sectionVisibility?: Record<string, boolean>;
+}
+
+export class PDFService extends BaseService {
+  private static instance: PDFService;
+
+  private constructor() {
+    super('PDFService');
+  }
+
+  static getInstance(): PDFService {
+    if (!PDFService.instance) {
+      PDFService.instance = new PDFService();
+    }
+    return PDFService.instance;
+  }
+
+  /**
+   * Generate PDF from CV data and template (enhanced version)
+   * Uses TemplateRenderer to match preview exactly
+   */
+  static async generatePDF(
+    cvData: UnifiedCVDataStructure,
+    template: ITemplate,
+    options: PDFGenerationOptions = {}
+  ): Promise<Blob> {
+    const instance = PDFService.getInstance();
+    return instance.generatePDFInternal(cvData, template, options);
+  }
+
+  private async generatePDFInternal(
+    cvData: UnifiedCVDataStructure,
+    template: ITemplate,
+    options: PDFGenerationOptions = {}
+  ): Promise<Blob> {
+    return this.timeOperation('generatePDF', async () => {
+      const config = configService.getPDFConfig();
+      const cacheConfig = config.cache;
+
+      // Check cache first
+      const cacheKey = pdfCacheService.generateCacheKey(
+        cvData,
+        template,
+        options.paperSize || 'A4',
+        options.format || 'pdf'
+      );
+      
+      const cached = await pdfCacheService.get(cacheKey);
+      if (cached) {
+        await metricsService.trackOperation(
+          this.serviceName,
+          'generatePDF',
+          0,
+          true,
+          undefined,
+          { cached: true }
+        );
+        return cached;
+      }
+
+      // Generate PDF with retry logic
+      return this.withRetry(
+        async () => {
+          // Check renderer health
+          const isHealthy = await rendererHealthService.checkHealth();
+          if (!isHealthy) {
+            logger.warn(`${this.serviceName}: Renderer health check failed, using fallback`);
+            return await this.generatePDFFallback(cvData, template, options);
+          }
+
+          // Render template to HTML
+          const html = await templateRendererService.renderToHTML(cvData, template, {
+            paperSize: options.paperSize || 'A4',
+            orientation: options.orientation || 'portrait',
+            sectionOrder: options.sectionOrder,
+            sectionVisibility: options.sectionVisibility
+          });
+
+          // Generate PDF from HTML using Puppeteer pool
+          let pdfBuffer: Buffer;
+          try {
+            pdfBuffer = await this.generatePDFFromHTML(html, options);
+          } catch (puppeteerError) {
+            logger.error(`${this.serviceName}: Puppeteer PDF generation failed`, puppeteerError instanceof Error ? puppeteerError : new Error(String(puppeteerError)));
+            // Fallback to alternative method
+            return await this.generatePDFFallback(cvData, template, options);
+          }
+
+          // Apply protection if password provided
+          if (options.password) {
+            pdfBuffer = await fileProtectionService.protectPDF(pdfBuffer, options.password);
+          }
+
+          const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+
+          // Cache the result
+          await pdfCacheService.set(cacheKey, blob, cacheConfig.ttl);
+
+          return blob;
+        },
+        configService.getRetryConfig(),
+        { cvId: (cvData as any).id, templateId: template?.id || template?._id }
+      );
+    });
+  }
+
+  /**
+   * Generate PDF from HTML using Puppeteer pool
+   */
+  private async generatePDFFromHTML(
+    html: string,
+    options: PDFGenerationOptions
+  ): Promise<Buffer> {
+    const config = configService.getPDFConfig().puppeteer;
+    const browser = await puppeteerPoolService.getBrowser();
+    
+    try {
+      const page = await browser.newPage();
+      
+      try {
+        // Set timeout
+        page.setDefaultTimeout(config.timeout);
+        
+        // Set content
+        await page.setContent(html, {
+          waitUntil: 'networkidle0'
+        });
+
+        // Generate PDF
+        const pdfBuffer = await page.pdf({
+          format: options.paperSize || 'A4',
+          landscape: options.orientation === 'landscape',
+          printBackground: true,
+          margin: {
+            top: '0mm',
+            right: '0mm',
+            bottom: '0mm',
+            left: '0mm'
+          }
+        });
+
+        return Buffer.from(pdfBuffer);
+      } finally {
+        await page.close();
+      }
+    } finally {
+      await puppeteerPoolService.releaseBrowser(browser);
+    }
+  }
+
+  /**
+   * Fallback PDF generation using jsPDF (simpler but less accurate)
+   */
+  private async generatePDFFallback(
+    cvData: UnifiedCVDataStructure,
+    template: ITemplate,
+    options: PDFGenerationOptions
+  ): Promise<Blob> {
+    console.log('Using fallback PDF generation');
     
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+      orientation: options.orientation === 'landscape' ? 'landscape' : 'portrait',
+      unit: 'mm',
+      format: options.paperSize === 'Letter' ? 'letter' : 'a4'
+    });
     
     // Set font
     doc.setFont('helvetica');
     
     // Header
     doc.setFontSize(24);
-    doc.setTextColor(37, 99, 235); // Blue color
-    doc.text(cvData.basics.name, 20, 30);
+    doc.setTextColor(37, 99, 235);
+    doc.text(cvData.basics.name || '', 20, 30);
     
     // Contact info
     doc.setFontSize(12);
@@ -55,7 +228,7 @@ export class PDFService {
       doc.text('Work Experience', 20, yPos);
       yPos += 10;
       
-      cvData.work.forEach((exp, index) => {
+      cvData.work.forEach((exp) => {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
@@ -112,7 +285,7 @@ export class PDFService {
     }
     
     // Skills
-    if (cvData.skills.length > 0) {
+    if (cvData.skills && cvData.skills.length > 0) {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
@@ -149,4 +322,4 @@ export class PDFService {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
-} 
+}

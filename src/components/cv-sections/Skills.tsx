@@ -67,7 +67,7 @@ const Skills: React.FC<SkillsProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .skills-section {
           margin-bottom: ${template.globalStyles.spacing};
         }
