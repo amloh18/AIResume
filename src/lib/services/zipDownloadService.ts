@@ -1,5 +1,11 @@
 import JSZip from 'jszip';
 import { PDFService } from './pdfService';
+import { getCVWithTemplate } from '@/lib/cv-template-utils';
+import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { Template } from '@/models';
+import mongoose from 'mongoose';
+import { BaseService } from './baseService';
+import { configService } from './configService';
 
 export interface FileSizeEstimates {
   cv: number;
@@ -33,7 +39,20 @@ export interface JobData {
   deadline?: Date;
 }
 
-export class ZipDownloadService {
+export class ZipDownloadService extends BaseService {
+  private static instance: ZipDownloadService;
+
+  private constructor() {
+    super('ZipDownloadService');
+  }
+
+  static getInstance(): ZipDownloadService {
+    if (!ZipDownloadService.instance) {
+      ZipDownloadService.instance = new ZipDownloadService();
+    }
+    return ZipDownloadService.instance;
+  }
+
   /**
    * Generate file size estimates for download confirmation
    */
@@ -60,58 +79,67 @@ export class ZipDownloadService {
     journeyData: JourneyData,
     jobData: JobData,
     cvData?: any,
-    coverLetterData?: any
+    coverLetterData?: any,
+    cvTemplate?: any
   ): Promise<Blob> {
-    const zip = new JSZip();
+    const instance = ZipDownloadService.getInstance();
+    return instance.generateApplicationZipInternal(journeyData, jobData, cvData, coverLetterData, cvTemplate);
+  }
 
-    try {
-      // Generate CV PDF
-      if (cvData && journeyData.cvId) {
-        const cvPdf = await PDFService.generatePDF(cvData, {
-          id: 'default',
-          name: 'Default Template',
-          description: 'Default template',
-          thumbnail: '',
-          category: 'cv',
-          categories: [],
-          tier: 'free',
-          layoutType: 'one-column',
-          globalStyles: {},
-          columnLayout: {},
-          sectionStyling: {},
-          availableSections: [],
-          templateData: {},
-          isActive: true,
-          isDefault: false,
-          isPublished: true,
-          globalAccess: true,
-          version: 1
-        } as any); // Use default template
-        zip.file(`${journeyData.jobTitle} - CV.pdf`, cvPdf);
-      }
+  private async generateApplicationZipInternal(
+    journeyData: JourneyData,
+    jobData: JobData,
+    cvData?: any,
+    coverLetterData?: any,
+    cvTemplate?: any
+  ): Promise<Blob> {
+    return this.timeOperation('generateApplicationZip', async () => {
+      return this.withRetry(
+        async () => {
+          const zip = new JSZip();
 
-      // Generate Cover Letter PDF
-      if (coverLetterData && journeyData.coverLetterId) {
-        const coverLetterPdf = await this.generateCoverLetterPDF(coverLetterData);
-        zip.file(`${journeyData.jobTitle} - Cover Letter.pdf`, coverLetterPdf);
-      }
+          // Generate CV PDF with actual template
+          if (cvData && journeyData.cvId) {
+            // Get template if not provided
+            let template = cvTemplate;
+            if (!template && cvData.templateId) {
+              template = await this.getTemplate(cvData.templateId.toString());
+            }
+            
+            // Fallback to default if no template found
+            if (!template) {
+              template = this.getDefaultTemplate();
+            }
 
-      // Generate Job Description PDF
-      const jobDescriptionPdf = await this.generateJobDescriptionPDF(jobData);
-      zip.file(`${journeyData.jobTitle} - Job Description.pdf`, jobDescriptionPdf);
+            const cvPdf = await PDFService.generatePDF(cvData.cvData || cvData.data || cvData, template, {
+              paperSize: 'A4',
+              orientation: 'portrait'
+            });
+            zip.file(`${journeyData.jobTitle} - CV.pdf`, cvPdf);
+          }
 
-      // Generate Application Summary PDF
-      const summaryPdf = await this.generateApplicationSummaryPDF(journeyData, jobData);
-      zip.file(`${journeyData.jobTitle} - Application Summary.pdf`, summaryPdf);
+          // Generate Cover Letter PDF
+          if (coverLetterData && journeyData.coverLetterId) {
+            const coverLetterPdf = await this.generateCoverLetterPDF(coverLetterData);
+            zip.file(`${journeyData.jobTitle} - Cover Letter.pdf`, coverLetterPdf);
+          }
 
-      // Generate ZIP file
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      return zipBlob;
+          // Generate Job Description PDF
+          const jobDescriptionPdf = await this.generateJobDescriptionPDF(jobData);
+          zip.file(`${journeyData.jobTitle} - Job Description.pdf`, jobDescriptionPdf);
 
-    } catch (error) {
-      console.error('Error generating application ZIP:', error);
-      throw new Error('Failed to generate application files');
-    }
+          // Generate Application Summary PDF
+          const summaryPdf = await this.generateApplicationSummaryPDF(journeyData, jobData);
+          zip.file(`${journeyData.jobTitle} - Application Summary.pdf`, summaryPdf);
+
+          // Generate ZIP file
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          return zipBlob;
+        },
+        configService.getRetryConfig(),
+        { journeyId: journeyData.id, jobId: jobData.id }
+      );
+    });
   }
 
   /**
@@ -122,33 +150,68 @@ export class ZipDownloadService {
     journeyData: JourneyData,
     jobData: JobData,
     cvData?: any,
-    coverLetterData?: any
+    coverLetterData?: any,
+    cvTemplate?: any,
+    format: 'pdf' | 'docx' | 'doc' = 'pdf'
+  ): Promise<Blob> {
+    const instance = ZipDownloadService.getInstance();
+    return instance.generateIndividualFileInternal(type, journeyData, jobData, cvData, coverLetterData, cvTemplate, format);
+  }
+
+  private async generateIndividualFileInternal(
+    type: 'cv' | 'coverLetter' | 'jobDescription',
+    journeyData: JourneyData,
+    jobData: JobData,
+    cvData?: any,
+    coverLetterData?: any,
+    cvTemplate?: any,
+    format: 'pdf' | 'docx' | 'doc' = 'pdf'
   ): Promise<Blob> {
     switch (type) {
       case 'cv':
         if (!cvData || !journeyData.cvId) {
           throw new Error('CV data not available');
         }
-        return await PDFService.generatePDF(cvData, {
-          id: 'default',
-          name: 'Default Template',
-          description: 'Default template',
-          thumbnail: '',
-          category: 'cv',
-          categories: [],
-          tier: 'free',
-          layoutType: 'one-column',
-          globalStyles: {},
-          columnLayout: {},
-          sectionStyling: {},
-          availableSections: [],
-          templateData: {},
-          isActive: true,
-          isDefault: false,
-          isPublished: true,
-          globalAccess: true,
-          version: 1
-        } as any);
+        
+        // Get template if not provided
+        let template = cvTemplate;
+        if (!template && cvData.templateId) {
+          template = await ZipDownloadService.getTemplate(cvData.templateId.toString());
+        }
+        
+        // Fallback to default if no template found
+        if (!template) {
+          template = ZipDownloadService.getDefaultTemplate();
+        }
+
+        // Validate template has required properties
+        if (!template || !template.globalStyles) {
+          throw new Error('Invalid template: missing required properties');
+        }
+
+        // Get actual CV data - ensure it's in the right format
+        let actualCvData = cvData.cvData || cvData.data || cvData;
+        
+        // Ensure cvData has basics property (required for UnifiedCVDataStructure)
+        if (!actualCvData.basics && cvData.basics) {
+          actualCvData = { ...actualCvData, basics: cvData.basics };
+        }
+
+        if (format === 'pdf') {
+          return await PDFService.generatePDF(actualCvData, template, {
+            paperSize: 'A4',
+            orientation: 'portrait',
+            format: 'pdf'
+          });
+        } else {
+          // For DOCX/DOC, use docxService
+          const { docxService } = await import('./docxService');
+          return await docxService.generateDOCX(actualCvData, template, {
+            paperSize: 'A4',
+            orientation: 'portrait',
+            format
+          });
+        }
 
       case 'coverLetter':
         if (!coverLetterData || !journeyData.coverLetterId) {
@@ -162,6 +225,64 @@ export class ZipDownloadService {
       default:
         throw new Error('Invalid file type');
     }
+  }
+
+  /**
+   * Get template by ID (checks hardcoded first, then database)
+   */
+  private static async getTemplate(templateId: string): Promise<any> {
+    // Check hardcoded templates first
+    const hardcodedTemplate = HARDCODED_TEMPLATES.find(
+      t => t.id === templateId || t._id === templateId
+    );
+
+    if (hardcodedTemplate) {
+      return hardcodedTemplate;
+    }
+
+    // Try database template
+    if (mongoose.Types.ObjectId.isValid(templateId)) {
+      const template = await Template.findById(templateId);
+      if (template) {
+        return template;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get default template
+   */
+  private static getDefaultTemplate(): any {
+    // Return first hardcoded template as default, or create minimal default
+    const defaultTemplate = HARDCODED_TEMPLATES.find(t => t.name === 'Executive Professional') || HARDCODED_TEMPLATES[0];
+    
+    if (defaultTemplate) {
+      return defaultTemplate;
+    }
+
+    // Fallback minimal template
+    return {
+      id: 'default',
+      name: 'Default Template',
+      description: 'Default template',
+      thumbnail: '',
+      category: 'cv',
+      categories: [],
+      tier: 'free',
+      layoutType: 'one-column',
+      globalStyles: {},
+      columnLayout: {},
+      sectionStyling: {},
+      availableSections: [],
+      templateData: {},
+      isActive: true,
+      isDefault: false,
+      isPublished: true,
+      globalAccess: true,
+      version: 1
+    };
   }
 
   /**

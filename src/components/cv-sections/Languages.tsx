@@ -90,7 +90,7 @@ const Languages: React.FC<LanguagesProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .languages-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

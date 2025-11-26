@@ -155,13 +155,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6 text-center">
+          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-center">
             Simple,{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               Transparent Pricing
             </span>
           </h2>
-          <p className="text-sm tablet:text-base desktop:text-lg text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl mx-auto leading-relaxed">
             Choose the plan that fits your career goals. No hidden fees, no surprises.
           </p>
         </motion.div>
@@ -196,7 +196,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             
             <button
               onClick={() => setSelectedCategory('essential')}
-              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-sm tablet:text-base transition-colors duration-300 ${
+              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-xs tablet:text-sm transition-colors duration-300 ${
                 selectedCategory === 'essential'
                   ? 'text-black'
                   : 'text-white/70 hover:text-white'
@@ -206,7 +206,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             </button>
             <button
               onClick={() => setSelectedCategory('professional')}
-              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-sm tablet:text-base transition-colors duration-300 ${
+              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-xs tablet:text-sm transition-colors duration-300 ${
                 selectedCategory === 'professional'
                   ? 'text-black'
                   : 'text-white/70 hover:text-white'
@@ -296,53 +296,53 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 </motion.div>
 
                 {/* Plan Name */}
-                <h3 className="text-lg tablet:text-xl font-bold mb-3 text-white relative z-10">{plan.name}</h3>
+                <h3 className="text-base tablet:text-lg font-bold mb-3 text-white relative z-10">{plan.name}</h3>
 
                 {/* Plan Description */}
-                <p className="text-white/80 mb-4 text-xs tablet:text-sm leading-relaxed relative z-10">
+                <p className="text-white/80 mb-4 text-xs tablet:text-xs leading-relaxed relative z-10">
                   {plan.description}
                 </p>
 
                 {/* Pricing */}
                 <div className="mb-6 relative z-10">
                   {plan.key === 'free' ? (
-                    <div className="text-2xl tablet:text-3xl font-bold text-white">Free</div>
+                    <div className="text-xl tablet:text-2xl font-bold text-white">Free</div>
                   ) : (
                     <div>
                       {hasPromo ? (
                         <div>
                           <div className="flex flex-col gap-1">
                             <div className="flex items-baseline gap-2 flex-wrap">
-                              <span className="text-2xl tablet:text-3xl font-bold text-white">
+                              <span className="text-xl tablet:text-2xl font-bold text-white">
                                 {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
                               </span>
-                              <span className="text-base tablet:text-lg text-white/50 line-through">
+                              <span className="text-sm tablet:text-base text-white/50 line-through">
                                 {currencySymbol}{plan.price_one_time || plan.price_monthly}
                               </span>
                             </div>
                             {monthlyEquivalent.showMonthly && (
-                              <div className="text-sm text-white/60">
+                              <div className="text-xs text-white/60">
                                 {regionalPrice} total
                               </div>
                             )}
                           </div>
-                          <div className="text-xs tablet:text-sm text-lime-400 font-medium mt-1">
+                          <div className="text-xs tablet:text-xs text-lime-400 font-medium mt-1">
                             {plan.promotionDescription || 'Limited Time Offer!'}
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div className="text-2xl tablet:text-3xl font-bold text-white">
+                          <div className="text-xl tablet:text-2xl font-bold text-white">
                             {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
                           </div>
                           {monthlyEquivalent.showMonthly && (
-                            <div className="text-sm text-white/60 mt-1">
+                            <div className="text-xs text-white/60 mt-1">
                               {regionalPrice} total
                             </div>
                           )}
                         </div>
                       )}
-                      <div className="text-white/60 text-xs tablet:text-sm mt-1">
+                      <div className="text-white/60 text-xs tablet:text-xs mt-1">
                         {plan.key === 'day_pass' 
                           ? 'one-time' 
                           : monthlyEquivalent.showMonthly 
@@ -365,7 +365,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                       >
                         <Check size={18} className="text-lime-400 flex-shrink-0 mt-0.5" />
                       </motion.div>
-                      <span className="text-white/80 text-sm tablet:text-base leading-relaxed">{feature}</span>
+                      <span className="text-white/80 text-xs tablet:text-sm leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -413,7 +413,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <p className="text-white/70 mb-4 text-sm">Have questions about pricing?</p>
+          <p className="text-white/70 mb-4 text-xs">Have questions about pricing?</p>
           <motion.button 
             className="group text-lime-400 hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ x: 5 }}

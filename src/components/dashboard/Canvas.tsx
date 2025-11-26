@@ -766,7 +766,7 @@ const Canvas: React.FC = () => {
         // CV download
         if (documentType === 'cv') {
           if (format === 'pdf') {
-            window.open(`/api/cvs/download/${selectedCVForDownload.id}?format=pdf`, '_blank');
+            window.open(`/api/cvs/${selectedCVForDownload.id}/download?format=pdf`, '_blank');
           } else {
             const response = await fetch(`/api/cvs/${selectedCVForDownload.id}/export?format=${format}`);
             if (response.ok) {
@@ -787,11 +787,11 @@ const Canvas: React.FC = () => {
           if (journey?.coverLetterId) {
             // Download CV
             if (format === 'pdf') {
-              window.open(`/api/cvs/download/${selectedCVForDownload.id}?format=pdf`, '_blank');
+              window.open(`/api/cvs/${selectedCVForDownload.id}/download?format=pdf`, '_blank');
             }
             // Wait a bit then download cover letter
             setTimeout(() => {
-              window.open(`/api/cover-letters/download/${journey.coverLetterId}?format=${format}`, '_blank');
+              window.open(`/api/cover-letters/${journey.coverLetterId}?format=${format}`, '_blank');
             }, 500);
           }
         } else if (documentType === 'all') {
@@ -801,17 +801,17 @@ const Canvas: React.FC = () => {
             window.open(`/api/application-journey/${journey.journeyId}/download?type=all`, '_blank');
           } else {
             // No journey, just download CV
-            window.open(`/api/cvs/download/${selectedCVForDownload.id}`, '_blank');
+              window.open(`/api/cvs/${selectedCVForDownload.id}/download`, '_blank');
           }
         }
       } else if (selectedCoverLetterForDownload) {
         // Cover Letter download
         if (documentType === 'coverLetter') {
           if (format === 'pdf') {
-            window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}?format=pdf`, '_blank');
+            window.open(`/api/cover-letters/${selectedCoverLetterForDownload.id}?format=pdf`, '_blank');
           } else {
             // For DOCX/DOC, might need to check if there's an export endpoint
-            window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}?format=${format}`, '_blank');
+            window.open(`/api/cover-letters/${selectedCoverLetterForDownload.id}/download?format=${format}`, '_blank');
           }
         } else if (documentType === 'cvAndCoverLetter') {
           // Download cover letter first, then CV
@@ -819,11 +819,11 @@ const Canvas: React.FC = () => {
           if (journey?.cvId) {
             // Download cover letter
             if (format === 'pdf') {
-              window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}?format=pdf`, '_blank');
+              window.open(`/api/cover-letters/${selectedCoverLetterForDownload.id}?format=pdf`, '_blank');
             }
             // Wait a bit then download CV
             setTimeout(() => {
-              window.open(`/api/cvs/download/${journey.cvId}?format=${format}`, '_blank');
+              window.open(`/api/cvs/${journey.cvId}/download?format=${format}`, '_blank');
             }, 500);
           }
         } else if (documentType === 'all') {
@@ -833,7 +833,7 @@ const Canvas: React.FC = () => {
             window.open(`/api/application-journey/${journey.journeyId}/download?type=all`, '_blank');
           } else {
             // No journey, just download cover letter
-            window.open(`/api/cover-letters/download/${selectedCoverLetterForDownload.id}`, '_blank');
+            window.open(`/api/cover-letters/${selectedCoverLetterForDownload.id}/download`, '_blank');
           }
         }
       }

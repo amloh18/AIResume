@@ -43,7 +43,7 @@ const Profile: React.FC<ProfileProps> = ({
         />
       </div>
 
-      <style jsx>{`
+      <style>{`
         .profile-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

@@ -97,7 +97,7 @@ const Volunteer: React.FC<VolunteerProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .volunteer-section {
           margin-bottom: ${template.globalStyles.spacing};
         }

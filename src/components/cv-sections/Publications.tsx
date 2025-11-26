@@ -86,7 +86,7 @@ const Publications: React.FC<PublicationsProps> = ({
         ))}
       </div>
 
-      <style jsx>{`
+      <style>{`
         .publications-section {
           margin-bottom: ${template.globalStyles.spacing};
         }
