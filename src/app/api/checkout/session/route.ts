@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
-import { stripe } from '@/lib/payment/stripe';
+import { getStripe } from '@/lib/payment/stripe';
 import { getRazorpay } from '@/lib/payment/razorpay';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { getPricingForPlan } from '@/lib/services/countryPricingService';
@@ -904,16 +904,39 @@ async function handleDayPassPayment(
       });
     }
 
-    if (!stripe) {
-      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+    // Validate Stripe configuration before creating payment
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    
+    if (!secretKey) {
+      console.error('❌ Stripe Payment Creation Failed (Day Pass): STRIPE_SECRET_KEY is missing');
+      console.error('   → This is the MOST COMMON issue on Vercel deployments');
+      console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+      console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
+      console.error('   → Redeploy after adding environment variables');
+      return NextResponse.json({ 
+        error: 'Stripe is currently unavailable. Please contact support.',
+        details: 'Server configuration error'
+      }, { status: 500 });
     }
+    
+    const stripe = getStripe();
+    if (!stripe) {
+      console.error('❌ Stripe instance initialization failed (Day Pass)');
+      return NextResponse.json({ 
+        error: 'Stripe is currently unavailable. Please contact support.',
+        details: 'Server configuration error'
+      }, { status: 500 });
+    }
+    
     try {
       // Use Stripe price ID from plan or country pricing
       const stripePriceId = countryPricing?.stripePriceIds?.dayPass || plan.stripePriceId_one_time;
       
       if (stripePriceId) {
         // Use existing Stripe price
-        const session = await stripe.checkout.sessions.create({
+        let session;
+        try {
+          session = await stripe.checkout.sessions.create({
           customer: user.subscription?.providerCustomerId || undefined,
           payment_method_types: ['card'],
           line_items: [{
@@ -939,7 +962,9 @@ async function handleDayPassPayment(
       }
 
       // Fallback: Create PaymentIntent for one-time payment
-      const paymentIntent = await stripe.paymentIntents.create({
+      let paymentIntent;
+      try {
+        paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(amount),
         currency: currency.toLowerCase(),
         metadata: {
@@ -952,7 +977,31 @@ async function handleDayPassPayment(
         customer: user.subscription?.providerCustomerId || undefined,
         description: `Day Pass - ${plan.name}`,
         receipt_email: billingDetails.email || user.email
-      });
+        });
+      } catch (paymentIntentError: any) {
+        console.error('❌ Stripe payment intent creation failed (Day Pass):', paymentIntentError);
+        
+        // Extract detailed error information
+        if (paymentIntentError?.type) {
+          console.error('Stripe API Error Details:', {
+            type: paymentIntentError.type,
+            code: paymentIntentError.code,
+            message: paymentIntentError.message,
+            param: paymentIntentError.param,
+            decline_code: paymentIntentError.decline_code,
+          });
+          
+          // Check for common errors
+          if (paymentIntentError.message?.toLowerCase().includes('api key') || 
+              paymentIntentError.message?.toLowerCase().includes('authentication')) {
+            console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+            console.error('   → Verify the secret key in Vercel Environment Variables');
+            console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+          }
+        }
+        
+        throw paymentIntentError; // Re-throw to be caught by outer catch block
+      }
 
       return NextResponse.json({
         provider: 'stripe',
@@ -1137,11 +1186,68 @@ async function handleDayPassPayment(
       });
       console.log('Full order params JSON (day pass):', JSON.stringify(orderParams, null, 2));
       
+      // Validate Razorpay configuration before creating order
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      
+      if (!keySecret) {
+        console.error('❌ Razorpay Order Creation Failed (Day Pass): RAZORPAY_KEY_SECRET is missing');
+        console.error('   → This is the MOST COMMON issue on Vercel deployments');
+        console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+        console.error('   → Ensure RAZORPAY_KEY_SECRET is set (without NEXT_PUBLIC_ prefix)');
+        console.error('   → Redeploy after adding environment variables');
+        return NextResponse.json({ 
+          error: 'Razorpay is currently unavailable. Please contact support.',
+          details: 'Server configuration error'
+        }, { status: 500 });
+      }
+      
+      if (!keyId) {
+        console.error('❌ Razorpay Order Creation Failed (Day Pass): RAZORPAY_KEY_ID is missing');
+        return NextResponse.json({ 
+          error: 'Razorpay is currently unavailable. Please contact support.',
+          details: 'Server configuration error'
+        }, { status: 500 });
+      }
+      
       const razorpayInstance = getRazorpay();
       if (!razorpayInstance) {
-        return NextResponse.json({ error: 'Razorpay is not configured' }, { status: 500 });
+        console.error('❌ Razorpay instance initialization failed (Day Pass)');
+        return NextResponse.json({ 
+          error: 'Razorpay is currently unavailable. Please contact support.',
+          details: 'Server configuration error'
+        }, { status: 500 });
       }
-      const order = await razorpayInstance.orders.create(orderParams);
+      
+      let order;
+      try {
+        order = await razorpayInstance.orders.create(orderParams);
+      } catch (orderError: any) {
+        console.error('❌ Razorpay order creation failed (Day Pass):', orderError);
+        
+        // Extract detailed error information
+        if (orderError?.error) {
+          const razorpayError = orderError.error;
+          console.error('Razorpay API Error Details:', {
+            code: razorpayError.code,
+            description: razorpayError.description,
+            field: razorpayError.field,
+            source: razorpayError.source,
+            step: razorpayError.step,
+            reason: razorpayError.reason,
+          });
+          
+          // Check for common errors
+          if (razorpayError.description?.toLowerCase().includes('key') || 
+              razorpayError.description?.toLowerCase().includes('secret')) {
+            console.error('⚠️  This error suggests RAZORPAY_KEY_SECRET may be incorrect or missing');
+            console.error('   → Verify the secret key in Vercel Environment Variables');
+            console.error('   → Ensure it matches your Razorpay Dashboard (Test vs Live mode)');
+          }
+        }
+        
+        throw orderError; // Re-throw to be caught by outer catch block
+      }
       
       // Verify the order was created with the correct amount
       console.log('Razorpay order created (day pass) - verification:', {
@@ -1386,20 +1492,66 @@ async function handleProPlanPayment(
       }
     }
 
-    if (!stripe) {
-      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 500 });
+    // Validate Stripe configuration before creating payment
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    
+    if (!secretKey) {
+      console.error('❌ Stripe Payment Creation Failed (Pro Plan): STRIPE_SECRET_KEY is missing');
+      console.error('   → This is the MOST COMMON issue on Vercel deployments');
+      console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+      console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
+      console.error('   → Redeploy after adding environment variables');
+      return NextResponse.json({ 
+        error: 'Stripe is currently unavailable. Please contact support.',
+        details: 'Server configuration error'
+      }, { status: 500 });
     }
+    
+    const stripe = getStripe();
+    if (!stripe) {
+      console.error('❌ Stripe instance initialization failed (Pro Plan)');
+      return NextResponse.json({ 
+        error: 'Stripe is currently unavailable. Please contact support.',
+        details: 'Server configuration error'
+      }, { status: 500 });
+    }
+    
     try {
       // Create or get Stripe customer
       let customerId = user.subscription?.providerCustomerId;
       if (!customerId) {
-        const customer = await stripe.customers.create({
+        let customer;
+        try {
+          customer = await stripe.customers.create({
           email: user.email,
           name: billingDetails.name || `${user.firstName} ${user.lastName}`,
           metadata: {
             userId: user._id.toString()
           }
-        });
+          });
+        } catch (customerError: any) {
+          console.error('❌ Stripe customer creation failed (Pro Plan):', customerError);
+          
+          // Extract detailed error information
+          if (customerError?.type) {
+            console.error('Stripe API Error Details:', {
+              type: customerError.type,
+              code: customerError.code,
+              message: customerError.message,
+              param: customerError.param,
+            });
+            
+            // Check for common errors
+            if (customerError.message?.toLowerCase().includes('api key') || 
+                customerError.message?.toLowerCase().includes('authentication')) {
+              console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+              console.error('   → Verify the secret key in Vercel Environment Variables');
+              console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+            }
+          }
+          
+          throw customerError; // Re-throw to be caught by outer catch block
+        }
         customerId = customer.id;
         
         // Update user with customer ID
@@ -1484,7 +1636,32 @@ async function handleProPlanPayment(
         };
       }
 
-      const session = await stripe.checkout.sessions.create(sessionConfig);
+      let session;
+      try {
+        session = await stripe.checkout.sessions.create(sessionConfig);
+      } catch (sessionError: any) {
+        console.error('❌ Stripe checkout session creation failed (Pro Plan):', sessionError);
+        
+        // Extract detailed error information
+        if (sessionError?.type) {
+          console.error('Stripe API Error Details:', {
+            type: sessionError.type,
+            code: sessionError.code,
+            message: sessionError.message,
+            param: sessionError.param,
+          });
+          
+          // Check for common errors
+          if (sessionError.message?.toLowerCase().includes('api key') || 
+              sessionError.message?.toLowerCase().includes('authentication')) {
+            console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+            console.error('   → Verify the secret key in Vercel Environment Variables');
+            console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+          }
+        }
+        
+        throw sessionError; // Re-throw to be caught by outer catch block
+      }
 
       return NextResponse.json({
         provider: 'stripe',
@@ -1851,8 +2028,68 @@ async function handleProPlanPayment(
       });
       console.log('Full order params JSON:', JSON.stringify(orderParams, null, 2));
       
-      // Reuse razorpayInstance already declared above
-      const order = await razorpayInstance.orders.create(orderParams);
+      // Validate Razorpay configuration before creating order
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      
+      if (!keySecret) {
+        console.error('❌ Razorpay Order Creation Failed (Pro Plan): RAZORPAY_KEY_SECRET is missing');
+        console.error('   → This is the MOST COMMON issue on Vercel deployments');
+        console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+        console.error('   → Ensure RAZORPAY_KEY_SECRET is set (without NEXT_PUBLIC_ prefix)');
+        console.error('   → Redeploy after adding environment variables');
+        return NextResponse.json({ 
+          error: 'Razorpay is currently unavailable. Please contact support.',
+          details: 'Server configuration error'
+        }, { status: 500 });
+      }
+      
+      if (!keyId) {
+        console.error('❌ Razorpay Order Creation Failed (Pro Plan): RAZORPAY_KEY_ID is missing');
+        return NextResponse.json({ 
+          error: 'Razorpay is currently unavailable. Please contact support.',
+          details: 'Server configuration error'
+        }, { status: 500 });
+      }
+      
+      // Reuse razorpayInstance already declared above, but validate it exists
+      if (!razorpayInstance) {
+        console.error('❌ Razorpay instance initialization failed (Pro Plan)');
+        return NextResponse.json({ 
+          error: 'Razorpay is currently unavailable. Please contact support.',
+          details: 'Server configuration error'
+        }, { status: 500 });
+      }
+      
+      let order;
+      try {
+        order = await razorpayInstance.orders.create(orderParams);
+      } catch (orderError: any) {
+        console.error('❌ Razorpay order creation failed (Pro Plan):', orderError);
+        
+        // Extract detailed error information
+        if (orderError?.error) {
+          const razorpayError = orderError.error;
+          console.error('Razorpay API Error Details:', {
+            code: razorpayError.code,
+            description: razorpayError.description,
+            field: razorpayError.field,
+            source: razorpayError.source,
+            step: razorpayError.step,
+            reason: razorpayError.reason,
+          });
+          
+          // Check for common errors
+          if (razorpayError.description?.toLowerCase().includes('key') || 
+              razorpayError.description?.toLowerCase().includes('secret')) {
+            console.error('⚠️  This error suggests RAZORPAY_KEY_SECRET may be incorrect or missing');
+            console.error('   → Verify the secret key in Vercel Environment Variables');
+            console.error('   → Ensure it matches your Razorpay Dashboard (Test vs Live mode)');
+          }
+        }
+        
+        throw orderError; // Re-throw to be caught by outer catch block
+      }
       
       // Verify the order was created with the correct amount
       console.log('Razorpay order created - verification:', {

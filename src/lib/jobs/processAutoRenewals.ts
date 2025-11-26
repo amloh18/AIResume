@@ -1,7 +1,7 @@
 import subscriptionService from '@/lib/services/subscriptionService';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
-import { stripe } from '@/lib/payment/stripe';
+import { getStripe } from '@/lib/payment/stripe';
 import { getRazorpay } from '@/lib/payment/razorpay';
 
 /**
@@ -43,7 +43,12 @@ export async function processAutoRenewals() {
         }
         
         // Check payment status with provider
-        if (subscription.provider === 'stripe' && stripe) {
+        if (subscription.provider === 'stripe') {
+          const stripe = getStripe();
+          if (!stripe) {
+            console.warn(`Stripe not configured, skipping renewal for user ${user._id}`);
+            continue;
+          }
           const stripeSubscription = await stripe.subscriptions.retrieve(
             subscription.providerSubscriptionId
           );

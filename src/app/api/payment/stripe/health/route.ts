@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe } from '@/lib/payment/stripe';
+import { getStripe } from '@/lib/payment/stripe';
 
 /**
  * Stripe Health Check Endpoint
@@ -9,12 +9,13 @@ import { stripe } from '@/lib/payment/stripe';
  */
 export async function GET(request: NextRequest) {
   try {
+    const stripe = getStripe();
     if (!stripe) {
       return NextResponse.json(
         { 
           healthy: false, 
           provider: 'stripe',
-          error: 'Stripe not configured' 
+          error: 'Stripe not configured. Check STRIPE_SECRET_KEY environment variable.' 
         },
         { status: 503 }
       );
