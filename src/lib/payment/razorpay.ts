@@ -8,22 +8,66 @@ let razorpayInstance: Razorpay | null = null;
  * Get Razorpay instance with lazy initialization
  * Checks environment variables at runtime (when function is called)
  * rather than at module load time (which happens before Vercel injects env vars)
+ * 
+ * CRITICAL: In production (Vercel), ensure RAZORPAY_KEY_SECRET is set in:
+ * - Vercel Dashboard → Project → Settings → Environment Variables
+ * - Without NEXT_PUBLIC_ prefix (server-side only)
+ * - Redeploy after adding environment variables
  */
 function getRazorpayInstance(): Razorpay | null {
   // Always check at runtime - don't rely on cached value
   const keyId = process.env.RAZORPAY_KEY_ID;
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
   
-  if (!keyId || !keySecret) {
+  // Detailed validation with helpful error messages
+  if (!keyId && !keySecret) {
+    console.error('❌ Razorpay Configuration Error: Both RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are missing.');
+    console.error('   → Add RAZORPAY_KEY_ID to Vercel Environment Variables');
+    console.error('   → Add RAZORPAY_KEY_SECRET to Vercel Environment Variables (without NEXT_PUBLIC_ prefix)');
+    console.error('   → Redeploy after adding environment variables');
     return null;
+  }
+  
+  if (!keyId) {
+    console.error('❌ Razorpay Configuration Error: RAZORPAY_KEY_ID is missing.');
+    console.error('   → Add RAZORPAY_KEY_ID to Vercel Environment Variables');
+    console.error('   → Redeploy after adding environment variables');
+    return null;
+  }
+  
+  if (!keySecret) {
+    console.error('❌ Razorpay Configuration Error: RAZORPAY_KEY_SECRET is missing.');
+    console.error('   → This is the MOST COMMON issue on Vercel deployments');
+    console.error('   → Add RAZORPAY_KEY_SECRET to Vercel Dashboard → Project → Settings → Environment Variables');
+    console.error('   → Ensure it does NOT have NEXT_PUBLIC_ prefix (server-side only)');
+    console.error('   → Redeploy after adding environment variables');
+    return null;
+  }
+  
+  // Validate key formats (helpful for detecting test vs live mode issues)
+  const isTestKey = keyId.startsWith('rzp_test_');
+  const isLiveKey = keyId.startsWith('rzp_live_');
+  
+  if (!isTestKey && !isLiveKey) {
+    console.warn('⚠️  Razorpay Key ID format may be invalid. Expected format: rzp_test_... or rzp_live_...');
+  }
+  
+  if (process.env.NODE_ENV === 'production' && isTestKey) {
+    console.warn('⚠️  Using Razorpay TEST keys in production. Ensure this is intentional.');
   }
   
   // Create instance if not already created (lazy initialization with caching)
   if (!razorpayInstance) {
-    razorpayInstance = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
+    try {
+      razorpayInstance = new Razorpay({
+        key_id: keyId,
+        key_secret: keySecret,
+      });
+      console.log('✅ Razorpay instance initialized successfully');
+    } catch (error) {
+      console.error('❌ Failed to initialize Razorpay instance:', error);
+      return null;
+    }
   }
   
   return razorpayInstance;
@@ -62,11 +106,34 @@ export interface CreateSubscriptionParams {
 export class RazorpayService {
   // Create an order for one-time payments
   static async createOrder(params: CreateOrderParams) {
+    // Validate environment variables before attempting to create order
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    
+    if (!keySecret) {
+      console.error('❌ Razorpay Order Creation Failed: RAZORPAY_KEY_SECRET is missing');
+      console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
+      console.error('   → Ensure RAZORPAY_KEY_SECRET is set (without NEXT_PUBLIC_ prefix)');
+      console.error('   → Redeploy after adding environment variables');
+      return {
+        success: false,
+        error: 'Razorpay secret key is not configured. Please check server environment variables.',
+      };
+    }
+    
+    if (!keyId) {
+      console.error('❌ Razorpay Order Creation Failed: RAZORPAY_KEY_ID is missing');
+      return {
+        success: false,
+        error: 'Razorpay key ID is not configured. Please check server environment variables.',
+      };
+    }
+    
     const razorpayInstance = getRazorpayInstance();
     if (!razorpayInstance) {
       return {
         success: false,
-        error: 'Razorpay is not configured',
+        error: 'Razorpay is not configured. Please check server environment variables.',
       };
     }
     
@@ -78,6 +145,12 @@ export class RazorpayService {
         notes: params.notes,
       });
 
+      console.log('✅ Razorpay order created successfully:', {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+      });
+
       return {
         success: true,
         orderId: order.id,
@@ -85,11 +158,29 @@ export class RazorpayService {
         currency: order.currency,
         receipt: order.receipt,
       };
-    } catch (error) {
-      console.error('Razorpay createOrder error:', error);
+    } catch (error: any) {
+      console.error('❌ Razorpay createOrder error:', error);
+      
+      // Extract detailed error information from Razorpay API
+      let errorMessage = 'Failed to create Razorpay order';
+      if (error?.error) {
+        const razorpayError = error.error;
+        errorMessage = razorpayError.description || razorpayError.message || errorMessage;
+        console.error('Razorpay API Error Details:', {
+          code: razorpayError.code,
+          description: razorpayError.description,
+          field: razorpayError.field,
+          source: razorpayError.source,
+          step: razorpayError.step,
+          reason: razorpayError.reason,
+        });
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }
