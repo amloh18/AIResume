@@ -31,11 +31,11 @@ function AICareerReportContent() {
   // Sync URL with current step to maintain state on refresh
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const currentUrl = new URL(window.location.href);
     const urlStep = currentUrl.searchParams.get('step');
     const currentStepStr = state.currentStep.toString();
-    
+
     // Only update URL if it doesn't match current step (avoid infinite loops)
     if (urlStep !== currentStepStr) {
       currentUrl.searchParams.set('step', currentStepStr);
@@ -50,7 +50,7 @@ function AICareerReportContent() {
     const savedData = localStorage.getItem('ai-career-report-data');
     let savedStep: number | null = null;
     let hasSavedCvData = false;
-    
+
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
@@ -81,7 +81,7 @@ function AICareerReportContent() {
     // Flow Detection: Determine which flow user is in
     // Flow 3 (Edit Master): editMaster=true param present
     // Flow 1/2 (New Master CV): No editMaster param
-    
+
     // Priority: Flow 3 (editMaster) > URL step param > Saved step (if has data) > Mode param > Default
     if (editMasterParam) {
       // Flow 3: Master CV Edit - start at step 3 (skip step 1 and 2)
@@ -138,7 +138,7 @@ function AICareerReportContent() {
 
       try {
         console.log('🔍 Loading job data for ID:', state.jobId);
-        
+
         const response = await fetch(`/api/jobs/${state.jobId}?userId=${session.user.id}`);
         const result = await response.json();
 
@@ -215,7 +215,7 @@ function AICareerReportContent() {
     };
 
     window.addEventListener('popstate', handlePopState);
-    
+
     // Periodic security check to catch any edge cases
     const securityCheckInterval = setInterval(() => {
       if (typeof window !== 'undefined') {
@@ -228,7 +228,7 @@ function AICareerReportContent() {
         }
       }
     }, 2000); // Check every 2 seconds
-    
+
     return () => {
       window.removeEventListener('popstate', handlePopState);
       clearInterval(securityCheckInterval);
@@ -244,7 +244,7 @@ function AICareerReportContent() {
       router.push('/dashboard');
       return;
     }
-    
+
     if (state.currentStep > 1) {
       prevStep();
     } else {
@@ -336,10 +336,10 @@ function AICareerReportContent() {
 
               {/* Logo */}
               <div className="flex items-center gap-3">
-                <Image 
-                  src="/images/logo.png" 
-                  alt="CV Circle Logo" 
-                  width={40} 
+                <Image
+                  src="/images/logo.png"
+                  alt="CV Circle Logo"
+                  width={40}
                   height={40}
                   className="object-contain rounded-lg"
                   priority
@@ -376,12 +376,23 @@ function AICareerReportContent() {
                   Data Saved
                 </motion.div>
               )}
-              
+
               {/* Report, CV Preview and Authentication buttons */}
-              {session?.user ? (
-                <>
-                  {state.currentStep === 3 && (
-                    <>
+              <div className="flex items-center gap-4">
+                {/* Preview Button - Visible to all users on Step 3 */}
+                {state.currentStep === 3 && (
+                  <button
+                    onClick={() => setShowPreview(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#80FF00] text-black rounded-lg font-medium transition-colors hover:bg-[#70e600]"
+                  >
+                    <Eye size={16} />
+                    Preview
+                  </button>
+                )}
+
+                {session?.user ? (
+                  <>
+                    {state.currentStep === 3 && (
                       <button
                         onClick={() => setShowReport(true)}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
@@ -389,24 +400,17 @@ function AICareerReportContent() {
                         <FileText size={16} />
                         Report
                       </button>
+                    )}
                     <button
-                      onClick={() => setShowPreview(true)}
-                      className="flex items-center gap-2 px-4 py-2 bg-[#80FF00] text-black rounded-lg font-medium transition-colors hover:bg-[#70e600]"
+                      onClick={() => signOut({ callbackUrl: '/' })}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-[5px] transition-colors"
                     >
-                      <Eye size={16} />
-                        Preview
+                      <LogOut size={16} />
+                      Logout
                     </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => signOut({ callbackUrl: '/' })}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-[5px] transition-colors"
-                  >
-                    <LogOut size={16} />
-                    Logout
-                  </button>
-                </>
-              ) : null}
+                  </>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
@@ -457,10 +461,10 @@ function AICareerReportContent() {
 
       {/* CV Preview Side Panel */}
       <CVPreviewSidePanel
-          isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          cvData={state.cvData}
-        />
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        cvData={state.cvData}
+      />
 
       {/* Career Report Side Panel */}
       <CareerReportSidePanel

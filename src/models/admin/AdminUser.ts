@@ -7,17 +7,20 @@ export interface IAdminUser extends Document {
   email: string;
   firstName: string;
   lastName: string;
-  
+
   // Authentication info
   authProvider: 'google' | 'firebase' | 'credentials';
   isEmailVerified: boolean;
-  
+
+  // Location
+  region?: string;
+
   // Subscription info
   currentPlanKey: string;
   subscriptionStatus: 'active' | 'inactive' | 'cancelled' | 'past_due';
   subscriptionStartDate?: Date;
   subscriptionEndDate?: Date;
-  
+
   // Usage metrics
   usage: {
     cvJourneyCount: number;
@@ -26,11 +29,11 @@ export interface IAdminUser extends Document {
     exportCount: number;
     atsCheckCount: number;
   };
-  
+
   // Activity tracking
   lastActiveAt?: Date;
   registrationDate: Date;
-  
+
   // Campaign tracking
   emailCampaigns: {
     received: number;
@@ -39,15 +42,15 @@ export interface IAdminUser extends Document {
     unsubscribed: boolean;
     unsubscribedAt?: Date;
   };
-  
+
   // User status
   isDeleted: boolean;
   deletedAt?: Date;
-  
+
   // Sync metadata
   lastSyncedAt: Date;
   syncVersion: number;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -85,6 +88,10 @@ const AdminUserSchema = new Schema<IAdminUser>(
     isEmailVerified: {
       type: Boolean,
       default: false,
+    },
+    region: {
+      type: String,
+      trim: true,
     },
     currentPlanKey: {
       type: String,

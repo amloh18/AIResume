@@ -11,7 +11,11 @@ export function isInAppToastEligible(notification: INotification, isAuthenticate
     return false;
   }
 
-  const channels = Array.isArray(notification.channels) ? notification.channels : [];
+  // Fix: Default to ['in-app'] if channels is undefined/null (common in lean queries or old data)
+  const channels = Array.isArray(notification.channels) && notification.channels.length > 0
+    ? notification.channels
+    : ['in-app'];
+
   return channels.includes('in-app');
 }
 

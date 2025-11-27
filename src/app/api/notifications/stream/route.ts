@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
       await getConnection();
     } catch (dbError) {
       console.error('Database connection error in stream route:', dbError);
-      return new Response(JSON.stringify({ error: 'Database connection failed' }), { 
+      return new Response(JSON.stringify({ error: 'Database connection failed' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       const User = (await import('@/models/User')).default;
       const user = await User.findOne({ email: session.user.email });
       if (!user) {
-        return new Response(JSON.stringify({ error: 'User not found' }), { 
+        return new Response(JSON.stringify({ error: 'User not found' }), {
           status: 404,
           headers: { 'Content-Type': 'application/json' }
         });
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       userId = user._id.toString();
     } catch (userError) {
       console.error('Error finding user in stream route:', userError);
-      return new Response(JSON.stringify({ error: 'Failed to find user' }), { 
+      return new Response(JSON.stringify({ error: 'Failed to find user' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
@@ -48,7 +48,8 @@ export async function GET(request: NextRequest) {
     // Create SSE stream with timeout handling
     // Determine if running locally (for timeout and heartbeat adjustments)
     const isLocal = process.env.NODE_ENV === 'development' || !process.env.VERCEL;
-    
+
+    const encoder = new TextEncoder();
     const stream = new ReadableStream({
       start(controller) {
         try {
@@ -56,7 +57,6 @@ export async function GET(request: NextRequest) {
           connections.set(userId, controller);
 
           // Send initial connection message
-          const encoder = new TextEncoder();
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
         } catch (startError) {
           console.error('Error in stream start:', startError);
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           try {
             // Check for unread notifications created in the last 5 seconds
             const fiveSecondsAgo = new Date(Date.now() - 5000);
-            
+
             // Ensure userId is a valid ObjectId string
             if (!userId || typeof userId !== 'string') {
               console.error('Invalid userId in stream interval:', userId);
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
         // Set up heartbeat to keep connection alive and detect disconnects
         // For local: every 30 seconds, for production: every 10 seconds
         const heartbeatIntervalMs = isLocal ? 30000 : 10000;
-        
+
         let heartbeatCount = 0;
         const heartbeatInterval = setInterval(() => {
           try {
@@ -140,9 +140,9 @@ export async function GET(request: NextRequest) {
         }, heartbeatIntervalMs);
 
         // Set connection timeout
-        // For local development: 5 minutes, for production: 25 seconds (before Vercel's 30s limit)
-        const timeoutDuration = isLocal ? 300000 : 25000; // 5 minutes local, 25 seconds production
-        
+        // For local development: 5 minutes, for production: 15 seconds (well within Vercel's 30s limit)
+        const timeoutDuration = isLocal ? 300000 : 15000; // 5 minutes local, 15 seconds production
+
         const connectionTimeout = setTimeout(() => {
           console.log(`⏱️ SSE connection timeout for user ${userId}, closing gracefully`);
           clearInterval(interval);
@@ -184,11 +184,11 @@ export async function GET(request: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('SSE stream error details:', { errorMessage, errorStack, error });
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Internal Server Error',
       message: errorMessage,
       details: process.env.NODE_ENV === 'development' ? errorStack : undefined
-    }), { 
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

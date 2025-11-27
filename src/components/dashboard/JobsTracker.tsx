@@ -105,7 +105,7 @@ const JobsTracker: React.FC = () => {
 
   // Focus mode
   const { isFocusMode, toggleFocusMode } = useFocusMode();
-  
+
   // Credit exhaustion handler
   const { showExhaustionModal } = useCreditExhaustionHandler();
 
@@ -196,40 +196,40 @@ const JobsTracker: React.FC = () => {
           // Preserve optimistic updates for jobs that are currently being updated
           const existingJob = jobs.find(j => j.id === job.id);
           const isBeingUpdated = isUpdatingJobStatus.has(job.id);
-          
+
           return {
-          id: job.id,
-          _id: job.id,
-          userId: job.userId,
-          jobTitle: job.jobTitle,
-          title: job.jobTitle,
-          company: job.company,
+            id: job.id,
+            _id: job.id,
+            userId: job.userId,
+            jobTitle: job.jobTitle,
+            title: job.jobTitle,
+            company: job.company,
             // Preserve optimistic status if job is being updated
             status: (isBeingUpdated && existingJob) ? existingJob.status : job.status,
-          jobDescription: job.jobDescription,
-          description: job.jobDescription,
-          location: job.location,
-          jobUrl: job.jobUrl,
-          salary: job.salary,
-          jobType: job.type,
-          type: job.type,
-          source: job.source,
-          sourceUrl: job.sourceUrl,
-          postedDate: job.postedDate,
-          applicationDate: job.applicationDate,
-          deadline: job.deadline,
-          priority: job.priority || 'medium',
-          notes: job.notes,
-          sponsorship: job.sponsorship,
-          tags: job.tags || [],
-          contactDetails: job.contactDetails || { name: '', email: '', phone: '', role: '' },
-          interviews: job.interviews || [],
-          followUps: job.followUps || [],
-          attachments: job.attachments || [],
-          atsScore: job.atsScore,
-          isArchived: job.isArchived || false,
-          createdAt: job.createdAt,
-          updatedAt: job.updatedAt
+            jobDescription: job.jobDescription,
+            description: job.jobDescription,
+            location: job.location,
+            jobUrl: job.jobUrl,
+            salary: job.salary,
+            jobType: job.type,
+            type: job.type,
+            source: job.source,
+            sourceUrl: job.sourceUrl,
+            postedDate: job.postedDate,
+            applicationDate: job.applicationDate,
+            deadline: job.deadline,
+            priority: job.priority || 'medium',
+            notes: job.notes,
+            sponsorship: job.sponsorship,
+            tags: job.tags || [],
+            contactDetails: job.contactDetails || { name: '', email: '', phone: '', role: '' },
+            interviews: job.interviews || [],
+            followUps: job.followUps || [],
+            attachments: job.attachments || [],
+            atsScore: job.atsScore,
+            isArchived: job.isArchived || false,
+            createdAt: job.createdAt,
+            updatedAt: job.updatedAt
           };
         });
         setJobs(transformedJobs);
@@ -405,14 +405,35 @@ const JobsTracker: React.FC = () => {
   }, [filteredAndSortedJobs, isFocusMode]);
 
   // Group jobs by status - memoized to ensure reactivity
-  const jobsByStatus = React.useMemo(() => ({
-    draft: filteredJobsForView.filter(job => job.status === 'draft'),
-    created: filteredJobsForView.filter(job => job.status === 'created'),
-    applied: filteredJobsForView.filter(job => job.status === 'applied'),
-    interview: filteredJobsForView.filter(job => job.status === 'interview'),
-    offer: filteredJobsForView.filter(job => job.status === 'offer'),
-    rejected: filteredJobsForView.filter(job => job.status === 'rejected')
-  }), [filteredJobsForView]);
+  const jobsByStatus = React.useMemo(() => {
+    // Debug logging
+    console.log('🔍 JobsTracker - Filtering jobs:', {
+      total: jobs.length,
+      filtered: filteredJobsForView.length,
+      filterStatus,
+      isFocusMode
+    });
+
+    const grouped = {
+      draft: filteredJobsForView.filter(job => job.status === 'draft'),
+      created: filteredJobsForView.filter(job => job.status === 'created'),
+      applied: filteredJobsForView.filter(job => job.status === 'applied'),
+      interview: filteredJobsForView.filter(job => job.status === 'interview'),
+      offer: filteredJobsForView.filter(job => job.status === 'offer'),
+      rejected: filteredJobsForView.filter(job => job.status === 'rejected')
+    };
+
+    console.log('🔍 JobsTracker - Jobs by status:', {
+      draft: grouped.draft.length,
+      created: grouped.created.length,
+      applied: grouped.applied.length,
+      interview: grouped.interview.length,
+      offer: grouped.offer.length,
+      rejected: grouped.rejected.length
+    });
+
+    return grouped;
+  }, [filteredJobsForView, jobs.length, filterStatus, isFocusMode]);
 
   // Handlers
   const handleAddJob = () => {
@@ -483,7 +504,7 @@ const JobsTracker: React.FC = () => {
         currency?: string;
         period?: 'hourly' | 'monthly' | 'yearly';
       } | undefined = undefined;
-      
+
       if (parsedData.salary) {
         salaryData = {
           min: parsedData.salary.min,
@@ -684,20 +705,20 @@ const JobsTracker: React.FC = () => {
             // Only log parse errors, not the actual error response
             console.error('Failed to parse error response:', parseError);
           }
-          
+
           // Check if this is a credit-related error
           // When moving from draft to created, 500 errors are likely credit-related
-          const isCreditError = 
+          const isCreditError =
             (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (response.status === 500) || // Assume 500 errors when moving draft->created are credit issues
             (errorData.error?.includes('limit') || errorData.error?.includes('credit'));
-          
+
           if (isCreditError) {
             const limit = errorData.limit || 1;
             const currentUsage = errorData.currentUsage || limit;
             const creditsRemaining = Math.max(0, limit - currentUsage);
-            
+
             showExhaustionModal(
               {
                 creditsRemaining,
@@ -708,7 +729,7 @@ const JobsTracker: React.FC = () => {
             );
             throw new Error('Insufficient credits to create journey');
           }
-          
+
           // Only log non-credit errors to console
           console.error('Failed to move job to created stage:', response.status, errorData);
           throw new Error(errorData.error || errorData.message || 'Failed to move job to created stage');
@@ -716,10 +737,10 @@ const JobsTracker: React.FC = () => {
 
         // Job status updated successfully - API route automatically creates journey
         toast.success('CV and Cover Letter journey created!');
-        
+
         // Dispatch credit update event to refresh membership card
         window.dispatchEvent(new CustomEvent('creditsUpdated'));
-        
+
         // Refresh data
         await loadData();
       } else {
@@ -762,7 +783,7 @@ const JobsTracker: React.FC = () => {
             }
             throw new Error(errorData.error || errorData.message || 'Failed to create journey');
           }
-          
+
           toast.success('CV and Cover Letter journey created!');
           await loadData();
         } else {
@@ -771,12 +792,12 @@ const JobsTracker: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Error creating journey:', error);
-      
+
       // Don't show toast if it's a credit error (paywall already shown)
       if (!error?.message?.includes('Insufficient credits')) {
         toast.error(error?.message || 'Failed to create journey. Please try again.');
       }
-      
+
       throw error;
     }
   };
@@ -881,22 +902,22 @@ const JobsTracker: React.FC = () => {
             // Only log parse errors, not the actual error response
             console.error('Failed to parse error response:', parseError);
           }
-          
+
           // Check if this is a credit-related error
           // When moving from draft to created, 500 errors are likely credit-related
           const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
-          const isCreditError = 
+          const isCreditError =
             (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (isDraftToCreated && response.status === 500) || // Assume 500 errors when moving draft->created are credit issues
             (isDraftToCreated && (errorData.requiresUpgrade || errorData.error?.includes('limit') || errorData.error?.includes('credit')));
-          
+
           // Handle insufficient credits error - show paywall
           if (isCreditError) {
             const limit = errorData.limit || 1;
             const currentUsage = errorData.currentUsage || limit;
             const creditsRemaining = Math.max(0, limit - currentUsage);
-            
+
             showExhaustionModal(
               {
                 creditsRemaining,
@@ -910,7 +931,7 @@ const JobsTracker: React.FC = () => {
             console.error('Failed to update job status:', response.status, errorData);
             toast.error(errorData.message || errorData.error || `Failed to update job status (${response.status}). Please try again.`);
           }
-          
+
           // Revert on failure
           setJobs(prevJobs =>
             prevJobs.map(j =>
@@ -931,19 +952,19 @@ const JobsTracker: React.FC = () => {
           if (result.error || (result.success === false)) {
             // Check if this is a credit-related error
             const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
-            const isCreditError = 
+            const isCreditError =
               result.requiresUpgrade ||
               result.error?.includes('limit exceeded') ||
               result.error?.includes('insufficient credits') ||
               result.error?.includes('Plan limit exceeded') ||
               (isDraftToCreated && (result.error?.includes('limit') || result.error?.includes('credit')));
-            
+
             // Handle insufficient credits error - show paywall
             if (isCreditError) {
               const limit = result.limit || 1;
               const currentUsage = result.currentUsage || limit;
               const creditsRemaining = Math.max(0, limit - currentUsage);
-              
+
               showExhaustionModal(
                 {
                   creditsRemaining,
@@ -957,7 +978,7 @@ const JobsTracker: React.FC = () => {
               console.error('API returned error:', result);
               toast.error(result.message || result.error || 'Failed to update job status. Please try again.');
             }
-            
+
             // Revert on failure
             setJobs(prevJobs =>
               prevJobs.map(j =>
@@ -973,17 +994,17 @@ const JobsTracker: React.FC = () => {
           }
           // Success - update with server response to ensure consistency
           console.log('✅ Job status updated successfully:', newStatus);
-          
+
           // Dispatch credit update event if moving from draft to created
           if (originalStatus === 'draft' && newStatus === 'created') {
             window.dispatchEvent(new CustomEvent('creditsUpdated'));
           }
-          
+
           if (result.job || result.data) {
             const updatedJob = result.job || result.data;
-            setJobs(prevJobs => 
-              prevJobs.map(j => 
-                j.id === currentDraggedJob 
+            setJobs(prevJobs =>
+              prevJobs.map(j =>
+                j.id === currentDraggedJob
                   ? { ...j, status: updatedJob.status || newStatus, updatedAt: updatedJob.updatedAt || new Date().toISOString() }
                   : j
               )
@@ -1011,15 +1032,15 @@ const JobsTracker: React.FC = () => {
       })
       .catch(error => {
         console.error('Error updating job status:', error);
-        
+
         // Check if error is credit-related
         const errorMessage = error?.message || error?.toString() || '';
-        const isCreditError = 
+        const isCreditError =
           errorMessage.includes('limit exceeded') ||
           errorMessage.includes('insufficient credits') ||
           errorMessage.includes('Plan limit exceeded') ||
           (originalStatus === 'draft' && newStatus === 'created' && (errorMessage.includes('limit') || errorMessage.includes('credit')));
-        
+
         if (isCreditError) {
           showExhaustionModal(
             {
@@ -1032,7 +1053,7 @@ const JobsTracker: React.FC = () => {
         } else {
           toast.error('Failed to update job status. Please try again.');
         }
-        
+
         // Revert on error
         setJobs(prevJobs =>
           prevJobs.map(j =>

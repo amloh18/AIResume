@@ -19,13 +19,13 @@ import TemplateManager from '@/components/admin/TemplateManager';
 import UserManagement from '@/components/admin/UserManagement';
 import EmailCampaignManager from '@/components/admin/EmailCampaignManager';
 import DraftManagement from '@/components/admin/DraftManagement';
-import NotificationManager from '@/components/admin/NotificationManager';
-import NotificationTester from '@/components/admin/NotificationTester';
+import UnifiedNotificationManager from '@/components/admin/UnifiedNotificationManager';
 import SystemHealth from '@/components/admin/SystemHealth';
 import PricingPlanManager from '@/components/admin/PricingPlanManager';
 import TestimonialManager from '@/components/admin/TestimonialManager';
 import AIAnalytics from '@/components/admin/AIAnalytics';
 import LogsViewer from '@/components/admin/LogsViewer';
+import ContentAnalytics from '@/components/admin/ContentAnalytics';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -219,7 +219,6 @@ export default function AdminDashboard() {
                 <Button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   variant="outline"
-                  size="sm"
                   className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
                   <User className="h-4 w-4 mr-2" />
@@ -271,9 +270,8 @@ export default function AdminDashboard() {
                   setIsActivityPanelOpen(!isActivityPanelOpen);
                 }}
                 variant={isActivityPanelOpen ? "default" : "outline"}
-                size="sm"
-                className={isActivityPanelOpen 
-                  ? "bg-blue-600 text-white hover:bg-blue-700" 
+                className={isActivityPanelOpen
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "border-gray-600 text-gray-300 hover:bg-gray-700"
                 }
               >
@@ -364,16 +362,7 @@ export default function AdminDashboard() {
                 </TabsContent>
 
                 <TabsContent value="content" className="mt-6">
-                  <div className="space-y-6">
-                    <div>
-                      <h2 className="text-2xl font-bold text-white mb-2">Content Management</h2>
-                      <p className="text-gray-400">Manage templates and testimonials</p>
-                    </div>
-                    <TemplateManager />
-                    <div className="mt-8">
-                      <TestimonialManager />
-                    </div>
-                  </div>
+                  <ContentAnalytics />
                 </TabsContent>
 
                 <TabsContent value="logs" className="mt-6">
@@ -417,8 +406,7 @@ export default function AdminDashboard() {
                 </TabsContent>
 
                 <TabsContent value="notifications" className="mt-6 space-y-6">
-                  <NotificationTester />
-                  <NotificationManager />
+                  <UnifiedNotificationManager />
                 </TabsContent>
 
                 <TabsContent value="drafts" className="mt-6">
@@ -436,43 +424,43 @@ export default function AdminDashboard() {
 
             {/* User Info Card */}
             <div className="mt-8">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Admin Information</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Current admin user details
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-400">Email</p>
-                    <p className="text-sm text-white">{user.email}</p>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Admin Information</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Current admin user details
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-400">Email</p>
+                      <p className="text-sm text-white">{user.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-400">Role</p>
+                      <p className="text-sm text-white">{user.role || 'admin'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-400">Type</p>
+                      <p className="text-sm text-white">{user.type || 'admin'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-400">User ID</p>
+                      <p className="text-sm text-white">{user.id}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-400">Role</p>
-                    <p className="text-sm text-white">{user.role || 'admin'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-400">Type</p>
-                    <p className="text-sm text-white">{user.type || 'admin'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-400">User ID</p>
-                    <p className="text-sm text-white">{user.id}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
         </main>
       </Tabs>
 
       {/* Recent Activity Overlay Panel */}
       {isActivityPanelOpen && (
-        <RecentActivityPanel 
-          isOpen={isActivityPanelOpen} 
+        <RecentActivityPanel
+          isOpen={isActivityPanelOpen}
           onClose={() => setIsActivityPanelOpen(false)}
           activities={activities}
           loading={activitiesLoading}

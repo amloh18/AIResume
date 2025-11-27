@@ -60,6 +60,12 @@ interface JobApplication {
   };
   createdAt: string;
   updatedAt: string;
+  interviews?: any[];
+  followUps?: any[];
+  attachments?: any[];
+  atsScore?: number;
+  atsAnalysis?: any;
+  statusHistory?: any[];
 }
 
 
@@ -93,15 +99,15 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [loadingCV, setLoadingCV] = useState(false);
   const [skillGapAnalysisOpen, setSkillGapAnalysisOpen] = useState(false);
   const [interviewPrepOpen, setInterviewPrepOpen] = useState(false);
-  
+
   // EditJobSidebar state for layered sidebar
   const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
-  
+
   // Email sent confirmation state
   const [showEmailSentDialog, setShowEmailSentDialog] = useState(false);
   const [currentTimelineIndex, setCurrentTimelineIndex] = useState<number | null>(null);
   const [emailSentStatus, setEmailSentStatus] = useState<Record<number, boolean>>({});
-  
+
   // Dynamic data hooks
   const { insights, loading: insightsLoading } = useJobInsights(job.id);
   const fallbacks = useJobFallbacks();
@@ -138,7 +144,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     try {
       // First try to get CV from journey if cvId provided
       let targetCvId = cvId;
-      
+
       // If no cvId from journey, try to get master CV
       if (!targetCvId) {
         const masterCVResponse = await authenticatedFetchWithUserId('/api/cvs/master', user.id);
@@ -147,7 +153,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
           targetCvId = masterCVResult.data.masterCV._id || masterCVResult.data.masterCV.id;
         }
       }
-      
+
       if (targetCvId) {
         const cvResponse = await authenticatedFetchWithUserId(`/api/cvs/${targetCvId}`, user.id);
         const cvResult = await cvResponse.json();
@@ -206,8 +212,8 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   // Determine if follow-up is needed based on stage and days
   const isFollowUpNeeded = (job: JobApplication) => {
     const days = getDaysSinceLastUpdate(job);
-    
-    switch(job.status) {
+
+    switch (job.status) {
       case 'applied':
         return days >= 3 || days >= 7; // Show after 3 or 7 days
       case 'interview':
@@ -223,7 +229,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
 
   // Get follow-up suggestion text
   const getFollowUpSuggestion = (job: JobApplication, days: number) => {
-    switch(job.status) {
+    switch (job.status) {
       case 'applied':
         return `It's been ${days} days since you applied. Consider sending a polite follow-up email to check on your application status.`;
       case 'interview':
@@ -236,7 +242,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   };
 
   const getEmailSubject = (job: JobApplication) => {
-    switch(job.status) {
+    switch (job.status) {
       case 'applied':
         return `Following up on ${job.jobTitle} Application`;
       case 'screening':
@@ -284,7 +290,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     const recipientEmail = job.contactDetails?.email || '';
     const subject = encodeURIComponent(getEmailSubject(job));
     const body = encodeURIComponent(getEmailTemplate(job));
-    
+
     // If we have a recipient email, use it; otherwise just open with subject and body
     if (recipientEmail) {
       return `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
@@ -300,10 +306,10 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
       if (timelineIndex !== undefined) {
         setCurrentTimelineIndex(timelineIndex);
       }
-      
+
       // Open email client
       window.location.href = mailtoLink;
-      
+
       // Show confirmation dialog after a short delay to ensure email client opens
       setTimeout(() => {
         if (timelineIndex !== undefined) {
@@ -353,7 +359,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
     const userName = getUserName();
     const contactName = getContactName();
     const interviewerName = getInterviewerName();
-    
+
     const templates = {
       applied: `Dear ${contactName},
 
@@ -427,14 +433,14 @@ ${userName}`
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
-      
+
       if (date.toDateString() === today.toDateString()) {
         return 'Today';
       } else if (date.toDateString() === tomorrow.toDateString()) {
         return 'Tomorrow';
       } else {
-        return date.toLocaleDateString('en-US', { 
-          month: 'short', 
+        return date.toLocaleDateString('en-US', {
+          month: 'short',
           day: 'numeric',
           year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
         });
@@ -442,10 +448,10 @@ ${userName}`
     };
 
     // Get deadline date
-    const deadlineDate = job.deadline 
+    const deadlineDate = job.deadline
       ? (typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline)
       : null;
-    
+
     // Get application date (use updatedAt if applicationDate doesn't exist)
     const applicationDate = job.applicationDate
       ? (typeof job.applicationDate === 'string' ? new Date(job.applicationDate) : job.applicationDate)
@@ -465,7 +471,7 @@ ${userName}`
     if (job.status === 'applied') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       // Right after application (today)
       timelines.applied.push({
         day: formatDate(today),
@@ -477,7 +483,7 @@ ${userName}`
       const day4Date = new Date(applicationDate);
       day4Date.setDate(day4Date.getDate() + 4);
       day4Date.setHours(0, 0, 0, 0);
-      
+
       // If deadline exists, ensure we don't go past it
       if (deadlineDate) {
         const deadline = new Date(deadlineDate);
@@ -488,7 +494,7 @@ ${userName}`
           day4Date.setDate(day4Date.getDate() - 2);
         }
       }
-      
+
       if (day4Date >= today) {
         timelines.applied.push({
           day: formatDate(day4Date),
@@ -501,7 +507,7 @@ ${userName}`
       const day14Date = new Date(applicationDate);
       day14Date.setDate(day14Date.getDate() + 14);
       day14Date.setHours(0, 0, 0, 0);
-      
+
       // If deadline exists, ensure we don't go past it
       if (deadlineDate) {
         const deadline = new Date(deadlineDate);
@@ -512,7 +518,7 @@ ${userName}`
           day14Date.setDate(day14Date.getDate() - 1);
         }
       }
-      
+
       if (day14Date >= today && day14Date.getTime() !== day4Date.getTime()) {
         timelines.applied.push({
           day: formatDate(day14Date),
@@ -531,8 +537,8 @@ ${userName}`
       let interviewDate: Date;
       if (job.interviews && job.interviews.length > 0) {
         const firstInterview = job.interviews[0];
-        interviewDate = typeof firstInterview.date === 'string' 
-          ? new Date(firstInterview.date) 
+        interviewDate = typeof firstInterview.date === 'string'
+          ? new Date(firstInterview.date)
           : firstInterview.date;
       } else if (deadlineDate) {
         interviewDate = new Date(deadlineDate);
@@ -548,7 +554,7 @@ ${userName}`
       if (prepDate < today) {
         prepDate.setTime(today.getTime());
       }
-      
+
       timelines.interview.push({
         day: formatDate(prepDate),
         action: 'View Prep - Practice interview questions',
@@ -559,7 +565,7 @@ ${userName}`
       const day6Date = new Date(interviewDate);
       day6Date.setDate(day6Date.getDate() + 6);
       day6Date.setHours(0, 0, 0, 0);
-      
+
       if (day6Date >= today) {
         timelines.interview.push({
           day: formatDate(day6Date),
@@ -572,7 +578,7 @@ ${userName}`
       const day14Date = new Date(interviewDate);
       day14Date.setDate(day14Date.getDate() + 14);
       day14Date.setHours(0, 0, 0, 0);
-      
+
       if (day14Date >= today && day14Date.getTime() !== day6Date.getTime()) {
         timelines.interview.push({
           day: formatDate(day14Date),
@@ -587,13 +593,13 @@ ${userName}`
 
   const handleCreateJourney = async () => {
     if (isCreatingJourney) return; // Prevent multiple clicks
-    
+
     try {
       setIsCreatingJourney(true);
-      
+
       // Get userId from user
       const userId = user?.id;
-      
+
       if (!userId) {
         toast.error('User session not found. Please log in again.');
         return;
@@ -601,7 +607,7 @@ ${userName}`
 
       // Check if journey already exists for this job
       const existingJourney = journeys.find(j => j.jobId === job.id);
-      
+
       if (existingJourney) {
         // If journey exists but job is still in draft, move it to created
         if (job.status === 'draft') {
@@ -685,7 +691,7 @@ ${userName}`
         } else {
           toast.success('CV journey created successfully!');
         }
-        
+
         // Reload journeys immediately to show the new journey card
         await loadJourneysForJob();
         // Also refresh parent component
@@ -723,23 +729,23 @@ ${userName}`
 
   const handleUpdateJourney = (journeyId: string, updates: any) => {
     console.log('🔍 ApplicationJourneyModal - Updating journey:', journeyId, 'with updates:', updates);
-    
+
     // Update the specific journey in local state
-    setJourneys(prev => prev.map(journey => 
-      journey.id === journeyId 
+    setJourneys(prev => prev.map(journey =>
+      journey.id === journeyId
         ? { ...journey, ...updates }
         : journey
     ));
-    
+
     console.log('✅ ApplicationJourneyModal - Journey updated in local state');
   };
 
   const handleMoveToCreated = async () => {
     if (isMovingToCreated || !user?.id) return;
-    
+
     try {
       setIsMovingToCreated(true);
-      
+
       const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
         method: 'PUT',
         headers: {
@@ -758,13 +764,13 @@ ${userName}`
         } catch (parseError) {
           console.error('Failed to parse error response:', parseError);
         }
-        
+
         // Handle insufficient credits error (403) - show paywall
         if (statusResponse.status === 403) {
           const limit = errorData.limit || 1;
           const currentUsage = errorData.currentUsage || limit;
           const creditsRemaining = Math.max(0, limit - currentUsage);
-          
+
           console.log('🔍 JobSidebar - Credit error detected:', {
             requiresUpgrade: errorData.requiresUpgrade,
             limit,
@@ -772,7 +778,7 @@ ${userName}`
             creditsRemaining,
             error: errorData.error
           });
-          
+
           // Show paywall if requiresUpgrade is true OR if it's a 403 (credit error)
           if (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits')) {
             console.log('🔍 JobSidebar - Showing paywall modal');
@@ -787,21 +793,21 @@ ${userName}`
             return;
           }
         }
-        
+
         toast.error(errorData.error || errorData.message || 'Failed to move job to created stage. Please try again.');
         return;
       }
 
       toast.success('Job moved to created stage!');
-      
+
       // Dispatch credit update event to refresh membership card
       window.dispatchEvent(new CustomEvent('creditsUpdated'));
-      
+
       // Refresh job data to get updated status
       await onRefresh();
     } catch (error: any) {
       console.error('Error updating job status:', error);
-      
+
       // Check if error message indicates credit issue
       if (error?.message?.includes('limit exceeded') || error?.message?.includes('insufficient credits')) {
         showExhaustionModal(
@@ -832,7 +838,7 @@ ${userName}`
       }
 
       console.log('🔍 ApplicationJourneyModal - Deleting journey:', journeyId, 'userId:', userId);
-      
+
       // Call the CV Journey API to delete the journey
       console.log('🔍 ApplicationJourneyModal - Making DELETE request to /api/application-journey');
       const response = await authenticatedFetchWithUserId('/api/application-journey', user.id, {
@@ -855,13 +861,13 @@ ${userName}`
 
       // Remove from local state
       setJourneys(prev => prev.filter(journey => journey.id !== journeyId));
-      
+
       // Close confirmation dialog
       setShowDeleteConfirm(null);
-      
+
       // Show success message
       toast.success('CV journey deleted successfully');
-      
+
       // Refresh the parent component
       await onRefresh();
     } catch (error) {
@@ -881,17 +887,17 @@ ${userName}`
   const handleEditJobSaved = (updatedJob: any) => {
     // Close the EditJobSidebar
     setShowEditJobSidebar(false);
-    
+
     // Refresh the parent component to get updated data
     onRefresh();
-    
+
     toast.success('Job updated successfully!');
   };
 
   const handleDuplicateJob = async () => {
     try {
       const userId = user?.id;
-      
+
       if (!userId) {
         toast.error('User session not found. Please log in again.');
         return;
@@ -929,7 +935,7 @@ ${userName}`
 
       toast.success('Job duplicated successfully!');
       onRefresh();
-      
+
     } catch (error) {
       console.error('❌ Error duplicating job:', error);
       toast.error('Failed to duplicate job. Please try again.');
@@ -951,7 +957,7 @@ ${userName}`
   const handleDeleteJob = async () => {
     try {
       const userId = user?.id;
-      
+
       if (!userId) {
         toast.error('User session not found. Please log in again.');
         return;
@@ -959,7 +965,7 @@ ${userName}`
 
       // Use job._id if available, otherwise fall back to job.id
       const jobId = job._id || job.id;
-      
+
       if (!jobId) {
         toast.error('Job ID not found. Please refresh and try again.');
         return;
@@ -978,13 +984,13 @@ ${userName}`
           // Check if response has content before parsing
           const contentType = response.headers.get('content-type');
           const hasJsonContent = contentType && contentType.includes('application/json');
-          
+
           if (hasJsonContent) {
             const text = await response.text();
             if (text && text.trim()) {
               const errorData = JSON.parse(text);
               console.error('❌ JobSidebar - Delete failed:', errorData);
-              
+
               // Check if errorData has meaningful content
               if (errorData && Object.keys(errorData).length > 0) {
                 errorMessage = errorData.error || errorData.message || errorMessage;
@@ -1005,20 +1011,20 @@ ${userName}`
           console.error('❌ JobSidebar - Failed to parse error response:', parseError);
           errorMessage = response.statusText || `Server returned status ${response.status}`;
         }
-        
+
         console.error('❌ JobSidebar - Delete error details:', {
           status: response.status,
           statusText: response.statusText,
           errorMessage
         });
-        
+
         throw new Error(errorMessage);
       }
 
       toast.success('Job deleted successfully!');
       onClose(); // Close modal after deletion
       onRefresh();
-      
+
     } catch (error) {
       console.error('❌ Error deleting job:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete job. Please try again.');
@@ -1028,7 +1034,7 @@ ${userName}`
   const handleArchiveJob = async () => {
     try {
       const userId = user?.id;
-      
+
       if (!userId) {
         toast.error('User session not found. Please log in again.');
         return;
@@ -1057,7 +1063,7 @@ ${userName}`
 
       toast.success(job.isArchived ? 'Job archived successfully!' : 'Job unarchived successfully!');
       onRefresh();
-      
+
     } catch (error) {
       console.error('❌ Error archiving job:', error);
       toast.error('Failed to archive job. Please try again.');
@@ -1077,11 +1083,11 @@ ${userName}`
   // Track window width for responsive sidebar
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -1184,6 +1190,26 @@ ${userName}`
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.jobTitle || job.title}</h2>
               <span className="text-gray-500 dark:text-gray-400 hidden sm:inline">at</span>
               <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white truncate">{job.company}</h2>
+
+              {/* Sponsorship Tag */}
+              {job.sponsorship && job.sponsorship !== 'unknown' && (
+                <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ml-0 sm:ml-2 ${job.sponsorship === 'yes'
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                  }`}>
+                  {job.sponsorship === 'yes' ? (
+                    <>
+                      <CheckCircle size={12} />
+                      <span>Sponsorship Provided</span>
+                    </>
+                  ) : (
+                    <>
+                      <X size={12} />
+                      <span>No Sponsorship</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {(job.jobDescription || job.description) && job.status !== 'draft' && (
@@ -1273,42 +1299,42 @@ ${userName}`
                 ) : (
                   <>
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
-                    
+
                     {journeys.length > 0 ? (
                       <div className="space-y-4">
                         {journeys
                           .filter(cvJourney => cvJourney.id)
                           .map((cvJourney, index) => {
-                          const journey = {
-                            id: cvJourney.id,
-                            jobId: cvJourney.jobId,
-                            jobTitle: cvJourney.jobTitle,
-                            company: cvJourney.company,
-                            status: cvJourney.status as 'in-progress' | 'completed',
-                            currentStep: cvJourney.currentStep,
-                            totalSteps: cvJourney.totalSteps,
-                            createdAt: cvJourney.metadata.createdAt instanceof Date 
-                              ? cvJourney.metadata.createdAt.toISOString()
-                              : new Date(cvJourney.metadata.createdAt).toISOString(),
-                            updatedAt: cvJourney.metadata.updatedAt instanceof Date 
-                              ? cvJourney.metadata.updatedAt.toISOString()
-                              : new Date(cvJourney.metadata.updatedAt).toISOString(),
-                            atsScore: cvJourney.atsScore,
-                            cvId: cvJourney.cvId,
-                            coverLetterId: cvJourney.coverLetterId
-                          };
-                          
-                          return (
-                            <JourneyTimelineCard
-                              key={journey.id || `journey-${index}`}
-                              journey={journey}
-                              onResume={handleContinueJourney}
-                              onDownload={handleApplyNow}
-                              onRefresh={onRefresh}
-                              onUpdateJourney={handleUpdateJourney}
-                            />
-                          );
-                        })}
+                            const journey = {
+                              id: cvJourney.id,
+                              jobId: cvJourney.jobId,
+                              jobTitle: cvJourney.jobTitle,
+                              company: cvJourney.company,
+                              status: cvJourney.status as 'in-progress' | 'completed',
+                              currentStep: cvJourney.currentStep,
+                              totalSteps: cvJourney.totalSteps,
+                              createdAt: cvJourney.metadata.createdAt instanceof Date
+                                ? cvJourney.metadata.createdAt.toISOString()
+                                : new Date(cvJourney.metadata.createdAt).toISOString(),
+                              updatedAt: cvJourney.metadata.updatedAt instanceof Date
+                                ? cvJourney.metadata.updatedAt.toISOString()
+                                : new Date(cvJourney.metadata.updatedAt).toISOString(),
+                              atsScore: cvJourney.atsScore,
+                              cvId: cvJourney.cvId,
+                              coverLetterId: cvJourney.coverLetterId
+                            };
+
+                            return (
+                              <JourneyTimelineCard
+                                key={journey.id || `journey-${index}`}
+                                journey={journey}
+                                onResume={handleContinueJourney}
+                                onDownload={handleApplyNow}
+                                onRefresh={onRefresh}
+                                onUpdateJourney={handleUpdateJourney}
+                              />
+                            );
+                          })}
                       </div>
                     ) : (
                       <div className="text-center py-8">
@@ -1350,32 +1376,28 @@ ${userName}`
                           return (
                             <div
                               key={index}
-                              className={`flex-1 rounded-lg p-4 border shadow-sm transition-colors ${
-                                isEmailSent
-                                  ? 'bg-lime-50 dark:bg-lime-500/10 border-lime-300 dark:border-lime-500/50'
-                                  : 'bg-white dark:bg-[#1A201A] border-lime-200 dark:border-lime-500/30'
-                              }`}
+                              className={`flex-1 rounded-lg p-4 border shadow-sm transition-colors ${isEmailSent
+                                ? 'bg-lime-50 dark:bg-lime-500/10 border-lime-300 dark:border-lime-500/50'
+                                : 'bg-white dark:bg-[#1A201A] border-lime-200 dark:border-lime-500/30'
+                                }`}
                             >
                               <div className="flex items-start gap-3 mb-3">
-                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
-                                  isEmailSent
-                                    ? 'bg-lime-500 dark:bg-lime-500/30'
-                                    : 'bg-lime-100 dark:bg-lime-500/20'
-                                }`}>
-                                  <span className={`font-semibold text-xs ${
-                                    isEmailSent
-                                      ? 'text-white'
-                                      : 'text-lime-600 dark:text-[#80FF00]'
+                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isEmailSent
+                                  ? 'bg-lime-500 dark:bg-lime-500/30'
+                                  : 'bg-lime-100 dark:bg-lime-500/20'
                                   }`}>
+                                  <span className={`font-semibold text-xs ${isEmailSent
+                                    ? 'text-white'
+                                    : 'text-lime-600 dark:text-[#80FF00]'
+                                    }`}>
                                     {index + 1}
                                   </span>
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className={`text-xs font-semibold mb-1 ${
-                                    isEmailSent
-                                      ? 'text-lime-700 dark:text-lime-300'
-                                      : 'text-lime-600 dark:text-[#80FF00]'
-                                  }`}>
+                                  <div className={`text-xs font-semibold mb-1 ${isEmailSent
+                                    ? 'text-lime-700 dark:text-lime-300'
+                                    : 'text-lime-600 dark:text-[#80FF00]'
+                                    }`}>
                                     {timeline.day}
                                   </div>
                                   <div className="text-sm text-gray-700 dark:text-gray-300">
@@ -1457,7 +1479,7 @@ ${userName}`
                               </div>
                             </div>
                           )}
-                          
+
                           {job.jobUrl && (
                             <div className="flex items-center gap-2">
                               <ExternalLink size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1476,7 +1498,7 @@ ${userName}`
                               </div>
                             </div>
                           )}
-                          
+
                           {job.salary && (job.salary.min || job.salary.max) && (
                             <div className="flex items-center gap-2">
                               <DollarSign size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1488,7 +1510,7 @@ ${userName}`
                               </div>
                             </div>
                           )}
-                          
+
                           {job.applicationDate && (
                             <div className="flex items-center gap-2">
                               <Calendar size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1498,7 +1520,7 @@ ${userName}`
                               </div>
                             </div>
                           )}
-                          
+
                           {job.deadline && (
                             <div className="flex items-center gap-2">
                               <Calendar size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1508,7 +1530,7 @@ ${userName}`
                               </div>
                             </div>
                           )}
-                          
+
                           {job.jobType && (
                             <div className="flex items-center gap-2">
                               <Briefcase size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1518,7 +1540,7 @@ ${userName}`
                               </div>
                             </div>
                           )}
-                          
+
                           {job.source && (
                             <div className="flex items-center gap-2">
                               <Building2 size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1547,7 +1569,7 @@ ${userName}`
                                 </div>
                               </div>
                             )}
-                            
+
                             {job.contactDetails.email && (
                               <div className="flex items-center gap-2">
                                 <Mail size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1564,7 +1586,7 @@ ${userName}`
                                 </div>
                               </div>
                             )}
-                            
+
                             {job.contactDetails.phone && (
                               <div className="flex items-center gap-2">
                                 <Phone size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1579,7 +1601,7 @@ ${userName}`
                                 </div>
                               </div>
                             )}
-                            
+
                             {job.contactDetails.role && (
                               <div className="flex items-center gap-2">
                                 <Briefcase size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
@@ -1618,41 +1640,39 @@ ${userName}`
                         <div className="space-y-3 min-w-0 w-full">
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Status</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                              job.status === 'applied' ? 'bg-lime-500 text-white' :
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${job.status === 'applied' ? 'bg-lime-500 text-white' :
                               job.status === 'interview' ? 'bg-blue-500 text-white' :
-                              job.status === 'offer' ? 'bg-purple-500 text-white' :
-                              job.status === 'rejected' ? 'bg-red-500 text-white' :
-                              'bg-gray-500 text-white'
-                            }`}>
-                              {job.status === 'applied' ? 'In Progress' : 
-                               job.status === 'interview' ? 'Interview' :
-                               job.status === 'offer' ? 'Offer' :
-                               job.status === 'rejected' ? 'Rejected' :
-                               'Created'}
+                                job.status === 'offer' ? 'bg-purple-500 text-white' :
+                                  job.status === 'rejected' ? 'bg-red-500 text-white' :
+                                    'bg-gray-500 text-white'
+                              }`}>
+                              {job.status === 'applied' ? 'In Progress' :
+                                job.status === 'interview' ? 'Interview' :
+                                  job.status === 'offer' ? 'Offer' :
+                                    job.status === 'rejected' ? 'Rejected' :
+                                      'Created'}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Priority</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                              job.priority === 'high' ? 'bg-red-500 text-white' :
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${job.priority === 'high' ? 'bg-red-500 text-white' :
                               job.priority === 'medium' ? 'bg-yellow-500 text-white' :
-                              'bg-gray-500 text-white'
-                            }`}>
+                                'bg-gray-500 text-white'
+                              }`}>
                               {job.priority?.charAt(0).toUpperCase() + job.priority?.slice(1) || 'Medium'}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Sponsorship</span>
                             <span className="text-gray-900 dark:text-white/80 text-xs text-right flex-shrink-0 truncate">
-                              {job.sponsorship === 'yes' ? 'Required' : 
-                               job.sponsorship === 'no' ? 'Not Required' : 
-                               'Unknown'}
+                              {job.sponsorship === 'yes' ? 'Required' :
+                                job.sponsorship === 'no' ? 'Not Required' :
+                                  'Unknown'}
                             </span>
                           </div>
-                          
+
                           {job.tags && job.tags.length > 0 && (
                             <div>
                               <span className="text-gray-600 dark:text-white/60 block mb-2">Tags</span>
@@ -1680,21 +1700,21 @@ ${userName}`
                               {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Hiring Trend</span>
                             <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
                               {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Skills Gap</span>
                             <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
                               {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
                             </span>
                           </div>
-                          
+
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-500 dark:text-gray-400 text-xs truncate min-w-0">Market Comp.</span>
                             <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
@@ -1711,177 +1731,177 @@ ${userName}`
           </div>
         </motion.div>
 
-      {/* Delete Confirmation Dialog */}
-      {showDeleteConfirm && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-60 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
-        >
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
           <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-60 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
           >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-                <Trash2 size={20} className="text-red-600 dark:text-red-400" />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full mx-4"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                  <Trash2 size={20} className="text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Delete CV Journey
+                </h3>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Delete CV Journey
-              </h3>
-            </div>
-            
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Are you sure you want to delete this CV journey? This action cannot be undone and will remove all associated CV and cover letter data.
-            </p>
-            
-            <div className="flex gap-3 justify-end">
-              <motion.button
-                onClick={() => setShowDeleteConfirm(null)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                disabled={isDeleting}
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                onClick={() => {
-                  console.log('🔍 ApplicationJourneyModal - Delete button clicked, journeyId:', showDeleteConfirm);
-                  console.log('🔍 ApplicationJourneyModal - isDeleting state:', isDeleting);
-                  handleDeleteJourney(showDeleteConfirm);
-                }}
-                disabled={isDeleting}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                {isDeleting ? (
-                  <>
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                    >
+
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Are you sure you want to delete this CV journey? This action cannot be undone and will remove all associated CV and cover letter data.
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <motion.button
+                  onClick={() => setShowDeleteConfirm(null)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={() => {
+                    console.log('🔍 ApplicationJourneyModal - Delete button clicked, journeyId:', showDeleteConfirm);
+                    console.log('🔍 ApplicationJourneyModal - isDeleting state:', isDeleting);
+                    handleDeleteJourney(showDeleteConfirm);
+                  }}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isDeleting ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      >
+                        <Trash2 size={16} />
+                      </motion.div>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
                       <Trash2 size={16} />
-                    </motion.div>
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={16} />
-                    Delete Journey
-                  </>
-                )}
-              </motion.button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-
-      {/* EditJobSidebar - Layered on top */}
-      {showEditJobSidebar && (
-        <EditJobSidebar
-          isOpen={showEditJobSidebar}
-          onClose={() => setShowEditJobSidebar(false)}
-          onJobSaved={handleEditJobSaved}
-          editingJob={{
-            id: job.id,
-            userId: job.userId,
-            jobTitle: job.jobTitle,
-            company: job.company,
-            location: job.location,
-            jobUrl: job.jobUrl,
-            jobDescription: job.jobDescription,
-            notes: job.notes,
-            priority: job.priority,
-            status: job.status,
-            deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : undefined,
-            applicationDate: job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : undefined,
-            sponsorship: job.sponsorship,
-            tags: job.tags,
-            salary: job.salary,
-            contactDetails: job.contactDetails,
-            source: job.source as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other' | undefined,
-            createdAt: job.createdAt,
-            updatedAt: job.updatedAt
-          }}
-          userId={user?.id}
-        />
-      )}
-
-      {/* Email Sent Confirmation Dialog */}
-      {showEmailSentDialog && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-60 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setShowEmailSentDialog(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-6 max-w-md w-full mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
-                <Mail size={20} className="text-lime-600 dark:text-[#80FF00]" />
+                      Delete Journey
+                    </>
+                  )}
+                </motion.button>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Email Sent?
-              </h3>
-            </div>
-            
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Did you send the email?
-            </p>
-            
-            <div className="flex gap-3 justify-end">
-              <motion.button
-                onClick={() => handleEmailSentConfirmation(false)}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                No
-              </motion.button>
-              <motion.button
-                onClick={() => handleEmailSentConfirmation(true)}
-                className="px-4 py-2 bg-lime-600 dark:bg-[#80FF00] hover:bg-lime-700 dark:hover:bg-[#70e600] text-white rounded-lg font-medium transition-colors"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Yes
-              </motion.button>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
+        )}
 
-      {/* Skill Gap Analysis Sidebar */}
-      <SkillGapAnalysisSidebar
-        isOpen={skillGapAnalysisOpen}
-        onClose={() => setSkillGapAnalysisOpen(false)}
-        jobId={job.id || job._id}
-        jobTitle={job.jobTitle || job.title}
-        company={job.company}
-      />
+        {/* EditJobSidebar - Layered on top */}
+        {showEditJobSidebar && (
+          <EditJobSidebar
+            isOpen={showEditJobSidebar}
+            onClose={() => setShowEditJobSidebar(false)}
+            onJobSaved={handleEditJobSaved}
+            editingJob={{
+              id: job.id,
+              userId: job.userId,
+              jobTitle: job.jobTitle,
+              company: job.company,
+              location: job.location,
+              jobUrl: job.jobUrl,
+              jobDescription: job.jobDescription,
+              notes: job.notes,
+              priority: job.priority,
+              status: job.status,
+              deadline: job.deadline ? new Date(job.deadline).toISOString().split('T')[0] : undefined,
+              applicationDate: job.applicationDate ? new Date(job.applicationDate).toISOString().split('T')[0] : undefined,
+              sponsorship: job.sponsorship,
+              tags: job.tags,
+              salary: job.salary,
+              contactDetails: job.contactDetails,
+              source: job.source as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other' | undefined,
+              createdAt: job.createdAt,
+              updatedAt: job.updatedAt
+            }}
+            userId={user?.id}
+          />
+        )}
 
-      {/* Interview Prep Sidebar */}
-      {job.status === 'interview' && (
-        <InterviewPrepSidebar
-          isOpen={interviewPrepOpen}
-          onClose={() => setInterviewPrepOpen(false)}
+        {/* Email Sent Confirmation Dialog */}
+        {showEmailSentDialog && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-60 bg-black/70 dark:bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowEmailSentDialog(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-[#1A201A] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-6 max-w-md w-full mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 bg-lime-100 dark:bg-lime-500/20 rounded-lg">
+                  <Mail size={20} className="text-lime-600 dark:text-[#80FF00]" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Email Sent?
+                </h3>
+              </div>
+
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Did you send the email?
+              </p>
+
+              <div className="flex gap-3 justify-end">
+                <motion.button
+                  onClick={() => handleEmailSentConfirmation(false)}
+                  className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  No
+                </motion.button>
+                <motion.button
+                  onClick={() => handleEmailSentConfirmation(true)}
+                  className="px-4 py-2 bg-lime-600 dark:bg-[#80FF00] hover:bg-lime-700 dark:hover:bg-[#70e600] text-white rounded-lg font-medium transition-colors"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  Yes
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* Skill Gap Analysis Sidebar */}
+        <SkillGapAnalysisSidebar
+          isOpen={skillGapAnalysisOpen}
+          onClose={() => setSkillGapAnalysisOpen(false)}
           jobId={job.id || job._id}
-          jobTitle={job.jobTitle || job.title || ''}
+          jobTitle={job.jobTitle || job.title}
           company={job.company}
         />
-      )}
+
+        {/* Interview Prep Sidebar */}
+        {job.status === 'interview' && (
+          <InterviewPrepSidebar
+            isOpen={interviewPrepOpen}
+            onClose={() => setInterviewPrepOpen(false)}
+            jobId={job.id || job._id}
+            jobTitle={job.jobTitle || job.title || ''}
+            company={job.company}
+          />
+        )}
       </>
     </AnimatePresence>
   );
