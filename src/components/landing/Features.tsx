@@ -3,14 +3,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
-import { ArrowRight, Target, BarChart3, Download, Zap, CheckCircle, Eye, FileText } from 'lucide-react';
+import { ArrowRight, Target, BarChart3, Download, Globe, CheckCircle, FileText } from 'lucide-react';
 
 const Features = () => {
   const features = [
     {
-      id: 'never-miss-role',
-      title: 'Never Miss a Role',
-      description: 'Effortless job saving and tracking across all major boards is here. Keep your job hunt organized and focused, automatically. Get an instant, free analysis of your current CV.',
+      id: 'smart-extension',
+      title: 'Smart Extension',
+      description: 'Save and autofill job data instantly from any job board. Never copy-paste again.',
       icon: Target,
       color: 'from-lime-400 to-lime-500',
       bgColor: 'from-lime-400/10 to-lime-500/10',
@@ -19,26 +19,59 @@ const Features = () => {
       image: '/images/never_miss_a_role.png'
     },
     {
-      id: 'gain-your-edge',
-      title: 'Gain Your Edge',
-      description: 'See exactly how it ranks in the market and what hiring managers look for.',
-      icon: BarChart3,
+      id: 'global-opportunities',
+      title: 'Global Opportunities',
+      description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies. More countries coming soon.',
+      icon: Globe,
       color: 'from-blue-400 to-blue-500',
       bgColor: 'from-blue-400/10 to-blue-500/10',
-      cta: 'Check My CV For Free',
+      cta: 'Explore Jobs',
+      ctaLink: '/dashboard/jobs',
+      image: '/images/global_opportunities.png'
+    },
+    {
+      id: 'skills-gap',
+      title: 'Skills Gap Analysis',
+      description: 'Identify missing skills and get actionable recommendations to bridge the gap for your dream role.',
+      icon: BarChart3,
+      color: 'from-purple-400 to-purple-500',
+      bgColor: 'from-purple-400/10 to-purple-500/10',
+      cta: 'Analyze My Skills',
       ctaLink: '/ai-career-report',
       image: '/images/gain_your_edge.png'
     },
     {
-      id: 'one-click-career-kit',
-      title: 'One-Click Career Kit',
-      description: 'Instantly download a complete package: a tailored CV, personalised cover letter, and an ATS-ready industry report.',
+      id: 'career-insights',
+      title: 'Deep Career Insights',
+      description: 'Get a detailed CV report highlighting career gaps, strengths, and improvement areas.',
+      icon: FileText,
+      color: 'from-orange-400 to-orange-500',
+      bgColor: 'from-orange-400/10 to-orange-500/10',
+      cta: 'Get Report',
+      ctaLink: '/ai-career-report',
+      image: '/images/deep_career_insights.png'
+    },
+    {
+      id: 'ats-optimized',
+      title: 'ATS-Optimized Documents',
+      description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high scores.',
+      icon: CheckCircle,
+      color: 'from-green-400 to-green-500',
+      bgColor: 'from-green-400/10 to-green-500/10',
+      cta: 'Create CV',
+      ctaLink: '/studio',
+      image: '/images/ats_optimized_documents.png'
+    },
+    {
+      id: 'one-click-export',
+      title: 'One-Click Export',
+      description: 'Download your complete application kit: CV, Cover Letter, and ATS Report in one click.',
       icon: Download,
-      color: 'from-purple-400 to-purple-500',
-      bgColor: 'from-purple-400/10 to-purple-500/10',
-      cta: 'Start Now',
-      ctaLink: '/sign-up',
-      image: '/images/one_click_career_kit.png'
+      color: 'from-pink-400 to-pink-500',
+      bgColor: 'from-pink-400/10 to-pink-500/10',
+      cta: 'Start Export',
+      ctaLink: '/dashboard',
+      image: '/images/one_click_export.png'
     }
   ];
 
@@ -73,7 +106,7 @@ const Features = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
-      
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div
@@ -94,9 +127,9 @@ const Features = () => {
           </p>
         </motion.div>
 
-        {/* Three Cards Layout */}
-        <motion.div 
-          className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-8 max-w-6xl mx-auto"
+        {/* Two Column Grid Layout */}
+        <motion.div
+          className="grid grid-cols-1 tablet:grid-cols-2 gap-6 max-w-6xl mx-auto"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -124,7 +157,7 @@ const Features = () => {
                   className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${feature.bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
                   style={{ filter: 'blur(20px)' }}
                 />
-                
+
                 {/* Image Section with White Background */}
                 <motion.div
                   className="w-full h-48 bg-white relative overflow-hidden"
@@ -133,43 +166,30 @@ const Features = () => {
                     transition: { duration: 0.3 }
                   }}
                 >
-                  <div 
+                  <div
                     className="relative w-full h-full"
                     style={{
-                      transform: feature.id === 'never-miss-role' 
+                      transform: feature.id === 'smart-extension'
                         ? 'scale(0.9)' :
-                      feature.id === 'gain-your-edge' 
-                        ? 'scale(0.9)' :
-                      feature.id === 'one-click-career-kit' 
-                        ? 'scale(1.1)' :
-                      'scale(1)'
+                        feature.id === 'global-opportunities'
+                          ? 'scale(0.9)' :
+                          feature.id === 'ats-optimized'
+                            ? 'scale(1.1)' :
+                            'scale(1)'
                     }}
                   >
                     {feature.image.endsWith('.svg') ? (
                       <img
                         src={feature.image}
                         alt={feature.title}
-                        className={`w-full h-full ${
-                          feature.id === 'never-miss-role' ? 'object-contain brightness-0 invert' :
-                          feature.id === 'gain-your-edge' ? 'object-contain' :
-                          feature.id === 'one-click-career-kit' ? 'object-cover' :
-                          'object-cover'
-                        }`}
+                        className={`w-full h-full object-cover`}
                       />
                     ) : (
                       <Image
                         src={feature.image}
                         alt={feature.title}
                         fill
-                        className={
-                          feature.id === 'never-miss-role' 
-                            ? 'object-contain' :
-                          feature.id === 'gain-your-edge' 
-                            ? 'object-contain' :
-                          feature.id === 'one-click-career-kit' 
-                            ? 'object-cover' :
-                          'object-cover'
-                        }
+                        className="object-cover"
                       />
                     )}
                   </div>
@@ -177,21 +197,26 @@ const Features = () => {
 
                 {/* Content */}
                 <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-lg tablet:text-xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300 mb-4">
-                    {feature.title}
-                  </h3>
-                  
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${feature.color} bg-opacity-10`}>
+                      <feature.icon size={20} className="text-white" />
+                    </div>
+                    <h3 className="text-lg tablet:text-xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300">
+                      {feature.title}
+                    </h3>
+                  </div>
+
                   <p className="text-white/70 leading-relaxed text-xs tablet:text-sm desktop:text-base flex-grow">
                     {feature.description}
                   </p>
-                  
+
                   {/* CTA Button */}
                   <motion.a
                     href={feature.ctaLink}
                     target={feature.ctaLink.startsWith('http') ? '_blank' : undefined}
                     rel={feature.ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
                     className="group/btn relative inline-flex items-center gap-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-6 tablet:py-3 rounded-full font-semibold text-xs tablet:text-sm shadow-lg hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden mt-6 w-fit"
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.05,
                       boxShadow: "0 15px 30px -8px rgba(132, 204, 22, 0.5)"
                     }}
@@ -219,9 +244,9 @@ const Features = () => {
                   className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity"
                   whileHover={{ x: 5, rotate: 45 }}
                 >
-                  <ArrowRight 
-                    size={20} 
-                    className="text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.8)]" 
+                  <ArrowRight
+                    size={20}
+                    className="text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.8)]"
                   />
                 </motion.div>
               </motion.div>

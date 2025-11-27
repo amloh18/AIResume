@@ -23,6 +23,7 @@ interface UserSummary {
   email: string;
   firstName: string;
   summary: DailySummary;
+  isFreePlan: boolean;
 }
 
 class DailySummaryEmailService {
@@ -51,7 +52,7 @@ class DailySummaryEmailService {
       'statusHistory.status': 'applied',
       'statusHistory.changedAt': { $gte: startDate, $lte: endDate },
     }).lean();
-    
+
     // Also check jobs without statusHistory that were updated to applied
     const appliedJobsNoHistory = await JobApplication.find({
       userId: userObjectId,
@@ -59,7 +60,7 @@ class DailySummaryEmailService {
       statusHistory: { $exists: false },
       updatedAt: { $gte: startDate, $lte: endDate },
     }).lean();
-    
+
     const jobsApplied = new Set([
       ...appliedJobs.map(j => j._id.toString()),
       ...appliedJobsNoHistory.map(j => j._id.toString()),
@@ -72,7 +73,7 @@ class DailySummaryEmailService {
       'statusHistory.status': 'interview',
       'statusHistory.changedAt': { $gte: startDate, $lte: endDate },
     }).lean();
-    
+
     // Also check jobs without statusHistory that were updated to interview
     const interviewJobsNoHistory = await JobApplication.find({
       userId: userObjectId,
@@ -80,7 +81,7 @@ class DailySummaryEmailService {
       statusHistory: { $exists: false },
       updatedAt: { $gte: startDate, $lte: endDate },
     }).lean();
-    
+
     const interviewsScheduled = new Set([
       ...interviewJobs.map(j => j._id.toString()),
       ...interviewJobsNoHistory.map(j => j._id.toString()),
@@ -124,12 +125,12 @@ class DailySummaryEmailService {
    * Generate HTML email template for daily summary
    */
   private getEmailTemplate(userSummary: UserSummary): string {
-    const { summary, firstName } = userSummary;
-    const date = new Date().toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const { summary, firstName, isFreePlan } = userSummary;
+    const date = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
 
     return `
@@ -138,82 +139,77 @@ class DailySummaryEmailService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Daily Job Search Summary - CVCircle</title>
+  <title>Job Application Report</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">📊 Your Daily Summary</h1>
-    <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 14px;">${date}</p>
-  </div>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #ffffff; background-color: #1a230f; margin: 0; padding: 0;">
   
-  <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
-    <p style="font-size: 16px; margin: 0 0 20px 0;">Hi ${firstName || 'there'},</p>
+  <!-- Main Container -->
+  <div style="max-width: 600px; margin: 0 auto; background-color: #141810; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);">
     
-    <p style="font-size: 16px; margin: 0 0 30px 0;">Here's what happened with your job search today:</p>
-    
-    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h2 style="margin: 0 0 15px 0; font-size: 18px; color: #1f2937;">📈 Today's Activity</h2>
-      ${summary.jobsAdded > 0 ? `<div style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-        <strong style="color: #667eea;">${summary.jobsAdded}</strong> ${summary.jobsAdded === 1 ? 'job' : 'jobs'} added
-      </div>` : ''}
-      ${summary.jobsApplied > 0 ? `<div style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-        <strong style="color: #10b981;">${summary.jobsApplied}</strong> ${summary.jobsApplied === 1 ? 'application' : 'applications'} submitted
-      </div>` : ''}
-      ${summary.interviewsScheduled > 0 ? `<div style="padding: 10px 0; border-bottom: 1px solid #e5e7eb;">
-        <strong style="color: #f59e0b;">${summary.interviewsScheduled}</strong> ${summary.interviewsScheduled === 1 ? 'interview' : 'interviews'} scheduled
-      </div>` : ''}
-      ${summary.documentsReady > 0 ? `<div style="padding: 10px 0;">
-        <strong style="color: #8b5cf6;">${summary.documentsReady}</strong> ${summary.documentsReady === 1 ? 'document set' : 'document sets'} ready
-      </div>` : ''}
+    <!-- Header with Logo and Text -->
+    <div style="background-color: #141810; padding: 30px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px;">
+        <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/images/logo.png" alt="CVCircle" style="height: 40px; display: block;">
+        <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">CVCircle</span>
+      </div>
+      <p style="color: #757575; margin: 0; font-size: 14px;">${date}</p>
     </div>
     
-    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <h2 style="margin: 0 0 15px 0; font-size: 18px; color: #1f2937;">📋 Current Status</h2>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Draft</div>
-          <div style="font-size: 20px; font-weight: bold; color: #374151;">${summary.jobsByStatus.draft}</div>
+    <!-- Content -->
+    <div style="padding: 30px;">
+      <p style="font-size: 16px; margin: 0 0 25px 0; color: #ffffff;">Hi ${firstName || 'there'},</p>
+      
+      <p style="font-size: 16px; margin: 0 0 30px 0; color: #e5e5e5;">Here is your daily snapshot of your job search progress.</p>
+      
+      <!-- Daily Activity Cards -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 30px;">
+        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.jobsAdded}</div>
+          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Jobs Added</div>
         </div>
-        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Created</div>
-          <div style="font-size: 20px; font-weight: bold; color: #374151;">${summary.jobsByStatus.created}</div>
+        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.jobsApplied}</div>
+          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Applied</div>
         </div>
-        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Applied</div>
-          <div style="font-size: 20px; font-weight: bold; color: #374151;">${summary.jobsByStatus.applied}</div>
+        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.interviewsScheduled}</div>
+          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Interviews</div>
         </div>
-        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Interview</div>
-          <div style="font-size: 20px; font-weight: bold; color: #374151;">${summary.jobsByStatus.interview}</div>
-        </div>
-        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Offer</div>
-          <div style="font-size: 20px; font-weight: bold; color: #374151;">${summary.jobsByStatus.offer}</div>
-        </div>
-        <div style="padding: 10px; background: #f3f4f6; border-radius: 6px;">
-          <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Rejected</div>
-          <div style="font-size: 20px; font-weight: bold; color: #374151;">${summary.jobsByStatus.rejected}</div>
+        <div style="background-color: #313a28; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.08);">
+          <div style="font-size: 24px; font-weight: 800; color: #99FF00; margin-bottom: 5px;">${summary.documentsReady}</div>
+          <div style="font-size: 12px; color: #757575; text-transform: uppercase; letter-spacing: 0.5px;">Docs Ready</div>
         </div>
       </div>
+      
+      <!-- Upgrade Section (Only for Free Plan) -->
+      ${isFreePlan ? `
+      <div style="background: linear-gradient(135deg, rgba(153, 255, 0, 0.1) 0%, rgba(153, 255, 0, 0.05) 100%); border: 1px solid rgba(153, 255, 0, 0.3); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 30px;">
+        <h3 style="color: #ffffff; margin: 0 0 10px 0; font-size: 18px;">Unlock Your Full Potential 🚀</h3>
+        <p style="color: #e5e5e5; font-size: 14px; margin: 0 0 20px 0;">Get unlimited AI tailoring, advanced analytics, and priority support with CVCircle Pro.</p>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard/settings?tab=billing" 
+           style="display: inline-block; background: linear-gradient(to right, #99FF00, #88e600); color: #000000; padding: 10px 24px; text-decoration: none; border-radius: 9999px; font-weight: 700; font-size: 14px;">
+          Upgrade to Pro
+        </a>
+      </div>
+      ` : ''}
+
+      <!-- Dashboard Button -->
+      <div style="text-align: center;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard" 
+           style="display: inline-block; background-color: #313a28; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; border: 1px solid rgba(255, 255, 255, 0.08);">
+          Go to Dashboard
+        </a>
+      </div>
+      
     </div>
     
-    <div style="text-align: center; margin-top: 30px;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard" 
-         style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-        View Dashboard
-      </a>
+    <!-- Footer -->
+    <div style="background-color: #141810; padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+      <p style="font-size: 12px; color: #757575; margin: 0;">
+        &copy; ${new Date().getFullYear()} CVCircle. All rights reserved.<br>
+        You received this email because you have active job applications.
+      </p>
     </div>
-    
-    <p style="font-size: 14px; color: #6b7280; margin-top: 30px; text-align: center;">
-      Keep up the great work! 🚀
-    </p>
-    
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-    
-    <p style="font-size: 12px; color: #9ca3af; text-align: center; margin: 0;">
-      This is your daily summary email from CVCircle.<br>
-      You're receiving this because you have active job applications.
-    </p>
   </div>
 </body>
 </html>
@@ -224,42 +220,40 @@ class DailySummaryEmailService {
    * Generate text email template for daily summary
    */
   private getTextTemplate(userSummary: UserSummary): string {
-    const { summary, firstName } = userSummary;
-    const date = new Date().toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const { summary, firstName, isFreePlan } = userSummary;
+    const date = new Date().toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
 
     return `
-Your Daily Job Search Summary - ${date}
+Job Application Report
+${date}
 
 Hi ${firstName || 'there'},
 
-Here's what happened with your job search today:
+Here is your daily snapshot of your job search progress.
 
-Today's Activity:
-${summary.jobsAdded > 0 ? `- ${summary.jobsAdded} ${summary.jobsAdded === 1 ? 'job' : 'jobs'} added` : ''}
-${summary.jobsApplied > 0 ? `- ${summary.jobsApplied} ${summary.jobsApplied === 1 ? 'application' : 'applications'} submitted` : ''}
-${summary.interviewsScheduled > 0 ? `- ${summary.interviewsScheduled} ${summary.interviewsScheduled === 1 ? 'interview' : 'interviews'} scheduled` : ''}
-${summary.documentsReady > 0 ? `- ${summary.documentsReady} ${summary.documentsReady === 1 ? 'document set' : 'document sets'} ready` : ''}
+TODAY'S ACTIVITY
+----------------
+Jobs Added: ${summary.jobsAdded}
+Applied: ${summary.jobsApplied}
+Interviews: ${summary.interviewsScheduled}
+Docs Ready: ${summary.documentsReady}
 
-Current Status:
-- Draft: ${summary.jobsByStatus.draft}
-- Created: ${summary.jobsByStatus.created}
-- Applied: ${summary.jobsByStatus.applied}
-- Interview: ${summary.jobsByStatus.interview}
-- Offer: ${summary.jobsByStatus.offer}
-- Rejected: ${summary.jobsByStatus.rejected}
+${isFreePlan ? `
+UNLOCK YOUR FULL POTENTIAL
+--------------------------
+Get unlimited AI tailoring, advanced analytics, and priority support with CVCircle Pro.
+Upgrade here: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard/settings?tab=billing
+` : ''}
 
 View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard
 
-Keep up the great work! 🚀
-
 ---
-This is your daily summary email from CVCircle.
-You're receiving this because you have active job applications.
+© ${new Date().getFullYear()} CVCircle. All rights reserved.
     `.trim();
   }
 
@@ -270,7 +264,7 @@ You're receiving this because you have active job applications.
     try {
       await getConnection();
 
-      const user = await User.findById(userId).select('email firstName settings');
+      const user = await User.findById(userId).select('email firstName settings subscription');
       if (!user || !user.email) {
         return { success: false, error: 'User not found or no email address' };
       }
@@ -287,17 +281,21 @@ You're receiving this because you have active job applications.
       startDate.setDate(startDate.getDate() - 1);
 
       const summary = await this.getUserDailySummary(userId, startDate, endDate);
-      
+
       // Only send if there's activity
       if (!summary) {
         return { success: true, error: 'No activity to summarize' };
       }
+
+      // Check if user is on free plan
+      const isFreePlan = !user.subscription?.planId || user.subscription.planId === 'free';
 
       const userSummary: UserSummary = {
         userId,
         email: user.email,
         firstName: user.firstName || 'there',
         summary,
+        isFreePlan,
       };
 
       const html = this.getEmailTemplate(userSummary);
@@ -305,7 +303,7 @@ You're receiving this because you have active job applications.
 
       const result = await sendEmail({
         to: user.email,
-        subject: `📊 Your Daily Job Search Summary - ${new Date().toLocaleDateString()}`,
+        subject: `Job Application Report`,
         text,
         html,
       });
@@ -350,7 +348,7 @@ You're receiving this because you have active job applications.
       for (const user of users) {
         try {
           const result = await this.sendDailySummary(user._id.toString());
-          
+
           if (result.success) {
             if (result.error === 'No activity to summarize') {
               results.skipped++;
@@ -378,4 +376,3 @@ You're receiving this because you have active job applications.
 }
 
 export default new DailySummaryEmailService();
-

@@ -95,7 +95,7 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/unified",
+      "path": "/api/cron/daily-summary",
       "schedule": "0 8 * * *"
     }
   ]
