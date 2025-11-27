@@ -41,7 +41,7 @@ const Hero = () => {
         >
           <motion.span
             className="inline-block font-bold"
-            whileHover={{ 
+            whileHover={{
               scale: 1.02,
               textShadow: '0 0 30px rgba(132, 204, 22, 0.4)'
             }}
@@ -49,7 +49,7 @@ const Hero = () => {
             style={{ willChange: 'auto' }}
           >
             Stop wasting{' '}
-            <span className="inline-flex items-center gap-0.5 font-mono">
+            <span className="inline-flex items-center gap-0 font-mono">
               <AnimatePresence initial={false} mode="wait">
                 <motion.span
                   key={currentTime.getHours()}
@@ -98,7 +98,7 @@ const Hero = () => {
         >
           <motion.span
             className="inline-block italic font-thin"
-            whileHover={{ 
+            whileHover={{
               scale: 1.02
             }}
             transition={{ duration: 0.2 }}
@@ -130,7 +130,7 @@ const Hero = () => {
           <motion.a
             href="/sign-up"
             className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-xs tablet:text-sm desktop:text-base shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden btn-hover"
-            whileHover={{ 
+            whileHover={{
               scale: 1.05,
               boxShadow: "0 15px 30px -5px rgba(132, 204, 22, 0.3)"
             }}
@@ -149,11 +149,11 @@ const Hero = () => {
               <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
             </motion.div>
           </motion.a>
-          
+
           <motion.a
             href="/ai-career-report"
             className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-xs tablet:text-sm desktop:text-base hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 tablet:gap-3"
-            whileHover={{ 
+            whileHover={{
               scale: 1.05,
               borderColor: 'rgba(132, 204, 22, 0.8)',
               backgroundColor: 'rgba(132, 204, 22, 0.1)'
@@ -167,7 +167,7 @@ const Hero = () => {
             <span>Career Guide</span>
             <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5" />
           </motion.a>
-          
+
         </motion.div>
 
         {/* Hero Banner Image */}
