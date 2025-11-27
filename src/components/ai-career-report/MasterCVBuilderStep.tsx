@@ -5,19 +5,19 @@ import { motion } from 'framer-motion';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  User, 
-  Briefcase, 
-  GraduationCap, 
-  Settings, 
-  Code, 
-  Award, 
-  Trophy, 
-  Plus, 
-  ChevronUp, 
-  ChevronDown, 
-  Trash2, 
-  ArrowLeft, 
+import {
+  User,
+  Briefcase,
+  GraduationCap,
+  Settings,
+  Code,
+  Award,
+  Trophy,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
+  ArrowLeft,
   ArrowRight,
   Eye,
   Heart,
@@ -91,13 +91,13 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const { data: session, status: sessionStatus } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   if (!context) {
     return <div className="min-h-screen bg-[#1A261A] flex items-center justify-center">
       <div className="text-white">Loading...</div>
     </div>;
   }
-  
+
   const { state, dispatch } = context;
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [showAddSectionModal, setShowAddSectionModal] = useState(false);
@@ -368,7 +368,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   // AI generation handlers
   const handleAIGenerate = async (type: 'summary' | 'experience', fieldId: string, currentContent: string, workIndex?: number) => {
     setGeneratingAI(prev => ({ ...prev, [fieldId]: true }));
-    
+
     try {
       const response = await fetch('/api/ai/fix-and-improve', {
         method: 'POST',
@@ -388,7 +388,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       }
 
       const result = await response.json();
-      
+
       if (result.success && result.content) {
         if (type === 'summary') {
           updateBasicInfo('summary', result.content);
@@ -419,8 +419,34 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
     }
 
     if (authStatus !== 'authenticated' || !currentSession?.user?.id) {
-      alert('Please sign in to save your Master CV');
-      return;
+      // User is not authenticated - save to localStorage and redirect to signup
+      console.log('👤 User not authenticated, saving to localStorage and redirecting to signup...');
+
+      try {
+        const dataToSave = {
+          cvData: state.cvData,
+          aiAnalysis: state.aiAnalysis,
+          currentStep: 3, // Force step 3 on return
+          jobId: state.jobId,
+          jobData: state.jobData,
+          completedSteps: state.completedSteps,
+          activeSection: state.activeSection,
+          availableSections: state.availableSections,
+          timestamp: Date.now()
+        };
+
+        localStorage.setItem('ai-career-report-data', JSON.stringify(dataToSave));
+        console.log('✅ Data saved to localStorage');
+
+        // Redirect to signup with callback to this step
+        const callbackUrl = encodeURIComponent('/ai-career-report?step=3');
+        router.push(`/signup?callbackUrl=${callbackUrl}`);
+        return;
+      } catch (e) {
+        console.error('❌ Failed to save data to localStorage:', e);
+        alert('Failed to save your progress. Please try again.');
+        return;
+      }
     }
 
     try {
@@ -460,7 +486,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           console.log('✅ Passing selected templateId:', templateId);
         }
       }
-      
+
       const response = await fetch('/api/cv-draft/convert-to-master', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -468,14 +494,14 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       });
 
       console.log('📡 Master CV creation response status:', response.status);
-      
+
       if (!response.ok) {
         let errorMessage = `Master CV creation failed: ${response.status} ${response.statusText}`;
-        
+
         try {
           const errorData = await response.json();
           console.error('❌ Master CV creation failed with details:', errorData);
-          
+
           if (errorData.error) {
             errorMessage = errorData.error;
           }
@@ -484,7 +510,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           console.error('❌ Master CV creation failed (text response):', errorText);
           errorMessage = errorText || errorMessage;
         }
-        
+
         alert(errorMessage);
         return;
       }
@@ -495,17 +521,17 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
       if (result.success) {
         const actionVerb = isEditingMasterCV ? 'updated' : 'created';
         console.log(`✅ Master CV ${actionVerb} successfully:`, result.cv?.id);
-        
+
         // Mark as created/updated
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('masterCVCreated', 'true');
           sessionStorage.setItem('fromAICareerReport', 'true');
-          
+
           // Clear masterCVId from sessionStorage after successful update
           if (isEditingMasterCV) {
             sessionStorage.removeItem('masterCVId');
           }
-          
+
           // Clear localStorage since data is now in database
           try {
             localStorage.removeItem('ai-career-report-data');
@@ -514,7 +540,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           } catch (error) {
             console.warn('⚠️ Failed to clear localStorage:', error);
           }
-          
+
           // Dispatch custom event to notify other components
           window.dispatchEvent(new CustomEvent('masterCVCreated'));
         }
@@ -533,7 +559,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
 
     } catch (error: any) {
       console.error('❌ Save Master CV error:', error);
-      
+
       if (error.message) {
         alert(error.message);
       } else if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
@@ -546,11 +572,11 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
 
   const addNewSection = (sectionType: string) => {
     console.log('Adding new section:', sectionType);
-    
+
     // Initialize CV data for the new section
     let newSectionData: any = null;
     let fieldName: string = sectionType;
-    
+
     switch (sectionType) {
       case 'volunteer':
         newSectionData = [...(state.cvData.volunteer || []), {
@@ -656,21 +682,21 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
         fieldName = 'work';
         break;
     }
-    
+
     // Update both CV data and structure in a single dispatch
     if (newSectionData !== null && fieldName) {
       // Prepare structure update
       let updatedStructure = state.cvData.structure || { sections: [] };
-      
+
       // Ensure structure has sections array
       if (!updatedStructure.sections) {
         updatedStructure = { ...updatedStructure, sections: [] };
       }
-      
+
       // Clone sections array to avoid mutations
       const sections = [...updatedStructure.sections];
       const sectionIndex = sections.findIndex(s => s.type === sectionType);
-      
+
       if (sectionIndex >= 0) {
         // Section exists in structure - mark as visible
         sections[sectionIndex] = {
@@ -686,7 +712,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
           visible: true
         });
       }
-      
+
       // Update both CV data field and structure in a single dispatch
       dispatch({
         type: 'UPDATE_CV_DATA',
@@ -696,7 +722,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
         }
       });
     }
-    
+
     console.log('CV data after adding section:', state.cvData);
     setShowAddSectionModal(false);
   };
@@ -722,7 +748,7 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   const renderSection = (section: any, index: number) => {
     const Icon = section.icon;
     const isCollapsed = collapsedSections.has(section.id);
-    
+
     const getColorClasses = (color: string) => {
       const colorMap: { [key: string]: string } = {
         blue: 'from-blue-500 to-blue-600',
@@ -935,109 +961,108 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
   return (
     <div className="flex flex-col h-[calc(100vh-5rem)] bg-[#1A201A]">
       <div className="flex flex-1 overflow-hidden">
-      {/* Sticky Sidebar */}
-      <div className="w-20 tablet:w-80 flex-shrink-0 p-2 tablet:p-4">
-        <div className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl">
-          {/* Sidebar Header with Step Info */}
-          <div className="p-3 tablet:p-6 border-b border-white/10">
-            <div className="text-center mb-4">
-              <div className="text-[#80FF00] font-bold text-sm tablet:text-lg mb-1">Step 2 of 3</div>
-              <div className="text-lg tablet:text-xl font-bold text-white mb-2 hidden tablet:block">Details Sections</div>
-              <div className="text-white/70 text-xs tablet:text-sm leading-relaxed hidden tablet:block">
-                Review and edit your CV sections.<br />
-                Click on a section title to navigate.
+        {/* Sticky Sidebar */}
+        <div className="w-20 tablet:w-80 flex-shrink-0 p-2 tablet:p-4">
+          <div className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl">
+            {/* Sidebar Header with Step Info */}
+            <div className="p-3 tablet:p-6 border-b border-white/10">
+              <div className="text-center mb-4">
+                <div className="text-[#80FF00] font-bold text-sm tablet:text-lg mb-1">Step 2 of 3</div>
+                <div className="text-lg tablet:text-xl font-bold text-white mb-2 hidden tablet:block">Details Sections</div>
+                <div className="text-white/70 text-xs tablet:text-sm leading-relaxed hidden tablet:block">
+                  Review and edit your CV sections.<br />
+                  Click on a section title to navigate.
+                </div>
               </div>
             </div>
-          </div>
-          
-          {/* Section Navigation - Using visible sections from selector */}
-          <div className="flex-1 p-2 tablet:p-4 space-y-2 overflow-y-auto">
-            {sidebarSections.map((section) => {
-              const IconComponent = section.icon;
-              const isActive = state.activeSection === section.id;
-              
-              return (
-                <motion.button
-                  key={section.id}
-                  onClick={() => {
-                    dispatch({ type: 'SET_ACTIVE_SECTION', payload: section.id });
-                    scrollToSection(section.id);
-                  }}
-                  className={`w-full flex items-center justify-center tablet:justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3 rounded-xl transition-all duration-200 ${
-                    isActive
-                      ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/5'
-                  }`}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  title={section.title}
-                >
-                  {React.createElement(IconComponent, { size: 18 })}
-                  <span className="font-medium text-xs tablet:text-sm hidden tablet:block">{section.title}</span>
-                </motion.button>
-              );
-            })}
-          </div>
-          
-          {/* Sidebar Footer */}
-          <div className="p-2 tablet:p-4 border-t border-white/10">
-            <button 
-              onClick={() => setShowAddSectionModal(true)}
-              className="w-full flex items-center justify-center tablet:justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
-              title="Add New Section"
-            >
-              <Plus size={18} />
-              <span className="font-medium text-xs tablet:text-sm hidden tablet:block">Add New Section</span>
-            </button>
+
+            {/* Section Navigation - Using visible sections from selector */}
+            <div className="flex-1 p-2 tablet:p-4 space-y-2 overflow-y-auto">
+              {sidebarSections.map((section) => {
+                const IconComponent = section.icon;
+                const isActive = state.activeSection === section.id;
+
+                return (
+                  <motion.button
+                    key={section.id}
+                    onClick={() => {
+                      dispatch({ type: 'SET_ACTIVE_SECTION', payload: section.id });
+                      scrollToSection(section.id);
+                    }}
+                    className={`w-full flex items-center justify-center tablet:justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3 rounded-xl transition-all duration-200 ${isActive
+                        ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
+                        : 'text-white/70 hover:text-white hover:bg-white/5'
+                      }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    title={section.title}
+                  >
+                    {React.createElement(IconComponent, { size: 18 })}
+                    <span className="font-medium text-xs tablet:text-sm hidden tablet:block">{section.title}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+
+            {/* Sidebar Footer */}
+            <div className="p-2 tablet:p-4 border-t border-white/10">
+              <button
+                onClick={() => setShowAddSectionModal(true)}
+                className="w-full flex items-center justify-center tablet:justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
+                title="Add New Section"
+              >
+                <Plus size={18} />
+                <span className="font-medium text-xs tablet:text-sm hidden tablet:block">Add New Section</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto relative">
-        <div className="p-6">
-          {/* Dynamic Sections - Using visible sections from selector */}
-          {sidebarSections.map((section, index) => renderSection(section, index))}
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-y-auto relative">
+          <div className="p-6">
+            {/* Dynamic Sections - Using visible sections from selector */}
+            {sidebarSections.map((section, index) => renderSection(section, index))}
 
-          {/* Bottom Navigation */}
-          <div className="flex items-center justify-start mt-12 pt-8 border-t border-white/10">
-            <motion.button
-              onClick={onBack}
-              className="flex items-center gap-2 px-6 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <ArrowLeft size={20} />
-              Previous: Enter Details
-            </motion.button>
+            {/* Bottom Navigation */}
+            <div className="flex items-center justify-start mt-12 pt-8 border-t border-white/10">
+              <motion.button
+                onClick={onBack}
+                className="flex items-center gap-2 px-6 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <ArrowLeft size={20} />
+                Previous: Enter Details
+              </motion.button>
+            </div>
           </div>
-        </div>
-        
-        {/* Finish & Save CV Button - Sticky button centered to form for unauth route OR auth route with no master CV (creating new) */}
-        {(!authStatus || authStatus !== 'authenticated' || !isEditingMasterCV) && (
-          <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
-            <button
-              onClick={handleSaveMasterCV}
-              className="bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:from-[#70e600] hover:to-[#60d600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
-            >
-              Finish & Save CV
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        )}
 
-        {/* Update Master CV Button - Sticky button centered to form for auth route with master CV edit/update */}
-        {authStatus === 'authenticated' && isEditingMasterCV && (
-          <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
-            <button
-              onClick={handleSaveMasterCV}
-              className="bg-[#80FF00] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#70e600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
-            >
-              Update Master CV
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        )}
+          {/* Finish & Save CV Button - Sticky button centered to form for unauth route OR auth route with no master CV (creating new) */}
+          {(!authStatus || authStatus !== 'authenticated' || !isEditingMasterCV) && (
+            <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
+              <button
+                onClick={handleSaveMasterCV}
+                className="bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:from-[#70e600] hover:to-[#60d600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
+              >
+                Finish & Save CV
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
+
+          {/* Update Master CV Button - Sticky button centered to form for auth route with master CV edit/update */}
+          {authStatus === 'authenticated' && isEditingMasterCV && (
+            <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
+              <button
+                onClick={handleSaveMasterCV}
+                className="bg-[#80FF00] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#70e600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
+              >
+                Update Master CV
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1060,21 +1085,20 @@ export default function MasterCVBuilderStep({ onNext, onBack }: MasterCVBuilderS
                 <X size={24} />
               </button>
             </div>
-            
+
             <div className="grid grid-cols-2 tablet:grid-cols-3 gap-4">
               {addableSections.map((section) => {
                 const IconComponent = section.icon;
                 const isAlreadyAdded = sidebarSections.some(s => s.type === section.id);
-                
+
                 return (
                   <motion.button
                     key={section.id}
                     onClick={() => !isAlreadyAdded && addNewSection(section.id)}
-                    className={`w-full aspect-square flex flex-col items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200 ${
-                      isAlreadyAdded
+                    className={`w-full aspect-square flex flex-col items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200 ${isAlreadyAdded
                         ? 'bg-white/5 text-white/30 cursor-not-allowed'
                         : 'bg-white/10 hover:bg-white/20 text-white hover:scale-105'
-                    }`}
+                      }`}
                     whileHover={!isAlreadyAdded ? { scale: 1.05 } : {}}
                     whileTap={!isAlreadyAdded ? { scale: 0.95 } : {}}
                     disabled={isAlreadyAdded}

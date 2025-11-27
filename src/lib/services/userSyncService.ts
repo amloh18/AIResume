@@ -53,6 +53,7 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
           lastName: user.lastName || 'User',
           authProvider: user.authProvider || 'credentials',
           isEmailVerified: user.isEmailVerified || false,
+          region: user.region || user.location,
           currentPlanKey: user.currentPlanKey || 'free',
           subscriptionStatus: user.subscription?.status || 'inactive',
           subscriptionStartDate: user.subscription?.startDate,
@@ -147,6 +148,7 @@ export async function syncSingleUser(userId: string): Promise<boolean> {
       lastName: userDoc.lastName || 'User',
       authProvider: userDoc.authProvider || 'credentials',
       isEmailVerified: userDoc.isEmailVerified || false,
+      region: userDoc.region || userDoc.location,
       currentPlanKey: userDoc.currentPlanKey || 'free',
       subscriptionStatus: userDoc.subscription?.status || 'inactive',
       subscriptionStartDate: userDoc.subscription?.startDate,
@@ -262,9 +264,9 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
         query['usage.cvCreatedCount'] = { $gte: filters.usageMetrics.minCVsCreated };
       }
       if (filters.usageMetrics.maxCVsCreated !== undefined) {
-        query['usage.cvCreatedCount'] = { 
+        query['usage.cvCreatedCount'] = {
           ...query['usage.cvCreatedCount'],
-          $lte: filters.usageMetrics.maxCVsCreated 
+          $lte: filters.usageMetrics.maxCVsCreated
         };
       }
       if (filters.usageMetrics.minJourneysCompleted !== undefined) {
@@ -286,6 +288,11 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
     // Apply deleted users filter
     if (filters.isDeleted !== undefined) {
       query.isDeleted = filters.isDeleted;
+    }
+
+    // Apply region filter
+    if (filters.region) {
+      query.region = filters.region;
     }
 
     const users = await AdminUserModel.find(query).lean();

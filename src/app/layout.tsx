@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import React from 'react'
 import ClientProviders from '@/components/providers/ClientProviders'
 import ResourceHints from '@/components/ResourceHints'
 import DeferredAnalytics from '@/components/DeferredAnalytics'
@@ -150,9 +151,11 @@ export default async function RootLayout({
       <body>
         <ViewportMeta />
         <ResourceHints />
-        <ClientProviders session={session}>
-          {children}
-        </ClientProviders>
+        <React.Suspense fallback={null}>
+          <ClientProviders session={session}>
+            {children}
+          </ClientProviders>
+        </React.Suspense>
         {/* Load analytics after page is interactive */}
         <DeferredAnalytics />
       </body>
