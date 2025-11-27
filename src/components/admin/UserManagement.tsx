@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AdminUserManagementSkeleton } from './AdminSkeletons';
-import { 
-  Users, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Mail, 
+import {
+  Users,
+  Search,
+  Filter,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Eye,
+  Mail,
   CreditCard,
   Calendar,
   Globe,
@@ -92,16 +92,7 @@ const UserManagement: React.FC = () => {
     planDisplayNames: {}
   });
 
-  // Track initial fetch to prevent duplicate calls
-  const hasInitializedRef = useRef(false);
-
   useEffect(() => {
-    // Prevent duplicate initialization calls
-    if (hasInitializedRef.current) {
-      return;
-    }
-    hasInitializedRef.current = true;
-
     // Run all initial fetches in parallel for better performance
     Promise.all([
       fetchUsers(true),
@@ -150,11 +141,11 @@ const UserManagement: React.FC = () => {
       console.log('🔍 Fetching users from admin API...', url);
       const response = await fetch(url, { cache: 'no-store' });
       console.log('📥 Response status:', response.status);
-      
+
       // Check content type before parsing
       const contentType = response.headers.get('content-type');
       const isJson = contentType && contentType.includes('application/json');
-      
+
       if (response.ok) {
         if (!isJson) {
           throw new Error('Server returned non-JSON response');
@@ -230,10 +221,10 @@ const UserManagement: React.FC = () => {
           const data = await response.json();
           // Parse the metrics from the API response
           setMetrics({
-            totalUsers: users.length,
-            activeUsers: parseInt(data.activeUsers?.replace(/[^\d]/g, '') || '0') || 0,
-            jobsLanded: parseInt(data.jobsLanded?.replace(/[^\d]/g, '') || '0') || 0,
-            successRate: parseInt(data.successRate?.replace(/[^\d]/g, '') || '0') || 0
+            totalUsers: data.totalUsers || 0,
+            activeUsers: typeof data.activeUsers === 'number' ? data.activeUsers : parseInt(data.activeUsers?.replace(/[^\d]/g, '') || '0') || 0,
+            jobsLanded: typeof data.jobsLanded === 'number' ? data.jobsLanded : parseInt(data.jobsLanded?.replace(/[^\d]/g, '') || '0') || 0,
+            successRate: typeof data.successRate === 'number' ? data.successRate : parseInt(data.successRate?.replace(/[^\d]/g, '') || '0') || 0
           });
         }
       }
@@ -252,9 +243,9 @@ const UserManagement: React.FC = () => {
       const response = await fetch(`/api/admin/users/${user._id}/checkout/session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          planKey, 
-          delivery: 'email' 
+        body: JSON.stringify({
+          planKey,
+          delivery: 'email'
         })
       });
 
@@ -269,15 +260,15 @@ const UserManagement: React.FC = () => {
   const handleCompPlan = async (user: User) => {
     const planKey = prompt(`Enter plan key (available plans: ${planConfig.plans.join(', ')}):`);
     const note = prompt('Enter reason for complimentary plan:');
-    
+
     if (planKey && note) {
       try {
         const response = await fetch(`/api/admin/users/${user._id}/plan/complimentary`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            planKey, 
-            note 
+          body: JSON.stringify({
+            planKey,
+            note
           })
         });
 
@@ -295,18 +286,18 @@ const UserManagement: React.FC = () => {
     if (!confirm(`Are you sure you want to cancel the plan for ${user.email}?`)) {
       return;
     }
-    
+
     const when = confirm('Cancel now or at period end?') ? 'now' : 'period_end';
     const note = prompt('Enter cancellation reason:');
-    
+
     if (note) {
       try {
         const response = await fetch(`/api/admin/users/${user._id}/subscription/cancel`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            when, 
-            note 
+          body: JSON.stringify({
+            when,
+            note
           })
         });
 
@@ -328,13 +319,13 @@ const UserManagement: React.FC = () => {
     if (!confirm(`⚠️ WARNING: This will permanently delete user ${user.email} and all their data.\n\nThis action cannot be undone. Are you absolutely sure?`)) {
       return;
     }
-    
+
     const confirmation = prompt(`Type "DELETE" to confirm deletion of ${user.email}:`);
     if (confirmation !== 'DELETE') {
       alert('Deletion cancelled. Confirmation text did not match.');
       return;
     }
-    
+
     try {
       const response = await fetch(`/api/admin/users/${user._id}`, {
         method: 'DELETE',
@@ -362,7 +353,7 @@ const UserManagement: React.FC = () => {
     if (!PAYMENT_PROVIDERS.includes(provider as any)) {
       return <AlertCircle size={14} className="text-gray-400" />;
     }
-    
+
     switch (provider) {
       case 'stripe':
         return <CreditCard size={14} className="text-blue-400" />;
@@ -395,12 +386,12 @@ const UserManagement: React.FC = () => {
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.lastName.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.lastName.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesRole = filterRole === 'all' || user.role === filterRole;
     const matchesPlan = filterPlan === 'all' || user.currentPlanKey === filterPlan;
-    
+
     return matchesSearch && matchesRole && matchesPlan;
   });
 
@@ -419,7 +410,7 @@ const UserManagement: React.FC = () => {
               {error}
             </p>
             <button
-              onClick={fetchUsers}
+              onClick={() => fetchUsers(true)}
               className="mt-3 text-sm bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200 px-3 py-1 rounded hover:bg-red-200 dark:hover:bg-red-700"
             >
               Try Again
@@ -570,6 +561,9 @@ const UserManagement: React.FC = () => {
                   User
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  User ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Current Plan
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -599,14 +593,14 @@ const UserManagement: React.FC = () => {
                         {users.length === 0 ? 'No users found' : 'No users match your filters'}
                       </h3>
                       <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        {users.length === 0 
+                        {users.length === 0
                           ? 'There are no users in the database. Check the console for errors or create some users.'
                           : 'Try adjusting your search or filter criteria.'
                         }
                       </p>
                       {users.length === 0 && (
                         <button
-                          onClick={fetchUsers}
+                          onClick={() => fetchUsers(true)}
                           className="text-lime-600 hover:text-lime-700 font-medium"
                         >
                           Refresh
@@ -617,89 +611,92 @@ const UserManagement: React.FC = () => {
                 </tr>
               ) : (
                 filteredUsers.map((user) => (
-                <tr 
-                  key={user._id} 
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
-                  onClick={() => {
-                    setSelectedUserForActivity(user);
-                    setIsActivityModalOpen(true);
-                  }}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-                            {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                          </span>
+                  <tr
+                    key={user._id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                    onClick={() => {
+                      setSelectedUserForActivity(user);
+                      setIsActivityModalOpen(true);
+                    }}
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                              {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {user.firstName} {user.lastName}
+                          </div>
+                          <div className="text-sm text-gray-500 dark:text-gray-300">{user.email}</div>
                         </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {user.firstName} {user.lastName}
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-300">{user.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 font-mono">
+                      {user._id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
+                        {getPlanDisplayName(user.currentPlanKey)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        {getProviderIcon(user.subscription?.provider || 'none')}
+                        <span className="text-sm text-gray-900 dark:text-white capitalize">
+                          {user.subscription?.provider || 'none'}
+                        </span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                      {getPlanDisplayName(user.currentPlanKey)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {getProviderIcon(user.subscription?.provider || 'none')}
-                      <span className="text-sm text-gray-900 dark:text-white capitalize">
-                        {user.subscription?.provider || 'none'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(user.subscription?.status || 'inactive')}
-                      <span className="text-sm text-gray-900 dark:text-white capitalize">
-                        {user.subscription?.status || 'inactive'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {formatDate(user.subscription?.currentPeriodEnd || '')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
-                      <Globe size={14} className="text-gray-600 dark:text-gray-400" />
-                      <span className="text-sm text-gray-900 dark:text-white">
-                        {user.region || 'Unknown'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleDeleteUser(user)}
-                        className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleCancelSubscription(user)}
-                        className="text-orange-600 hover:text-orange-900 p-2 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
-                        title="Cancel Plan"
-                      >
-                        <X size={18} />
-                      </button>
-                      <button
-                        onClick={() => handleChangePlan(user)}
-                        className="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                        title="Admin Upgrade"
-                      >
-                        <ArrowUpCircle size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(user.subscription?.status || 'inactive')}
+                        <span className="text-sm text-gray-900 dark:text-white capitalize">
+                          {user.subscription?.status || 'inactive'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {formatDate(user.subscription?.currentPeriodEnd || '')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <Globe size={14} className="text-gray-600 dark:text-gray-400" />
+                        <span className="text-sm text-gray-900 dark:text-white">
+                          {user.region || 'Unknown'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          onClick={() => handleDeleteUser(user)}
+                          className="text-red-600 hover:text-red-900 p-2 rounded hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleCancelSubscription(user)}
+                          className="text-orange-600 hover:text-orange-900 p-2 rounded hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                          title="Cancel Plan"
+                        >
+                          <X size={18} />
+                        </button>
+                        <button
+                          onClick={() => handleChangePlan(user)}
+                          className="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                          title="Admin Upgrade"
+                        >
+                          <ArrowUpCircle size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))
               )}
             </tbody>

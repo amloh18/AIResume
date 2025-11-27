@@ -15,9 +15,11 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
     usageMetrics: filters?.usageMetrics || {},
   }));
   const [availablePlans, setAvailablePlans] = useState<string[]>([]);
+  const [availableRegions, setAvailableRegions] = useState<string[]>([]);
 
   useEffect(() => {
     fetchAvailablePlans();
+    fetchAvailableRegions();
   }, []);
 
   const fetchAvailablePlans = async () => {
@@ -33,6 +35,21 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
       console.error('Error fetching plans for campaign filters:', error);
       // Fallback to empty array
       setAvailablePlans([]);
+    }
+  };
+
+  const fetchAvailableRegions = async () => {
+    try {
+      const response = await fetch('/api/admin/country-pricing');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.countryPricing) {
+          const regions = data.countryPricing.map((cp: any) => cp.countryCode);
+          setAvailableRegions(regions);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching regions:', error);
     }
   };
 
@@ -99,6 +116,13 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
     }
   };
 
+  const handleRegionChange = (region: string) => {
+    setLocalFilters({
+      ...localFilters,
+      region: region || undefined,
+    });
+  };
+
   const clearAllFilters = () => {
     setLocalFilters({});
   };
@@ -133,21 +157,21 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         <div className="grid grid-cols-2 gap-3">
           {availablePlans.length > 0 ? (
             availablePlans.map((plan) => {
-            const isChecked = localFilters.membershipPlans?.includes(plan) ?? false;
-            return (
-              <label
-                key={plan}
-                className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={isChecked}
-                  onChange={(e) => handlePlanChange(plan, e.target.checked)}
-                  className="w-4 h-4 text-lime-500 bg-white/10 border-white/20 rounded focus:ring-lime-400"
-                />
-                <span className="text-white capitalize">{plan}</span>
-              </label>
-            );
+              const isChecked = localFilters.membershipPlans?.includes(plan) ?? false;
+              return (
+                <label
+                  key={plan}
+                  className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg cursor-pointer transition-colors"
+                >
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={(e) => handlePlanChange(plan, e.target.checked)}
+                    className="w-4 h-4 text-lime-500 bg-white/10 border-white/20 rounded focus:ring-lime-400"
+                  />
+                  <span className="text-white capitalize">{plan}</span>
+                </label>
+              );
             })
           ) : (
             <div className="col-span-2 text-sm text-gray-400">Loading plans...</div>
@@ -169,7 +193,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
               <option value="new_users">New Users</option>
               <option value="existing_users">Existing Users</option>
             </select>
-            
+
             {localFilters.userAge && (
               <>
                 <select
@@ -307,8 +331,8 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
                 localFilters.emailVerified === true
                   ? 'true'
                   : localFilters.emailVerified === false
-                  ? 'false'
-                  : ''
+                    ? 'false'
+                    : ''
               }
               onChange={(e) =>
                 handleBooleanFilter(
@@ -331,8 +355,8 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
                 localFilters.isDeleted === true
                   ? 'true'
                   : localFilters.isDeleted === false
-                  ? 'false'
-                  : ''
+                    ? 'false'
+                    : ''
               }
               onChange={(e) =>
                 handleBooleanFilter(
@@ -350,30 +374,54 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         </div>
       </div>
 
+
+
+      {/* Region Filter */}
+      <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+        <h4 className="text-sm font-medium text-gray-300 mb-3">Region / Country</h4>
+        <select
+          value={localFilters.region || ''}
+          onChange={(e) => handleRegionChange(e.target.value)}
+          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+        >
+          <option value="">All Regions</option>
+          {availableRegions.map((region) => (
+            <option key={region} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Summary */}
-      {hasActiveFilters && (
-        <div className={`bg-lime-500/10 border border-lime-500/20 rounded-lg p-4 ${twoColumn ? 'col-span-2' : ''}`}>
-          <h4 className="text-sm font-medium text-lime-400 mb-2">Active Filters</h4>
-          <div className="text-xs text-gray-300 space-y-1">
-            {localFilters.membershipPlans?.length > 0 && (
-              <div>• Plans: {localFilters.membershipPlans.join(', ')}</div>
-            )}
-            {localFilters.userAge && (
-              <div>
-                • {localFilters.userAge.type === 'new_users' ? 'New' : 'Existing'} users (last{' '}
-                {localFilters.userAge.days} days)
-              </div>
-            )}
-            {localFilters.emailVerified !== undefined && (
-              <div>• Email {localFilters.emailVerified ? 'verified' : 'not verified'}</div>
-            )}
-            {localFilters.isDeleted !== undefined && (
-              <div>• {localFilters.isDeleted ? 'Deleted' : 'Active'} users</div>
-            )}
+      {
+        hasActiveFilters && (
+          <div className={`bg-lime-500/10 border border-lime-500/20 rounded-lg p-4 ${twoColumn ? 'col-span-2' : ''}`}>
+            <h4 className="text-sm font-medium text-lime-400 mb-2">Active Filters</h4>
+            <div className="text-xs text-gray-300 space-y-1">
+              {localFilters.membershipPlans?.length > 0 && (
+                <div>• Plans: {localFilters.membershipPlans.join(', ')}</div>
+              )}
+              {localFilters.userAge && (
+                <div>
+                  • {localFilters.userAge.type === 'new_users' ? 'New' : 'Existing'} users (last{' '}
+                  {localFilters.userAge.days} days)
+                </div>
+              )}
+              {localFilters.emailVerified !== undefined && (
+                <div>• Email {localFilters.emailVerified ? 'verified' : 'not verified'}</div>
+              )}
+              {localFilters.isDeleted !== undefined && (
+                <div>• {localFilters.isDeleted ? 'Deleted' : 'Active'} users</div>
+              )}
+              {localFilters.region && (
+                <div>• Region: {localFilters.region}</div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 }
 

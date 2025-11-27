@@ -36,27 +36,27 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   // Track if we've already fetched to prevent duplicate calls
   const hasFetchedRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
-  
+
   // Check if we're on admin route - skip session logic if so
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
-  
+
   // Ensure we're mounted before using session (prevents SSR/hydration issues)
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
+
   // Use useSession - must be called unconditionally (React hook rule)
   // SessionProvider should always be available since NotificationProvider is inside it in ClientProviders
   // Safely handle potential null/undefined returns
   const sessionResult = useSession();
   const session = sessionResult?.data || null;
   const status = sessionResult?.status || 'loading';
-  
+
   // Safely check authentication - handle null/undefined cases
-  const isAuthenticated = isMounted && 
-                          !isAdminRoute && 
-                          status === 'authenticated' && 
-                          !!session?.user;
+  const isAuthenticated = isMounted &&
+    !isAdminRoute &&
+    status === 'authenticated' &&
+    !!session?.user;
 
   // Filter out expired time-sensitive notifications
   const filterExpiredNotifications = useCallback((notifs: INotification[]) => {
@@ -148,7 +148,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         method: 'PUT',
       });
       if (!response.ok) throw new Error('Failed to mark as read');
-      
+
       setNotifications((prev) => {
         // Fix 1: Ensure prev is an array before calling map
         if (!prev || !Array.isArray(prev)) {
@@ -179,7 +179,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         method: 'PUT',
       });
       if (!response.ok) throw new Error('Failed to mark all as read');
-      
+
       setNotifications((prev) => {
         // Fix 3: Ensure prev is an array before calling map
         if (!prev || !Array.isArray(prev)) {
@@ -206,24 +206,24 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         body: JSON.stringify({ actionType }),
       });
       if (!response.ok) throw new Error('Failed to handle action');
-      
+
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         console.error('Notification action response is not JSON. Content-Type:', contentType);
         return;
       }
-      
+
       const data = await response.json();
-      
+
       // Mark as read after action
       await markAsRead(notificationId);
-      
+
       // Show success message
       toast({
         title: 'Success',
         description: data.message || 'Action completed',
       });
-      
+
       // Refresh notifications
       await refreshNotifications();
     } catch (error) {
@@ -249,6 +249,12 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const showToastForNotification = useCallback(
     (notification: INotification, allowReschedule: boolean = true) => {
       if (!shouldShowToast(notification)) {
+        console.debug('🚫 Toast suppressed: Not eligible', {
+          id: notification._id,
+          title: notification.title,
+          read: notification.read,
+          channels: notification.channels
+        });
         return;
       }
 
@@ -305,8 +311,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
               {notification.actionType === 'move_to_next_stage'
                 ? 'Move to Next Stage'
                 : notification.actionType === 'review_job'
-                ? 'Review Job'
-                : 'View Details'}
+                  ? 'Review Job'
+                  : 'View Details'}
             </button>
           ) : undefined,
       });
@@ -378,10 +384,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       }
 
       const es = new EventSource('/api/notifications/stream');
-      
+
       es.onmessage = (event) => {
         try {
           const notification = JSON.parse(event.data) as INotification;
+          console.debug('📨 SSE Received:', notification);
 
           // Filter expired notifications
           const filtered = filterExpiredNotifications([notification]);
@@ -391,7 +398,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
               if (!prev || !Array.isArray(prev)) {
                 return [notification];
               }
-              
+
               // Check if notification already exists (avoid duplicates)
               // Fix 4: Safely convert _id to string for comparison
               const notificationId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
@@ -424,7 +431,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         // Check connection state to determine error type
         const isLocal = process.env.NODE_ENV === 'development';
         const reconnectDelay = isLocal ? 2000 : 5000; // Faster reconnection for local
-        
+
         if (es.readyState === EventSource.CLOSED) {
           if (isLocal) {
             console.debug('SSE connection closed. Will attempt to reconnect...');
@@ -505,10 +512,10 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     if (status === 'loading') {
       return; // Don't fetch while session is loading
     }
-    
+
     // Only fetch if authenticated and we haven't fetched yet (or user just logged in)
     if (isAuthenticated && (!hasFetchedRef.current || status === 'authenticated')) {
-    fetchNotifications();
+      fetchNotifications();
     } else if (!isAuthenticated) {
       // Reset on logout
       hasFetchedRef.current = false;

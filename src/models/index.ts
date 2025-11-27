@@ -1,6 +1,8 @@
 export { default as User, type IUser } from './User';
 export { default as CV, type ICV } from './CV';
+export { default as Job, type IJob } from './Job';
 export { default as JobApplication, type IJobApplication } from './JobApplication';
+export { default as ActivityLog, type IActivityLog } from './ActivityLog';
 
 export { default as Template, type ITemplate, type ISectionBlueprint } from './Template';
 export { default as PricingPlan, type IPricingPlan } from './PricingPlan';

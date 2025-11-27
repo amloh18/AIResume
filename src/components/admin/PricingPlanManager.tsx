@@ -6,12 +6,12 @@ import { AdminPricingPlanSkeleton } from './AdminSkeletons';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Plus, 
-  Edit, 
-  Eye, 
-  Link, 
-  ToggleLeft, 
+import {
+  Plus,
+  Edit,
+  Eye,
+  Link,
+  ToggleLeft,
   ToggleRight,
   CreditCard,
   CheckCircle,
@@ -82,8 +82,9 @@ const PricingPlanManager: React.FC = () => {
   const [selectedPlanForEdit, setSelectedPlanForEdit] = useState<PricingPlan | null>(null);
   const [isPlanDetailsModalOpen, setIsPlanDetailsModalOpen] = useState(false);
   const [selectedPlanForDetails, setSelectedPlanForDetails] = useState<PricingPlan | null>(null);
-  const [allPromotionalOffers, setAllPromotionalOffers] = useState<any[]>([]);
-  const [loadingOffers, setLoadingOffers] = useState(false);
+  const [promotionalOffersState, setPromotionalOffersState] = useState<PromotionalOffer[]>([]); // Renamed to avoid conflict with hook
+  const [regionalPricing, setRegionalPricing] = useState<any[]>([]);
+  const [loadingOffersState, setLoadingOffersState] = useState(false); // Renamed to avoid conflict with hook
   const [regionalFilter, setRegionalFilter] = useState<string>('all');
   const [countryPricing, setCountryPricing] = useState<any[]>([]);
   const [loadingPricing, setLoadingPricing] = useState(true);
@@ -94,31 +95,45 @@ const PricingPlanManager: React.FC = () => {
   // Ensure plans is always an array to prevent filter errors
   const safePlans = Array.isArray(plans) ? plans : [];
   const safePromotionalOffers = Array.isArray(promotionalOffers) ? promotionalOffers : [];
-  
+
   // Ensure pricing data is always an array to prevent errors
   const safeCountryPricing = Array.isArray(countryPricing) ? countryPricing : [];
-  
+
   // Calculate metrics for dashboard overview
   const activePlans = safePlans.filter(p => p.status === 'active').length;
   const activePromotions = safePromotionalOffers.filter((offer: any) => offer.isActive).length;
   const regionsWithCustomPricing = safeCountryPricing.length; // From database
-  
+
   // Calculate monthly changes (placeholder - would need historical data)
   const activePlansChange = 2; // Would calculate from historical data
   const activePromotionsChange = -1; // Would calculate from historical data
   const regionsChange = 0; // Would calculate from historical data
 
+  interface PromotionalOffer {
+    _id: string;
+    title: string;
+    description: string;
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    validFrom: string;
+    validUntil: string;
+    isActive: boolean;
+    bannerText?: string;
+    promotionalPricing?: any[];
+  }
+
   // Fetch all promotional offers for display
   useEffect(() => {
     const fetchAllOffers = async () => {
-      setLoadingOffers(true);
+      setLoadingOffersState(true);
       try {
         const response = await fetch('/api/admin/promotional-offers');
         if (response.ok) {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const data = await response.json();
-            setAllPromotionalOffers(data);
+            setPromotionalOffersState(data);
           }
         }
       } catch (error) {
@@ -128,7 +143,7 @@ const PricingPlanManager: React.FC = () => {
           console.error('Error fetching promotional offers:', String(error));
         }
       } finally {
-        setLoadingOffers(false);
+        setLoadingOffersState(false);
       }
     };
     fetchAllOffers();
@@ -189,13 +204,13 @@ const PricingPlanManager: React.FC = () => {
     if (offer.bannerText) {
       return offer.bannerText;
     }
-    
+
     // Fallback: try to calculate from promotional pricing
     if (offer.promotionalPricing && offer.promotionalPricing.length > 0) {
       // For now, just return a generic discount text
       return 'Discount Available';
     }
-    
+
     // Final fallback
     return offer.title || 'Special Offer';
   };
@@ -210,8 +225,8 @@ const PricingPlanManager: React.FC = () => {
       const response = await fetch(`/api/admin/plans/${planId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          status: currentStatus === 'active' ? 'inactive' : 'active' 
+        body: JSON.stringify({
+          status: currentStatus === 'active' ? 'inactive' : 'active'
         })
       });
 
@@ -312,17 +327,17 @@ const PricingPlanManager: React.FC = () => {
       // Pro plans
       readiness.stripe = !!(plan.stripePriceId_monthly || plan.stripePriceId_quarterly || plan.stripePriceId_yearly);
       readiness.razorpay = !!(plan.razorpayPlanId_monthly || plan.razorpayPlanId_quarterly || plan.razorpayPlanId_yearly);
-      
+
       const stripeIds = [];
       if (plan.stripePriceId_monthly) stripeIds.push('Monthly');
       if (plan.stripePriceId_quarterly) stripeIds.push('Quarterly');
       if (plan.stripePriceId_yearly) stripeIds.push('Yearly');
-      
+
       const razorpayIds = [];
       if (plan.razorpayPlanId_monthly) razorpayIds.push('Monthly');
       if (plan.razorpayPlanId_quarterly) razorpayIds.push('Quarterly');
       if (plan.razorpayPlanId_yearly) razorpayIds.push('Yearly');
-      
+
       readiness.stripeDetails = stripeIds.length > 0 ? stripeIds.join(', ') : 'No price IDs';
       readiness.razorpayDetails = razorpayIds.length > 0 ? razorpayIds.join(', ') : 'No plan IDs';
     }
@@ -344,36 +359,36 @@ const PricingPlanManager: React.FC = () => {
       {/* Tabs Navigation */}
       <Tabs defaultValue="pricing" className="w-full" key="pricing-manager-tabs">
         <TabsList className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 rounded-none p-0 h-auto w-full justify-start">
-          <TabsTrigger 
-            value="pricing" 
+          <TabsTrigger
+            value="pricing"
             className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <CreditCard className="h-4 w-4 mr-2" />
             Current Pricing
           </TabsTrigger>
-          <TabsTrigger 
-            value="regional" 
+          <TabsTrigger
+            value="regional"
             className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <Globe className="h-4 w-4 mr-2" />
             Regional Settings
           </TabsTrigger>
-          <TabsTrigger 
-            value="promotions" 
+          <TabsTrigger
+            value="promotions"
             className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <Gift className="h-4 w-4 mr-2" />
             Promotional Offers
           </TabsTrigger>
-          <TabsTrigger 
-            value="coupons" 
+          <TabsTrigger
+            value="coupons"
             className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <Tag className="h-4 w-4 mr-2" />
             Coupon Management
           </TabsTrigger>
-          <TabsTrigger 
-            value="revenue" 
+          <TabsTrigger
+            value="revenue"
             className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
             <DollarSign className="h-4 w-4 mr-2" />
@@ -399,7 +414,7 @@ const PricingPlanManager: React.FC = () => {
                   Manage Regional Pricing
                 </Button>
               </div>
-              
+
               <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-6">
@@ -480,18 +495,18 @@ const PricingPlanManager: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {safePlans.map((plan) => {
+                      {safePlans.map((plan: any) => {
                         const price = getPlanPrice(plan);
                         const billingCycle = getBillingCycle(plan);
-                        const priceDisplay = plan.key === DEFAULT_PLAN_KEY 
-                          ? 'Free' 
-                          : price === 0 
-                            ? 'Contact Us' 
+                        const priceDisplay = plan.key === DEFAULT_PLAN_KEY
+                          ? 'Free'
+                          : price === 0
+                            ? 'Contact Us'
                             : `$${price.toFixed(2)}`;
-                        
+
                         return (
-                          <tr 
-                            key={plan._id} 
+                          <tr
+                            key={plan._id}
                             className="border-b border-gray-700 hover:bg-gray-750 cursor-pointer transition-colors"
                             onClick={() => handleRowClick(plan)}
                           >
@@ -501,11 +516,10 @@ const PricingPlanManager: React.FC = () => {
                             <td className="p-4 text-gray-300">{priceDisplay}</td>
                             <td className="p-4 text-gray-300">{billingCycle}</td>
                             <td className="p-4">
-                              <span className={`px-2 py-1 rounded-full text-xs ${
-                                plan.status === 'active'
-                                  ? 'bg-green-900 text-green-300'
-                                  : 'bg-gray-700 text-gray-400'
-                              }`}>
+                              <span className={`px-2 py-1 rounded-full text-xs ${plan.status === 'active'
+                                ? 'bg-green-900 text-green-300'
+                                : 'bg-gray-700 text-gray-400'
+                                }`}>
                                 {plan.status === 'active' ? 'Active' : 'Archived'}
                               </span>
                             </td>
@@ -535,21 +549,21 @@ const PricingPlanManager: React.FC = () => {
                 <h2 className="text-2xl font-bold text-white">Promotional Offers</h2>
                 <p className="text-gray-400 mt-1">Active and expired promotional offers</p>
               </div>
-              
-              {loadingOffers ? (
+
+              {loadingOffersState ? (
                 <div className="flex items-center justify-center h-32">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
-                  {allPromotionalOffers.map((offer) => {
+                  {promotionalOffersState.map((offer) => {
                     const status = getOfferStatus(offer);
                     const discountText = formatOfferDiscount(offer);
                     const isExpired = status.badge === 'Expired';
-                    const expiryDate = isExpired 
-                      ? formatDate(offer.validUntil) 
+                    const expiryDate = isExpired
+                      ? formatDate(offer.validUntil)
                       : formatDate(offer.validUntil);
-                    
+
                     return (
                       <Card key={offer._id} className="bg-gray-800 border-gray-700 hover:shadow-lg transition-shadow">
                         <CardContent className="p-6 relative">
@@ -558,13 +572,13 @@ const PricingPlanManager: React.FC = () => {
                               {status.badge}
                             </span>
                           </div>
-                          
+
                           <div className="mb-4">
                             <div className="text-sm text-gray-400 mb-1">Code: {offer.title?.toUpperCase() || 'N/A'}</div>
                             <div className="text-2xl font-bold text-white mb-2">{discountText}</div>
                             <div className="text-sm text-gray-300">{offer.description || 'No description'}</div>
                           </div>
-                          
+
                           <div className="mt-4 pt-4 border-t border-gray-700 flex items-center justify-between">
                             <div className="text-sm text-gray-400">
                               {isExpired ? `Expired: ${expiryDate}` : `Expires: ${expiryDate}`}
@@ -577,8 +591,8 @@ const PricingPlanManager: React.FC = () => {
                       </Card>
                     );
                   })}
-                  
-                  {allPromotionalOffers.length === 0 && (
+
+                  {promotionalOffersState.length === 0 && (
                     <div className="col-span-full text-center py-8 text-gray-400">
                       No promotional offers found
                     </div>
@@ -594,32 +608,70 @@ const PricingPlanManager: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-white">Regional Settings</h2>
-                <p className="text-gray-400 mt-1">Regional pricing is now managed per plan. Use the dedicated pricing plans page to edit regional pricing.</p>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Regional Pricing</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Manage pricing for different countries and regions
+                </p>
               </div>
               <Button
                 onClick={() => router.push('/admin/pricing-plans')}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
               >
-                <Settings className="w-4 h-4 mr-2" />
-                Manage Regional Pricing
+                Manage Regions
               </Button>
             </div>
-            
-            <Card className="bg-gray-800 border-gray-700">
-              <CardContent className="p-6">
-                <div className="text-center py-8">
-                  <Globe className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-white mb-2">Regional Pricing Management</h3>
-                  <p className="text-gray-400 mb-6">
-                    Regional pricing is now stored directly in each pricing plan. Click the button above to manage regional pricing for all plans.
-                  </p>
-                  <Button
-                    onClick={() => router.push('/admin/pricing-plans')}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                  >
-                    Go to Pricing Plans Management
-                  </Button>
+
+            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Country</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Currency</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Region</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Day Pass</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Monthly</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quarterly</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Yearly</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                      {regionalPricing.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                            No regional pricing data found.
+                          </td>
+                        </tr>
+                      ) : (
+                        regionalPricing.map((pricing: any) => (
+                          <tr key={pricing._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                              {pricing.countryName} ({pricing.countryCode})
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {pricing.currency} ({pricing.currencySymbol})
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                              {pricing.regionId}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                              {pricing.currencySymbol}{pricing.planPrices?.dayPass?.price || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                              {pricing.currencySymbol}{pricing.planPrices?.monthly?.price || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                              {pricing.currencySymbol}{pricing.planPrices?.quarterly?.price || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                              {pricing.currencySymbol}{pricing.planPrices?.yearly?.price || '-'}
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
@@ -667,11 +719,11 @@ const PricingPlanManager: React.FC = () => {
 
       {/* Plan Details Modal */}
       {selectedPlanForDetails && (
-        <div 
+        <div
           className={`fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'}`}
           onClick={() => setIsPlanDetailsModalOpen(false)}
         >
-          <Card 
+          <Card
             className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
@@ -764,11 +816,10 @@ const PricingPlanManager: React.FC = () => {
                 {/* Status */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-700">
                   <div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedPlanForDetails.status === 'active'
-                        ? 'bg-green-900 text-green-300'
-                        : 'bg-gray-700 text-gray-400'
-                    }`}>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedPlanForDetails.status === 'active'
+                      ? 'bg-green-900 text-green-300'
+                      : 'bg-gray-700 text-gray-400'
+                      }`}>
                       {selectedPlanForDetails.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </div>
