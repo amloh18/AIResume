@@ -56,6 +56,15 @@ class NotificationService {
       documents_ready: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       interview_follow_up: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
       job_applied: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+
+      // New Types Defaults
+      job_draft_created: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      job_stage_moved: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      job_stale_alert: { enabled: true, channels: { 'in-app': true, email: true, push: false } },
+      interview_prep_ready: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      document_saved: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      feature_discovery: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
+      extension_download: { enabled: true, channels: { 'in-app': true, email: false, push: false } },
     };
 
     return defaults[type] || { enabled: true, channels: { 'in-app': true, email: false, push: false } };
@@ -70,7 +79,7 @@ class NotificationService {
   ): Promise<{ enabled: boolean; channels: { 'in-app': boolean; email: boolean; push: boolean } }> {
     await getConnection();
     const user = await User.findById(userId).select('notificationPreferences');
-    
+
     if (!user) {
       return this.getDefaultPreferences(type);
     }
@@ -100,7 +109,7 @@ class NotificationService {
 
     // Use provided channels if available, otherwise use user preferences
     let channels: NotificationChannel[] = [];
-    
+
     if (params.channels && params.channels.length > 0) {
       // Use explicitly provided channels
       channels = params.channels;
@@ -340,6 +349,141 @@ class NotificationService {
     }
 
     return { processed, failed };
+  }
+  /**
+   * Notify when a job draft is created
+   */
+  async notifyJobDraftCreated(userId: string, jobTitle: string, jobId: string): Promise<void> {
+    await this.createNotification({
+      userId,
+      type: 'job_draft_created',
+      title: 'Job Draft Created',
+      message: `Draft for "${jobTitle}" has been saved. Complete your application when ready.`,
+      actionType: 'edit_job',
+      actionData: { jobId },
+      interactive: true,
+      priority: 'low',
+    });
+  }
+
+  /**
+   * Notify when a job stage is moved
+   */
+  async notifyJobStageMoved(
+    userId: string,
+    jobTitle: string,
+    jobId: string,
+    newStage: string,
+    oldStage: string
+  ): Promise<void> {
+    // Determine message based on stage
+    let message = `"${jobTitle}" moved to ${newStage}.`;
+    let priority: NotificationPriority = 'medium';
+
+    if (newStage === 'Offer') {
+      message = `Congratulations! "${jobTitle}" moved to Offer stage! 🎉`;
+      priority = 'high';
+    } else if (newStage === 'Rejected') {
+      message = `"${jobTitle}" moved to Rejected. Keep going, the right role is out there!`;
+      priority = 'low';
+    } else if (newStage === 'Interview') {
+      message = `Exciting! "${jobTitle}" moved to Interview stage. Check out prep materials.`;
+      priority = 'high';
+    }
+
+    await this.createNotification({
+      userId,
+      type: 'job_stage_moved',
+      title: 'Job Status Updated',
+      message,
+      actionType: 'view_job',
+      actionData: { jobId },
+      interactive: true,
+      priority,
+    });
+
+    // Valid "Interview Prep Ready" notification if moving to Interview
+    if (newStage === 'Interview') {
+      await this.notifyInterviewPrepReady(userId, jobTitle, jobId);
+    }
+  }
+
+  /**
+   * Notify when interview prep is ready
+   */
+  async notifyInterviewPrepReady(userId: string, jobTitle: string, jobId: string): Promise<void> {
+    await this.createNotification({
+      userId,
+      type: 'interview_prep_ready',
+      title: 'Interview Prep Ready',
+      message: `AI Interview Coach is ready for "${jobTitle}". Practice now!`,
+      actionType: 'interview_prep',
+      actionData: { jobId },
+      interactive: true,
+      priority: 'high',
+    });
+  }
+
+  /**
+   * Notify about stale jobs (Action Required)
+   */
+  async notifyStaleJob(userId: string, jobTitle: string, jobId: string, daysSinceUpdate: number): Promise<void> {
+    await this.createNotification({
+      userId,
+      type: 'job_stale_alert',
+      title: 'Action Required',
+      message: `"${jobTitle}" hasn't been updated in ${daysSinceUpdate} days. Any updates?`,
+      actionType: 'view_job',
+      actionData: { jobId },
+      interactive: true,
+      priority: 'medium',
+    });
+  }
+
+  /**
+   * Notify when documents are saved
+   */
+  async notifyDocumentSaved(userId: string, docName: string, docType: string): Promise<void> {
+    await this.createNotification({
+      userId,
+      type: 'document_saved',
+      title: 'Document Saved',
+      message: `${docType} "${docName}" has been saved successfully.`,
+      priority: 'low',
+    });
+  }
+
+  /**
+   * Trigger feature discovery notification (idempotent check should be done by caller or here if needed)
+   */
+  async notifyFeatureDiscovery(userId: string, featureName: string, description: string): Promise<void> {
+    await this.createNotification({
+      userId,
+      type: 'feature_discovery',
+      title: `Try New Feature: ${featureName}`,
+      message: description,
+      interactive: true,
+      actionType: 'feature_discovery', // generic action handler
+      actionData: { feature: featureName },
+      priority: 'low',
+    });
+  }
+
+  /**
+   * Trigger Chrome Extension download nudge
+   */
+  async notifyExtensionDownload(userId: string): Promise<void> {
+    await this.createNotification({
+      userId,
+      type: 'extension_download',
+      title: 'Boost Your Productivity',
+      message: 'Download our Chrome Extension to save jobs directly from LinkedIn and other sites.',
+      interactive: true,
+      actionType: 'download_extension',
+      actionData: { url: 'https://chrome.google.com/webstore/...' }, // Placeholder URL
+      priority: 'medium',
+      channels: ['in-app'], // Usually just in-app is enough
+    });
   }
 }
 

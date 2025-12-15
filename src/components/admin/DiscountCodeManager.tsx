@@ -18,24 +18,28 @@ import {
 interface DiscountCode {
   _id: string;
   code: string;
-  description: string;
-  discountType: 'percentage' | 'fixed';
-  discountValue: number;
-  currency: string;
+  description?: string;
+  type: 'percentage' | 'fixed' | 'trial';  // Support trial coupons
+  discountValue?: number;
+  trialDays?: number;  // For trial coupons
+  currency?: string;
   maxUses: number;
   usedCount: number;
   validFrom: Date;
   validUntil: Date;
-  applicablePlans: string[];
+  applicablePlans?: string[];  // Legacy
+  applicablePlanKeys?: string[];  // Plan keys (e.g., 'pro_monthly')
   minimumOrderValue?: number;
   isActive: boolean;
-  createdBy: string;
+  requiresCreditCard?: boolean;
+  createdBy?: string;
   createdAt: string;
   updatedAt: string;
 }
 
 interface PricingPlan {
   _id: string;
+  key?: string;  // Plan key (e.g., 'pro_monthly')
   name: string;
   price: number;
   currency: string;
@@ -44,15 +48,17 @@ interface PricingPlan {
 interface DiscountCodeFormData {
   code: string;
   description: string;
-  discountType: 'percentage' | 'fixed';
-  discountValue: number;
-  currency: string;
+  type: 'percentage' | 'fixed' | 'trial';  // Support all coupon types
+  discountValue?: number;
+  trialDays?: number;  // For trial coupons
+  currency?: string;
   maxUses: number;
   validFrom: string;
   validUntil: string;
-  applicablePlans: string[];
+  applicablePlanKeys: string[];  // Use plan keys instead of ObjectIds
   minimumOrderValue?: number;
   isActive: boolean;
+  requiresCreditCard?: boolean;
 }
 
 const DiscountCodeManager: React.FC = () => {
@@ -65,15 +71,17 @@ const DiscountCodeManager: React.FC = () => {
   const [formData, setFormData] = useState<DiscountCodeFormData>({
     code: '',
     description: '',
-    discountType: 'percentage',
+    type: 'percentage',
     discountValue: 0,
-    currency: 'EUR', // Will be updated from config
+    trialDays: 7,
+    currency: 'USD',
     maxUses: 100,
     validFrom: new Date().toISOString().split('T')[0],
     validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    applicablePlans: [],
+    applicablePlanKeys: [],
     minimumOrderValue: 0,
-    isActive: true
+    isActive: true,
+    requiresCreditCard: false
   });
   const [availableCurrencies, setAvailableCurrencies] = useState<string[]>(['EUR', 'USD', 'INR']);
 
@@ -105,7 +113,7 @@ const DiscountCodeManager: React.FC = () => {
 
   const fetchDiscountCodes = async () => {
     try {
-      const url = showInactive 
+      const url = showInactive
         ? '/api/admin/discount-codes?includeInactive=true'
         : '/api/admin/discount-codes';
       const response = await fetch(url);
@@ -185,16 +193,18 @@ const DiscountCodeManager: React.FC = () => {
     setEditingCode(code);
     setFormData({
       code: code.code,
-      description: code.description,
-      discountType: code.discountType,
+      description: code.description || '',
+      type: code.type,
       discountValue: code.discountValue,
+      trialDays: code.trialDays,
       currency: code.currency,
       maxUses: code.maxUses,
       validFrom: new Date(code.validFrom).toISOString().split('T')[0],
       validUntil: new Date(code.validUntil).toISOString().split('T')[0],
-      applicablePlans: code.applicablePlans,
+      applicablePlanKeys: code.applicablePlanKeys || code.applicablePlans || [],
       minimumOrderValue: code.minimumOrderValue,
-      isActive: code.isActive
+      isActive: code.isActive,
+      requiresCreditCard: code.requiresCreditCard
     });
     setShowForm(true);
   };
@@ -232,15 +242,17 @@ const DiscountCodeManager: React.FC = () => {
     setFormData({
       code: '',
       description: '',
-      discountType: 'percentage',
+      type: 'percentage',
       discountValue: 0,
-      currency: 'EUR',
+      trialDays: 7,
+      currency: 'USD',
       maxUses: 100,
       validFrom: new Date().toISOString().split('T')[0],
       validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      applicablePlans: [],
+      applicablePlanKeys: [],
       minimumOrderValue: 0,
-      isActive: true
+      isActive: true,
+      requiresCreditCard: false
     });
     setEditingCode(null);
     setShowForm(false);
@@ -249,9 +261,9 @@ const DiscountCodeManager: React.FC = () => {
   const isCodeValid = (code: DiscountCode) => {
     const now = new Date();
     return code.isActive &&
-           code.usedCount < code.maxUses &&
-           now >= new Date(code.validFrom) &&
-           now <= new Date(code.validUntil);
+      code.usedCount < code.maxUses &&
+      now >= new Date(code.validFrom) &&
+      now <= new Date(code.validUntil);
   };
 
   const getRemainingUses = (code: DiscountCode) => {
@@ -314,7 +326,7 @@ const DiscountCodeManager: React.FC = () => {
         </div>
         <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-            {discountCodes.filter(c => c.discountType === 'percentage').length}
+            {discountCodes.filter(c => c.type === 'percentage').length}
           </div>
           <div className="text-sm text-gray-600 dark:text-gray-400">Percentage Codes</div>
         </div>
@@ -325,9 +337,8 @@ const DiscountCodeManager: React.FC = () => {
         {discountCodes.map((code) => (
           <div
             key={code._id}
-            className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border ${
-              isCodeValid(code) ? 'border-green-200 dark:border-green-700' : 'border-red-200 dark:border-red-700'
-            }`}
+            className={`bg-white dark:bg-gray-800 rounded-lg shadow-sm border ${isCodeValid(code) ? 'border-green-200 dark:border-green-700' : 'border-red-200 dark:border-red-700'
+              }`}
           >
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
@@ -352,7 +363,7 @@ const DiscountCodeManager: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Discount:</span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">
-                    {code.discountType === 'percentage' ? (
+                    {code.type === 'percentage' ? (
                       <span className="text-green-600">{code.discountValue}%</span>
                     ) : (
                       <span className="text-green-600">{code.currency} {code.discountValue}</span>
@@ -369,9 +380,8 @@ const DiscountCodeManager: React.FC = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Remaining:</span>
-                  <span className={`text-sm font-medium ${
-                    getRemainingUses(code) > 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <span className={`text-sm font-medium ${getRemainingUses(code) > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
                     {getRemainingUses(code)} uses
                   </span>
                 </div>
@@ -393,9 +403,9 @@ const DiscountCodeManager: React.FC = () => {
                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                   <Users size={12} />
                   <span>
-                    {code.applicablePlans.length === 0 
-                      ? 'All plans' 
-                      : `${code.applicablePlans.length} plan${code.applicablePlans.length > 1 ? 's' : ''}`
+                    {(code.applicablePlanKeys || code.applicablePlans || []).length === 0
+                      ? 'All plans'
+                      : `${(code.applicablePlanKeys || code.applicablePlans || []).length} plan${(code.applicablePlanKeys || code.applicablePlans || []).length > 1 ? 's' : ''}`
                     }
                   </span>
                 </div>
@@ -493,23 +503,31 @@ const DiscountCodeManager: React.FC = () => {
                       Discount Type
                     </label>
                     <select
-                      value={formData.discountType}
-                      onChange={(e) => setFormData(prev => ({ ...prev, discountType: e.target.value as 'percentage' | 'fixed' }))}
+                      value={formData.type}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'percentage' | 'fixed' | 'trial' }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                     >
                       <option value="percentage">Percentage</option>
                       <option value="fixed">Fixed Amount</option>
+                      <option value="trial">Trial Period</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {formData.discountType === 'percentage' ? 'Percentage' : 'Amount'}
+                      {formData.type === 'trial' ? 'Trial Days' : formData.type === 'percentage' ? 'Percentage' : 'Amount'}
                     </label>
                     <input
                       type="number"
-                      step={formData.discountType === 'percentage' ? '1' : '0.01'}
-                      value={formData.discountValue}
-                      onChange={(e) => setFormData(prev => ({ ...prev, discountValue: parseFloat(e.target.value) }))}
+                      step={formData.type === 'percentage' ? '1' : '0.01'}
+                      value={formData.type === 'trial' ? formData.trialDays : formData.discountValue}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value);
+                        setFormData(prev =>
+                          prev.type === 'trial'
+                            ? { ...prev, trialDays: value }
+                            : { ...prev, discountValue: value }
+                        );
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
                       required
                     />
@@ -580,34 +598,35 @@ const DiscountCodeManager: React.FC = () => {
                     <label className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={formData.applicablePlans.length === 0}
+                        checked={formData.applicablePlanKeys.length === 0}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setFormData(prev => ({ ...prev, applicablePlans: [] }));
+                            setFormData(prev => ({ ...prev, applicablePlanKeys: [] }));
                           }
                         }}
                         className="rounded border-gray-300 dark:border-gray-600 text-green-600 focus:ring-green-500"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">
-                        All Plans (Sitewide) {formData.applicablePlans.length === 0 && <span className="text-green-600">✓</span>}
+                        All Plans (Sitewide) {formData.applicablePlanKeys.length === 0 && <span className="text-green-600">✓</span>}
                       </span>
                     </label>
                     {pricingPlans.map((plan) => (
                       <label key={plan._id} className="flex items-center gap-3">
                         <input
                           type="checkbox"
-                          checked={formData.applicablePlans.includes(plan._id)}
-                          disabled={formData.applicablePlans.length === 0}
+                          checked={formData.applicablePlanKeys.includes(plan.key || plan._id)}
+                          disabled={formData.applicablePlanKeys.length === 0}
                           onChange={(e) => {
+                            const planKey = plan.key || plan._id;
                             if (e.target.checked) {
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                applicablePlans: [...prev.applicablePlans, plan._id] 
+                              setFormData(prev => ({
+                                ...prev,
+                                applicablePlanKeys: [...prev.applicablePlanKeys, planKey]
                               }));
                             } else {
-                              setFormData(prev => ({ 
-                                ...prev, 
-                                applicablePlans: prev.applicablePlans.filter(id => id !== plan._id) 
+                              setFormData(prev => ({
+                                ...prev,
+                                applicablePlanKeys: prev.applicablePlanKeys.filter((id: string) => id !== planKey)
                               }));
                             }
                           }}

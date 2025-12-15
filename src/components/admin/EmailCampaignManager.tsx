@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Mail, 
-  Send, 
-  Eye, 
-  Edit, 
-  Trash2, 
-  Plus, 
-  Filter, 
+import {
+  Mail,
+  Send,
+  Eye,
+  Edit,
+  Trash2,
+  Plus,
+  Filter,
   Search,
   Calendar,
   Users,
@@ -16,13 +16,25 @@ import {
   Clock,
   X,
   FileText,
-  Target
+  Target,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampaignEditor from './CampaignEditor';
 import CampaignFilters from './CampaignFilters';
 import { formatDate } from '@/lib/utils';
 import { CAMPAIGN_STATUSES } from '@/lib/config/adminConstants';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 interface Campaign {
   _id: string;
@@ -43,18 +55,24 @@ interface Campaign {
 }
 
 export default function EmailCampaignManager() {
+  const { toast } = useToast();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showEditor, setShowEditor] = useState(false);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
-  const [syncStatus, setSyncStatus] = useState<any>(null);
   const [syncing, setSyncing] = useState(false);
+  const [metrics, setMetrics] = useState({ totalUsers: 0 });
+
+  // Delete Dialog State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCampaigns();
-    fetchSyncStatus();
+    fetchMetrics();
   }, [statusFilter]);
 
   const fetchCampaigns = async () => {
@@ -63,103 +81,99 @@ export default function EmailCampaignManager() {
       const response = await fetch(
         `/api/admin/email-campaigns?status=${statusFilter}&limit=50`
       );
-      
-      // Check content type before parsing
+
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Invalid response format from server');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         setCampaigns(data.campaigns);
       }
     } catch (error) {
       console.error('Failed to fetch campaigns:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch campaigns",
+        variant: "destructive"
+      });
       setCampaigns([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchSyncStatus = async () => {
+  const fetchMetrics = async () => {
     try {
-      const response = await fetch('/api/admin/users/sync');
-      
-      // Check if response is ok
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to fetch sync status:', response.status, errorText);
-        return;
-      }
-
-      // Check content type before parsing JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const errorText = await response.text();
-        console.error('Non-JSON response from sync status:', errorText);
-        return;
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setSyncStatus(data.stats);
+      const response = await fetch('/api/metrics');
+      if (response.ok) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await response.json();
+          setMetrics({
+            totalUsers: data.totalUsers || 0
+          });
+        }
       }
     } catch (error) {
-      console.error('Failed to fetch sync status:', error);
+      console.error('Error fetching metrics:', error);
     }
   };
 
   const handleSyncUsers = async () => {
     if (syncing) return;
-    
+
     setSyncing(true);
     try {
       const response = await fetch('/api/admin/users/sync', {
         method: 'POST',
       });
 
-      // Check if response is ok
       if (!response.ok) {
         const errorText = await response.text();
         console.error('Sync users API error:', response.status, errorText);
-        alert(`Failed to sync users: ${response.status} ${response.statusText}`);
-        setSyncing(false);
+        toast({
+          title: "Sync Failed",
+          description: `Failed to sync users: ${response.statusText}`,
+          variant: "destructive"
+        });
         return;
       }
 
-      // Check content type before parsing JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        const errorText = await response.text();
-        console.error('Non-JSON response from sync users:', errorText);
-        alert('Invalid response from server. Please check the console for details.');
-        setSyncing(false);
+        toast({
+          title: "Error",
+          description: "Invalid response from server",
+          variant: "destructive"
+        });
         return;
       }
 
       const data = await response.json();
-      
+
       if (data.success) {
-        alert(`User sync completed!\n- Synced: ${data.stats.syncedCount}\n- New: ${data.stats.newUsers}\n- Updated: ${data.stats.updatedUsers}`);
-        fetchSyncStatus();
+        toast({
+          title: "Sync Completed",
+          description: `Synced: ${data.stats.syncedCount}, New: ${data.stats.newUsers}, Updated: ${data.stats.updatedUsers}`,
+        });
+        fetchMetrics(); // Refresh metrics after sync
       } else {
-        alert('User sync failed: ' + (data.error || 'Unknown error'));
-        if (data.details) {
-          console.error('Sync error details:', data.details);
-        }
+        toast({
+          title: "Sync Failed",
+          description: data.error || 'Unknown error',
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
-      if (error instanceof Error) {
-        console.error('Failed to sync users:', error.message);
-        alert('Failed to sync users: ' + error.message);
-      } else if (error && typeof error === 'object' && !('target' in error)) {
-        console.error('Failed to sync users:', String(error));
-        alert('Failed to sync users: Unknown error');
-      } else {
-        alert('Failed to sync users: Unknown error');
-      }
+      console.error('Failed to sync users:', error);
+      toast({
+        title: "Sync Failed",
+        description: error.message || 'Unknown error',
+        variant: "destructive"
+      });
     } finally {
       setSyncing(false);
     }
@@ -175,32 +189,45 @@ export default function EmailCampaignManager() {
     setShowEditor(true);
   };
 
-  const handleDeleteCampaign = async (campaignId: string) => {
-    if (!confirm('Are you sure you want to delete this campaign?')) return;
+  const handleDeleteClick = (campaign: Campaign) => {
+    setCampaignToDelete(campaign);
+    setDeleteDialogOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!campaignToDelete) return;
+
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/admin/email-campaigns/${campaignId}`, {
+      const response = await fetch(`/api/admin/email-campaigns/${campaignToDelete._id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Campaign deleted successfully",
+        });
         fetchCampaigns();
       } else {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          try {
-            const data = await response.json();
-            alert('Failed to delete campaign: ' + data.error);
-          } catch {
-            alert('Failed to delete campaign');
-          }
-        } else {
-          alert('Failed to delete campaign');
-        }
+        const data = await response.json().catch(() => ({}));
+        toast({
+          title: "Error",
+          description: data.error || "Failed to delete campaign",
+          variant: "destructive"
+        });
       }
     } catch (error) {
-      alert('Failed to delete campaign');
+      toast({
+        title: "Error",
+        description: "Failed to delete campaign",
+        variant: "destructive"
+      });
       console.error(error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
     }
   };
 
@@ -242,7 +269,7 @@ export default function EmailCampaignManager() {
     return (
       <span className="flex items-center gap-1 text-gray-400">
         <span className="text-lg">📊</span> Low
-        </span>
+      </span>
     );
   };
 
@@ -265,68 +292,65 @@ export default function EmailCampaignManager() {
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-white mb-2">Email Campaigns</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-white mb-2">Email Campaigns</h1>
+              <span className="px-3 py-1 bg-blue-500/25 text-blue-400 text-sm font-medium rounded-full mb-2">
+                Total Users: {metrics.totalUsers.toLocaleString()}
+              </span>
+            </div>
             <p className="text-gray-300">Create and manage marketing campaigns</p>
           </div>
+
+          {/* Search, Filters, and Action Buttons inline */}
           <div className="flex items-center gap-3">
-            {/* Sync Status */}
-            {syncStatus && (
-              <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2">
-                <div className="text-xs text-gray-400 mb-1">Total Users</div>
-                <div className="text-lg font-bold text-white">{syncStatus.totalUsers}</div>
-              </div>
-            )}
-            
+            {/* Search */}
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search campaigns..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+            >
+              <option value="all">All Status</option>
+              {CAMPAIGN_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
+
             {/* Sync Button */}
-            <button
+            <Button
+              variant="outline"
               onClick={handleSyncUsers}
               disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 text-blue-400 rounded-lg transition-all disabled:opacity-50"
+              className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 text-blue-400 border-0"
             >
-              <Users className="w-4 h-4" />
+              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
               {syncing ? 'Syncing...' : 'Sync Users'}
-            </button>
+            </Button>
 
             {/* Create Campaign Button */}
-            <button
+            <Button
               onClick={handleCreateCampaign}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all"
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Plus className="w-4 h-4" />
               New Campaign
-            </button>
+            </Button>
           </div>
-        </div>
-
-        {/* Search and Filters */}
-        <div className="flex items-center gap-4">
-          {/* Search */}
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by campaign, subject..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/50"
-            />
-          </div>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-          >
-            <option value="all">All Status</option>
-            {CAMPAIGN_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -362,8 +386,8 @@ export default function EmailCampaignManager() {
             </thead>
             <tbody>
               {filteredCampaigns.map((campaign) => {
-                const openRate = campaign.sentCount > 0 
-                  ? Math.round((campaign.openedCount / campaign.sentCount) * 100) 
+                const openRate = campaign.sentCount > 0
+                  ? Math.round((campaign.openedCount / campaign.sentCount) * 100)
                   : 0;
 
                 return (
@@ -385,8 +409,8 @@ export default function EmailCampaignManager() {
                       {campaign.sentAt
                         ? formatDate(campaign.sentAt)
                         : campaign.scheduledAt
-                        ? formatDate(campaign.scheduledAt)
-                        : formatDate(campaign.createdAt)}
+                          ? formatDate(campaign.scheduledAt)
+                          : formatDate(campaign.createdAt)}
                     </td>
                     <td className="px-6 py-4">
                       {getStatusBadge(campaign.status)}
@@ -408,7 +432,7 @@ export default function EmailCampaignManager() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDeleteCampaign(campaign._id)}
+                          onClick={() => handleDeleteClick(campaign)}
                           className="text-red-400 hover:text-red-300 transition-colors"
                           title="Delete"
                         >
@@ -423,6 +447,45 @@ export default function EmailCampaignManager() {
           </table>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-400">
+              <AlertTriangle className="w-5 h-5" />
+              Delete Campaign
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Are you sure you want to delete "{campaignToDelete?.campaignName}"? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setDeleteDialogOpen(false)}
+              className="text-gray-400 hover:text-white hover:bg-gray-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Campaign'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

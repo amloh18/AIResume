@@ -17,7 +17,7 @@ export async function GET(
 ) {
   const startTime = Date.now();
   let userId: string | undefined;
-  
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -52,7 +52,7 @@ export async function GET(
     // Rate limiting
     const downloadConfig = configService.getDownloadConfig();
     const rateLimitConfig = downloadConfig.rateLimit;
-    
+
     // Per-user rate limiting
     const userLimitResult = await redisRateLimiter.checkLimit(
       `download:user:${userId}`,
@@ -69,11 +69,11 @@ export async function GET(
         remaining: userLimitResult.remaining
       });
       return NextResponse.json(
-        { 
+        {
           error: 'Rate limit exceeded. Please try again later.',
           resetTime: userLimitResult.resetTime
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': rateLimitConfig.perUser.toString(),
@@ -101,11 +101,11 @@ export async function GET(
         remaining: ipLimitResult.remaining
       });
       return NextResponse.json(
-        { 
+        {
           error: 'Rate limit exceeded. Please try again later.',
           resetTime: ipLimitResult.resetTime
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': rateLimitConfig.perIP.toString(),
@@ -126,12 +126,15 @@ export async function GET(
       return NextResponse.json({ error: 'Cover letter not found' }, { status: 404 });
     }
 
-    // Generate filename
+    // Generate filename based on cover letter title, then job title, then fallback
     const jobTitle = searchParams.get('jobTitle');
+    const coverLetterTitle = coverLetter.title;
     const baseName = sanitizeFilename(
-      jobTitle 
-        ? jobTitle.toLowerCase().replace(/\s+/g, '-')
-        : coverLetter.metadata?.targetPosition?.toLowerCase().replace(/\s+/g, '-') || 'cover-letter'
+      coverLetterTitle
+        ? coverLetterTitle
+        : jobTitle
+          ? jobTitle
+          : 'CoverLetter'
     );
 
     let fileBlob: Blob;
@@ -141,13 +144,13 @@ export async function GET(
     if (format === 'pdf') {
       fileBlob = await generateCoverLetterPDF(coverLetter, paperSize, orientation);
       mimeType = 'application/pdf';
-      filename = `${baseName}-cover-letter.pdf`;
+      filename = `${baseName}|CoverLetter.pdf`;
     } else if (format === 'docx' || format === 'doc') {
       fileBlob = await generateCoverLetterDOCX(coverLetter, format);
-      mimeType = format === 'doc' 
-        ? 'application/msword' 
+      mimeType = format === 'doc'
+        ? 'application/msword'
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      filename = `${baseName}-cover-letter.${format}`;
+      filename = `${baseName}|CoverLetter.${format}`;
     } else {
       return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
     }
@@ -229,10 +232,10 @@ async function generateCoverLetterPDF(
   let yPos = margin + 20;
 
   // Date (top right)
-  const today = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const today = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
   doc.setFontSize(11);
   doc.setTextColor(100, 100, 100);
@@ -256,10 +259,10 @@ async function generateCoverLetterPDF(
   // Content
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  
+
   // Split content into paragraphs
   const paragraphs = coverLetter.content.split('\n\n').filter(p => p.trim());
-  
+
   paragraphs.forEach((paragraph: string) => {
     // Check if we need a new page
     if (yPos > pageHeight - margin - 20) {
@@ -281,7 +284,7 @@ async function generateCoverLetterPDF(
   yPos += 10;
   doc.text('Sincerely,', margin, yPos);
   yPos += 10;
-  
+
   // Signature space
   doc.text('[Your Name]', margin, yPos);
 
@@ -295,10 +298,10 @@ async function generateCoverLetterDOCX(
   coverLetter: any,
   format: 'docx' | 'doc'
 ): Promise<Blob> {
-  const today = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const today = new Date().toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
 
   // Split content into paragraphs
@@ -357,8 +360,8 @@ async function generateCoverLetterDOCX(
 
   const buffer = await Packer.toBuffer(doc);
   return new Blob([buffer], {
-    type: format === 'doc' 
-      ? 'application/msword' 
+    type: format === 'doc'
+      ? 'application/msword'
       : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
   });
 }

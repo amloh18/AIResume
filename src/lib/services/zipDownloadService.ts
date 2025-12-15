@@ -105,7 +105,7 @@ export class ZipDownloadService extends BaseService {
             if (!template && cvData.templateId) {
               template = await this.getTemplate(cvData.templateId.toString());
             }
-            
+
             // Fallback to default if no template found
             if (!template) {
               template = this.getDefaultTemplate();
@@ -115,22 +115,34 @@ export class ZipDownloadService extends BaseService {
               paperSize: 'A4',
               orientation: 'portrait'
             });
-            zip.file(`${journeyData.jobTitle} - CV.pdf`, cvPdf);
+
+            // Use CV title, then job title, then fallback
+            const cvFileName = cvData.title || journeyData.jobTitle || 'CV';
+            zip.file(`${cvFileName}|CV.pdf`, cvPdf);
           }
 
           // Generate Cover Letter PDF
           if (coverLetterData && journeyData.coverLetterId) {
             const coverLetterPdf = await this.generateCoverLetterPDF(coverLetterData);
-            zip.file(`${journeyData.jobTitle} - Cover Letter.pdf`, coverLetterPdf);
+
+            // Use cover letter title, then job title, then fallback
+            const coverLetterFileName = coverLetterData.title || journeyData.jobTitle || 'CoverLetter';
+            zip.file(`${coverLetterFileName}|CoverLetter.pdf`, coverLetterPdf);
           }
 
           // Generate Job Description PDF
           const jobDescriptionPdf = await this.generateJobDescriptionPDF(jobData);
-          zip.file(`${journeyData.jobTitle} - Job Description.pdf`, jobDescriptionPdf);
 
-          // Generate Application Summary PDF
+          // Use job title for job description
+          const jobDescFileName = journeyData.jobTitle || 'JobDescription';
+          zip.file(`${jobDescFileName}|JobDescription.pdf`, jobDescriptionPdf);
+
+          // Generate Application Summary PDF (ATS Summary)
           const summaryPdf = await this.generateApplicationSummaryPDF(journeyData, jobData);
-          zip.file(`${journeyData.jobTitle} - Application Summary.pdf`, summaryPdf);
+
+          // Use job title for application summary
+          const summaryFileName = journeyData.jobTitle || 'ApplicationSummary';
+          zip.file(`${summaryFileName}|ATSSummary.pdf`, summaryPdf);
 
           // Generate ZIP file
           const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -172,13 +184,13 @@ export class ZipDownloadService extends BaseService {
         if (!cvData || !journeyData.cvId) {
           throw new Error('CV data not available');
         }
-        
+
         // Get template if not provided
         let template = cvTemplate;
         if (!template && cvData.templateId) {
           template = await ZipDownloadService.getTemplate(cvData.templateId.toString());
         }
-        
+
         // Fallback to default if no template found
         if (!template) {
           template = ZipDownloadService.getDefaultTemplate();
@@ -191,7 +203,7 @@ export class ZipDownloadService extends BaseService {
 
         // Get actual CV data - ensure it's in the right format
         let actualCvData = cvData.cvData || cvData.data || cvData;
-        
+
         // Ensure cvData has basics property (required for UnifiedCVDataStructure)
         if (!actualCvData.basics && cvData.basics) {
           actualCvData = { ...actualCvData, basics: cvData.basics };
@@ -257,7 +269,7 @@ export class ZipDownloadService extends BaseService {
   private static getDefaultTemplate(): any {
     // Return first hardcoded template as default, or create minimal default
     const defaultTemplate = HARDCODED_TEMPLATES.find(t => t.name === 'Executive Professional') || HARDCODED_TEMPLATES[0];
-    
+
     if (defaultTemplate) {
       return defaultTemplate;
     }
@@ -302,7 +314,7 @@ export class ZipDownloadService extends BaseService {
     doc.setFontSize(14);
     doc.setFont('helvetica', 'normal');
     doc.text(jobData.company, 20, 45);
-    
+
     if (jobData.location) {
       doc.text(jobData.location, 20, 55);
     }
@@ -312,7 +324,7 @@ export class ZipDownloadService extends BaseService {
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text('Job Description', 20, 75);
-      
+
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       const descriptionLines = doc.splitTextToSize(jobData.description, 170);
@@ -325,7 +337,7 @@ export class ZipDownloadService extends BaseService {
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text('Requirements', 20, yPos);
-      
+
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       const requirementsLines = doc.splitTextToSize(jobData.requirements, 170);
@@ -369,7 +381,7 @@ export class ZipDownloadService extends BaseService {
     doc.text(`Job Title: ${journeyData.jobTitle}`, 20, 65);
     doc.text(`Company: ${journeyData.company}`, 20, 75);
     doc.text(`Journey ID: ${journeyData.id}`, 20, 85);
-    
+
     if (journeyData.completedAt) {
       doc.text(`Completed: ${journeyData.completedAt.toLocaleDateString()}`, 20, 95);
     }
@@ -426,7 +438,7 @@ export class ZipDownloadService extends BaseService {
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    
+
     if (coverLetterData.content) {
       const lines = doc.splitTextToSize(coverLetterData.content, 170);
       doc.text(lines, 20, 50);

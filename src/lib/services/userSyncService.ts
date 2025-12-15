@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import User from '@/models/User';
 import AdminUser from '@/models/admin/AdminUser';
+import { getAdminUser } from '@/models/admin-models';
 import getConnection from '@/lib/database';
 // Admin database connection removed - using main database
 
@@ -32,7 +33,7 @@ export async function syncUsersToAdmin(): Promise<SyncResult> {
     await getConnection();
 
     // Get AdminUser model
-    const AdminUserModel = AdminUser;
+    const AdminUserModel = await getAdminUser();
 
     // Fetch all users from main database
     const users = await User.find({}).lean();
@@ -139,7 +140,7 @@ export async function syncSingleUser(userId: string): Promise<boolean> {
       throw new Error('User not found');
     }
 
-    const AdminUserModel = AdminUser;
+    const AdminUserModel = await getAdminUser();
 
     const adminUserData = {
       mainUserId: userDoc._id,
@@ -205,15 +206,11 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       return [];
     }
 
-    // Add safety check for filters
-    if (!filters || typeof filters !== 'object') {
-      console.warn('⚠️ getTargetedUsers: Invalid filters provided, returning empty array');
-      return [];
-    }
+    // Note: Empty filters object {} is valid and means "all users" (excluding unsubscribed)
 
     await getConnection();
 
-    const AdminUserModel = AdminUser;
+    const AdminUserModel = await getAdminUser();
 
     const query: any = {
       'emailCampaigns.unsubscribed': false, // Never target unsubscribed users

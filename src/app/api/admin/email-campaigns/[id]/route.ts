@@ -26,7 +26,14 @@ export async function GET(
 
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user as any).role !== 'admin') {
+    // Check if user is admin by type or role
+    const isAdmin = session?.user && (
+      (session.user as any).type === 'admin' ||
+      (session.user as any).role === 'admin' ||
+      (session.user as any).role === 'superadmin'
+    );
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 403 }
@@ -66,7 +73,14 @@ export async function PUT(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user as any).role !== 'admin') {
+    // Check if user is admin by type or role
+    const isAdmin = session?.user && (
+      (session.user as any).type === 'admin' ||
+      (session.user as any).role === 'admin' ||
+      (session.user as any).role === 'superadmin'
+    );
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 403 }
@@ -151,7 +165,14 @@ export async function DELETE(
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session?.user || (session.user as any).role !== 'admin') {
+    // Check if user is admin by type or role
+    const isAdmin = session?.user && (
+      (session.user as any).type === 'admin' ||
+      (session.user as any).role === 'admin' ||
+      (session.user as any).role === 'superadmin'
+    );
+
+    if (!isAdmin) {
       return NextResponse.json(
         { error: 'Unauthorized. Admin access required.' },
         { status: 403 }

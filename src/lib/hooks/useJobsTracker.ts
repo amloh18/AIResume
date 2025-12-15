@@ -79,7 +79,7 @@ export const useJobsTracker = (options: UseJobsTrackerOptions = {}) => {
       setError(null);
 
       // Create and store the request promise
-      const jobsPromise = authenticatedFetchWithUserId('/api/jobs', userId);
+      const jobsPromise = authenticatedFetchWithUserId('/api/jobs?limit=all', userId);
       const journeysPromise = authenticatedFetchWithUserId('/api/application-journey', userId, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }

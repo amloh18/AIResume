@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import DiscountCode from '@/models/DiscountCode';
+import Coupon from '@/models/Coupon';
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,18 +19,17 @@ export async function GET(request: NextRequest) {
       query.code = { $regex: codeFilter, $options: 'i' };
     }
 
-    // Fetch discount codes
-    const discountCodes = await DiscountCode.find(query)
-      .populate('applicablePlans', 'name key')
+    // Fetch coupons (unified model)
+    const coupons = await Coupon.find(query)
       .sort({ createdAt: -1 })
       .lean();
 
-    return NextResponse.json(discountCodes);
+    return NextResponse.json(coupons);
 
   } catch (error: any) {
-    console.error('Error fetching discount codes:', error);
+    console.error('Error fetching coupons:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch discount codes', details: error.message },
+      { success: false, error: 'Failed to fetch coupons', details: error.message },
       { status: 500 }
     );
   }
@@ -42,22 +41,19 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    // Create new discount code
-    const discountCode = new DiscountCode(body);
-    await discountCode.save();
-
-    // Populate relations
-    await discountCode.populate('applicablePlans', 'name key');
+    // Create new coupon
+    const coupon = new Coupon(body);
+    await coupon.save();
 
     return NextResponse.json(
-      { success: true, discountCode },
+      { success: true, coupon },
       { status: 201 }
     );
 
   } catch (error: any) {
-    console.error('Error creating discount code:', error);
+    console.error('Error creating coupon:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create discount code', details: error.message },
+      { success: false, error: 'Failed to create coupon', details: error.message },
       { status: 500 }
     );
   }
@@ -76,26 +72,26 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Update discount code
-    const discountCode = await DiscountCode.findByIdAndUpdate(
+    // Update coupon
+    const coupon = await Coupon.findByIdAndUpdate(
       codeId,
       updateData,
       { new: true, runValidators: true }
-    ).populate('applicablePlans', 'name key');
+    );
 
-    if (!discountCode) {
+    if (!coupon) {
       return NextResponse.json(
-        { success: false, error: 'Discount code not found' },
+        { success: false, error: 'Coupon not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, discountCode });
+    return NextResponse.json({ success: true, coupon });
 
   } catch (error: any) {
-    console.error('Error updating discount code:', error);
+    console.error('Error updating coupon:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to update discount code', details: error.message },
+      { success: false, error: 'Failed to update coupon', details: error.message },
       { status: 500 }
     );
   }
@@ -115,25 +111,25 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete discount code
-    const result = await DiscountCode.findByIdAndDelete(codeId);
+    // Delete coupon
+    const result = await Coupon.findByIdAndDelete(codeId);
 
     if (!result) {
       return NextResponse.json(
-        { success: false, error: 'Discount code not found' },
+        { success: false, error: 'Coupon not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Discount code deleted successfully' 
+    return NextResponse.json({
+      success: true,
+      message: 'Coupon deleted successfully'
     });
 
   } catch (error: any) {
-    console.error('Error deleting discount code:', error);
+    console.error('Error deleting coupon:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to delete discount code', details: error.message },
+      { success: false, error: 'Failed to delete coupon', details: error.message },
       { status: 500 }
     );
   }
