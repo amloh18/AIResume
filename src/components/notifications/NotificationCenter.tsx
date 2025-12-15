@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import { Bell, X, Check, CheckCheck, ExternalLink, Clock } from 'lucide-react';
@@ -19,7 +19,17 @@ export default function NotificationCenter() {
   const isAuthenticated = status === 'authenticated' && !!session?.user;
   const { notifications, unreadCount, markAsRead, markAllAsRead, handleNotificationAction } = useNotifications();
 
-  
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔔 NotificationCenter - Rendered', {
+        isAuthenticated,
+        isAdminRoute,
+        unreadCount,
+        totalNotifications: notifications.length
+      });
+    }
+  }, [isAuthenticated, isAdminRoute, unreadCount, notifications.length]);
+
   // Helper function to safely convert _id to string
   const getIdAsString = (id: any): string => {
     if (!id) return '';
@@ -36,7 +46,7 @@ export default function NotificationCenter() {
     }
     return String(id);
   };
-  
+
   // Don't render notification center if user is not authenticated or on admin routes
   if (!isAuthenticated || isAdminRoute) {
     return null;
@@ -56,7 +66,7 @@ export default function NotificationCenter() {
   // Handle cases where persistent might be undefined/null
   const persistentNotifications = filteredNotifications.filter((n) => n.persistent === true);
   const timeSensitiveNotifications = filteredNotifications.filter((n) => n.persistent !== true);
-  
+
   // Debug: Log filtered notifications to help diagnose issues
   if (process.env.NODE_ENV === 'development' && filteredNotifications.length === 0 && unreadCount > 0) {
     console.log('Debug: No filtered notifications but unreadCount > 0', {
@@ -77,7 +87,7 @@ export default function NotificationCenter() {
       console.error('Notification missing _id:', notification);
       return;
     }
-    
+
     if (notification.interactive && notification.actionType) {
       await handleNotificationAction(notificationId, notification.actionType);
     } else {
@@ -103,6 +113,22 @@ export default function NotificationCenter() {
         return '🎁';
       case 'achievement':
         return '🏆';
+      case 'job_draft_created':
+        return '📝';
+      case 'job_stage_moved':
+        return '🚀';
+      case 'job_stale_alert':
+        return '⚠️';
+      case 'interview_prep_ready':
+        return '🎯';
+      case 'document_saved':
+        return '💾';
+      case 'feature_discovery':
+        return '✨';
+      case 'extension_download':
+        return '🧩';
+      case 'job_applied':
+        return '✅';
       default:
         return '🔔';
     }
@@ -149,7 +175,7 @@ export default function NotificationCenter() {
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="tablet"
                     onClick={markAllAsRead}
                     className="text-xs"
                   >
@@ -218,7 +244,7 @@ export default function NotificationCenter() {
                       />
                     );
                   })}
-                  
+
                   {/* Time-sensitive notifications */}
                   {timeSensitiveNotifications.map((notification, index) => {
                     const notificationId = getIdAsString(notification._id) || `time-sensitive-${index}`;
@@ -312,7 +338,7 @@ function NotificationItem({
               {notification.interactive && notification.actionType && (
                 <div className="mt-2">
                   <Button
-                    size="sm"
+                    size="tablet"
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -321,8 +347,8 @@ function NotificationItem({
                     className="text-xs"
                   >
                     {notification.actionType === 'move_to_next_stage' ? 'Move to Next Stage' :
-                     notification.actionType === 'review_job' ? 'Review Job' :
-                     'View Details'}
+                      notification.actionType === 'review_job' ? 'Review Job' :
+                        'View Details'}
                     <ExternalLink className="h-3 w-3 ml-1" />
                   </Button>
                 </div>

@@ -120,7 +120,12 @@ export const COUNTRY_NAMES: Record<string, string> = {
  * Helper function to get country name
  */
 export function getCountryName(countryCode: string): string {
-  return COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode;
+  try {
+    const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+    return regionNames.of(countryCode.toUpperCase()) || COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode;
+  } catch (error) {
+    return COUNTRY_NAMES[countryCode.toUpperCase()] || countryCode;
+  }
 }
 
 /**

@@ -8,6 +8,8 @@ import VerificationToken from '@/models/VerificationToken';
 import { isCodeExpired } from '@/lib/verification-code';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
+import { headers } from 'next/headers';
+import { detectUserRegion } from '@/lib/services/regionDetectionService';
 
 /**
  * Unified Authentication Service
@@ -76,19 +78,19 @@ export class UnifiedAuthService {
           },
           async authorize(credentials, req) {
             try {
-            if (!credentials?.email || !credentials?.password) {
+              if (!credentials?.email || !credentials?.password) {
                 console.error('❌ Credentials provider: Missing email or password');
-              return null;
-            }
+                return null;
+              }
 
               console.log('🔐 Credentials provider: Attempting authentication for:', credentials.email);
 
-            const result = await UserService.authenticateUser(
-              credentials.email,
-              credentials.password
-            );
+              const result = await UserService.authenticateUser(
+                credentials.email,
+                credentials.password
+              );
 
-            if (!result.user || result.error) {
+              if (!result.user || result.error) {
                 console.error('❌ Credentials provider: Authentication failed', {
                   hasUser: !!result.user,
                   error: result.error
@@ -136,15 +138,15 @@ export class UnifiedAuthService {
             try {
               // Get database connection
               await getConnection();
-              
+
               // Dynamically import AdminAuth model to avoid circular dependencies
               const AdminAuth = (await import('@/models/AdminAuth')).default;
-              
+
               // Find admin user by email
-              const adminUser = await AdminAuth.findOne({ 
+              const adminUser = await AdminAuth.findOne({
                 email: credentials.email.toLowerCase().trim()
               }).select('+password');
-              
+
               if (!adminUser) {
                 console.log('Admin user not found:', credentials.email);
                 // Log failed login attempt
@@ -169,7 +171,7 @@ export class UnifiedAuthService {
 
               // Verify password
               const isPasswordValid = await adminUser.comparePassword(credentials.password);
-              
+
               if (!isPasswordValid) {
                 console.log('Invalid password for admin:', credentials.email);
                 // Log failed login attempt
@@ -257,7 +259,7 @@ export class UnifiedAuthService {
               // This is used when code was already verified by atomic-signup
               if (isPreVerified) {
                 console.log('✅ Passwordless login: Pre-verified flow - skipping code verification');
-                
+
                 // User was already verified by atomic-signup
                 // Just find them and return user data
                 const user = await User.findOne({
@@ -374,13 +376,13 @@ export class UnifiedAuthService {
                     languagePreference: 'en'
                   }
                 });
-                
+
                 await newUser.save();
                 userDoc = newUser.toObject();
                 console.log('✅ New user created for passwordless login:', newUser._id.toString());
               } else if (!userDoc.isEmailVerified) {
                 // Update existing user to be verified
-                await User.findByIdAndUpdate((userDoc._id as any).toString(), { 
+                await User.findByIdAndUpdate((userDoc._id as any).toString(), {
                   isEmailVerified: true,
                   emailVerifiedAt: new Date()
                 });
@@ -447,13 +449,13 @@ export class UnifiedAuthService {
           // Initial sign-in - store minimal data only (id, email)
           // CRITICAL: Keep JWT token minimal to prevent cookie size issues
           // The JWT token is what gets stored in the cookie, so it must be tiny
-          
+
           if (user) {
             // Only store essential identifiers - fetch full data in session callback
             // Ensure all values are strings and limited in length
             token.id = String(user.id || '').substring(0, 100);
             token.email = String(user.email || '').substring(0, 255);
-            
+
             // Preserve admin type and role from authorize function (minimal)
             if ((user as any).type === 'admin') {
               token.type = 'admin';
@@ -465,7 +467,7 @@ export class UnifiedAuthService {
               // Regular users - don't store name in token, fetch in session callback
               token.type = 'user';
             }
-            
+
             // Explicitly remove image from token - it can be large
             delete (token as any).image;
           }
@@ -482,7 +484,7 @@ export class UnifiedAuthService {
           if (token.iat) cleanedToken.iat = Number(token.iat);
           if (token.exp) cleanedToken.exp = Number(token.exp);
           if (token.jti) cleanedToken.jti = String(token.jti).substring(0, 100);
-          
+
           // Only add role and name if they exist and are short
           if (token.role) {
             cleanedToken.role = String(token.role).substring(0, 50);
@@ -504,7 +506,7 @@ export class UnifiedAuthService {
         async session({ session, token }) {
           // Check if this is an admin user first
           const isAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
-          
+
           if (isAdmin) {
             // Admin user - use token data directly (don't fetch from User model)
             session.user.id = (token.id as string) || '';
@@ -595,7 +597,7 @@ export class UnifiedAuthService {
           try {
             const { ActivityLogService } = await import('@/lib/services/activityLogService');
             const isAdmin = (user as any)?.type === 'admin' || (user as any)?.role === 'admin' || (user as any)?.role === 'superadmin';
-            
+
             if (isAdmin) {
               // Log admin login
               await ActivityLogService.logAdminAction({
@@ -610,6 +612,31 @@ export class UnifiedAuthService {
                 }
               });
             } else {
+              // Detect user region from IP
+              let region = 'Unknown';
+              let ipLocation = 'Unknown';
+
+              try {
+                const headersList = await headers();
+                const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || '127.0.0.1';
+                const regionInfo = await detectUserRegion(ip);
+
+                if (regionInfo) {
+                  region = regionInfo.countryName;
+                  ipLocation = regionInfo.countryCode;
+
+                  // Update user with region info
+                  await getConnection();
+                  await User.findByIdAndUpdate(user.id, {
+                    region: region,
+                    ip_location: ipLocation,
+                    lastLogin: new Date()
+                  });
+                }
+              } catch (regionError) {
+                console.error('Failed to detect/update user region:', regionError);
+              }
+
               // Log regular user login
               await ActivityLogService.logUserAction({
                 userId: user.id || '',
@@ -618,7 +645,9 @@ export class UnifiedAuthService {
                 status: 'success',
                 metadata: {
                   provider: account?.provider || 'unknown',
-                  isNewUser: isNewUser || false
+                  isNewUser: isNewUser || false,
+                  region,
+                  ipLocation
                 }
               });
             }

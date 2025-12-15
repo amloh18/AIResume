@@ -20,14 +20,9 @@ export async function POST(request: NextRequest) {
     await requireAdmin(request);
 
     const body = await request.json();
-    const { targetFilters, limit = 100 } = body;
+    const { targetFilters = {}, limit = 100 } = body;
 
-    if (!targetFilters || typeof targetFilters !== 'object') {
-      return NextResponse.json(
-        { success: false, error: 'Invalid target filters provided' },
-        { status: 400 }
-      );
-    }
+    // No validation - empty object is valid (means all users)
 
     // Get all targeted users
     const allUsers = await getTargetedUsers(targetFilters);
@@ -53,7 +48,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ Preview targets API error:', error);
-    
+
     // Handle authentication errors
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json(
@@ -67,10 +62,10 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
-    
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: error.message || 'Failed to preview targeted users',
         totalCount: 0,
         previewCount: 0,

@@ -2954,7 +2954,8 @@ const CVStudio: React.FC<CVStudioProps> = ({
       const { downloadAsPDF, downloadAsDOCX } = await import('@/lib/utils/download');
 
       let filename = '';
-      const baseName = cvData?.basics?.name?.toLowerCase().replace(/\s+/g, '-') || cvTitle?.toLowerCase().replace(/\s+/g, '-') || 'document';
+      // Use CV title, then job title, then fallback
+      const baseName = cvTitle || currentJob?.title || 'Document';
 
       if (documentType === 'all') {
         // For journey downloads, use the API
@@ -2979,7 +2980,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
 
         // Download CV
         if (cvData && previewElement) {
-          await downloadAsPDF(previewElement, `${baseName}-cv.${format}`);
+          await downloadAsPDF(previewElement, `${baseName}|CV.${format}`);
         }
 
         // Download Cover Letter (if available)
@@ -2991,7 +2992,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${baseName}-cover-letter.${format}`;
+          a.download = `${coverLetterTitle || baseName}|CoverLetter.${format}`;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);
@@ -3002,15 +3003,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
         if (!previewElement) throw new Error('Preview element not found');
 
         if (format === 'pdf') {
-          await downloadAsPDF(previewElement, `${baseName}-cv.pdf`);
+          await downloadAsPDF(previewElement, `${baseName}|CV.pdf`, cvId || undefined, {
+            paperSize: 'A4',
+            orientation: 'portrait',
+            jobTitle: currentJob?.title
+          });
         } else if (format === 'docx') {
           if (cvData) {
-            await downloadAsDOCX(cvData, `${baseName}-cv.docx`);
+            await downloadAsDOCX(cvData, `${baseName}|CV.docx`);
           }
         } else if (format === 'doc') {
           // DOC format - convert DOCX or use API
           if (cvData) {
-            await downloadAsDOCX(cvData, `${baseName}-cv.doc`);
+            await downloadAsDOCX(cvData, `${baseName}|CV.doc`);
           }
         }
       } else if (documentType === 'coverLetter') {
@@ -3022,7 +3027,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${baseName}-cover-letter.${format}`;
+          a.download = `${coverLetterTitle || baseName}|CoverLetter.${format}`;
           document.body.appendChild(a);
           a.click();
           window.URL.revokeObjectURL(url);

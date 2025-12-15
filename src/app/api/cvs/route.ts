@@ -20,11 +20,11 @@ export async function GET(request: NextRequest) {
 
     // Check authentication using NextAuth
     const authResult = await getAuthenticatedUser();
-    console.log('🔍 CV API - Auth check:', { 
+    console.log('🔍 CV API - Auth check:', {
       hasAuth: !!authResult,
-      email: authResult?.userEmail 
+      email: authResult?.userEmail
     });
-    
+
     if (!authResult) {
       console.log('❌ CV API - No valid authentication found');
       return NextResponse.json(
@@ -36,18 +36,18 @@ export async function GET(request: NextRequest) {
     // Use auth result
     const userEmail = authResult.userEmail;
     const userId = authResult.userId;
-    
+
     console.log('🔍 CV API - User info:', { userEmail, userId });
-    
+
     // Validate userId
-    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    if (!userId || typeof userId !== 'string' || !mongoose.Types.ObjectId.isValid(userId)) {
       console.error('❌ CV API - Invalid userId:', userId);
       return NextResponse.json(
         { success: false, error: 'Invalid user ID' },
         { status: 400 }
       );
     }
-    
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type'); // 'cv' or 'cover'
     const status = searchParams.get('status');
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     let baseQuery: Record<string, any> = {
       userId: new mongoose.Types.ObjectId(userId)
     };
-    
+
     // Add journeyId filter if provided
     if (journeyId && mongoose.Types.ObjectId.isValid(journeyId)) {
       baseQuery.journeyId = new mongoose.Types.ObjectId(journeyId);
@@ -83,20 +83,20 @@ export async function GET(request: NextRequest) {
         ];
       }
     }
-    
+
     if (status) {
       baseQuery.status = status;
     }
-    
+
     if (starred !== null && starred !== undefined) {
       baseQuery['metadata.starred'] = starred === 'true';
     }
-    
+
     if (published !== null && published !== undefined) {
       const isPublished = published === 'true';
       baseQuery.status = isPublished ? 'published' : { $ne: 'published' };
     }
-    
+
     // Add search filter if provided
     if (searchTerm) {
       baseQuery.$and = baseQuery.$and || [];
@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
         ]
       });
     }
-    
+
     // Create the actual query
     let query = CV.find(baseQuery);
 
@@ -132,25 +132,25 @@ export async function GET(request: NextRequest) {
     // Execute query
     console.log('🔍 CV API - Executing database query');
     const cvs = await query.lean();
-    
+
     // For summary projection, populate ObjectId templateIds only
     if (projection === 'summary') {
       // Separate CVs with ObjectId templateIds from those with string templateIds
       const objectIdTemplateIds = cvs
         .filter(cv => cv.templateId && mongoose.Types.ObjectId.isValid(cv.templateId))
         .map(cv => new mongoose.Types.ObjectId(cv.templateId));
-      
+
       if (objectIdTemplateIds.length > 0) {
         // Fetch templates for ObjectId templateIds
         const templates = await Template.find({
           _id: { $in: objectIdTemplateIds }
         }).select('name globalStyles availableSections').lean();
-        
+
         // Create a map for quick lookup
         const templateMap = new Map(
           templates.map((t: any) => [t._id.toString(), t])
         );
-        
+
         // Populate templateId in CVs that have ObjectId templateIds
         cvs.forEach(cv => {
           if (cv.templateId && mongoose.Types.ObjectId.isValid(cv.templateId)) {
@@ -163,16 +163,16 @@ export async function GET(request: NextRequest) {
       }
     }
     console.log('🔍 CV API - Query executed, found CVs:', cvs.length);
-    
+
     // Trigger async thumbnail generation for CVs missing thumbnails
     // Use service function instead of HTTP call to avoid authentication issues
     cvs.forEach(async (cv) => {
-      const thumbnailAge = cv.metadata?.thumbnailGeneratedAt 
+      const thumbnailAge = cv.metadata?.thumbnailGeneratedAt
         ? Date.now() - new Date(cv.metadata.thumbnailGeneratedAt).getTime()
         : Infinity;
-      
+
       const needsThumbnail = !cv.metadata?.thumbnailUrl || thumbnailAge > 7 * 24 * 60 * 60 * 1000; // 7 days
-      
+
       if (needsThumbnail) {
         // Use service function for server-side thumbnail generation (no auth needed)
         setImmediate(async () => {
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
         });
       }
     });
-    
+
     // Debug: Show all found CVs
     cvs.forEach((cv, index) => {
       console.log(`🔍 CV API - CV ${index + 1}:`, {
@@ -205,7 +205,7 @@ export async function GET(request: NextRequest) {
     let countBaseQuery = {
       userId: new mongoose.Types.ObjectId(userId)
     };
-    
+
     const counts = await Promise.all([
       CV.countDocuments(countBaseQuery),
       CV.countDocuments({ ...countBaseQuery, status: 'draft' }),
@@ -226,20 +226,20 @@ export async function GET(request: NextRequest) {
         isMasterType: typeof cv.metadata?.isMaster,
         fullMetadata: cv.metadata
       });
-      
+
       // For list/summary projections, exclude heavy fields like thumbnailUrl and cvData
-      const baseMetadata = projection === 'list' || projection === 'summary' 
+      const baseMetadata = projection === 'list' || projection === 'summary'
         ? {
-            ...cv.metadata,
-            // Exclude Base64 thumbnail for list views - only include URL if it's a regular URL
-            thumbnailUrl: cv.metadata?.thumbnailUrl && !cv.metadata.thumbnailUrl.startsWith('data:')
-              ? cv.metadata.thumbnailUrl
-              : undefined,
-            // Exclude other heavy fields
-            thumbnailGeneratedAt: undefined
-          }
+          ...cv.metadata,
+          // Exclude Base64 thumbnail for list views - only include URL if it's a regular URL
+          thumbnailUrl: cv.metadata?.thumbnailUrl && !cv.metadata.thumbnailUrl.startsWith('data:')
+            ? cv.metadata.thumbnailUrl
+            : undefined,
+          // Exclude other heavy fields
+          thumbnailGeneratedAt: undefined
+        }
         : cv.metadata;
-      
+
       return {
         id: cv._id,
         title: cv.title,
@@ -257,8 +257,8 @@ export async function GET(request: NextRequest) {
           templateId: cv.templateId,
           templateName: cv.templateName,
           templateData: cv.templateData, // Include saved template data
-          template: cv.templateData || (isHardcodedTemplate(cv.templateId?.toString() || '') 
-            ? getTemplateById(cv.templateId?.toString() || '') 
+          template: cv.templateData || (isHardcodedTemplate(cv.templateId?.toString() || '')
+            ? getTemplateById(cv.templateId?.toString() || '')
             : cv.templateId), // Use saved templateData if available
           styling: cv.styling
         }),
@@ -302,8 +302,8 @@ export async function GET(request: NextRequest) {
           templateId: cv.templateId,
           templateName: cv.templateName,
           templateData: cv.templateData, // Include saved template data
-          template: cv.templateData || (isHardcodedTemplate(cv.templateId?.toString() || '') 
-            ? getTemplateById(cv.templateId?.toString() || '') 
+          template: cv.templateData || (isHardcodedTemplate(cv.templateId?.toString() || '')
+            ? getTemplateById(cv.templateId?.toString() || '')
             : cv.templateId) // Use saved templateData if available
         })
       };
@@ -334,16 +334,16 @@ export async function GET(request: NextRequest) {
         isPublic: cv.metadata?.isPublic || false,
         viewCount: cv.viewCount,
         downloadCount: cv.downloadCount,
-        atsScore: cv.metadata?.atsScore,
+        atsScore: cv.metadata?.atsScore ?? (cv.cvData?.analysis?.score || cv.cvData?.atsScore),
         atsScoreDate: cv.metadata?.atsScoreDate,
         // Only include thumbnailUrl if it's not a Base64 data URL (for list views)
         thumbnailUrl: projection === 'list' || projection === 'summary'
           ? (cv.metadata?.thumbnailUrl && !cv.metadata.thumbnailUrl.startsWith('data:')
-              ? cv.metadata.thumbnailUrl
-              : undefined)
+            ? cv.metadata.thumbnailUrl
+            : undefined)
           : cv.metadata?.thumbnailUrl,
-        thumbnailGeneratedAt: projection === 'list' || projection === 'summary' 
-          ? undefined 
+        thumbnailGeneratedAt: projection === 'list' || projection === 'summary'
+          ? undefined
           : cv.metadata?.thumbnailGeneratedAt,
         starred: cv.starred,
         aiAnalysis: projection === 'full' ? cv.metadata?.aiAnalysis : undefined // Include AI analysis for full projection
@@ -378,7 +378,7 @@ export async function GET(request: NextRequest) {
       name: error?.name,
       cause: error?.cause
     });
-    
+
     // More detailed error logging
     if (error instanceof mongoose.Error) {
       console.error('❌ Mongoose error:', error.message);
@@ -386,9 +386,9 @@ export async function GET(request: NextRequest) {
     if (error instanceof Error) {
       console.error('❌ Error stack:', error.stack);
     }
-    
+
     const errorResponse = createErrorResponse(error);
-    
+
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }
@@ -406,7 +406,7 @@ export async function POST(request: NextRequest) {
 
     // Use new authentication system
     const authResult = await getAuthenticatedUser();
-    
+
     if (!authResult) {
       console.log('❌ CV POST API - No valid authentication found');
       return NextResponse.json(
@@ -414,7 +414,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = authResult.userId;
     console.log('🔍 CV POST API - Using authenticated user:', authResult.userEmail);
 
@@ -427,10 +427,10 @@ export async function POST(request: NextRequest) {
 
     // Extract CV data from request
     const {
-      title, 
+      title,
       templateId,
-      cvData, 
-      status, 
+      cvData,
+      status,
       isMaster,
       journeyId,
       metadata
@@ -446,10 +446,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if trying to create Master CV - limit to 1 per user
-    const isCreatingMasterCV = isMaster === true || 
-                                isMaster === 'true' || 
-                                metadata?.isMaster === true || 
-                                metadata?.isMaster === 'true';
+    const isCreatingMasterCV = isMaster === true ||
+      isMaster === 'true' ||
+      metadata?.isMaster === true ||
+      metadata?.isMaster === 'true';
 
     if (isCreatingMasterCV) {
       // Check if Master CV already exists
@@ -466,8 +466,8 @@ export async function POST(request: NextRequest) {
       if (existingMasterCV) {
         console.log('❌ CV POST API - Master CV already exists for user');
         return NextResponse.json(
-          { 
-            success: false, 
+          {
+            success: false,
             error: 'Master CV already exists. You can only have one Master CV. Please edit your existing Master CV instead.',
             existingMasterCVId: existingMasterCV._id.toString()
           },
@@ -484,7 +484,7 @@ export async function POST(request: NextRequest) {
       const executiveProfessional = HARDCODED_TEMPLATES.find(
         t => t.id === 'executive-professional-layout-template' || t.name === 'Executive Professional'
       );
-      
+
       if (executiveProfessional) {
         finalTemplateId = executiveProfessional.id || executiveProfessional._id;
         console.log('✅ CV POST API - Using Executive Professional as default template');
@@ -493,7 +493,7 @@ export async function POST(request: NextRequest) {
         const hardcodedDefault = HARDCODED_TEMPLATES.find(
           t => t.isDefault === true && t.category === 'cv'
         );
-        
+
         if (hardcodedDefault) {
           finalTemplateId = hardcodedDefault.id || hardcodedDefault._id;
           console.log('✅ CV POST API - Using hardcoded default template:', hardcodedDefault.name);
@@ -535,7 +535,7 @@ export async function POST(request: NextRequest) {
         journeyId: journeyId,
         userId: new mongoose.Types.ObjectId(userId)
       });
-      
+
       if (existingCV) {
         console.log('✅ CV POST API - Found existing CV for journey:', existingCV._id);
         return NextResponse.json({
@@ -584,7 +584,7 @@ export async function POST(request: NextRequest) {
     };
 
     console.log('🚀 CV POST API - CV data prepared:', {
-      title, 
+      title,
       status: cvDataToCreate.status,
       isMaster: cvDataToCreate.metadata.isMaster,
       userId,
@@ -643,7 +643,7 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-      
+
       const { CVS3Service } = await import('@/lib/services/cvS3Service');
       const s3Url = await CVS3Service.saveCVToS3(
         newCV._id.toString(),
@@ -651,7 +651,7 @@ export async function POST(request: NextRequest) {
         newCV.cvData,
         templateData
       );
-      
+
       if (s3Url) {
         // Store S3 URL in metadata
         if (!newCV.metadata) {
@@ -690,7 +690,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ CV POST API - Error creating CV:', error);
-    
+
     if (error.code === 11000) {
       // Duplicate key error
       return NextResponse.json(
@@ -698,7 +698,7 @@ export async function POST(request: NextRequest) {
         { status: 409 }
       );
     }
-    
+
     const errorResponse = createErrorResponse(error);
     return NextResponse.json(
       errorResponse,

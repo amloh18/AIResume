@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react';
-import { 
-  ZoomIn, 
+import {
+  ZoomIn,
   ZoomOut,
   RotateCcw,
   Download,
@@ -82,8 +82,8 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
 
   // Get fallback template (Executive Professional) if template is missing
   const fallbackTemplate = useMemo(() => {
-    return HARDCODED_TEMPLATES.find((t: any) => 
-      t.id === 'executive-professional-layout-template' || 
+    return HARDCODED_TEMPLATES.find((t: any) =>
+      t.id === 'executive-professional-layout-template' ||
       t.name === 'Executive Professional'
     ) || null;
   }, []);
@@ -98,7 +98,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
       hasFallback: !!fallbackTemplate,
       fallbackId: fallbackTemplate?.id
     });
-    
+
     if (template) {
       console.log('✅ CVPreview - Using provided template:', template.name);
       return template;
@@ -115,9 +115,9 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   const effectiveCustomCSS = useMemo(() => {
     if (customCSS) return customCSS;
     if (effectiveTemplate) {
-      return (effectiveTemplate as any)?.customCSS || 
-             (effectiveTemplate as any)?.globalStyles?.customCSS || 
-             '';
+      return (effectiveTemplate as any)?.customCSS ||
+        (effectiveTemplate as any)?.globalStyles?.customCSS ||
+        '';
     }
     return '';
   }, [customCSS, effectiveTemplate]);
@@ -164,7 +164,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   const getSectionHeight = useMemo(() => {
     return (section: string): number => {
       if (!cvData || !visibleSectionTypes.has(section)) return 0;
-      
+
       // Helper to check if section has data
       const hasData = (data: any): boolean => {
         if (!data) return false;
@@ -187,7 +187,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
         }
         return false;
       };
-      
+
       // Helper to estimate entry height based on content - more conservative
       const estimateEntryHeight = (entry: any, baseHeight: number): number => {
         let height = baseHeight;
@@ -201,7 +201,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
         }
         return height;
       };
-      
+
       const baseHeights: { [key: string]: number } = {
         personal_header: (() => {
           if (!hasData(cvData.basics)) return 0;
@@ -264,7 +264,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
           return Math.max(60, (cvData.references?.length || 0) * 55); // Further reduced from 80/65
         })()
       };
-      
+
       return baseHeights[section] || 0; // Return 0 instead of 100 for unknown sections
     };
   }, [cvData, visibleSectionTypes]);
@@ -284,12 +284,12 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     // Check if this is a single-page template (like Tech Pro Blue)
     // Note: Even single-page templates should use natural flow if they're custom renderers
     // The natural flow system will handle them correctly
-    const isSinglePageTemplate = effectiveTemplate?.customRenderer === 'TechProBlueTemplate' || 
-                                 effectiveTemplate?.name?.toLowerCase().includes('tech pro blue') ||
-                                 (effectiveTemplate?.layoutType === 'one-column' && 
-                                  effectiveTemplate?.customRenderer && 
-                                  !isCustomTemplateWithNaturalFlow);
-    
+    const isSinglePageTemplate = effectiveTemplate?.customRenderer === 'TechProBlueTemplate' ||
+      effectiveTemplate?.name?.toLowerCase().includes('tech pro blue') ||
+      (effectiveTemplate?.layoutType === 'one-column' &&
+        effectiveTemplate?.customRenderer &&
+        !isCustomTemplateWithNaturalFlow);
+
     // For custom templates with natural flow, render all content and let CSS handle breaks
     if (isCustomTemplateWithNaturalFlow) {
       // Estimate total pages based on content height
@@ -300,24 +300,24 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
         const height = getSectionHeight(section);
         return height > 0; // Only include sections with actual height/data
       });
-      
+
       let totalEstimatedHeight = 0;
-      
+
       sectionsWithData.forEach(section => {
         const height = getSectionHeight(section);
         if (height > 0) {
           totalEstimatedHeight += height;
         }
       });
-      
+
       // Add minimal spacing between sections (6px per section - more conservative)
       totalEstimatedHeight += sectionsWithData.length * 6;
-      
+
       // Very conservative page calculation - add buffer to prevent overestimation
       // Use 0.85 multiplier to account for actual rendering being more compact than estimates
       const adjustedHeight = totalEstimatedHeight * 0.85;
       const estimatedPages = Math.max(1, Math.ceil(adjustedHeight / maxPageHeight));
-      
+
       console.log('📄 CVPreview - Natural flow page calculation:', {
         sectionsWithData,
         totalEstimatedHeight,
@@ -325,47 +325,47 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
         estimatedPages,
         sectionHeights: sectionsWithData.map(s => ({ section: s, height: getSectionHeight(s) }))
       });
-      
-      return { 
+
+      return {
         pages: { 1: sectionsWithData }, // All sections on "page 1" - will flow naturally
-        totalPages: estimatedPages 
+        totalPages: estimatedPages
       };
     }
-    
+
     // Use full available height minus padding for accurate page breaks
     const maxPageHeight = currentDimensions.height - (uniformPadding * 2);
-    
+
     // Use visible sections from selector (respects structure visibility)
     const sectionsWithData = effectiveSectionOrder.filter(section => visibleSectionTypes.has(section));
-    
+
     // If no sections have data, return empty first page
     if (sectionsWithData.length === 0) {
       return { pages: { 1: [] }, totalPages: 1 };
     }
-    
+
     // For single-page templates, force all content to one page
     if (isSinglePageTemplate) {
       return { pages: { 1: sectionsWithData }, totalPages: 1 };
     }
-    
+
     // Calculate pages based on section heights with smart break logic
     const pages: { [key: number]: string[] } = {};
     let currentPage = 1;
     let currentPageHeight = 0;
-    
+
     pages[currentPage] = [];
-    
+
     // Track which sections have entries that can be split
     const sectionsWithEntries = ['work_experience', 'education', 'projects', 'volunteer'];
-    
+
     for (let i = 0; i < sectionsWithData.length; i++) {
       const section = sectionsWithData[i];
       const sectionHeight = getSectionHeight(section);
       const isEntrySection = sectionsWithEntries.includes(section);
-      
+
       // Priority 1: Try to keep section together
       const sectionFits = currentPageHeight + sectionHeight <= maxPageHeight;
-      
+
       // Priority 2: If section doesn't fit and current page has content, start new page
       if (!sectionFits && pages[currentPage].length > 0) {
         // Check if we can break before this section (between sections)
@@ -373,17 +373,17 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
         pages[currentPage] = [];
         currentPageHeight = 0;
       }
-      
+
       // Priority 3: For entry sections, check if we need to split entries
       if (isEntrySection && !sectionFits && pages[currentPage].length > 0) {
         // Section doesn't fit on current page
         // Move to next page (already done above)
       }
-      
+
       // Add section to current page
       pages[currentPage].push(section);
       currentPageHeight += sectionHeight;
-      
+
       // Add spacing after section (except last section)
       if (i < sectionsWithData.length - 1) {
         currentPageHeight += 20; // Section spacing
@@ -432,7 +432,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
       // Measure the actual rendered height
       // Find the inner content wrapper (matching the page content wrapper structure)
       const contentWrapper = measurementElement.querySelector('[data-measurement-wrapper="true"]') as HTMLElement;
-      
+
       if (!contentWrapper) {
         // Content not ready yet, retry
         setTimeout(measureContent, 50);
@@ -445,20 +445,20 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
       // Round to nearest integer to avoid sub-pixel issues that could cause duplication
       const rawHeight = contentWrapper.scrollHeight || contentWrapper.offsetHeight;
       const actualContentHeight = Math.round(rawHeight);
-      
+
       if (actualContentHeight === 0) {
         // Content not ready yet, retry
         setTimeout(measureContent, 50);
         return;
       }
-      
+
       setMeasuredContentHeight(actualContentHeight);
 
       // Calculate page offsets
       // maxPageHeight is the available content area per page (page height minus padding)
       const maxPageHeight = Math.floor(currentDimensions.height - (uniformPadding * 2));
       const calculatedPages = Math.max(1, Math.ceil(actualContentHeight / maxPageHeight));
-      
+
       const offsets: number[] = [];
       for (let i = 0; i < calculatedPages; i++) {
         // Calculate offset to show the correct page portion
@@ -477,7 +477,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
         const contentStartPosition = Math.floor(i * maxPageHeight);
         offsets.push(-contentStartPosition);
       }
-      
+
       setPageOffsets(offsets);
       setTotalPages(calculatedPages);
 
@@ -500,7 +500,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     const measurementElement = measurementRef.current;
     if (measurementElement) {
       resizeObserver.observe(measurementElement);
-      
+
       // Also measure immediately after a short delay to catch initial render
       const timeoutId = setTimeout(() => {
         measureContent();
@@ -523,32 +523,35 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
     const pageHeight = currentDimensions.height;
     const gapBetweenPages = 16; // 16px gap between pages
     const padding = 40; // top and bottom padding
-    
+
     // For custom templates with natural flow, estimate height based on content
     if (isCustomTemplateWithNaturalFlow) {
       const maxPageHeight = currentDimensions.height - (uniformPadding * 2);
       const sectionsWithData = effectiveSectionOrder.filter(section => visibleSectionTypes.has(section));
       let totalEstimatedHeight = 0;
-      
+
       sectionsWithData.forEach(section => {
         totalEstimatedHeight += getSectionHeight(section);
       });
-      
+
       // Add some buffer for spacing and ensure minimum height
       const estimatedHeight = Math.max(pageHeight, totalEstimatedHeight + 100);
       return estimatedHeight;
     }
-    
+
     return (pageHeight * calculatePages.totalPages) + (gapBetweenPages * Math.max(0, calculatePages.totalPages - 1)) + padding;
   }, [calculatePages.totalPages, currentDimensions.height, isCustomTemplateWithNaturalFlow, effectiveSectionOrder, visibleSectionTypes, getSectionHeight, uniformPadding]);
 
   // Download handlers
   const handleDownloadPDF = async () => {
     if (!contentRef.current) return;
-    
+
     setIsDownloading(true);
     try {
-      await downloadAsPDF(contentRef.current, `CV-${cvData?.basics?.name || 'Document'}.pdf`);
+      await downloadAsPDF(contentRef.current, `${cvData?.title || cvData?.basics?.name || 'CV'}|CV.pdf`, cvId, {
+        paperSize: paperSize,
+        orientation: 'portrait'
+      });
     } catch (error) {
       console.error('PDF download failed:', error);
     } finally {
@@ -558,7 +561,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
 
   const handleDownloadDOCX = async () => {
     if (!contentRef.current) return;
-    
+
     setIsDownloading(true);
     try {
       await downloadAsDOCX(contentRef.current as any, `CV-${cvData?.basics?.name || 'Document'}.docx`);
@@ -571,7 +574,7 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
 
   const handleDownloadImage = async () => {
     if (!contentRef.current) return;
-    
+
     setIsDownloading(true);
     try {
       await downloadAsImage(contentRef.current, `CV-${cvData?.basics?.name || 'Document'}.png`);
@@ -615,23 +618,23 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
 
       const container = containerRef.current;
       const containerWidth = container.clientWidth;
-      
+
       // Skip if container has no width yet
       if (containerWidth === 0) return;
-      
+
       // Get the page width (A4 or Letter)
       const pageWidth = currentDimensions.width;
-      
+
       // Calculate scale to fit width with some padding (20px on each side)
       const padding = 40; // 20px on each side
       const availableWidth = containerWidth - padding;
       const calculatedZoom = availableWidth / pageWidth;
-      
+
       // Clamp zoom between 0.3 and 2.0 to prevent too small or too large
       const clampedZoom = Math.max(0.3, Math.min(2.0, calculatedZoom));
-      
+
       setAutoFitZoom(clampedZoom);
-      
+
       // Auto-update zoom if setZoom is available
       if (setZoom && Math.abs(clampedZoom - zoom) > 0.01) {
         setZoom(clampedZoom);
@@ -674,8 +677,8 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
   const effectiveZoom = autoFitZoom > 0 ? autoFitZoom : zoom;
 
   return (
-    <div 
-      className="relative w-full h-full" 
+    <div
+      className="relative w-full h-full"
       ref={containerRef}
       style={{
         overflow: 'auto'
@@ -688,8 +691,8 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
           minHeight: `${totalContentHeight * effectiveZoom}px`
         }}
       >
-            {/* Page break CSS for proper pagination */}
-            <style>{`
+        {/* Page break CSS for proper pagination */}
+        <style>{`
               ${generatePageBreakCSS()}
               ${isCustomTemplateWithNaturalFlow ? `
                 /* For custom templates with natural flow - allow content to flow across pages */
@@ -784,141 +787,51 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
                 }
               }
             `}</style>
-      {/* Vertical scrollable container for all pages */}
-      <div 
-        className="flex flex-col items-center"
-        style={{ 
-          width: '100%',
-          height: `${totalContentHeight}px`,
-          minHeight: `${totalContentHeight}px`,
-          padding: '20px 0',
-          transform: `scale(${effectiveZoom})`,
-          transformOrigin: 'top center',
-          position: 'relative'
-        }}
-      >
-        {/* For custom templates with natural flow: Two-pass system */}
-        {/* Pass 1: Hidden measurement | Pass 2: Visible rendering with transforms */}
-        {isCustomTemplateWithNaturalFlow ? (
-          <>
-            {/* Pass 1: Hidden measurement container - must match page container structure exactly */}
-            {effectiveTemplate && cvData && (
-              <div
-                ref={measurementRef}
-                style={{
-                  position: 'absolute',
-                  visibility: 'hidden',
-                  width: `${currentDimensions.width}px`,
-                  padding: `${uniformPadding}px`,
-                  top: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  zIndex: -1,
-                  pointerEvents: 'none',
-                  boxSizing: 'border-box'
-                }}
-              >
-                {/* Measurement wrapper matching the page content wrapper structure */}
+        {/* Vertical scrollable container for all pages */}
+        <div
+          className="flex flex-col items-center"
+          style={{
+            width: '100%',
+            height: `${totalContentHeight}px`,
+            minHeight: `${totalContentHeight}px`,
+            padding: '20px 0',
+            transform: `scale(${effectiveZoom})`,
+            transformOrigin: 'top center',
+            position: 'relative'
+          }}
+        >
+          {/* For custom templates with natural flow: Two-pass system */}
+          {/* Pass 1: Hidden measurement | Pass 2: Visible rendering with transforms */}
+          {isCustomTemplateWithNaturalFlow ? (
+            <>
+              {/* Pass 1: Hidden measurement container - must match page container structure exactly */}
+              {effectiveTemplate && cvData && (
                 <div
-                  data-measurement-wrapper="true"
+                  ref={measurementRef}
                   style={{
-                    width: '100%',
-                    height: 'auto',
-                    position: 'relative',
-                    overflow: 'visible',
-                    margin: 0,
-                    padding: 0,
+                    position: 'absolute',
+                    visibility: 'hidden',
+                    width: `${currentDimensions.width}px`,
+                    padding: `${uniformPadding}px`,
+                    top: 0,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: -1,
+                    pointerEvents: 'none',
                     boxSizing: 'border-box'
                   }}
                 >
-                  <TemplateRenderer
-                    cvData={cvData}
-                    template={effectiveTemplate as any}
-                    sectionOrder={effectiveSectionOrder}
-                    sectionVisibility={sectionVisibility}
-                    className="template-rendered-content"
-                    customStyles={{
-                      width: '100%',
-                      height: 'auto',
-                      minHeight: 'auto',
-                      overflow: 'visible',
-                      margin: 0,
-                      padding: 0
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Pass 2: Visible page containers with transformed content */}
-            {effectiveTemplate && cvData && pageOffsets.length > 0 ? (
-              Array.from({ length: pageOffsets.length }, (_, index) => {
-            const pageNumber = index + 1;
-                const isLastPage = pageNumber === pageOffsets.length;
-                const gapBetweenPages = 16;
-                const offset = pageOffsets[index];
-                const maxPageHeight = currentDimensions.height - (uniformPadding * 2);
-            
-            return (
-              <div 
-                key={pageNumber}
-                className="bg-white relative shadow-lg cv-preview-page flex-shrink-0"
-                style={{
-                  width: `${currentDimensions.width}px`,
-                  height: `${currentDimensions.height}px`,
-                  maxHeight: `${currentDimensions.height}px`,
-                  minHeight: `${currentDimensions.height}px`,
-                  padding: `${uniformPadding}px`,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  display: 'block',
-                  overflow: 'hidden',
-                      position: 'relative',
-                  pageBreakAfter: !isLastPage ? 'always' : 'auto',
-                  breakAfter: !isLastPage ? 'page' : 'auto',
-                  marginBottom: !isLastPage ? `${gapBetweenPages}px` : '0'
-                }}
-              >
-                {/* Page number indicator */}
-                    {pageOffsets.length > 1 && (
-                  <div 
-                    className="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded"
-                    style={{ fontSize: '10px', zIndex: 10 }}
-                  >
-                        Page {pageNumber} of {pageOffsets.length}
-                  </div>
-                )}
-
-                    {/* Full content rendered once, translated to show correct page window */}
-                    {/* Content wrapper: fixed height matching page content area, clips overflow */}
-                    {/* This wrapper sits inside the page container's padding, so it naturally has spacing */}
+                  {/* Measurement wrapper matching the page content wrapper structure */}
                   <div
+                    data-measurement-wrapper="true"
                     style={{
                       width: '100%',
-                      height: `${maxPageHeight}px`,
-                      maxHeight: `${maxPageHeight}px`,
+                      height: 'auto',
                       position: 'relative',
-                      overflow: 'hidden',
+                      overflow: 'visible',
                       margin: 0,
                       padding: 0,
                       boxSizing: 'border-box'
-                    }}
-                  >
-                    {/* Transformed content: absolute positioned, shifted to show correct page portion */}
-                    {/* Content height matches measured height, transform shifts to show correct portion */}
-                    <div
-                      style={{
-                        width: '100%',
-                        height: `${measuredContentHeight || maxPageHeight}px`,
-                        minHeight: `${measuredContentHeight || maxPageHeight}px`,
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        transform: `translate3d(0, ${offset}px, 0)`,
-                        transition: 'none',
-                        margin: 0,
-                        padding: 0,
-                        willChange: 'transform',
-                        backfaceVisibility: 'hidden'
                     }}
                   >
                     <TemplateRenderer
@@ -929,178 +842,269 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
                       className="template-rendered-content"
                       customStyles={{
                         width: '100%',
-                          height: 'auto',
+                        height: 'auto',
                         minHeight: 'auto',
-                          overflow: 'visible',
-                          margin: 0,
-                          padding: 0
+                        overflow: 'visible',
+                        margin: 0,
+                        padding: 0
                       }}
                     />
                   </div>
-                  </div>
-                  </div>
-                );
-              })
-            ) : effectiveTemplate && cvData && !measuredContentHeight ? (
-              // Show loading state while measuring
-              <div className="bg-white relative shadow-lg cv-preview-page flex-shrink-0 flex items-center justify-center"
-                style={{
-                  width: `${currentDimensions.width}px`,
-                  height: `${currentDimensions.height}px`
-                }}
-              >
-                <div className="text-center text-gray-400">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-                  <p className="text-sm">Measuring content...</p>
                 </div>
-              </div>
-            ) : !cvData ? (
-              <div className="bg-white relative shadow-lg cv-preview-page flex-shrink-0 flex items-center justify-center"
-                style={{
-                  width: `${currentDimensions.width}px`,
-                  height: `${currentDimensions.height}px`
-                }}
-              >
-                <div className="text-center text-gray-400">
-                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-lg font-medium">No CV data available</p>
-                      <p className="text-sm mt-2">Please add your CV information to see the preview</p>
-                    </div>
-                  </div>
-            ) : (
-              <div className="bg-white relative shadow-lg cv-preview-page flex-shrink-0 flex items-center justify-center"
-                style={{
-                  width: `${currentDimensions.width}px`,
-                  height: `${currentDimensions.height}px`
-                }}
-              >
-                <div className="text-center text-gray-400">
-                      <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <p className="text-lg font-medium">No template available</p>
-                      <p className="text-sm mt-2">Please select a template to preview your CV</p>
-                    </div>
-                  </div>
-            )}
-          </>
-        ) : (
-          /* Standard template rendering with page-by-page sections */
-          Object.keys(calculatePages.pages).map((pageKey, index) => {
-            const pageNumber = parseInt(pageKey);
-            const pageSections = calculatePages.pages[pageNumber];
-            
-            // Debug: Log page rendering with detailed section assignments
-            console.log(`📄 CVPreview - Rendering Page ${pageNumber}:`, {
-              pageNumber,
-              assignedSections: pageSections,
-              sectionCount: pageSections.length,
-              allPages: Object.keys(calculatePages.pages).map(k => ({
-                page: parseInt(k),
-                sections: calculatePages.pages[parseInt(k)]
-              }))
-            });
-            
-            // Verify no duplicate sections across pages
-            const allAssignedSections = Object.values(calculatePages.pages).flat();
-            const duplicates = allAssignedSections.filter((section, idx) => 
-              allAssignedSections.indexOf(section) !== idx
-            );
-            if (duplicates.length > 0 && index === 0) {
-              console.warn('⚠️ CVPreview - Duplicate sections detected:', duplicates);
-            }
-            
-            return (
-              <div 
-                key={pageNumber}
-                className="bg-white relative shadow-lg cv-preview-page flex-shrink-0"
-                style={{
-                  width: `${currentDimensions.width}px`,
-                  height: `${currentDimensions.height}px`,
-                  maxHeight: `${currentDimensions.height}px`,
-                  minHeight: `${currentDimensions.height}px`,
-                  overflow: 'hidden',
-                  padding: `${uniformPadding}px`,
-                  pageBreakAfter: pageNumber < calculatePages.totalPages ? 'always' : 'auto',
-                  breakAfter: pageNumber < calculatePages.totalPages ? 'page' : 'auto',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                  display: 'block',
-                  marginBottom: pageNumber < calculatePages.totalPages ? '16px' : '0'
-                }}
-              >
-                {/* Page number indicator */}
-                {totalPages > 1 && (
-                  <div 
-                    className="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded"
-                    style={{ fontSize: '10px' }}
-                  >
-                    Page {pageNumber} of {totalPages}
-                  </div>
-                )}
+              )}
 
-                {/* Use TemplateRenderer with current page sections */}
-                {/* IMPORTANT: Only render if cvData exists - never use sample/hardcoded data */}
-                {effectiveTemplate && cvData ? (
-                  (() => {
-                    console.log('🎨 CVPreview - Rendering TemplateRenderer:', {
-                      hasTemplate: !!effectiveTemplate,
-                      templateName: effectiveTemplate?.name,
-                      customRenderer: effectiveTemplate?.customRenderer,
-                      hasCvData: !!cvData,
-                      enabledSections: pageSections,
-                      sectionOrder: effectiveSectionOrder
-                    });
-                    return (
-                      <div 
-                        className="template-rendered-content"
+              {/* Pass 2: Visible page containers with transformed content */}
+              {effectiveTemplate && cvData && pageOffsets.length > 0 ? (
+                Array.from({ length: pageOffsets.length }, (_, index) => {
+                  const pageNumber = index + 1;
+                  const isLastPage = pageNumber === pageOffsets.length;
+                  const gapBetweenPages = 16;
+                  const offset = pageOffsets[index];
+                  const maxPageHeight = currentDimensions.height - (uniformPadding * 2);
+
+                  return (
+                    <div
+                      key={pageNumber}
+                      className="bg-white relative shadow-lg cv-preview-page flex-shrink-0"
+                      style={{
+                        width: `${currentDimensions.width}px`,
+                        height: `${currentDimensions.height}px`,
+                        maxHeight: `${currentDimensions.height}px`,
+                        minHeight: `${currentDimensions.height}px`,
+                        padding: `${uniformPadding}px`,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        display: 'block',
+                        overflow: 'hidden',
+                        position: 'relative',
+                        pageBreakAfter: !isLastPage ? 'always' : 'auto',
+                        breakAfter: !isLastPage ? 'page' : 'auto',
+                        marginBottom: !isLastPage ? `${gapBetweenPages}px` : '0'
+                      }}
+                    >
+                      {/* Page number indicator */}
+                      {pageOffsets.length > 1 && (
+                        <div
+                          className="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded"
+                          style={{ fontSize: '10px', zIndex: 10 }}
+                        >
+                          Page {pageNumber} of {pageOffsets.length}
+                        </div>
+                      )}
+
+                      {/* Full content rendered once, translated to show correct page window */}
+                      {/* Content wrapper: fixed height matching page content area, clips overflow */}
+                      {/* This wrapper sits inside the page container's padding, so it naturally has spacing */}
+                      <div
                         style={{
-                          height: `${currentDimensions.height - (uniformPadding * 2)}px`,
-                          maxHeight: `${currentDimensions.height - (uniformPadding * 2)}px`,
+                          width: '100%',
+                          height: `${maxPageHeight}px`,
+                          maxHeight: `${maxPageHeight}px`,
+                          position: 'relative',
                           overflow: 'hidden',
-                          position: 'relative'
+                          margin: 0,
+                          padding: 0,
+                          boxSizing: 'border-box'
                         }}
                       >
-                        <TemplateRenderer
-                          cvData={cvData}
-                          template={effectiveTemplate as any}
-                          sectionOrder={effectiveSectionOrder}
-                          sectionVisibility={sectionVisibility}
-                          enabledSections={pageSections}
+                        {/* Transformed content: absolute positioned, shifted to show correct page portion */}
+                        {/* Content height matches measured height, transform shifts to show correct portion */}
+                        <div
+                          style={{
+                            width: '100%',
+                            height: `${measuredContentHeight || maxPageHeight}px`,
+                            minHeight: `${measuredContentHeight || maxPageHeight}px`,
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            transform: `translate3d(0, ${offset}px, 0)`,
+                            transition: 'none',
+                            margin: 0,
+                            padding: 0,
+                            willChange: 'transform',
+                            backfaceVisibility: 'hidden'
+                          }}
+                        >
+                          <TemplateRenderer
+                            cvData={cvData}
+                            template={effectiveTemplate as any}
+                            sectionOrder={effectiveSectionOrder}
+                            sectionVisibility={sectionVisibility}
+                            className="template-rendered-content"
+                            customStyles={{
+                              width: '100%',
+                              height: 'auto',
+                              minHeight: 'auto',
+                              overflow: 'visible',
+                              margin: 0,
+                              padding: 0
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : effectiveTemplate && cvData && !measuredContentHeight ? (
+                // Show loading state while measuring
+                <div className="bg-white relative shadow-lg cv-preview-page flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    width: `${currentDimensions.width}px`,
+                    height: `${currentDimensions.height}px`
+                  }}
+                >
+                  <div className="text-center text-gray-400">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+                    <p className="text-sm">Measuring content...</p>
+                  </div>
+                </div>
+              ) : !cvData ? (
+                <div className="bg-white relative shadow-lg cv-preview-page flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    width: `${currentDimensions.width}px`,
+                    height: `${currentDimensions.height}px`
+                  }}
+                >
+                  <div className="text-center text-gray-400">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-lg font-medium">No CV data available</p>
+                    <p className="text-sm mt-2">Please add your CV information to see the preview</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white relative shadow-lg cv-preview-page flex-shrink-0 flex items-center justify-center"
+                  style={{
+                    width: `${currentDimensions.width}px`,
+                    height: `${currentDimensions.height}px`
+                  }}
+                >
+                  <div className="text-center text-gray-400">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-lg font-medium">No template available</p>
+                    <p className="text-sm mt-2">Please select a template to preview your CV</p>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Standard template rendering with page-by-page sections */
+            Object.keys(calculatePages.pages).map((pageKey, index) => {
+              const pageNumber = parseInt(pageKey);
+              const pageSections = calculatePages.pages[pageNumber];
+
+              // Debug: Log page rendering with detailed section assignments
+              console.log(`📄 CVPreview - Rendering Page ${pageNumber}:`, {
+                pageNumber,
+                assignedSections: pageSections,
+                sectionCount: pageSections.length,
+                allPages: Object.keys(calculatePages.pages).map(k => ({
+                  page: parseInt(k),
+                  sections: calculatePages.pages[parseInt(k)]
+                }))
+              });
+
+              // Verify no duplicate sections across pages
+              const allAssignedSections = Object.values(calculatePages.pages).flat();
+              const duplicates = allAssignedSections.filter((section, idx) =>
+                allAssignedSections.indexOf(section) !== idx
+              );
+              if (duplicates.length > 0 && index === 0) {
+                console.warn('⚠️ CVPreview - Duplicate sections detected:', duplicates);
+              }
+
+              return (
+                <div
+                  key={pageNumber}
+                  className="bg-white relative shadow-lg cv-preview-page flex-shrink-0"
+                  style={{
+                    width: `${currentDimensions.width}px`,
+                    height: `${currentDimensions.height}px`,
+                    maxHeight: `${currentDimensions.height}px`,
+                    minHeight: `${currentDimensions.height}px`,
+                    overflow: 'hidden',
+                    padding: `${uniformPadding}px`,
+                    pageBreakAfter: pageNumber < calculatePages.totalPages ? 'always' : 'auto',
+                    breakAfter: pageNumber < calculatePages.totalPages ? 'page' : 'auto',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    display: 'block',
+                    marginBottom: pageNumber < calculatePages.totalPages ? '16px' : '0'
+                  }}
+                >
+                  {/* Page number indicator */}
+                  {totalPages > 1 && (
+                    <div
+                      className="absolute top-2 right-2 text-xs text-gray-500 bg-white px-2 py-1 rounded"
+                      style={{ fontSize: '10px' }}
+                    >
+                      Page {pageNumber} of {totalPages}
+                    </div>
+                  )}
+
+                  {/* Use TemplateRenderer with current page sections */}
+                  {/* IMPORTANT: Only render if cvData exists - never use sample/hardcoded data */}
+                  {effectiveTemplate && cvData ? (
+                    (() => {
+                      console.log('🎨 CVPreview - Rendering TemplateRenderer:', {
+                        hasTemplate: !!effectiveTemplate,
+                        templateName: effectiveTemplate?.name,
+                        customRenderer: effectiveTemplate?.customRenderer,
+                        hasCvData: !!cvData,
+                        enabledSections: pageSections,
+                        sectionOrder: effectiveSectionOrder
+                      });
+                      return (
+                        <div
                           className="template-rendered-content"
-                          customStyles={{
-                            height: '100%',
+                          style={{
+                            height: `${currentDimensions.height - (uniformPadding * 2)}px`,
                             maxHeight: `${currentDimensions.height - (uniformPadding * 2)}px`,
                             overflow: 'hidden',
-                            pageBreakInside: 'avoid',
-                            breakInside: 'avoid'
+                            position: 'relative'
                           }}
-                        />
+                        >
+                          <TemplateRenderer
+                            cvData={cvData}
+                            template={effectiveTemplate as any}
+                            sectionOrder={effectiveSectionOrder}
+                            sectionVisibility={sectionVisibility}
+                            enabledSections={pageSections}
+                            className="template-rendered-content"
+                            customStyles={{
+                              height: '100%',
+                              maxHeight: `${currentDimensions.height - (uniformPadding * 2)}px`,
+                              overflow: 'hidden',
+                              pageBreakInside: 'avoid',
+                              breakInside: 'avoid'
+                            }}
+                          />
+                        </div>
+                      );
+                    })()
+                  ) : !cvData ? (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                      <div className="text-center">
+                        <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                        <p className="text-lg font-medium">No CV data available</p>
+                        <p className="text-sm mt-2">Please add your CV information to see the preview</p>
                       </div>
-                    );
-                  })()
-                ) : !cvData ? (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    <div className="text-center">
-                      <FileText size={48} className="mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">No CV data available</p>
-                      <p className="text-sm mt-2">Please add your CV information to see the preview</p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400">
-                    <div className="text-center">
-                      <FileText size={48} className="mx-auto mb-4 opacity-50" />
-                      <p className="text-lg font-medium">No template available</p>
-                      <p className="text-sm mt-2">Please select a template to preview your CV</p>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400">
+                      <div className="text-center">
+                        <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                        <p className="text-lg font-medium">No template available</p>
+                        <p className="text-sm mt-2">Please select a template to preview your CV</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-              {/* Custom CSS */}
-              {effectiveCustomCSS && (
-                <style dangerouslySetInnerHTML={{ __html: effectiveCustomCSS }} />
-              )}
-              
-              {/* Page break CSS - optimized for both screen and print */}
-              <style dangerouslySetInnerHTML={{ __html: `
+                  {/* Custom CSS */}
+                  {effectiveCustomCSS && (
+                    <style dangerouslySetInnerHTML={{ __html: effectiveCustomCSS }} />
+                  )}
+
+                  {/* Page break CSS - optimized for both screen and print */}
+                  <style dangerouslySetInnerHTML={{
+                    __html: `
                 .template-rendered-content {
                   height: 100%;
                   overflow: hidden;
@@ -1139,11 +1143,11 @@ const CVPreviewComponent: React.FC<CVPreviewProps> = ({
                   }
                 }
               ` }}></style>
-            </div>
-          );
-        })
-        )}
-      </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

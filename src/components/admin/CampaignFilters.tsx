@@ -28,28 +28,40 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setAvailablePlans(data.plans || []);
+          const plans = data.plans || [];
+          // Always include 'free' plan if not already present
+          if (!plans.includes('free')) {
+            plans.unshift('free');
+          }
+          setAvailablePlans(plans);
         }
       }
     } catch (error) {
       console.error('Error fetching plans for campaign filters:', error);
-      // Fallback to empty array
-      setAvailablePlans([]);
+      // Fallback to just free plan
+      setAvailablePlans(['free']);
     }
   };
 
   const fetchAvailableRegions = async () => {
     try {
-      const response = await fetch('/api/admin/country-pricing');
+      const response = await fetch('/api/admin/pricing-regions');
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.countryPricing) {
-          const regions = data.countryPricing.map((cp: any) => cp.countryCode);
-          setAvailableRegions(regions);
+        if (data.success && data.regions) {
+          setAvailableRegions(data.regions);
+        } else {
+          // Fallback to common regions
+          setAvailableRegions(['US', 'GB', 'IN', 'CA', 'AU', 'EU']);
         }
+      } else {
+        // Fallback to common regions
+        setAvailableRegions(['US', 'GB', 'IN', 'CA', 'AU', 'EU']);
       }
     } catch (error) {
       console.error('Error fetching regions:', error);
+      // Fallback to common regions
+      setAvailableRegions(['US', 'GB', 'IN', 'CA', 'AU', 'EU']);
     }
   };
 
@@ -219,54 +231,158 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
         </div>
       </div>
 
-      {/* Registration Date Range */}
+      {/* Registration Date Range - Predefined */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Registration Date Range</h4>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">From</label>
-            <input
-              type="date"
-              value={localFilters.registrationDateRange?.startDate ? localFilters.registrationDateRange.startDate.split('T')[0] : ''}
-              onChange={(e) => handleDateRangeChange('registrationDateRange', 'startDate', e.target.value)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">To</label>
-            <input
-              type="date"
-              value={localFilters.registrationDateRange?.endDate ? localFilters.registrationDateRange.endDate.split('T')[0] : ''}
-              onChange={(e) => handleDateRangeChange('registrationDateRange', 'endDate', e.target.value)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            />
-          </div>
-        </div>
+        <h4 className="text-sm font-medium text-gray-300 mb-3">Registration Date</h4>
+        <select
+          value={localFilters.registrationDateRange?.preset || ''}
+          onChange={(e) => {
+            const preset = e.target.value;
+            if (!preset) {
+              const { registrationDateRange, ...rest } = localFilters;
+              setLocalFilters(rest);
+              return;
+            }
+
+            const now = new Date();
+            let startDate: Date;
+
+            switch (preset) {
+              case 'last7days':
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+              case 'last30days':
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
+              case 'thisMonth':
+                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                break;
+              case 'lastMonth':
+                startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+                setLocalFilters({
+                  ...localFilters,
+                  registrationDateRange: {
+                    preset,
+                    startDate: startDate.toISOString(),
+                    endDate: endOfLastMonth.toISOString(),
+                  },
+                });
+                return;
+              case 'lastQuarter':
+                const currentQuarter = Math.floor(now.getMonth() / 3);
+                const lastQuarterStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+                const lastQuarterEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
+                setLocalFilters({
+                  ...localFilters,
+                  registrationDateRange: {
+                    preset,
+                    startDate: lastQuarterStart.toISOString(),
+                    endDate: lastQuarterEnd.toISOString(),
+                  },
+                });
+                return;
+              case 'thisYear':
+                startDate = new Date(now.getFullYear(), 0, 1);
+                break;
+              default:
+                startDate = now;
+            }
+
+            setLocalFilters({
+              ...localFilters,
+              registrationDateRange: {
+                preset,
+                startDate: startDate.toISOString(),
+                endDate: now.toISOString(),
+              },
+            });
+          }}
+          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+        >
+          <option value="">All Time</option>
+          <option value="last7days">Last 7 Days</option>
+          <option value="last30days">Last 30 Days</option>
+          <option value="thisMonth">This Month</option>
+          <option value="lastMonth">Last Month</option>
+          <option value="lastQuarter">Last Quarter</option>
+          <option value="thisYear">This Year</option>
+        </select>
       </div>
 
-      {/* Last Active Range */}
+      {/* Last Active Range - Predefined */}
       <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-        <h4 className="text-sm font-medium text-gray-300 mb-3">Last Active Range</h4>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">From</label>
-            <input
-              type="date"
-              value={localFilters.lastActiveRange?.startDate ? localFilters.lastActiveRange.startDate.split('T')[0] : ''}
-              onChange={(e) => handleDateRangeChange('lastActiveRange', 'startDate', e.target.value)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-400 mb-1">To</label>
-            <input
-              type="date"
-              value={localFilters.lastActiveRange?.endDate ? localFilters.lastActiveRange.endDate.split('T')[0] : ''}
-              onChange={(e) => handleDateRangeChange('lastActiveRange', 'endDate', e.target.value)}
-              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
-            />
-          </div>
-        </div>
+        <h4 className="text-sm font-medium text-gray-300 mb-3">Last Active</h4>
+        <select
+          value={localFilters.lastActiveRange?.preset || ''}
+          onChange={(e) => {
+            const preset = e.target.value;
+            if (!preset) {
+              const { lastActiveRange, ...rest } = localFilters;
+              setLocalFilters(rest);
+              return;
+            }
+
+            const now = new Date();
+            let startDate: Date;
+
+            switch (preset) {
+              case 'last7days':
+                startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+              case 'last30days':
+                startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
+              case 'last60days':
+                startDate = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+                break;
+              case 'last90days':
+                startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                break;
+              case 'inactive30':
+                // Users NOT active in last 30 days
+                const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                setLocalFilters({
+                  ...localFilters,
+                  lastActiveRange: {
+                    preset,
+                    endDate: thirtyDaysAgo.toISOString(),
+                  },
+                });
+                return;
+              case 'inactive60':
+                const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
+                setLocalFilters({
+                  ...localFilters,
+                  lastActiveRange: {
+                    preset,
+                    endDate: sixtyDaysAgo.toISOString(),
+                  },
+                });
+                return;
+              default:
+                startDate = now;
+            }
+
+            setLocalFilters({
+              ...localFilters,
+              lastActiveRange: {
+                preset,
+                startDate: startDate.toISOString(),
+                endDate: now.toISOString(),
+              },
+            });
+          }}
+          className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+        >
+          <option value="">Any Time</option>
+          <option value="last7days">Active in Last 7 Days</option>
+          <option value="last30days">Active in Last 30 Days</option>
+          <option value="last60days">Active in Last 60 Days</option>
+          <option value="last90days">Active in Last 90 Days</option>
+          <option value="inactive30">Inactive for 30+ Days</option>
+          <option value="inactive60">Inactive for 60+ Days</option>
+        </select>
       </div>
 
       {/* Usage Metrics */}

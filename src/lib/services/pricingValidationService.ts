@@ -94,21 +94,13 @@ class PricingValidationService {
         };
       }
 
-      // Special case: LAUNCH100 should only work for pro_monthly
-      if (coupon.code === 'LAUNCH100' && planKey !== 'pro_monthly') {
-        return {
-          valid: false,
-          error: 'This coupon is only applicable to the monthly plan'
-        };
-      }
-
       // Check if coupon is applicable to the selected plan
-      const hasApplicablePlans = 
+      const hasApplicablePlans =
         (coupon.applicablePlans && coupon.applicablePlans.length > 0) ||
         (coupon.applicablePlanKeys && coupon.applicablePlanKeys.length > 0);
 
       if (hasApplicablePlans) {
-        const isApplicable = 
+        const isApplicable =
           (coupon.applicablePlans && coupon.applicablePlans.includes(planKey)) ||
           (coupon.applicablePlanKeys && coupon.applicablePlanKeys.includes(planKey as any));
 
@@ -159,9 +151,9 @@ class PricingValidationService {
 
       // Get plan from database
       const PricingPlan = await getAdminPricingPlan();
-      const plan = await PricingPlan.findOne({ 
-        key: planKey, 
-        status: 'active' 
+      const plan = await PricingPlan.findOne({
+        key: planKey,
+        status: 'active'
       });
 
       if (!plan) {

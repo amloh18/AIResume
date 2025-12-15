@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { AdminAIAnalyticsSkeleton } from './AdminSkeletons';
-import { 
-  Activity, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Activity,
+  DollarSign,
+  TrendingUp,
   Users,
   Calendar,
   BarChart3,
@@ -70,22 +70,22 @@ const AIAnalytics: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/ai-analytics?range=${timeRange}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Invalid response format from server');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
+
       setAiData(data);
     } catch (error) {
       console.error('Error fetching AI data:', error);
@@ -136,25 +136,25 @@ const AIAnalytics: React.FC = () => {
     if (aiData?.dailyUsage && aiData.dailyUsage.length > 0) {
       return aiData.dailyUsage;
     }
-    
+
     // Generate realistic data
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
     const mockData = [];
-    
+
     // Base values that scale with time range
     const baseRequests = timeRange === '7d' ? 45 : timeRange === '30d' ? 65 : timeRange === '90d' ? 85 : 120;
     const baseTokens = timeRange === '7d' ? 2500 : timeRange === '30d' ? 3500 : timeRange === '90d' ? 4500 : 6000;
     const baseCost = timeRange === '7d' ? 4.5 : timeRange === '30d' ? 6.5 : timeRange === '90d' ? 8.5 : 12.0;
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      
+
       // Generate realistic patterns
       const trendFactor = 1 + (Math.sin(i * 0.15) * 0.25); // Weekly trend
       const weekendFactor = [0, 6].includes(date.getDay()) ? 0.6 : 1; // Weekend reduction
       const workdayFactor = [1, 2, 3, 4, 5].includes(date.getDay()) ? 1.2 : 0.8; // Workday boost
-      
+
       // For yearly data, group by months
       let dateLabel: string;
       if (timeRange === '1y') {
@@ -162,7 +162,7 @@ const AIAnalytics: React.FC = () => {
       } else {
         dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       }
-      
+
       mockData.push({
         date: dateLabel,
         requests: Math.floor((baseRequests * trendFactor * weekendFactor * workdayFactor) + (Math.random() * 20 - 10)),
@@ -170,11 +170,11 @@ const AIAnalytics: React.FC = () => {
         cost: parseFloat(((baseCost * trendFactor * weekendFactor * workdayFactor) + (Math.random() * 2 - 1)).toFixed(2))
       });
     }
-    
+
     // For yearly data, aggregate by month
     if (timeRange === '1y') {
       const monthlyData: { [key: string]: any } = {};
-      
+
       mockData.forEach(item => {
         if (monthlyData[item.date]) {
           monthlyData[item.date].requests += item.requests;
@@ -184,10 +184,10 @@ const AIAnalytics: React.FC = () => {
           monthlyData[item.date] = { ...item };
         }
       });
-      
+
       return Object.values(monthlyData);
     }
-    
+
     return mockData;
   };
 
@@ -244,7 +244,7 @@ const AIAnalytics: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AI Analytics</h1>
           <p className="text-gray-600 dark:text-gray-400">Monitor AI usage, costs, and performance</p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <select
             value={timeRange}
@@ -275,9 +275,8 @@ const AIAnalytics: React.FC = () => {
                 </div>
               </div>
               <div className="mt-4 flex items-center">
-                <span className={`text-sm font-medium ${
-                  metric.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                }`}>
+                <span className={`text-sm font-medium ${metric.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+                  }`}>
                   {metric.change}
                 </span>
                 <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">from last period</span>
@@ -394,7 +393,7 @@ const AIAnalytics: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           {/* Cost Breakdown Pie Chart */}
           <div className="mt-6">
             <ResponsiveContainer width="100%" height={200}>
@@ -413,7 +412,7 @@ const AIAnalytics: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     backgroundColor: '#1F2937',
                     border: '1px solid #374151',
@@ -430,17 +429,17 @@ const AIAnalytics: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Daily Usage Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <AreaChart data={getDailyUsageData()}>
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 stroke="#6B7280"
                 fontSize={12}
                 interval={timeRange === '1y' ? 0 : 'preserveStartEnd'}
               />
-              <YAxis 
+              <YAxis
                 stroke="#6B7280"
                 fontSize={12}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{
                   backgroundColor: '#1F2937',
                   border: '1px solid #374151',
@@ -449,21 +448,21 @@ const AIAnalytics: React.FC = () => {
                 }}
               />
               <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="requests" 
+              <Area
+                type="monotone"
+                dataKey="requests"
                 stackId="1"
-                stroke="#3B82F6" 
-                fill="#3B82F6" 
+                stroke="#3B82F6"
+                fill="#3B82F6"
                 fillOpacity={0.6}
                 name="Requests"
               />
-              <Area 
-                type="monotone" 
-                dataKey="tokens" 
+              <Area
+                type="monotone"
+                dataKey="tokens"
                 stackId="2"
-                stroke="#8B5CF6" 
-                fill="#8B5CF6" 
+                stroke="#8B5CF6"
+                fill="#8B5CF6"
                 fillOpacity={0.6}
                 name="Tokens"
               />
@@ -479,17 +478,17 @@ const AIAnalytics: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Cost Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={getDailyUsageData()}>
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 stroke="#6B7280"
                 fontSize={12}
                 interval={timeRange === '1y' ? 0 : 'preserveStartEnd'}
               />
-              <YAxis 
+              <YAxis
                 stroke="#6B7280"
                 fontSize={12}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{
                   backgroundColor: '#1F2937',
                   border: '1px solid #374151',
@@ -498,10 +497,10 @@ const AIAnalytics: React.FC = () => {
                 }}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="cost" 
-                stroke="#10B981" 
+              <Line
+                type="monotone"
+                dataKey="cost"
+                stroke="#10B981"
                 strokeWidth={2}
                 dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
                 name="Cost ($)"
@@ -514,18 +513,18 @@ const AIAnalytics: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Requests vs Tokens</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={getDailyUsageData().slice(-7)}>
-              <XAxis 
-                dataKey="date" 
+            <BarChart data={(getDailyUsageData() || []).slice(-7)}>
+              <XAxis
+                dataKey="date"
                 stroke="#6B7280"
                 fontSize={12}
                 interval={timeRange === '1y' ? 0 : 'preserveStartEnd'}
               />
-              <YAxis 
+              <YAxis
                 stroke="#6B7280"
                 fontSize={12}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{
                   backgroundColor: '#1F2937',
                   border: '1px solid #374151',

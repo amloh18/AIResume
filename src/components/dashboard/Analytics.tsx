@@ -4,8 +4,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
-import { 
-  FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap, 
+import {
+  FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap,
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart,
   MessageSquare, User, BarChart3, SearchX
 } from 'lucide-react';
@@ -14,7 +14,7 @@ import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
-import AnalyticsJourneyWidget from './AnalyticsJourneyWidget';
+
 import ProgressTrackingWidget from './ProgressTrackingWidget';
 import ApplicationStatsWidget from './ApplicationStatsWidget';
 import PageHeader from './PageHeader';
@@ -104,50 +104,50 @@ const calculateProjectsScore = (projects: any[]): number => {
 const calculateCompletionPercentage = (cv: any): number => {
   if (cv.status === 'published') return 100;
   if (cv.status === 'archived') return 0;
-  
+
   let totalScore = 0;
   let maxScore = 0;
-  
+
   const sectionWeights = { personalInfo: 25, experience: 30, education: 20, skills: 15, projects: 10 };
-  
+
   if (cv.cvData?.basics) {
     const basics = cv.cvData.basics;
     const personalInfoScore = calculatePersonalInfoScore(basics);
     totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
   }
   maxScore += sectionWeights.personalInfo;
-  
+
   if (cv.cvData?.work) {
     const experienceScore = calculateExperienceScore(cv.cvData.work);
     totalScore += (experienceScore * sectionWeights.experience) / 100;
   }
   maxScore += sectionWeights.experience;
-  
+
   if (cv.cvData?.education) {
     const educationScore = calculateEducationScore(cv.cvData.education);
     totalScore += (educationScore * sectionWeights.education) / 100;
   }
   maxScore += sectionWeights.education;
-  
+
   if (cv.cvData?.skills) {
     const skillsScore = calculateSkillsScore(cv.cvData.skills);
     totalScore += (skillsScore * sectionWeights.skills) / 100;
   }
   maxScore += sectionWeights.skills;
-  
+
   if (cv.cvData?.projects) {
     const projectsScore = calculateProjectsScore(cv.cvData.projects);
     totalScore += (projectsScore * sectionWeights.projects) / 100;
   }
   maxScore += sectionWeights.projects;
-  
+
   const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
   return Math.max(0, Math.min(100, completionPercentage));
 };
 
 // 1. Combined CV Management Section - CV Health Score + Master CV Management + Quick Actions + Monthly Goal
 const CVManagementSection: React.FC<{
-  cvHealthScore: number; 
+  cvHealthScore: number;
   cvs: any[];
   drafts: any[];
   onImproveScore: () => void;
@@ -162,7 +162,7 @@ const CVManagementSection: React.FC<{
   userId?: string;
   jobs?: any[];
 }> = ({ cvHealthScore, cvs, drafts, onImproveScore, onCreateCV, onAddJob, onWriteCoverLetter, onCreateCoverLetter, onCreateJob, onSetMasterCV, predictions, onUpdateGoal, userId, jobs = [] }) => {
-  
+
   // Function to navigate to canvas page and open report sidepanel for master CV
   const router = useRouter();
   const handleShowATSAnalysis = () => {
@@ -185,7 +185,7 @@ const CVManagementSection: React.FC<{
       router.push('/studio?master=true');
     }
   };
-  
+
   const getStatus = (score: number) => {
     if (score >= 80) return { label: 'Excellent', color: 'text-green-400' };
     if (score >= 60) return { label: 'Good', color: 'text-yellow-400' };
@@ -234,7 +234,7 @@ const CVManagementSection: React.FC<{
     // Calculate years of experience from work history
     if (masterCV.cvData?.work && Array.isArray(masterCV.cvData.work) && masterCV.cvData.work.length > 0) {
       const workEntries = masterCV.cvData.work;
-      
+
       // Get all start dates and calculate total experience
       const startDates = workEntries
         .map((job: any) => {
@@ -266,7 +266,7 @@ const CVManagementSection: React.FC<{
         })
         .filter((date: any) => date !== null && !isNaN(date.getTime()))
         .sort((a: any, b: any) => a!.getTime() - b!.getTime());
-      
+
       if (startDates.length > 0 && startDates[0]) {
         const earliestStart = startDates[0];
         const now = new Date();
@@ -315,7 +315,7 @@ const CVManagementSection: React.FC<{
           <MasterCVBadge />
         </div>
       </div>
-      
+
       <div className="space-y-6 flex-1">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
           {/* Left Column: CV Health Score - Takes both rows */}
@@ -330,8 +330,8 @@ const CVManagementSection: React.FC<{
                       <stop offset="100%" stopColor="#f97316" />
                     </linearGradient>
                   </defs>
-                  <circle cx="50" cy="50" r="45" stroke="url(#cvHealthGradient)" strokeWidth="10" fill="none" 
-                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} 
+                  <circle cx="50" cy="50" r="45" stroke="url(#cvHealthGradient)" strokeWidth="10" fill="none"
+                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
                     className="transition-all duration-1000 ease-out" strokeLinecap="round" />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -351,10 +351,10 @@ const CVManagementSection: React.FC<{
                 </motion.button>
               </div>
               <p className={`text-xs font-medium ${status.color}`}>{status.label}</p>
-              
+
             </div>
           </div>
-          
+
 
           {/* Right Column */}
           <div className="space-y-6">
@@ -367,7 +367,7 @@ const CVManagementSection: React.FC<{
                       {profile.experienceLevel}
                     </h4>
                     <p className="text-gray-600 dark:text-white/60 text-sm">
-                      {profile.yearsExperience > 0 
+                      {profile.yearsExperience > 0
                         ? `${profile.yearsExperience} ${profile.yearsExperience === 1 ? 'year' : 'years'} experience`
                         : 'No experience listed'
                       }
@@ -386,13 +386,13 @@ const CVManagementSection: React.FC<{
                 Quick Actions
               </h3>
               <div className="space-y-2">
-                <motion.button 
+                <motion.button
                   onClick={handleShowATSAnalysis}
                   className="w-full p-3 bg-purple-400/20 text-purple-400 rounded-lg text-sm font-medium hover:bg-purple-400/30 transition-all duration-300 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                   <Target size={16} /> Show ATS Analysis
                 </motion.button>
-                <motion.button 
+                <motion.button
                   onClick={onCreateJob}
                   className="w-full p-3 bg-blue-400/20 text-blue-400 rounded-lg text-sm font-medium hover:bg-blue-400/30 transition-all duration-300 flex items-center gap-2"
                   whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -409,7 +409,7 @@ const CVManagementSection: React.FC<{
 };
 
 // 2. Application Calendar Widget (3 Weeks)
-const ApplicationCalendarWidget: React.FC<{ 
+const ApplicationCalendarWidget: React.FC<{
   jobs: any[];
 }> = ({ jobs }) => {
   return (
@@ -421,7 +421,7 @@ const ApplicationCalendarWidget: React.FC<{
       <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Calendar (3 Weeks)</h2>
       </div>
-      
+
       {/* Calendar */}
       <div className="flex-1 flex flex-col">
         <div className="grid grid-cols-7 gap-1">
@@ -431,7 +431,7 @@ const ApplicationCalendarWidget: React.FC<{
               {day}
             </div>
           ))}
-          
+
           {/* Calendar days */}
           {(() => {
             const today = new Date();
@@ -441,40 +441,40 @@ const ApplicationCalendarWidget: React.FC<{
             const dayOfWeek = today.getDay();
             const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1, Sunday = 0
             startDate.setDate(today.getDate() + mondayOffset - 7);
-            
+
             const calendarDays = [];
             for (let i = 0; i < 21; i++) { // 3 weeks * 7 days
               const currentDate = new Date(startDate);
               currentDate.setDate(startDate.getDate() + i);
-              
+
               // Count applications for this date
               const dayApplications = jobs.filter(job => {
                 const jobDate = new Date(job.createdAt);
                 return jobDate.toDateString() === currentDate.toDateString();
               }).length;
-              
+
               // Count deadlines for this date
               const dayDeadlines = jobs.filter(job => {
                 if (!job.deadline) return false;
                 const deadlineDate = new Date(job.deadline);
                 return deadlineDate.toDateString() === currentDate.toDateString();
               }).length;
-              
+
               const isToday = currentDate.toDateString() === today.toDateString();
               const isPast = currentDate < today;
               const isFuture = currentDate > today;
-              
+
               // Determine if this is a deadline day
               const isDeadlineDay = dayDeadlines > 0;
-              
+
               calendarDays.push(
-                <div 
-                  key={i} 
+                <div
+                  key={i}
                   className={`
                     aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
-                    ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium' : 
-                      isPast ? 'text-gray-600 dark:text-white/60' : 
-                      'text-gray-400 dark:text-white/40'}
+                    ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium' :
+                      isPast ? 'text-gray-600 dark:text-white/60' :
+                        'text-gray-400 dark:text-white/40'}
                     ${dayApplications > 0 ? 'bg-green-400/20 dark:bg-green-400/20 text-green-400' : ''}
                     ${isDeadlineDay ? 'bg-red-400/20 dark:bg-red-400/20 text-red-400' : ''}
                     hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer
@@ -517,7 +517,7 @@ const ApplicationCalendarWidget: React.FC<{
 };
 
 // 3. The "Intelligence Dashboard" - Enhanced Market Intelligence + AI Insights
-const IntelligenceDashboard: React.FC<{ 
+const IntelligenceDashboard: React.FC<{
   predictions: any;
   marketIntelligence: any;
   jobs: any[];
@@ -559,7 +559,7 @@ const IntelligenceDashboard: React.FC<{
         .map((job: any) => new Date(job.startDate))
         .filter((date: any) => !isNaN(date.getTime()))
         .sort((a: any, b: any) => a.getTime() - b.getTime());
-      
+
       if (startDates.length > 0) {
         const earliestStart = startDates[0];
         const now = new Date();
@@ -601,7 +601,7 @@ const IntelligenceDashboard: React.FC<{
 
     const responsiveJobs = jobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied');
     const interviewJobs = jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted');
-    
+
     const metrics = {
       applicationVolume: thisMonth.length,
       responseRate: jobs.length > 0 ? Math.round((responsiveJobs.length / jobs.length) * 100) : 0,
@@ -645,13 +645,13 @@ const IntelligenceDashboard: React.FC<{
   const calculateMarketData = () => {
     if (!userProfile) return null;
 
-    const industryJobs = jobs.filter(job => 
-      userProfile.industries.includes(job.industry) || 
+    const industryJobs = jobs.filter(job =>
+      userProfile.industries.includes(job.industry) ||
       userProfile.jobTitles.some(title => job.title?.toLowerCase().includes(title.toLowerCase()))
     );
 
     const salaryData = jobs.filter(job => job.salary?.min || job.salary?.max);
-    const avgSalary = salaryData.length > 0 ? 
+    const avgSalary = salaryData.length > 0 ?
       salaryData.reduce((sum, job) => sum + (job.salary?.min || job.salary?.max || 0), 0) / salaryData.length : 0;
 
     const responseTimes = jobs.filter(job => job.lastStatusUpdate).map(job => {
@@ -660,7 +660,7 @@ const IntelligenceDashboard: React.FC<{
       return Math.abs(response.getTime() - applied.getTime()) / (1000 * 60 * 60 * 24);
     });
 
-    const avgResponseTime = responseTimes.length > 0 ? 
+    const avgResponseTime = responseTimes.length > 0 ?
       responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length : 0;
 
     return {
@@ -668,8 +668,8 @@ const IntelligenceDashboard: React.FC<{
       avgSalary: Math.round(avgSalary / 1000),
       avgResponseTime: Math.round(avgResponseTime),
       marketDemandScore: Math.round((jobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied').length / Math.max(jobs.length, 1)) * 100),
-      skillMatchScore: userProfile.skills.length > 0 ? 
-        Math.round((userProfile.skills.filter(skill => 
+      skillMatchScore: userProfile.skills.length > 0 ?
+        Math.round((userProfile.skills.filter(skill =>
           jobs.some(job => job.requirements?.toLowerCase().includes(skill.toLowerCase()))
         ).length / userProfile.skills.length) * 100) : 0
     };
@@ -691,8 +691,8 @@ const IntelligenceDashboard: React.FC<{
     <div className="glass-widget-premium rounded-xl p-6 min-h-[400px]">
       <div className="space-y-4 h-full">
 
-                    
-                    
+
+
 
       </div>
     </div>
@@ -700,7 +700,7 @@ const IntelligenceDashboard: React.FC<{
 };
 
 // 4. The "Performance Insights" Section - Enhanced with Conversion Funnel and Actionable Insights
-const PerformanceInsights: React.FC<{ 
+const PerformanceInsights: React.FC<{
   analyticsData: any;
   jobs: any[];
   cvs: any[];
@@ -769,9 +769,8 @@ const PerformanceInsights: React.FC<{
           <span className="text-gray-600 dark:text-white/60 text-sm">Period:</span>
           {['Day', 'Week', 'Month'].map((period) => (
             <motion.button key={period} onClick={() => onPeriodChange(period.toLowerCase())}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${
-                selectedPeriod === period.toLowerCase() ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
-              }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${selectedPeriod === period.toLowerCase() ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
+                }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               {period}
             </motion.button>
           ))}
@@ -780,68 +779,68 @@ const PerformanceInsights: React.FC<{
 
       {/* First Row: Application Conversion Funnel and Performance Metrics - Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      {/* Application Conversion Funnel */}
+        {/* Application Conversion Funnel */}
         <div>
-        <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
-          <TrendingUp size={14} className="text-blue-400" />
-          Application Conversion Funnel
-        </h3>
+          <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
+            <TrendingUp size={14} className="text-blue-400" />
+            Application Conversion Funnel
+          </h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="glass-card-premium rounded-xl p-4 text-center">
               <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.applicationFunnel.applied}</div>
               <div className="text-gray-600 dark:text-white/60 text-xs">Applied</div>
-                </div>
-            
+            </div>
+
             <div className="glass-card-premium rounded-xl p-4 text-center">
               <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.applicationFunnel.interview}</div>
               <div className="text-gray-600 dark:text-white/60 text-xs">Interview</div>
-                  </div>
-            
+            </div>
+
             <div className="glass-card-premium rounded-xl p-4 text-center">
               <div className="text-2xl font-bold text-green-400 mb-1">{metrics.applicationFunnel.offer}</div>
               <div className="text-gray-600 dark:text-white/60 text-xs">Offered</div>
-              </div>
-            
+            </div>
+
             <div className="glass-card-premium rounded-xl p-4 text-center">
               <div className="text-2xl font-bold text-red-400 mb-1">{jobs.filter(job => job.status === 'rejected').length}</div>
               <div className="text-gray-600 dark:text-white/60 text-xs">Rejection</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Performance Metrics */}
+        {/* Performance Metrics */}
         <div>
           <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3 flex items-center gap-2">
             <Target size={14} className="text-green-400" />
             Performance Metrics
           </h3>
           <div className="grid grid-cols-2 gap-4">
-        <div className="glass-card-premium rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.periodApplications}</div>
-          <div className="text-gray-600 dark:text-white/60 text-xs">Applications This {selectedPeriod}</div>
-        </div>
-        
-        <div className="glass-card-premium rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-green-400 mb-1">{metrics.conversionRates.overallSuccess}%</div>
-          <div className="text-gray-600 dark:text-white/60 text-xs">Overall Success Rate</div>
-          {metrics.productivity.improvement > 0 && (
-            <div className="text-xs text-green-400 font-medium">+{metrics.productivity.improvement}% vs Industry</div>
-          )}
-        </div>
-        
-        <div className="glass-card-premium rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.periodResponses}</div>
-          <div className="text-gray-600 dark:text-white/60 text-xs">Responses Received</div>
-          <div className="text-xs text-gray-500 dark:text-white/50">
-            {metrics.periodApplications > 0 ? Math.round((metrics.periodResponses / metrics.periodApplications) * 100) : 0}% response rate
-          </div>
-        </div>
-        
-        <div className="glass-card-premium rounded-xl p-4 text-center">
-          <div className="text-2xl font-bold text-orange-400 mb-1">{metrics.responseTime}</div>
-          <div className="text-gray-600 dark:text-white/60 text-xs">Avg Response Time (days)</div>
-          <div className={`text-xs font-medium ${metrics.responseTime <= 7 ? 'text-green-400' : metrics.responseTime <= 14 ? 'text-yellow-400' : 'text-red-400'}`}>
-            {metrics.responseTime <= 7 ? 'Excellent' : metrics.responseTime <= 14 ? 'Good' : 'Slow'}
+            <div className="glass-card-premium rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-blue-400 mb-1">{metrics.periodApplications}</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Applications This {selectedPeriod}</div>
+            </div>
+
+            <div className="glass-card-premium rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-green-400 mb-1">{metrics.conversionRates.overallSuccess}%</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Overall Success Rate</div>
+              {metrics.productivity.improvement > 0 && (
+                <div className="text-xs text-green-400 font-medium">+{metrics.productivity.improvement}% vs Industry</div>
+              )}
+            </div>
+
+            <div className="glass-card-premium rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-purple-400 mb-1">{metrics.periodResponses}</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Responses Received</div>
+              <div className="text-xs text-gray-500 dark:text-white/50">
+                {metrics.periodApplications > 0 ? Math.round((metrics.periodResponses / metrics.periodApplications) * 100) : 0}% response rate
+              </div>
+            </div>
+
+            <div className="glass-card-premium rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-orange-400 mb-1">{metrics.responseTime}</div>
+              <div className="text-gray-600 dark:text-white/60 text-xs">Avg Response Time (days)</div>
+              <div className={`text-xs font-medium ${metrics.responseTime <= 7 ? 'text-green-400' : metrics.responseTime <= 14 ? 'text-yellow-400' : 'text-red-400'}`}>
+                {metrics.responseTime <= 7 ? 'Excellent' : metrics.responseTime <= 14 ? 'Good' : 'Slow'}
               </div>
             </div>
           </div>
@@ -865,10 +864,10 @@ const PerformanceInsights: React.FC<{
                 const jobDate = new Date(job.createdAt);
                 return jobDate.getMonth() === now.getMonth() && jobDate.getFullYear() === now.getFullYear();
               });
-              
+
               const responseRate = jobs.filter(job => job.status !== 'draft' && job.status !== 'created' && job.status !== 'applied').length / Math.max(jobs.length, 1) * 100;
               const interviewRate = jobs.filter(job => job.status === 'interview' || job.status === 'offer' || job.status === 'accepted').length / Math.max(jobs.length, 1) * 100;
-              
+
               if (thisMonth.length < 5) {
                 insights.push({
                   icon: '📈',
@@ -877,7 +876,7 @@ const PerformanceInsights: React.FC<{
                   priority: 'medium'
                 });
               }
-              
+
               if (responseRate < 20) {
                 insights.push({
                   icon: '🎯',
@@ -886,7 +885,7 @@ const PerformanceInsights: React.FC<{
                   priority: 'high'
                 });
               }
-              
+
               if (interviewRate < 10) {
                 insights.push({
                   icon: '💼',
@@ -895,7 +894,7 @@ const PerformanceInsights: React.FC<{
                   priority: 'high'
                 });
               }
-              
+
               if (metrics.responseTime > 14) {
                 insights.push({
                   icon: '⏰',
@@ -904,14 +903,13 @@ const PerformanceInsights: React.FC<{
                   priority: 'medium'
                 });
               }
-              
+
               return insights;
             })().map((insight, index) => (
-              <div key={index} className={`p-3 rounded-lg border-l-4 ${
-                insight.priority === 'high' ? 'bg-red-400/10 border-red-400' :
+              <div key={index} className={`p-3 rounded-lg border-l-4 ${insight.priority === 'high' ? 'bg-red-400/10 border-red-400' :
                 insight.priority === 'medium' ? 'bg-yellow-400/10 border-yellow-400' :
-                'bg-blue-400/10 border-blue-400'
-              }`}>
+                  'bg-blue-400/10 border-blue-400'
+                }`}>
                 <div className="flex items-start gap-2">
                   <span className="text-lg">{insight.icon}</span>
                   <div className="flex-1">
@@ -921,37 +919,37 @@ const PerformanceInsights: React.FC<{
                 </div>
               </div>
             ))}
-            
+
             {/* Traditional Performance Analysis */}
-          <div className="space-y-2">
-            {metrics.conversionRates.applyToScreen < 20 && (
-              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
-                <div className="w-1 h-1 bg-red-400 rounded-full"></div>
-                <span>Low screening rate - consider improving CV targeting</span>
-              </div>
-            )}
-            {metrics.conversionRates.screenToInterview < 30 && metrics.applicationFunnel.screening > 0 && (
-              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
-                <div className="w-1 h-1 bg-orange-400 rounded-full"></div>
-                <span>Interview conversion needs improvement - optimize phone screening approach</span>
-              </div>
-            )}
-            {metrics.responseTime > 14 && (
-              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
-                <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
-                <span>Follow up more promptly - faster responses improve success rates</span>
-              </div>
-            )}
-            {metrics.productivity.improvement > 0 && (
-              <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
-                <div className="w-1 h-1 bg-green-400 rounded-full"></div>
-                <span>Above industry average - maintain current application quality</span>
-              </div>
-            )}
+            <div className="space-y-2">
+              {metrics.conversionRates.applyToScreen < 20 && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                  <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                  <span>Low screening rate - consider improving CV targeting</span>
+                </div>
+              )}
+              {metrics.conversionRates.screenToInterview < 30 && metrics.applicationFunnel.screening > 0 && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                  <div className="w-1 h-1 bg-orange-400 rounded-full"></div>
+                  <span>Interview conversion needs improvement - optimize phone screening approach</span>
+                </div>
+              )}
+              {metrics.responseTime > 14 && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                  <div className="w-1 h-1 bg-yellow-400 rounded-full"></div>
+                  <span>Follow up more promptly - faster responses improve success rates</span>
+                </div>
+              )}
+              {metrics.productivity.improvement > 0 && (
+                <div className="flex items-center gap-2 text-gray-700 dark:text-white/70 text-xs">
+                  <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+                  <span>Above industry average - maintain current application quality</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
-        
+
         <div className="p-4 glass-card-premium rounded-lg">
           <h3 className="text-gray-900 dark:text-white font-medium text-sm mb-3">Next Actions</h3>
           <div className="space-y-2">
@@ -983,7 +981,7 @@ const PerformanceInsights: React.FC<{
 };
 
 // 5. The "Recent Jobs" Widget - Matching image design
-const RecentJobsWidget: React.FC<{ 
+const RecentJobsWidget: React.FC<{
   jobs: any[];
   onViewJob: (jobId: string) => void;
   onCreateJob?: () => void;
@@ -1030,7 +1028,7 @@ const RecentJobsWidget: React.FC<{
       <div className="mb-4">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Jobs</h2>
       </div>
-      
+
       {/* Content */}
       {lastJobs.length === 0 ? (
         // Empty State
@@ -1061,7 +1059,7 @@ const RecentJobsWidget: React.FC<{
                 <div className="flex-shrink-0 mt-0.5">
                   <Briefcase className="w-5 h-5 text-red-500" />
                 </div>
-                
+
                 {/* Job Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
@@ -1079,7 +1077,7 @@ const RecentJobsWidget: React.FC<{
               </div>
             ))}
           </div>
-          
+
           {/* View All Link */}
           <div className="mt-6 text-center">
             <button
@@ -1106,7 +1104,7 @@ const Analytics: React.FC = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlanKey, setSelectedPlanKey] = useState<string | null>(null);
   const router = useRouter();
-  
+
   // Use centralized dashboard data context
   const {
     cvs,
@@ -1117,27 +1115,27 @@ const Analytics: React.FC = () => {
     error: dataError,
     refreshAll
   } = useDashboardData();
-  
+
   // Performance monitoring
   const { startPageLoad, endPageLoad } = usePerformanceMonitor('Analytics');
-  
+
   // Handle URL parameters for payment modal
   useEffect(() => {
     const plan = searchParams.get('plan');
     const showModal = searchParams.get('showPaymentModal');
-    
+
     if (plan && showModal === 'true') {
       setSelectedPlanKey(plan);
       setShowPaymentModal(true);
     }
   }, [searchParams]);
-  
+
   // Get user ID for data fetching using unified authentication
   const userId = getUserIdForAPI(user);
-  
+
   // Use standardized user data from hook
   const userProfile = userData;
-  
+
   // No need for separate fetchers - data comes from context
   const loading = dataLoading;
   const drafts: any[] = []; // Drafts removed from context for now
@@ -1175,47 +1173,47 @@ const Analytics: React.FC = () => {
   const calculateCompletionPercentage = (cv: any): number => {
     if (cv.status === 'published') return 100;
     if (cv.status === 'archived') return 0;
-    
+
     let totalScore = 0;
     let maxScore = 0;
-    
+
     const sectionWeights = { personalInfo: 25, experience: 30, education: 20, skills: 15, projects: 10 };
-    
+
     if (cv.cvData?.basics) {
       const basics = cv.cvData.basics;
       const personalInfoScore = calculatePersonalInfoScore(basics);
       totalScore += (personalInfoScore * sectionWeights.personalInfo) / 100;
     }
     maxScore += sectionWeights.personalInfo;
-    
+
     if (cv.cvData?.work) {
       const experienceScore = calculateExperienceScore(cv.cvData.work);
       totalScore += (experienceScore * sectionWeights.experience) / 100;
     }
     maxScore += sectionWeights.experience;
-    
+
     if (cv.cvData?.education) {
       const educationScore = calculateEducationScore(cv.cvData.education);
       totalScore += (educationScore * sectionWeights.education) / 100;
     }
     maxScore += sectionWeights.education;
-    
+
     if (cv.cvData?.skills) {
       const skillsScore = calculateSkillsScore(cv.cvData.skills);
       totalScore += (skillsScore * sectionWeights.skills) / 100;
     }
     maxScore += sectionWeights.skills;
-    
+
     if (cv.cvData?.projects) {
       const projectsScore = calculateProjectsScore(cv.cvData.projects);
       totalScore += (projectsScore * sectionWeights.projects) / 100;
     }
     maxScore += sectionWeights.projects;
-    
+
     const completionPercentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
     return Math.max(0, Math.min(100, completionPercentage));
   };
-  
+
   const calculatePersonalInfoScore = (basics: any): number => {
     let score = 0;
     let maxScore = 5;
@@ -1226,7 +1224,7 @@ const Analytics: React.FC = () => {
     if (basics.summary && basics.summary.trim()) score += 1;
     return (score / maxScore) * 100;
   };
-  
+
   const calculateExperienceScore = (work: any[]): number => {
     if (!Array.isArray(work) || work.length === 0) return 0;
     let totalScore = 0;
@@ -1268,15 +1266,15 @@ const Analytics: React.FC = () => {
       const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
       return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
     });
-    
+
     if (!masterCV) {
       return 0;
     }
-    
+
     const healthScore = calculateCompletionPercentage(masterCV);
     return healthScore;
   };
-  
+
   const cvHealthScore = calculateCVHealthScore();
 
   // Performance monitoring
@@ -1293,18 +1291,18 @@ const Analytics: React.FC = () => {
   // Check if subscription is past due
   const subscriptionStatus = userProfile?.subscription?.status;
   const isPastDue = subscriptionStatus === 'past_due' || subscriptionStatus === 'unpaid';
-  
+
   // Get expiry information from useUsageLimits
   const { timeAccess, subscription: usageSubscription } = useUsageLimits();
-  
+
   // Determine if we should show expiry banner
   // Show if: subscription is active, not free, and (expiring within 7 days OR in grace period)
-  const shouldShowExpiryBanner = !isPastDue && 
-    userProfile?.subscription?.status === 'active' && 
+  const shouldShowExpiryBanner = !isPastDue &&
+    userProfile?.subscription?.status === 'active' &&
     userProfile?.subscription?.planKey !== 'free' &&
     timeAccess &&
-    ((timeAccess.daysRemaining !== undefined && timeAccess.daysRemaining <= 7) || 
-     (timeAccess.isInGracePeriod === true));
+    ((timeAccess.daysRemaining !== undefined && timeAccess.daysRemaining <= 7) ||
+      (timeAccess.isInGracePeriod === true));
 
   return (
     <div className="dashboard-page space-y-4 pb-0">
@@ -1402,25 +1400,9 @@ const Analytics: React.FC = () => {
         </div>
       </div>
 
-      {/* Third Row: Journey Widget and Performance Insights Container */}
+
+      {/* Third Row: Performance Insights Container */}
       <div className="flex flex-col gap-4 min-h-[400px]">
-        {/* Journey Widget - Full Width, Expandable */}
-        <div className="flex-1 h-full">
-          <AnalyticsJourneyWidget
-            onResumeJourney={(journey) => {
-              // Navigate to Tracker page to view the journey
-              router.push(`/dashboard/tracker?journeyId=${journey.id}`);
-            }}
-            onDeleteJourney={(journeyId) => {
-              // TODO: Implement delete journey functionality
-            }}
-            onViewJourney={(journey) => {
-              // Navigate to Tracker page to view the journey
-              router.push(`/dashboard/tracker?journeyId=${journey.id}`);
-            }}
-          />
-        </div>
-        
         {/* Performance Insights - Full Width */}
         <PerformanceInsights
           analyticsData={analyticsData}

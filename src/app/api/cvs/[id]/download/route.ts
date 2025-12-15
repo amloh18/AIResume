@@ -163,12 +163,15 @@ export async function GET(
     let mimeType: string;
     let filename: string;
 
-    // Generate filename based on job title or CV title
+    // Generate filename based on CV title, then job title, then fallback
     const jobTitle = searchParams.get('jobTitle');
+    const cvTitle = cvWithTemplate.title;
     const baseName = sanitizeFilename(
-      jobTitle 
-        ? jobTitle.toLowerCase().replace(/\s+/g, '-')
-        : cvData.basics?.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'
+      cvTitle 
+        ? cvTitle
+        : jobTitle 
+          ? jobTitle
+          : 'CV'
     );
 
     if (format === 'pdf') {
@@ -178,7 +181,7 @@ export async function GET(
         format: 'pdf'
       });
       mimeType = 'application/pdf';
-      filename = `${baseName}-cv.pdf`;
+      filename = `${baseName}|CV.pdf`;
     } else if (format === 'docx' || format === 'doc') {
       fileBlob = await docxService.generateDOCX(cvData, template, {
         paperSize,
@@ -188,7 +191,7 @@ export async function GET(
       mimeType = format === 'doc' 
         ? 'application/msword' 
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      filename = `${baseName}-cv.${format}`;
+      filename = `${baseName}|CV.${format}`;
     } else {
       return NextResponse.json({ error: 'Unsupported format' }, { status: 400 });
     }

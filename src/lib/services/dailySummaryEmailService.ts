@@ -259,6 +259,11 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}
 
   /**
    * Send daily summary email to a user
+   * 
+   * IMPORTANT: This method ONLY uses real database data. It NEVER uses hardcoded or mock data.
+   * - All job counts are queried from the database
+   * - If there's no activity, the email is NOT sent (returns early)
+   * - All summary data comes from actual user job applications
    */
   async sendDailySummary(userId: string): Promise<{ success: boolean; error?: string }> {
     try {
@@ -275,14 +280,14 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}
         return { success: true, error: 'Daily summary email is disabled by user' };
       }
 
-      // Get summary for last 24 hours
+      // Get summary for last 24 hours - ALL DATA COMES FROM DATABASE, NO HARDCODED VALUES
       const endDate = new Date();
       const startDate = new Date(endDate);
       startDate.setDate(startDate.getDate() - 1);
 
       const summary = await this.getUserDailySummary(userId, startDate, endDate);
 
-      // Only send if there's activity
+      // Only send if there's activity - NO MOCK DATA IS EVER USED
       if (!summary) {
         return { success: true, error: 'No activity to summarize' };
       }

@@ -30,10 +30,22 @@ export function isRecentNotification(
 
   const timestamp = new Date(createdAt).getTime();
   if (Number.isNaN(timestamp)) {
+    console.warn('⚠️ NotificationToast - Invalid createdAt timestamp:', createdAt);
     return true;
   }
 
-  return now - timestamp <= windowMs;
+  const diff = now - timestamp;
+  const isRecent = diff <= windowMs;
+
+  if (!isRecent && process.env.NODE_ENV === 'development') {
+    console.debug('⏳ NotificationToast - Filtered old notification:', {
+      createdAt,
+      diffMinutes: Math.round(diff / 60000),
+      windowMinutes: Math.round(windowMs / 60000)
+    });
+  }
+
+  return isRecent;
 }
 
 export function resolveToastGateState({

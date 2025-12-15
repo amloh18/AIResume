@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Target, 
-  TrendingUp, 
-  Lightbulb, 
-  FileText, 
-  ArrowRight, 
+import {
+  Target,
+  TrendingUp,
+  Lightbulb,
+  FileText,
+  ArrowRight,
   RefreshCw,
   CheckCircle,
   AlertCircle,
@@ -41,7 +41,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
   // Use prop session if provided, otherwise use hook session
   const currentSession = propSession || session;
   const authStatus = propSession ? 'authenticated' : sessionStatus;
-  
+
   // Flow Detection: Check if this is Flow 3 (Master CV Edit)
   const editMaster = searchParams?.get('editMaster') === 'true';
   const masterCVId = searchParams?.get('masterCVId') || (typeof window !== 'undefined' ? sessionStorage.getItem('masterCVId') : null);
@@ -101,8 +101,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     // Verify we have meaningful CV data before attempting analysis
     const hasMeaningfulCvData = !!(
       state.cvData && (
-        state.cvData.work?.length > 0 || 
-        state.cvData.education?.length > 0 || 
+        state.cvData.work?.length > 0 ||
+        state.cvData.education?.length > 0 ||
         state.cvData.projects?.length > 0 ||
         state.cvData.basics?.name
       )
@@ -133,7 +133,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     if (isRetry) {
       setRetryCount(prev => prev + 1);
     }
-    
+
     setIsGenerating(true);
     setError(null);
 
@@ -141,8 +141,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       // Validate CV data before making API call
       const hasMeaningfulData = !!(
         state.cvData && (
-          state.cvData.work?.length > 0 || 
-          state.cvData.education?.length > 0 || 
+          state.cvData.work?.length > 0 ||
+          state.cvData.education?.length > 0 ||
           state.cvData.projects?.length > 0 ||
           state.cvData.basics?.name
         )
@@ -181,20 +181,20 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         interests: state.cvData.interests || [],
         references: state.cvData.references || []
       };
-      
+
       console.log('📤 Sending payload to API:', {
         cvDataSize: JSON.stringify(cvDataPayload).length,
         hasJobData: !!state.jobData,
         jobId: state.jobId
       });
-      
+
       const response = await fetch('/api/ai/career-analysis', {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           cvData: cvDataPayload,
           jobData: state.jobData || null,
           jobId: state.jobId || null
@@ -202,7 +202,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       });
 
       console.log('📡 AI Analysis response status:', response.status, response.statusText);
-      
+
       let result;
       if (!response.ok) {
         // Try to parse error response
@@ -213,11 +213,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             statusText: response.statusText,
             errorText: errorText.substring(0, 500) // Log first 500 chars
           });
-          
+
           try {
             const errorData = JSON.parse(errorText);
             console.error('❌ Error details:', errorData);
-            
+
             // If it's a 400 error about missing CV data, show specific error
             if (response.status === 400 && errorData.error) {
               if (errorData.error.includes('CV data')) {
@@ -230,7 +230,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
               setIsGenerating(false);
               return;
             }
-            
+
             result = errorData;
           } catch {
             // If parsing fails, show error with status
@@ -282,7 +282,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       }
     } catch (error) {
       console.error('AI analysis error:', error);
-      
+
       // Use fallback analysis instead of showing error
       console.log('🔄 Using fallback analysis due to error');
       const fallbackAnalysis = {
@@ -357,7 +357,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         requestBody.masterCVId = masterCVId;
         console.log('🔄 Flow 3: Passing explicit masterCVId for update:', masterCVId);
       }
-      
+
       const response = await fetch('/api/cv-draft/convert-to-master', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -365,14 +365,14 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       });
 
       console.log('📡 Master CV creation response status:', response.status);
-      
+
       if (!response.ok) {
         let errorMessage = `Master CV creation failed: ${response.status} ${response.statusText}`;
-        
+
         try {
           const errorData = await response.json();
           console.error('❌ Master CV creation failed with details:', errorData);
-          
+
           if (errorData.error) {
             errorMessage = errorData.error;
           }
@@ -381,7 +381,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           console.error('❌ Master CV creation failed (text response):', errorText);
           errorMessage = errorText || errorMessage;
         }
-        
+
         setError(errorMessage);
         return;
       }
@@ -392,17 +392,17 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
       if (result.success) {
         const actionVerb = isEditingMasterCV ? 'updated' : 'created';
         console.log(`✅ Master CV ${actionVerb} successfully:`, result.cv?.id);
-        
+
         // Mark as created/updated
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('masterCVCreated', 'true');
           sessionStorage.setItem('fromAICareerReport', 'true');
-          
+
           // Clear masterCVId from sessionStorage after successful update
           if (isEditingMasterCV) {
             sessionStorage.removeItem('masterCVId');
           }
-          
+
           // Clear localStorage since data is now in database
           try {
             localStorage.removeItem('ai-career-report-data');
@@ -411,7 +411,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           } catch (error) {
             console.warn('⚠️ Failed to clear localStorage:', error);
           }
-          
+
           // Dispatch custom event to notify other components
           window.dispatchEvent(new CustomEvent('masterCVCreated'));
         }
@@ -432,7 +432,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
 
     } catch (error: any) {
       console.error('❌ Save Master CV error:', error);
-      
+
       // CRITICAL: Never call onComplete() on error - this prevents unauthenticated redirects
       if (error.message) {
         setError(error.message);
@@ -512,8 +512,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     // Check if we have CV data to analyze
     const hasMeaningfulData = !!(
       state.cvData && (
-        state.cvData.work?.length > 0 || 
-        state.cvData.education?.length > 0 || 
+        state.cvData.work?.length > 0 ||
+        state.cvData.education?.length > 0 ||
         state.cvData.projects?.length > 0 ||
         state.cvData.basics?.name
       )
@@ -570,9 +570,9 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
     );
   }
 
-  const { 
-    experienceLevel, 
-    careerPath, 
+  const {
+    experienceLevel,
+    careerPath,
     strategicSuggestions,
     impactScore,
     careerCoherence,
@@ -589,12 +589,12 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         {/* Blurred content */}
         <div className="blur-sm pointer-events-none min-h-[calc(100vh-5rem)] bg-[#1A201A]">
           <div className="max-w-6xl mx-auto p-8 space-y-8">
-        {/* Description Section */}
-        <div className="text-center mb-12">
-          <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
-            Here's a summary of our AI-powered analysis. Use these insights to tailor your CV for your next career move.
-          </p>
-        </div>
+            {/* Description Section */}
+            <div className="text-center mb-12">
+              <p className="text-gray-600 text-lg max-w-2xl mx-auto mb-6">
+                Here's a summary of our AI-powered analysis. Use these insights to tailor your CV for your next career move.
+              </p>
+            </div>
 
             {/* Experience Level Card */}
             <motion.div
@@ -609,11 +609,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </div>
                 <h2 className="text-2xl font-bold text-white">Experience Level</h2>
               </div>
-              
+
               <p className="text-gray-400 mb-6">
                 We've determined your current career standing based on your work history.
               </p>
-              
+
               <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
                 <h3 className="text-3xl font-bold text-[#80FF00] mb-4">{experienceLevel.level}</h3>
                 <p className="text-gray-300 leading-relaxed">{experienceLevel.rationale}</p>
@@ -631,7 +631,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </div>
                 <p className="text-gray-400 text-sm">Data-driven assessment of your CV's competitive strength...</p>
               </div>
-              
+
               <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
@@ -641,7 +641,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </div>
                 <p className="text-gray-400 text-sm">Analysis of career progression and job duration patterns...</p>
               </div>
-              
+
               <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
@@ -651,7 +651,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </div>
                 <p className="text-gray-400 text-sm">Ensure your most important information is easily digestible...</p>
               </div>
-              
+
               <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
@@ -661,7 +661,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </div>
                 <p className="text-gray-400 text-sm">Analysis of skill depth vs. frequency and focus areas...</p>
               </div>
-              
+
               <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
@@ -671,7 +671,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </div>
                 <p className="text-gray-400 text-sm">Reframe your experience using senior-level language...</p>
               </div>
-              
+
               <div className="bg-[#1a2015] border border-white/10 rounded-xl p-6 mx-4">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-6 h-6 bg-[#80FF00] rounded flex items-center justify-center">
@@ -686,7 +686,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
         </div>
 
         {/* Sign-in modal overlay */}
-        <SignInModal isOpen={true} onClose={() => {}} />
+        <SignInModal isOpen={true} onClose={() => { }} />
       </div>
     );
   }
@@ -712,11 +712,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
             <h2 className="text-2xl font-bold text-white">Experience Level</h2>
           </div>
-          
+
           <p className="text-gray-400 mb-6">
             We've determined your current career standing based on your work history.
           </p>
-          
+
           <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
             <h3 className="text-3xl font-bold text-[#80FF00] mb-4">{experienceLevel.level}</h3>
             <p className="text-gray-300 leading-relaxed">{experienceLevel.rationale}</p>
@@ -736,11 +736,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
             <h2 className="text-2xl font-bold text-white">Impact Score Analysis</h2>
           </div>
-          
+
           <p className="text-gray-400 mb-6">
             Data-driven assessment of your CV's competitive strength based on quantifiable achievements and action-oriented language.
           </p>
-          
+
           <div className="space-y-6">
             {/* Impact Metrics Table */}
             <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
@@ -788,34 +788,32 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             {/* Key Insights */}
             <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               {impactScore?.insights?.map((insight: any, index: number) => (
-                <div key={index} className={`bg-[#141810] rounded-lg p-4 border ${
-                  insight.type === 'Critical Gap' ? 'border-red-500/20' : 
-                  insight.type === 'Improvement Needed' ? 'border-yellow-500/20' : 
-                  'border-green-500/20'
-                }`}>
-                  <h4 className={`font-semibold mb-2 ${
-                    insight.type === 'Critical Gap' ? 'text-red-400' : 
-                    insight.type === 'Improvement Needed' ? 'text-yellow-400' : 
-                    'text-green-400'
+                <div key={index} className={`bg-[#141810] rounded-lg p-4 border ${insight.type === 'Critical Gap' ? 'border-red-500/20' :
+                  insight.type === 'Improvement Needed' ? 'border-yellow-500/20' :
+                    'border-green-500/20'
                   }`}>
-                    {insight.type === 'Critical Gap' ? '🚨 Critical Gap' : 
-                     insight.type === 'Improvement Needed' ? '⚠️ Improvement Needed' : 
-                     '✅ Strength'}
+                  <h4 className={`font-semibold mb-2 ${insight.type === 'Critical Gap' ? 'text-red-400' :
+                    insight.type === 'Improvement Needed' ? 'text-yellow-400' :
+                      'text-green-400'
+                    }`}>
+                    {insight.type === 'Critical Gap' ? '🚨 Critical Gap' :
+                      insight.type === 'Improvement Needed' ? '⚠️ Improvement Needed' :
+                        '✅ Strength'}
                   </h4>
                   <p className="text-gray-300 text-sm">{insight.message}</p>
                 </div>
               )) || (
-                <>
-                  <div className="bg-[#141810] rounded-lg p-4 border border-red-500/20">
-                    <h4 className="text-red-400 font-semibold mb-2">🚨 Critical Gap</h4>
-                    <p className="text-gray-300 text-sm">Limited quantifiable achievements found in your CV.</p>
-                  </div>
-                  <div className="bg-[#141810] rounded-lg p-4 border border-yellow-500/20">
-                    <h4 className="text-yellow-400 font-semibold mb-2">⚠️ Improvement Needed</h4>
-                    <p className="text-gray-300 text-sm">Need more action-oriented language and quantifiable results.</p>
-                  </div>
-                </>
-              )}
+                  <>
+                    <div className="bg-[#141810] rounded-lg p-4 border border-red-500/20">
+                      <h4 className="text-red-400 font-semibold mb-2">🚨 Critical Gap</h4>
+                      <p className="text-gray-300 text-sm">Limited quantifiable achievements found in your CV.</p>
+                    </div>
+                    <div className="bg-[#141810] rounded-lg p-4 border border-yellow-500/20">
+                      <h4 className="text-yellow-400 font-semibold mb-2">⚠️ Improvement Needed</h4>
+                      <p className="text-gray-300 text-sm">Need more action-oriented language and quantifiable results.</p>
+                    </div>
+                  </>
+                )}
             </div>
           </div>
         </motion.div>
@@ -825,12 +823,12 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
+          className="mx-4"
         >
           <CareerTrajectoryGraph
             careerPath={careerPath}
             careerCoherence={careerCoherence}
             experienceLevel={experienceLevel?.level}
-            forceLightTheme={true}
           />
         </motion.div>
 
@@ -847,11 +845,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
             <h2 className="text-2xl font-bold text-white">CV Reading Time Optimization</h2>
           </div>
-          
+
           <p className="text-gray-400 mb-6">
             Recruiters spend an average of 6 seconds on initial CV scan. Ensure your most important information is easily digestible.
           </p>
-          
+
           <div className="space-y-4">
             <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
               <h3 className="text-lg font-bold text-white mb-4">Your CV Structure Analysis</h3>
@@ -894,7 +892,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 </table>
               </div>
             </div>
-            
+
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
               <p className="text-red-400 text-sm"><strong>Critical Insight:</strong> A recruiter won't read the second page. Move your best achievements above the fold to maximize initial screen success.</p>
             </div>
@@ -914,11 +912,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
             <h2 className="text-2xl font-bold text-white">Skills Gap Analysis</h2>
           </div>
-          
+
           <p className="text-gray-400 mb-6">
             Analysis of skill depth vs. frequency and focus area distribution in your CV.
           </p>
-          
+
           <div className="space-y-6">
             {/* Skill Depth Analysis */}
             <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
@@ -940,12 +938,11 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                           <td className="py-3">{skill.name}</td>
                           <td className="py-3">{skill.mentions} times</td>
                           <td className="py-3">{skill.quantifiedUse} times</td>
-                          <td className={`py-3 ${
-                            skill.gapInsight === 'Major Gap' ? 'text-red-400' :
+                          <td className={`py-3 ${skill.gapInsight === 'Major Gap' ? 'text-red-400' :
                             skill.gapInsight === 'Minor Gap' ? 'text-yellow-400' :
-                            skill.gapInsight === 'Targeted Gap' ? 'text-green-400' :
-                            'text-blue-400'
-                          }`}>
+                              skill.gapInsight === 'Targeted Gap' ? 'text-green-400' :
+                                'text-blue-400'
+                            }`}>
                             {skill.gapInsight}
                           </td>
                         </tr>
@@ -973,7 +970,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                         <span className="text-gray-300">{area.area}</span>
                         <div className="flex items-center gap-2">
                           <div className="w-32 bg-gray-700 rounded-full h-2">
-                            <div className={`${color} h-2 rounded-full`} style={{width: `${area.percentage}%`}}></div>
+                            <div className={`${color} h-2 rounded-full`} style={{ width: `${area.percentage}%` }}></div>
                           </div>
                           <span className="text-gray-300 text-sm">{area.percentage}%</span>
                         </div>
@@ -1004,30 +1001,30 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
             <h2 className="text-2xl font-bold text-white">Mid-Level to Senior Translation</h2>
           </div>
-          
+
           <p className="text-gray-400 mb-6">
             Automatically reframe your experience using senior-level language to advance your career positioning.
           </p>
-          
+
           <div className="space-y-4">
             {seniorTranslation?.translations && seniorTranslation.translations.length > 0 ? (
               seniorTranslation.translations.map((item: any, index: number) => (
-              <div key={index} className="bg-[#141810] border border-white/10 rounded-lg p-6">
-                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="text-red-400 font-semibold mb-2">Current (Mid-Level)</h4>
-                    <p className="text-gray-300 text-sm italic">"{item.current}"</p>
+                <div key={index} className="bg-[#141810] border border-white/10 rounded-lg p-6">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="text-red-400 font-semibold mb-2">Current (Mid-Level)</h4>
+                      <p className="text-gray-300 text-sm italic">"{item.current}"</p>
+                    </div>
+                    <div>
+                      <h4 className="text-[#80FF00] font-semibold mb-2">Senior Translation</h4>
+                      <p className="text-gray-300 text-sm">"{item.improved}"</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-[#80FF00] font-semibold mb-2">Senior Translation</h4>
-                    <p className="text-gray-300 text-sm">"{item.improved}"</p>
+                  <div className="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
+                    <p className="text-blue-400 text-xs"><strong>Shift:</strong> {item.shift}</p>
                   </div>
                 </div>
-                <div className="mt-3 bg-blue-500/10 border border-blue-500/20 rounded-lg p-2">
-                  <p className="text-blue-400 text-xs"><strong>Shift:</strong> {item.shift}</p>
-                </div>
-              </div>
-            ))
+              ))
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-400">No senior translation examples available</p>
@@ -1049,23 +1046,23 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
             </div>
             <h2 className="text-2xl font-bold text-white">Industry Specialization Analysis</h2>
           </div>
-          
+
           <div className="space-y-6">
             <div className="bg-[#141810] border border-white/10 rounded-lg p-6">
               <h3 className="text-lg font-bold text-white mb-4">Identified Specialization</h3>
               <div className="bg-green-500/20 border border-green-500/30 rounded-lg p-4">
                 <h4 className="text-green-400 font-semibold mb-2">🎯 {
-                  industrySpecialization?.specialization || 
+                  industrySpecialization?.specialization ||
                   (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : 'General')
                 } Specialist</h4>
                 <p className="text-gray-300 text-sm mb-3">
-                  {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ? 
+                  {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ?
                     `Your specialization in ${industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : '')} is a major asset!` :
                     'Consider developing a specialization to stand out to recruiters.'
                   }
                 </p>
                 <p className="text-gray-300 text-sm">
-                  {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ? 
+                  {industrySpecialization?.specialization || (typeof industrySpecialization?.identified === 'string' ? industrySpecialization.identified : null) ?
                     'Recruiters often screen for specific industry keywords before general skills.' :
                     'Focus on building expertise in a specific industry or technology stack.'
                   }
@@ -1077,7 +1074,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                       <div className="mb-2">
                         <p className="text-gray-300 text-xs font-semibold mb-1">Target Industries:</p>
                         <p className="text-gray-400 text-xs">
-                          {Array.isArray(industrySpecialization.identified.target_industries) 
+                          {Array.isArray(industrySpecialization.identified.target_industries)
                             ? industrySpecialization.identified.target_industries.join(', ')
                             : String(industrySpecialization.identified.target_industries)}
                         </p>
@@ -1102,7 +1099,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                       <div className="mb-2">
                         <p className="text-gray-300 text-xs font-semibold mb-1">Target Industries:</p>
                         <p className="text-gray-400 text-xs">
-                          {Array.isArray(industrySpecialization.industryAlignment.target_industries) 
+                          {Array.isArray(industrySpecialization.industryAlignment.target_industries)
                             ? industrySpecialization.industryAlignment.target_industries.join(', ')
                             : String(industrySpecialization.industryAlignment.target_industries)}
                         </p>
@@ -1126,7 +1123,7 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                     <div className="mb-2">
                       <p className="text-gray-300 text-xs font-semibold mb-1">Target Industries:</p>
                       <p className="text-gray-400 text-xs">
-                        {Array.isArray(industrySpecialization.target_industries) 
+                        {Array.isArray(industrySpecialization.target_industries)
                           ? industrySpecialization.target_industries.join(', ')
                           : String(industrySpecialization.target_industries)}
                       </p>
@@ -1198,8 +1195,8 @@ export default function AICareerReportStep({ onComplete, onBack, session: propSe
                 <ul className="space-y-2">
                   {industrySpecialization.recommendations.map((recommendation: any, index: number) => {
                     // Handle both string and object formats
-                    const recommendationText = typeof recommendation === 'string' 
-                      ? recommendation 
+                    const recommendationText = typeof recommendation === 'string'
+                      ? recommendation
                       : (recommendation?.text || recommendation?.recommendation || recommendation?.message || JSON.stringify(recommendation));
                     return (
                       <li key={index} className="flex items-start gap-2">
