@@ -73,10 +73,11 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     });
   }, []);
 
-  // Fetch notifications from API - only if authenticated
+  // Fetch notifications from API - only for authenticated users
   const fetchNotifications = useCallback(async () => {
     // Don't fetch if user is not authenticated
     if (!isAuthenticated) {
+      console.log('🔒 NotificationContext - Skipping fetch: Not authenticated');
       setNotifications([]);
       setIsLoading(false);
       hasFetchedRef.current = false; // Reset on logout
@@ -94,6 +95,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     lastFetchTimeRef.current = now;
 
     try {
+      console.log('📥 NotificationContext - Fetching notifications...');
       const response = await fetch('/api/notifications', { cache: 'no-store' });
       if (!response.ok) {
         const contentType = response.headers.get('content-type');
@@ -111,7 +113,9 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
         const data = await response.json();
+        console.log(`✅ NotificationContext - Fetched ${data.notifications?.length || 0} notifications`);
         const filtered = filterExpiredNotifications(data.notifications || []);
+        console.log(`🧹 NotificationContext - After expiration filter: ${filtered.length}`);
         setNotifications(filtered);
       } else {
         console.error('Notifications response is not JSON. Content-Type:', contentType);
@@ -135,6 +139,16 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       setIsLoading(false);
     }
   }, [filterExpiredNotifications, toast, isAuthenticated]);
+
+  // Periodic trigger checks (Stale jobs, engagement) - Run once on mount/auth
+  useEffect(() => {
+    if (isAuthenticated && !hasFetchedRef.current) {
+      // Run checks in background
+      fetch('/api/notifications/check-triggers', { method: 'POST' }).catch(err =>
+        console.error('Failed to run notification checks:', err)
+      );
+    }
+  }, [isAuthenticated]);
 
   // Refresh notifications
   const refreshNotifications = useCallback(async () => {
@@ -265,6 +279,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         : '';
 
       if (!notifId) {
+        console.warn('🚫 Toast suppressed: No ID');
         return;
       }
 
@@ -276,12 +291,15 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         lastShownAt,
       });
 
+      console.log(`🚥 Toast gate state for ${notifId}:`, gateState);
+
       if (gateState === 'repeat-suppressed') {
         return;
       }
 
       if (gateState === 'debounce') {
         if (allowReschedule && typeof window !== 'undefined') {
+          console.log(`⏱️ Rescheduling toast for ${notifId} due to debounce`);
           window.setTimeout(() => showToastForNotification(notification, false), TOAST_DEBOUNCE_MS);
         }
         return;
@@ -289,6 +307,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
       lastToastAtRef.current = now;
       displayedToastIdsRef.current.set(notifId, now);
+
+      console.log(`🍞 Showing toast for: ${notification.title}`);
 
       toast({
         title: notification.title,
@@ -383,12 +403,18 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         eventSource.close();
       }
 
-      const es = new EventSource('/api/notifications/stream');
+      console.log('🔌 NotificationContext - Connecting to SSE stream...');
+      const es = new EventSource('/api/stream-notifications');
+
+      es.onopen = () => {
+        console.log('🟢 NotificationContext - SSE Connection established');
+      };
 
       es.onmessage = (event) => {
         try {
+          console.log('📨 NotificationContext - SSE Message received raw:', event.data);
           const notification = JSON.parse(event.data) as INotification;
-          console.debug('📨 SSE Received:', notification);
+          console.log('📦 NotificationContext - Parsed notification:', notification.title);
 
           // Filter expired notifications
           const filtered = filterExpiredNotifications([notification]);
@@ -406,11 +432,18 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
                 const nId = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
                 return nId === notificationId;
               });
-              if (exists) return prev;
 
+              if (exists) {
+                console.log('🔁 NotificationContext - Duplicate notification skipped:', notificationId);
+                return prev;
+              }
+
+              console.log('🆕 NotificationContext - Adding new notification to state');
               // Add new notification at the beginning
               return filterExpiredNotifications([notification, ...prev]);
             });
+          } else {
+            console.log('🗑️ NotificationContext - Notification filtered out (expired or invalid)');
           }
         } catch (error) {
           // Safely handle errors without stringifying Event objects

@@ -10,7 +10,7 @@ export const downloadAsJSON = (cvData: UnifiedCVDataStructure, filename: string 
   const dataStr = JSON.stringify(cvData, null, 2);
   const dataBlob = new Blob([dataStr], { type: 'application/json' });
   const url = URL.createObjectURL(dataBlob);
-  
+
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
@@ -20,43 +20,87 @@ export const downloadAsJSON = (cvData: UnifiedCVDataStructure, filename: string 
   URL.revokeObjectURL(url);
 };
 
-// Download CV as PDF using html2canvas and jsPDF
-export const downloadAsPDF = async (elementRef: HTMLElement, filename: string = 'cv.pdf') => {
+// Download CV as PDF using server-side API for exact preview matching
+export const downloadAsPDF = async (
+  elementRef: HTMLElement,
+  filename: string = 'cv.pdf',
+  cvId?: string,
+  options?: {
+    paperSize?: 'A4' | 'Letter';
+    orientation?: 'portrait' | 'landscape';
+    jobTitle?: string;
+  }
+) => {
   try {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
       throw new Error('PDF generation is only available in browser environment');
     }
 
+    // If cvId is provided, use server-side API for exact preview matching
+    if (cvId) {
+      try {
+        const params = new URLSearchParams({
+          format: 'pdf',
+          paperSize: options?.paperSize || 'A4',
+          orientation: options?.orientation || 'portrait',
+        });
+
+        if (options?.jobTitle) {
+          params.append('jobTitle', options.jobTitle);
+        }
+
+        const response = await fetch(`/api/cvs/${cvId}/download?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error(`Server PDF generation failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        return; // Success - exit early
+      } catch (apiError) {
+        console.warn('Server-side PDF generation failed, falling back to client-side:', apiError);
+        // Continue to fallback method below
+      }
+    }
+
+    // Fallback: Client-side PDF generation using html2pdf.js
+    // This is less accurate but works offline and when API fails
+    console.log('Using client-side PDF generation (fallback)');
+
     // Dynamic imports to avoid SSR issues
     const html2canvas = (await import('html2canvas')).default;
-    
-    // Use html2pdf library which is more reliable
     const html2pdf = (await import('html2pdf.js')).default;
-    
-    // Enhanced configuration for better PDF quality matching preview
+
+    // Enhanced configuration for better PDF quality
     const opt = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
       filename: filename,
-      image: { 
-        type: 'jpeg' as const, 
-        quality: 0.98 
+      image: {
+        type: 'jpeg' as const,
+        quality: 0.98
       },
-      html2canvas: { 
-        scale: 3, // Increased from 2 to 3 for better quality
+      html2canvas: {
+        scale: 3,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: 794, // A4 width in pixels
-        height: 1123, // A4 height in pixels
+        width: 794,
+        height: 1123,
         logging: false,
-        // Additional optimization for better rendering
         letterRendering: true,
         removeContainer: true,
         imageTimeout: 0,
-        // Preserve colors and styling
         onclone: (clonedDoc: Document) => {
-          // Force all elements to use exact colors (no browser optimization)
           const elements = clonedDoc.querySelectorAll('*');
           elements.forEach((el: any) => {
             if (el.style) {
@@ -67,28 +111,25 @@ export const downloadAsPDF = async (elementRef: HTMLElement, filename: string = 
           });
         }
       },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
+      jsPDF: {
+        unit: 'mm',
+        format: 'a4',
         orientation: 'portrait' as const,
         compress: true,
-        // Optimize for high quality output
         precision: 16,
         userUnit: 1.0
       },
-      // Enable page breaks
-      pagebreak: { 
+      pagebreak: {
         mode: ['avoid-all', 'css', 'legacy'],
         before: '.page-break-before',
         after: '.page-break-after',
         avoid: ['.no-page-break', '.section-content', '.experience-item', '.education-item', '.project-item']
       }
     };
-    
-    // Small delay to ensure all fonts and images are loaded
+
     await new Promise(resolve => setTimeout(resolve, 100));
-    
     await html2pdf().set(opt).from(elementRef).save();
+
   } catch (error) {
     console.error('Error generating PDF:', error);
     alert('Failed to generate PDF. Please try again.');
@@ -105,7 +146,7 @@ export const downloadAsImage = async (elementRef: HTMLElement, filename: string 
 
     // Dynamic imports to avoid SSR issues
     const html2canvas = (await import('html2canvas')).default;
-    
+
     const canvas = await html2canvas(elementRef, {
       scale: 3, // Higher scale for better quality
       useCORS: true,
@@ -115,7 +156,7 @@ export const downloadAsImage = async (elementRef: HTMLElement, filename: string 
       height: 1123, // A4 height in pixels
       logging: false
     });
-    
+
     const link = document.createElement('a');
     link.download = filename;
     link.href = canvas.toDataURL('image/png');
@@ -137,7 +178,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
     }
 
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
-    
+
     const doc = new Document({
       sections: [{
         properties: {},
@@ -171,7 +212,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
             alignment: AlignmentType.CENTER,
           }),
           new Paragraph({ text: '' }), // Spacing
-          
+
           // Summary
           ...(cvData.basics.summary ? [
             new Paragraph({
@@ -183,7 +224,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
             }),
             new Paragraph({ text: '' }), // Spacing
           ] : []),
-          
+
           // Work Experience
           ...(cvData.work.length > 0 ? [
             new Paragraph({
@@ -204,7 +245,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
               new Paragraph({ text: '' }), // Spacing
             ]),
           ] : []),
-          
+
           // Education
           ...(cvData.education.length > 0 ? [
             new Paragraph({
@@ -222,7 +263,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
               new Paragraph({ text: '' }), // Spacing
             ]),
           ] : []),
-          
+
           // Skills
           ...(cvData.skills.length > 0 ? [
             new Paragraph({
@@ -234,7 +275,7 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
             }),
             new Paragraph({ text: '' }), // Spacing
           ] : []),
-          
+
           // Projects
           ...(cvData.projects.length > 0 ? [
             new Paragraph({
@@ -255,10 +296,10 @@ export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: s
         ],
       }],
     });
-    
+
     const blob = await Packer.toBlob(doc);
     const url = URL.createObjectURL(blob);
-    
+
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;

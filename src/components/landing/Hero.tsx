@@ -49,7 +49,7 @@ const Hero = () => {
             style={{ willChange: 'auto' }}
           >
             Stop wasting{' '}
-            <span className="inline-flex items-center gap-0 font-mono">
+            <span className="inline-flex items-center -space-x-2 font-mono">
               <AnimatePresence initial={false} mode="wait">
                 <motion.span
                   key={currentTime.getHours()}
@@ -116,7 +116,7 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
           style={{ willChange: 'auto' }}
         >
-          Fully automated application tracker with cv, cover letter and ats creation
+          Fully automated application tracker with cv, cover letter providing maximum ats compatibility
         </motion.p>
 
         {/* Enhanced CTA Buttons - Optimized */}

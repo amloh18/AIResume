@@ -12,19 +12,19 @@ export async function GET(
 ) {
   try {
     await getConnection();
-    
+
     let userId: string;
-    
+
     // Check if this is an extension request (with JWT token)
     const authHeader = request.headers.get('authorization');
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       // Extension request with JWT token
       const token = authHeader.substring(7);
-      
+
       try {
         const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-        
+
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
           return NextResponse.json(
@@ -32,7 +32,7 @@ export async function GET(
             { status: 401 }
           );
         }
-        
+
         userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
@@ -45,7 +45,7 @@ export async function GET(
     } else {
       // Web interface request with session
       const authResult = await getAuthenticatedUser();
-      
+
       if (!authResult) {
         console.log('❌ No valid authentication found for web request');
         return NextResponse.json(
@@ -53,11 +53,11 @@ export async function GET(
           { status: 401 }
         );
       }
-      
+
       userId = authResult.userId;
       console.log('✅ Web session verified for user:', userId);
     }
-    
+
     const resolvedParams = await params;
 
     const job = await JobApplication.findOne({
@@ -66,10 +66,10 @@ export async function GET(
     });
 
     if (!job) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
         message: 'Job not found',
-        error: 'Job not found' 
+        error: 'Job not found'
       }, { status: 404 });
     }
 
@@ -137,7 +137,7 @@ export async function GET(
       updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt
     };
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       data: { job: transformedJob },
       job: transformedJob // Keep for backwards compatibility
@@ -158,19 +158,19 @@ export async function PUT(
   try {
     console.log('🔍 Job Update API - Starting PUT request');
     await getConnection();
-    
+
     let userId: string;
-    
+
     // Check if this is an extension request (with JWT token)
     const authHeader = request.headers.get('authorization');
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       // Extension request with JWT token
       const token = authHeader.substring(7);
-      
+
       try {
         const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-        
+
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
           return NextResponse.json(
@@ -178,7 +178,7 @@ export async function PUT(
             { status: 401 }
           );
         }
-        
+
         userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
@@ -191,7 +191,7 @@ export async function PUT(
     } else {
       // Web interface request with session
       const authResult = await getAuthenticatedUser();
-      
+
       if (!authResult) {
         console.log('❌ No valid authentication found for web request');
         return NextResponse.json(
@@ -199,11 +199,11 @@ export async function PUT(
           { status: 401 }
         );
       }
-      
+
       userId = authResult.userId;
       console.log('✅ Web session verified for user:', userId);
     }
-    
+
     const resolvedParams = await params;
     console.log('🔍 Job Update API - Job ID:', resolvedParams.id);
     console.log('🔍 Job Update API - User ID:', userId);
@@ -227,13 +227,13 @@ export async function PUT(
       console.log('❌ Job Update API - Invalid job ID format:', resolvedParams.id);
       return NextResponse.json({ error: 'Invalid job ID format' }, { status: 400 });
     }
-    
+
     console.log('🔍 Job Update API - Current job found:', !!currentJob);
     if (!currentJob) {
       console.log('❌ Job Update API - Job not found or does not belong to user');
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
-    
+
     // Track status changes
     if (body.status && body.status !== currentJob?.status) {
       if (!currentJob.statusHistory) {
@@ -261,7 +261,7 @@ export async function PUT(
     }
 
     console.log('🔍 Job Update API - Updating job with data:', Object.keys(updateData));
-    
+
     // VALIDATION: Prevent invalid status transitions
     const validStatuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
     const newStatus = body.status;
@@ -271,43 +271,43 @@ export async function PUT(
         { status: 400 }
       );
     }
-    
+
     // VALIDATION: Prevent status manipulation that could bypass credit checks
     // Don't allow changing from 'created' back to 'draft' (prevents credit refund exploit)
     const previousStatus = currentJob?.status;
     if (previousStatus === 'created' && newStatus === 'draft') {
       return NextResponse.json(
-        { 
+        {
           error: 'Cannot change job status from "created" to "draft". Once a job is created, it cannot be reverted to draft status.',
           code: 'INVALID_STATUS_TRANSITION'
         },
         { status: 400 }
       );
     }
-    
+
     // RATE LIMITING: Prevent rapid-fire status change requests
     if (newStatus && previousStatus !== newStatus) {
       try {
         const { rateLimiter } = await import('@/lib/rate-limiter');
-        
+
         const keyGenerator = (req: any) => {
           return `job_status_change:user:${userId}`;
         };
-        
+
         const rateLimitResult = await rateLimiter.checkLimit(request, {
           windowMs: 60 * 1000, // 1 minute window
           maxRequests: 20, // Max 20 status changes per minute per user
           keyGenerator
         });
-        
+
         if (!rateLimitResult.allowed) {
           console.log(`⚠️ Rate limit exceeded for status change by user: ${userId}`);
           return NextResponse.json(
-            { 
+            {
               error: 'Too many status change requests. Please wait a moment.',
               retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)
             },
-            { 
+            {
               status: 429,
               headers: {
                 'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
@@ -323,10 +323,10 @@ export async function PUT(
         console.warn('⚠️ Rate limiting check failed for status change, allowing request:', rateLimitError);
       }
     }
-    
+
     // Check if status changed from 'draft' to 'created' - handle this in transaction
     let job: any = null;
-    
+
     if (previousStatus === 'draft' && newStatus === 'created') {
       // ATOMIC OPERATION: Use transaction to ensure credit check + status update + credit spending are atomic
       // This prevents race conditions where multiple requests could bypass credit limits
@@ -335,23 +335,23 @@ export async function PUT(
         const User = (await import('@/models/User')).default;
         const creditService = await import('@/lib/services/creditService');
         const { getAdminPricingPlan } = await import('@/models/admin-models');
-        
+
         // Pre-load pricing plan data outside transaction for better performance
         const PricingPlan = await getAdminPricingPlan();
-        
+
         await withTransaction(async (session) => {
           // 1. CREDIT CHECK: Check credits WITHIN transaction (locks user record to prevent race conditions)
           const user = await User.findById(normalizedUserId).session(session);
           if (!user) {
             throw new Error('User not found');
           }
-          
+
           // Fast credit check using already-fetched user (avoid redundant queries)
           const plan = await PricingPlan.findOne({ key: user.currentPlanKey }).session(session).lean();
           if (!plan) {
             throw new Error('Plan not found');
           }
-          
+
           // Check time-based access quickly
           const now = new Date();
           let hasTimeAccess = true;
@@ -360,18 +360,18 @@ export async function PUT(
           } else if (user.subscription?.currentPeriodEnd) {
             hasTimeAccess = new Date(user.subscription.currentPeriodEnd) > now;
           }
-          
+
           if (!hasTimeAccess && user.currentPlanKey !== 'free') {
             throw new Error('Subscription access expired');
           }
-          
+
           // Quick credit availability check using user data
           const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(user.currentPlanKey);
           const hasActiveSubscription = user.subscription?.status === 'active' && hasTimeAccess;
-          
+
           let creditsRemaining = 0;
           let limit = 1;
-          
+
           if (isUnlimitedPlan && hasActiveSubscription) {
             creditsRemaining = -1;
             limit = -1;
@@ -381,7 +381,7 @@ export async function PUT(
             limit = planCredits.jobCredits;
             creditsRemaining = user.credits?.jobCredits ?? 0;
           }
-          
+
           const allowed = limit === -1 || creditsRemaining > 0;
           const currentUsage = limit === -1 ? -1 : limit - creditsRemaining;
 
@@ -397,7 +397,7 @@ export async function PUT(
             console.log(`❌ Job Update API - Credit check failed (in transaction):`, reason);
             throw new Error(reason);
           }
-          
+
           // 2. Update job status within transaction (only if credits are available)
           // Merge with other update data if provided
           const statusUpdateData = {
@@ -405,7 +405,7 @@ export async function PUT(
             status: 'created',
             updatedAt: new Date()
           };
-          
+
           const updatedJob = await JobApplication.findOneAndUpdate(
             {
               _id: new mongoose.Types.ObjectId(resolvedParams.id),
@@ -414,28 +414,28 @@ export async function PUT(
             statusUpdateData,
             { session, new: true }
           );
-          
+
           if (!updatedJob) {
             throw new Error('Job not found');
           }
-          
+
           // Store updated job for later use
           job = updatedJob;
-          
+
           // 3. Spend credit within same transaction (atomic with status update)
           const isUnlimited = limit === -1;
-          
+
           // Build update operation for credit spending
           const creditUpdateData: any = {
             $inc: {
               'credits.totalCreated.jobs': 1
             }
           };
-          
+
           if (!isUnlimited) {
             creditUpdateData.$inc['credits.jobCredits'] = -1;
           }
-          
+
           // Ensure nested structure exists
           if (!user.credits?.totalCreated || user.credits.totalCreated.jobs === undefined) {
             const currentJobs = user.credits?.totalCreated?.jobs ?? 0;
@@ -452,26 +452,26 @@ export async function PUT(
               }
             }
           }
-          
+
           // Update user credits within transaction
           await User.findByIdAndUpdate(
             normalizedUserId,
             creditUpdateData,
             { session, new: true, runValidators: true }
           );
-          
+
           console.log(`✅ Job Update API - Credit spent in transaction for user: ${normalizedUserId.toString()}`);
         });
-        
+
         // Log job status change and credit usage OUTSIDE transaction for better performance
         try {
           const updatedJobForLog = await JobApplication.findById(resolvedParams.id).lean();
           const userForLog = await User.findById(normalizedUserId).lean();
-          
+
           if (updatedJobForLog && userForLog) {
             const { ActivityLogService } = await import('@/lib/services/activityLogService');
             const isUnlimited = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(userForLog.currentPlanKey || 'free');
-            
+
             // Log asynchronously - don't wait for it
             Promise.all([
               ActivityLogService.logUserAction({
@@ -482,9 +482,9 @@ export async function PUT(
                 resourceId: resolvedParams.id,
                 resourceName: `${updatedJobForLog.jobTitle} at ${updatedJobForLog.company}`,
                 status: 'success',
-                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                          request.headers.get('x-real-ip') || 
-                          undefined,
+                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                  request.headers.get('x-real-ip') ||
+                  undefined,
                 metadata: {
                   oldStatus: 'draft',
                   newStatus: 'created',
@@ -496,9 +496,9 @@ export async function PUT(
                 userEmail: userForLog.email || '',
                 action: 'credit_used',
                 status: 'success',
-                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                          request.headers.get('x-real-ip') || 
-                          undefined,
+                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] ||
+                  request.headers.get('x-real-ip') ||
+                  undefined,
                 metadata: {
                   creditType: 'job_credit',
                   creditsUsed: 1,
@@ -524,15 +524,15 @@ export async function PUT(
           stack: creditError.stack,
           name: creditError.name
         });
-        
+
         // Transaction automatically rolled back - status remains 'draft', credits not spent
-        
+
         // Check if error is due to insufficient credits
-        const isCreditError = creditError.message?.includes('limit exceeded') || 
-                             creditError.message?.includes('insufficient credits') ||
-                             creditError.message?.includes('Insufficient credits') ||
-                             creditError.message?.includes('Job creation limit exceeded');
-        
+        const isCreditError = creditError.message?.includes('limit exceeded') ||
+          creditError.message?.includes('insufficient credits') ||
+          creditError.message?.includes('Insufficient credits') ||
+          creditError.message?.includes('Job creation limit exceeded');
+
         if (isCreditError) {
           // Extract credit info from error if available
           const usageLimitsService = await import('@/lib/services/usageLimitsService');
@@ -556,7 +556,7 @@ export async function PUT(
               reason: creditError.message
             };
           }
-          
+
           const errorResponse = {
             success: false,
             error: creditError.message || 'Insufficient credits to create job application',
@@ -565,20 +565,20 @@ export async function PUT(
             limit: creditInfo.limit ?? 1,
             message: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
           };
-          
+
           console.log('🔍 Job Update API - Returning credit error response:', errorResponse);
-          
+
           return NextResponse.json(
             errorResponse,
             { status: 403 }
           );
         }
-        
+
         // For other transaction errors, check if they might be credit-related
-        const mightBeCreditError = creditError.message?.includes('limit') || 
-                                   creditError.message?.includes('credit') ||
-                                   creditError.message?.includes('Plan limit');
-        
+        const mightBeCreditError = creditError.message?.includes('limit') ||
+          creditError.message?.includes('credit') ||
+          creditError.message?.includes('Plan limit');
+
         if (mightBeCreditError) {
           // Try to get credit info even if transaction failed
           const usageLimitsService = await import('@/lib/services/usageLimitsService');
@@ -595,7 +595,7 @@ export async function PUT(
           } catch (e) {
             console.error('⚠️ Job Update API - Failed to get credit info after transaction error:', e);
           }
-          
+
           return NextResponse.json(
             {
               success: false,
@@ -608,7 +608,7 @@ export async function PUT(
             { status: 403 } // Return 403 instead of 500 for credit errors
           );
         }
-        
+
         // For other errors, return detailed error message
         return NextResponse.json(
           {
@@ -637,13 +637,9 @@ export async function PUT(
         userId: normalizedUserId.toString(),
         userIdType: typeof normalizedUserId
       });
-      
+
       if (!job) {
         console.log('❌ Job Update API - Job not found for user:', userId);
-        console.log('❌ Job Update API - Tried to update with:', {
-          jobId: resolvedParams.id,
-          userId: normalizedUserId.toString()
-        });
         return NextResponse.json({ error: 'Job not found' }, { status: 404 });
       }
     }
@@ -653,20 +649,36 @@ export async function PUT(
       try {
         const { ApplicationJourney } = await import('@/models');
         const { createJourneyDocuments } = await import('@/lib/services/journeyDocumentService');
-        
+
         // Check if journey already exists for this job
         const existingJourney = await ApplicationJourney.findOne({
           jobId: resolvedParams.id,
           userId: userId
         });
-        
+
         if (!existingJourney) {
           console.log(`🚀 Job Update API - Creating ApplicationJourney for job moved from draft to created: ${resolvedParams.id}`);
-          
+
           // Determine if documents need to be created
           const needsDocuments = true; // Always create documents when moving to created
           const initialStatus = needsDocuments ? 'processing_documents' : 'in-progress';
-          
+
+          // Check for stage change and send notification
+          if (body.status && currentJob.status !== body.status && job) {
+            try {
+              const notificationService = (await import('@/lib/services/notificationService')).default;
+              await notificationService.notifyJobStageMoved(
+                userId,
+                job.jobTitle,
+                job._id.toString(),
+                body.status,
+                currentJob.status
+              );
+            } catch (notifError) {
+              console.error('Failed to send stage move notification:', notifError);
+            }
+          }
+
           const journeyData = {
             journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             userId: new mongoose.Types.ObjectId(userId),
@@ -723,10 +735,10 @@ export async function PUT(
               notes: ''
             }
           };
-          
+
           const newJourney = await ApplicationJourney.create(journeyData);
           console.log('✅ Job Update API - ApplicationJourney created successfully:', newJourney._id);
-          
+
           // Send notification that documents are being generated
           try {
             const notificationService = (await import('@/lib/services/notificationService')).default;
@@ -758,7 +770,7 @@ export async function PUT(
           } catch (notificationError) {
             console.error('⚠️ Job Update API - Failed to send notification (non-critical):', notificationError);
           }
-          
+
           // If documents need to be created, trigger async creation
           if (needsDocuments && newJourney.status === 'processing_documents') {
             // Call document creation service directly (no HTTP request needed)
@@ -767,7 +779,7 @@ export async function PUT(
               try {
                 console.log('🚀 Job Update API - Starting document creation for journey:', newJourney._id);
                 const result = await createJourneyDocuments(newJourney._id.toString(), userId);
-                
+
                 if (result.success) {
                   console.log('✅ Job Update API - Document creation completed successfully:', {
                     journeyId: newJourney._id,
@@ -782,28 +794,28 @@ export async function PUT(
                 // Journey status will be updated by the service on error
               }
             });
-            
+
             console.log('🚀 Job Update API - Triggered async document creation for journey:', newJourney._id);
           }
         } else {
           console.log(`ℹ️ Job Update API - Journey already exists for job ${resolvedParams.id}, skipping creation`);
-          
+
           // If existing journey doesn't have documents yet, trigger document creation
           if (!existingJourney.cvId && !existingJourney.coverLetterId && existingJourney.status !== 'processing_documents') {
             console.log(`🚀 Job Update API - Existing journey found without documents, triggering document creation for journey: ${existingJourney._id}`);
-            
+
             // Update journey status to processing_documents
             await ApplicationJourney.updateOne(
               { _id: existingJourney._id },
               { $set: { status: 'processing_documents' } }
             );
-            
+
             // Trigger document creation in background
             setImmediate(async () => {
               try {
                 console.log('🚀 Job Update API - Starting document creation for existing journey:', existingJourney._id);
                 const result = await createJourneyDocuments(existingJourney._id.toString(), userId);
-                
+
                 if (result.success) {
                   console.log('✅ Job Update API - Document creation completed successfully for existing journey:', {
                     journeyId: existingJourney._id,
@@ -831,8 +843,8 @@ export async function PUT(
         const { ApplicationJourney } = await import('@/models');
         await ApplicationJourney.updateMany(
           { jobId: resolvedParams.id },
-          { 
-            $set: { 
+          {
+            $set: {
               jobTitle: job.jobTitle,
               company: job.company,
               'metadata.updatedAt': new Date()
@@ -851,10 +863,10 @@ export async function PUT(
       try {
         const { ApplicationJourney } = await import('@/models');
         const now = new Date();
-        
+
         // Find and update associated journeys
         const updatedJourneys = await ApplicationJourney.updateMany(
-          { 
+          {
             jobId: resolvedParams.id,
             userId: userId,
             status: { $ne: 'completed' } // Only update non-completed journeys
@@ -1004,7 +1016,7 @@ export async function PUT(
     }
 
     console.log('✅ Job Update API - Job updated successfully:', job._id);
-    
+
     // Serialize job to include _id field for extension compatibility
     const jobId = job._id ? job._id.toString() : job.id;
     const serializedJob = {
@@ -1046,10 +1058,10 @@ export async function PUT(
       createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
       updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt
     };
-    
+
     // Return response in format expected by extension
     // Extension expects response.data to be the job object directly, not nested
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       data: serializedJob, // Extension expects data to be the job directly
       job: serializedJob // Keep for backwards compatibility
@@ -1058,9 +1070,9 @@ export async function PUT(
     console.error('❌ Job Update API - Error updating job:', error);
     console.error('❌ Job Update API - Error message:', error instanceof Error ? error.message : 'Unknown error');
     console.error('❌ Job Update API - Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to update job',
         message: error instanceof Error ? error.message : 'Unknown error occurred'
       },
@@ -1075,19 +1087,19 @@ export async function DELETE(
 ) {
   try {
     await getConnection();
-    
+
     let userId: string;
-    
+
     // Check if this is an extension request (with JWT token)
     const authHeader = request.headers.get('authorization');
-    
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       // Extension request with JWT token
       const token = authHeader.substring(7);
-      
+
       try {
         const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-        
+
         if (decoded.type !== 'extension') {
           console.log('❌ Invalid token type');
           return NextResponse.json(
@@ -1095,7 +1107,7 @@ export async function DELETE(
             { status: 401 }
           );
         }
-        
+
         userId = decoded.userId || '';
         console.log('✅ Extension token verified for user:', userId);
       } catch (error) {
@@ -1108,7 +1120,7 @@ export async function DELETE(
     } else {
       // Web interface request with session
       const authResult = await getAuthenticatedUser();
-      
+
       if (!authResult) {
         console.log('❌ No valid authentication found for web request');
         return NextResponse.json(
@@ -1116,11 +1128,11 @@ export async function DELETE(
           { status: 401 }
         );
       }
-      
+
       userId = authResult.userId;
       console.log('✅ Web session verified for user:', userId);
     }
-    
+
     const resolvedParams = await params;
     const jobId = resolvedParams.id;
 
@@ -1130,11 +1142,11 @@ export async function DELETE(
     console.log('🔍 Job DELETE API - User ID type:', typeof userId);
 
     // Convert jobId and userId to ObjectId for proper querying
-    const normalizedJobId = mongoose.Types.ObjectId.isValid(jobId) 
-      ? new mongoose.Types.ObjectId(jobId) 
+    const normalizedJobId = mongoose.Types.ObjectId.isValid(jobId)
+      ? new mongoose.Types.ObjectId(jobId)
       : jobId;
-    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId) 
-      ? new mongoose.Types.ObjectId(userId) 
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
       : userId;
 
     console.log('🔍 Job DELETE API - Normalized Job ID:', normalizedJobId.toString());
@@ -1157,7 +1169,7 @@ export async function DELETE(
     // Step 1: Find all journeys associated with this job
     console.log('🔍 Job DELETE API - Finding associated journeys for job:', jobId);
     // Try both string and ObjectId formats for jobId matching
-    const journeys = await ApplicationJourney.find({ 
+    const journeys = await ApplicationJourney.find({
       $or: [
         { jobId: jobId.toString() },
         { jobId: normalizedJobId },
@@ -1192,7 +1204,7 @@ export async function DELETE(
         try {
           console.log('🔍 Job DELETE API - Checking CV for deletion:', journey.cvId);
           const cv = await CV.findById(journey.cvId);
-          
+
           if (cv) {
             // Verify CV belongs to the user before deletion (check CV object reference only)
             const cvUserId = cv.userId.toString();
@@ -1272,12 +1284,12 @@ export async function DELETE(
     }
 
     console.log('✅ Job DELETE API - Job and all associated data deleted successfully');
-    
+
     // Get counts for response
     const deletedCVsCount = journeys.filter(j => j.cvId).length;
     const deletedCoverLettersCount = journeys.filter(j => j.coverLetterId).length;
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: 'Job deleted successfully',
       deletedJourneys: journeys.length,
       deletedCVs: deletedCVsCount,

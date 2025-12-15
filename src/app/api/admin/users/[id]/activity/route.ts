@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { User, CV, CoverLetter, JobApplication, ApplicationJourney } from '@/models';
+import { User, CV, CoverLetter, JobApplication, ApplicationJourney, ActivityLog } from '@/models';
 import { requireAdmin } from '@/lib/middleware/admin-auth';
 
 // Force dynamic rendering
@@ -23,17 +23,17 @@ export async function GET(
     } catch (dbError: any) {
       console.error('❌ Database connection error:', dbError);
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: 'Database connection failed',
-          details: dbError.message 
+          details: dbError.message
         },
         { status: 500 }
       );
     }
 
     // Find user
-    const user = await User.findById(id).lean();
+    const user = await User.findById(id).lean() as any;
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'User not found' },
@@ -53,18 +53,43 @@ export async function GET(
       ApplicationJourney.countDocuments({ userId }),
     ]);
 
-    // Calculate total time spent (using lastActiveAt from AdminUser or lastLogin from User)
-    // For now, we'll use a simple calculation based on registration date and last activity
-    const registrationDate = user.createdAt ? new Date(user.createdAt) : null;
-    const lastActiveDate = user.lastLogin ? new Date(user.lastLogin) : (user.updatedAt ? new Date(user.updatedAt) : null);
-    
-    // Estimate session time (this is a placeholder - you may want to track actual session time)
-    // For now, we'll calculate based on days since registration and assume average session time
+    // Calculate total time spent using ActivityLog
+    // We'll group logs into sessions. A new session starts if there's a gap of > 30 minutes.
+    const logs = await ActivityLog.find({ userId: user._id })
+      .sort({ timestamp: 1 })
+      .select('timestamp')
+      .lean();
+
     let estimatedSessionTime = 0; // in minutes
-    if (registrationDate && lastActiveDate) {
-      const daysSinceRegistration = Math.floor((lastActiveDate.getTime() - registrationDate.getTime()) / (1000 * 60 * 60 * 24));
-      // Estimate: if user has been active recently, assume average 30 minutes per active day
-      estimatedSessionTime = daysSinceRegistration > 0 ? daysSinceRegistration * 30 : 0;
+
+    if (logs.length > 0) {
+      let currentSessionStart = new Date(logs[0].timestamp).getTime();
+      let lastLogTime = currentSessionStart;
+      const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+      for (let i = 1; i < logs.length; i++) {
+        const currentLogTime = new Date(logs[i].timestamp).getTime();
+        const timeDiff = currentLogTime - lastLogTime;
+
+        if (timeDiff > SESSION_TIMEOUT) {
+          // End of current session
+          // Add duration of previous session (at least 1 minute per action if single action)
+          const sessionDuration = Math.max(lastLogTime - currentSessionStart, 60000);
+          estimatedSessionTime += sessionDuration;
+
+          // Start new session
+          currentSessionStart = currentLogTime;
+        }
+
+        lastLogTime = currentLogTime;
+      }
+
+      // Add the last session
+      const lastSessionDuration = Math.max(lastLogTime - currentSessionStart, 60000);
+      estimatedSessionTime += lastSessionDuration;
+
+      // Convert to minutes
+      estimatedSessionTime = Math.round(estimatedSessionTime / (1000 * 60));
     }
 
     // Get recent activity (last 10 CVs, journeys, etc.)
@@ -119,7 +144,7 @@ export async function GET(
 
   } catch (error: any) {
     console.error('❌ Get user activity error:', error);
-    
+
     // Handle authentication errors
     if (error.message === 'UNAUTHORIZED') {
       return NextResponse.json(
@@ -133,10 +158,10 @@ export async function GET(
         { status: 403 }
       );
     }
-    
+
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: error.message || 'Failed to get user activity',
       },
       { status: 500 }

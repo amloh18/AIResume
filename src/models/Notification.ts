@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
-export type NotificationType = 
+export type NotificationType =
   | 'job_status_check'
   | 'follow_up'
   | 'deadline_approaching'
@@ -13,7 +13,14 @@ export type NotificationType =
   | 'achievement'
   | 'documents_ready'
   | 'interview_follow_up'
-  | 'job_applied';
+  | 'job_applied'
+  | 'job_draft_created'
+  | 'job_stage_moved'
+  | 'job_stale_alert'
+  | 'interview_prep_ready'
+  | 'document_saved'
+  | 'feature_discovery'
+  | 'extension_download';
 
 export type NotificationChannel = 'in-app' | 'email' | 'push';
 export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
@@ -88,6 +95,13 @@ const notificationSchema = new Schema<INotification>(
         'documents_ready',
         'interview_follow_up',
         'job_applied',
+        'job_draft_created',
+        'job_stage_moved',
+        'job_stale_alert',
+        'interview_prep_ready',
+        'document_saved',
+        'feature_discovery',
+        'extension_download',
       ],
       required: true
       // Note: Index defined in compound index below

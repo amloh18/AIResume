@@ -189,7 +189,7 @@ const JobsTracker: React.FC = () => {
       setLoading(true);
 
       // Load jobs
-      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs', userId || undefined);
+      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs?limit=all', userId || undefined);
       const jobsResult = await jobsResponse.json();
       if (jobsResult.success) {
         const transformedJobs = jobsResult.data.jobs.map((job: any) => {

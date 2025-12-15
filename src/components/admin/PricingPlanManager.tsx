@@ -23,11 +23,15 @@ import {
   Gift,
   Tag,
   X,
-  DollarSign
+  DollarSign,
+  Save,
+  Loader2
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import RedesignedPricingCards from '@/components/pricing/RedesignedPricingCards';
 import PricingPlanEditModal from '@/components/admin/PricingPlanEditModal';
+import AddPricingModal from '@/components/admin/AddPricingModal';
 import PromotionalOfferManager from '@/components/admin/PromotionalOfferManager';
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import RevenueManager from '@/components/admin/RevenueManager';
@@ -88,6 +92,7 @@ const PricingPlanManager: React.FC = () => {
   const [regionalFilter, setRegionalFilter] = useState<string>('all');
   const [countryPricing, setCountryPricing] = useState<any[]>([]);
   const [loadingPricing, setLoadingPricing] = useState(true);
+  const [isAddCountryModalOpen, setIsAddCountryModalOpen] = useState(false);
 
   // Use the shared pricing hook
   const { plans, loading, refetch, promotionalOffers } = usePricingPlans({ includeInactive: true });
@@ -98,6 +103,8 @@ const PricingPlanManager: React.FC = () => {
 
   // Ensure pricing data is always an array to prevent errors
   const safeCountryPricing = Array.isArray(countryPricing) ? countryPricing : [];
+
+
 
   // Calculate metrics for dashboard overview
   const activePlans = safePlans.filter(p => p.status === 'active').length;
@@ -155,12 +162,17 @@ const PricingPlanManager: React.FC = () => {
       setLoadingPricing(true);
       try {
         const response = await fetch('/api/admin/country-pricing');
+
         if (response.ok) {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            if (data.success) {
-              setCountryPricing(data.countryPricing || []);
+            const responseData = await response.json();
+
+            if (responseData.success) {
+              // Extract data from the nested 'data' property (standard api-validator format)
+              // Fallback to direct property for backward compatibility
+              const pricingList = responseData.data?.countryPricing || responseData.countryPricing || [];
+              setCountryPricing(pricingList);
             }
           }
         }
@@ -176,6 +188,67 @@ const PricingPlanManager: React.FC = () => {
     };
     fetchPricingData();
   }, []);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedPrices, setEditedPrices] = useState<Record<string, { dayPass: number, monthly: number, quarterly: number, yearly: number }>>({});
+  const [savingPricing, setSavingPricing] = useState(false);
+
+  const handleSaveRegionalPricing = async () => {
+    setSavingPricing(true);
+    try {
+      const updates = Object.entries(editedPrices).map(async ([countryCode, prices]) => {
+        // Find original data to keep constant fields
+        const original = countryPricing.find(cp => cp.countryCode === countryCode);
+        if (!original) return null;
+
+        const payload = {
+          countryCode: original.countryCode,
+          countryName: original.countryName,
+          currency: original.currency,
+          currencySymbol: original.currencySymbol,
+          regionId: original.regionId,
+          planPrices: {
+            ...original.planPrices,
+            dayPass: { ...original.planPrices?.dayPass, price: prices.dayPass },
+            monthly: { ...original.planPrices?.monthly, price: prices.monthly },
+            quarterly: { ...original.planPrices?.quarterly, price: prices.quarterly },
+            yearly: { ...original.planPrices?.yearly, price: prices.yearly }
+          }
+        };
+
+        const response = await fetch('/api/admin/country-pricing', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) throw new Error(`Failed to update ${countryCode}`);
+        return response.json();
+      });
+
+      await Promise.all(updates);
+
+      // Refresh data
+      const response = await fetch('/api/admin/country-pricing');
+      if (response.ok) {
+        const responseData = await response.json();
+        // Handle potentially nested data structure same as useEffect
+        if (responseData.success) {
+          const pricingList = responseData.data?.countryPricing || responseData.countryPricing || [];
+          setCountryPricing(pricingList);
+        }
+      }
+
+      setIsEditing(false);
+      setEditedPrices({});
+
+    } catch (error) {
+      console.error('Error saving pricing:', error);
+      alert('Failed to save some pricing updates');
+    } finally {
+      setSavingPricing(false);
+    }
+  };
 
   const handleRowClick = (plan: PricingPlan) => {
     setSelectedPlanForDetails(plan);
@@ -401,18 +474,9 @@ const PricingPlanManager: React.FC = () => {
           <div className="space-y-6">
             {/* Dashboard Overview Section */}
             <div className="mb-8">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
-                  <p className="text-gray-400 mt-1">A summary of key pricing metrics.</p>
-                </div>
-                <Button
-                  onClick={() => router.push('/admin/pricing-plans')}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Manage Regional Pricing
-                </Button>
+              <div>
+                <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
+                <p className="text-gray-400 mt-1">A summary of key pricing metrics.</p>
               </div>
 
               <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
@@ -603,22 +667,67 @@ const PricingPlanManager: React.FC = () => {
           </div>
         </TabsContent>
 
-        {/* Regional Settings Tab */}
         <TabsContent value="regional" className="mt-6">
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Regional Pricing</h2>
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Pricing by Region</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Manage pricing for different countries and regions
+                  Manage regional pricing for all plans.
                 </p>
               </div>
-              <Button
-                onClick={() => router.push('/admin/pricing-plans')}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                Manage Regions
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setIsAddCountryModalOpen(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Country
+                </Button>
+                {isEditing ? (
+                  <>
+                    <Button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setEditedPrices({});
+                      }}
+                      variant="outline"
+                      className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSaveRegionalPricing}
+                      disabled={savingPricing}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      {savingPricing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                      Save Changes
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      // Initialize edit state with current values
+                      const initialEdits: Record<string, any> = {};
+                      safeCountryPricing.forEach(cp => {
+                        initialEdits[cp.countryCode] = {
+                          dayPass: cp.planPrices?.dayPass?.price || 0,
+                          monthly: cp.planPrices?.monthly?.price || 0,
+                          quarterly: cp.planPrices?.quarterly?.price || 0,
+                          yearly: cp.planPrices?.yearly?.price || 0
+                        };
+                      });
+                      setEditedPrices(initialEdits);
+                      setIsEditing(true);
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Manage Regional Pricing
+                  </Button>
+                )}
+              </div>
             </div>
 
             <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
@@ -627,9 +736,8 @@ const PricingPlanManager: React.FC = () => {
                   <table className="w-full">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Country</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">Country</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Currency</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Region</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Day Pass</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Monthly</th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quarterly</th>
@@ -637,38 +745,92 @@ const PricingPlanManager: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {regionalPricing.length === 0 ? (
+                      {loadingPricing || loading ? (
                         <tr>
-                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
-                            No regional pricing data found.
+                          <td colSpan={6} className="px-6 py-8 text-center">
+                            <div className="flex items-center justify-center">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
                           </td>
                         </tr>
                       ) : (
-                        regionalPricing.map((pricing: any) => (
-                          <tr key={pricing._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                              {pricing.countryName} ({pricing.countryCode})
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {pricing.currency} ({pricing.currencySymbol})
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                              {pricing.regionId}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {pricing.currencySymbol}{pricing.planPrices?.dayPass?.price || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {pricing.currencySymbol}{pricing.planPrices?.monthly?.price || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {pricing.currencySymbol}{pricing.planPrices?.quarterly?.price || '-'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {pricing.currencySymbol}{pricing.planPrices?.yearly?.price || '-'}
-                            </td>
-                          </tr>
-                        ))
+                        <>
+                          {safeCountryPricing.length > 0 ? (
+                            safeCountryPricing.map((pricing: any) => {
+                              const countryCode = pricing.countryCode;
+                              const edits = editedPrices[countryCode] || {};
+
+                              return (
+                                <tr key={pricing._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                  <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-2xl" role="img" aria-label={pricing.countryName}>
+                                        {getCountryFlag(pricing.countryCode)}
+                                      </span>
+                                      <div>
+                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                          {getCountryName(pricing.countryCode)}
+                                        </div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                          {pricing.countryCode}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-semibold text-gray-700 dark:text-gray-300">{pricing.currency}</span>
+                                      <span className="text-xs text-gray-500">({pricing.currencySymbol})</span>
+                                    </div>
+                                  </td>
+                                  {/* Price Columns */}
+                                  {(['dayPass', 'monthly', 'quarterly', 'yearly'] as const).map((planKey) => (
+                                    <td key={planKey} className="px-6 py-4 whitespace-nowrap">
+                                      {isEditing ? (
+                                        <div className="relative">
+                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                                            {pricing.currencySymbol}
+                                          </span>
+                                          <Input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={edits[planKey] !== undefined ? edits[planKey] : pricing.planPrices?.[planKey]?.price || 0}
+                                            onChange={(e) => {
+                                              const val = parseFloat(e.target.value) || 0;
+                                              setEditedPrices(prev => ({
+                                                ...prev,
+                                                [countryCode]: {
+                                                  ...prev[countryCode],
+                                                  [planKey]: val
+                                                }
+                                              }));
+                                            }}
+                                            className="w-24 pl-5 h-8 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
+                                          />
+                                        </div>
+                                      ) : (
+                                        <span className="text-sm text-gray-900 dark:text-white font-medium">
+                                          {pricing.currencySymbol}{pricing.planPrices?.[planKey]?.price?.toLocaleString() || '0'}
+                                        </span>
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={6} className="px-6 py-12 text-center">
+                                <div className="text-gray-500 dark:text-gray-400 flex flex-col items-center">
+                                  <Globe className="h-12 w-12 text-gray-300 mb-3" />
+                                  <p className="text-lg font-medium mb-1">No regional pricing configured.</p>
+                                  <p className="text-sm">Click "Manage Regional Pricing" to verify configuration.</p>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </>
                       )}
                     </tbody>
                   </table>
@@ -695,163 +857,193 @@ const PricingPlanManager: React.FC = () => {
       </Tabs>
 
       {/* Preview Modal */}
-      {selectedPlanForPreview && (
-        <UniversalPaymentModal
-          isOpen={isPreviewModalOpen}
-          onClose={() => setIsPreviewModalOpen(false)}
-          currentUserPlan={DEFAULT_PLAN_KEY}
-          preselectedPlanKey={selectedPlanForPreview.key}
-          onSuccess={() => setIsPreviewModalOpen(false)}
-          adminMode={true}
-          previewMode={true}
-        />
-      )}
+      {
+        selectedPlanForPreview && (
+          <UniversalPaymentModal
+            isOpen={isPreviewModalOpen}
+            onClose={() => setIsPreviewModalOpen(false)}
+            currentUserPlan={DEFAULT_PLAN_KEY}
+            preselectedPlanKey={selectedPlanForPreview.key}
+            onSuccess={() => setIsPreviewModalOpen(false)}
+            adminMode={true}
+            previewMode={true}
+          />
+        )
+      }
 
       {/* Edit Modal */}
-      {selectedPlanForEdit && (
-        <PricingPlanEditModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          plan={selectedPlanForEdit}
-          onSave={handlePlanUpdated}
-        />
-      )}
+      {
+        selectedPlanForEdit && (
+          <PricingPlanEditModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            plan={selectedPlanForEdit}
+            onSave={handlePlanUpdated}
+          />
+        )
+      }
 
       {/* Plan Details Modal */}
-      {selectedPlanForDetails && (
-        <div
-          className={`fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'}`}
-          onClick={() => setIsPlanDetailsModalOpen(false)}
-        >
-          <Card
-            className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+      {
+        selectedPlanForDetails && (
+          <div
+            className={`fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'}`}
+            onClick={() => setIsPlanDetailsModalOpen(false)}
           >
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-6">
-                <div>
-                  <h3 className="text-2xl font-bold text-white mb-2">{selectedPlanForDetails.name}</h3>
-                  <p className="text-gray-400">{selectedPlanForDetails.description}</p>
-                </div>
-                <button
-                  onClick={() => setIsPlanDetailsModalOpen(false)}
-                  className="text-gray-400 hover:text-white"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Pricing */}
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">Pricing</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedPlanForDetails.price_monthly && (
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Monthly</div>
-                        <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_monthly.toFixed(2)}</div>
-                      </div>
-                    )}
-                    {selectedPlanForDetails.price_quarterly && (
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Quarterly</div>
-                        <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_quarterly.toFixed(2)}</div>
-                      </div>
-                    )}
-                    {selectedPlanForDetails.price_yearly && (
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Yearly</div>
-                        <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_yearly.toFixed(2)}</div>
-                      </div>
-                    )}
-                    {selectedPlanForDetails.price_one_time && (
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">One-time</div>
-                        <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_one_time.toFixed(2)}</div>
-                      </div>
-                    )}
-                    {selectedPlanForDetails.key === DEFAULT_PLAN_KEY && (
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Price</div>
-                        <div className="text-xl font-bold text-white">Free</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">Features</h4>
-                  <div className="bg-gray-700 p-4 rounded-lg">
-                    <ul className="space-y-2">
-                      {selectedPlanForDetails.features.map((feature, index) => (
-                        <li key={index} className="text-gray-300 flex items-start gap-2">
-                          <CheckCircle size={16} className="text-green-400 mt-1 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Limits */}
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-3">Limits</h4>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-gray-700 p-4 rounded-lg">
-                      <div className="text-sm text-gray-400">Max CVs</div>
-                      <div className="text-xl font-bold text-white">{selectedPlanForDetails.maxCVs === -1 ? 'Unlimited' : selectedPlanForDetails.maxCVs}</div>
-                    </div>
-                    <div className="bg-gray-700 p-4 rounded-lg">
-                      <div className="text-sm text-gray-400">Max Exports</div>
-                      <div className="text-xl font-bold text-white">{selectedPlanForDetails.maxExports === -1 ? 'Unlimited' : selectedPlanForDetails.maxExports}</div>
-                    </div>
-                    <div className="bg-gray-700 p-4 rounded-lg">
-                      <div className="text-sm text-gray-400">Storage</div>
-                      <div className="text-xl font-bold text-white">{selectedPlanForDetails.storageLimit === -1 ? 'Unlimited' : `${selectedPlanForDetails.storageLimit}GB`}</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-700">
+            <Card
+              className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-6">
                   <div>
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedPlanForDetails.status === 'active'
-                      ? 'bg-green-900 text-green-300'
-                      : 'bg-gray-700 text-gray-400'
-                      }`}>
-                      {selectedPlanForDetails.status === 'active' ? 'Active' : 'Inactive'}
-                    </span>
+                    <h3 className="text-2xl font-bold text-white mb-2">{selectedPlanForDetails.name}</h3>
+                    <p className="text-gray-400">{selectedPlanForDetails.description}</p>
                   </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setIsPlanDetailsModalOpen(false);
-                        handlePreviewPlan(selectedPlanForDetails);
-                      }}
-                      className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center gap-2"
-                    >
-                      <Eye size={16} />
-                      Preview
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsPlanDetailsModalOpen(false);
-                        handleEditPlan(selectedPlanForDetails);
-                      }}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-                    >
-                      <Edit size={16} />
-                      Edit
-                    </button>
+                  <button
+                    onClick={() => setIsPlanDetailsModalOpen(false)}
+                    className="text-gray-400 hover:text-white"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {/* Pricing */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">Pricing</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedPlanForDetails.price_monthly && (
+                        <div className="bg-gray-700 p-4 rounded-lg">
+                          <div className="text-sm text-gray-400">Monthly</div>
+                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_monthly.toFixed(2)}</div>
+                        </div>
+                      )}
+                      {selectedPlanForDetails.price_quarterly && (
+                        <div className="bg-gray-700 p-4 rounded-lg">
+                          <div className="text-sm text-gray-400">Quarterly</div>
+                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_quarterly.toFixed(2)}</div>
+                        </div>
+                      )}
+                      {selectedPlanForDetails.price_yearly && (
+                        <div className="bg-gray-700 p-4 rounded-lg">
+                          <div className="text-sm text-gray-400">Yearly</div>
+                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_yearly.toFixed(2)}</div>
+                        </div>
+                      )}
+                      {selectedPlanForDetails.price_one_time && (
+                        <div className="bg-gray-700 p-4 rounded-lg">
+                          <div className="text-sm text-gray-400">One-time</div>
+                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_one_time.toFixed(2)}</div>
+                        </div>
+                      )}
+                      {selectedPlanForDetails.key === DEFAULT_PLAN_KEY && (
+                        <div className="bg-gray-700 p-4 rounded-lg">
+                          <div className="text-sm text-gray-400">Price</div>
+                          <div className="text-xl font-bold text-white">Free</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Features */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">Features</h4>
+                    <div className="bg-gray-700 p-4 rounded-lg">
+                      <ul className="space-y-2">
+                        {selectedPlanForDetails.features.map((feature, index) => (
+                          <li key={index} className="text-gray-300 flex items-start gap-2">
+                            <CheckCircle size={16} className="text-green-400 mt-1 flex-shrink-0" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Limits */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-white mb-3">Limits</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-gray-700 p-4 rounded-lg">
+                        <div className="text-sm text-gray-400">Max CVs</div>
+                        <div className="text-xl font-bold text-white">{selectedPlanForDetails.maxCVs === -1 ? 'Unlimited' : selectedPlanForDetails.maxCVs}</div>
+                      </div>
+                      <div className="bg-gray-700 p-4 rounded-lg">
+                        <div className="text-sm text-gray-400">Max Exports</div>
+                        <div className="text-xl font-bold text-white">{selectedPlanForDetails.maxExports === -1 ? 'Unlimited' : selectedPlanForDetails.maxExports}</div>
+                      </div>
+                      <div className="bg-gray-700 p-4 rounded-lg">
+                        <div className="text-sm text-gray-400">Storage</div>
+                        <div className="text-xl font-bold text-white">{selectedPlanForDetails.storageLimit === -1 ? 'Unlimited' : `${selectedPlanForDetails.storageLimit}GB`}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-700">
+                    <div>
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedPlanForDetails.status === 'active'
+                        ? 'bg-green-900 text-green-300'
+                        : 'bg-gray-700 text-gray-400'
+                        }`}>
+                        {selectedPlanForDetails.status === 'active' ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsPlanDetailsModalOpen(false);
+                          handlePreviewPlan(selectedPlanForDetails);
+                        }}
+                        className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center gap-2"
+                      >
+                        <Eye size={16} />
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsPlanDetailsModalOpen(false);
+                          handleEditPlan(selectedPlanForDetails);
+                        }}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        <Edit size={16} />
+                        Edit
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      }
+      <AddPricingModal
+        isOpen={isAddCountryModalOpen}
+        onClose={() => setIsAddCountryModalOpen(false)}
+        onSuccess={() => {
+          // Re-fetch pricing data
+          const fetchPricingData = async () => {
+            setLoadingPricing(true);
+            try {
+              const response = await fetch('/api/admin/country-pricing');
+              if (response.ok) {
+                const data = await response.json();
+                if (data.success) {
+                  setCountryPricing(data.data?.countryPricing || data.countryPricing || []);
+                }
+              }
+            } finally {
+              setLoadingPricing(false);
+            }
+          };
+          fetchPricingData();
+          refetch(); // Also refetch plans just in case
+        }}
+        plans={safePlans}
+      />
+    </div >
   );
 };
 

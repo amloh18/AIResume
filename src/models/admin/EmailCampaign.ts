@@ -6,7 +6,7 @@ export interface IEmailCampaign extends Document {
   htmlContent: string;
   plainTextContent?: string;
   status: 'draft' | 'scheduled' | 'sent' | 'cancelled';
-  
+
   // Targeting filters
   targetFilters: {
     membershipPlans?: string[]; // ['free', 'basic', 'premium', 'enterprise']
@@ -31,7 +31,24 @@ export interface IEmailCampaign extends Document {
     emailVerified?: boolean;
     isDeleted?: boolean; // Target deleted users
   };
-  
+
+  // A/B Testing Configuration
+  abTestConfig?: {
+    enabled: boolean;
+    testType: 'subject' | 'cta' | 'both';
+    variants: Array<{
+      id: string;
+      subjectLine?: string;
+      ctaText?: string;
+    }>;
+    sampleSize: number; // Percentage (10-50%)
+    testDuration: number; // Hours (1-48)
+    winningMetric: 'opens' | 'clicks';
+    winningVariantId?: string;
+    testStartedAt?: Date;
+    testCompletedAt?: Date;
+  };
+
   // Campaign metadata
   targetedUserCount: number;
   sentCount: number;
@@ -40,24 +57,72 @@ export interface IEmailCampaign extends Document {
   clickedCount: number;
   bouncedCount: number;
   unsubscribedCount: number;
-  
+
+  // Enhanced Performance Tracking
+  performance: {
+    sent: number;
+    delivered: number;
+    bounced: number;
+    hardBounces: number;
+    softBounces: number;
+    opened: number;
+    uniqueOpens: number;
+    clicked: number;
+    uniqueClicks: number;
+    unsubscribed: number;
+    spamReports: number;
+    goalCompletions: number;
+    revenue?: number;
+  };
+
+  // Verification Status
+  verification?: {
+    hasUnsubscribeLink: boolean;
+    allLinksValid: boolean;
+    personalizationValid: boolean;
+    mobileResponsive: boolean;
+    spamScore?: number;
+    checkedAt?: Date;
+  };
+
+  // Review & Approval
+  review?: {
+    requestedFrom?: mongoose.Types.ObjectId; // User ID
+    approvedBy?: mongoose.Types.ObjectId;
+    approvedAt?: Date;
+    rejectedAt?: Date;
+    notes?: string;
+  };
+
+  // Filter Preset Reference
+  filterPresetId?: string;
+  filterPresetName?: string;
+
   // Scheduling
   scheduledAt?: Date;
   sentAt?: Date;
-  
+
+  // Campaign Goal
+  campaignGoal?: string; // 'clicks', 'conversions', 'opens', 'signups', 'revenue'
+
+  // Sender Info
+  fromName?: string;
+  fromEmail?: string;
+  replyTo?: string;
+
   // Template info
   templateId?: string;
   templateName?: string;
-  
+
   // Creator info
   createdBy: mongoose.Types.ObjectId;
   createdByName: string;
   createdByEmail: string;
-  
+
   // Metadata
   tags?: string[];
   notes?: string;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -112,6 +177,27 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
       emailVerified: Boolean,
       isDeleted: Boolean,
     },
+    abTestConfig: {
+      enabled: Boolean,
+      testType: {
+        type: String,
+        enum: ['subject', 'cta', 'both'],
+      },
+      variants: [{
+        id: String,
+        subjectLine: String,
+        ctaText: String,
+      }],
+      sampleSize: Number,
+      testDuration: Number,
+      winningMetric: {
+        type: String,
+        enum: ['opens', 'clicks'],
+      },
+      winningVariantId: String,
+      testStartedAt: Date,
+      testCompletedAt: Date,
+    },
     targetedUserCount: {
       type: Number,
       default: 0,
@@ -140,8 +226,44 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
       type: Number,
       default: 0,
     },
+    performance: {
+      sent: { type: Number, default: 0 },
+      delivered: { type: Number, default: 0 },
+      bounced: { type: Number, default: 0 },
+      hardBounces: { type: Number, default: 0 },
+      softBounces: { type: Number, default: 0 },
+      opened: { type: Number, default: 0 },
+      uniqueOpens: { type: Number, default: 0 },
+      clicked: { type: Number, default: 0 },
+      uniqueClicks: { type: Number, default: 0 },
+      unsubscribed: { type: Number, default: 0 },
+      spamReports: { type: Number, default: 0 },
+      goalCompletions: { type: Number, default: 0 },
+      revenue: Number,
+    },
+    verification: {
+      hasUnsubscribeLink: Boolean,
+      allLinksValid: Boolean,
+      personalizationValid: Boolean,
+      mobileResponsive: Boolean,
+      spamScore: Number,
+      checkedAt: Date,
+    },
+    review: {
+      requestedFrom: Schema.Types.ObjectId,
+      approvedBy: Schema.Types.ObjectId,
+      approvedAt: Date,
+      rejectedAt: Date,
+      notes: String,
+    },
+    filterPresetId: String,
+    filterPresetName: String,
     scheduledAt: Date,
     sentAt: Date,
+    campaignGoal: String,
+    fromName: String,
+    fromEmail: String,
+    replyTo: String,
     templateId: String,
     templateName: String,
     createdBy: {

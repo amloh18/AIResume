@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, 
-  FileText, 
-  TrendingUp, 
+import {
+  Users,
+  FileText,
+  TrendingUp,
   Activity,
   Calendar,
   Target,
@@ -98,13 +98,13 @@ const CVJourneyKPIs: React.FC = () => {
     try {
       setLoading(true);
       const response = await fetch(`/api/admin/cv-journey-kpis?range=${timeRange}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         setKpiData(result.data);
         setLastUpdated(new Date());
@@ -235,7 +235,7 @@ const CVJourneyKPIs: React.FC = () => {
             )}
           </p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <select
             value={timeRange}
@@ -257,24 +257,13 @@ const CVJourneyKPIs: React.FC = () => {
           </button>
         </div>
       </div>
-
-      {/* Period Info */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-          <Calendar size={16} />
-          <span className="font-medium">
-            Period: {formatDate(kpiData.period.startDate)} - {formatDate(kpiData.period.endDate)}
-          </span>
-        </div>
-      </div>
-
       {/* 1. USER ENGAGEMENT & ADOPTION KPIs */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Users className="text-blue-500" size={20} />
           1. User Engagement & Adoption KPIs
         </h2>
-        
+
         <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
           {/* CV Journeys Initiated */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -380,15 +369,15 @@ const CVJourneyKPIs: React.FC = () => {
           <Briefcase className="text-green-500" size={20} />
           2. Application Funnel & Effectiveness KPIs
         </h2>
-        
+
         <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
           {/* Application Status Funnel */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Application Status Funnel</h3>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={applicationFunnelData}>
-                <XAxis 
-                  dataKey="name" 
+                <XAxis
+                  dataKey="name"
                   stroke="#6B7280"
                   fontSize={12}
                   angle={-45}
@@ -396,7 +385,7 @@ const CVJourneyKPIs: React.FC = () => {
                   height={80}
                 />
                 <YAxis stroke="#6B7280" fontSize={12} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     backgroundColor: '#1F2937',
                     border: '1px solid #374151',
@@ -454,20 +443,20 @@ const CVJourneyKPIs: React.FC = () => {
           <Database className="text-orange-500" size={20} />
           3. Content & System Health KPIs
         </h2>
-        
+
         <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
           {/* Asset Growth Rate */}
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Asset Growth Rate</h3>
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={assetGrowthChartData}>
-                <XAxis 
-                  dataKey="date" 
+                <XAxis
+                  dataKey="date"
                   stroke="#6B7280"
                   fontSize={12}
                 />
                 <YAxis stroke="#6B7280" fontSize={12} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{
                     backgroundColor: '#1F2937',
                     border: '1px solid #374151',
@@ -476,21 +465,21 @@ const CVJourneyKPIs: React.FC = () => {
                   }}
                 />
                 <Legend />
-                <Area 
-                  type="monotone" 
-                  dataKey="cvs" 
+                <Area
+                  type="monotone"
+                  dataKey="cvs"
                   stackId="1"
-                  stroke="#8B5CF6" 
-                  fill="#8B5CF6" 
+                  stroke="#8B5CF6"
+                  fill="#8B5CF6"
                   fillOpacity={0.6}
                   name="CVs"
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="coverLetters" 
+                <Area
+                  type="monotone"
+                  dataKey="coverLetters"
                   stackId="1"
-                  stroke="#3B82F6" 
-                  fill="#3B82F6" 
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
                   fillOpacity={0.6}
                   name="Cover Letters"
                 />

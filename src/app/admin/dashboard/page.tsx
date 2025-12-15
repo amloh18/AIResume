@@ -45,6 +45,44 @@ export default function AdminDashboard() {
   const user = session?.user as any;
   const isAdmin = user?.type === 'admin' || user?.role === 'admin' || user?.role === 'superadmin';
 
+  // Hash-based navigation state
+  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'management' | 'pricing'>('overview');
+  const [activeSubTab, setActiveSubTab] = useState<string>('');
+
+  // Parse hash from URL on mount and on hash change
+  useEffect(() => {
+    const parseHash = () => {
+      const hash = window.location.hash.slice(1); // Remove #
+      if (!hash) {
+        setActiveTab('overview');
+        setActiveSubTab('');
+        return;
+      }
+
+      // Parse format: section or section-subsection
+      const parts = hash.split('-');
+      const section = parts[0] as 'overview' | 'analytics' | 'management' | 'pricing';
+      const subsection = parts.slice(1).join('-') || '';
+
+      if (['overview', 'analytics', 'management', 'pricing'].includes(section)) {
+        setActiveTab(section);
+        setActiveSubTab(subsection);
+      }
+    };
+
+    parseHash();
+    window.addEventListener('hashchange', parseHash);
+    return () => window.removeEventListener('hashchange', parseHash);
+  }, []);
+
+  // Update URL hash when tab changes
+  const handleTabChange = (tab: 'overview' | 'analytics' | 'management' | 'pricing', subTab?: string) => {
+    const hash = subTab ? `${tab}-${subTab}` : tab;
+    window.location.hash = hash;
+    setActiveTab(tab);
+    setActiveSubTab(subTab || '');
+  };
+
   useEffect(() => {
     // Redirect if not authenticated or not an admin
     if (status === 'unauthenticated') {
@@ -205,15 +243,58 @@ export default function AdminDashboard() {
       {/* Header */}
       <header className="bg-gray-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
-          <div className="flex justify-between items-center py-6 mb-0">
-            <div className="flex items-center">
+          <div className="flex justify-between items-center py-6 mb-0 gap-4">
+            {/* Logo Section */}
+            <div className="flex items-center flex-shrink-0">
               <Shield className="h-8 w-8 text-red-500 mr-3" />
               <div>
                 <h1 className="text-2xl font-bold text-white">CVCircle</h1>
                 <p className="text-sm text-gray-300">Admin Panel</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
+
+            {/* Navigation Chips */}
+            <div className="hidden md:flex items-center gap-2 flex-1 justify-center">
+              <button
+                onClick={() => handleTabChange('overview')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'overview'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+              >
+                Overview
+              </button>
+              <button
+                onClick={() => handleTabChange('analytics')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'analytics'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+              >
+                Analytics
+              </button>
+              <button
+                onClick={() => handleTabChange('management')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'management'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+              >
+                Management
+              </button>
+              <button
+                onClick={() => handleTabChange('pricing')}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${activeTab === 'pricing'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+              >
+                Pricing
+              </button>
+            </div>
+
+            {/* User & Activity Buttons */}
+            <div className="flex items-center space-x-4 flex-shrink-0">
               {/* Consolidated Admin Menu */}
               <div className="relative" ref={menuRef}>
                 <Button
@@ -222,7 +303,7 @@ export default function AdminDashboard() {
                   className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
                   <User className="h-4 w-4 mr-2" />
-                  {user.email}
+                  <span className="hidden tablet:inline">{user.email}</span>
                   <ChevronDown className="h-4 w-4 ml-2" />
                 </Button>
 
@@ -276,7 +357,7 @@ export default function AdminDashboard() {
                 }
               >
                 <Activity className="h-4 w-4 mr-2" />
-                Activity
+                <span className="hidden tablet:inline">Activity</span>
                 {activityCount > 0 && (
                   <div className="ml-2 px-2 py-0.5 bg-red-500 text-white text-xs rounded-full min-w-[20px] text-center">
                     {activityCount > 99 ? '99+' : activityCount}
@@ -291,45 +372,64 @@ export default function AdminDashboard() {
         </div>
       </header>
 
-      {/* Admin Panel with Main Tabs */}
-      <Tabs defaultValue="overview" className="w-full">
-        {/* Navbar Tabs - Full Width */}
-        <div className="bg-gray-800">
-          <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
-            <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 tablet:mx-0 tablet:px-0">
-              <TabsList className="flex w-max min-w-full bg-transparent border-0 tablet:grid tablet:w-full tablet:grid-cols-4">
-                <TabsTrigger value="overview" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="analytics" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
-                  <Activity className="h-4 w-4 mr-2" />
-                  Analytics
-                </TabsTrigger>
-                <TabsTrigger value="management" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
-                  <Users className="h-4 w-4 mr-2" />
-                  Management
-                </TabsTrigger>
-                <TabsTrigger value="pricing" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 flex-shrink-0 tablet:flex-shrink">
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Pricing
-                </TabsTrigger>
-              </TabsList>
-            </div>
+      {/* Mobile Navigation - Below Header */}
+      <div className="md:hidden bg-gray-800 border-t border-gray-700">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
+            <button
+              onClick={() => handleTabChange('overview')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'overview'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => handleTabChange('analytics')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'analytics'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+            >
+              Analytics
+            </button>
+            <button
+              onClick={() => handleTabChange('management')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'management'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+            >
+              Management
+            </button>
+            <button
+              onClick={() => handleTabChange('pricing')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${activeTab === 'pricing'
+                ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                }`}
+            >
+              Pricing
+            </button>
           </div>
         </div>
+      </div>
 
-        {/* Main Content */}
-        <main className="max-w-7xl mx-auto py-6 tablet:px-6 desktop:px-8">
-          <div className="px-4 tablet:px-0">
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="mt-0">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto py-6 tablet:px-6 desktop:px-8">
+        <div className="px-4 tablet:px-0">
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
+            <div className="mt-0">
               <AdminKPIs />
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Analytics Tab with Sub-tabs */}
-            <TabsContent value="analytics" className="mt-6">
-              <Tabs defaultValue="ai" className="w-full">
+          {/* Analytics Tab with Sub-tabs */}
+          {activeTab === 'analytics' && (
+            <div>
+              <Tabs value={activeSubTab || 'ai'} onValueChange={(value) => handleTabChange('analytics', value)} className="w-full">
                 <TabsList className="bg-transparent border-b border-gray-700 rounded-none p-0 h-auto w-full justify-start">
                   <TabsTrigger value="ai" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 rounded-none px-6 py-3">
                     <Sparkles className="h-4 w-4 mr-2" />
@@ -373,11 +473,13 @@ export default function AdminDashboard() {
                   <SystemHealth />
                 </TabsContent>
               </Tabs>
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Management Tab with Sub-tabs */}
-            <TabsContent value="management" className="mt-6">
-              <Tabs defaultValue="users" className="w-full">
+          {/* Management Tab with Sub-tabs */}
+          {activeTab === 'management' && (
+            <div>
+              <Tabs value={activeSubTab || 'users'} onValueChange={(value) => handleTabChange('management', value)} className="w-full">
                 <TabsList className="bg-transparent border-b border-gray-700 rounded-none p-0 h-auto w-full justify-start">
                   <TabsTrigger value="users" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 rounded-none px-6 py-3">
                     <Users className="h-4 w-4 mr-2" />
@@ -413,49 +515,51 @@ export default function AdminDashboard() {
                   <DraftManagement />
                 </TabsContent>
               </Tabs>
-            </TabsContent>
+            </div>
+          )}
 
-            {/* Pricing Tab */}
-            <TabsContent value="pricing" className="mt-6 space-y-6">
+          {/* Pricing Tab */}
+          {activeTab === 'pricing' && (
+            <div className="space-y-6">
               <div className="w-full min-h-[400px]">
                 <PricingPlanManager />
               </div>
-            </TabsContent>
-
-            {/* User Info Card */}
-            <div className="mt-8">
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white">Admin Information</CardTitle>
-                  <CardDescription className="text-gray-400">
-                    Current admin user details
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-400">Email</p>
-                      <p className="text-sm text-white">{user.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-400">Role</p>
-                      <p className="text-sm text-white">{user.role || 'admin'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-400">Type</p>
-                      <p className="text-sm text-white">{user.type || 'admin'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-400">User ID</p>
-                      <p className="text-sm text-white">{user.id}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
+          )}
+
+          {/* User Info Card */}
+          <div className="mt-8">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Admin Information</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Current admin user details
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Email</p>
+                    <p className="text-sm text-white">{user.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Role</p>
+                    <p className="text-sm text-white">{user.role || 'admin'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">Type</p>
+                    <p className="text-sm text-white">{user.type || 'admin'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-400">User ID</p>
+                    <p className="text-sm text-white">{user.id}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </main>
-      </Tabs>
+        </div>
+      </main>
 
       {/* Recent Activity Overlay Panel */}
       {isActivityPanelOpen && (

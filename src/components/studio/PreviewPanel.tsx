@@ -66,7 +66,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
 }, ref) => {
   // CRITICAL: All hooks must be called unconditionally, before any conditional returns
   // This ensures consistent hook order and prevents "Rendered fewer hooks than expected" errors
-  
+
   const { theme } = useTheme();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -74,7 +74,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
   const internalRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  
+
   // Combine refs: use forwarded ref if provided, otherwise use internal ref
   React.useEffect(() => {
     if (typeof ref === 'function') {
@@ -99,7 +99,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
       const pageHeight = currentDimensions.height - (pagePadding.top + pagePadding.bottom);
       const pages = Math.ceil(contentHeight / pageHeight);
       setTotalPages(Math.max(1, pages));
-      
+
       // Reset to page 1 if current page exceeds total pages
       if (currentPage > pages) {
         setCurrentPage(1);
@@ -131,7 +131,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
   const handleDownloadJSON = () => {
     if (!cvData) return;
     try {
-      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}-data.json`;
+      const filename = `${cvData.title || cvData.basics.name || 'CV'}|CV-data.json`;
       downloadAsJSON(cvData, filename);
     } catch (error) {
       console.error('Error downloading JSON:', error);
@@ -143,8 +143,11 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
     if (!previewRef.current || !cvData) return;
     setIsDownloading(true);
     try {
-      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}.pdf`;
-      await downloadAsPDF(previewRef.current, filename);
+      const filename = `${cvData.title || cvData.basics.name || 'CV'}|CV.pdf`;
+      await downloadAsPDF(previewRef.current, filename, cvId, {
+        paperSize: 'A4',
+        orientation: 'portrait'
+      });
     } catch (error) {
       console.error('Error downloading PDF:', error);
       alert('Failed to download PDF. Please try again.');
@@ -157,7 +160,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
     if (!cvData) return;
     setIsDownloading(true);
     try {
-      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}.docx`;
+      const filename = `${cvData.title || cvData.basics.name || 'CV'}|CV.docx`;
       await downloadAsDOCX(cvData, filename);
     } catch (error) {
       console.error('Error downloading DOCX:', error);
@@ -171,7 +174,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
     if (!previewRef.current || !cvData) return;
     setIsDownloading(true);
     try {
-      const filename = `${cvData.basics.name?.toLowerCase().replace(/\s+/g, '-') || 'cv'}.png`;
+      const filename = `${cvData.title || cvData.basics.name || 'CV'}|CV.png`;
       await downloadAsImage(previewRef.current, filename);
     } catch (error) {
       console.error('Error downloading image:', error);
@@ -212,7 +215,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
 
   const renderCoverLetterPreview = () => {
     return (
-      <div 
+      <div
         ref={contentRef}
         className="relative bg-white/95 dark:bg-[#1a230f] mx-auto"
         style={{
@@ -238,7 +241,7 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
     <div className="h-full flex flex-col bg-[#1A201A] relative">
       {/* Inject Page Break CSS for smart A4 splitting */}
       <style dangerouslySetInnerHTML={{ __html: generatePageBreakCSS() }} />
-      
+
       {/* Top Controls Bar */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/50 dark:border-white/10">
         {/* Left Side - Document Type Switcher */}
@@ -246,20 +249,19 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
           <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1">
             <button
               onClick={() => onDocumentTypeChange('cv')}
-              className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
-                documentType === 'cv'
-                  ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
-              }`}
+              className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${documentType === 'cv'
+                ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
+                }`}
             >
               CV
             </button>
             <button
               onClick={() => {
-                console.log('🖱️ Cover Letter button clicked!', { 
-                  isMasterCV, 
+                console.log('🖱️ Cover Letter button clicked!', {
+                  isMasterCV,
                   onDocumentTypeChange: !!onDocumentTypeChange,
-                  documentType 
+                  documentType
                 });
                 if (isMasterCV) {
                   console.log('⚠️ Cannot create cover letter for Master CV');
@@ -273,13 +275,12 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
                 }
               }}
               disabled={isMasterCV}
-              className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
-                documentType === 'cover-letter'
-                  ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
-                  : isMasterCV
+              className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${documentType === 'cover-letter'
+                ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                : isMasterCV
                   ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-50'
                   : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
-              }`}
+                }`}
               title={isMasterCV ? 'Cover letters cannot be created for Master CV' : 'Switch to Cover Letter'}
             >
               Cover Letter
@@ -294,21 +295,19 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
             <div className="flex items-center space-x-1 bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 rounded-lg p-1">
               <button
                 onClick={() => setPaperSize('A4')}
-                className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  paperSize === 'A4'
-                    ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
-                }`}
+                className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${paperSize === 'A4'
+                  ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
+                  }`}
               >
                 A4
               </button>
               <button
                 onClick={() => setPaperSize('Letter')}
-                className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${
-                  paperSize === 'Letter'
-                    ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
-                    : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
-                }`}
+                className={`px-4 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${paperSize === 'Letter'
+                  ? 'bg-gray-200 dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:text-white/80'
+                  }`}
               >
                 US Letter
               </button>
@@ -325,11 +324,11 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
             >
               <ZoomOut className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
             </button>
-            
+
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-[45px] text-center">
               {Math.round(zoom * 100)}%
             </span>
-            
+
             <button
               onClick={handleZoomIn}
               disabled={zoom >= 2}
@@ -338,9 +337,9 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
             >
               <ZoomIn className="w-3.5 h-3.5 text-gray-600 dark:text-gray-300" />
             </button>
-            
+
             <div className="w-px h-4 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-            
+
             <button
               onClick={handleResetZoom}
               className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
@@ -353,10 +352,10 @@ const PreviewPanel = React.forwardRef<HTMLDivElement, PreviewPanelProps>(({
       </div>
 
       {/* Preview Area */}
-      <div 
+      <div
         ref={containerRef}
         className="flex-1 overflow-auto scrollbar-hide"
-        style={{ 
+        style={{
           minHeight: 0,
           width: '100%'
         }}

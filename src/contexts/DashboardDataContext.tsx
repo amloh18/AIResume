@@ -54,7 +54,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
-  
+
   // Separate loading states for critical vs secondary data
   const [criticalLoading, setCriticalLoading] = useState(true);
   const [secondaryLoading, setSecondaryLoading] = useState({
@@ -63,24 +63,24 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     jobs: false,
     analytics: false
   });
-  
+
   const [errors, setErrors] = useState<{
     cvs?: string | null;
     coverLetters?: string | null;
     jobs?: string | null;
     analytics?: string | null;
   }>({});
-  
+
   // Track if data has been loaded to prevent duplicate fetches
   const hasLoadedRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
-  
+
   // Use Map to track loading state per endpoint
   const loadingStates = useRef(new Map<string, boolean>());
 
   const fetchCVs = useCallback(async (userId: string) => {
     const endpoint = `/api/cvs?projection=summary`;
-    
+
     // Use request deduplication to prevent multiple simultaneous calls
     return requestDeduplication.deduplicate(endpoint, async () => {
       if (loadingStates.current.get('cvs')) {
@@ -97,7 +97,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
-          
+
           if (result.success && result.data?.cvs) {
             console.log(`✅ DashboardData - CVs loaded: ${result.data.cvs.length} items`);
             setCvs(result.data.cvs);
@@ -119,7 +119,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchCoverLetters = useCallback(async (userId: string) => {
     const endpoint = `/api/cover-letters`;
-    
+
     // Use request deduplication to prevent multiple simultaneous calls
     return requestDeduplication.deduplicate(endpoint, async () => {
       if (loadingStates.current.get('coverLetters')) {
@@ -136,7 +136,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
-          
+
           if (result.success && result.data?.coverLetters) {
             console.log(`✅ DashboardData - Cover letters loaded: ${result.data.coverLetters.length} items`);
             setCoverLetters(result.data.coverLetters);
@@ -157,8 +157,8 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const fetchJobs = useCallback(async (userId: string) => {
-    const endpoint = `/api/jobs`;
-    
+    const endpoint = `/api/jobs?limit=all`;
+
     // Use request deduplication to prevent multiple simultaneous calls
     return requestDeduplication.deduplicate(endpoint, async () => {
       if (loadingStates.current.get('jobs')) {
@@ -175,7 +175,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
-          
+
           if (result.success && result.data?.jobs) {
             console.log(`✅ DashboardData - Jobs loaded: ${result.data.jobs.length} items`);
             setJobs(result.data.jobs);
@@ -197,7 +197,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const fetchAnalytics = useCallback(async (userId: string, period: string = 'week') => {
     const endpoint = `/api/analytics/progress?userId=${userId}&period=${period}`;
-    
+
     // Use request deduplication to prevent multiple simultaneous calls
     return requestDeduplication.deduplicate(endpoint, async () => {
       if (loadingStates.current.get('analytics')) {
@@ -214,7 +214,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
           const result = await response.json();
-          
+
           if (result.success) {
             console.log('✅ DashboardData - Analytics loaded');
             setAnalytics(result.data);
@@ -269,9 +269,9 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('🔄 DashboardData - Refreshing all data for user:', userId);
     setSecondaryLoading({ cvs: true, coverLetters: true, jobs: true, analytics: true });
     setErrors({});
-    
+
     const startTime = performance.now();
-    
+
     // Fetch all secondary data in parallel - request deduplication will handle any overlapping calls
     await Promise.all([
       fetchCVs(userId),
@@ -279,7 +279,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       fetchJobs(userId),
       fetchAnalytics(userId)
     ]);
-    
+
     const duration = Math.round(performance.now() - startTime);
     console.log(`✅ DashboardData - All secondary data loaded in ${duration}ms`);
   }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchAnalytics]);
@@ -293,7 +293,7 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const userId = getUserIdForAPI(user);
-    
+
     if (!userId) {
       setCriticalLoading(false);
       return;
@@ -323,16 +323,16 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     console.log('🔍 DashboardData - Initial load for user:', userId);
     hasLoadedRef.current = true;
     lastUserIdRef.current = userId;
-    
+
     refreshAll();
   }, [authLoading, user?.id, refreshAll]);
-  
+
   // Calculate legacy loading state (for backward compatibility)
   const loading = criticalLoading || Object.values(secondaryLoading).some(v => v);
-  
+
   // Calculate legacy error state (for backward compatibility)
   const error = Object.values(errors).find(e => e) || null;
-  
+
   // Ready state: true when critical data is loaded
   const isReady = !criticalLoading && !!userId;
 

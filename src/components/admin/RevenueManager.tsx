@@ -2,15 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { 
-  DollarSign, 
-  TrendingUp, 
-  Globe, 
+import {
+  DollarSign,
+  TrendingUp,
+  Globe,
   Mail,
   Users,
   MapPin,
   Calendar,
-  Download
+  Download,
+  ExternalLink,
+  CreditCard
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency, convertToINR } from '@/lib/utils/currencyConverter';
@@ -157,6 +159,29 @@ export default function RevenueManager() {
             <Download className="h-4 w-4" />
             Export CSV
           </button>
+
+          <a
+            href="https://dashboard.stripe.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-[#635BFF] hover:bg-[#5851E2] text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
+            title="Open Stripe Dashboard"
+          >
+            <CreditCard className="h-4 w-4" />
+            <span className="hidden tablet:inline">Stripe</span>
+          </a>
+
+          <a
+            href="https://dashboard.razorpay.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-[#3395FF] hover:bg-[#2E86E5] text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
+            title="Open Razorpay Dashboard"
+          >
+            <CreditCard className="h-4 w-4" />
+            <span className="hidden tablet:inline">Razorpay</span>
+          </a>
+
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
             <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
               <Calendar className="h-4 w-4 mr-2" />
@@ -209,7 +234,7 @@ export default function RevenueManager() {
               <div>
                 <p className="text-gray-400 text-sm">Average Order Value</p>
                 <p className="text-3xl font-bold text-white mt-2">
-                  ₹{revenueData.totalPurchases > 0 
+                  ₹{revenueData.totalPurchases > 0
                     ? (revenueData.totalInINR / revenueData.totalPurchases).toLocaleString('en-IN', { maximumFractionDigits: 2 })
                     : '0.00'}
                 </p>
@@ -221,29 +246,31 @@ export default function RevenueManager() {
       </div>
 
       {/* Revenue by Currency */}
-      {Object.keys(revenueData.revenueByCurrency).length > 0 && (
-        <Card className="bg-gray-800 border-gray-700">
-          <CardContent className="p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Revenue by Currency</h3>
-            <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
-              {Object.entries(revenueData.revenueByCurrency).map(([currency, data]) => (
-                <div key={currency} className="bg-gray-700 p-4 rounded-lg">
-                  <p className="text-gray-400 text-sm">{currency}</p>
-                  <p className="text-2xl font-bold text-white mt-1">
-                    {formatCurrency(data.amount, currency)}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {data.count} {data.count === 1 ? 'purchase' : 'purchases'}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    ₹{convertToINR(data.amount, currency).toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
-                  </p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {
+        Object.keys(revenueData.revenueByCurrency).length > 0 && (
+          <Card className="bg-gray-800 border-gray-700">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-bold text-white mb-4">Revenue by Currency</h3>
+              <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
+                {Object.entries(revenueData.revenueByCurrency).map(([currency, data]) => (
+                  <div key={currency} className="bg-gray-700 p-4 rounded-lg">
+                    <p className="text-gray-400 text-sm">{currency}</p>
+                    <p className="text-2xl font-bold text-white mt-1">
+                      {formatCurrency(data.amount, currency)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {data.count} {data.count === 1 ? 'purchase' : 'purchases'}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      ₹{convertToINR(data.amount, currency).toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )
+      }
 
       {/* User Purchases Table */}
       <Card className="bg-gray-800 border-gray-700">
@@ -272,7 +299,7 @@ export default function RevenueManager() {
                   </tr>
                 ) : (
                   revenueData.userPurchases.map((purchase, index) => (
-                    <tr 
+                    <tr
                       key={index}
                       className="border-b border-gray-700 hover:bg-gray-750 transition-colors"
                     >
@@ -327,13 +354,13 @@ export default function RevenueManager() {
           <div className="bg-gray-700 rounded-lg p-8 text-center">
             <Globe className="h-16 w-16 text-gray-500 mx-auto mb-4" />
             <p className="text-gray-400">
-              Interactive map visualization coming soon. 
+              Interactive map visualization coming soon.
               Ensure user location tracking is enabled.
             </p>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </div >
   );
 }
 

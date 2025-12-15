@@ -50,7 +50,10 @@ export default function ContentAnalytics() {
                         <LayoutTemplate className="h-4 w-4 text-gray-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-white">{data.totalTemplates}</div>
+                        <div className="text-2xl font-bold text-white">{data?.totalTemplates ?? 0}</div>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {data?.totalTemplates === 0 ? 'No templates yet' : 'Active templates'}
+                        </p>
                     </CardContent>
                 </Card>
                 <Card className="bg-gray-800 border-gray-700">
@@ -59,7 +62,10 @@ export default function ContentAnalytics() {
                         <MessageSquare className="h-4 w-4 text-gray-500" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-white">{data.totalTestimonials}</div>
+                        <div className="text-2xl font-bold text-white">{data?.totalTestimonials ?? 0}</div>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {data?.totalTestimonials === 0 ? 'No testimonials yet' : 'Published testimonials'}
+                        </p>
                     </CardContent>
                 </Card>
             </div>

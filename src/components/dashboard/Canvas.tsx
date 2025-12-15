@@ -58,6 +58,9 @@ import MasterCVCardOverlay from './MasterCVCardOverlay';
 import CVCardOverlay from './CVCardOverlay';
 import CoverLetterCardOverlay from './CoverLetterCardOverlay';
 import JobSidebar from './jobs/JobSidebar';
+import CVListView from './CVListView';
+import CoverLetterListView from './CoverLetterListView';
+import { LayoutList, LayoutGrid } from 'lucide-react';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
@@ -306,9 +309,8 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
     <div className="flex items-center gap-2">
       <motion.button
         onClick={checkUnlinkedItems}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${className} ${
-          isExpanded ? 'bg-red-500 text-white hover:bg-red-600' : ''
-        }`}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${className} ${isExpanded ? 'bg-red-500 text-white hover:bg-red-600' : ''
+          }`}
         whileHover={!isExpanded ? { scale: 1.05 } : {}}
         whileTap={!isExpanded ? { scale: 0.95 } : {}}
         disabled={items.length === 0 || isExpanded}
@@ -385,6 +387,7 @@ const Canvas: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'lastModified' | 'title' | 'status'>('lastModified');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list'); // Default to list view
 
   // Career Report Sidebar state
   const [showCareerReportSidebar, setShowCareerReportSidebar] = useState(false);
@@ -628,7 +631,7 @@ const Canvas: React.FC = () => {
               cv.metadata?.isMaster === 'true' ||
               cv.isMaster === true ||
               cv.metadata?.createdVia === 'ai-career-report',
-            atsScore: cv.metadata?.atsScore, // Include ATS score
+            atsScore: cv.metadata?.atsScore || cv.atsScore || cv.cvData?.analysis?.score, // Include ATS score
             metadata: cv.metadata // Include full metadata
           } as CV;
         });
@@ -801,7 +804,7 @@ const Canvas: React.FC = () => {
             window.open(`/api/application-journey/${journey.journeyId}/download?type=all`, '_blank');
           } else {
             // No journey, just download CV
-              window.open(`/api/cvs/${selectedCVForDownload.id}/download`, '_blank');
+            window.open(`/api/cvs/${selectedCVForDownload.id}/download`, '_blank');
           }
         }
       } else if (selectedCoverLetterForDownload) {
@@ -2059,15 +2062,15 @@ const Canvas: React.FC = () => {
               <button
                 onClick={() => setActiveTab('cv')}
                 className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'cv'
-                    ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
-                    : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
+                  : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 CVs
                 <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === 'cv'
-                    ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                   }`}>
                   {cvs.length}
                 </span>
@@ -2075,15 +2078,15 @@ const Canvas: React.FC = () => {
               <button
                 onClick={() => setActiveTab('coverLetter')}
                 className={`flex items-center px-4 py-3 text-sm font-medium transition-all duration-200 rounded-none border-b-2 ${activeTab === 'coverLetter'
-                    ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
-                    : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
+                  ? 'text-lime-700 dark:text-lime-400 border-lime-500 dark:border-lime-400'
+                  : 'text-gray-600 dark:text-gray-300 border-transparent hover:text-gray-900 dark:hover:text-white'
                   }`}
               >
                 <PenTool className="h-4 w-4 mr-2" />
                 Cover Letters
                 <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${activeTab === 'coverLetter'
-                    ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                   }`}>
                   {coverLetters.length}
                 </span>
@@ -2094,6 +2097,30 @@ const Canvas: React.FC = () => {
 
         {/* Right Side - Sort and Clean Unlinked Buttons */}
         <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-gray-100 dark:bg-[#232f1c] rounded-lg p-1 border border-gray-300 dark:border-lime-500/20">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'list'
+                ? 'bg-white dark:bg-lime-500/20 text-lime-700 dark:text-lime-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              title="List View"
+            >
+              <LayoutList size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-md transition-all ${viewMode === 'grid'
+                ? 'bg-white dark:bg-lime-500/20 text-lime-700 dark:text-lime-400 shadow-sm'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              title="Grid View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+          </div>
+
           {/* Sort By Button */}
           <div className="relative" data-sort-dropdown>
             <button
@@ -2130,8 +2157,8 @@ const Canvas: React.FC = () => {
                         setShowSortDropdown(false);
                       }}
                       className={`w-full px-4 py-2 text-left text-sm transition-colors ${sortBy === option.value
-                          ? 'bg-lime-500/10 text-lime-700 dark:text-lime-300'
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        ? 'bg-lime-500/10 text-lime-700 dark:text-lime-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                     >
                       {option.label}
@@ -2170,162 +2197,238 @@ const Canvas: React.FC = () => {
         <div className="space-y-6">
 
 
-          {/* CV Grid */}
-          <div className="space-y-6">
 
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-              {/* Master CV Card - Always First */}
-              <MasterCVCardOverlay
-                onEditMasterCV={handleEditMasterCV}
-                onDuplicateMasterCV={handleDuplicateMasterCV}
-                userId={getUserIdForAPI(user) || ''}
-                onToggleStar={toggleStar}
-                onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
-                masterCVData={masterCVs.length > 0 ? {
-                  id: masterCVs[0].id,
-                  title: masterCVs[0].title,
-                  lastModified: masterCVs[0].lastModified,
-                  status: masterCVs[0].status,
-                  isMaster: true,
-                  cvData: masterCVs[0].cvData,
-                  // Use templateData if available (from API summary projection), otherwise use template object
-                  template: masterCVs[0].templateData || (masterCVs[0].template && typeof masterCVs[0].template === 'object'
-                    ? masterCVs[0].template
-                    : (masterCVs[0].templateId ? {
-                      _id: masterCVs[0].templateId,
-                      name: masterCVs[0].templateName || 'Default Template',
-                      globalStyles: {},
-                      availableSections: []
-                    } : null)),
-                  templateId: masterCVs[0].templateId,
-                  templateName: masterCVs[0].templateName,
-                  isStarred: masterCVs[0].isStarred,
-                  thumbnail: masterCVs[0].thumbnail || '',
-                  metadata: masterCVs[0].metadata
-                } : null}
-              />
-
-              {loading ? (
-                // Loading skeleton
-                Array.from({ length: 4 }).map((_, index) => (
-                  <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl p-6 animate-pulse border border-gray-200 dark:border-gray-700">
-                    <div className="h-48 bg-gray-200 dark:bg-white/10 rounded-lg mb-4"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-white/10 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3"></div>
-                  </div>
-                ))
-              ) : (
-                // CV Cards with Overlay Design
-                filteredAndSortedCVs.length > 0 ? (
-                  filteredAndSortedCVs.map((cv, index) => {
-                    // Find linked journey for this CV (performance optimization - no API call per card)
-                    const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
-                    return (
-                      <CVCardOverlay
-                        key={cv.id || `cv-${index}`}
-                        cv={{
-                          id: cv.id,
-                          title: cv.title,
-                          lastModified: cv.lastModified,
-                          status: cv.status,
-                          views: cv.views,
-                          isStarred: cv.isStarred,
-                          thumbnail: cv.thumbnail,
-                          description: cv.description,
-                          cvData: cv.cvData,
-                          template: cv.template,
-                          completionPercentage: cv.completionPercentage,
-                          isMaster: cv.isMaster,
-                          journeyId: cv.journeyId,
-                          atsScore: cv.atsScore,
-                          metadata: cv.metadata
-                        }}
-                        linkedJourney={linkedJourney}
-                        onEdit={(cv) => { handleCVClick(cv as any); }}
-                        onDownload={(cv) => { handleDownloadCV(cv as any); }}
-                        onDelete={(cv) => { handleDeleteCV(cv as any); }}
-                        onToggleStar={toggleStar}
-                        onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
-                        onRename={(cvId, newTitle) => {
-                          setEditingTitle(newTitle);
-                          saveTitle(cvId);
-                        }}
-                        onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
-                        onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
-                        editingCVId={editingCVId}
-                        editingTitle={editingTitle}
-                        onStartEditing={(cv) => startEditing(cv as any)}
-                        onSaveTitle={saveTitle}
-                        onCancelEditing={cancelEditing}
-                      />
-                    );
-                  })
-                ) : searchQuery ? (
-                  // Only show empty state if there's a search query (filtered out all results)
-                  <div className="col-span-full flex flex-col items-center justify-center py-12 px-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
-                      <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
-                      <p className="text-gray-600 dark:text-gray-400">
-                        No CVs found.
-                      </p>
-                    </div>
-                  </div>
-                ) : null
+          {viewMode === 'list' ? (
+            <div className="space-y-6">
+              {/* Master CVs Section if any */}
+              {masterCVs.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Master CV</h3>
+                  <CVListView
+                    cvs={masterCVs}
+                    onEdit={(cv) => {
+                      // Handle Master CV edit redirect
+                      router.push(`/ai-career-report?editMaster=true&masterCVId=${cv.id}`);
+                    }}
+                    onDuplicate={handleDuplicateMasterCV}
+                    onDownload={(cv) => handleDownloadCV(cv as any)}
+                    onDelete={() => { /* Master CV usually not deleted here or logic specific */ }}
+                    onToggleStar={toggleStar}
+                    onViewReport={(cv) => handleViewCareerReport(cv as any)}
+                    onRename={(cvId, newTitle) => {
+                      setEditingTitle(newTitle);
+                      return saveTitle(cvId);
+                    }}
+                    editingCVId={editingCVId}
+                    editingTitle={editingTitle}
+                    onStartEditing={(cv) => startEditing(cv as any)}
+                    onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                    onCancelEditing={cancelEditing}
+                  />
+                </div>
               )}
+
+              {/* Regular CVs */}
+              <div className="space-y-3">
+                {masterCVs.length > 0 && <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">My CVs</h3>}
+                <CVListView
+                  cvs={filteredAndSortedCVs}
+                  onEdit={(cv) => handleCVClick(cv as any)}
+                  onDuplicate={(cv) => handleDuplicateCV(cv as any)}
+                  onDownload={(cv) => handleDownloadCV(cv as any)}
+                  onDelete={(cv) => handleDeleteCV(cv as any)}
+                  onToggleStar={toggleStar}
+                  onViewReport={(cv) => handleViewCareerReport(cv as any)}
+                  onRename={(cvId, newTitle) => {
+                    setEditingTitle(newTitle);
+                    return saveTitle(cvId);
+                  }}
+                  editingCVId={editingCVId}
+                  editingTitle={editingTitle}
+                  onStartEditing={(cv) => startEditing(cv as any)}
+                  onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                  onCancelEditing={cancelEditing}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            /* CV Grid */
+            <div className="space-y-6">
+
+              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+                {/* Master CV Card - Always First */}
+                <MasterCVCardOverlay
+                  onEditMasterCV={handleEditMasterCV}
+                  onDuplicateMasterCV={handleDuplicateMasterCV}
+                  userId={getUserIdForAPI(user) || ''}
+                  onToggleStar={toggleStar}
+                  onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
+                  masterCVData={masterCVs.length > 0 ? {
+                    id: masterCVs[0].id,
+                    title: masterCVs[0].title,
+                    lastModified: masterCVs[0].lastModified,
+                    status: masterCVs[0].status,
+                    isMaster: true,
+                    cvData: masterCVs[0].cvData,
+                    // Use templateData if available (from API summary projection), otherwise use template object
+                    template: masterCVs[0].templateData || (masterCVs[0].template && typeof masterCVs[0].template === 'object'
+                      ? masterCVs[0].template
+                      : (masterCVs[0].templateId ? {
+                        _id: masterCVs[0].templateId,
+                        name: masterCVs[0].templateName || 'Default Template',
+                        globalStyles: {},
+                        availableSections: []
+                      } : null)),
+                    templateId: masterCVs[0].templateId,
+                    templateName: masterCVs[0].templateName,
+                    isStarred: masterCVs[0].isStarred,
+                    thumbnail: masterCVs[0].thumbnail || '',
+                    metadata: masterCVs[0].metadata
+                  } : null}
+                />
+
+                {loading ? (
+                  // Loading skeleton
+                  Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="bg-white dark:bg-gray-800 rounded-2xl p-6 animate-pulse border border-gray-200 dark:border-gray-700">
+                      <div className="h-48 bg-gray-200 dark:bg-white/10 rounded-lg mb-4"></div>
+                      <div className="h-4 bg-gray-200 dark:bg-white/10 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 dark:bg-white/10 rounded w-2/3"></div>
+                    </div>
+                  ))
+                ) : (
+                  // CV Cards with Overlay Design
+                  filteredAndSortedCVs.length > 0 ? (
+                    filteredAndSortedCVs.map((cv, index) => {
+                      // Find linked journey for this CV (performance optimization - no API call per card)
+                      const linkedJourney = journeys.find(journey => journey.cvId === cv.id) || null;
+                      return (
+                        <CVCardOverlay
+                          key={cv.id || `cv-${index}`}
+                          cv={{
+                            id: cv.id,
+                            title: cv.title,
+                            lastModified: cv.lastModified,
+                            status: cv.status,
+                            views: cv.views,
+                            isStarred: cv.isStarred,
+                            thumbnail: cv.thumbnail,
+                            description: cv.description,
+                            cvData: cv.cvData,
+                            template: cv.template,
+                            completionPercentage: cv.completionPercentage,
+                            isMaster: cv.isMaster,
+                            journeyId: cv.journeyId,
+                            atsScore: cv.atsScore,
+                            metadata: cv.metadata
+                          }}
+                          linkedJourney={linkedJourney}
+                          onEdit={(cv) => { handleCVClick(cv as any); }}
+                          onDownload={(cv) => { handleDownloadCV(cv as any); }}
+                          onDelete={(cv) => { handleDeleteCV(cv as any); }}
+                          onToggleStar={toggleStar}
+                          onViewReport={(cv) => { handleViewCareerReport(cv as any); }}
+                          onRename={(cvId, newTitle) => {
+                            setEditingTitle(newTitle);
+                            saveTitle(cvId);
+                          }}
+                          onEditJourney={(cv, journey) => { handleEditJourney(cv as any, journey); }}
+                          onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                          editingCVId={editingCVId}
+                          editingTitle={editingTitle}
+                          onStartEditing={(cv) => startEditing(cv as any)}
+                          onSaveTitle={saveTitle}
+                          onCancelEditing={cancelEditing}
+                        />
+                      );
+                    })
+                  ) : searchQuery ? (
+                    // Only show empty state if there's a search query (filtered out all results)
+                    <div className="col-span-full flex flex-col items-center justify-center py-12 px-4">
+                      <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
+                        <FileText className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No CVs Found</h3>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          No CVs found.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* Cover Letter Content */
         <div className="space-y-6">
           {/* Cover Letter Grid */}
-          <div className="space-y-6">
+          {/* Cover Letter Grid */}
+          {viewMode === 'list' ? (
+            <CoverLetterListView
+              coverLetters={filteredAndSortedCoverLetters}
+              onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}&returnUrl=/dashboard/canvas`); }}
+              onDownload={handleDownloadCoverLetter}
+              onDelete={handleDeleteCoverLetter}
+              onToggleStar={toggleCoverLetterStar}
+              onRename={(id, newTitle) => {
+                setEditingCoverLetterTitle(newTitle);
+                return saveCoverLetterTitle(id);
+              }}
+              editingCoverLetterId={editingCoverLetterId}
+              editingTitle={editingCoverLetterTitle}
+              onStartEditing={startEditingCoverLetter}
+              onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
+              onCancelEditing={cancelEditingCoverLetter}
+            />
+          ) : (
+            <div className="space-y-6">
 
-            {filteredAndSortedCoverLetters.length > 0 ? (
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
-                {filteredAndSortedCoverLetters.map((coverLetter) => (
-                  <CoverLetterCardOverlay
-                    key={coverLetter.id}
-                    coverLetter={{
-                      id: coverLetter.id,
-                      title: coverLetter.title,
-                      lastModified: coverLetter.lastModified,
-                      status: coverLetter.status,
-                      content: coverLetter.content || '',
-                      isStarred: coverLetter.isStarred,
-                      views: coverLetter.views || 0,
-                      thumbnail: coverLetter.thumbnail || '',
-                      metadata: coverLetter.metadata
-                    }}
-                    onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}&returnUrl=/dashboard/canvas`); }}
-                    onDownload={handleDownloadCoverLetter}
-                    onDelete={handleDeleteCoverLetter}
-                    onToggleStar={toggleCoverLetterStar}
-                    onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
-                    editingCoverLetterId={editingCoverLetterId}
-                    editingTitle={editingCoverLetterTitle}
-                    onStartEditing={startEditingCoverLetter}
-                    onSaveTitle={saveCoverLetterTitle}
-                    onCancelEditing={cancelEditingCoverLetter}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-12 px-4">
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
-                  <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6">
-                    Create your first cover letter to get started.
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Cover letters are typically created when you start a job application journey.
-                  </p>
+              {filteredAndSortedCoverLetters.length > 0 ? (
+                <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+                  {filteredAndSortedCoverLetters.map((coverLetter) => (
+                    <CoverLetterCardOverlay
+                      key={coverLetter.id}
+                      coverLetter={{
+                        id: coverLetter.id,
+                        title: coverLetter.title,
+                        lastModified: coverLetter.lastModified,
+                        status: coverLetter.status,
+                        content: coverLetter.content || '',
+                        isStarred: coverLetter.isStarred,
+                        views: coverLetter.views || 0,
+                        thumbnail: coverLetter.thumbnail || '',
+                        metadata: coverLetter.metadata
+                      }}
+                      onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}&returnUrl=/dashboard/canvas`); }}
+                      onDownload={handleDownloadCoverLetter}
+                      onDelete={handleDeleteCoverLetter}
+                      onToggleStar={toggleCoverLetterStar}
+                      onTitleEdit={(id, newTitle) => setEditingCoverLetterTitle(newTitle)}
+                      editingCoverLetterId={editingCoverLetterId}
+                      editingTitle={editingCoverLetterTitle}
+                      onStartEditing={startEditingCoverLetter}
+                      onSaveTitle={saveCoverLetterTitle}
+                      onCancelEditing={cancelEditingCoverLetter}
+                    />
+                  ))}
                 </div>
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 px-4">
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 max-w-md w-full text-center">
+                    <MessageSquare className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No Cover Letters Found</h3>
+                    <p className="text-gray-600 dark:text-gray-400 mb-6">
+                      Create your first cover letter to get started.
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Cover letters are typically created when you start a job application journey.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
