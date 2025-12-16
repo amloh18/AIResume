@@ -1374,11 +1374,20 @@ const CVStudio: React.FC<CVStudioProps> = ({
           return;
         }
 
-        console.log('🔍 Studio - Starting cover letter save...', { coverLetterId, userId, coverLetterTitle });
+        // CRITICAL FIX: Use originalCoverLetterId state instead of coverLetterId prop
+        // This ensures we update existing cover letters even after mode switches
+        const activeCoverLetterIdForSave = originalCoverLetterId || coverLetterId;
+        console.log('🔍 Studio - Starting cover letter save...', {
+          activeCoverLetterIdForSave,
+          originalCoverLetterId,
+          coverLetterIdProp: coverLetterId,
+          userId,
+          coverLetterTitle
+        });
 
-        if (coverLetterId) {
-          console.log('🔍 Studio - Updating existing cover letter...');
-          const response = await fetch(`/api/cover-letters/${coverLetterId}`, {
+        if (activeCoverLetterIdForSave) {
+          console.log('🔍 Studio - Updating existing cover letter:', activeCoverLetterIdForSave);
+          const response = await fetch(`/api/cover-letters/${activeCoverLetterIdForSave}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -1387,7 +1396,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               title: coverLetterTitle,
               content: coverLetterData.content,
               status: 'draft',
-              cvId: cvId,
+              cvId: originalCvId || cvId,
               jobId: selectedJobId,
               metadata: coverLetterData.metadata || {}
             }),
@@ -1435,10 +1444,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
           return;
         }
 
-        console.log('🔍 Studio - Starting CV save...', { cvId, userId, cvTitle });
+        // CRITICAL FIX: Use originalCvId state instead of cvId prop
+        // This ensures we update existing CVs even after mode switches
+        const activeCvIdForSave = originalCvId || cvId;
+        console.log('🔍 Studio - Starting CV save...', {
+          activeCvIdForSave,
+          originalCvId,
+          cvIdProp: cvId,
+          userId,
+          cvTitle
+        });
 
-        if (cvId) {
-          console.log('🔍 Studio - Updating existing CV...');
+        if (activeCvIdForSave) {
+          console.log('🔍 Studio - Updating existing CV:', activeCvIdForSave);
           const updateData = {
             title: cvTitle,
             cvData: cvData,
@@ -1460,7 +1478,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           }
 
           try {
-            const updatedCV = await CVService.updateCV(cvId, updateData, userId || undefined);
+            const updatedCV = await CVService.updateCV(activeCvIdForSave, updateData, userId || undefined);
             setSaveStatus('saved');
             setLastSavedData(JSON.stringify(cvData));
 
@@ -1498,7 +1516,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                  cvId: cvId,
+                  cvId: activeCvIdForSave,
                   jobId: selectedJobId,
                   userId: userId
                 })
@@ -3319,18 +3337,19 @@ const CVStudio: React.FC<CVStudioProps> = ({
           await reloadCVData(existingCvId);
         }
 
-        // Find existing cover letter ID from multiple sources
+        // CRITICAL FIX: Prioritize freshJourneyData.coverLetterId as the SOURCE OF TRUTH
+        // This is the most recent data from database, loaded just moments ago
         const existingCoverLetterId = freshJourneyData?.coverLetterId ||
-          journeyInfo?.coverLetterId ||
           originalCoverLetterId ||
+          journeyInfo?.coverLetterId ||
           coverLetterId;
 
-        console.log('🔄 Switching to cover letter - Checking for existing cover letter:', {
-          freshJourneyDataCoverLetterId: freshJourneyData?.coverLetterId,
-          journeyInfoCoverLetterId: journeyInfo?.coverLetterId,
-          originalCoverLetterId,
-          coverLetterId,
-          finalExistingId: existingCoverLetterId
+        console.log('🔄 Switching to cover letter - Cover Letter ID Resolution:', {
+          SOURCE_OF_TRUTH_freshJourneyData: freshJourneyData?.coverLetterId,
+          fallback1_originalCoverLetterId: originalCoverLetterId,
+          fallback2_journeyInfoCoverLetterId: journeyInfo?.coverLetterId,
+          fallback3_coverLetterIdProp: coverLetterId,
+          FINAL_RESULT: existingCoverLetterId
         });
 
         // Determine final cover letter ID to use
@@ -3456,9 +3475,16 @@ const CVStudio: React.FC<CVStudioProps> = ({
           newParams.set('type', 'cv');
         }
 
-        // Find existing CV ID from fresh journey data FIRST
-        const existingCvId = freshJourneyData?.cvId || originalCvId || cvId;
-        console.log('🔄 Switching to CV - Found from journey:', existingCvId);
+        // CRITICAL FIX: Prioritize freshJourneyData.cvId as the SOURCE OF TRUTH
+        // This is the most recent data from database, loaded just moments ago
+        const existingCvId = freshJourneyData?.cvId || originalCvId || journeyInfo?.cvId || cvId;
+        console.log('🔄 Switching to CV - CV ID Resolution:', {
+          SOURCE_OF_TRUTH_freshJourneyData: freshJourneyData?.cvId,
+          fallback1_originalCvId: originalCvId,
+          fallback2_journeyInfoCvId: journeyInfo?.cvId,
+          fallback3_cvIdProp: cvId,
+          FINAL_RESULT: existingCvId
+        });
 
         // Remove coverLetterId param when in CV mode
         newParams.delete('coverLetterId');
@@ -3475,18 +3501,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
           // Reload CV data
           try {
             await reloadCVData(existingCvId);
-          } catch (error) {
-            console.error('❌ Error reloading CV, but continuing:', error);
-          }
-        } else if (journeyInfo?.cvId) {
-          // Use CV from journey
-          if (!currentJourneyId) {
-            // Only set cvId for standalone mode
-            newParams.set('cvId', journeyInfo.cvId);
-          }
-          setOriginalCvId(journeyInfo.cvId);
-          try {
-            await reloadCVData(journeyInfo.cvId);
+            console.log('✅ CV data reloaded for existing CV');
           } catch (error) {
             console.error('❌ Error reloading CV, but continuing:', error);
           }

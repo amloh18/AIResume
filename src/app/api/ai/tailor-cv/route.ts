@@ -54,31 +54,44 @@ export async function POST(request: NextRequest) {
 
         // Construct the prompt
         const prompt = `
-    You are an expert Senior HR Recruiter and CV Writer.
-    Your task is to TAILOR the candidate's CV specifically for the target job.
+**Role**: Senior Executive Career Architect & ATS Algorithm Expert.
+**Goal**: Transform a multi-section Master CV JSON into a Tailored CV JSON that positions the candidate as the "Ideal Hire" (Top 1% match) regardless of domain pivots, seniority gaps, or skill-set outliers.
 
-    TARGET JOB:
-    Title: ${jobTitle}
-    Company: ${company}
-    Description: ${jobDescription}
+### 1. LOGICAL GATES (PRIORITY EXECUTION)
+- **Tenure Protection**: Calculate (Current Year - Earliest Start Date). If total years < JD Requirement, you MUST include all roles (even outliers/internships). Never omit a role that contributes to the minimum duration threshold.
+- **Evidence Verification**: You are FORBIDDEN from adding technical tools (e.g., Python, SQL) not present in the Master CV. You may only use functional synonyms (e.g., "Data Cleaning" for "Data Governance").
+- **Reverse Chronology**: Maintain strict newest-to-oldest order for Experience, Projects, and Education.
 
-    CANDIDATE CV DATA (JSON):
-    ${JSON.stringify(cvData)}
+### 2. SECTION-SPECIFIC TAILORING
+- **Summary**: Write a 3-sentence "Hook." Sentence 1: Total years + target role title. Sentence 2: The "Bridge" between user skills and the JD's specific problem. Sentence 3: Alignment with company culture (e.g., "Simpler, Better, Faster").
+- **Work Experience**: Transform every bullet into: [Power Verb] + [JD Context] + [Quantifiable Result]. 
+    - *If Overskilled*: Focus on "Execution" and "Efficiency." 
+    - *If Underskilled*: Focus on "Learning Agility" and "Technical Logic Foundations."
+- **Projects**: Rewrite project descriptions to sound like professional business solutions. Prioritize projects that utilize tools mentioned in the JD.
+- **Education**: If the degree field is unrelated to the JD, highlight relevant modules, thesis topics, or honors that prove analytical or logical rigor.
 
-    INSTRUCTIONS:
-    1. **Filter Experience**: Remove work experiences that are completely irrelevant to the target role, or very old (>15 years) unless they show critical leadership or foundational skills relevant to the job. Keep the most recent and relevant roles.
-    2. **Enhance Bullet Points**: Rewrite bullet points for the remaining roles.
-       - Use the Challenge-Action-Result (CAR) framework.
-       - Incorporate keywords from the Job Description naturally.
-       - Focus on achievements and impact (quantifiable metrics).
-       - Remove generic responsibilities.
-    3. **Skill Gap Analysis**: Identify skills in the JD that the candidate likely possesses based on their experience but hasn't explicitly listed. Add these to the "skills" section if appropriate.
-    4. **Professional Summary**: Rewrite the summary to pitch the candidate specifically for this role, highlighting the match between their experience and the JD requirements.
-    5. **HR Perspective**: Ensure the tone is professional, confident, and optimized for how an HR manager scans a CV (clear headings, impact-first).
+### 3. DOMAIN & SENIORITY "SPIN" (OUTLIER HANDLING)
+- **Functional Translation**: For career pivoters, translate domain-specific tasks into universal business value. 
+    - (Example: Web Dev "API Integration" -> "Streamlined cross-platform data connectivity and integrity").
+- **Level Calibration**: Match the "Seniority Vibe." For Junior roles, emphasize "Hands-on tools" and "supporting teams." For Senior roles, emphasize "ROI," "Scalability," and "Stakeholder influence."
 
-    OUTPUT FORMAT:
-    Return ONLY the valid JSON of the tailored CV data. The structure must match the input JSON structure exactly (UnifiedCVDataStructure).
-    Do not include any markdown formatting or explanation. Just the JSON.
+### 4. OUTPUT CONSTRAINTS (API STABILITY)
+- **Zero Prose**: Return ONLY valid JSON. No conversational text.
+- **Schema Lock**: Maintain exact 1:1 key-value mapping from the Input JSON.
+- **Title Optimization**: Adjust titles slightly to match JD nomenclature ONLY if truthful (e.g., "Analyst" to "Sales Data Analyst").
+- **Metric Retention**: 100% of numerical data from the Master CV must be carried over.
+
+TARGET JOB:
+Title: ${jobTitle}
+Company: ${company}
+Description: ${jobDescription}
+
+CANDIDATE CV DATA (JSON):
+${JSON.stringify(cvData)}
+
+OUTPUT FORMAT:
+Return ONLY the valid JSON of the tailored CV data. The structure must match the input JSON structure exactly (UnifiedCVDataStructure).
+Do not include any markdown formatting or explanation. Just the JSON.
     `;
 
         const aiResponse = await callAIWithFallback({

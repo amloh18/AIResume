@@ -342,9 +342,33 @@ function createCoverLetterPrompt({
 - Connect education and projects to job requirements
 - Show passion and commitment to the field`;
 
-  return `You are an expert Senior HR Recruiter and Career Marketing Specialist. Your goal is to write a highly persuasive, tailored cover letter that positions the candidate as the ideal fit for the role.
+  return `**Role**: Expert Career Biographer & Persuasive Storyteller.
+**Goal**: Write a humanized, compelling cover letter (300-400 words) that bridges the gap between a Master CV and a Job Description (JD).
 
-${experienceGuidance}
+### 1. THE "HUMAN" STYLE PROTOCOL (CRITICAL)
+- **Avoid AI-isms**: Do not use "buzzwords" typically associated with LLMs (e.g., avoid: "delve," "tapestry," "pave the way," "multifaceted," "in today's digital landscape," "unlocking," "vibrant," "testament").
+- **Sentence Variance**: Use a mix of short, punchy sentences and longer, complex ones. This creates a natural human "rhythm."
+- **First-Person Narrative**: Write with a clear "voice." Instead of "The applicant possesses experience in...", use "I've spent the last two years learning how to..."
+- **Authentic Transitions**: Use natural transitions (e.g., "That's why I'm so drawn to ${company}," or "Beyond the technical side of things...") instead of formal "Furthermore" or "Moreover."
+
+### 2. THE "IDEAL CANDIDATE" STRATEGY
+- **The Gap Bridge**: Address domain shifts or skill gaps by focusing on "Functional Logic." If a tool is missing, highlight the "Technical Foundation" that ensures rapid mastery.
+- **The Personal Touch**: 
+    - **Active Projects**: Mention one specific project the user is "Currently working on" from the Master CV. Explain the *excitement* behind it.
+    - **Interests**: Connect a personal interest to a professional trait (e.g., "My background in competitive sports taught me the discipline I now bring to meeting sales targets").
+
+### 3. COMPOSITION STRUCTURE
+- **The Hook**: Start with a specific observation about the company (from the JD's "About Us"). Show them you've actually read their mission.
+- **Pillar 1 (The Value)**: Share a "mini-story" of a win from the CV. Focus on the *human impact* and the result (%, $).
+- **Pillar 2 (The Bridge & Project)**: "Right now, I'm deep-diving into [Project Name] because I'm fascinated by [Topic]..." Link this to the JD's requirements.
+- **Pillar 3 (The Culture)**: Use the company's internal language (e.g., "Simpler, Better, Faster") to show you're already one of them.
+- **The CTA**: Close with a direct, confident invitation to talk, focused on solving a specific company problem.
+
+### 4. TECHNICAL CONSTRAINTS
+- **Fact Anchoring**: Only use data present in the Master CV. No hallucinations.
+- **Tone**: Entrepreneurial, warm, and professional.
+- **Zero Prose**: Return ONLY the letter text.
+- **Placeholders**: Use \`[Name]\`, \`[Date]\`, \`[Phone]\`, and \`[Email]\`.
 
 --- JOB DESCRIPTION (JD) ---
 Job Title: ${jobTitle}
@@ -370,22 +394,8 @@ ${skillsText}
 --- SKILL GAP ANALYSIS (USE TO STRATEGIZE) ---
 ${skillsGap.skills ? skillsGap.skills.map((skill: any) => `- ${skill.name}: ${skill.gapInsight || 'N/A'}`).join('\n') : 'No specific gaps identified.'}
 
-INSTRUCTIONS:
-1. **HR Perspective**: Write from the perspective of what a recruiter wants to see: immediate value, cultural fit, and specific problem-solving abilities.
-2. **Address Skill Gaps**: If the analysis identifies a gap (e.g., missing a specific tool), do NOT highlight the lack of it. Instead, emphasize *transferable skills* or *related experience* that demonstrates the ability to quickly learn or adapt. If the candidate has the skill but it wasn't explicitly listed, infer it from their experience if reasonable.
-3. **Filter & Prioritize**: Do not just summarize the CV. Select only the 2-3 most relevant experiences or projects that directly address the top requirements in the JD. Ignore irrelevant experience.
-4. **Quantifiable Impact**: Use numbers and metrics from the CV to prove claims (e.g., "Increased revenue by 20%").
-5. **Structure (EXACTLY 3 Paragraphs)**:
-   - **Para 1 (The Hook)**: State enthusiasm for the role/company and link a major achievement to the company's goals.
-   - **Para 2 (The Proof)**: Deep dive into relevant experience. Connect past actions to future value for *this* company. Address key JD requirements.
-   - **Para 3 (The Close)**: Reiterate fit, express confidence, and include a call to action.
+EXPERIENCE LEVEL: ${experienceLevel}
+${experienceGuidance}
 
-CONSTRAINTS:
-- EXACTLY 3 paragraphs.
-- NO salutations (e.g., "Dear Hiring Manager") or closings (e.g., "Sincerely").
-- NO placeholders like "[Your Name]".
-- NO generic fluff ("I am a hard worker").
-- Tone: Professional, confident, ${experienceLevel}.
-
-Output ONLY the 3 body paragraphs.`;
+Output ONLY the cover letter text (300-400 words). No salutations (e.g., "Dear Hiring Manager") or closings (e.g., "Sincerely"). Use placeholders [Name], [Date], [Phone], [Email] where needed.`;
 }
