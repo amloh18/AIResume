@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
-import { 
+import {
   BarChart3, Target, FileText,
   Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star
 } from 'lucide-react';
@@ -47,7 +47,7 @@ const OptimizedNavigation: React.FC = () => {
   } | null>(null);
   const [creditInfoLoading, setCreditInfoLoading] = useState(true);
   const [isAnyPaymentModalOpen, setIsAnyPaymentModalOpen] = useState(false);
-  
+
   // Update time every minute for day pass countdown
   useEffect(() => {
     const interval = setInterval(() => {
@@ -101,15 +101,15 @@ const OptimizedNavigation: React.FC = () => {
     const checkModalOpen = () => {
       // Check for the modal backdrop/overlay - UniversalPaymentModal uses z-[99999]
       // Look for elements with z-index 99999 or the specific backdrop classes
-      const modalBackdrop = 
+      const modalBackdrop =
         document.querySelector('[class*="z-[99999]"]') ||
-        document.querySelector('[class*="z-[9999]"]') || 
+        document.querySelector('[class*="z-[9999]"]') ||
         document.querySelector('[style*="z-index: 9999"]') ||
         document.querySelector('[style*="z-index:9999"]') ||
         // Also check for the specific backdrop blur class used by UniversalPaymentModal
-        (document.querySelector('.backdrop-blur-sm') && 
-         document.querySelector('.fixed.inset-0')?.getAttribute('style')?.includes('z-index: 9999'));
-      
+        (document.querySelector('.backdrop-blur-sm') &&
+          document.querySelector('.fixed.inset-0')?.getAttribute('style')?.includes('z-index: 9999'));
+
       setIsAnyPaymentModalOpen(!!modalBackdrop);
     };
 
@@ -177,7 +177,7 @@ const OptimizedNavigation: React.FC = () => {
     };
 
     window.addEventListener('creditsUpdated', handleCreditUpdate);
-    
+
     return () => {
       window.removeEventListener('creditsUpdated', handleCreditUpdate);
     };
@@ -194,7 +194,7 @@ const OptimizedNavigation: React.FC = () => {
 
     const startPolling = () => {
       if (pollInterval) return;
-      
+
       pollInterval = setInterval(() => {
         if (isDocumentVisible()) {
           fetchCreditInfo();
@@ -239,7 +239,7 @@ const OptimizedNavigation: React.FC = () => {
       '/dashboard/canvas',
       '/dashboard/settings'
     ];
-    
+
     // Prefetch all dashboard routes for instant navigation
     routesToPrefetch.forEach(route => {
       router.prefetch(route);
@@ -263,12 +263,12 @@ const OptimizedNavigation: React.FC = () => {
   const handleNavigation = useCallback((sectionId: string) => {
     // Update active section immediately for instant feedback
     setActiveSection(sectionId);
-    
+
     // Close mobile sidebar if open
     if (isMobileMenuOpen) {
       setIsOpen(false);
     }
-    
+
     // Navigate immediately
     const routes = {
       'analytics': '/dashboard',
@@ -276,7 +276,7 @@ const OptimizedNavigation: React.FC = () => {
       'canvas': '/dashboard/canvas',
       'settings': '/dashboard/settings'
     };
-    
+
     const targetRoute = routes[sectionId as keyof typeof routes];
     if (targetRoute) {
       // Prefetch route if not already prefetched
@@ -311,31 +311,31 @@ const OptimizedNavigation: React.FC = () => {
   };
 
   const sections = [
-    { 
-      id: 'analytics', 
-      name: 'Analytics', 
-      icon: BarChart3, 
+    {
+      id: 'analytics',
+      name: 'Analytics',
+      icon: BarChart3,
       description: 'Progress Tracking',
       route: '/dashboard'
     },
-    { 
-      id: 'jobs', 
-      name: 'Tracker', 
-      icon: Briefcase, 
+    {
+      id: 'jobs',
+      name: 'Tracker',
+      icon: Briefcase,
       description: 'Application tracking with CV journeys',
       route: '/dashboard/tracker'
     },
-    { 
-      id: 'canvas', 
-      name: 'CV Studio', 
-      icon: FileText, 
+    {
+      id: 'canvas',
+      name: 'CV Studio',
+      icon: FileText,
       description: 'Saved CVs/ CL and Reports',
       route: '/dashboard/canvas'
     },
-    { 
-      id: 'extension', 
-      name: 'Chrome Extension', 
-      icon: ExternalLink, 
+    {
+      id: 'extension',
+      name: 'Chrome Extension',
+      icon: ExternalLink,
       description: 'Save jobs from any site',
       route: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
       external: true
@@ -359,9 +359,9 @@ const OptimizedNavigation: React.FC = () => {
         >
           {/* Logo Icon */}
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg bg-white dark:bg-[#1a2015] p-1">
-            <Image 
-              src="/images/logo.png" 
-              alt="CVCircle Logo" 
+            <Image
+              src="/images/logo.png"
+              alt="CVCircle Logo"
               width={32}
               height={32}
               className="w-full h-full object-contain"
@@ -375,7 +375,7 @@ const OptimizedNavigation: React.FC = () => {
             <span className="text-2xl font-bold text-lime-500 dark:text-[rgb(129,255,0)]">CV</span><span className="text-2xl font-bold text-gray-600 dark:text-gray-300">Circle</span>
           </div>
         </motion.button>
-        
+
         {/* Close Button - Only visible on mobile */}
         <motion.button
           onClick={() => setIsOpen(false)}
@@ -394,39 +394,38 @@ const OptimizedNavigation: React.FC = () => {
           const Icon = section.icon;
           const isActive = activeSection === section.id;
           const isExternal = (section as any).external === true;
-          
+
           const Component = isExternal ? motion.a : motion.button;
-          const componentProps = isExternal 
+          const componentProps = isExternal
             ? {
-                href: section.route,
-                target: '_blank',
-                rel: 'noopener noreferrer',
-                onClick: () => {
-                  if (isMobileMenuOpen) {
-                    setIsOpen(false);
-                  }
+              href: section.route,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+              onClick: () => {
+                if (isMobileMenuOpen) {
+                  setIsOpen(false);
                 }
               }
+            }
             : {
-                onClick: () => handleNavigation(section.id),
-                onMouseEnter: () => {
-                  // Prefetch route and preload component on hover for instant navigation (only for internal routes)
-                  if (!isExternal && section.route.startsWith('/')) {
-                    router.prefetch(section.route);
-                    preloadOnHover(section.id);
-                  }
+              onClick: () => handleNavigation(section.id),
+              onMouseEnter: () => {
+                // Prefetch route and preload component on hover for instant navigation (only for internal routes)
+                if (!isExternal && section.route.startsWith('/')) {
+                  router.prefetch(section.route);
+                  preloadOnHover(section.id);
                 }
-              };
-          
+              }
+            };
+
           return (
             <Component
               key={section.id}
               {...componentProps}
-              className={`w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start ${
-                isActive
-                  ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] text-black dark:text-black'
-                  : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
-              }`}
+              className={`w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start ${isActive
+                ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] text-black dark:text-black'
+                : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -436,11 +435,10 @@ const OptimizedNavigation: React.FC = () => {
                   {section.name}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
-                <div className={`text-sm lg:text-xs truncate mt-0.5 ${
-                  isActive
-                    ? 'text-black dark:text-black'
-                    : 'text-gray-500 dark:text-gray-400'
-                }`}>
+                <div className={`text-sm lg:text-xs truncate mt-0.5 ${isActive
+                  ? 'text-black dark:text-black'
+                  : 'text-gray-500 dark:text-gray-400'
+                  }`}>
                   {section.description}
                 </div>
               </div>
@@ -478,7 +476,7 @@ const OptimizedNavigation: React.FC = () => {
       {(() => {
         const planStatus = userData?.subscription?.status || 'active';
         const isPastDue = planStatus === 'past_due' || planStatus === 'unpaid';
-        
+
         if (isPastDue) {
           return (
             <div className="px-4 pb-3">
@@ -493,7 +491,7 @@ const OptimizedNavigation: React.FC = () => {
         return null;
       })()}
 
-      {/* Membership Card - Persistent for free and day pass only */}
+      {/* Membership Card - Show for all users on 2xl+ screens */}
       {!showSubscriptionModal && !isAnyPaymentModalOpen && (
         <div className="px-4 pb-3">
           {(() => {
@@ -501,49 +499,48 @@ const OptimizedNavigation: React.FC = () => {
             const subscription = billingData?.subscription;
             const currentPlan = subscription?.planKey || userData?.subscription?.planKey || userData?.currentPlanKey || 'free';
             const planStatus = subscription?.status || userData?.subscription?.status || 'active';
-            
+
             // Don't show membership card if subscription is past_due (PaymentPastDueBanner handles that)
             if (planStatus === 'past_due' || planStatus === 'unpaid') {
               return null;
             }
-          
-          // Don't show card if credit info is still loading or not available
-          if (creditInfoLoading || !creditInfo) {
-            return null;
-          }
-          
-          // Calculate time remaining for day pass (updates with currentTime state)
-          const getTimeRemaining = () => {
-            if (currentPlan !== 'day_pass') return null;
-            
-            const accessExpiresAt = userData?.subscription?.accessExpiresAt;
-            if (!accessExpiresAt) return null;
-            
-            const expiryDate = new Date(accessExpiresAt);
-            const diffTime = expiryDate.getTime() - currentTime.getTime();
-            
-            if (diffTime <= 0) return { hours: 0, minutes: 0 };
-            
-            const hours = Math.floor(diffTime / (1000 * 60 * 60));
-            const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
-            
-            return { hours, minutes };
-          };
-          
-          const timeRemaining = getTimeRemaining();
-          const isDayPass = currentPlan === 'day_pass';
-          const isExpired = isDayPass && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
-          
-          // Urgency indicators
-          const isUrgent = isDayPass && timeRemaining && timeRemaining.hours < 3;
-          
-          // Use the utility function to get plan display name
-          const planDisplayName = (planKey: string) => {
-            return getPlanName(planKey as any);
-          };
 
-          // Free plan card
-          if (currentPlan === 'free') {
+            // Don't show card if credit info is still loading or not available
+            if (creditInfoLoading || !creditInfo) {
+              return null;
+            }
+
+            // Calculate time remaining for day pass (updates with currentTime state)
+            const getTimeRemaining = () => {
+              if (currentPlan !== 'day_pass') return null;
+
+              const accessExpiresAt = userData?.subscription?.accessExpiresAt;
+              if (!accessExpiresAt) return null;
+
+              const expiryDate = new Date(accessExpiresAt);
+              const diffTime = expiryDate.getTime() - currentTime.getTime();
+
+              if (diffTime <= 0) return { hours: 0, minutes: 0 };
+
+              const hours = Math.floor(diffTime / (1000 * 60 * 60));
+              const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+
+              return { hours, minutes };
+            };
+
+            const timeRemaining = getTimeRemaining();
+            const isDayPass = currentPlan === 'day_pass';
+            const isExpired = isDayPass && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
+
+            // Urgency indicators
+            const isUrgent = isDayPass && timeRemaining && timeRemaining.hours < 3;
+
+            // Use the utility function to get plan display name
+            const planDisplayName = (planKey: string) => {
+              return getPlanName(planKey as any);
+            };
+
+            // Common usage data
             const remaining = creditInfo.remaining;
             const limit = creditInfo.limit;
             const isUnlimited = limit === -1;
@@ -551,233 +548,301 @@ const OptimizedNavigation: React.FC = () => {
             const used = creditInfo.used !== undefined
               ? creditInfo.used
               : Math.max(0, (limit > -1 ? limit - remaining : 0));
+            const totalCreated = creditInfo.totalCreated ?? used ?? 0;
             const progressPercent = !isUnlimited && limit > 0
               ? Math.min(100, (used / limit) * 100)
               : 0;
-            
-            return (
-              <div className="hidden 2xl:block rounded-2xl p-3 text-white border-2 border-white/20" style={{ backgroundColor: '#603a86' }}>
-                <div className="text-sm font-semibold mb-2">
-                  Your Free Plan
-                </div>
+            const nextReset = creditInfo.nextResetDate ? new Date(creditInfo.nextResetDate) : null;
 
-                {!isUnlimited && limit > 0 && (
-                  <div className="mb-3">
-                    <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
-                      <span>Credits used</span>
-                      <span>{used}/{limit}</span>
-                    </div>
-                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progressPercent}%` }}
-                        transition={{ duration: 0.5 }}
-                        className="h-2 bg-white rounded-full"
-                      />
-                    </div>
+            // Free plan card
+            if (currentPlan === 'free') {
+              return (
+                <div className="hidden 2xl:block rounded-2xl p-3 text-white border-2 border-white/20" style={{ backgroundColor: '#603a86' }}>
+                  <div className="text-sm font-semibold mb-2">
+                    Your Free Plan
                   </div>
-                )}
-                
-                {!hasCredits && (
-                  <div className="text-xs text-yellow-300 mb-2 font-medium">
-                    ⚠️ Credits exhausted. Upgrade to continue creating jobs.
+
+                  {!isUnlimited && limit > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
+                        <span>Credits used</span>
+                        <span>{used}/{limit}</span>
+                      </div>
+                      <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPercent}%` }}
+                          transition={{ duration: 0.5 }}
+                          className="h-2 bg-white rounded-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!hasCredits && (
+                    <div className="text-xs text-yellow-300 mb-2 font-medium">
+                      ⚠️ Credits exhausted. Upgrade to continue creating jobs.
+                    </div>
+                  )}
+
+                  <div className="text-xs font-semibold mb-1.5">
+                    Go Pro to get:
                   </div>
-                )}
-                
-                <div className="text-xs font-semibold mb-1.5">
-                  Go Pro to get:
+
+                  <ul className="text-xs text-white/90 space-y-0.5 mb-3">
+                    <li>• Unlimited job creation</li>
+                    <li>• Unlimited CVs & cover letters</li>
+                    <li>• Unlimited ATS checks per job</li>
+                    <li>• Premium templates</li>
+                    <li>• Priority support</li>
+                  </ul>
+
+                  <div className="space-y-2">
+                    <motion.button
+                      onClick={() => {
+                        setPreselectedPlanKey('day_pass');
+                        setShowSubscriptionModal(true);
+                      }}
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Star className="w-3 h-3" />
+                      Buy Day Pass
+                    </motion.button>
+
+                    <motion.button
+                      onClick={() => {
+                        setPreselectedPlanKey('pro_monthly');
+                        setShowSubscriptionModal(true);
+                      }}
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      Go Monthly
+                    </motion.button>
+
+                    <motion.button
+                      onClick={() => {
+                        setPreselectedPlanKey(undefined);
+                        setShowSubscriptionModal(true);
+                      }}
+                      className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Zap className="w-3 h-3" />
+                      View All Plans
+                    </motion.button>
+                  </div>
                 </div>
-                
-                <ul className="text-xs text-white/90 space-y-0.5 mb-3">
-                  <li>• Unlimited job creation</li>
-                  <li>• Unlimited CVs & cover letters</li>
-                  <li>• Unlimited ATS checks per job</li>
-                  <li>• Premium templates</li>
-                  <li>• Priority support</li>
-                </ul>
-                
-                <div className="space-y-2">
+              );
+            }
+
+            // Day pass card
+            if (currentPlan === 'day_pass') {
+              return (
+                <motion.div
+                  className={`hidden 2xl:block bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
+                  animate={isUrgent ? {
+                    boxShadow: ['0 0 0px rgba(239, 68, 68, 0.4)', '0 0 12px rgba(239, 68, 68, 0.6)', '0 0 0px rgba(239, 68, 68, 0.4)']
+                  } : {}}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-1.5">
+                      {isUrgent && <AlertCircle className="w-3.5 h-3.5 animate-pulse" />}
+                      <div className="text-sm font-semibold">
+                        Day Pass
+                      </div>
+                    </div>
+                    {timeRemaining && (
+                      <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${isUrgent ? 'bg-red-400/30' : 'bg-white/20'
+                        }`}>
+                        <Clock className="w-3 h-3" />
+                        <span>
+                          {isExpired ? 'Expired' : `${timeRemaining.hours}h ${timeRemaining.minutes}m`}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-xs text-white/95 mb-2 leading-relaxed">
+                    <span>We have created tailored CVs/CLs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
+                  </div>
+
+                  {!isUnlimited && limit > 0 && (
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between text-[11px] text-white/85 mb-1">
+                        <span>Credits used</span>
+                        <span>{used}/{limit}</span>
+                      </div>
+                      <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${progressPercent}%` }}
+                          transition={{ duration: 0.5 }}
+                          className="h-2 bg-white rounded-full"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {!hasCredits && !isExpired && (
+                    <div className="text-xs text-yellow-200 mb-2 font-medium">
+                      ⚠️ Credits exhausted. Upgrade to continue.
+                    </div>
+                  )}
+
+                  <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
+                    {isUrgent ? (
+                      <span className="font-medium">Need your plan to last for a month? Monthly or quarterly plans keep you covered.</span>
+                    ) : (
+                      <span>Job searching was never easier. Upgrade to monthly or quarterly plans for longer access.</span>
+                    )}
+                  </div>
+
                   <motion.button
-                    onClick={() => {
-                      setPreselectedPlanKey('day_pass');
-                      setShowSubscriptionModal(true);
-                    }}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+                    onClick={() => setShowSubscriptionModal(true)}
+                    className={`w-full text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${isUrgent
+                      ? 'bg-white text-red-600 hover:bg-red-50 shadow-lg'
+                      : 'bg-white/20 hover:bg-white/30'
+                      }`}
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                   >
-                    <Star className="w-3 h-3" />
-                    Buy Day Pass
+                    <Zap className="w-3 h-3" />
+                    {isUrgent ? 'Upgrade Now' : 'Upgrade'}
                   </motion.button>
-                  
+                </motion.div>
+              );
+            }
+
+            // Monthly plan card (with upsell)
+            if (currentPlan === 'pro_monthly') {
+              return (
+                <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-2 border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold">Monthly Plan</div>
+                      <div className="text-xs text-white/80">Pro subscriber</div>
+                    </div>
+                    {nextReset && (
+                      <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+                        Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/15 rounded-xl p-3 mb-2">
+                    <div className="text-xs text-white/80 mb-0.5">
+                      Jobs created this month
+                    </div>
+                    <div className="text-xl font-bold">
+                      {totalCreated}
+                    </div>
+                    <div className="text-[10px] text-white/70 mt-0.5">
+                      Unlimited credits
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-white/90 mb-2.5 leading-relaxed">
+                    <span className="font-medium">💡 Save up to 40% with quarterly or yearly plans!</span>
+                  </div>
+
                   <motion.button
-                    onClick={() => {
-                      setPreselectedPlanKey('pro_monthly');
-                      setShowSubscriptionModal(true);
-                    }}
+                    onClick={() => setShowSubscriptionModal(true)}
                     className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.97 }}
                   >
                     <Zap className="w-3 h-3" />
-                    Go Monthly
-                  </motion.button>
-                  
-                  <motion.button
-                    onClick={() => {
-                      setPreselectedPlanKey(undefined);
-                      setShowSubscriptionModal(true);
-                    }}
-                    className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    <Zap className="w-3 h-3" />
-                    Upgrade
+                    Upgrade & Save
                   </motion.button>
                 </div>
-              </div>
-            );
-          }
-          
-          // Only show Day Pass card if the current plan is actually day_pass
-          if (currentPlan !== 'day_pass') {
+              );
+            }
+
+            // Quarterly plan card (no upsell)
+            if (currentPlan === 'pro_quarterly') {
+              return (
+                <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white border-2 border-white/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold">Quarterly Plan</div>
+                      <div className="text-xs text-white/80">Pro subscriber</div>
+                    </div>
+                    {nextReset && (
+                      <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+                        Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/15 rounded-xl p-3 mb-2">
+                    <div className="text-xs text-white/80 mb-0.5">
+                      Jobs created this quarter
+                    </div>
+                    <div className="text-xl font-bold">
+                      {totalCreated}
+                    </div>
+                    <div className="text-[10px] text-white/70 mt-0.5">
+                      Unlimited credits
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-white/90 leading-relaxed">
+                    <span>Quarterly plan • Unlimited job creation & CV/CL generation</span>
+                  </div>
+                </div>
+              );
+            }
+
+            // Yearly plan card (no upsell, best value badge)
+            if (currentPlan === 'pro_yearly') {
+              return (
+                <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-2 border-amber-300/50 relative overflow-hidden">
+                  {/* Best Value Badge */}
+                  <div className="absolute -right-8 top-2 bg-white/20 text-white text-[9px] font-bold px-8 py-0.5 rotate-45 transform">
+                    BEST VALUE
+                  </div>
+
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-semibold">Yearly Plan</div>
+                      <div className="text-xs text-white/80">Pro subscriber</div>
+                    </div>
+                    {nextReset && (
+                      <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+                        Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white/15 rounded-xl p-3 mb-2">
+                    <div className="text-xs text-white/80 mb-0.5">
+                      Jobs created this year
+                    </div>
+                    <div className="text-xl font-bold">
+                      {totalCreated}
+                    </div>
+                    <div className="text-[10px] text-white/70 mt-0.5">
+                      Unlimited credits
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-white/90 leading-relaxed">
+                    <span>Annual plan • Best value with unlimited access all year</span>
+                  </div>
+                </div>
+              );
+            }
+
+            // Fallback for any other plan types
             return null;
-          }
-          
-          // Day pass card
-          const dayPassRemaining = creditInfo.remaining;
-          const dayPassLimit = creditInfo.limit;
-          const dayPassIsUnlimited = dayPassLimit === -1;
-          const dayPassHasCredits = dayPassIsUnlimited || dayPassRemaining > 0;
-          const dayPassUsed = creditInfo.used !== undefined
-            ? creditInfo.used
-            : Math.max(0, (dayPassLimit > -1 ? dayPassLimit - dayPassRemaining : 0));
-          const dayPassProgress = !dayPassIsUnlimited && dayPassLimit > 0
-            ? Math.min(100, (dayPassUsed / dayPassLimit) * 100)
-            : 0;
-          
-          return (
-            <motion.div 
-              className={`bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
-              animate={isUrgent ? { 
-                boxShadow: ['0 0 0px rgba(239, 68, 68, 0.4)', '0 0 12px rgba(239, 68, 68, 0.6)', '0 0 0px rgba(239, 68, 68, 0.4)']
-              } : {}}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  {isUrgent && <AlertCircle className="w-3.5 h-3.5 animate-pulse" />}
-                  <div className="text-sm font-semibold">
-                    Day Pass
-                  </div>
-                </div>
-                {timeRemaining && (
-                  <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-                    isUrgent ? 'bg-red-400/30' : 'bg-white/20'
-                  }`}>
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      {isExpired ? 'Expired' : `${timeRemaining.hours}h ${timeRemaining.minutes}m`}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              <div className="text-xs text-white/95 mb-2 leading-relaxed">
-                {dayPassIsUnlimited ? (
-                  <span>We have created tailored CVs/CLs for <span className="font-bold">{creditInfo.totalCreated || dayPassUsed || 0}</span> {creditInfo.totalCreated === 1 || dayPassUsed === 1 ? 'job' : 'jobs'} for you.</span>
-                ) : (
-                  <span>We have created tailored CVs/CLs for <span className="font-bold">{creditInfo.totalCreated || dayPassUsed || 0}</span> {creditInfo.totalCreated === 1 || dayPassUsed === 1 ? 'job' : 'jobs'} for you.</span>
-                )}
-              </div>
-
-              {!dayPassIsUnlimited && dayPassLimit > 0 && (
-                <div className="mb-3">
-                  <div className="flex items-center justify-between text-[11px] text-white/85 mb-1">
-                    <span>Credits used</span>
-                    <span>{dayPassUsed}/{dayPassLimit}</span>
-                  </div>
-                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${dayPassProgress}%` }}
-                      transition={{ duration: 0.5 }}
-                      className="h-2 bg-white rounded-full"
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {!dayPassHasCredits && !isExpired && (
-                <div className="text-xs text-yellow-200 mb-2 font-medium">
-                  ⚠️ Credits exhausted. Upgrade to continue.
-                </div>
-              )}
-              
-              <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
-                {isUrgent ? (
-                  <span className="font-medium">Need your plan to last for a month? Monthly or quarterly plans keep you covered.</span>
-                ) : (
-                  <span>Job searching was never easier. Upgrade to monthly or quarterly plans for longer access.</span>
-                )}
-              </div>
-              
-              <motion.button
-                onClick={() => setShowSubscriptionModal(true)}
-                className={`w-full text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
-                  isUrgent 
-                    ? 'bg-white text-red-600 hover:bg-red-50 shadow-lg' 
-                    : 'bg-white/20 hover:bg-white/30'
-                }`}
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                <Zap className="w-3 h-3" />
-                {isUrgent ? 'Upgrade Now' : 'Upgrade'}
-              </motion.button>
-            </motion.div>
-          );
-
-          // Pro plans - show usage summary
-          const proUsed = creditInfo.totalCreated ?? creditInfo.used ?? 0;
-          const nextReset = creditInfo.nextResetDate ? new Date(creditInfo.nextResetDate) : null;
-          const proPlanName = planDisplayName(currentPlan);
-
-          return (
-            <div className="hidden 2xl:block rounded-2xl p-4 bg-gradient-to-br from-gray-900 to-gray-800 text-white border border-white/10">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="text-sm font-semibold">{proPlanName}</div>
-                  <div className="text-xs text-white/60 capitalize">
-                    {currentPlan.replace('_', ' ')}
-                  </div>
-                </div>
-                {nextReset && (
-                  <div className="text-[11px] text-white/60">
-                    Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                  </div>
-                )}
-              </div>
-
-              <div className="bg-white/10 rounded-xl p-4 mb-3">
-                <div className="text-xs text-white/60 mb-1">
-                  Jobs created
-                </div>
-                <div className="text-2xl font-bold">
-                  {proUsed}
-                </div>
-                <div className="text-[11px] text-white/70 mt-1">
-                  Unlimited credits included
-                </div>
-              </div>
-
-              <p className="text-xs text-white/70">
-                You're on the Pro plan. Keep creating and we'll track your usage here.
-              </p>
-            </div>
-          );
-        })()}
+          })()}
         </div>
       )}
 
@@ -896,7 +961,7 @@ const OptimizedNavigation: React.FC = () => {
                       <Moon className="w-5 h-5 flex-shrink-0" />
                     )}
                   </motion.button>
-                  
+
                   {/* 2xl+: Toggle switch */}
                   <div className="hidden 2xl:flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <div className="flex items-center gap-3">
@@ -909,18 +974,16 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                     <button
                       onClick={toggleTheme}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${
-                        theme === 'dark' 
-                          ? 'bg-lime-500' 
-                          : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${theme === 'dark'
+                        ? 'bg-lime-500'
+                        : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
                       type="button"
                       aria-label="Toggle theme"
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </button>
                   </div>
@@ -937,7 +1000,7 @@ const OptimizedNavigation: React.FC = () => {
                       <div className="text-sm font-medium truncate">Sign Out</div>
                     </div>
                   </motion.button>
-        </div>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -976,7 +1039,7 @@ const OptimizedNavigation: React.FC = () => {
                 <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </motion.div>
             </motion.button>
-        </div>
+          </div>
         </div>
       </div>
 
@@ -996,8 +1059,8 @@ const OptimizedNavigation: React.FC = () => {
           refetchBillingData();
           // Refresh user data to update plan info
           if (userData) {
-            window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
-              detail: { refreshUserData: true } 
+            window.dispatchEvent(new CustomEvent('userProfileUpdated', {
+              detail: { refreshUserData: true }
             }));
           }
         }}
