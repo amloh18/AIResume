@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Briefcase, 
-  Building, 
-  MapPin, 
-  Calendar, 
-  DollarSign, 
-  FileText, 
+import {
+  X,
+  Briefcase,
+  Building,
+  MapPin,
+  Calendar,
+  DollarSign,
+  FileText,
   Star,
   Clock,
   CheckCircle,
@@ -33,6 +33,8 @@ import { ApplicationPackageService } from '@/lib/services/applicationPackageServ
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { getCountryFlag } from '@/lib/config/adminConstants';
 import { LocationService } from '@/lib/payment/locationService';
+import { DuplicateJobService, DuplicateCheckResult } from '@/lib/services/duplicateJobService';
+import DuplicateJobWarningModal from './DuplicateJobWarningModal';
 
 interface Job {
   id?: string;
@@ -107,6 +109,7 @@ interface EditJobSidebarProps {
   onJobSaved: (job: Job) => void;
   editingJob?: Job | null;
   userId?: string;
+  existingJobs?: any[]; // For duplicate detection
 }
 
 const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
@@ -114,7 +117,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   onClose,
   onJobSaved,
   editingJob,
-  userId
+  userId,
+  existingJobs = []
 }) => {
   const { user } = useUnifiedAuth();
   const [isSaving, setIsSaving] = useState(false);
@@ -122,10 +126,15 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  
+
+  // Duplicate detection state
+  const [duplicateCheck, setDuplicateCheck] = useState<DuplicateCheckResult | null>(null);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
+  const [proceedDespiteDuplicate, setProceedDespiteDuplicate] = useState(false);
+
   // Global credit exhaustion handler
   const { checkUsageAndHandleExhaustion, showExhaustionModal } = useCreditExhaustionHandler();
-  
+
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedDataRef = useRef<any>(null);
@@ -182,7 +191,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   // Helper function to extract country code from location string
   const extractCountryFromLocation = (location: string): string | null => {
     if (!location) return null;
-    
+
     // Common country name to code mapping
     const countryMap: Record<string, string> = {
       'united states': 'US', 'usa': 'US', 'america': 'US',
@@ -230,7 +239,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     };
 
     const locationLower = location.toLowerCase().trim();
-    
+
     // Check for exact country name matches
     for (const [countryName, code] of Object.entries(countryMap)) {
       if (locationLower.includes(countryName)) {
@@ -313,8 +322,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         if (!prev.location && !prev.salary?.currency) {
           return {
             ...prev,
-            salary: { 
-              ...prev.salary, 
+            salary: {
+              ...prev.salary,
               currency: userCurrency,
               period: prev.salary?.period || 'yearly'
             }
@@ -332,7 +341,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       const countryCode = extractCountryFromLocation(location);
       if (countryCode) {
         setLocationFlag(getCountryFlag(countryCode));
-        
+
         // Update currency based on location
         const countryCurrencies: Record<string, string> = {
           'US': 'USD', 'CA': 'CAD', 'GB': 'GBP', 'AU': 'AUD',
@@ -345,7 +354,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           'RU': 'RUB', 'TH': 'THB', 'ID': 'IDR', 'PH': 'PHP',
           'VN': 'VND', 'MY': 'MYR', 'HK': 'HKD', 'TW': 'TWD'
         };
-        
+
         const currency = countryCurrencies[countryCode];
         if (currency) {
           setFormData(prev => ({
@@ -370,11 +379,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   // Track window width for responsive sidebar
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -526,10 +535,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
     // Check if data has changed
     const hasChanges = JSON.stringify(formData) !== JSON.stringify(lastSavedDataRef.current);
-    
+
     if (hasChanges) {
       setHasUnsavedChanges(true);
-      
+
       // Set new timeout for auto-save (only if not already saving manually)
       if (!isSavingRef.current) {
         autoSaveTimeoutRef.current = setTimeout(() => {
@@ -554,7 +563,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       userId: userId || user?.id,
       updatedAt: new Date().toISOString()
     };
-    
+
     // Remove id, _id, createdAt for new jobs (let server generate them)
     const isNewJob = !editingJob?.id && !editingJob?._id;
     if (isNewJob) {
@@ -563,10 +572,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       delete data.createdAt;
       // Keep updatedAt as it's set above
     }
-    
+
     // Remove applicationDate as it's no longer used in the form
     delete data.applicationDate;
-    
+
     return data;
   };
 
@@ -593,16 +602,16 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       // Determine if this is a new job - check both id and _id fields
       const isNewJob = !editingJob?.id && !editingJob?._id;
       const jobData = getFormData();
-      
+
       // Ensure we're using the correct ID for updates
       const jobId = editingJob?.id || editingJob?._id;
       const url = jobId ? `/api/jobs/${jobId}` : '/api/jobs';
       const method = jobId ? 'PUT' : 'POST';
 
-      console.log('🔍 EditJobSidebar - Saving job:', { 
-        method, 
-        url, 
-        isNewJob, 
+      console.log('🔍 EditJobSidebar - Saving job:', {
+        method,
+        url,
+        isNewJob,
         hasEditingJob: !!editingJob,
         editingJobId: editingJob?.id || editingJob?._id,
         jobId,
@@ -655,13 +664,50 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         jobData.jobUrl = jobData.jobUrl.trim();
       }
 
+      // Check for duplicate jobs (only for new jobs, not auto-saves)
+      if (isNewJob && !isAutoSave && !proceedDespiteDuplicate && jobData.jobTitle && jobData.company) {
+        try {
+          const duplicateResult = await DuplicateJobService.checkDuplicate(
+            {
+              jobTitle: jobData.jobTitle,
+              company: jobData.company,
+              location: jobData.location,
+              jobUrl: jobData.jobUrl
+            },
+            existingJobs,
+            {
+              checkLocation: false, // Don't require location match
+              daysThreshold: 30,
+              similarityThreshold: 0.7
+            }
+          );
+
+          if (duplicateResult.isDuplicate && (duplicateResult.confidence === 'high' || duplicateResult.confidence === 'medium')) {
+            // Show duplicate warning modal
+            setDuplicateCheck(duplicateResult);
+            setShowDuplicateWarning(true);
+            if (!isAutoSave) setIsSaving(false);
+            isSavingRef.current = false;
+            return;
+          }
+        } catch (duplicateError) {
+          console.warn('Duplicate check failed, proceeding anyway:', duplicateError);
+          // Don't block save if duplicate check fails
+        }
+      }
+
+      // Reset duplicate flag after check
+      if (proceedDespiteDuplicate) {
+        setProceedDespiteDuplicate(false);
+      }
+
       // Check credits only if creating/updating job with status 'created' (not 'draft')
       // Draft jobs can be saved unlimited without credit check
       const jobStatus = jobData.status || 'created';
       const previousStatus = editingJob?.status;
       const isMovingToCreated = previousStatus === 'draft' && jobStatus === 'created';
       const isCreatingAsCreated = isNewJob && jobStatus === 'created';
-      
+
       if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave && user?.id) {
         try {
           const creditCheckResponse = await authenticatedFetchWithUserId('/api/user/usage/check', user.id, {
@@ -705,22 +751,22 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         } catch (parseError) {
           console.error('Failed to parse error response:', parseError);
         }
-        
+
         console.log('🔍 EditJobSidebar - Error response:', errorResult);
-        
+
         // Check if this is a credit-related error
-        const isCreditError = 
+        const isCreditError =
           (response.status === 403 && (errorResult.requiresUpgrade || errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits'))) ||
           (response.status === 500 && (errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits') || errorResult.error?.includes('Plan limit exceeded'))) ||
           ((isCreatingAsCreated || isMovingToCreated) && (errorResult.requiresUpgrade || errorResult.error?.includes('limit') || errorResult.error?.includes('credit')));
-        
+
         if (isCreditError) {
           // Show credit exhaustion modal with custom message
           const customMessage = errorResult.message || errorResult.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs';
           const limit = errorResult.limit || 1;
           const currentUsage = errorResult.currentUsage || limit;
           const creditsRemaining = Math.max(0, limit - currentUsage);
-          
+
           showExhaustionModal(
             {
               creditsRemaining,
@@ -756,15 +802,18 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             window.dispatchEvent(new CustomEvent('creditsUpdated'));
           }
 
+          // Dispatch job updated event for ALL saves (including draft and auto-saves) to refresh tracker
+          window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { job: savedJob, isAutoSave } }));
+
           // Step 2: If this is a new job, implement the "Job First" workflow
           // Create an Application Package automatically
           if (isNewJob && !isAutoSave && user?.id) {
             try {
               console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id || savedJob._id);
-              
+
               // Use the job ID from savedJob (could be id or _id)
               const jobId = savedJob.id || savedJob._id;
-              
+
               if (!jobId) {
                 console.warn('⚠️ EditJobSidebar - No job ID available, skipping package creation');
               } else {
@@ -839,7 +888,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       } else {
         const errorText = await response.text();
         console.error('❌ EditJobSidebar - Save failed with status:', response.status, 'Error:', errorText);
-        
+
         // Handle 404 error - job not found (might be trying to update a non-existent job)
         if (response.status === 404 && method === 'PUT') {
           console.log('⚠️ EditJobSidebar - Job not found on PUT, retrying as new job creation (POST)');
@@ -847,7 +896,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           const newJobData = { ...jobData };
           delete newJobData.id;
           delete newJobData._id;
-          
+
           try {
             const retryResponse = await authenticatedFetchWithUserId('/api/jobs', user?.id, {
               method: 'POST',
@@ -856,12 +905,12 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
               },
               body: JSON.stringify(newJobData),
             });
-            
+
             if (retryResponse.ok) {
               const retryResult = await retryResponse.json();
-              const savedJob = retryResult.job || retryResult.data || { 
-                ...newJobData, 
-                id: retryResult.data?.id || retryResult.data?._id || retryResult.id || retryResult._id 
+              const savedJob = retryResult.job || retryResult.data || {
+                ...newJobData,
+                id: retryResult.data?.id || retryResult.data?._id || retryResult.id || retryResult._id
               };
               lastSavedDataRef.current = savedJob;
               setHasUnsavedChanges(false);
@@ -882,7 +931,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             console.error('❌ EditJobSidebar - Error during retry POST:', retryError);
           }
         }
-        
+
         if (!isAutoSave) {
           try {
             const errorJson = JSON.parse(errorText);
@@ -905,13 +954,13 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       if (!isAutoSave) {
         // Provide more specific error messages based on the error type
         let errorMsg = 'Error saving job. Please try again.';
-        
+
         if (error instanceof TypeError && error.message.includes('fetch')) {
           errorMsg = 'Network error. Please check your connection and try again.';
         } else if (error instanceof Error) {
           errorMsg = `Error: ${error.message}`;
         }
-        
+
         setErrorMessage(errorMsg);
       }
     } finally {
@@ -936,7 +985,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     if (autoSaveTimeoutRef.current) {
       clearTimeout(autoSaveTimeoutRef.current);
     }
-    
+
     // Reset form state
     setFormData({
       jobTitle: '',
@@ -1011,20 +1060,20 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             {/* Header */}
             <div className="border-b border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] sticky top-0 z-10">
               <div className="flex items-center justify-between p-4">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
-              </h2>
-              <motion.button
-                onClick={handleClose}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a2015] rounded-lg transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title="Close (Esc)"
-              >
-                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </motion.button>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {editingJob ? 'Edit Job Application' : 'Add New Job Application'}
+                </h2>
+                <motion.button
+                  onClick={handleClose}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-[#1a2015] rounded-lg transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Close (Esc)"
+                >
+                  <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                </motion.button>
               </div>
-              
+
               {/* Non-intrusive Unsaved Changes Banner */}
               {showUnsavedWarning && (
                 <motion.div
@@ -1094,7 +1143,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                 {/* Basic Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h3>
-                  
+
                   <div className="space-y-4">
                     <div>
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Job Title</label>
@@ -1111,11 +1160,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             });
                           }
                         }}
-                        className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${
-                          fieldErrors.jobTitle 
-                            ? 'border-red-500 dark:border-red-500' 
-                            : 'border-gray-300 dark:border-white/20'
-                        } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                        className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.jobTitle
+                          ? 'border-red-500 dark:border-red-500'
+                          : 'border-gray-300 dark:border-white/20'
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                         placeholder="Enter job title"
                         maxLength={100}
                       />
@@ -1124,7 +1172,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       )}
                       <div className="text-gray-500 dark:text-white/50 text-xs mt-1">{jobTitleCount}/100</div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Company</label>
@@ -1141,11 +1189,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               });
                             }
                           }}
-                          className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${
-                            fieldErrors.company 
-                              ? 'border-red-500 dark:border-red-500' 
-                              : 'border-gray-300 dark:border-white/20'
-                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                          className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.company
+                            ? 'border-red-500 dark:border-red-500'
+                            : 'border-gray-300 dark:border-white/20'
+                            } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                           placeholder="Enter company name"
                           maxLength={100}
                         />
@@ -1172,7 +1219,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         </div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Job URL</label>
                       <input
@@ -1188,22 +1235,21 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             });
                           }
                         }}
-                        className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${
-                          fieldErrors.jobUrl 
-                            ? 'border-red-500 dark:border-red-500' 
-                            : 'border-gray-300 dark:border-white/20'
-                        } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
+                        className={`w-full px-3 py-2 bg-white dark:bg-[#232f1c] border ${fieldErrors.jobUrl
+                          ? 'border-red-500 dark:border-red-500'
+                          : 'border-gray-300 dark:border-white/20'
+                          } text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md`}
                         placeholder="https://company.com/job-posting"
                       />
                       {fieldErrors.jobUrl && (
                         <p className="text-red-600 dark:text-red-400 text-xs mt-1">{fieldErrors.jobUrl}</p>
                       )}
                     </div>
-                    
+
                     {/* Deadline and Priority */}
                     <div>
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-2">Deadline</label>
-                      
+
                       {/* Quick Options */}
                       <div className="flex flex-wrap gap-2 mb-3">
                         {[5, 10, 15, 30].map((days) => {
@@ -1214,11 +1260,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               key={days}
                               type="button"
                               onClick={() => handleFormChange('deadline', dateStr)}
-                              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                                isSelected
-                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black'
-                                  : 'bg-gray-100 dark:bg-[#232f1c] text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/20'
-                              }`}
+                              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${isSelected
+                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black'
+                                : 'bg-gray-100 dark:bg-[#232f1c] text-gray-700 dark:text-white/70 hover:bg-gray-200 dark:hover:bg-white/10 border border-gray-300 dark:border-white/20'
+                                }`}
                               whileHover={{ scale: 1.05 }}
                               whileTap={{ scale: 0.95 }}
                             >
@@ -1227,7 +1272,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                           );
                         })}
                       </div>
-                      
+
                       {/* Date Input and Priority - Inline */}
                       <div className="flex gap-3 items-end">
                         <div className="relative flex-1">
@@ -1240,7 +1285,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                           />
                           <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
                         </div>
-                        
+
                         <div className="flex-shrink-0">
                           <label className="block text-gray-700 dark:text-white/80 text-xs font-medium mb-1">Priority</label>
                           <div className="flex bg-gray-100 dark:bg-[#232f1c] rounded-xl p-1 border border-gray-300 dark:border-white/20">
@@ -1248,11 +1293,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                               <button
                                 key={priority}
                                 onClick={() => handleFormChange('priority', priority)}
-                                className={`px-3 py-2 text-xs font-medium transition-all ${
-                                  formData.priority === priority
-                                    ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-lg'
-                                    : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
-                                }`}
+                                className={`px-3 py-2 text-xs font-medium transition-all ${formData.priority === priority
+                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-lg'
+                                  : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
+                                  }`}
                               >
                                 {priority.charAt(0).toUpperCase() + priority.slice(1)}
                               </button>
@@ -1281,7 +1325,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       </select>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1299,7 +1343,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                           />
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
                         <div className="relative">
@@ -1322,7 +1366,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                 {/* Job Description */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description</h3>
-                  
+
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium">Job Description</label>
@@ -1342,7 +1386,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                 {/* Additional Information */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Additional Information</h3>
-                  
+
                   <div className="space-y-4">
                     {/* Sponsorship and Tags - Inline */}
                     <div className="grid grid-cols-2 gap-4">
@@ -1353,18 +1397,17 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             <button
                               key={sponsorship}
                               onClick={() => handleFormChange('sponsorship', sponsorship)}
-                              className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${
-                                formData.sponsorship === sponsorship
-                                  ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
-                                  : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
-                              }`}
+                              className={`flex-1 px-3 py-2 text-sm font-medium transition-all ${formData.sponsorship === sponsorship
+                                ? 'bg-lime-500 dark:bg-[#80FF00] text-white dark:text-black rounded-xl'
+                                : 'text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white rounded-lg'
+                                }`}
                             >
                               {sponsorship.charAt(0).toUpperCase() + sponsorship.slice(1)}
                             </button>
                           ))}
                         </div>
                       </div>
-                      
+
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Tags</label>
                         <input
@@ -1377,7 +1420,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                         <div className="text-gray-500 dark:text-white/50 text-xs mt-1">Separate tags with commas</div>
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Contact Details</label>
                       <div className="space-y-2">
@@ -1433,7 +1476,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                 {/* Notes */}
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notes</h3>
-                  
+
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium">Notes</label>
@@ -1475,6 +1518,37 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
         </>
       )}
+
+      {/* Duplicate Job Warning Modal */}
+      <DuplicateJobWarningModal
+        isOpen={showDuplicateWarning}
+        duplicateCheck={duplicateCheck}
+        newJobData={{
+          jobTitle: formData.jobTitle || '',
+          company: formData.company || '',
+          location: formData.location
+        }}
+        onProceed={() => {
+          setShowDuplicateWarning(false);
+          setProceedDespiteDuplicate(true);
+          // Re-trigger save after user confirms
+          setTimeout(() => handleSaveJob(false), 100);
+        }}
+        onCancel={() => {
+          setShowDuplicateWarning(false);
+          setDuplicateCheck(null);
+          isSavingRef.current = false;
+        }}
+        onViewExisting={(jobId) => {
+          // Close this sidebar and trigger viewing the existing job
+          setShowDuplicateWarning(false);
+          setDuplicateCheck(null);
+          onClose();
+          // TODO: Implement viewing existing job in JobSidebar
+          // This would require passing a callback from JobsTracker
+          console.log('View existing job:', jobId);
+        }}
+      />
     </AnimatePresence>
   );
 };

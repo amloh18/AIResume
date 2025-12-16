@@ -157,6 +157,22 @@ const JobsTracker: React.FC = () => {
     }
   }, [userId]);
 
+  // Listen for job updates (including draft saves and auto-saves)
+  useEffect(() => {
+    if (!userId) return;
+
+    const handleJobUpdate = (event: CustomEvent) => {
+      console.log('🔄 JobsTracker - Job update event received, refreshing jobs list');
+      loadData();
+    };
+
+    window.addEventListener('jobUpdated', handleJobUpdate as EventListener);
+
+    return () => {
+      window.removeEventListener('jobUpdated', handleJobUpdate as EventListener);
+    };
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load CV context if cvId is provided
   useEffect(() => {
     if (cvId && userId) {
@@ -1304,6 +1320,7 @@ const JobsTracker: React.FC = () => {
           setEditingJob(null);
         }}
         onJobSaved={handleJobSaved}
+        existingJobs={jobs} // Pass existing jobs for duplicate detection
         editingJob={editingJob ? {
           id: editingJob.id,
           jobTitle: editingJob.jobTitle,
