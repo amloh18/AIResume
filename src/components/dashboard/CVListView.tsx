@@ -42,6 +42,7 @@ interface CV {
     completionPercentage?: number;
     isMaster?: boolean;
     journeyId?: string;
+    cvType?: 'master' | 'journey' | 'standalone';
     atsScore?: number;
     metadata?: any;
     [key: string]: any; // Allow loose typing to accept CVDocument extranous props
@@ -80,6 +81,36 @@ const CVListView: React.FC<CVListViewProps> = ({
 }) => {
     const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
 
+    // Check if any CV in the list is a journey CV (non-master CV)
+    // Journey CVs should show "ATS Score" instead of "CV Score"
+    // Master CVs show completion percentage, so they show "CV Score"
+    const hasJourneyCVs = cvs.some(cv => {
+        // Check if it's explicitly a journey CV
+        if (cv.cvType === 'journey' || cv.metadata?.cvType === 'journey') return true;
+        // Check if it has a journeyId
+        if (cv.journeyId || cv.metadata?.journeyId) return true;
+        // Check if it's NOT a master CV (non-master CVs in "My CVs" section should show ATS Score)
+        const isMaster = cv.isMaster === true || 
+                        cv.metadata?.isMaster === true || 
+                        cv.metadata?.isMaster === 'true' ||
+                        cv.metadata?.createdVia === 'ai-career-report';
+        // If it's not a master CV, show ATS Score
+        return !isMaster;
+    });
+    
+    // Alternative: If all CVs are non-master, show ATS Score
+    // This ensures "My CVs" section always shows "ATS Score"
+    const allNonMaster = cvs.length > 0 && cvs.every(cv => {
+        const isMaster = cv.isMaster === true || 
+                        cv.metadata?.isMaster === true || 
+                        cv.metadata?.isMaster === 'true' ||
+                        cv.metadata?.createdVia === 'ai-career-report';
+        return !isMaster;
+    });
+    
+    // Show "ATS Score" if there are any journey CVs OR if all CVs are non-master
+    const showATSScore = hasJourneyCVs || allNonMaster;
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'published': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
@@ -109,7 +140,9 @@ const CVListView: React.FC<CVListViewProps> = ({
                         <tr className="bg-gray-50 dark:bg-[#141810] border-b border-gray-200 dark:border-white/10">
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">CV Score</th>
+                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
+                                {showATSScore ? 'ATS Score' : 'CV Score'}
+                            </th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Last Modified</th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider text-right">Actions</th>
                         </tr>
@@ -203,17 +236,20 @@ const CVListView: React.FC<CVListViewProps> = ({
                                             <span className="text-[10px] text-gray-400">-</span>
                                         )
                                     ) : (
-                                        // Regular CV - Show ATS Score
-                                        cv.atsScore !== undefined ? (
-                                            <div className="flex items-center gap-1.5 text-[10px]">
-                                                <BarChart3 size={12} className={cv.atsScore >= 70 ? 'text-green-500' : cv.atsScore >= 50 ? 'text-yellow-500' : 'text-red-500'} />
-                                                <span className={cv.atsScore >= 70 ? 'text-green-600 dark:text-green-400' : cv.atsScore >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>
-                                                    {cv.atsScore}%
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <span className="text-[10px] text-gray-400">-</span>
-                                        )
+                                        // Regular CV - Show ATS Score (check metadata first, then fallback to direct property)
+                                        (() => {
+                                            const atsScore = cv.metadata?.atsScore !== undefined ? cv.metadata.atsScore : cv.atsScore;
+                                            return atsScore !== undefined ? (
+                                                <div className="flex items-center gap-1.5 text-[10px]">
+                                                    <BarChart3 size={12} className={atsScore >= 70 ? 'text-green-500' : atsScore >= 50 ? 'text-yellow-500' : 'text-red-500'} />
+                                                    <span className={atsScore >= 70 ? 'text-green-600 dark:text-green-400' : atsScore >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}>
+                                                        {atsScore}%
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-[10px] text-gray-400">-</span>
+                                            );
+                                        })()
                                     )}
                                 </td>
 

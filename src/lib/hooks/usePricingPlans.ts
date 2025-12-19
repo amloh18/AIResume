@@ -140,13 +140,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         
         // Get regional pricing from database API
         let pricingSet = false;
+        let pricingTimeoutId: NodeJS.Timeout | null = null;
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          pricingTimeoutId = setTimeout(() => controller.abort(), 3000);
           const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`, {
             signal: controller.signal
           });
-          clearTimeout(timeoutId);
+          if (pricingTimeoutId) {
+            clearTimeout(pricingTimeoutId);
+            pricingTimeoutId = null;
+          }
           if (response.ok) {
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
@@ -164,19 +168,32 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
           } else {
             console.warn(`Failed to fetch pricing (status: ${response.status}), trying fallback`);
           }
-        } catch (pricingError) {
-          console.error('Error fetching pricing from database:', pricingError);
+        } catch (pricingError: any) {
+          if (pricingTimeoutId) {
+            clearTimeout(pricingTimeoutId);
+            pricingTimeoutId = null;
+          }
+          // AbortError is expected when timeout occurs - handle gracefully
+          if (pricingError?.name === 'AbortError') {
+            console.warn('Regional pricing fetch timeout, using fallback');
+          } else {
+            console.error('Error fetching pricing from database:', pricingError);
+          }
         }
         
         // Fallback: try to get default pricing if regional pricing wasn't set
         if (!pricingSet) {
+          let defaultTimeoutId: NodeJS.Timeout | null = null;
           try {
             const defaultController = new AbortController();
-            const defaultTimeoutId = setTimeout(() => defaultController.abort(), 3000);
+            defaultTimeoutId = setTimeout(() => defaultController.abort(), 3000);
             const defaultResponse = await fetch('/api/pricing/regional', {
               signal: defaultController.signal
             });
-            clearTimeout(defaultTimeoutId);
+            if (defaultTimeoutId) {
+              clearTimeout(defaultTimeoutId);
+              defaultTimeoutId = null;
+            }
             if (defaultResponse.ok) {
               const defaultData = await defaultResponse.json();
               if (defaultData.success && defaultData.pricing) {
@@ -190,8 +207,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
               console.warn(`Failed to fetch default pricing (status: ${defaultResponse.status})`);
               setRegionalPricing(null);
             }
-          } catch (fallbackError) {
-            console.error('Error fetching default pricing:', fallbackError);
+          } catch (fallbackError: any) {
+            if (defaultTimeoutId) {
+              clearTimeout(defaultTimeoutId);
+              defaultTimeoutId = null;
+            }
+            // AbortError is expected when timeout occurs - handle gracefully
+            if (fallbackError?.name === 'AbortError') {
+              console.warn('Default pricing fetch timeout');
+            } else {
+              console.error('Error fetching default pricing:', fallbackError);
+            }
             // Last resort: set empty pricing (components should handle this gracefully)
             setRegionalPricing(null);
           }
@@ -200,13 +226,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         clearTimeout(timeoutId);
         console.error('Error detecting location:', error);
         // Try to get default pricing immediately on error
+        let errorTimeoutId: NodeJS.Timeout | null = null;
         try {
           const errorController = new AbortController();
-          const errorTimeoutId = setTimeout(() => errorController.abort(), 3000);
+          errorTimeoutId = setTimeout(() => errorController.abort(), 3000);
           const defaultResponse = await fetch('/api/pricing/regional', {
             signal: errorController.signal
           });
-          clearTimeout(errorTimeoutId);
+          if (errorTimeoutId) {
+            clearTimeout(errorTimeoutId);
+            errorTimeoutId = null;
+          }
           if (defaultResponse.ok) {
             const defaultData = await defaultResponse.json();
             if (defaultData.success && defaultData.pricing) {
@@ -214,8 +244,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
               setSelectedCurrency(defaultData.pricing.currency);
             }
           }
-        } catch (fallbackError) {
-          console.error('Error fetching default pricing:', fallbackError);
+        } catch (fallbackError: any) {
+          if (errorTimeoutId) {
+            clearTimeout(errorTimeoutId);
+            errorTimeoutId = null;
+          }
+          // AbortError is expected when timeout occurs - handle gracefully
+          if (fallbackError?.name === 'AbortError') {
+            console.warn('Default pricing fetch timeout after location error');
+          } else {
+            console.error('Error fetching default pricing:', fallbackError);
+          }
           setRegionalPricing(null);
         }
       }
@@ -274,16 +313,29 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
 
         // Fetch offers separately (non-blocking)
         let offersResponse: Response | null = null;
+        let offersTimeoutId: NodeJS.Timeout | null = null;
         try {
           const offersController = new AbortController();
-          const offersTimeoutId = setTimeout(() => offersController.abort(), 5000);
+          offersTimeoutId = setTimeout(() => offersController.abort(), 5000);
           offersResponse = await fetch('/api/promotional-offers/active?userType=all', { 
             signal: offersController.signal 
           });
-          clearTimeout(offersTimeoutId);
+          if (offersTimeoutId) {
+            clearTimeout(offersTimeoutId);
+            offersTimeoutId = null;
+          }
         } catch (err: any) {
+          if (offersTimeoutId) {
+            clearTimeout(offersTimeoutId);
+            offersTimeoutId = null;
+          }
           // Offers are optional, don't block on error
-          console.warn('Failed to fetch promotional offers:', err);
+          // AbortError is expected when timeout occurs - handle gracefully
+          if (err?.name === 'AbortError') {
+            console.warn('Promotional offers fetch timeout');
+          } else {
+            console.warn('Failed to fetch promotional offers:', err);
+          }
           offersResponse = null;
         }
 

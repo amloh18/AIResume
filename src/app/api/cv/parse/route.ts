@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 
 // ============================================================================
@@ -814,7 +815,9 @@ from the resume text and return **only** a valid JSON object.
       stack: error.stack?.substring(0, 300)
     } : error);
     
-    throw new Error(`AI API call failed: ${errorMessage}`);
+    // Sanitize error message before throwing
+    const sanitizedMessage = sanitizeErrorMessage(errorMessage, 'AI processing failed. Please try again.');
+    throw new Error(sanitizedMessage);
   }
 }
 
@@ -1383,8 +1386,9 @@ export async function POST(request: NextRequest) {
     console.error('Error message:', error instanceof Error ? error.message : String(error));
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
-    // Return proper error response
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    // Return proper error response - sanitize for user display
+    const rawErrorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorMessage = sanitizeErrorMessage(rawErrorMessage, 'Failed to parse CV. Please try again.');
     
     return NextResponse.json(
       { 

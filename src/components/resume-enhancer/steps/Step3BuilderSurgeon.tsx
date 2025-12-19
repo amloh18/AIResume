@@ -35,6 +35,7 @@ import VolunteerSection from '@/components/studio/forms/VolunteerSection';
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
+import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 
 // CV Surgeon service
@@ -91,6 +92,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
   const [showChatbotCard, setShowChatbotCard] = useState(true);
   const [showRoleProfiler, setShowRoleProfiler] = useState(false);
   const [showAddSectionTiles, setShowAddSectionTiles] = useState(false);
+  const [showJobParserDialog, setShowJobParserDialog] = useState(false);
 
   const isRoleReady = Boolean(state.targetRole && state.seniorityLevel);
 
@@ -185,12 +187,13 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         state.jobData.jd || 
         '';
       
-      if (jobDescription && !jdText) {
+      // Update jdText if jobData has a description and it's different from current jdText
+      if (jobDescription && jobDescription !== jdText) {
         setJdText(jobDescription);
         setShowJDInput(true);
       }
     }
-  }, [state.jobData]);
+  }, [state.jobData, jdText]);
 
   // Update linked job description when JD text changes (debounced)
   useEffect(() => {
@@ -1418,7 +1421,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <label className="block text-xs font-medium text-[color:var(--text-secondary)]">
-                        Job Description (Optional)
+                        Job Description {state.cvType === 'standalone' ? '(Required for ATS check)' : '(Optional)'}
                       </label>
                       <button
                         onClick={() => {
@@ -1624,6 +1627,18 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     setShowRoleProfiler(true);
                     return;
                   }
+                  
+                  // Check for JD requirement for standalone CVs
+                  if (state.cvType === 'standalone') {
+                    const hasJD = jdText.trim().length > 0 || 
+                                  (state.jobData && (state.jobData.jobDescription || state.jobData.description));
+                    
+                    if (!hasJD) {
+                      setShowJobParserDialog(true);
+                      return;
+                    }
+                  }
+                  
                   // Ensure we have a full analysis before showing the report
                   if (!state.surgeonAnalysis || (state.fixAnnotations || []).length === 0) {
                     await handleRunAnalysis();
@@ -1669,6 +1684,38 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             payload: { targetRole: role, seniorityLevel: seniority as any }
           });
           setShowRoleProfiler(false);
+        }}
+      />
+
+      {/* Job Parser Dialog (Magic Paste) for standalone CVs */}
+      <JobParserDialog
+        isOpen={showJobParserDialog}
+        onClose={() => setShowJobParserDialog(false)}
+        customDescription="Add a Job Description for ATS check. This helps us provide more accurate analysis tailored to your target role by matching your CV against the job requirements."
+        onParseComplete={(parsedData) => {
+          // Extract job description from parsed data
+          const jobDescription = parsedData.jobDescription || parsedData.jobDescriptionRaw || '';
+          
+          if (jobDescription) {
+            setJdText(jobDescription);
+            setShowJDInput(true);
+            
+            // Update jobData in state with the parsed information
+            dispatch({
+              type: 'SET_JOB_DATA',
+              payload: {
+                ...state.jobData,
+                jobTitle: parsedData.jobTitle || state.targetRole,
+                title: parsedData.jobTitle || state.targetRole,
+                company: parsedData.company || 'Unknown Company',
+                description: jobDescription,
+                jobDescription: jobDescription,
+                location: parsedData.location
+              }
+            });
+          }
+          
+          setShowJobParserDialog(false);
         }}
       />
 
