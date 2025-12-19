@@ -5,6 +5,8 @@ import { Eye } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { DesignSettings, SectionConfig } from '@/types/design-settings';
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
+import AnnotatedText from '@/components/resume-enhancer/annotations/AnnotatedText';
+import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 
 interface CVPreviewContentProps {
   cvData: UnifiedCVDataStructure | null;
@@ -18,6 +20,26 @@ interface CVPreviewContentProps {
   pagePadding?: { top: number; bottom: number };
   designSettings?: DesignSettings;
   sectionConfig?: Partial<SectionConfig>;
+
+  // Resume Enhancer overlays (optional; used by Resume Enhancer report/review)
+  overlaysEnabled?: boolean;
+  annotations?: FixAnnotation[];
+  activeFixId?: string;
+  onSelectFix?: (fixId: string) => void;
+  onApplyFix?: (fix: FixAnnotation) => void;
+  onDismissFix?: (fixId: string) => void;
+
+  /**
+   * When true, ignore cvData.structure visibility and render all sections.
+   * Useful for report/review flows where we want full transparency.
+   */
+  ignoreStructureVisibility?: boolean;
+
+  /**
+   * Render pages as a continuous paper (no clipping to A4 height).
+   * Used by report modal so users can scroll the whole CV.
+   */
+  renderMode?: 'pages' | 'continuous';
 }
 
 const CVPreviewContent: React.FC<CVPreviewContentProps> = ({ 
@@ -31,7 +53,15 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   templateName,
   pagePadding = { top: 32, bottom: 32 },
   designSettings,
-  sectionConfig
+  sectionConfig,
+  overlaysEnabled = false,
+  annotations = [],
+  activeFixId,
+  onSelectFix,
+  onApplyFix,
+  onDismissFix,
+  ignoreStructureVisibility = false,
+  renderMode = 'pages'
 }) => {
   // CRITICAL FIX: All hooks must be called BEFORE any conditional returns (Rules of Hooks)
   const isDark = theme === 'dark';
@@ -56,6 +86,12 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   
   // Effect hooks must be called unconditionally
   useEffect(() => {
+    // In continuous mode we intentionally avoid pagination; render one flowing paper.
+    if (renderMode === 'continuous') {
+      setContentHeight(0);
+      setTotalPages(1);
+      return;
+    }
     if (!cvData || !contentRef.current) {
       setContentHeight(0);
       setTotalPages(1);
@@ -103,6 +139,11 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   // Helper function to check if a section should be visible
   // Use centralized selector when structure exists, fallback to prop for legacy CVs
   const isSectionVisible = (sectionName: string) => {
+    // If ignoreStructureVisibility is true (e.g., in report modal), show all sections
+    if (ignoreStructureVisibility) {
+      return true;
+    }
+    
     // If CV has structure, use centralized selector (source of truth)
     if (cvData?.structure?.sections && Array.isArray(cvData.structure.sections) && cvData.structure.sections.length > 0) {
       return visibleSectionTypes.has(sectionName);
@@ -114,6 +155,63 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
     }
     const isVisible = sectionVisibility[sectionName] !== false;
     return isVisible;
+  };
+
+  const stripRichText = (value: string): string => {
+    // Convert common rich-text HTML (from WYSIWYG) into readable plain text.
+    // We intentionally keep this lightweight and deterministic for preview/report overlays.
+    if (!value) return '';
+    const hasTags = /<[^>]+>/.test(value);
+    if (!hasTags) return value;
+    return value
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<p[^>]*>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&amp;/gi, '&')
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
+  // Flexible accessors (cvData may vary depending on parser/importer/version)
+  const getWorkTitle = (w: any) => stripRichText(String(w?.position || w?.title || w?.jobTitle || w?.role || ''));
+  const getWorkCompany = (w: any) => stripRichText(String(w?.name || w?.company || w?.companyName || w?.organization || ''));
+  const getWorkDateRange = (w: any) => {
+    const start = w?.startDate || w?.start || w?.from;
+    const end = w?.endDate || w?.end || w?.to;
+    if (start && end) return `${start} - ${end}`;
+    return start || end || '';
+  };
+
+  const getEducationDegree = (e: any) => stripRichText(String(e?.studyType || e?.degree || e?.qualification || ''));
+  const getEducationField = (e: any) => stripRichText(String(e?.area || e?.field || e?.major || ''));
+  const getEducationInstitution = (e: any) => stripRichText(String(e?.institution || e?.school || e?.name || ''));
+  const getEducationDateRange = (e: any) => {
+    const start = e?.startDate || e?.start || e?.from;
+    const end = e?.endDate || e?.end || e?.to;
+    if (start && end) return `${start} - ${end}`;
+    return start || end || '';
+  };
+
+  const getSkillCategory = (s: any) => stripRichText(String(s?.category || s?.name || ''));
+  const getSkillItems = (s: any): string[] => {
+    const items =
+      (Array.isArray(s?.skills) && s.skills) ||
+      (Array.isArray(s?.keywords) && s.keywords) ||
+      (Array.isArray(s?.items) && s.items) ||
+      [];
+    return items.map((x: any) => stripRichText(String(x))).filter(Boolean);
+  };
+
+  const getProjectTitle = (p: any) => stripRichText(String(p?.name || p?.title || p?.projectTitle || ''));
+  const getProjectDateRange = (p: any) => {
+    const start = p?.startDate || p?.start || p?.from;
+    const end = p?.endDate || p?.end || p?.to;
+    if (start && end) return `${start} - ${end}`;
+    return start || end || '';
   };
   
   
@@ -207,17 +305,20 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
         </div>
       )}
       
-      {/* Render multiple pages */}
-      {Array.from({ length: totalPages }, (_, pageIndex) => (
+      {/* Render multiple pages (or a single continuous paper in report mode) */}
+      {Array.from({ length: renderMode === 'pages' ? totalPages : 1 }, (_, pageIndex) => (
         <div 
           key={pageIndex}
           className={`${themeClasses.page} cv-page mb-8`} 
           style={{ 
             width: '210mm', 
-            height: '297mm',
-            overflow: 'hidden',
-            pageBreakAfter: pageIndex < totalPages - 1 ? 'always' : 'auto',
-            breakAfter: pageIndex < totalPages - 1 ? 'page' : 'auto',
+            height: renderMode === 'pages' ? '297mm' : 'auto',
+            minHeight: '297mm',
+            overflow: renderMode === 'pages' ? 'hidden' : 'visible',
+            pageBreakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'always' : 'auto',
+            breakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'page' : 'auto',
+            backgroundColor: '#ffffff',
+            color: '#111827',
             ...templateStyle
           }}
         >
@@ -225,7 +326,8 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             paddingTop: `${pagePadding.top}px`,
             paddingBottom: `${pagePadding.bottom}px`,
             paddingLeft: '32px',
-            paddingRight: '32px'
+            paddingRight: '32px',
+            color: '#111827'
           }}>
             {/* Render appropriate layout based on template type */}
             {layoutType === 'two-column' ? (
@@ -237,16 +339,16 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                     borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
                   }}>
                     <h4 
-                      className={`text-3xl font-bold mb-2 text-gray-900`}
+                      className="text-3xl font-bold mb-2 !text-gray-900"
                     >
                       {cvData.basics.name || 'Your Name'}
                     </h4>
                     <p 
-                      className="text-xl mb-3 text-gray-700"
+                      className="text-xl mb-3 !text-gray-900"
                     >
                       {cvData.basics.label || 'Professional Title'}
                     </p>
-                    <div className="flex items-center justify-center gap-6 mt-3 text-sm text-gray-600" style={{
+                    <div className="flex items-center justify-center gap-6 mt-3 text-sm !text-gray-900" style={{
                       fontSize: '14px',
                       fontWeight: '400'
                     }}>
@@ -288,21 +390,21 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   
                   {/* Contact Info */}
                   <div className="space-y-4">
-                    {cvData.basics.email && <p className="text-sm">{cvData.basics.email}</p>}
-                    {cvData.basics.phone && <p className="text-sm">{cvData.basics.phone}</p>}
-                    {cvData.basics.location.city && <p className="text-sm">{cvData.basics.location.city}</p>}
-                    {cvData.basics.url && <p className="text-sm">{cvData.basics.url}</p>}
+                    {cvData.basics.email && <p className="text-sm !text-gray-900">{cvData.basics.email}</p>}
+                    {cvData.basics.phone && <p className="text-sm !text-gray-900">{cvData.basics.phone}</p>}
+                    {cvData.basics.location.city && <p className="text-sm !text-gray-900">{cvData.basics.location.city}</p>}
+                    {cvData.basics.url && <p className="text-sm !text-gray-900">{cvData.basics.url}</p>}
                   </div>
                   
                   {/* Skills */}
                   {cvData.skills && cvData.skills.length > 0 && (
                     <div className="space-y-2">
-                      <h5 className="font-semibold text-lg">Skills</h5>
+                      <h5 className="font-semibold text-lg !text-gray-900">Skills</h5>
                       <div className="space-y-1">
                         {cvData.skills.map((skill, index) => (
                           <div key={index}>
-                            {skill.category && <p className="font-medium">{skill.category}</p>}
-                            <p>{skill.skills?.join(', ')}</p>
+                            {getSkillCategory(skill) && <p className="font-medium !text-gray-900">{getSkillCategory(skill)}</p>}
+                            <p className="!text-gray-900">{getSkillItems(skill).join(', ')}</p>
                           </div>
                         ))}
                       </div>
@@ -312,10 +414,10 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   {/* Languages */}
                   {cvData.languages && cvData.languages.length > 0 && (
                     <div className="space-y-2">
-                      <h5 className="font-semibold text-lg">Languages</h5>
+                      <h5 className="font-semibold text-lg !text-gray-900">Languages</h5>
                       <div className="space-y-1">
                         {cvData.languages.map((lang, index) => (
-                          <p key={index}>{lang.language} - {lang.fluency}</p>
+                          <p key={index} className="!text-gray-900">{lang.language} - {lang.fluency}</p>
                         ))}
                       </div>
                     </div>
@@ -327,23 +429,64 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   {/* Summary */}
                   {cvData.basics.summary && (
                     <div className="space-y-2">
-                      <h5 className="font-semibold text-lg">Professional Summary</h5>
-                      <p className="text-sm">{cvData.basics.summary}</p>
+                      <h5 className="font-semibold text-lg !text-gray-900">Professional Summary</h5>
+                      <AnnotatedText
+                        as="p"
+                        className="text-sm !text-gray-900"
+                        enabled={overlaysEnabled}
+                        fieldPath="basics.summary"
+                        text={stripRichText(cvData.basics.summary)}
+                        annotations={annotations}
+                        activeFixId={activeFixId}
+                        onSelectFix={onSelectFix}
+                        onApplyFix={onApplyFix}
+                        onDismissFix={onDismissFix}
+                      />
                     </div>
                   )}
                   
                   {/* Work Experience */}
                   {cvData.work && cvData.work.length > 0 && (
                     <div className="space-y-4">
-                      <h5 className="font-semibold text-lg">Work Experience</h5>
+                      <h5 className="font-semibold text-lg !text-gray-900">Work Experience</h5>
                       <div className="space-y-3">
                         {cvData.work.map((job, index) => (
                           <div key={index} className="space-y-1">
-                            <h6 className="font-medium">{job.position}</h6>
-                            <p className="text-sm text-gray-600">{job.name}</p>
-                            <p className="text-xs text-gray-500">{job.startDate} - {job.endDate}</p>
+                            <h6 className="font-medium !text-gray-900">{getWorkTitle(job) || 'Role'}</h6>
+                            {getWorkCompany(job) && <p className="text-sm !text-gray-900">{getWorkCompany(job)}</p>}
+                            {getWorkDateRange(job) && <p className="text-xs !text-gray-900">{getWorkDateRange(job)}</p>}
                             {job.summary && job.summary.trim() && (
-                              <p className="text-sm mt-2">{job.summary}</p>
+                              <AnnotatedText
+                                as="p"
+                                className="text-sm mt-2 !text-gray-900"
+                                enabled={overlaysEnabled}
+                                fieldPath={`work[${index}].summary`}
+                                text={stripRichText(job.summary)}
+                                annotations={annotations}
+                                activeFixId={activeFixId}
+                                onSelectFix={onSelectFix}
+                                onApplyFix={onApplyFix}
+                                onDismissFix={onDismissFix}
+                              />
+                            )}
+                            {job.highlights && job.highlights.length > 0 && (
+                              <ul className="list-disc list-inside text-sm mt-2 space-y-1 !text-gray-900">
+                                {job.highlights.map((highlight, i) => (
+                                  <li key={i}>
+                                    <AnnotatedText
+                                      as="span"
+                                      enabled={overlaysEnabled}
+                                      fieldPath={`work[${index}].highlights[${i}]`}
+                                      text={stripRichText(highlight)}
+                                      annotations={annotations}
+                                      activeFixId={activeFixId}
+                                      onSelectFix={onSelectFix}
+                                      onApplyFix={onApplyFix}
+                                      onDismissFix={onDismissFix}
+                                    />
+                                  </li>
+                                ))}
+                              </ul>
                             )}
                           </div>
                         ))}
@@ -354,13 +497,20 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   {/* Education */}
                   {cvData.education && cvData.education.length > 0 && (
                     <div className="space-y-4">
-                      <h5 className="font-semibold text-lg">Education</h5>
+                      <h5 className="font-semibold text-lg !text-gray-900">Education</h5>
                       <div className="space-y-3">
                         {cvData.education.map((edu, index) => (
                           <div key={index} className="space-y-1">
-                            <h6 className="font-medium">{edu.studyType}</h6>
-                            <p className="text-sm text-gray-600">{edu.institution}</p>
-                            <p className="text-xs text-gray-500">{edu.startDate} - {edu.endDate}</p>
+                            <h6 className="font-medium !text-gray-900">
+                              {getEducationDegree(edu) || 'Education'}
+                              {getEducationField(edu) ? ` • ${getEducationField(edu)}` : ''}
+                            </h6>
+                              {getEducationInstitution(edu) && (
+                                <p className="text-sm !text-gray-900">{getEducationInstitution(edu)}</p>
+                              )}
+                              {getEducationDateRange(edu) && (
+                                <p className="text-xs !text-gray-900">{getEducationDateRange(edu)}</p>
+                              )}
                           </div>
                         ))}
                       </div>
@@ -370,12 +520,89 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   {/* Projects */}
                   {cvData.projects && cvData.projects.length > 0 && (
                     <div className="space-y-4">
-                      <h5 className="font-semibold text-lg">Projects</h5>
+                      <h5 className="font-semibold text-lg !text-gray-900">Projects</h5>
                       <div className="space-y-3">
                         {cvData.projects.map((project, index) => (
                           <div key={index} className="space-y-1">
-                            <h6 className="font-medium">{project.name}</h6>
-                            <p className="text-sm">{project.description}</p>
+                            <h6 className="font-medium !text-gray-900">{getProjectTitle(project) || 'Project'}</h6>
+                            <AnnotatedText
+                              as="p"
+                              className="text-sm"
+                              enabled={overlaysEnabled}
+                              fieldPath={`projects[${index}].description`}
+                              text={stripRichText(project.description || '')}
+                              annotations={annotations}
+                              activeFixId={activeFixId}
+                              onSelectFix={onSelectFix}
+                              onApplyFix={onApplyFix}
+                              onDismissFix={onDismissFix}
+                            />
+                            {project.highlights && project.highlights.length > 0 && (
+                              <ul className="list-disc list-inside text-sm mt-2 space-y-1">
+                                {project.highlights.map((highlight: string, i: number) => (
+                                  <li key={i}>
+                                    <AnnotatedText
+                                      as="span"
+                                      enabled={overlaysEnabled}
+                                      fieldPath={`projects[${index}].highlights[${i}]`}
+                                      text={stripRichText(highlight)}
+                                      annotations={annotations}
+                                      activeFixId={activeFixId}
+                                      onSelectFix={onSelectFix}
+                                      onApplyFix={onApplyFix}
+                                      onDismissFix={onDismissFix}
+                                    />
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Certificates */}
+                  {cvData.certificates && cvData.certificates.length > 0 && (
+                    <div className="space-y-4">
+                      <h5 className="font-semibold text-lg !text-gray-900">Certificates</h5>
+                      <div className="space-y-2">
+                        {cvData.certificates.map((cert, index) => (
+                          <div key={index} className="space-y-0.5">
+                            <div className="font-medium text-sm !text-gray-900">{cert.name}</div>
+                            <div className="text-xs text-gray-600">
+                              {cert.issuer ? cert.issuer : ''}{cert.date ? (cert.issuer ? ` • ${cert.date}` : cert.date) : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Volunteer */}
+                  {cvData.volunteer && cvData.volunteer.length > 0 && (
+                    <div className="space-y-4">
+                      <h5 className="font-semibold text-lg !text-gray-900">Volunteer</h5>
+                      <div className="space-y-2">
+                        {cvData.volunteer.map((v, index) => (
+                          <div key={index} className="space-y-0.5">
+                            <div className="font-medium text-sm">{v.position}</div>
+                            <div className="text-xs text-gray-600">{v.organization}</div>
+                            {v.summary && (
+                              <div className="text-sm mt-1">
+                                <AnnotatedText
+                                  as="span"
+                                  enabled={overlaysEnabled}
+                                  fieldPath={`volunteer[${index}].summary`}
+                                  text={stripRichText(v.summary)}
+                                  annotations={annotations}
+                                  activeFixId={activeFixId}
+                                  onSelectFix={onSelectFix}
+                                  onApplyFix={onApplyFix}
+                                  onDismissFix={onDismissFix}
+                                />
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -391,16 +618,16 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
                 }}>
                   <h4 
-                    className={`text-3xl font-bold mb-2 text-gray-900`}
+                    className="text-3xl font-bold mb-2 !text-gray-900"
                   >
                     {cvData.basics.name || 'Your Name'}
                   </h4>
                   <p 
-                    className="text-xl mb-3 text-gray-700"
+                    className="text-xl mb-3 !text-gray-900"
                   >
                     {cvData.basics.label || 'Professional Title'}
                   </p>
-                  <div className="flex items-center justify-center gap-6 mt-3 text-sm text-gray-600" style={{
+                  <div className="flex items-center justify-center gap-6 mt-3 text-sm !text-gray-900" style={{
                     fontSize: '14px',
                     fontWeight: '400'
                   }}>
@@ -449,10 +676,18 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                     }}>
                       Professional Summary
                     </h5>
-                    <div className="text-sm leading-relaxed" style={{
-                      color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                    }}>
-                      <p>{cvData.basics.summary}</p>
+                    <div className="text-sm leading-relaxed !text-gray-900">
+                      <AnnotatedText
+                        as="p"
+                        enabled={overlaysEnabled}
+                        fieldPath="basics.summary"
+                        text={stripRichText(cvData.basics.summary)}
+                        annotations={annotations}
+                        activeFixId={activeFixId}
+                        onSelectFix={onSelectFix}
+                        onApplyFix={onApplyFix}
+                        onDismissFix={onDismissFix}
+                      />
                     </div>
                   </div>
                 )}
@@ -473,38 +708,52 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                         }}>
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h6 className="font-semibold text-lg" style={{
-                                color: templateStyles?.primaryColor || themeClasses.text.primary
-                              }}>
-                                {work.position}
+                              <h6 className="font-semibold text-lg !text-gray-900">
+                                {getWorkTitle(work) || 'Role'}
                               </h6>
-                              <p className="text-sm" style={{
-                                color: templateStyles?.secondaryColor || themeClasses.text.muted
-                              }}>
-                                {work.name}
-                              </p>
+                              {getWorkCompany(work) && (
+                                <p className="text-sm !text-gray-900">
+                                  {getWorkCompany(work)}
+                                </p>
+                              )}
                             </div>
-                            <span className="text-sm" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.muted
-                            }}>
-                              {work.startDate && work.endDate ? `${work.startDate} - ${work.endDate}` : ''}
-                            </span>
+                            {getWorkDateRange(work) && (
+                              <span className="text-sm !text-gray-900">
+                                {getWorkDateRange(work)}
+                              </span>
+                            )}
                           </div>
                           {work.summary && work.summary.trim() && (
-                            <div className="text-sm leading-relaxed" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                            }}>
-                              <p>{work.summary}</p>
+                            <div className="text-sm leading-relaxed !text-gray-900">
+                              <AnnotatedText
+                                as="p"
+                                enabled={overlaysEnabled}
+                                fieldPath={`work[${index}].summary`}
+                                text={stripRichText(work.summary)}
+                                annotations={annotations}
+                                activeFixId={activeFixId}
+                                onSelectFix={onSelectFix}
+                                onApplyFix={onApplyFix}
+                                onDismissFix={onDismissFix}
+                              />
                             </div>
                           )}
                           {work.highlights && work.highlights.length > 0 && (
-                            <ul className="text-sm mt-2 space-y-1" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                            }}>
+                            <ul className="text-sm mt-2 space-y-1 !text-gray-900">
                               {work.highlights.map((highlight, i) => (
                                 <li key={i} className="flex items-start">
                                   <span className="mr-2">•</span>
-                                  <span>{highlight}</span>
+                                  <AnnotatedText
+                                    as="span"
+                                    enabled={overlaysEnabled}
+                                    fieldPath={`work[${index}].highlights[${i}]`}
+                                    text={stripRichText(highlight)}
+                                    annotations={annotations}
+                                    activeFixId={activeFixId}
+                                    onSelectFix={onSelectFix}
+                                    onApplyFix={onApplyFix}
+                                    onDismissFix={onDismissFix}
+                                  />
                                 </li>
                               ))}
                             </ul>
@@ -531,22 +780,20 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                         }}>
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h6 className="font-semibold text-lg" style={{
-                                color: templateStyles?.primaryColor || themeClasses.text.primary
-                              }}>
-                                {education.studyType} {education.area && `in ${education.area}`}
+                              <h6 className="font-semibold text-lg !text-gray-900">
+                                {getEducationDegree(education) || 'Education'}{getEducationField(education) ? ` in ${getEducationField(education)}` : ''}
                               </h6>
-                              <p className="text-sm" style={{
-                                color: templateStyles?.secondaryColor || themeClasses.text.muted
-                              }}>
-                                {education.institution}
-                              </p>
+                              {getEducationInstitution(education) && (
+                                <p className="text-sm !text-gray-900">
+                                  {getEducationInstitution(education)}
+                                </p>
+                              )}
                             </div>
-                            <span className="text-sm" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.muted
-                            }}>
-                              {education.startDate && education.endDate ? `${education.startDate} - ${education.endDate}` : ''}
-                            </span>
+                            {getEducationDateRange(education) && (
+                              <span className="text-sm !text-gray-900">
+                                {getEducationDateRange(education)}
+                              </span>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -566,17 +813,13 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                     <div className="space-y-2">
                       {cvData.skills.map((skill, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          {skill.category && (
-                            <span className="text-xs font-medium" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                            }}>
-                              {skill.category}:
+                          {getSkillCategory(skill) && (
+                            <span className="text-xs font-medium !text-gray-900">
+                              {getSkillCategory(skill)}:
                             </span>
                           )}
-                          <span className="text-sm" style={{
-                            color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                          }}>
-                            {skill.skills?.join(', ')}
+                          <span className="text-sm !text-gray-900">
+                            {getSkillItems(skill).join(', ')}
                           </span>
                         </div>
                       ))}
@@ -600,29 +843,31 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                         }}>
                           <div className="flex justify-between items-start mb-2">
                             <div>
-                              <h6 className="font-semibold text-lg" style={{
-                                color: templateStyles?.primaryColor || themeClasses.text.primary
-                              }}>
-                                {project.name}
+                              <h6 className="font-semibold text-lg !text-gray-900">
+                                {getProjectTitle(project) || 'Project'}
                               </h6>
                               {project.description && (
-                                <p className="text-sm" style={{
-                                  color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                                }}>
-                                  {project.description}
+                                <p className="text-sm !text-gray-900">
+                                  <AnnotatedText
+                                    as="span"
+                                    enabled={overlaysEnabled}
+                                    fieldPath={`projects[${index}].description`}
+                                    text={stripRichText(project.description)}
+                                    annotations={annotations}
+                                    activeFixId={activeFixId}
+                                    onSelectFix={onSelectFix}
+                                    onApplyFix={onApplyFix}
+                                    onDismissFix={onDismissFix}
+                                  />
                                 </p>
                               )}
                             </div>
-                            <span className="text-sm" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.muted
-                            }}>
+                            <span className="text-sm !text-gray-900">
                               {project.startDate && project.endDate ? `${project.startDate} - ${project.endDate}` : ''}
                             </span>
                           </div>
                           {project.url && (
-                            <p className="text-sm mt-2" style={{
-                              color: templateStyles?.secondaryColor || themeClasses.text.accent
-                            }}>
+                            <p className="text-sm mt-2 !text-gray-900">
                               <a href={project.url} target="_blank" rel="noopener noreferrer">
                                 {project.url}
                               </a>
@@ -647,22 +892,16 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                       {cvData.certificates.map((certificate, index) => (
                         <div key={index} className="flex justify-between items-start">
                           <div>
-                            <h6 className="font-medium" style={{
-                              color: templateStyles?.primaryColor || themeClasses.text.primary
-                            }}>
+                            <h6 className="font-medium !text-gray-900">
                               {certificate.name}
                             </h6>
                             {certificate.issuer && (
-                              <p className="text-sm" style={{
-                                color: templateStyles?.secondaryColor || themeClasses.text.muted
-                              }}>
+                              <p className="text-sm !text-gray-900">
                                 {certificate.issuer}
                               </p>
                             )}
                           </div>
-                          <span className="text-sm" style={{
-                            color: templateStyles?.secondaryColor || themeClasses.text.muted
-                          }}>
+                          <span className="text-sm !text-gray-900">
                             {certificate.date}
                           </span>
                         </div>
@@ -682,10 +921,118 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                     </h5>
                     <div className="grid grid-cols-2 gap-4">
                       {cvData.languages.map((language, index) => (
-                        <div key={index} className="text-sm" style={{
-                          color: templateStyles?.secondaryColor || themeClasses.text.secondary
-                        }}>
+                        <div key={index} className="text-sm !text-gray-900">
                           {language.language} - {language.fluency}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Volunteer */}
+                {cvData.volunteer && cvData.volunteer.length > 0 && isSectionVisible('volunteer') && (
+                  <div className="mb-6">
+                    <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
+                      color: '#1f2937',
+                      borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
+                    }}>
+                      Volunteer Experience
+                    </h5>
+                    <div className="space-y-4">
+                      {cvData.volunteer.map((v, index) => (
+                        <div key={index} className="border-l-4 pl-4" style={{
+                          borderLeftColor: templateStyles?.primaryColor || themeClasses.accent
+                        }}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h6 className="font-semibold text-lg !text-gray-900">
+                                {v.position || v.role || 'Volunteer Role'}
+                              </h6>
+                              {v.organization && (
+                                <p className="text-sm !text-gray-900">
+                                  {v.organization}
+                                </p>
+                              )}
+                            </div>
+                            {(v.startDate || v.endDate) && (
+                              <span className="text-sm !text-gray-900">
+                                {v.startDate && v.endDate ? `${v.startDate} - ${v.endDate}` : v.startDate || v.endDate}
+                              </span>
+                            )}
+                          </div>
+                          {v.summary && (
+                            <div className="text-sm leading-relaxed !text-gray-900">
+                              <AnnotatedText
+                                as="p"
+                                enabled={overlaysEnabled}
+                                fieldPath={`volunteer[${index}].summary`}
+                                text={stripRichText(v.summary)}
+                                annotations={annotations}
+                                activeFixId={activeFixId}
+                                onSelectFix={onSelectFix}
+                                onApplyFix={onApplyFix}
+                                onDismissFix={onDismissFix}
+                              />
+                            </div>
+                          )}
+                          {v.highlights && v.highlights.length > 0 && (
+                            <ul className="text-sm mt-2 space-y-1 !text-gray-900">
+                              {v.highlights.map((highlight, i) => (
+                                <li key={i} className="flex items-start">
+                                  <span className="mr-2">•</span>
+                                  <AnnotatedText
+                                    as="span"
+                                    enabled={overlaysEnabled}
+                                    fieldPath={`volunteer[${index}].highlights[${i}]`}
+                                    text={stripRichText(highlight)}
+                                    annotations={annotations}
+                                    activeFixId={activeFixId}
+                                    onSelectFix={onSelectFix}
+                                    onApplyFix={onApplyFix}
+                                    onDismissFix={onDismissFix}
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Awards */}
+                {cvData.awards && cvData.awards.length > 0 && isSectionVisible('awards') && (
+                  <div className="mb-6">
+                    <h5 className={`text-xl font-semibold mb-4 border-b pb-1`} style={{
+                      color: '#1f2937',
+                      borderBottomColor: templateStyles?.secondaryColor || themeClasses.border
+                    }}>
+                      Awards & Recognition
+                    </h5>
+                    <div className="space-y-3">
+                      {cvData.awards.map((award, index) => (
+                        <div key={index} className="flex justify-between items-start">
+                          <div>
+                            <h6 className="font-medium !text-gray-900">
+                              {award.title || award.name || 'Award'}
+                            </h6>
+                            {award.awarder && (
+                              <p className="text-sm !text-gray-900">
+                                {award.awarder}
+                              </p>
+                            )}
+                            {award.summary && (
+                              <p className="text-sm !text-gray-900 mt-1">
+                                {award.summary}
+                              </p>
+                            )}
+                          </div>
+                          {award.date && (
+                            <span className="text-sm !text-gray-900">
+                              {award.date}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>

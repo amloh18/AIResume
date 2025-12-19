@@ -1756,7 +1756,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
               cvDocument.metadata?.createdVia === 'ai-career-report';
             if (isMasterCV) {
               console.log('🔄 CVStudio - Master CV detected in journey, redirecting to ai-career-report');
-              router.replace(`/ai-career-report?editMaster=true&masterCVId=${journeyInfo.cvId}`);
+              router.replace(`/resume-enhancer?editMaster=true&masterCVId=${journeyInfo.cvId}`);
               return; // Exit early, don't load master CV in studio
             }
           }
@@ -2250,7 +2250,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                         cvDocument.metadata?.createdVia === 'ai-career-report';
                       if (isMasterCV) {
                         console.log('🔄 CVStudio - Master CV detected in journey, redirecting to ai-career-report');
-                        router.replace(`/ai-career-report?editMaster=true&masterCVId=${loadedJourneyInfo.cvId}`);
+                        router.replace(`/resume-enhancer?editMaster=true&masterCVId=${loadedJourneyInfo.cvId}`);
                         return; // Exit early, don't load master CV in studio
                       }
 
@@ -2453,9 +2453,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
                   console.log('🔄 CVStudio - Master CV data found in sessionStorage, redirecting to ai-career-report');
                   const masterCVId = masterCVData.id || editingCVId;
                   if (masterCVId) {
-                    router.replace(`/ai-career-report?editMaster=true&masterCVId=${masterCVId}`);
+                    router.replace(`/resume-enhancer?editMaster=true&masterCVId=${masterCVId}`);
                   } else {
-                    router.replace('/ai-career-report?editMaster=true');
+                    router.replace('/resume-enhancer?editMaster=true');
                   }
                   // Clear master CV sessionStorage
                   sessionStorage.removeItem('editingMasterCV');
@@ -2475,7 +2475,7 @@ const CVStudio: React.FC<CVStudioProps> = ({
                         cvCheckDocument.metadata?.createdVia === 'ai-career-report';
                       if (isMasterCV) {
                         console.log('🔄 CVStudio - Master CV detected from editingCVData, redirecting to ai-career-report');
-                        router.replace(`/ai-career-report?editMaster=true&masterCVId=${editingCVId}`);
+                        router.replace(`/resume-enhancer?editMaster=true&masterCVId=${editingCVId}`);
                         sessionStorage.removeItem('editingCVId');
                         sessionStorage.removeItem('editingCVTitle');
                         sessionStorage.removeItem('editingCVData');
@@ -2535,9 +2535,9 @@ const CVStudio: React.FC<CVStudioProps> = ({
                 console.log('🔄 CVStudio - Master CV detected, redirecting to ai-career-report for editing');
                 const masterCVId = cvId || (await fetch(`/api/cvs/master?userId=${userId}`).then(r => r.json()).then(d => d.data?.masterCV?.id)).catch(() => null);
                 if (masterCVId) {
-                  router.replace(`/ai-career-report?editMaster=true&masterCVId=${masterCVId}`);
+                  router.replace(`/resume-enhancer?editMaster=true&masterCVId=${masterCVId}`);
                 } else {
-                  router.replace('/ai-career-report?editMaster=true');
+                  router.replace('/resume-enhancer?editMaster=true');
                 }
                 return; // Exit early, don't load master CV in studio
               }

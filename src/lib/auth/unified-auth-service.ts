@@ -130,37 +130,54 @@ export class UnifiedAuthService {
             password: { type: 'password' },
           },
           async authorize(credentials, req) {
-            if (!credentials?.email || !credentials?.password) {
-              console.log('Admin auth: Missing credentials');
+            const email = credentials?.email?.toLowerCase()?.trim();
+            const password = credentials?.password;
+
+            console.log('🔐 Admin auth attempt:', { email, hasPassword: !!password });
+
+            if (!email || !password) {
+              console.error('❌ Admin auth: Missing credentials', { 
+                hasEmail: !!email, 
+                hasPassword: !!password 
+              });
               return null;
             }
 
             try {
+              console.log('📡 Connecting to database...');
               // Get database connection
               await getConnection();
+              console.log('✅ Database connected');
 
               // Dynamically import AdminAuth model to avoid circular dependencies
               const AdminAuth = (await import('@/models/AdminAuth')).default;
+              console.log('✅ AdminAuth model loaded');
 
               // Find admin user by email
+              console.log('🔍 Searching for admin user:', email);
               const adminUser = await AdminAuth.findOne({
-                email: credentials.email.toLowerCase().trim()
+                email: email
               }).select('+password');
 
               if (!adminUser) {
-                console.log('Admin user not found:', credentials.email);
+                console.error('❌ Admin user not found:', email);
+                // Check if any admin users exist at all
+                const adminCount = await AdminAuth.countDocuments({});
+                console.log(`ℹ️  Total admin users in database: ${adminCount}`);
+                
                 // Log failed login attempt
                 try {
                   const { ActivityLogService } = await import('@/lib/services/activityLogService');
                   await ActivityLogService.logAdminAction({
                     adminUserId: 'unknown',
-                    adminEmail: credentials.email,
+                    adminEmail: email,
                     action: 'admin_login_failed',
                     actionType: 'authentication',
                     status: 'failed',
                     metadata: {
                       reason: 'user_not_found',
-                      provider: 'admin-credentials'
+                      provider: 'admin-credentials',
+                      totalAdmins: adminCount
                     }
                   });
                 } catch (logError) {
@@ -169,17 +186,25 @@ export class UnifiedAuthService {
                 return null;
               }
 
+              console.log('✅ Admin user found:', {
+                id: adminUser._id.toString(),
+                email: adminUser.email,
+                role: adminUser.role,
+                hasPassword: !!adminUser.password
+              });
+
               // Verify password
-              const isPasswordValid = await adminUser.comparePassword(credentials.password);
+              console.log('🔑 Verifying password...');
+              const isPasswordValid = await adminUser.comparePassword(password);
 
               if (!isPasswordValid) {
-                console.log('Invalid password for admin:', credentials.email);
+                console.error('❌ Invalid password for admin:', email);
                 // Log failed login attempt
                 try {
                   const { ActivityLogService } = await import('@/lib/services/activityLogService');
                   await ActivityLogService.logAdminAction({
                     adminUserId: adminUser._id.toString(),
-                    adminEmail: credentials.email,
+                    adminEmail: email,
                     action: 'admin_login_failed',
                     actionType: 'authentication',
                     status: 'failed',
@@ -194,30 +219,40 @@ export class UnifiedAuthService {
                 return null;
               }
 
+              console.log('✅ Password verified successfully');
+
               // Update last login (don't fail if this fails)
               try {
                 adminUser.lastLogin = new Date();
                 await adminUser.save();
+                console.log('✅ Last login updated');
               } catch (saveError) {
-                console.warn('Failed to update admin last login:', saveError);
+                console.warn('⚠️  Failed to update admin last login:', saveError);
                 // Continue anyway - this is not critical
               }
 
               // Return admin user with role
-              return {
+              const userData = {
                 id: adminUser._id.toString(),
                 email: adminUser.email,
                 name: adminUser.email.split('@')[0],
                 role: adminUser.role || 'admin',
                 type: 'admin',
               };
+              console.log('✅ Admin authentication successful:', userData.email);
+              return userData;
             } catch (error: any) {
-              // Log error but don't expose details to client
-              console.error('Admin authentication error:', {
+              // Log error with full details for debugging
+              console.error('❌ Admin authentication error:', {
                 message: error?.message || 'Unknown error',
                 name: error?.name || 'Error',
-                // Don't log full stack in production
-                ...(process.env.NODE_ENV === 'development' && { stack: error?.stack })
+                code: error?.code,
+                email: email,
+                // Always log stack in development
+                ...(process.env.NODE_ENV === 'development' && { 
+                  stack: error?.stack,
+                  fullError: error
+                })
               });
               // Always return null on error - never throw
               return null;

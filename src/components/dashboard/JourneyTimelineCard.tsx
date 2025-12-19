@@ -643,7 +643,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     const hasValidCV = journey.cvId && journey.cvId.trim() !== '';
     const hasValidJob = journey.jobId && journey.jobId.trim() !== '';
     const hasScoreInDB = journey.atsScore !== undefined && journey.atsScore !== null;
-    
+
     // If we have a CV and Job, we should verify/recalculate the score
     // Don't trust database score if CV or Job might have changed
     if (hasValidCV && hasValidJob) {
@@ -2436,7 +2436,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             You need to create a master CV first before creating job-specific CVs.
                           </p>
                           <motion.button
-                            onClick={() => router.push('/ai-career-report')}
+                            onClick={() => router.push('/resume-enhancer')}
                             className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -2493,7 +2493,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         You need to create a master CV first before creating job-specific CVs.
                       </p>
                       <motion.button
-                        onClick={() => router.push('/ai-career-report')}
+                        onClick={() => router.push('/resume-enhancer')}
                         className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}

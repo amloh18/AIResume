@@ -85,6 +85,7 @@ interface CV {
   templateId?: string;
   templateName?: string;
   templateData?: any; // Saved template data from API
+  cvType?: 'master' | 'journey' | 'standalone'; // NEW: Resume Enhancer CV type
   isMaster?: boolean; // Legacy support - new format uses metadata.isMaster
   metadata?: {
     isMaster?: boolean;
@@ -1098,9 +1099,8 @@ const Canvas: React.FC = () => {
   // Master CV handlers (moved after load functions)
   const handleEditMasterCV = async (masterCV: any) => {
     try {
-      // Master CVs can only be edited in ai-career-report, not in studio
-      // Route directly to ai-career-report with editMaster flag
-      router.push(`/ai-career-report?editMaster=true&masterCVId=${masterCV.id}`);
+      // Route Master CV edit into Resume Enhancer (replaces legacy studio edit flow)
+      router.push(`/resume-enhancer?mode=edit&cvId=${masterCV.id}`);
     } catch (error) {
       console.error('Failed to route to ai-career-report for master CV editing:', error);
     }
@@ -1238,20 +1238,12 @@ const Canvas: React.FC = () => {
 
   const handleCVClick = async (cv: CV) => {
     try {
-      // Find the journey associated with this CV
-      const associatedJourney = journeys.find(journey => journey.cvId === cv.id);
-
-      if (associatedJourney && associatedJourney.journeyId) {
-        // Navigate directly to studio in journey mode (new architecture)
-        router.push(`/studio?journeyId=${associatedJourney.journeyId}&documentType=cv&mode=cvedit&returnUrl=/dashboard/canvas`);
-      } else {
-        // If no journey found, navigate directly to studio in standalone mode (new architecture)
-        router.push(`/studio?cvId=${cv.id}&returnUrl=/dashboard/canvas`);
-      }
+      // All CV edits should open Resume Enhancer (replaces legacy studio)
+      router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
     } catch (error) {
-      console.error('Error navigating to studio:', error);
-      // Fallback: navigate to standalone mode
-      router.push(`/studio?cvId=${cv.id}&returnUrl=/dashboard/canvas`);
+      console.error('Error navigating to resume-enhancer:', error);
+      // Fallback: still attempt to open resume-enhancer
+      router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
     }
   };
 
@@ -2039,7 +2031,7 @@ const Canvas: React.FC = () => {
     <div className="space-y-6">
       {/* Page Header - Always show immediately */}
       <PageHeader
-        title="CV Studio"
+        title="Documents"
         description="Saved CVs/ Cover Letter and Career Reports"
         user={{
           name: getUserDisplayName(userData),
@@ -2208,7 +2200,7 @@ const Canvas: React.FC = () => {
                     cvs={masterCVs}
                     onEdit={(cv) => {
                       // Handle Master CV edit redirect
-                      router.push(`/ai-career-report?editMaster=true&masterCVId=${cv.id}`);
+                      router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
                     }}
                     onDuplicate={handleDuplicateMasterCV}
                     onDownload={(cv) => handleDownloadCV(cv as any)}

@@ -144,6 +144,26 @@ body.dark {
   background: #1a230f; /* Matches dark:bg-[#1a230f] from layout */
 }
 
+/*
+  Resume Enhancer should look like the dashboard in LIGHT mode (neutral app shell),
+  not like the marketing pages (green gradient background).
+  We do this by overriding surface variables ONLY when html is NOT dark.
+*/
+html:not(.dark) .resume-enhancer-page {
+  background: #f9fafb;
+
+  /* App shell surfaces (light) */
+  --bg-primary: #f9fafb;  /* page background (matches dashboard bg-gray-50) */
+  --bg-secondary: #ffffff; /* primary panels/cards */
+  --bg-tertiary: #f3f4f6;  /* nested surfaces */
+
+  /* Glass elements should read as standard dashboard surfaces in light mode */
+  --header-bg: rgba(255, 255, 255, 0.9);
+  --modal-bg: rgba(255, 255, 255, 0.98);
+  --input-bg: #ffffff;
+  --hover-bg: #f3f4f6;
+}
+
 /* Dashboard text colors to match design - Dark theme only */
 .dark .dashboard-page h1,
 .dark .dashboard-page h2,

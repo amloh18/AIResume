@@ -307,7 +307,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         }`}
         title="Bold"
       >
-        <Bold size={16} className="text-white/80" />
+        <Bold size={16} className="text-[color:var(--text-secondary)]" />
       </button>
       
       <button
@@ -322,7 +322,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         }`}
         title="Italic"
       >
-        <Italic size={16} className="text-white/80" />
+        <Italic size={16} className="text-[color:var(--text-secondary)]" />
       </button>
       
       <button
@@ -337,10 +337,10 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         }`}
         title="Underline"
       >
-        <Underline size={16} className="text-white/80" />
+        <Underline size={16} className="text-[color:var(--text-secondary)]" />
       </button>
       
-      <div className="w-px h-4 bg-white/20 mx-0.5" />
+      <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
       
       <button
         type="button"
@@ -356,10 +356,10 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         className="p-1 hover:opacity-70 transition-opacity opacity-60"
         title="Bullet List"
       >
-        <List size={16} className="text-white/80" />
+        <List size={16} className="text-[color:var(--text-secondary)]" />
       </button>
       
-      <div className="w-px h-4 bg-white/20 mx-0.5" />
+      <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
       
       <button
         type="button"
@@ -374,7 +374,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         className="p-1 hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed opacity-60"
         title="Undo"
       >
-        <Undo2 size={16} className="text-white/80" />
+        <Undo2 size={16} className="text-[color:var(--text-secondary)]" />
       </button>
       
       <button
@@ -390,12 +390,12 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         className="p-1 hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed opacity-60"
         title="Redo"
       >
-        <Redo2 size={16} className="text-white/80" />
+        <Redo2 size={16} className="text-[color:var(--text-secondary)]" />
       </button>
 
       {showAIButton && (
         <>
-          <div className="w-px h-4 bg-white/20 mx-0.5" />
+          <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
           <button
             type="button"
             onClick={onAISuggestions || onAIGenerate}
@@ -407,7 +407,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           >
             <Sparkles 
               size={16} 
-              className={`text-white/80 ${isGenerating ? 'animate-pulse' : ''}`} 
+              className={`text-[color:var(--text-secondary)] ${isGenerating ? 'animate-pulse' : ''}`} 
             />
           </button>
         </>

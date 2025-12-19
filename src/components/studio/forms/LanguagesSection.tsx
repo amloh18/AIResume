@@ -50,7 +50,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
       {safeData.map((language, index) => (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-white">{language.language || 'Language'}</h4>
+            <h4 className="text-lg font-semibold text-[color:var(--text-primary)]">{language.language || 'Language'}</h4>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => duplicateLanguage(index)}
@@ -89,7 +89,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
               <select
                 value={language.fluency || ''}
                 onChange={(e) => updateLanguage(index, 'fluency', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
               >
                 <option value="">Select fluency level</option>
                 <option value="Native">Native</option>
@@ -111,7 +111,7 @@ const LanguagesSection: React.FC<LanguagesSectionProps> = ({
           };
           onUpdate([...safeData, newLanguage]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add Language

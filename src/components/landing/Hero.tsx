@@ -151,7 +151,7 @@ const Hero = () => {
           </motion.a>
 
           <motion.a
-            href="/ai-career-report"
+            href="/resume-enhancer"
             className="group relative border-2 border-lime-400/50 text-lime-400 px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-xs tablet:text-sm desktop:text-base hover:bg-lime-400/10 transition-all backdrop-blur-sm overflow-hidden flex items-center gap-2 tablet:gap-3"
             whileHover={{
               scale: 1.05,

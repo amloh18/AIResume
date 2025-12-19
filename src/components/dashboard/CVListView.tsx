@@ -11,10 +11,11 @@ import {
     MoreVertical,
     Check,
     X,
-    FileText,
+    Pencil,
     BarChart3, // Using BarChart3 for Analytics as per CVCardOverlay
     ExternalLink,
-    Loader2
+    Loader2,
+    FileText
 } from 'lucide-react';
 import { formatDetailedTime } from '@/lib/utils/timeUtils';
 import CVPreviewThumbnail from './CVPreviewThumbnail';
@@ -117,7 +118,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                         {cvs.map((cv) => (
                             <tr
                                 key={cv.id}
-                                className="bg-white dark:bg-[#1a2015] group hover:bg-gray-50 dark:hover:bg-[#1f2619] transition-colors cursor-pointer"
+                                className="bg-white dark:bg-[#1a2015] group hover:bg-gray-50 dark:hover:bg-[#1f2619] transition-colors cursor-pointer border-b border-gray-100 dark:border-white/10 last:border-b-0"
                                 onMouseEnter={() => setHoveredRowId(cv.id)}
                                 onMouseLeave={() => setHoveredRowId(null)}
                                 onClick={() => onEdit(cv)}
@@ -147,6 +148,18 @@ const CVListView: React.FC<CVListViewProps> = ({
                                         ) : (
                                             <div className="flex items-center gap-2">
                                                 <span className="font-medium text-sm text-gray-900 dark:text-white truncate" title={cv.title}>{cv.title}</span>
+                                                {onStartEditing && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onStartEditing(cv);
+                                                        }}
+                                                        className="transition-opacity text-gray-300 dark:text-gray-600 hover:text-lime-600 dark:hover:text-lime-400 opacity-0 group-hover:opacity-100"
+                                                        title="Rename"
+                                                    >
+                                                        <Pencil size={14} />
+                                                    </button>
+                                                )}
                                                 {/* Master Badge */}
                                                 {((cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true') || cv.metadata?.createdVia === 'ai-career-report') && (
                                                     <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-lime-400 text-black border border-lime-400 uppercase tracking-wide">
@@ -218,13 +231,6 @@ const CVListView: React.FC<CVListViewProps> = ({
                                             title="Edit"
                                         >
                                             <Edit size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => onStartEditing && onStartEditing(cv)}
-                                            className="p-1.5 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            title="Rename"
-                                        >
-                                            <FileText size={14} />
                                         </button>
                                         <button
                                             onClick={() => onDuplicate(cv)}

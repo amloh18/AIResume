@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  FileText, 
-  Target, 
-  Sparkles, 
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Target,
+  Sparkles,
   Plus,
   ArrowRight,
   CheckCircle,
@@ -34,7 +34,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         setIsCheckingCV(true);
         const response = await fetch(`/api/cvs/master?userId=${userId}`);
         const result = await response.json();
-        
+
         if (result.success && result.data?.masterCV) {
           setHasMasterCV(true);
         } else {
@@ -159,7 +159,7 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
       sessionStorage.setItem('fromOnboarding', 'true');
       sessionStorage.setItem('welcomeDismissed', 'true');
     }
-    router.push('/ai-career-report');
+    router.push('/resume-enhancer');
   };
 
   const allCardsVisited = visitedCards.every(visited => visited);
@@ -177,9 +177,9 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
         <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center">
-              <img 
-                src="/images/logo.png" 
-                alt="CVCircle Logo" 
+              <img
+                src="/images/logo.png"
+                alt="CVCircle Logo"
                 className="w-8 h-8 object-contain"
                 loading="eager"
                 decoding="async"
@@ -194,20 +194,19 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
               <p className="text-white/60 text-sm">Let's get you started</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             {/* Progress Indicator */}
             <div className="flex items-center gap-2">
               {cards.map((_, index) => (
                 <div
                   key={index}
-                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    index === currentCard 
-                      ? 'bg-lime-400 w-8' 
-                      : visitedCards[index] 
-                        ? 'bg-lime-400/50' 
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentCard
+                      ? 'bg-lime-400 w-8'
+                      : visitedCards[index]
+                        ? 'bg-lime-400/50'
                         : 'bg-white/20'
-                  }`}
+                    }`}
                 />
               ))}
             </div>
@@ -266,16 +265,16 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
                       initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
                       animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                       exit={{ opacity: 0, scale: 0.8, rotateY: 15 }}
-                      transition={{ 
-                        delay: 0.2, 
-                        duration: 0.6, 
+                      transition={{
+                        delay: 0.2,
+                        duration: 0.6,
                         ease: "easeInOut",
                         type: "spring",
                         stiffness: 100
                       }}
                       className="relative group"
                     >
-                      <motion.div 
+                      <motion.div
                         className="w-full h-80 bg-white rounded-xl border border-gray-200 shadow-lg flex items-center justify-center overflow-hidden p-4"
                         animate={{
                           y: [0, -5, 0],
@@ -308,11 +307,10 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
           <motion.button
             onClick={prevCard}
             disabled={currentCard === 0}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-              currentCard === 0
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${currentCard === 0
                 ? 'text-white/30 cursor-not-allowed'
                 : 'text-white/70 hover:text-white hover:bg-white/10'
-            }`}
+              }`}
             whileHover={currentCard > 0 ? { scale: 1.05 } : {}}
             whileTap={currentCard > 0 ? { scale: 0.95 } : {}}
           >
@@ -331,13 +329,12 @@ const OnboardingCarouselModal: React.FC<OnboardingCarouselModalProps> = ({ userI
                     setIsTransitioning(false);
                   }, 150);
                 }}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === currentCard 
-                    ? 'bg-lime-400' 
-                    : visitedCards[index] 
-                      ? 'bg-lime-400/50 hover:bg-lime-400/70' 
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentCard
+                    ? 'bg-lime-400'
+                    : visitedCards[index]
+                      ? 'bg-lime-400/50 hover:bg-lime-400/70'
                       : 'bg-white/20 hover:bg-white/30'
-                }`}
+                  }`}
               />
             ))}
           </div>

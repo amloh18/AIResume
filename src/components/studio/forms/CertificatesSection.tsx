@@ -139,7 +139,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
       {safeData.map((certificate, index) => (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-white">{certificate.name || 'Certification Name'}</h4>
+            <h4 className="text-lg font-semibold text-[color:var(--text-primary)]">{certificate.name || 'Certification Name'}</h4>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => duplicateCertificate(index)}
@@ -245,7 +245,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
           };
           onUpdate([...safeData, newCertificate]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Certification

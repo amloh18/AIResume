@@ -15,6 +15,7 @@ interface WYSIWYGEditorProps {
   isGenerating?: boolean;
   fieldType?: 'summary' | 'experience' | 'other';
   showToolbar?: boolean;
+  hasAnnotation?: boolean;
 }
 
 // Hook to get toolbar props for external rendering
@@ -62,7 +63,8 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   onAIGenerate,
   isGenerating = false,
   fieldType = 'other',
-  showToolbar = false
+  showToolbar = false,
+  hasAnnotation = false
 }) => {
   // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
@@ -123,8 +125,12 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`relative border border-white/20 rounded-lg bg-white/10 transition-all ${
-          isFocused ? 'border-[#80FF00] bg-white/15' : ''
+        className={`relative border border-white/20 rounded-lg transition-all ${
+          hasAnnotation 
+            ? 'bg-red-500/20 border-red-500/40' 
+            : isFocused 
+              ? 'border-[#80FF00] bg-white/15' 
+              : 'bg-white/10'
         }`}
       >
 
@@ -148,7 +154,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
               handleContentChange();
             }
           }}
-          className="w-full px-4 py-3 text-white placeholder-white/50 focus:outline-none resize-none overflow-y-auto"
+          className="w-full px-4 py-3 text-white focus:outline-none resize-none overflow-y-auto"
           style={{ minHeight, maxHeight: `${rows * 2}rem` }}
           data-placeholder={placeholder}
           suppressContentEditableWarning
