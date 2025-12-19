@@ -1,17 +1,19 @@
 'use client';
 
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronDown, ChevronUp, Minimize2, Maximize2 } from 'lucide-react';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronDown, ChevronUp, Minimize2, Maximize2, Home } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
+import RibbonStepIndicator from './RibbonStepIndicator';
 import Step1Parser from './steps/Step1Parser';
 import Step2Template from './steps/Step2Template';
 import Step3BuilderSurgeon from './steps/Step3BuilderSurgeon';
 import Step4Review from './steps/Step4Review';
 import RoleSelectorModal from './RoleSelectorModal';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { ITemplate } from '@/types/template';
 import UserAvatar from '@/components/ui/UserAvatar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
@@ -68,6 +70,11 @@ export default function ResumeEnhancerContainer({
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const step3Ref = useRef<Step3BuilderSurgeonRef>(null);
+  const initializedRef = useRef<{ mode: string; cvId?: string } | null>(null);
+  // Track initial CV data to detect unsaved changes
+  const initialCVDataRef = useRef<UnifiedCVDataStructure | null>(null);
+  const initialCVTitleRef = useRef<string>('');
+  const initialTemplateRef = useRef<ITemplate | null>(null);
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
   const [showJobSidebar, setShowJobSidebar] = useState(false);
@@ -85,7 +92,10 @@ export default function ResumeEnhancerContainer({
     (typeof state.jobData?.jd === 'string' && state.jobData.jd) ||
     '';
   const isJDReferenced = jdText.trim().length > 0;
-  const scoreLabel = isJDReferenced ? 'ATS score' : 'CV score';
+  const isMasterCV = mode === 'edit-master' || state.cvType === 'master';
+  const isJourneyCV = state.cvType === 'journey';
+  const isStandaloneCV = state.cvType === 'standalone';
+  const scoreLabel = isMasterCV ? 'CV score' : (isJourneyCV ? 'ATS score' : 'CV score');
   const openIssuesCount = (state.fixAnnotations || []).filter((f) => f.status === 'open').length;
 
   // Extract ATS keywords from skill gap analysis
@@ -107,44 +117,89 @@ export default function ResumeEnhancerContainer({
     return keywords;
   }, [skillGapAnalysis]);
 
-  // Fetch skill gap analysis when job data is available
-  useEffect(() => {
-    const fetchSkillGapAnalysis = async () => {
-      if (!state.jobData?.id && !state.jobData?._id) return;
-      if (!userId) return;
-      if (isLoadingSkillGap) return;
+  // Track if we've attempted to fetch skill gap analysis to prevent loops
+  const skillGapFetchAttemptedRef = useRef<string | null>(null);
+  const skillGapErrorRef = useRef<string | null>(null); // Track which job had the error
+  const skillGapFetchingRef = useRef<boolean>(false); // Track if currently fetching
 
-      const jobId = state.jobData.id || state.jobData._id;
-      if (!jobId) return;
+  // Memoize job ID to prevent unnecessary re-renders
+  const jobId = useMemo(() => {
+    return state.jobData?.id || state.jobData?._id || null;
+  }, [state.jobData?.id, state.jobData?._id]);
 
-      setIsLoadingSkillGap(true);
-      try {
-        const response = await authenticatedFetchWithUserId(
-          `/api/jobs/${jobId}/skill-gap-analysis`,
-          userId
-        );
+  // Memoize CV data check
+  const hasCVData = useMemo(() => {
+    return state.cvData && Object.keys(state.cvData).length > 0;
+  }, [state.cvData]);
 
-        if (!response.ok) {
-          console.warn('Failed to fetch skill gap analysis');
+  // Stable fetch function using useCallback
+  const fetchSkillGapAnalysis = useCallback(async () => {
+    if (!jobId || !userId) return;
+    if (isLoadingSkillGap || skillGapFetchingRef.current) return;
+
+    // Reset error ref if job changed
+    if (skillGapErrorRef.current && skillGapErrorRef.current !== jobId) {
+      skillGapErrorRef.current = null;
+      skillGapFetchAttemptedRef.current = null;
+    }
+
+    // Prevent re-fetching if we've already attempted for this job or if there was an error for this job
+    const fetchKey = `${jobId}-${userId}`;
+    if (skillGapFetchAttemptedRef.current === fetchKey || skillGapErrorRef.current === jobId) {
+      return;
+    }
+
+    // Mark as fetching to prevent concurrent requests
+    skillGapFetchingRef.current = true;
+    setIsLoadingSkillGap(true);
+    skillGapFetchAttemptedRef.current = fetchKey;
+    
+    try {
+      const response = await authenticatedFetchWithUserId(
+        `/api/jobs/${jobId}/skill-gap-analysis`,
+        userId
+      );
+
+      if (!response.ok) {
+        // Don't retry on 429 (quota exceeded) or 500 errors for this job
+        if (response.status === 429 || response.status === 500) {
+          skillGapErrorRef.current = jobId;
+          console.warn('Skill gap analysis unavailable (API quota exceeded or error)');
           return;
         }
-
-        const result = await response.json();
-        if (result.success && result.analysis) {
-          setSkillGapAnalysis(result.analysis);
-        }
-      } catch (error) {
-        console.error('Error fetching skill gap analysis:', error);
-      } finally {
-        setIsLoadingSkillGap(false);
+        console.warn('Failed to fetch skill gap analysis:', response.status);
+        return;
       }
-    };
 
-    // Only fetch if we have job data and CV data
-    if (state.jobData && state.cvData && state.currentStep === 3) {
-      fetchSkillGapAnalysis();
+      const result = await response.json();
+      if (result.success && result.analysis) {
+        setSkillGapAnalysis(result.analysis);
+        skillGapErrorRef.current = null; // Reset error flag on success
+      } else if (result.quotaExceeded) {
+        // Handle quota exceeded from response body
+        skillGapErrorRef.current = jobId;
+        console.warn('Skill gap analysis unavailable (API quota exceeded)');
+      }
+    } catch (error) {
+      console.error('Error fetching skill gap analysis:', error);
+      skillGapErrorRef.current = jobId; // Set error flag to prevent retries for this job
+    } finally {
+      setIsLoadingSkillGap(false);
+      skillGapFetchingRef.current = false;
     }
-  }, [state.jobData?.id, state.jobData?._id, state.cvData, state.currentStep, userId, isLoadingSkillGap]);
+  }, [jobId, userId, isLoadingSkillGap]);
+
+  // Fetch skill gap analysis when job data is available
+  useEffect(() => {
+    // Early return checks - prevent any execution if conditions aren't met
+    if (!state.jobData || !hasCVData || state.currentStep !== 3) return;
+    if (!jobId) return;
+    if (skillGapErrorRef.current === jobId) return;
+    if (skillGapFetchAttemptedRef.current === `${jobId}-${userId}`) return;
+    if (isLoadingSkillGap || skillGapFetchingRef.current) return;
+    
+    fetchSkillGapAnalysis();
+  }, [jobId, hasCVData, state.currentStep, userId, isLoadingSkillGap, fetchSkillGapAnalysis]);
 
   // Compute cvSections for sidebar (only used when step === 3)
   const cvDataWithStructure = useMemo(() => {
@@ -315,6 +370,14 @@ export default function ResumeEnhancerContainer({
 
   // Initialize based on mode
   useEffect(() => {
+    // Prevent re-initialization if already initialized with same params
+    const initKey = `${mode}-${cvId || 'no-cv'}`;
+    if (initializedRef.current && 
+        initializedRef.current.mode === mode && 
+        initializedRef.current.cvId === cvId) {
+      return;
+    }
+
     const initializeEnhancer = async () => {
       if (mode === 'edit' || mode === 'edit-master' || mode === 'journey') {
         // Load existing CV
@@ -331,14 +394,49 @@ export default function ResumeEnhancerContainer({
           const result = await response.json();
           const cv = result.data.cv;
 
-          const resolvedCvType: 'master' | 'journey' | 'standalone' =
-            cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
+          // Resolve CV type: 
+          // 1. If mode is 'journey', force journey type
+          // 2. Otherwise, prioritize cvType field, then infer from metadata/journeyId
+          let resolvedCvType: 'master' | 'journey' | 'standalone' =
+            mode === 'journey' 
+              ? 'journey'
+              : cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
 
-          // Edge case: CV has journeyId but no jobData - clear invalid journeyId
-          if (resolvedCvType === 'journey' && cv.journeyId && !cv.jobData) {
-            console.warn('⚠️ CV has journeyId but no jobData - clearing invalid journeyId');
-            // Optionally clear the journeyId from CV (commented out to avoid data loss)
-            // Could show a warning to user instead
+          // For journey CVs: ensure we have jobData to show journey-based interface
+          if (resolvedCvType === 'journey') {
+            console.log('🎯 Journey CV detected - will show journey-based interface', {
+              cvId: cv.id,
+              journeyId: cv.journeyId,
+              hasJobData: !!cv.jobData
+            });
+
+            // If jobData is missing but journeyId exists, try to fetch it
+            if (!cv.jobData && cv.journeyId) {
+              console.warn('⚠️ Journey CV missing jobData, attempting to fetch from journey...');
+              try {
+                const journeyResponse = await fetch(`/api/application-journey?journeyId=${cv.journeyId}`);
+                if (journeyResponse.ok) {
+                  const journeyResult = await journeyResponse.json();
+                  if (journeyResult.success && journeyResult.data?.journey?.jobId) {
+                    const jobResponse = await fetch(`/api/jobs/${journeyResult.data.journey.jobId}`);
+                    if (jobResponse.ok) {
+                      const jobResult = await jobResponse.json();
+                      if (jobResult.success && jobResult.data?.job) {
+                        cv.jobData = jobResult.data.job;
+                        console.log('✅ Successfully loaded jobData for journey CV');
+                      }
+                    }
+                  }
+                }
+              } catch (error) {
+                console.error('Failed to fetch jobData for journey CV:', error);
+              }
+            }
+
+            // If still no jobData, log warning but continue (journey interface may be limited)
+            if (!cv.jobData) {
+              console.warn('⚠️ Journey CV loaded without jobData - journey interface may be limited');
+            }
           }
 
           // Edge case: Master CV with JD - don't treat as journey
@@ -354,7 +452,13 @@ export default function ResumeEnhancerContainer({
               journeyId: undefined,
               jobData: undefined
             });
+            
+            // Store initial data for unsaved changes detection
+            initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
+            initialCVTitleRef.current = cv.title;
+            initialTemplateRef.current = cv.template || null;
           } else {
+            // Load CV with resolved type and jobData (for journey CVs)
             loadCV({
               cvId: cv.id,
               cvType: resolvedCvType,
@@ -364,6 +468,11 @@ export default function ResumeEnhancerContainer({
               journeyId: cv.journeyId,
               jobData: cv.jobData
             });
+            
+            // Store initial data for unsaved changes detection
+            initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
+            initialCVTitleRef.current = cv.title;
+            initialTemplateRef.current = cv.template || null;
           }
 
           // Master CVs are always role-based: auto-derive role + seniority so Step 3 analysis is ready.
@@ -387,6 +496,9 @@ export default function ResumeEnhancerContainer({
           // Skip to Step 3 for editing
           goToStep(3);
           setCompletedSteps([1, 2]);
+          
+          // Mark as initialized
+          initializedRef.current = { mode, cvId };
         } catch (error) {
           console.error('Failed to load CV:', error);
           alert('Failed to load CV. Redirecting to dashboard.');
@@ -398,6 +510,9 @@ export default function ResumeEnhancerContainer({
         // Create mode
         dispatch({ type: 'SET_MODE', payload: 'create' });
         goToStep(1);
+        
+        // Mark as initialized
+        initializedRef.current = { mode, cvId };
       }
     };
 
@@ -407,6 +522,13 @@ export default function ResumeEnhancerContainer({
   const handleStep1Complete = (cvData: UnifiedCVDataStructure) => {
     dispatch({ type: 'SET_CV_DATA', payload: cvData });
     setCompletedSteps([...completedSteps, 1]);
+    
+    // For create mode, set initial data when first data is entered
+    if (mode === 'create') {
+      initialCVDataRef.current = JSON.parse(JSON.stringify(cvData));
+      initialCVTitleRef.current = state.cvTitle;
+    }
+    
     // Show role selector modal
     setShowRoleModal(true);
   };
@@ -482,6 +604,116 @@ export default function ResumeEnhancerContainer({
       seniorityLevel: state.seniorityLevel || ''
     };
 
+    // For standalone CVs, automatically convert to journey when JD is added
+    if (state.cvType === 'standalone') {
+      const jobDescription = parsedData.jobDescription || parsedData.jobDescriptionRaw || parsedData.description || '';
+      
+      if (jobDescription && jobDescription.trim().length > 100) {
+        try {
+          // Create job application from parsed data
+          const jobResponse = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobTitle: parsedData.jobTitle || state.targetRole || 'Software Engineer',
+              company: parsedData.company || 'Unknown Company',
+              jobDescription: jobDescription,
+              location: parsedData.location,
+              jobUrl: parsedData.jobUrl,
+              status: 'created'
+            })
+          });
+
+          if (jobResponse.ok) {
+            const jobResult = await jobResponse.json();
+            const jobId = jobResult.data.jobApplication._id;
+            const journeyId = jobResult.data.journey._id;
+
+            // Update CV with journeyId and cvType if CV exists
+            if (state.cvId) {
+              try {
+                await fetch(`/api/cvs/${state.cvId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    journeyId: journeyId,
+                    cvType: 'journey'
+                  })
+                });
+              } catch (cvError) {
+                console.error('Error updating CV:', cvError);
+              }
+            }
+
+            // Update context to journey type
+            dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
+            dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
+            dispatch({ 
+              type: 'SET_JOB_DATA', 
+              payload: { 
+                id: jobId,
+                _id: jobId,
+                jobTitle: parsedData.jobTitle || state.targetRole,
+                title: parsedData.jobTitle || state.targetRole,
+                company: parsedData.company || 'Unknown Company',
+                description: jobDescription,
+                jobDescription: jobDescription,
+                location: parsedData.location
+              } 
+            });
+          } else {
+            // If job creation fails, just update jobData
+            dispatch({ 
+              type: 'SET_JOB_DATA', 
+              payload: { 
+                ...state.jobData,
+                jobTitle: parsedData.jobTitle || state.targetRole,
+                title: parsedData.jobTitle || state.targetRole,
+                company: parsedData.company || 'Unknown Company',
+                description: jobDescription,
+                jobDescription: jobDescription,
+                location: parsedData.location
+              } 
+            });
+          }
+        } catch (error) {
+          console.error('Failed to convert standalone to journey:', error);
+          // Fallback: just update jobData
+          dispatch({ 
+            type: 'SET_JOB_DATA', 
+            payload: { 
+              ...state.jobData,
+              jobTitle: parsedData.jobTitle || state.targetRole,
+              title: parsedData.jobTitle || state.targetRole,
+              company: parsedData.company || 'Unknown Company',
+              description: jobDescription,
+              jobDescription: jobDescription,
+              location: parsedData.location
+            } 
+          });
+        }
+      } else {
+        // If JD is too short, just update jobData without converting
+        dispatch({ 
+          type: 'SET_JOB_DATA', 
+          payload: { 
+            ...state.jobData,
+            jobTitle: parsedData.jobTitle || state.targetRole,
+            title: parsedData.jobTitle || state.targetRole,
+            company: parsedData.company || 'Unknown Company',
+            description: jobDescription,
+            jobDescription: jobDescription,
+            location: parsedData.location
+          } 
+        });
+      }
+      
+      setShowJobParserDialog(false);
+      setPendingRoleData(null);
+      return;
+    }
+
+    // For non-standalone CVs, create a journey (existing logic)
     if (!roleData.targetRole || !roleData.seniorityLevel) {
       // If we don't have role data, show role modal again
       setShowRoleModal(true);
@@ -546,6 +778,12 @@ export default function ResumeEnhancerContainer({
 
   const handleStep2Complete = () => {
     setCompletedSteps([...completedSteps, 2]);
+    
+    // For create mode, update initial template when Step 2 completes
+    if (mode === 'create' && state.selectedTemplate && !initialTemplateRef.current) {
+      initialTemplateRef.current = state.selectedTemplate;
+    }
+    
     goToStep(3);
   };
 
@@ -554,9 +792,71 @@ export default function ResumeEnhancerContainer({
     goToStep(4);
   };
 
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    // For new CVs (create mode), check if any data has been entered after Step 1
+    if (mode === 'create') {
+      // If initial data is set (Step 1 completed), compare with current data
+      if (initialCVDataRef.current) {
+        const currentDataStr = JSON.stringify(state.cvData);
+        const initialDataStr = JSON.stringify(initialCVDataRef.current);
+        const dataChanged = currentDataStr !== initialDataStr;
+        const titleChanged = state.cvTitle !== initialCVTitleRef.current;
+        const currentTemplateId = state.selectedTemplate?.id || (state.selectedTemplate as any)?._id;
+        const initialTemplateId = initialTemplateRef.current?.id || (initialTemplateRef.current as any)?._id;
+        const templateChanged = currentTemplateId !== initialTemplateId;
+        return dataChanged || titleChanged || templateChanged;
+      }
+      
+      // If initial data not set yet, check if any meaningful content exists
+      const hasContent = 
+        (state.cvData.basics?.name && state.cvData.basics.name.trim() !== '') ||
+        (state.cvData.work && state.cvData.work.length > 0) ||
+        (state.cvData.education && state.cvData.education.length > 0) ||
+        (state.cvData.skills && state.cvData.skills.length > 0);
+      
+      return hasContent;
+    }
+    
+    // For edit mode, compare with initial data
+    if (!initialCVDataRef.current) return false;
+    
+    // Deep comparison of CV data
+    const currentDataStr = JSON.stringify(state.cvData);
+    const initialDataStr = JSON.stringify(initialCVDataRef.current);
+    const dataChanged = currentDataStr !== initialDataStr;
+    
+    // Check if title changed
+    const titleChanged = state.cvTitle !== initialCVTitleRef.current;
+    
+    // Check if template changed
+    const currentTemplateId = state.selectedTemplate?.id || (state.selectedTemplate as any)?._id;
+    const initialTemplateId = initialTemplateRef.current?.id || (initialTemplateRef.current as any)?._id;
+    const templateChanged = currentTemplateId !== initialTemplateId;
+    
+    return dataChanged || titleChanged || templateChanged;
+  }, [mode, state.cvData, state.cvTitle, state.selectedTemplate]);
+
   const handleExit = () => {
-    if (confirm('Are you sure you want to exit? Unsaved changes will be lost.')) {
-      router.push('/dashboard?tab=cvs');
+    // Determine where to navigate back based on how user arrived
+    let returnPath = '/dashboard'; // Default
+    
+    if (journeyId) {
+      // User came from tracker (journey-based editing)
+      returnPath = '/dashboard/tracker';
+    } else if (cvId && (mode === 'edit' || mode === 'edit-master')) {
+      // User came from canvas/documents page
+      returnPath = '/dashboard/canvas';
+    }
+    
+    // Only show confirmation if there are unsaved changes
+    if (hasUnsavedChanges) {
+      if (confirm('Are you sure you want to exit? Unsaved changes will be lost.')) {
+        router.push(returnPath);
+      }
+    } else {
+      // No unsaved changes, exit without confirmation
+      router.push(returnPath);
     }
   };
 
@@ -613,10 +913,25 @@ export default function ResumeEnhancerContainer({
     };
 
     try {
+      // For Master CV or any edit mode, ensure we use PUT (update) if cvId exists
+      // This prevents trying to create a duplicate Master CV
+      const isMasterCV = state.cvType === 'master' || mode === 'edit-master';
+      const isEditMode = mode === 'edit' || mode === 'edit-master' || mode === 'journey';
+      
+      // Use cvId from state, or fallback to prop, or use the one from URL params
+      const effectiveCvId = state.cvId || cvId;
+      
+      // If we're in edit mode or have a cvId, we should update, not create
+      const shouldUpdate = isEditMode || effectiveCvId;
+      
+      if (isMasterCV && !effectiveCvId) {
+        throw new Error('Cannot save Master CV: CV ID is missing. Please reload the page and try again.');
+      }
+      
       const response = await fetch(
-        state.cvId ? `/api/cvs/${state.cvId}` : '/api/cvs',
+        shouldUpdate && effectiveCvId ? `/api/cvs/${effectiveCvId}` : '/api/cvs',
         {
-          method: state.cvId ? 'PATCH' : 'POST',
+          method: shouldUpdate && effectiveCvId ? 'PUT' : 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         }
@@ -628,18 +943,23 @@ export default function ResumeEnhancerContainer({
         throw new Error(result?.error || 'Failed to save');
       }
 
-      const cvId = extractCvIdFromResponse(result);
-      if (cvId) {
-        dispatch({ type: 'SET_CV_ID', payload: cvId });
+      const savedCvId = extractCvIdFromResponse(result);
+      if (savedCvId) {
+        dispatch({ type: 'SET_CV_ID', payload: savedCvId });
       }
+
+      // Update initial data refs after successful save to reset unsaved changes tracking
+      initialCVDataRef.current = JSON.parse(JSON.stringify(state.cvData));
+      initialCVTitleRef.current = state.cvTitle;
+      initialTemplateRef.current = state.selectedTemplate;
 
       setSaveStatus('success');
 
       if (isContinuing) {
         // Move to review after a successful save
         handleStep3Complete();
-      } else if (isFinishing && cvId) {
-        router.push(`/dashboard?tab=cvs&highlight=${cvId}`);
+      } else if (isFinishing && savedCvId) {
+        router.push(`/dashboard?tab=cvs&highlight=${savedCvId}`);
       }
 
       // Reset success state after a short delay (if we didn't navigate away)
@@ -674,6 +994,13 @@ export default function ResumeEnhancerContainer({
           <div className="flex items-center justify-between">
             {/* Logo */}
             <div className="flex items-center space-x-3">
+              <button
+                onClick={handleExit}
+                className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
+                title="Go back"
+              >
+                <Home className="w-5 h-5 text-[color:var(--text-primary)]" />
+              </button>
               <h1 className="text-[color:var(--text-primary)] font-bold">
                 <span className="text-xl">Resume Enhancer</span>
                 <span className="text-sm">
@@ -726,13 +1053,6 @@ export default function ResumeEnhancerContainer({
               
               {/* Notification Center */}
               <NotificationCenter />
-              
-              <button
-                onClick={handleExit}
-                className="px-2.5 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg transition-all hover:scale-105 shadow-sm shadow-black/10 dark:shadow-black/30"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
             </div>
           </div>
         </div>
@@ -745,25 +1065,23 @@ export default function ResumeEnhancerContainer({
             </div>
           </div>
         )}
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-3 px-4 py-1.5 lg:hidden">
-          <StepIndicator
-            currentStep={state.currentStep}
-            completedSteps={completedSteps}
-            onStepClick={(step) => {
-              if (completedSteps.includes(step)) {
-                goToStep(step);
-              }
-            }}
-          />
-        </div>
       </header>
 
+      {/* Ribbon Step Indicator - Below Header */}
+      <RibbonStepIndicator
+        currentStep={state.currentStep}
+        completedSteps={completedSteps}
+        onStepClick={(step) => {
+          if (completedSteps.includes(step)) {
+            goToStep(step);
+          }
+        }}
+      />
+
       {/* Content Area (Left Sticky Steps + Main Content) */}
-      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px)]">
+      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)]">
         {/* Floating / Sticky vertical steps panel (desktop) */}
-        <aside className="hidden lg:block w-52 flex-shrink-0 mt-2 mb-2 ml-2 rounded-xl overflow-y-auto overscroll-contain bg-[#141810] border border-white/10 h-[calc(100vh-64px)]">
+        <aside className="hidden lg:block w-52 flex-shrink-0 mt-2 mb-2 ml-2 rounded-xl overflow-y-auto overscroll-contain bg-[#141810] border border-white/10 h-[calc(100vh-64px-80px)]">
           <div className="flex flex-col h-full p-3">
             <div className="flex-1 space-y-3 overflow-y-auto">
               {/* Job Card - Show for journey-based CVs */}
@@ -801,8 +1119,12 @@ export default function ResumeEnhancerContainer({
                   <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4 h-4 text-[color:var(--accent-primary)]" />
-                      <InfoTooltip content="ATS (Applicant Tracking System) Check analyzes how well your resume matches the job requirements and ATS software requirements.">
-                        <div className="text-sm font-semibold text-[color:var(--text-primary)] cursor-help">ATS Check*</div>
+                      <InfoTooltip content={isMasterCV || isStandaloneCV
+                        ? "CVCircle Score analyzes your resume's overall quality, structure, and best practices for professional CVs."
+                        : "ATS (Applicant Tracking System) Check analyzes how well your resume matches the job requirements and ATS software requirements."}>
+                        <div className="text-sm font-semibold text-[color:var(--text-primary)] cursor-help">
+                          {isMasterCV || isStandaloneCV ? 'CVCircle Score' : 'ATS Check*'}
+                        </div>
                       </InfoTooltip>
                     </div>
                     <button
@@ -845,22 +1167,15 @@ export default function ResumeEnhancerContainer({
 
                     {!isScoreAnalysisCompact && (
                       <>
-                        {/* Resume Tailoring Expandable Section */}
+                        {/* Missing Skills Section - Only show for non-Master CVs with job description */}
+                        {!isMasterCV && (
                         <div>
-                          <button
-                            onClick={() => {/* Toggle would go here if needed */}}
-                            className="w-full flex items-center justify-between text-xs font-medium text-[color:var(--text-primary)]"
-                          >
-                            <span>Resume Tailoring</span>
-                            <ChevronUp className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
-                          </button>
-                          
-                          <div className="mt-2 space-y-2">
-                            {/* ATS Keywords Header */}
+                            <div className="space-y-2">
+                              {/* Missing Skills Header */}
                             <div className="flex items-center gap-2">
                               <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                              <InfoTooltip content="Keywords from the job description that ATS systems look for. Red dot means important keywords are missing from your resume.">
-                                <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">ATS Keywords</span>
+                                <InfoTooltip content="Skills from the job description that are missing from your resume. Red dot indicates important skills that need to be added.">
+                                  <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Missing Skills</span>
                               </InfoTooltip>
                             </div>
 
@@ -871,25 +1186,25 @@ export default function ResumeEnhancerContainer({
                               <span className="text-center">In Job Ad</span>
                             </div>
 
-                            {/* Keywords Preview - Show top 5 missing skills from skill gap analysis if available, otherwise from fix annotations */}
-                            <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                              {atsKeywords.length > 0 ? (
-                                // Show top 5 missing skills from skill gap analysis
-                                atsKeywords
-                                  .filter(kw => !kw.inResume)
-                                  .slice(0, 5)
-                                  .map((kw, idx) => (
-                                    <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
-                                      <span className="text-[color:var(--text-primary)] truncate" title={kw.keyword}>
-                                        {kw.keyword}
-                                      </span>
-                                      <div className="flex justify-center">
-                                        <XCircle className="w-3 h-3 text-red-400" />
+                              {/* Keywords Preview - Show top 5 missing skills from skill gap analysis if available, otherwise from fix annotations */}
+                              <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                                {atsKeywords.length > 0 ? (
+                                  // Show top 5 missing skills from skill gap analysis
+                                  atsKeywords
+                                    .filter(kw => !kw.inResume)
+                                    .slice(0, 5)
+                                    .map((kw, idx) => (
+                                      <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
+                                        <span className="text-[color:var(--text-primary)] truncate" title={kw.keyword}>
+                                          {kw.keyword}
+                                        </span>
+                                        <div className="flex justify-center">
+                                          <XCircle className="w-3 h-3 text-red-400" />
+                                        </div>
+                                        <span className="text-center text-[color:var(--text-secondary)]">{kw.inJobAd}</span>
                                       </div>
-                                      <span className="text-center text-[color:var(--text-secondary)]">{kw.inJobAd}</span>
-                                    </div>
-                                  ))
-                              ) : (state.fixAnnotations || [])
+                                    ))
+                                ) : (state.fixAnnotations || [])
                                 .filter(f => f.category === 'keywords' && f.status === 'open')
                                 .slice(0, 3)
                                 .map((fix, idx) => (
@@ -901,18 +1216,19 @@ export default function ResumeEnhancerContainer({
                                     <span className="text-center text-[color:var(--text-secondary)]">1</span>
                                   </div>
                                 ))}
-                              {(atsKeywords.length === 0 || atsKeywords.filter(kw => !kw.inResume).length === 0) && (state.fixAnnotations || []).filter(f => f.category === 'keywords').length === 0 && (
+                                {(atsKeywords.length === 0 || atsKeywords.filter(kw => !kw.inResume).length === 0) && (state.fixAnnotations || []).filter(f => f.category === 'keywords').length === 0 && (
                                 <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
-                                  {isLoadingSkillGap 
-                                    ? 'Analyzing keywords...' 
-                                    : isJDReferenced 
-                                      ? (atsKeywords.length > 0 ? 'All skills are covered!' : 'No keywords found')
-                                      : 'Add a job description to see keywords'}
+                                    {isLoadingSkillGap 
+                                      ? 'Analyzing keywords...' 
+                                      : isJDReferenced 
+                                        ? (atsKeywords.length > 0 ? 'All skills are covered!' : 'No keywords found')
+                                        : 'Add a job description to see keywords'}
                                 </div>
                               )}
                             </div>
                           </div>
                         </div>
+                        )}
 
                         {/* Issues Count Badge */}
                         <div className="flex items-center justify-between pt-1">
@@ -957,6 +1273,16 @@ export default function ResumeEnhancerContainer({
                           alert('Please set your target role and seniority level first.');
                           return;
                         }
+                      }
+
+                      // Check for JD requirement for standalone CVs
+                      if (state.cvType === 'standalone' && !isJDReferenced) {
+                        // Navigate to Step 3 if not already there, then open job parser
+                        if (state.currentStep !== 3) {
+                          goToStep(3);
+                        }
+                        setShowJobParserDialog(true);
+                        return;
                       }
 
                       setIsSidebarAnalyzing(true);
@@ -1024,7 +1350,8 @@ export default function ResumeEnhancerContainer({
                 </div>
               )}
 
-            <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-white/5">
+            {/* Vertical Step Indicator - Hidden on desktop since we have ribbon, shown on mobile if needed */}
+            <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-white/5 hidden">
               <StepIndicator
                 orientation="vertical"
                 currentStep={state.currentStep}
@@ -1240,11 +1567,15 @@ export default function ResumeEnhancerContainer({
         onClose={() => {
           setShowJobParserDialog(false);
           setPendingRoleData(null);
-          // Reopen role modal if we don't have role data
-          if (!state.targetRole || !state.seniorityLevel) {
+          // Reopen role modal if we don't have role data (only for non-standalone)
+          if (state.cvType !== 'standalone' && !state.targetRole || !state.seniorityLevel) {
             setShowRoleModal(true);
           }
         }}
+        customDescription={state.cvType === 'standalone' 
+          ? 'Add a Job Description for ATS check. This helps us provide more accurate analysis tailored to your target role by matching your CV against the job requirements.'
+          : undefined
+        }
         onParseComplete={handleJobParserComplete}
       />
 

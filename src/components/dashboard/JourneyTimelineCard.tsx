@@ -2461,8 +2461,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <div className="flex items-center gap-2 mt-1">
                             <motion.button
                               onClick={() => {
-                                // Navigate to studio in journey mode
-                                router.push(`/studio?journeyId=${journey.id}&documentType=cv&mode=cvedit`);
+                                // Navigate to resume-enhancer in journey mode
+                                const params = new URLSearchParams();
+                                params.set('mode', 'journey');
+                                params.set('journeyId', journey.id);
+                                if (journey.cvId) {
+                                  params.set('cvId', journey.cvId);
+                                }
+                                router.push(`/resume-enhancer?${params.toString()}`);
                               }}
                               className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
                             >
@@ -2635,7 +2641,22 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {/* Only show Edit button */}
                           <div className="flex items-center gap-2 mt-1">
                             <motion.button
-                              onClick={() => router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit`)}
+                              onClick={() => {
+                                // Navigate to cover-letter-editor in journey mode
+                                const params = new URLSearchParams();
+                                params.set('mode', 'journey');
+                                params.set('journeyId', journey.id);
+                                if (journey.coverLetterId) {
+                                  params.set('coverLetterId', journey.coverLetterId);
+                                }
+                                if (journey.cvId) {
+                                  params.set('cvId', journey.cvId);
+                                }
+                                if (journey.jobId) {
+                                  params.set('jobId', journey.jobId);
+                                }
+                                router.push(`/cover-letter-editor?${params.toString()}`);
+                              }}
                               className={`text-xs flex items-center gap-1 ${liveProgress.status === 'completed'
                                 ? 'text-blue-400 hover:text-blue-300'
                                 : 'text-lime-400 hover:text-lime-300'

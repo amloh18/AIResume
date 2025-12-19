@@ -86,37 +86,78 @@ export function navigateToStudioStandalone(
 export function createJourneyStudioActions(
   journeyId: string,
   userId: string,
-  router: any // Next.js router
+  router: any, // Next.js router
+  journeyData?: { cvId?: string; coverLetterId?: string; jobId?: string }
 ) {
   return {
     /**
-     * Navigate to CV Tailoring for this journey
+     * Navigate to CV Tailoring for this journey (opens resume-enhancer)
      */
     navigateToCVTailoring: () => {
-      const url = navigateToStudioFromJourney(journeyId, 'cv', userId);
-      router.push(url);
+      const params = new URLSearchParams();
+      params.set('mode', 'journey');
+      params.set('journeyId', journeyId);
+      if (journeyData?.cvId) {
+        params.set('cvId', journeyData.cvId);
+      }
+      if (journeyData?.jobId) {
+        params.set('jobId', journeyData.jobId);
+      }
+      router.push(`/resume-enhancer?${params.toString()}`);
     },
 
     /**
-     * Navigate to Cover Letter writing for this journey
+     * Navigate to Cover Letter writing for this journey (opens cover-letter-editor)
      */
     navigateToCoverLetter: () => {
-      const url = navigateToStudioFromJourney(journeyId, 'cover-letter', userId);
-      router.push(url);
+      const params = new URLSearchParams();
+      params.set('mode', 'journey');
+      params.set('journeyId', journeyId);
+      if (journeyData?.coverLetterId) {
+        params.set('coverLetterId', journeyData.coverLetterId);
+      }
+      if (journeyData?.cvId) {
+        params.set('cvId', journeyData.cvId);
+      }
+      if (journeyData?.jobId) {
+        params.set('jobId', journeyData.jobId);
+      }
+      router.push(`/cover-letter-editor?${params.toString()}`);
     },
 
     /**
      * Get URL for CV tailoring (for programmatic use)
      */
     getCVTailoringUrl: () => {
-      return navigateToStudioFromJourney(journeyId, 'cv', userId);
+      const params = new URLSearchParams();
+      params.set('mode', 'journey');
+      params.set('journeyId', journeyId);
+      if (journeyData?.cvId) {
+        params.set('cvId', journeyData.cvId);
+      }
+      if (journeyData?.jobId) {
+        params.set('jobId', journeyData.jobId);
+      }
+      return `/resume-enhancer?${params.toString()}`;
     },
 
     /**
      * Get URL for cover letter (for programmatic use)
      */
     getCoverLetterUrl: () => {
-      return navigateToStudioFromJourney(journeyId, 'cover-letter', userId);
+      const params = new URLSearchParams();
+      params.set('mode', 'journey');
+      params.set('journeyId', journeyId);
+      if (journeyData?.coverLetterId) {
+        params.set('coverLetterId', journeyData.coverLetterId);
+      }
+      if (journeyData?.cvId) {
+        params.set('cvId', journeyData.cvId);
+      }
+      if (journeyData?.jobId) {
+        params.set('jobId', journeyData.jobId);
+      }
+      return `/cover-letter-editor?${params.toString()}`;
     }
   };
 }
@@ -189,8 +230,8 @@ export function getReturnUrl(searchParams: URLSearchParams, fallback: string = '
  * Hook for Studio navigation in React components
  */
 export function useStudioNavigation(router: any, userId?: string) {
-  const journeyActions = (journeyId: string) => 
-    createJourneyStudioActions(journeyId, userId || '', router);
+  const journeyActions = (journeyId: string, journeyData?: { cvId?: string; coverLetterId?: string; jobId?: string }) => 
+    createJourneyStudioActions(journeyId, userId || '', router, journeyData);
   
   const standaloneActions = createStandaloneStudioActions(userId || '', router);
 

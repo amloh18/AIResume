@@ -31,12 +31,14 @@ interface JobParserDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onParseComplete: (data: ParsedJobData) => void;
+  customDescription?: string;
 }
 
 const JobParserDialog: React.FC<JobParserDialogProps> = ({
   isOpen,
   onClose,
-  onParseComplete
+  onParseComplete,
+  customDescription
 }) => {
   const [inputText, setInputText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -129,7 +131,7 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
             Quick Add Job (Magic Paste)
           </DialogTitle>
           <DialogDescription className="text-gray-600 dark:text-gray-400">
-            Paste a job description to automatically extract job details
+            {customDescription || 'Paste a job description to automatically extract job details'}
           </DialogDescription>
         </DialogHeader>
 

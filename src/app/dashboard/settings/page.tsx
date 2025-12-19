@@ -1582,15 +1582,27 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   </p>
                 </div>
               </div>
-              {subscription?.currentPeriodStart && subscription?.currentPeriodEnd && (
-                <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-1">
-                  <p>Start Date: {formatDate(subscription.currentPeriodStart)}</p>
-                  <p>End Date: {formatDate(subscription.currentPeriodEnd)}</p>
-                  {subscription?.nextBillingDate && (
-                    <p>Next Billing: {formatDate(subscription.nextBillingDate)}</p>
-                  )}
-                </div>
-              )}
+              {(() => {
+                // Determine end date - prefer currentPeriodEnd, fallback to endDate
+                const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
+                const startDate = subscription?.currentPeriodStart;
+                
+                if (!endDate && !startDate) return null;
+                
+                return (
+                  <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-1">
+                    {startDate && (
+                      <p>Start Date: {formatDate(startDate)}</p>
+                    )}
+                    {endDate && (
+                      <p>End Date: {formatDate(endDate)}</p>
+                    )}
+                    {subscription?.nextBillingDate && (
+                      <p>Next Billing: {formatDate(subscription.nextBillingDate)}</p>
+                    )}
+                  </div>
+                );
+              })()}
               {subscription?.planDetails?.features && (
                 <div className="text-sm text-gray-600 dark:text-gray-300">
                   <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>

@@ -1,17 +1,80 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { AlertCircle, Eye, Palette, X } from 'lucide-react';
+import { AlertCircle, Eye, Palette, X, FileText, Download } from 'lucide-react';
 import CVPreview from '@/components/studio/CVPreview';
 import TemplateSelector from '@/components/studio/TemplateSelector';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { downloadAsPDF } from '@/lib/utils/download';
 
 export default function Step4Review() {
   const { state, setTemplate } = useResumeEnhancer();
+  const router = useRouter();
   const [zoom, setZoom] = useState(1);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const previewRef = useRef<HTMLDivElement>(null);
+
+  const handleEditCoverLetter = () => {
+    const params = new URLSearchParams();
+    
+    // If CV is a journey CV, use 'journey' mode (which will edit if cover letter exists, otherwise create)
+    // If CV is standalone, use 'create' mode
+    if (state.cvType === 'journey' && state.journeyId) {
+      params.set('mode', 'journey');
+      params.set('journeyId', state.journeyId);
+      if (state.cvId) params.set('cvId', state.cvId);
+      if (state.jobData?.id || state.jobData?._id) {
+        params.set('jobId', state.jobData.id || state.jobData._id);
+      }
+    } else {
+      // Standalone CV - create new cover letter
+      params.set('mode', 'create');
+      if (state.cvId) params.set('cvId', state.cvId);
+    }
+    
+    router.push(`/cover-letter-editor?${params.toString()}`);
+  };
+
+  const handleDownload = async () => {
+    if (!state.selectedTemplate) {
+      alert('Please select a template before downloading');
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const filename = `${state.cvTitle || 'CV'}.pdf`;
+      
+      // Find the preview element for client-side fallback
+      let previewElement: HTMLElement | null = null;
+      if (previewRef.current) {
+        previewElement = previewRef.current.querySelector('.cv-preview-container') as HTMLElement ||
+          previewRef.current.querySelector('[class*="cv-preview"]') as HTMLElement ||
+          previewRef.current;
+      }
+      
+      // If cvId exists, use server-side API; otherwise use client-side generation
+      await downloadAsPDF(
+        previewElement || previewRef.current || document.body,
+        filename,
+        state.cvId || undefined,
+        {
+          paperSize: 'A4',
+          orientation: 'portrait',
+          jobTitle: state.jobData?.title || state.targetRole
+        }
+      );
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert('Failed to download CV. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const calculateCompletionPercentage = () => {
     let filledSections = 0;
@@ -69,10 +132,21 @@ export default function Step4Review() {
                 </p>
               </div>
               <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Template</p>
-                <p className="font-semibold text-[color:var(--text-primary)] text-sm">
-                  {state.selectedTemplate?.name || 'None'}
-                </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Template</p>
+                    <p className="font-semibold text-[color:var(--text-primary)] text-sm">
+                      {state.selectedTemplate?.name || 'None'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowTemplateModal(true)}
+                    className="px-3 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 hover:scale-105 shadow-sm shadow-black/10 dark:shadow-black/30"
+                  >
+                    <Palette className="w-3.5 h-3.5" />
+                    <span>Change Template</span>
+                  </button>
+                </div>
               </div>
               <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
                 <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Target Role</p>
@@ -87,6 +161,29 @@ export default function Step4Review() {
                 </p>
               </div>
             </div>
+
+            {/* Cover Letter Button */}
+            <div className="mt-4">
+              <button
+                onClick={handleEditCoverLetter}
+                className="w-full px-4 py-3 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-black rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-sm shadow-black/10 dark:shadow-black/30 hover:scale-105"
+              >
+                <FileText className="w-5 h-5" />
+                <span>{state.cvType === 'journey' ? 'Edit Cover Letter' : 'Create Cover Letter'}</span>
+              </button>
+            </div>
+
+            {/* Download Button */}
+            <div className="mt-3">
+              <button
+                onClick={handleDownload}
+                disabled={isDownloading || !state.selectedTemplate}
+                className="w-full px-4 py-3 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-sm shadow-black/10 dark:shadow-black/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-5 h-5" />
+                <span>{isDownloading ? 'Downloading...' : 'Download CV'}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -96,13 +193,6 @@ export default function Step4Review() {
           <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between">
             <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
             <div className="flex items-center space-x-3">
-              <button
-                onClick={() => setShowTemplateModal(true)}
-                className="px-3 py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 hover:scale-105 shadow-sm shadow-black/10 dark:shadow-black/30"
-              >
-                <Palette className="w-3.5 h-3.5" />
-                <span>Template</span>
-              </button>
               <div className="h-6 w-px bg-black/10 dark:bg-white/10" />
               <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
                 <Eye className="w-3.5 h-3.5" />
@@ -124,7 +214,7 @@ export default function Step4Review() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4" ref={previewRef}>
           {state.selectedTemplate ? (
             <CVPreview
               cvData={state.cvData}

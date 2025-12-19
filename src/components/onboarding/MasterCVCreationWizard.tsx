@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, CheckCircle, User, Briefcase, GraduationCap, Awa
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { adaptMasterCVToUnified, MasterCVOnboardingData } from '@/lib/data-adapters/cv-data-adapter';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 
 interface MasterCVCreationWizardProps {
   onComplete: () => void;
@@ -215,7 +216,8 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to parse CV');
+        const rawError = errorData.error || 'Failed to parse CV';
+        throw new Error(sanitizeErrorMessage(rawError, 'Failed to parse CV'));
       }
       
       const result = await response.json();
@@ -300,8 +302,9 @@ const MasterCVCreationWizard: React.FC<MasterCVCreationWizardProps> = ({ onCompl
         size: file.size
       });
       
-      // Provide more specific error messages
-      let errorMessage = 'An error occurred while parsing the CV';
+      // Provide more specific error messages - sanitize first
+      const sanitizedError = sanitizeErrorMessage(error, 'An error occurred while parsing the CV');
+      let errorMessage = sanitizedError;
       if (error instanceof Error) {
         if (error.message.includes('Unable to extract text from PDF')) {
           errorMessage = 'Unable to extract text from PDF. This might be a scanned PDF. Please try converting to DOCX format or copy-pasting the text content.';

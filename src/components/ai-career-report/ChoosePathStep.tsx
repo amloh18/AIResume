@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, ArrowRight, Sparkles, X, Eye, Save } from 'lucide-react';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 
 interface ChoosePathStepProps {
   onNext: () => void;
@@ -118,7 +119,8 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
         // Try to parse as JSON
         try {
           const errorData = JSON.parse(errorText);
-          throw new Error(errorData.error || 'Failed to parse CV');
+          const rawError = errorData.error || 'Failed to parse CV';
+          throw new Error(sanitizeErrorMessage(rawError, 'Failed to parse CV'));
         } catch (parseError) {
           // If it's not JSON, provide a generic error with more context
           throw new Error(`Failed to parse CV. Server returned: ${response.status} ${response.statusText}`);

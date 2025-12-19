@@ -117,7 +117,11 @@ export default function ApplicationJourneyModal({
   const progress = (journey.currentStep / steps.length) * 100;
 
   // Get the navigation functions for this journey
-  const studioActions = journeyActions(journey.id);
+  const studioActions = journeyActions(journey.id, {
+    cvId: journey.cv?.id || journey.cvId,
+    coverLetterId: journey.coverLetter?.id || journey.coverLetterId,
+    jobId: journey.job?.id || journey.jobId
+  });
 
   // Handle moving job to applied status
   const handleMoveToApplied = async () => {

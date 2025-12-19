@@ -17,6 +17,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { Session } from 'next-auth';
 import ClientErrorBoundary from './ClientErrorBoundary';
 import { FeedbackPrompt } from '@/components/feedback/FeedbackPrompt';
+import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionProvider';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -29,12 +30,14 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
       <PaymentModalProvider>
         <CreditExhaustionProvider>
           <ConsoleLoggerProvider>
-            <PerformanceMonitor />
-            <CookieConsent />
-            <SessionCleanup />
-            <Toaster />
-            <FeedbackPrompt />
-            {children}
+            <FeaturePromotionProvider>
+              <PerformanceMonitor />
+              <CookieConsent />
+              <SessionCleanup />
+              <Toaster />
+              <FeedbackPrompt />
+              {children}
+            </FeaturePromotionProvider>
           </ConsoleLoggerProvider>
         </CreditExhaustionProvider>
       </PaymentModalProvider>

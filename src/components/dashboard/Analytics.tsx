@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap,
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart,
-  MessageSquare, User, BarChart3, SearchX
+  MessageSquare, User, BarChart3, SearchX, Clock, ChevronRight
 } from 'lucide-react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
@@ -412,6 +412,49 @@ const CVManagementSection: React.FC<{
 const ApplicationCalendarWidget: React.FC<{
   jobs: any[];
 }> = ({ jobs }) => {
+  // Get upcoming deadlines sorted by date (earliest first)
+  const upcomingDeadlines = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return jobs
+      .filter(job => {
+        if (!job.deadline) return false;
+        const deadlineDate = new Date(job.deadline);
+        deadlineDate.setHours(0, 0, 0, 0);
+        return deadlineDate >= today; // Only future or today's deadlines
+      })
+      .map(job => ({
+        ...job,
+        deadlineDate: new Date(job.deadline)
+      }))
+      .sort((a, b) => a.deadlineDate.getTime() - b.deadlineDate.getTime());
+  }, [jobs]);
+
+  const formatDeadlineDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const deadline = new Date(date);
+    deadline.setHours(0, 0, 0, 0);
+    
+    const diffTime = deadline.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Tomorrow';
+    } else if (diffDays <= 7) {
+      return `In ${diffDays} days`;
+    } else {
+      return deadline.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: deadline.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
+
   return (
     <div
       className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full"
@@ -423,8 +466,8 @@ const ApplicationCalendarWidget: React.FC<{
       </div>
 
       {/* Calendar */}
-      <div className="flex-1 flex flex-col">
-        <div className="grid grid-cols-7 gap-1">
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="grid grid-cols-7 gap-1 mb-4">
           {/* Day headers */}
           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
             <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
@@ -497,7 +540,7 @@ const ApplicationCalendarWidget: React.FC<{
         </div>
 
         {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-600 dark:text-white/60">
+        <div className="flex items-center justify-center gap-4 mb-4 text-xs text-gray-600 dark:text-white/60">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-green-400 rounded-full"></div>
             <span>Applications</span>
@@ -511,6 +554,65 @@ const ApplicationCalendarWidget: React.FC<{
             <span>Today</span>
           </div>
         </div>
+
+        {/* Upcoming Deadlines List */}
+        {upcomingDeadlines.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              Upcoming Deadlines
+            </h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {upcomingDeadlines.map((job) => {
+                const isUrgent = (() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const deadline = new Date(job.deadlineDate);
+                  deadline.setHours(0, 0, 0, 0);
+                  const diffTime = deadline.getTime() - today.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  return diffDays <= 3;
+                })();
+
+                return (
+                  <div
+                    key={job.id || job._id}
+                    className={`
+                      flex items-center justify-between p-2 rounded-lg transition-colors
+                      ${isUrgent 
+                        ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20' 
+                        : 'bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10'
+                      }
+                    `}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {job.jobTitle || job.title}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                        {job.company}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3 flex-shrink-0">
+                      <div className={`text-xs font-medium ${isUrgent ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                        {formatDeadlineDate(job.deadlineDate)}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {upcomingDeadlines.length === 0 && (
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 text-center">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              No upcoming deadlines
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
