@@ -259,7 +259,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
           };
           onUpdate([...safeData, newEducation]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Education

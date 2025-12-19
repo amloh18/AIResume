@@ -143,7 +143,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
       {safeData.map((project, index) => (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-white">{project.name || 'Project Name'}</h4>
+            <h4 className="text-lg font-semibold text-[color:var(--text-primary)]">{project.name || 'Project Name'}</h4>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => duplicateProject(index)}
@@ -221,7 +221,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
           // highlights is optional - only include if user adds highlights
           onUpdate([...safeData, newProject]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Project

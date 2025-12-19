@@ -10,7 +10,7 @@ const HowItWorks = () => {
   const [isSectionVisible, setIsSectionVisible] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const isInView = useInView(sectionRef, { once: true, margin: "-100px" });
-  
+
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end start"]
@@ -151,9 +151,9 @@ const HowItWorks = () => {
   };
 
   return (
-    <section 
+    <section
       ref={sectionRef}
-      id="how-it-works" 
+      id="how-it-works"
       className="relative pt-32 pb-20 bg-gradient-to-b from-gray-900 to-black overflow-hidden"
     >
       {/* Background Effects */}
@@ -161,7 +161,7 @@ const HowItWorks = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
       </div>
-      
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full">
         {/* Header Section */}
         <motion.div
@@ -212,9 +212,9 @@ const HowItWorks = () => {
               >
                 STEP {steps[activeStep].number}: {steps[activeStep].title.toUpperCase()}
               </motion.div>
-              
+
               {/* Main Title */}
-              <motion.h4 
+              <motion.h4
                 className="text-xl tablet:text-2xl desktop:text-3xl font-bold text-white"
                 initial={{ opacity: 0, y: 10 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -223,7 +223,7 @@ const HowItWorks = () => {
               >
                 {steps[activeStep].headline}
               </motion.h4>
-              
+
               {/* Description */}
               <motion.p
                 className="text-white/80 leading-relaxed text-xs tablet:text-sm desktop:text-base font-light"
@@ -234,7 +234,7 @@ const HowItWorks = () => {
               >
                 {steps[activeStep].description}
               </motion.p>
-              
+
               {/* Start Your Journey Button */}
               <motion.div
                 className="pt-4"
@@ -244,9 +244,9 @@ const HowItWorks = () => {
                 viewport={{ once: true }}
               >
                 <motion.a
-                  href="/ai-career-report"
+                  href="/resume-enhancer"
                   className="group relative inline-block bg-gradient-to-r from-lime-400 to-lime-500 text-black px-6 py-3 rounded-full font-semibold text-sm shadow-lg hover:shadow-lime-400/50 transition-all overflow-hidden"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.05,
                     boxShadow: "0 15px 30px -8px rgba(128, 208, 0, 0.5)"
                   }}
@@ -313,7 +313,7 @@ const HowItWorks = () => {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Subtle gradient overlay for visual enhancement */}
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-lime-400/5 to-blue-400/5 pointer-events-none"></div>
               </motion.div>
@@ -334,7 +334,7 @@ const HowItWorks = () => {
           >
             {steps.map((step, index) => {
               const isActive = activeStep === index;
-              
+
               return (
                 <motion.div
                   key={index}
@@ -346,15 +346,14 @@ const HowItWorks = () => {
                 >
                   {/* Step Circle */}
                   <motion.div
-                    className={`w-12 h-12 tablet:w-16 tablet:h-16 rounded-full flex items-center justify-center text-white font-bold text-base tablet:text-lg transition-all duration-300 ${
-                      isActive 
-                        ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50' 
+                    className={`w-12 h-12 tablet:w-16 tablet:h-16 rounded-full flex items-center justify-center text-white font-bold text-base tablet:text-lg transition-all duration-300 ${isActive
+                        ? 'bg-gradient-to-r from-lime-400 to-lime-500 shadow-lg shadow-lime-400/50'
                         : 'bg-gray-800 border-2 border-white/20'
-                    }`}
+                      }`}
                     animate={{
                       scale: isActive ? 1.1 : 1,
-                      boxShadow: isActive 
-                        ? "0 0 30px rgba(132, 204, 22, 0.5)" 
+                      boxShadow: isActive
+                        ? "0 0 30px rgba(132, 204, 22, 0.5)"
                         : "0 4px 20px -4px rgba(0, 0, 0, 0.1)"
                     }}
                     transition={{ duration: 0.3 }}

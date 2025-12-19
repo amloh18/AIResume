@@ -22,15 +22,15 @@ const ParsingProgressMessages: React.FC = () => {
   useEffect(() => {
     // Show messages at random intervals
     const intervals: NodeJS.Timeout[] = [];
-    
+
     messages.forEach((_, index) => {
       // Random delay between 0.5s and 2.5s for each message
       const delay = 500 + Math.random() * 2000;
-      
+
       const timeout = setTimeout(() => {
-        setVisibleMessages(prev => new Set([...prev, index]));
+        setVisibleMessages(prev => new Set([...Array.from(prev), index]));
       }, delay);
-      
+
       intervals.push(timeout);
     });
 
@@ -46,7 +46,7 @@ const ParsingProgressMessages: React.FC = () => {
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#80FF00]"></div>
           <span className="font-medium text-lg">Processing your CV...</span>
         </div>
-        
+
         {/* Processing Steps - Show messages at random intervals */}
         <div className="w-full space-y-3 mt-4">
           {messages.map((message, index) => (
@@ -66,7 +66,7 @@ const ParsingProgressMessages: React.FC = () => {
             </AnimatePresence>
           ))}
         </div>
-        
+
         <p className="text-white/50 text-xs mt-2">This usually takes 5-10 seconds</p>
       </div>
     </div>
@@ -77,9 +77,9 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
   const { state, dispatch } = useAICareerReport();
   const [selectedOption, setSelectedOption] = useState<'upload' | 'manual' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Check if this is Flow 3: Master CV Edit
-  const isEditingMasterCV = typeof window !== 'undefined' && 
+  const isEditingMasterCV = typeof window !== 'undefined' &&
     new URLSearchParams(window.location.search).get('editMaster') === 'true';
 
   const handleFileUpload = async (file: File) => {
@@ -90,11 +90,11 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       // Use the same parsing logic as Master CV onboarding
       const formData = new FormData();
       formData.append('file', file);
-      
+
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
+
       const response = await fetch('/api/cv/parse', {
         method: 'POST',
         body: formData,
@@ -103,18 +103,18 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
         },
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('CV parsing failed with response:', errorText);
-        
+
         // Check if response is HTML (error page)
         if (errorText.trim().startsWith('<!DOCTYPE') || errorText.trim().startsWith('<html')) {
           throw new Error(`Server error: ${response.status} ${response.statusText}. Please try again later.`);
         }
-        
+
         // Try to parse as JSON
         try {
           const errorData = JSON.parse(errorText);
@@ -124,9 +124,9 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           throw new Error(`Failed to parse CV. Server returned: ${response.status} ${response.statusText}`);
         }
       }
-      
+
       const result = await response.json();
-      
+
       if (result.basics) {
         // Check if the parsing failed and error message is in basics.summary
         const errorMessagePattern = /Unable to extract text from this PDF/i;
@@ -136,7 +136,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           dispatch({ type: 'SET_UPLOAD_ERROR', payload: errorMessage });
           return;
         }
-        
+
         // Use the same normalization logic as Master CV onboarding
         const normalizedResult = {
           ...result,
@@ -144,29 +144,26 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           education: normalizeEducationDates(result.education || []),
           projects: normalizeProjectDates(result.projects || [])
         };
-        
+
         console.log('✅ ChoosePathStep - CV parsed successfully');
         console.log('📅 Work dates normalized:', normalizedResult.work);
         console.log('📅 Education dates normalized:', normalizedResult.education);
         console.log('📅 Project dates normalized:', normalizedResult.projects);
-        
+
         // Update the AI Career Report context with normalized data
         dispatch({ type: 'SET_CV_DATA', payload: normalizedResult });
         dispatch({ type: 'SET_UPLOADED_FILE', payload: file });
         dispatch({ type: 'SET_COMPLETED_STEP', payload: 1 });
-        
-        // Auto-advance to Step 2
-        setTimeout(() => {
-          onNext();
-        }, 1000);
+
+        // Don't auto-advance - let user review and click Next
       } else {
         dispatch({ type: 'SET_UPLOAD_ERROR', payload: 'Failed to parse CV data' });
       }
     } catch (error) {
       console.error('CV parsing error:', error);
-      
+
       let errorMessage = 'An error occurred while parsing the CV';
-      
+
       if (error instanceof Error) {
         if (error.name === 'AbortError') {
           errorMessage = 'Request timed out. Please try again with a smaller file.';
@@ -178,7 +175,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           errorMessage = error.message;
         }
       }
-      
+
       dispatch({ type: 'SET_UPLOAD_ERROR', payload: errorMessage });
     } finally {
       dispatch({ type: 'SET_UPLOADING', payload: false });
@@ -215,7 +212,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       return '';
     }
     const trimmed = value.trim();
-    
+
     // Accept YYYY-MM, YYYY-MM-DD, YYYY
     const yyyyMm = trimmed.match(/^\d{4}-(0[1-9]|1[0-2])$/);
     if (yyyyMm) {
@@ -231,7 +228,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       const result = `${yyyy[1]}-01`;
       return result;
     }
-    
+
     // Try to parse other common date formats
     try {
       const date = new Date(trimmed);
@@ -243,7 +240,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
       }
     } catch (error) {
     }
-    
+
     return '';
   };
 
@@ -282,7 +279,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
   }, [isEditingMasterCV, onNext]);
 
   return (
-    <div 
+    <div
       className="h-screen bg-[#1A201A] flex items-center justify-center p-4 pt-4 desktop:pt-8 overflow-hidden"
       onClick={handleClickOutside}
     >
@@ -298,10 +295,10 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             <p className="text-white/70 text-sm">Click Next to continue editing your Master CV</p>
           </motion.div>
         )}
-        
+
         {/* Header Section */}
         <div className="text-center mb-4 desktop:mb-8">
-          
+
           {/* Step Information */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -311,7 +308,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           >
             <div className="text-[#80FF00] font-bold text-lg mb-2">Step 1 of 3</div>
           </motion.div>
-          
+
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -320,7 +317,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           >
             Choose Your Path to Success
           </motion.h1>
-          
+
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -332,33 +329,31 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
         </div>
 
         {/* Main Content Cards */}
-        <div className={`grid gap-8 max-w-5xl mx-auto transition-all duration-500 ${
-          selectedOption === 'upload' ? 'grid-cols-1' : 'grid-cols-1 desktop:grid-cols-2'
-        }`}>
+        <div className={`grid gap-8 max-w-5xl mx-auto transition-all duration-500 ${selectedOption === 'upload' ? 'grid-cols-1' : 'grid-cols-1 desktop:grid-cols-2'
+          }`}>
           {/* Upload CV Card */}
           <motion.div
             initial={{ opacity: 0, x: -50 }}
-            animate={{ 
-              opacity: 1, 
+            animate={{
+              opacity: 1,
               x: 0
             }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            className={`upload-card-container relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${
-              selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20 desktop:col-span-2' : 'hover:shadow-xl hover:shadow-black/20'
-            }`}
+            className={`upload-card-container relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${selectedOption === 'upload' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20 desktop:col-span-2' : 'hover:shadow-xl hover:shadow-black/20'
+              }`}
             whileHover={selectedOption !== 'upload' ? { scale: 1.02, y: -5 } : {}}
             whileTap={{ scale: 0.98 }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Background Pattern */}
             <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
-            
+
             <div className="relative z-10">
               <div className="text-center mb-8">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#80FF00] to-[#70e600] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#80FF00]/30">
                   <Upload className="h-10 w-10 text-black" />
                 </div>
-                
+
                 <h3 className="text-3xl font-bold text-white mb-4">Upload Your CV</h3>
                 <p className="text-white/70 text-lg leading-relaxed mb-8">
                   Have an existing CV? Upload it and we'll analyze your experience to provide personalized career insights.
@@ -369,11 +364,10 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                 <button
                   onClick={() => !isEditingMasterCV && setSelectedOption('upload')}
                   disabled={isEditingMasterCV}
-                  className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 ${
-                    isEditingMasterCV 
-                      ? 'opacity-50 cursor-not-allowed' 
-                      : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
-                  }`}
+                  className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 ${isEditingMasterCV
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
+                    }`}
                 >
                   {isEditingMasterCV ? 'File Upload Disabled (Editing Master CV)' : 'Choose File'}
                 </button>
@@ -428,6 +422,33 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                   {state.isUploading && (
                     <ParsingProgressMessages />
                   )}
+
+                  {/* Success State - Show Next button after successful upload */}
+                  {!state.isUploading && !state.uploadError && state.uploadedFile && state.cvData?.basics?.name && (
+                    <div className="space-y-4">
+                      <div className="p-6 bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-xl text-[#80FF00] backdrop-blur-sm">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 bg-[#80FF00] rounded-full flex items-center justify-center">
+                            <Eye className="h-6 w-6 text-black" />
+                          </div>
+                          <div className="text-center">
+                            <p className="font-semibold text-lg mb-1">CV Uploaded Successfully!</p>
+                            <p className="text-white/70 text-sm">
+                              We've extracted your information. Review and click Next to continue.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={onNext}
+                        className="w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40 flex items-center justify-center gap-3"
+                      >
+                        Continue to Next Step
+                        <ArrowRight className="h-5 w-5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -438,56 +459,54 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
             {selectedOption !== 'upload' && (
               <motion.div
                 initial={{ opacity: 0, x: 50 }}
-                animate={{ 
+                animate={{
                   opacity: 1,
                   x: 0,
                   scale: 1
                 }}
-                exit={{ 
+                exit={{
                   opacity: 0,
                   x: 50,
                   scale: 0.8,
                   transition: { duration: 0.4 }
                 }}
                 transition={{ duration: 0.5, delay: 0.4 }}
-                className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${
-                  selectedOption === 'manual' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
-                }`}
+                className={`relative bg-[#263326] rounded-2xl p-8 transition-all duration-500 ${selectedOption === 'manual' ? 'ring-2 ring-[#80FF00] shadow-2xl shadow-[#80FF00]/20' : 'hover:shadow-xl hover:shadow-black/20'
+                  }`}
                 whileHover={{ scale: 1.02, y: -5 }}
                 whileTap={{ scale: 0.98 }}
               >
-            {/* Background Pattern */}
-            <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
-            
-            <div className="relative z-10">
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#80FF00] to-[#70e600] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#80FF00]/30">
-                  <FileText className="h-10 w-10 text-black" />
-                </div>
-                
-                <h3 className="text-3xl font-bold text-white mb-4">Start Fresh</h3>
-                <p className="text-white/70 text-lg leading-relaxed mb-8">
-                  Don't have a CV yet? No problem! We'll guide you through creating one from scratch with our smart builder.
-                </p>
-              </div>
+                {/* Background Pattern */}
+                <div className="absolute inset-0 rounded-2xl bg-[#80FF00]/5 opacity-50"></div>
 
-              <button
-                onClick={handleManualStart}
-                disabled={isEditingMasterCV}
-                className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 flex items-center justify-center gap-3 ${
-                  isEditingMasterCV 
-                    ? 'opacity-50 cursor-not-allowed' 
-                    : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
-                }`}
-              >
-                {isEditingMasterCV ? 'Manual Entry Disabled (Editing Master CV)' : (
-                  <>
-                    Create Manually
-                    <ArrowRight className="h-5 w-5" />
-                  </>
-                )}
-              </button>
-            </div>
+                <div className="relative z-10">
+                  <div className="text-center mb-8">
+                    <div className="w-20 h-20 bg-gradient-to-br from-[#80FF00] to-[#70e600] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-[#80FF00]/30">
+                      <FileText className="h-10 w-10 text-black" />
+                    </div>
+
+                    <h3 className="text-3xl font-bold text-white mb-4">Start Fresh</h3>
+                    <p className="text-white/70 text-lg leading-relaxed mb-8">
+                      Don't have a CV yet? No problem! We'll guide you through creating one from scratch with our smart builder.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleManualStart}
+                    disabled={isEditingMasterCV}
+                    className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 flex items-center justify-center gap-3 ${isEditingMasterCV
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
+                      }`}
+                  >
+                    {isEditingMasterCV ? 'Manual Entry Disabled (Editing Master CV)' : (
+                      <>
+                        Create Manually
+                        <ArrowRight className="h-5 w-5" />
+                      </>
+                    )}
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

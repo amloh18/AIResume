@@ -40,6 +40,28 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   // Check if we're on admin route - skip session logic if so
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
 
+  // Check if we're on a public route - notifications should not be shown on public routes
+  const publicRoutes = [
+    '/',
+    '/sign-in',
+    '/custom-signin',
+    '/sign-up',
+    '/admin/signin',
+    '/auth/verify-email',
+    '/auth/error',
+    '/auth/reset-password',
+    '/ai-career-report',
+    '/onboarding',
+    '/onboarding-universal',
+    '/privacy-policy',
+    '/terms',
+    '/cookie-policy',
+    '/force-logout',
+    '/features',
+    '/templates',
+  ];
+  const isPublicRoute = pathname ? publicRoutes.some(route => pathname === route || pathname.startsWith(route)) : false;
+
   // Ensure we're mounted before using session (prevents SSR/hydration issues)
   useEffect(() => {
     setIsMounted(true);
@@ -53,8 +75,10 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const status = sessionResult?.status || 'loading';
 
   // Safely check authentication - handle null/undefined cases
+  // Also check that we're not on a public route (like landing page)
   const isAuthenticated = isMounted &&
     !isAdminRoute &&
+    !isPublicRoute &&
     status === 'authenticated' &&
     !!session?.user;
 
@@ -341,7 +365,8 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   );
 
   useEffect(() => {
-    if (!isAuthenticated || !Array.isArray(notifications) || notifications.length === 0) {
+    // Don't show toasts if not authenticated, on public routes, or if there are no notifications
+    if (!isAuthenticated || isPublicRoute || !Array.isArray(notifications) || notifications.length === 0) {
       return;
     }
 
@@ -383,7 +408,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         displayedToastIdsRef.current.delete(id);
       }
     });
-  }, [notifications, isAuthenticated, shouldShowToast, showToastForNotification]);
+  }, [notifications, isAuthenticated, isPublicRoute, shouldShowToast, showToastForNotification]);
 
   // Set up Server-Sent Events for real-time notifications - only if authenticated
   useEffect(() => {
@@ -526,9 +551,9 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     };
   }, [handleNotificationAction, filterExpiredNotifications, toast, isAuthenticated]); // Include isAuthenticated
 
-  // Clear notifications when user logs out
+  // Clear notifications when user logs out or navigates to public route
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || isPublicRoute) {
       setNotifications([]);
       setIsLoading(false);
       // Close SSE connection if open
@@ -536,8 +561,12 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         eventSource.close();
         setEventSource(null);
       }
+      // Reset fetch flag when on public route
+      if (isPublicRoute) {
+        hasFetchedRef.current = false;
+      }
     }
-  }, [status, eventSource]);
+  }, [status, eventSource, isPublicRoute]);
 
   // Initial fetch - only if authenticated
   useEffect(() => {

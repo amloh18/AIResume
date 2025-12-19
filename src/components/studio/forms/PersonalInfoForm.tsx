@@ -8,6 +8,8 @@ import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '../AISuggestionsPanel';
 import { validateStringValue } from '@/lib/utils/eventHandlers';
 import { uploadToS3 } from '@/lib/utils/upload';
+import InlineSuggestion from '@/components/resume-enhancer/annotations/InlineSuggestion';
+import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 
 interface PersonalInfoFormProps {
   data: {
@@ -35,6 +37,9 @@ interface PersonalInfoFormProps {
   cvData?: any;
   jobData?: any;
   userId?: string;
+  annotations?: FixAnnotation[];
+  onApplyAnnotation?: (fix: FixAnnotation) => void;
+  onDismissAnnotation?: (fixId: string) => void;
 }
 
 const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
@@ -42,7 +47,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   onUpdate,
   cvData,
   jobData,
-  userId
+  userId,
+  annotations = [],
+  onApplyAnnotation,
+  onDismissAnnotation
 }) => {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -276,7 +284,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               <img
                 src={safePersonalInfo.image}
                 alt="Profile"
-                className="w-24 h-24 rounded-lg object-cover border-2 border-white/20"
+                className="w-24 h-24 rounded-lg object-cover border-2 border-[var(--border-primary)]"
                 onError={(e) => {
                   // Handle broken image URLs
                   const target = e.target as HTMLImageElement;
@@ -293,8 +301,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               </button>
             </div>
           ) : (
-            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-white/20 flex items-center justify-center bg-white/5 flex-shrink-0">
-              <ImageIcon className="w-8 h-8 text-white/40" />
+            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-[var(--border-primary)] flex items-center justify-center bg-[var(--bg-tertiary)] flex-shrink-0">
+              <ImageIcon className="w-8 h-8 text-[color:var(--text-tertiary)]" />
             </div>
           )}
 
@@ -311,7 +319,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             />
             <label
               htmlFor="photo-upload"
-              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white cursor-pointer hover:bg-white/15 transition-colors ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${
                 isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
@@ -330,7 +338,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             {uploadError && (
               <p className="mt-2 text-sm text-red-400">{uploadError}</p>
             )}
-            <p className="mt-2 text-xs text-white/50">
+            <p className="mt-2 text-xs text-[color:var(--text-tertiary)]">
               Recommended: Square image, max 5MB. Formats: JPG, PNG, WEBP
             </p>
           </div>
@@ -440,7 +448,19 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           onChange={(value) => handleFieldChange('summary', value)}
           rows={4}
           placeholder="Write a brief summary of your professional background and key achievements..."
+          hasAnnotation={annotations.some((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')}
         />
+        {/* Display inline suggestions for basics.summary below the editor */}
+        {annotations
+          .filter((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')
+          .map((fix) => (
+            <InlineSuggestion
+              key={fix.id}
+              fix={fix}
+              onApply={onApplyAnnotation || (() => {})}
+              onDismiss={onDismissAnnotation || (() => {})}
+            />
+          ))}
       </div>
 
     </div>
