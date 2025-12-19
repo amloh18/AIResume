@@ -118,8 +118,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('🔍 CV GET API - Starting request');
-    
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -130,13 +128,9 @@ export async function GET(
     }
 
     await getConnection();
-    console.log('🔍 CV GET API - Database connected');
     
     const { id } = await params;
-    console.log('🔍 CV GET API - CV ID from params:', id);
-
     const cvId = toObjectId(id);
-    console.log('🔍 CV GET API - Converted CV ID:', cvId);
     
     // Build query using session user ID
     const query: Record<string, any> = { 
@@ -144,26 +138,20 @@ export async function GET(
       userId: new mongoose.Types.ObjectId(session.user.id)
     };
     
-    console.log('🔍 CV GET API - Final query:', query);
-    
     // First, find the CV with user ownership check
     const cvDoc = await CV.findOne(query);
     
     if (!cvDoc) {
-      console.log('❌ CV GET API - CV not found for user');
       return NextResponse.json(
         { success: false, error: 'CV not found' },
         { status: 404 }
       );
     }
-
-    console.log('✅ CV GET API - CV found, getting template data');
     
     // Use utility function to get CV with template data
     const cv = await getCVWithTemplate(id);
     
     if (!cv) {
-      console.log('❌ CV GET API - CV not found after template fetch');
       return NextResponse.json(
         { success: false, error: 'CV not found' },
         { status: 404 }
@@ -174,8 +162,6 @@ export async function GET(
     let jobData = null;
     if (cvDoc.journeyId) {
       try {
-        console.log('🔍 CV GET API - CV has journeyId, loading job data:', cvDoc.journeyId);
-        
         // Load journey data
         const journeyId = typeof cvDoc.journeyId === 'string' 
           ? cvDoc.journeyId 
@@ -196,8 +182,6 @@ export async function GET(
         }
 
         if (foundJourney && foundJourney.jobId) {
-          console.log('🔍 CV GET API - Journey found, loading job:', foundJourney.jobId);
-          
           const jobResult = await Promise.allSettled([
             JobApplication.findOne({
               _id: foundJourney.jobId,
@@ -225,12 +209,7 @@ export async function GET(
               createdAt: jobDoc.createdAt,
               updatedAt: jobDoc.updatedAt
             };
-            console.log('✅ CV GET API - Job data loaded successfully');
-          } else {
-            console.warn('⚠️ CV GET API - Journey found but job not found:', foundJourney.jobId);
           }
-        } else {
-          console.warn('⚠️ CV GET API - CV has journeyId but journey not found:', cvDoc.journeyId);
         }
       } catch (error) {
         console.error('❌ CV GET API - Error loading job data:', error);
@@ -250,15 +229,20 @@ export async function GET(
       cv.metadata.viewCount += 1;
     }
 
-    console.log('✅ CV GET API - CV retrieved successfully');
+    // Ensure journeyId and cvType are included in response (from cvDoc, the source of truth)
+    // Also ensure id field is present (maps from _id)
+    const responseCv = {
+      ...cv,
+      id: cv._id || cvDoc._id.toString(), // Ensure id field is present
+      journeyId: cvDoc.journeyId ? (typeof cvDoc.journeyId === 'string' ? cvDoc.journeyId : cvDoc.journeyId.toString()) : undefined,
+      cvType: cvDoc.cvType || (cvDoc.metadata?.isMaster ? 'master' : cvDoc.journeyId ? 'journey' : 'standalone'),
+      jobData: jobData
+    };
 
     return NextResponse.json({
       success: true,
       data: {
-        cv: {
-          ...cv,
-          jobData: jobData
-        }
+        cv: responseCv
       }
     });
 

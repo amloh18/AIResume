@@ -96,7 +96,18 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         });
 
         if (!response.ok) {
-          throw new Error('Failed to fetch skill gap analysis');
+          // Try to get error message from response
+          let errorMessage = 'Failed to fetch skill gap analysis';
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            // If response is not JSON, use status text
+            errorMessage = `Failed to fetch skill gap analysis (${response.status} ${response.statusText})`;
+          }
+          console.warn(errorMessage);
+          // Don't throw - just log and continue without skill gap analysis
+          return;
         }
 
         const result = await response.json();
@@ -106,9 +117,17 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
           if (result.analysis.categories) {
             setExpandedSkillCategories(new Set(result.analysis.categories.map((cat: SkillCategory) => cat.name)));
           }
+        } else {
+          console.warn('Skill gap analysis response was not successful:', result);
         }
       } catch (error) {
-        console.error('Error fetching skill gap analysis:', error);
+        // Handle network errors and other exceptions gracefully
+        if (error instanceof Error) {
+          console.warn('Error fetching skill gap analysis:', error.message);
+        } else {
+          console.warn('Error fetching skill gap analysis:', error);
+        }
+        // Don't set error state - just continue without skill gap analysis
       } finally {
         setIsLoadingSkillGap(false);
       }

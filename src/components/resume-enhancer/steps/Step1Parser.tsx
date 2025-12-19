@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Upload, FileText, Edit3, CheckCircle2, Loader2 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 
 interface Step1ParserProps {
   onComplete: (cvData: UnifiedCVDataStructure) => void;
@@ -89,7 +90,8 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to parse CV');
+        const rawError = errorData.error || 'Failed to parse CV';
+        throw new Error(sanitizeErrorMessage(rawError, 'Failed to parse CV'));
       }
 
       const result = await response.json();
@@ -113,7 +115,7 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
       
       console.error('CV parsing error:', error);
       setUploadStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to parse CV');
+      setErrorMessage(sanitizeErrorMessage(error, 'Failed to parse CV'));
     } finally {
       setIsUploading(false);
     }

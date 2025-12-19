@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, FileText, User, Mail, Phone, MapPin, Globe, ArrowRight, X, RotateCcw, CheckCircle } from 'lucide-react';
 import { useOnboarding } from '@/contexts/OnboardingContext';
 import { normalizeWorkDates, normalizeEducationDates, normalizeProjectDates } from '@/lib/utils/dateNormalization';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 
 
 interface PersonalInfoStepProps {
@@ -44,7 +45,8 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to parse CV');
+        const rawError = errorData.error || 'Failed to parse CV';
+        throw new Error(sanitizeErrorMessage(rawError, 'Failed to parse CV'));
       }
       
       const result = await response.json();
@@ -77,7 +79,7 @@ export default function PersonalInfoStep({ onNext }: PersonalInfoStepProps) {
       }
     } catch (error) {
       console.error('CV parsing error:', error);
-      setUploadError(error instanceof Error ? error.message : 'An error occurred while parsing the CV');
+      setUploadError(sanitizeErrorMessage(error, 'An error occurred while parsing the CV'));
     } finally {
       setIsUploading(false);
     }

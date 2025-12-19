@@ -121,20 +121,120 @@ Return ONLY valid JSON. No markdown, no explanations.
         // Parse the AI response
         let result;
         try {
-            const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-                result = JSON.parse(jsonMatch[0]);
-            } else {
-                throw new Error('No JSON found in response');
+            let content = aiResponse.content.trim();
+            
+            // Remove markdown code blocks if present
+            const codeBlockRegex = /```(?:json)?\s*([\s\S]*?)```/;
+            const codeBlockMatch = content.match(codeBlockRegex);
+            if (codeBlockMatch) {
+                content = codeBlockMatch[1].trim();
             }
-        } catch (e) {
+            
+            // Try to find JSON object - look for the first { and try to find matching }
+            let jsonStart = content.indexOf('{');
+            if (jsonStart === -1) {
+                throw new Error('No JSON object found in response');
+            }
+            
+            // Find the matching closing brace by counting braces (handling strings properly)
+            let braceCount = 0;
+            let jsonEnd = -1;
+            let inString = false;
+            let escapeNext = false;
+            
+            for (let i = jsonStart; i < content.length; i++) {
+                const char = content[i];
+                
+                if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                }
+                
+                if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                }
+                
+                if (char === '"') {
+                    inString = !inString;
+                    continue;
+                }
+                
+                if (!inString) {
+                    if (char === '{') {
+                        braceCount++;
+                    } else if (char === '}') {
+                        braceCount--;
+                        if (braceCount === 0) {
+                            jsonEnd = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (jsonEnd === -1) {
+                // If we can't find matching brace, try to find the last complete closing brace
+                console.warn('⚠️ JSON appears incomplete, attempting to find last complete brace');
+                // Try to find the last complete array element or object
+                const lastCompleteBrace = content.lastIndexOf('}');
+                if (lastCompleteBrace > jsonStart) {
+                    jsonEnd = lastCompleteBrace + 1;
+                } else {
+                    throw new Error('Incomplete JSON - no matching closing brace found');
+                }
+            }
+            
+            let jsonString = content.substring(jsonStart, jsonEnd);
+            
+            // Try to fix common JSON issues before parsing
+            // Remove trailing commas before closing braces/brackets
+            jsonString = jsonString.replace(/,(\s*[}\]])/g, '$1');
+            
+            // Try to parse the JSON
+            result = JSON.parse(jsonString);
+            
+            // Validate the result structure
+            if (!result || typeof result !== 'object') {
+                throw new Error('Parsed JSON is not an object');
+            }
+            
+            // Ensure fixes is an array
+            if (!Array.isArray(result.fixes)) {
+                console.warn('⚠️ Fixes is not an array, converting to array');
+                result.fixes = result.fixes ? [result.fixes] : [];
+            }
+            
+        } catch (e: any) {
             console.error('Failed to parse CV Surgeon JSON:', e);
-            console.log('Raw response:', aiResponse.content);
-            return NextResponse.json({
-                success: false,
-                error: 'Failed to generate valid JSON for surgical fixes',
-                rawResponse: aiResponse.content
-            }, { status: 500, headers });
+            console.log('Raw response length:', aiResponse.content.length);
+            console.log('Raw response (first 500 chars):', aiResponse.content.substring(0, 500));
+            console.log('Raw response (last 500 chars):', aiResponse.content.substring(Math.max(0, aiResponse.content.length - 500)));
+            
+            // Try to extract partial fixes if possible
+            try {
+                // Look for any valid JSON fragments
+                const fixesMatch = aiResponse.content.match(/"fixes"\s*:\s*\[([\s\S]*?)\]/);
+                if (fixesMatch) {
+                    console.log('Attempting to extract fixes from partial JSON...');
+                    // This is a fallback - return a minimal valid response
+                    result = {
+                        score: 0,
+                        fixes: []
+                    };
+                    console.warn('⚠️ Using fallback empty fixes array due to JSON parsing error');
+                } else {
+                    throw new Error('Could not extract any valid JSON structure');
+                }
+            } catch (fallbackError) {
+                return NextResponse.json({
+                    success: false,
+                    error: 'Failed to generate valid JSON for surgical fixes',
+                    details: e.message,
+                    rawResponseLength: aiResponse.content.length,
+                    rawResponsePreview: aiResponse.content.substring(0, 1000)
+                }, { status: 500, headers });
+            }
         }
 
         // Add unique IDs to fixes

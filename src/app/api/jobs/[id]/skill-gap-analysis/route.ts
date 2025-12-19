@@ -155,12 +155,20 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error in skill gap analysis:', error);
+    
+    // Check if it's a quota exceeded error (429)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to analyze skill gap';
+    const isQuotaExceeded = errorMessage.includes('429') || 
+                           errorMessage.includes('quota exceeded') || 
+                           errorMessage.includes('RESOURCE_EXHAUSTED');
+    
     return NextResponse.json(
       { 
         success: false, 
-        error: error instanceof Error ? error.message : 'Failed to analyze skill gap' 
+        error: errorMessage,
+        quotaExceeded: isQuotaExceeded
       },
-      { status: 500 }
+      { status: isQuotaExceeded ? 429 : 500 }
     );
   }
 }

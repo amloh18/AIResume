@@ -310,3 +310,46 @@ export function assertOwnership(
     throw new ForbiddenError('Access denied');
   }
 }
+
+/**
+ * Sanitizes error messages for user display
+ * Filters out technical/internal error details that shouldn't be shown to users
+ */
+export function sanitizeErrorMessage(error: unknown, fallbackMessage: string = 'An error occurred. Please try again.'): string {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  
+  // Filter out Gemini API quota errors - show user-friendly message instead
+  if (
+    errorMessage.includes('All Gemini API keys failed') ||
+    errorMessage.includes('Gemini API error') ||
+    errorMessage.includes('quota') ||
+    errorMessage.includes('RESOURCE_EXHAUSTED') ||
+    errorMessage.includes('generativelanguage.googleapis.com')
+  ) {
+    return 'The AI service is temporarily unavailable. Please try again in a few moments.';
+  }
+  
+  // Filter out other technical API errors
+  if (
+    errorMessage.includes('AI API call failed') &&
+    (errorMessage.includes('429') || errorMessage.includes('quota'))
+  ) {
+    return 'The AI service is temporarily unavailable. Please try again in a few moments.';
+  }
+  
+  // Return the original error message if it's user-friendly, otherwise return fallback
+  // Check if the error message looks like a technical error (contains API details, stack traces, etc.)
+  const isTechnicalError = 
+    errorMessage.includes('at ') ||
+    errorMessage.includes('Error:') ||
+    errorMessage.includes('TypeError') ||
+    errorMessage.includes('ReferenceError') ||
+    errorMessage.includes('api.google') ||
+    errorMessage.includes('generativelanguage');
+  
+  if (isTechnicalError && !errorMessage.includes('Please')) {
+    return fallbackMessage;
+  }
+  
+  return errorMessage;
+}

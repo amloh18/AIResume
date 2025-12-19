@@ -120,6 +120,9 @@ interface CoverLetter {
   // connectedJobs removed - relationships now managed through CVJourney
   completionPercentage?: number;
   content?: string;
+  journeyId?: string;
+  cvId?: string;
+  jobId?: string;
   metadata?: {
     targetCompany?: string;
     targetPosition?: string;
@@ -625,6 +628,7 @@ const Canvas: React.FC = () => {
             templateName: cv.templateName,
             templateData: cv.templateData, // Include saved template data
             journeyId: cv.journeyId,
+            cvType: cv.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'), // Include CV type
             completionPercentage: calculateCompletionPercentage(cv),
             // Include master flag - Master CV: isMaster: true OR createdVia: 'ai-career-report'
             // Regular CV: isMaster: false (and if createdVia: 'journey', it's definitely a regular CV)
@@ -632,7 +636,7 @@ const Canvas: React.FC = () => {
               cv.metadata?.isMaster === 'true' ||
               cv.isMaster === true ||
               cv.metadata?.createdVia === 'ai-career-report',
-            atsScore: cv.metadata?.atsScore || cv.atsScore || cv.cvData?.analysis?.score, // Include ATS score
+            atsScore: cv.metadata?.atsScore || cv.atsScore || cv.cvData?.analysis?.score, // Include ATS score from metadata first
             metadata: cv.metadata // Include full metadata
           } as CV;
         });
@@ -690,6 +694,9 @@ const Canvas: React.FC = () => {
                 description: cl.metadata?.targetCompany ? `For ${cl.metadata.targetCompany}` : 'Cover letter',
                 coverLetterData: cl.content,
                 content: cl.content, // Add content field for the overlay component
+                journeyId: cl.journeyId, // Include journeyId for navigation
+                cvId: cl.cvId, // Include cvId for navigation
+                jobId: cl.jobId, // Include jobId for navigation
                 // connectedJobs removed - relationships now managed through CVJourney
                 completionPercentage: cl.completionPercentage || 0
               };
@@ -2311,6 +2318,7 @@ const Canvas: React.FC = () => {
                             completionPercentage: cv.completionPercentage,
                             isMaster: cv.isMaster,
                             journeyId: cv.journeyId,
+                            cvType: cv.cvType,
                             atsScore: cv.atsScore,
                             metadata: cv.metadata
                           }}
@@ -2359,7 +2367,15 @@ const Canvas: React.FC = () => {
           {viewMode === 'list' ? (
             <CoverLetterListView
               coverLetters={filteredAndSortedCoverLetters}
-              onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}&returnUrl=/dashboard/canvas`); }}
+              onEdit={(cl) => {
+                const params = new URLSearchParams();
+                params.set('mode', cl.journeyId ? 'journey' : 'edit');
+                params.set('coverLetterId', cl.id);
+                if (cl.journeyId) params.set('journeyId', cl.journeyId);
+                if (cl.cvId) params.set('cvId', cl.cvId);
+                if (cl.jobId) params.set('jobId', cl.jobId);
+                router.push(`/cover-letter-editor?${params.toString()}`);
+              }}
               onDownload={handleDownloadCoverLetter}
               onDelete={handleDeleteCoverLetter}
               onToggleStar={toggleCoverLetterStar}
@@ -2392,7 +2408,15 @@ const Canvas: React.FC = () => {
                         thumbnail: coverLetter.thumbnail || '',
                         metadata: coverLetter.metadata
                       }}
-                      onEdit={(cl) => { router.push(`/studio?coverLetterId=${cl.id}&returnUrl=/dashboard/canvas`); }}
+                      onEdit={(cl) => {
+                        const params = new URLSearchParams();
+                        params.set('mode', cl.journeyId ? 'journey' : 'edit');
+                        params.set('coverLetterId', cl.id);
+                        if (cl.journeyId) params.set('journeyId', cl.journeyId);
+                        if (cl.cvId) params.set('cvId', cl.cvId);
+                        if (cl.jobId) params.set('jobId', cl.jobId);
+                        router.push(`/cover-letter-editor?${params.toString()}`);
+                      }}
                       onDownload={handleDownloadCoverLetter}
                       onDelete={handleDeleteCoverLetter}
                       onToggleStar={toggleCoverLetterStar}

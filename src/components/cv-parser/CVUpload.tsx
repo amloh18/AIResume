@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDropzone } from 'react-dropzone';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 
 import { Upload, FileText, Image, File, X, CheckCircle, AlertCircle } from 'lucide-react';
 
@@ -70,7 +71,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
     } catch (error) {
       console.error('CV parsing error:', error);
       setUploadStatus('error');
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to parse CV');
+      setErrorMessage(sanitizeErrorMessage(error, 'Failed to parse CV'));
     } finally {
       setIsUploading(false);
     }
