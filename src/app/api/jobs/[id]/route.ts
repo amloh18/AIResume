@@ -125,6 +125,10 @@ export async function GET(
       source: job.source,
       sourceUrl: job.sourceUrl,
       atsScore: job.atsScore,
+      matchScore: job.matchScore,
+      trustScore: job.trustScore,
+      trustSnapshot: (job as any).trustSnapshot,
+      transparencySnapshot: (job as any).transparencySnapshot,
       atsAnalysis: job.atsAnalysis,
       statusHistory: (job.statusHistory || []).map((sh: any) => ({
         ...sh,
@@ -1054,6 +1058,10 @@ export async function PUT(
       attachments: job.attachments || [],
       sourceUrl: job.sourceUrl,
       atsScore: job.atsScore,
+      matchScore: (job as any).matchScore,
+      trustScore: (job as any).trustScore,
+      trustSnapshot: (job as any).trustSnapshot,
+      transparencySnapshot: (job as any).transparencySnapshot,
       isArchived: Boolean(job.isArchived),
       createdAt: job.createdAt instanceof Date ? job.createdAt.toISOString() : job.createdAt,
       updatedAt: job.updatedAt instanceof Date ? job.updatedAt.toISOString() : job.updatedAt

@@ -430,6 +430,7 @@ export async function POST(request: NextRequest) {
       title,
       templateId,
       cvData,
+      cvType, // NEW: Resume Enhancer CV type
       status,
       isMaster,
       journeyId,
@@ -564,12 +565,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine CV type (auto-detect if not provided)
+    let finalCvType = cvType || 'standalone';
+    if (!cvType) {
+      if (isCreatingMasterCV) {
+        finalCvType = 'master';
+      } else if (journeyId) {
+        finalCvType = 'journey';
+      }
+    }
+
     // Prepare CV data for creation (clean schema - no styling data)
     const cvDataToCreate = {
       title,
       templateId: finalTemplateId,
       templateName: templateName,
       cvData,
+      cvType: finalCvType, // NEW: Resume Enhancer CV type
       status: status || 'draft',
       journeyId: journeyId || undefined, // Store journeyId if provided
       metadata: {

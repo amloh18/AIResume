@@ -56,9 +56,9 @@ const TopBar: React.FC<TopBarProps> = ({
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white dark:bg-[#1a2015] p-1 shadow-sm">
-              <Image 
-                src="/images/logo.png" 
-                alt="CVCircle Logo" 
+              <Image
+                src="/images/logo.png"
+                alt="CVCircle Logo"
                 width={32}
                 height={32}
                 className="w-full h-full object-contain"
@@ -71,6 +71,18 @@ const TopBar: React.FC<TopBarProps> = ({
               <span className="text-lime-400 dark:text-[rgb(129,255,0)]">CV</span><span className="text-gray-300 dark:text-gray-200">Circle</span>
             </span>
           </div>
+
+          {/* Resume Enhancer Quick Link */}
+          {!isAdminRoute && (
+            <motion.button
+              onClick={() => router.push('/resume-enhancer')}
+              className="hidden desktop:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-400/10 to-lime-500/10 border border-lime-400/30 hover:border-lime-400/50 text-lime-400 rounded-lg transition-all duration-200 hover:from-lime-400/20 hover:to-lime-500/20"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <span className="text-sm font-medium">✨ Resume Enhancer</span>
+            </motion.button>
+          )}
         </div>
 
         {/* Center Section - Navigation breadcrumbs could go here */}
@@ -97,13 +109,13 @@ const TopBar: React.FC<TopBarProps> = ({
           </motion.button>
 
           {/* User Avatar */}
-          <UserAvatar 
+          <UserAvatar
             src={userData?.avatar || session?.user?.image || undefined}
-            name={userData?.firstName && userData?.lastName 
-              ? `${userData.firstName} ${userData.lastName}` 
+            name={userData?.firstName && userData?.lastName
+              ? `${userData.firstName} ${userData.lastName}`
               : userData?.username || session?.user?.name || 'User'}
-            alt={userData?.firstName && userData?.lastName 
-              ? `${userData.firstName} ${userData.lastName}` 
+            alt={userData?.firstName && userData?.lastName
+              ? `${userData.firstName} ${userData.lastName}`
               : userData?.username || session?.user?.name || 'User avatar'}
             size="sm"
           />

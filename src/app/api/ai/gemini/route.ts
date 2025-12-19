@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
+import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 
-// Get API key with fallback
+// Get API key with fallback (for backward compatibility)
 function getGeminiApiKey(): string | null {
   return (
     process.env.gemini_api_key || 
@@ -18,6 +19,16 @@ function getGeminiApiKey2(): string | null {
     process.env.GEMINI_API_KEY2 ||
     process.env['GEMINI_API-KEY2'] ||
     process.env['gemini_api-key2'] ||
+    null
+  );
+}
+
+function getGeminiApiKey3(): string | null {
+  return (
+    process.env.gemini_api_key3 || 
+    process.env.GEMINI_API_KEY3 ||
+    process.env['GEMINI_API-KEY3'] ||
+    process.env['gemini_api-key3'] ||
     null
   );
 }
@@ -117,66 +128,33 @@ Please provide the generated content:`;
         return NextResponse.json({ error: 'Invalid type specified' }, { status: 400 });
     }
 
-    // Use Gemini API with fallback
-    const apiKey = getGeminiApiKey() || getGeminiApiKey2();
-    
-    if (!apiKey) {
-      return NextResponse.json({ 
-        error: 'No Gemini API key configured',
-        details: 'Please set gemini_api_key or gemini_api_key2'
-      }, { status: 500 });
-    }
-
-    let lastError: Error | null = null;
-    const apiKeys = [
-      { name: 'gemini_api_key', key: getGeminiApiKey() },
-      { name: 'gemini_api_key2', key: getGeminiApiKey2() }
-    ].filter(k => k.key);
-
+    // Use Gemini API with fallback across all 3 keys
+    const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
     let generatedText: string | null = null;
 
-    for (const { name, key } of apiKeys) {
-      try {
-        console.log(`🔑 Attempting Gemini API call with ${name}...`);
-        
-        const genAI = new GoogleGenAI({ apiKey: key! });
-        // Use gemini-2.5-flash-lite for speed and cost efficiency
-        const fullPrompt = `${systemPrompt}\n\n${userPrompt}`;
-        const result = await genAI.models.generateContent({
-          model: 'gemini-2.5-flash-lite',
-          contents: fullPrompt
-        });
-        generatedText = result.text || '';
-        
-        if (generatedText) {
-          console.log(`✅ Gemini API call successful with ${name}`);
-          break;
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error(`❌ ${name} failed:`, errorMessage);
-        lastError = error instanceof Error ? error : new Error(String(error));
-        
-        // If this is the last key, continue to error handling
-        if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
-          // Check if it's a quota error
-          if (errorMessage.includes('429') || errorMessage.includes('quota')) {
-            return NextResponse.json({ 
-              error: 'API quota exceeded',
-              details: 'The AI service has reached its usage limits. Please try again later or upgrade your plan.',
-              retryAfter: '27s'
-            }, { status: 429 });
-          }
-          
-          return NextResponse.json({ 
-            error: 'AI service temporarily unavailable',
-            details: `Failed to generate content: ${errorMessage}`,
-            status: 503
-          }, { status: 503 });
-        }
-        
-        console.log(`⏭️  Continuing to next API key...`);
+    try {
+      generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
+        model: 'gemini-2.5-flash-lite',
+        temperature: 0.7,
+        maxTokens: 2048
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check if it's a quota error
+      if (errorMessage.includes('429') || errorMessage.includes('quota') || errorMessage.includes('RESOURCE_EXHAUSTED')) {
+        return NextResponse.json({ 
+          error: 'API quota exceeded',
+          details: 'The AI service has reached its usage limits. Please try again later or upgrade your plan.',
+          retryAfter: '30s'
+        }, { status: 429 });
       }
+      
+      return NextResponse.json({ 
+        error: 'AI service temporarily unavailable',
+        details: `Failed to generate content: ${errorMessage}`,
+        status: 503
+      }, { status: 503 });
     }
 
     if (!generatedText) {

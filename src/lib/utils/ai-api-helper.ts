@@ -23,40 +23,77 @@ export interface AIResponse {
 }
 
 /**
+ * Check if error is a quota/rate limit error (429)
+ */
+function isQuotaError(error: any): boolean {
+  if (!error) return false;
+  
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorString = JSON.stringify(error);
+  
+  // Check for 429 status code or quota-related error messages
+  return (
+    errorMessage.includes('429') ||
+    errorMessage.includes('quota') ||
+    errorMessage.includes('Quota exceeded') ||
+    errorMessage.includes('RESOURCE_EXHAUSTED') ||
+    errorMessage.includes('rate limit') ||
+    errorMessage.includes('rate-limit') ||
+    errorString.includes('"code":429') ||
+    errorString.includes('"status":"RESOURCE_EXHAUSTED"')
+  );
+}
+
+/**
  * Get available Gemini API keys in priority order
- * Checks both naming conventions: GEMINI_API_KEY/gemini_api_key and GEMINI_API_KEY2/gemini_api_key2
+ * Checks all three keys: gemini_api_key, gemini_api_key2, gemini_api_key3
+ * Priority: gemini_api_key2 first (primary), then gemini_api_key, then gemini_api_key3
  */
 function getGeminiApiKeys(): Array<{ name: string; key: string }> {
   const keys: Array<{ name: string; key: string }> = [];
-  
-  // Primary: Check multiple naming conventions
-  const primaryKey = 
-    process.env.gemini_api_key || 
-    process.env.GEMINI_API_KEY ||
-    process.env.gemini_api_key1 ||
-    process.env.GEMINI_API_KEY1;
-  
-  if (primaryKey) {
-    keys.push({
-      name: 'gemini_api_key',
-      key: primaryKey
-    });
-  }
-  
-  // Fallback: Check multiple naming conventions for second key
-  const fallbackKey = 
-    process.env.gemini_api_key2 || 
+
+  // PRIMARY: Try gemini_api_key2 first (check multiple naming conventions)
+  const primaryKey =
+    process.env.gemini_api_key2 ||
     process.env.GEMINI_API_KEY2 ||
     process.env['GEMINI_API-KEY2'] ||
     process.env['gemini_api-key2'];
-  
-  if (fallbackKey) {
+
+  if (primaryKey) {
     keys.push({
       name: 'gemini_api_key2',
-      key: fallbackKey
+      key: primaryKey
     });
   }
-  
+
+  // SECONDARY: Use gemini_api_key
+  const secondaryKey =
+    process.env.gemini_api_key ||
+    process.env.GEMINI_API_KEY ||
+    process.env.gemini_api_key1 ||
+    process.env.GEMINI_API_KEY1;
+
+  if (secondaryKey) {
+    keys.push({
+      name: 'gemini_api_key',
+      key: secondaryKey
+    });
+  }
+
+  // TERTIARY: Use gemini_api_key3 as final fallback
+  const tertiaryKey =
+    process.env.gemini_api_key3 ||
+    process.env.GEMINI_API_KEY3 ||
+    process.env['GEMINI_API-KEY3'] ||
+    process.env['gemini_api-key3'];
+
+  if (tertiaryKey) {
+    keys.push({
+      name: 'gemini_api_key3',
+      key: tertiaryKey
+    });
+  }
+
   return keys;
 }
 
@@ -66,16 +103,16 @@ function getGeminiApiKeys(): Array<{ name: string; key: string }> {
 async function callGemini(options: AICallOptions, apiKey: string): Promise<string> {
   try {
     const genAI = new GoogleGenAI({ apiKey });
-    
+
     // Use gemini-2.5-flash-lite as default for speed and cost efficiency
     const modelName = options.model || 'gemini-2.5-flash-lite';
-    
+
     // Combine system prompt and user prompt
     let fullPrompt = options.prompt;
     if (options.systemPrompt) {
       fullPrompt = `${options.systemPrompt}\n\n${options.prompt}`;
     }
-    
+
     // Generate content using the new SDK API
     const result = await genAI.models.generateContent({
       model: modelName,
@@ -85,13 +122,13 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
         maxOutputTokens: options.maxTokens || 2048,
       }
     });
-    
+
     const text = result.text;
-    
+
     if (!text) {
       throw new Error('Gemini API returned empty response');
     }
-    
+
     return text;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -101,23 +138,30 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
 
 /**
  * Call Gemini API with automatic fallback
- * Tries gemini_api_key first, then gemini_api_key2
+ * Tries all available keys: gemini_api_key2 (primary), gemini_api_key, gemini_api_key3
+ * Automatically falls back to next key on quota/rate limit errors
  */
 export async function callAIWithFallback(options: AICallOptions): Promise<AIResponse> {
   const apiKeys = getGeminiApiKeys();
-  
+
   if (apiKeys.length === 0) {
-    throw new Error('No Gemini API keys configured. Please set gemini_api_key or gemini_api_key2');
+    throw new Error('No Gemini API keys configured. Please set gemini_api_key, gemini_api_key2, or gemini_api_key3');
   }
-  
+
   let lastError: Error | null = null;
-  
-  for (const { name, key } of apiKeys) {
+  const currentKeyIndex = apiKeys.findIndex(k => k.name === 'gemini_api_key2') >= 0 
+    ? apiKeys.findIndex(k => k.name === 'gemini_api_key2')
+    : 0;
+
+  for (let i = 0; i < apiKeys.length; i++) {
+    const { name, key } = apiKeys[i];
+    const isLastKey = i === apiKeys.length - 1;
+    
     try {
       console.log(`🔑 Attempting Gemini API call with ${name}...`);
-      
+
       const content = await callGemini(options, key);
-      
+
       console.log(`✅ Gemini API call successful with ${name}`);
       return {
         content,
@@ -126,19 +170,26 @@ export async function callAIWithFallback(options: AICallOptions): Promise<AIResp
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`❌ ${name} failed:`, errorMessage);
-      lastError = error instanceof Error ? error : new Error(String(error));
+      const isQuota = isQuotaError(error);
       
-      // If this is the last key, throw the error
-      if (apiKeys.indexOf(apiKeys.find(k => k.name === name)!) === apiKeys.length - 1) {
-        throw new Error(`All Gemini API keys failed. Last error (${name}): ${errorMessage}`);
+      if (isQuota) {
+        console.warn(`⚠️ ${name} quota exceeded (429), falling back to next key...`);
+      } else {
+        console.error(`❌ ${name} failed:`, errorMessage);
       }
       
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // If this is the last key, throw the error
+      if (isLastKey) {
+        throw new Error(`All Gemini API keys failed. Last error (${name}): ${errorMessage}`);
+      }
+
       // Otherwise, continue to next key
       console.log(`⏭️  Continuing to next API key...`);
     }
   }
-  
+
   throw lastError || new Error('Failed to call Gemini API');
 }
 

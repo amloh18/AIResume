@@ -9,12 +9,13 @@ export interface ICV extends Document {
   templateName?: string; // Template name for quick access
   templateData?: any; // Full template data stored for S3 backup and faster access
   journeyId?: mongoose.Types.ObjectId; // Optional link to an application journey
+  cvType: 'master' | 'journey' | 'standalone'; // NEW: Type of CV for Resume Enhancer
   status: 'draft' | 'published' | 'archived';
   version: number;
   createdAt: Date;
   updatedAt: Date;
   metadata: {
-    isMaster: boolean; // A boolean to mark a user's primary CV
+    isMaster: boolean; // A boolean to mark a user's primary CV (kept for backward compatibility)
     lastModified: Date;
     createdFrom?: mongoose.Types.ObjectId; // Reference to source CV if duplicated
     tags: string[];
@@ -28,6 +29,17 @@ export interface ICV extends Document {
     starred: boolean;
     aiAnalysis?: any; // AI career analysis data
     createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'manual')
+    // CV Surgeon Analysis Cache
+    surgeonAnalysis?: {
+      score: number;
+      fixes: any[];
+      annotations: any[];
+      targetRole: string;
+      seniorityLevel: string;
+      analyzedAt: Date;
+      contentHash: string; // Hash of CV content + job data for cache invalidation
+      jobDataHash?: string; // Hash of linked job data if present
+    };
   };
 }
 
@@ -61,6 +73,12 @@ const cvSchema = new Schema<ICV>({
     ref: 'ApplicationJourney',
     required: false
   },
+  cvType: {
+    type: String,
+    enum: ['master', 'journey', 'standalone'],
+    default: 'standalone',
+    required: true
+  },
   status: {
     type: String,
     enum: ['draft', 'published', 'archived'],
@@ -90,7 +108,18 @@ const cvSchema = new Schema<ICV>({
     thumbnailGeneratedAt: { type: Date },
     starred: { type: Boolean, default: false },
     aiAnalysis: { type: Schema.Types.Mixed },
-    createdVia: { type: String, trim: true }
+    createdVia: { type: String, trim: true },
+    // CV Surgeon Analysis Cache
+    surgeonAnalysis: {
+      score: { type: Number },
+      fixes: { type: Schema.Types.Mixed },
+      annotations: { type: Schema.Types.Mixed },
+      targetRole: { type: String },
+      seniorityLevel: { type: String },
+      analyzedAt: { type: Date },
+      contentHash: { type: String },
+      jobDataHash: { type: String }
+    }
   }
 }, {
   timestamps: true,
@@ -109,6 +138,7 @@ const cvSchema = new Schema<ICV>({
 cvSchema.index({ userId: 1 }); // Primary index for user queries - should reduce query time from 1400ms to <100ms
 cvSchema.index({ userId: 1, createdAt: -1 }); // User's CVs by date
 cvSchema.index({ userId: 1, 'metadata.isMaster': 1 }); // Index for master CV queries
+cvSchema.index({ userId: 1, cvType: 1 }); // NEW: Index for CV type queries (Resume Enhancer)
 cvSchema.index({ journeyId: 1, userId: 1 }); // Unique CV per journey (prevents duplicates)
 cvSchema.index({ templateId: 1 }); // Index for template-based queries
 cvSchema.index({ 'metadata.tags': 1 }); // Tag-based searches

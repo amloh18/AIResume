@@ -40,6 +40,7 @@ interface CV {
     availableSections: any[];
   };
   completionPercentage?: number;
+  cvType?: 'master' | 'journey' | 'standalone'; // NEW: Resume Enhancer CV type
   isMaster?: boolean;
   journeyId?: string; // For linked journey functionality
   atsScore?: number; // ATS score for regular CVs
@@ -374,15 +375,29 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             </div>
           )}
 
-          {/* Master Badge - Top right corner */}
-          {/* Master CV: isMaster: true OR createdVia: 'ai-career-report' */}
-          {((cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true') || cv.metadata?.createdVia === 'ai-career-report') && (
-            <div className="absolute top-3 right-3">
-              <span className="px-2 py-1 rounded text-xs font-medium bg-lime-400 text-black border border-lime-400">
-                Master
-              </span>
-            </div>
-          )}
+          {/* CV Type Badge - Top right corner */}
+          {/* Determine CV type from cvType field or legacy fields */}
+          {(() => {
+            const cvType = cv.cvType || 
+                         (cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.createdVia === 'ai-career-report' ? 'master' : 
+                          cv.journeyId ? 'journey' : 'standalone');
+            
+            const badgeConfig = {
+              master: { label: 'Master', bgColor: 'bg-amber-400', textColor: 'text-black', borderColor: 'border-amber-500' },
+              journey: { label: 'Journey', bgColor: 'bg-blue-400', textColor: 'text-white', borderColor: 'border-blue-500' },
+              standalone: { label: 'Standalone', bgColor: 'bg-gray-400', textColor: 'text-white', borderColor: 'border-gray-500' }
+            };
+            
+            const config = badgeConfig[cvType] || badgeConfig.standalone;
+            
+            return (
+              <div className="absolute top-3 right-3">
+                <span className={`px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.textColor} border ${config.borderColor}`}>
+                  {config.label}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

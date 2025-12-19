@@ -62,23 +62,23 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="mb-4 p-4 bg-[#2D332D] border border-[#80FF00]/20 rounded-lg"
+          className="mb-4 p-4 bg-[var(--bg-tertiary)] border border-[rgb(129,255,0)]/20 rounded-lg"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#80FF00]" />
-              <h4 className="text-sm font-semibold text-white">AI Suggestions</h4>
+              <Sparkles className="w-4 h-4 text-[rgb(129,255,0)]" />
+              <h4 className="text-sm font-semibold text-[color:var(--text-primary)]">AI Suggestions</h4>
             </div>
             <div className="flex items-center gap-3">
               {/* Toggle for Short/Detailed - only show if suggestions have Short/Detailed sizes */}
               {suggestions.some(s => s.size === 'Short' || s.size === 'Detailed') && (
-                <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1">
+                <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 rounded-lg p-1">
                   <button
                     onClick={() => setShowDetailed(false)}
                     className={`px-2 py-1 text-xs rounded transition-colors ${
                       !showDetailed
-                        ? 'bg-[#80FF00]/20 text-[#80FF00] font-semibold'
-                        : 'text-white/60 hover:text-white'
+                        ? 'bg-[rgb(129,255,0)]/15 text-[rgb(129,255,0)] font-semibold'
+                        : 'text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]'
                     }`}
                   >
                     Short
@@ -87,8 +87,8 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
                     onClick={() => setShowDetailed(true)}
                     className={`px-2 py-1 text-xs rounded transition-colors ${
                       showDetailed
-                        ? 'bg-[#80FF00]/20 text-[#80FF00] font-semibold'
-                        : 'text-white/60 hover:text-white'
+                        ? 'bg-[rgb(129,255,0)]/15 text-[rgb(129,255,0)] font-semibold'
+                        : 'text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]'
                     }`}
                   >
                     Detailed
@@ -97,7 +97,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
               )}
               <button
                 onClick={onClose}
-                className="text-white/60 hover:text-white transition-colors"
+                className="text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)] transition-colors"
                 title="Close suggestions"
               >
                 <X className="w-4 h-4" />
@@ -107,8 +107,8 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
 
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-5 h-5 text-[#80FF00] animate-spin" />
-              <span className="ml-2 text-white/60 text-sm">Generating suggestions...</span>
+              <Loader2 className="w-5 h-5 text-[rgb(129,255,0)] animate-spin" />
+              <span className="ml-2 text-[color:var(--text-tertiary)] text-sm">Generating suggestions...</span>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3">
@@ -122,27 +122,27 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: index * 0.05 }}
                       onClick={() => onSelect(suggestion.content)}
-                      className="text-left p-3 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#80FF00]/30 rounded-lg transition-all group relative"
+                      className="text-left p-3 bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-[var(--border-primary)] hover:border-[rgb(129,255,0)]/30 rounded-lg transition-all group relative"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold text-[#80FF00] group-hover:text-[#80FF00]">
+                          <span className="text-xs font-semibold text-[rgb(129,255,0)]">
                             {method}
                           </span>
                           <div className="relative group/info">
-                            <Info className="w-3 h-3 text-white/40 hover:text-white/60 cursor-help" />
-                            <div className="absolute left-0 top-full mt-2 hidden group-hover/info:block z-10 w-64 p-2 bg-[#1a1a1a] border border-white/20 rounded text-xs text-white/90 shadow-lg pointer-events-none">
+                            <Info className="w-3 h-3 text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)] cursor-help" />
+                            <div className="absolute left-0 top-full mt-2 hidden group-hover/info:block z-10 w-64 p-2 bg-[var(--modal-bg)] border border-[var(--border-primary)] rounded text-xs text-[color:var(--text-primary)] shadow-lg pointer-events-none">
                               {methodDescription}
                             </div>
                           </div>
                         </div>
                         {suggestion.size && (
-                          <span className="text-xs text-white/40">
+                          <span className="text-xs text-[color:var(--text-tertiary)]">
                             {suggestion.size}
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-white/80 group-hover:text-white whitespace-pre-wrap">
+                      <div className="text-xs text-[color:var(--text-secondary)] whitespace-pre-wrap">
                         {suggestion.content}
                       </div>
                     </motion.button>

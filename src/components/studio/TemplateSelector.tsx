@@ -322,6 +322,23 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
           box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
         }
 
+        /* Resume Enhancer (dark theme) overrides.
+           styled-jsx scopes selectors, so we must use :global() for html/body classes like .dark. */
+        :global(.dark) :global(.resume-enhancer-page) .template-card {
+          border-color: rgba(255, 255, 255, 0.08);
+          background: var(--bg-secondary);
+        }
+
+        :global(.dark) :global(.resume-enhancer-page) .template-card:hover {
+          border-color: rgba(129, 255, 0, 0.35);
+          box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+        }
+
+        :global(.dark) :global(.resume-enhancer-page) .template-card.selected {
+          border-color: rgba(129, 255, 0, 0.7);
+          box-shadow: 0 0 0 3px rgba(129, 255, 0, 0.12);
+        }
+
         .template-preview {
           position: relative;
           width: 100%;

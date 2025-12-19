@@ -4,19 +4,27 @@ import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '../AISuggestionsPanel';
+import InlineSuggestion from '@/components/resume-enhancer/annotations/InlineSuggestion';
+import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 
 interface WorkExperienceSectionProps {
   data: any[];
   onUpdate: (data: any[]) => void;
   jobData?: any;
   userId?: string;
+  annotations?: FixAnnotation[];
+  onApplyAnnotation?: (fix: FixAnnotation) => void;
+  onDismissAnnotation?: (fixId: string) => void;
 }
 
 const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   data,
   onUpdate,
   jobData,
-  userId
+  userId,
+  annotations = [],
+  onApplyAnnotation,
+  onDismissAnnotation
 }) => {
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
@@ -251,14 +259,26 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
               onChange={(value) => updateWorkItem(index, 'summary', value)}
               rows={4}
               placeholder="Describe your key responsibilities and achievements..."
+              hasAnnotation={annotations.some((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')}
             />
+            {/* Display inline suggestions for this specific field below the editor */}
+            {annotations
+              .filter((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')
+              .map((fix) => (
+                <InlineSuggestion
+                  key={fix.id}
+                  fix={fix}
+                  onApply={onApplyAnnotation || (() => {})}
+                  onDismiss={onDismissAnnotation || (() => {})}
+                />
+              ))}
           </div>
         </div>
       ))}
       
       <button
         onClick={addWorkItem}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-all flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-all flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Work Experience

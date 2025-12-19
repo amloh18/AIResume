@@ -1027,9 +1027,10 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <React.Fragment key="edit-job-sidebar">
           {/* Backdrop */}
           <motion.div
+            key="backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -1048,6 +1049,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
           {/* Sidebar */}
           <motion.div
+            key="sidebar"
             ref={sidebarRef}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -1516,12 +1518,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             </div>
           </motion.div>
 
-        </>
+        </React.Fragment>
       )}
 
       {/* Duplicate Job Warning Modal */}
-      <DuplicateJobWarningModal
-        isOpen={showDuplicateWarning}
+      {showDuplicateWarning && (
+        <DuplicateJobWarningModal
+          key="duplicate-warning-modal"
+          isOpen={showDuplicateWarning}
         duplicateCheck={duplicateCheck}
         newJobData={{
           jobTitle: formData.jobTitle || '',
@@ -1548,7 +1552,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           // This would require passing a callback from JobsTracker
           console.log('View existing job:', jobId);
         }}
-      />
+        />
+      )}
     </AnimatePresence>
   );
 };

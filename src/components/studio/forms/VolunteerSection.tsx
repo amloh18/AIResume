@@ -160,7 +160,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
         return (
         <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-white">{volunteer.organization || 'Organization'}</h4>
+            <h4 className="text-lg font-semibold text-[color:var(--text-primary)]">{volunteer.organization || 'Organization'}</h4>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => duplicateVolunteer(index)}
@@ -255,7 +255,7 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
       
       <button
         onClick={handleAdd}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-[var(--border-primary)] hover:border-[#80FF00]/50 text-[color:var(--text-tertiary)] hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Volunteer Experience

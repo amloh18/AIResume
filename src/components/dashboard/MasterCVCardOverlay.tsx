@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Crown,
-  Edit3, 
-  Copy, 
+  Edit3,
+  Copy,
   Loader2,
   AlertCircle,
   CheckCircle,
@@ -79,13 +79,13 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
       '#FFFBEB', // Light amber
       '#F1F5F9', // Light slate
     ];
-    
+
     // Use Master CV ID to generate consistent color
     const hash = id.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     return colors[Math.abs(hash) % colors.length];
   };
 
@@ -127,7 +127,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   const handleEdit = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!masterCV) return;
-    
+
     setActionLoading('edit');
     try {
       await onEditMasterCV(masterCV);
@@ -141,7 +141,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
   const handleDuplicate = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!masterCV) return;
-    
+
     setActionLoading('duplicate');
     try {
       await onDuplicateMasterCV(masterCV);
@@ -154,20 +154,20 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
 
   const formatDate = (dateString: string) => {
     if (!dateString) return 'Unknown';
-    
+
     const date = new Date(dateString);
     if (isNaN(date.getTime())) {
       return 'Unknown';
     }
-    
+
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
-    
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
@@ -215,7 +215,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.href = '/ai-career-report'}
+            onClick={() => window.location.href = '/resume-enhancer'}
           >
             <Plus size={16} />
             Create Master CV
@@ -244,7 +244,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             className="px-4 py-2 bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 flex items-center gap-2 mx-auto"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => window.location.href = '/ai-career-report'}
+            onClick={() => window.location.href = '/resume-enhancer'}
           >
             <Plus size={16} />
             Create Master CV
@@ -266,11 +266,11 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
     >
       {/* Master CV Preview Container - Outer colored background */}
       <div className="w-full aspect-[3/4] rounded-xl border border-gray-200 dark:border-gray-700 group-hover:shadow-lg dark:group-hover:shadow-lime-500/20 transition-shadow p-6"
-           style={{
-             backgroundColor: masterCV ? getRandomColor(masterCV.id) : '#F0FDF4'
-           }}>
+        style={{
+          backgroundColor: masterCV ? getRandomColor(masterCV.id) : '#F0FDF4'
+        }}>
         {/* Master CV Preview - Inner smaller preview */}
-        <div 
+        <div
           className="w-full h-full rounded-xl relative shadow-lg cursor-pointer overflow-hidden"
           onClick={(e) => {
             e.stopPropagation();
@@ -308,18 +308,18 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
                   // Extract key and fetch presigned URL
                   fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
                     .then(res => res.json())
-                      .then(data => {
-                        if (data.url) {
-                          target.src = data.url;
-                        } else {
-                          // If presigned URL fails, show placeholder
-                          setThumbnailUrl(null);
-                        }
-                      })
-                      .catch(() => {
-                        console.error('Failed to fetch presigned URL for thumbnail');
+                    .then(data => {
+                      if (data.url) {
+                        target.src = data.url;
+                      } else {
+                        // If presigned URL fails, show placeholder
                         setThumbnailUrl(null);
-                      });
+                      }
+                    })
+                    .catch(() => {
+                      console.error('Failed to fetch presigned URL for thumbnail');
+                      setThumbnailUrl(null);
+                    });
                 } else {
                   setThumbnailUrl(null);
                 }
@@ -327,7 +327,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             />
           ) : thumbnailLoading ? (
             /* Loading state */
-            <div 
+            <div
               className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
@@ -345,7 +345,7 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
             </div>
           ) : (
             /* Fallback when no thumbnail available */
-            <div 
+            <div
               className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();

@@ -108,9 +108,31 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
   // Fetch location and set regional pricing from database
   useEffect(() => {
     const detectLocation = async () => {
+      // Add timeout to prevent blocking
+      const timeoutId = setTimeout(() => {
+        console.warn('Location detection timeout, using default pricing');
+        // Fetch default pricing if location detection takes too long
+        fetch('/api/pricing/regional')
+          .then(res => res.ok ? res.json() : null)
+          .then(data => {
+            if (data?.success && data.pricing) {
+              setRegionalPricing(data.pricing);
+              setSelectedCurrency(data.pricing.currency);
+            }
+          })
+          .catch(err => console.error('Error fetching default pricing after timeout:', err));
+      }, 5000); // 5 second timeout
+
       try {
         console.log('Detecting user location...');
-        const location = await LocationService.getLocationData();
+        const location = await Promise.race([
+          LocationService.getLocationData(),
+          new Promise<LocationData>((_, reject) => 
+            setTimeout(() => reject(new Error('Location detection timeout')), 4000)
+          )
+        ]);
+        
+        clearTimeout(timeoutId);
         console.log('Location detected:', location);
         
         setLocationData(location);
@@ -119,7 +141,12 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         // Get regional pricing from database API
         let pricingSet = false;
         try {
-          const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`);
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 3000);
+          const response = await fetch(`/api/pricing/regional?countryCode=${location.countryCode}`, {
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
           if (response.ok) {
             const contentType = response.headers.get('content-type');
             if (contentType && contentType.includes('application/json')) {
@@ -144,7 +171,12 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         // Fallback: try to get default pricing if regional pricing wasn't set
         if (!pricingSet) {
           try {
-            const defaultResponse = await fetch('/api/pricing/regional');
+            const defaultController = new AbortController();
+            const defaultTimeoutId = setTimeout(() => defaultController.abort(), 3000);
+            const defaultResponse = await fetch('/api/pricing/regional', {
+              signal: defaultController.signal
+            });
+            clearTimeout(defaultTimeoutId);
             if (defaultResponse.ok) {
               const defaultData = await defaultResponse.json();
               if (defaultData.success && defaultData.pricing) {
@@ -165,10 +197,16 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
           }
         }
       } catch (error) {
+        clearTimeout(timeoutId);
         console.error('Error detecting location:', error);
-        // Try to get default pricing
+        // Try to get default pricing immediately on error
         try {
-          const defaultResponse = await fetch('/api/pricing/regional');
+          const errorController = new AbortController();
+          const errorTimeoutId = setTimeout(() => errorController.abort(), 3000);
+          const defaultResponse = await fetch('/api/pricing/regional', {
+            signal: errorController.signal
+          });
+          clearTimeout(errorTimeoutId);
           if (defaultResponse.ok) {
             const defaultData = await defaultResponse.json();
             if (defaultData.success && defaultData.pricing) {
@@ -212,10 +250,42 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         }
         const plansUrl = `/api/pricing-plans${params.toString() ? '?' + params.toString() : ''}`;
 
-        const [plansResponse, offersResponse] = await Promise.all([
-          fetch(plansUrl),
-          fetch('/api/promotional-offers/active?userType=all')
-        ]);
+        // Add timeout to prevent blocking
+        const plansController = new AbortController();
+        const plansTimeoutId = setTimeout(() => plansController.abort(), 10000); // 10 second timeout
+
+        let plansResponse: Response;
+        try {
+          plansResponse = await fetch(plansUrl, { signal: plansController.signal });
+          clearTimeout(plansTimeoutId);
+        } catch (err: any) {
+          clearTimeout(plansTimeoutId);
+          if (err.name === 'AbortError') {
+            console.warn('Pricing plans fetch timeout');
+            setError('Request timeout - please try again');
+          } else {
+            console.error('Error fetching pricing plans:', err);
+            setError('Failed to load pricing plans');
+          }
+          setPlans([]);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch offers separately (non-blocking)
+        let offersResponse: Response | null = null;
+        try {
+          const offersController = new AbortController();
+          const offersTimeoutId = setTimeout(() => offersController.abort(), 5000);
+          offersResponse = await fetch('/api/promotional-offers/active?userType=all', { 
+            signal: offersController.signal 
+          });
+          clearTimeout(offersTimeoutId);
+        } catch (err: any) {
+          // Offers are optional, don't block on error
+          console.warn('Failed to fetch promotional offers:', err);
+          offersResponse = null;
+        }
 
         let fetchedPlans: DatabasePricingPlan[] = [];
         let fetchedOffers: any[] = [];
@@ -262,7 +332,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
           setPlans([]); // Set empty array on error
         }
 
-        if (offersResponse.ok) {
+        if (offersResponse && offersResponse.ok) {
           const contentType = offersResponse.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const offersData = await offersResponse.json();
@@ -308,8 +378,10 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
   const getRegionalPrice = (plan: DatabasePricingPlan): string => {
     if (!regionalPricing) {
       // Fallback to default prices if regional pricing not loaded yet
-      const fallbackPrice = plan.price_one_time || plan.price_monthly || 0;
-      return `${plan.currency || 'GBP'} ${fallbackPrice}`;
+      const fallbackPrice = plan.price_one_time || plan.price_monthly || plan.price_quarterly || plan.price_yearly || 0;
+      // Use currency symbol if available, otherwise use currency code
+      const currencySymbol = plan.currency === 'USD' ? '$' : plan.currency === 'GBP' ? '£' : plan.currency === 'EUR' ? '€' : plan.currency || '£';
+      return `${currencySymbol}${fallbackPrice}`;
     }
 
     // Map plan keys to regional pricing

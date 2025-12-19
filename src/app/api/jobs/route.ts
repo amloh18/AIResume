@@ -62,6 +62,10 @@ const serializeJob = (job: any) => {
     attachments: (job?.attachments || []),
     sourceUrl: job?.sourceUrl,
     atsScore: job?.atsScore,
+    matchScore: job?.matchScore,
+    trustScore: job?.trustScore,
+    trustSnapshot: job?.trustSnapshot,
+    transparencySnapshot: job?.transparencySnapshot,
     isArchived: Boolean(job?.isArchived),
     createdAt: job?.createdAt,
     updatedAt: job?.updatedAt
@@ -152,7 +156,8 @@ export async function POST(request: NextRequest) {
 
     const userId = auth.userId;
     // Use source from auth, but fallback to body.source if provided (for compatibility)
-    let source = auth.source;
+    // NOTE: auth.source is narrower (e.g. 'extension' | 'web'); we normalize to a string here.
+    let source: string | undefined = auth.source;
 
     // Parse the request body
     const body = await request.json();
@@ -171,6 +176,10 @@ export async function POST(request: NextRequest) {
       sponsorship,
       tags,
       contactDetails,
+      matchScore,
+      trustScore,
+      trustSnapshot,
+      transparencySnapshot,
       source: bodySource // Allow source to be passed in body as fallback
     } = body;
 
@@ -272,6 +281,10 @@ export async function POST(request: NextRequest) {
             applicationDate: applicationDate ? new Date(applicationDate) : undefined,
             sponsorship: sponsorship || 'unknown',
             contactDetails: contactDetails || undefined,
+            matchScore: typeof matchScore === 'number' ? matchScore : undefined,
+            trustScore: typeof trustScore === 'number' ? trustScore : undefined,
+            trustSnapshot: trustSnapshot && typeof trustSnapshot === 'object' ? trustSnapshot : undefined,
+            transparencySnapshot: transparencySnapshot && typeof transparencySnapshot === 'object' ? transparencySnapshot : undefined,
             contacts: [],
             interviews: [],
             followUps: [],
@@ -406,6 +419,10 @@ export async function POST(request: NextRequest) {
           applicationDate: applicationDate ? new Date(applicationDate) : undefined,
           sponsorship: sponsorship || 'unknown',
           contactDetails: contactDetails || undefined,
+          matchScore: typeof matchScore === 'number' ? matchScore : undefined,
+          trustScore: typeof trustScore === 'number' ? trustScore : undefined,
+          trustSnapshot: trustSnapshot && typeof trustSnapshot === 'object' ? trustSnapshot : undefined,
+          transparencySnapshot: transparencySnapshot && typeof transparencySnapshot === 'object' ? transparencySnapshot : undefined,
           contacts: [],
           interviews: [],
           followUps: [],

@@ -274,7 +274,8 @@ const OptimizedNavigation: React.FC = () => {
       'analytics': '/dashboard',
       'jobs': '/dashboard/tracker',
       'canvas': '/dashboard/canvas',
-      'settings': '/dashboard/settings'
+      'settings': '/dashboard/settings',
+      'resume-enhancer': '/resume-enhancer'
     };
 
     const targetRoute = routes[sectionId as keyof typeof routes];
@@ -327,10 +328,17 @@ const OptimizedNavigation: React.FC = () => {
     },
     {
       id: 'canvas',
-      name: 'CV Studio',
+      name: 'Documents',
       icon: FileText,
       description: 'Saved CVs/ CL and Reports',
       route: '/dashboard/canvas'
+    },
+    {
+      id: 'resume-enhancer',
+      name: '✨ Resume Enhancer',
+      icon: Target,
+      description: 'AI-powered CV optimization',
+      route: '/resume-enhancer'
     },
     {
       id: 'extension',

@@ -6,6 +6,8 @@ import { CV, Template } from '@/models';
 import { toObjectId, createErrorResponse } from '@/lib/db-utils';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
 import mongoose from 'mongoose';
+import { ApplicationJourney } from '@/models/ApplicationJourney';
+import JobApplication from '@/models/JobApplication';
 
 /**
  * Sanitize and validate CV data to ensure correct structure
@@ -168,6 +170,74 @@ export async function GET(
       );
     }
 
+    // Load job data if CV has a journeyId
+    let jobData = null;
+    if (cvDoc.journeyId) {
+      try {
+        console.log('🔍 CV GET API - CV has journeyId, loading job data:', cvDoc.journeyId);
+        
+        // Load journey data
+        const journeyId = typeof cvDoc.journeyId === 'string' 
+          ? cvDoc.journeyId 
+          : cvDoc.journeyId.toString();
+        
+        // Try finding journey by journeyId first, then by cvId as fallback
+        let foundJourney = await ApplicationJourney.findOne({ 
+          _id: journeyId,
+          userId: session.user.id 
+        }).lean();
+        
+        if (!foundJourney) {
+          // Fallback: try finding by cvId
+          foundJourney = await ApplicationJourney.findOne({ 
+            cvId: cvId.toString(),
+            userId: session.user.id 
+          }).lean();
+        }
+
+        if (foundJourney && foundJourney.jobId) {
+          console.log('🔍 CV GET API - Journey found, loading job:', foundJourney.jobId);
+          
+          const jobResult = await Promise.allSettled([
+            JobApplication.findOne({
+              _id: foundJourney.jobId,
+              userId: new mongoose.Types.ObjectId(session.user.id)
+            }).lean()
+          ]);
+
+          if (jobResult[0].status === 'fulfilled' && jobResult[0].value) {
+            const jobDoc = jobResult[0].value;
+            jobData = {
+              id: jobDoc._id.toString(),
+              _id: jobDoc._id.toString(),
+              jobTitle: jobDoc.jobTitle,
+              company: jobDoc.company,
+              jobDescription: jobDoc.jobDescription,
+              location: jobDoc.location,
+              status: jobDoc.status,
+              salary: jobDoc.salary,
+              deadline: jobDoc.deadline,
+              jobUrl: jobDoc.jobUrl,
+              sponsorship: jobDoc.sponsorship,
+              priority: jobDoc.priority,
+              notes: jobDoc.notes,
+              tags: jobDoc.tags || [],
+              createdAt: jobDoc.createdAt,
+              updatedAt: jobDoc.updatedAt
+            };
+            console.log('✅ CV GET API - Job data loaded successfully');
+          } else {
+            console.warn('⚠️ CV GET API - Journey found but job not found:', foundJourney.jobId);
+          }
+        } else {
+          console.warn('⚠️ CV GET API - CV has journeyId but journey not found:', cvDoc.journeyId);
+        }
+      } catch (error) {
+        console.error('❌ CV GET API - Error loading job data:', error);
+        // Don't fail the request if job loading fails - just log the error
+      }
+    }
+
     // Increment view count if it's a public CV
     if (cv.metadata.isPublic) {
       await CV.updateOne(
@@ -185,7 +255,10 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        cv: cv
+        cv: {
+          ...cv,
+          jobData: jobData
+        }
       }
     });
 
@@ -293,7 +366,7 @@ export async function PUT(
 
     // Prepare update data (excluding legacy fields)
     const allowedFields = [
-      'title', 'cvData', 'templateId', 'status', 'isMaster', 'metadata'
+      'title', 'cvData', 'templateId', 'cvType', 'status', 'isMaster', 'metadata', 'journeyId'
     ];
     
     const updateData: Record<string, any> = {};

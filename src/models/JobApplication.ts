@@ -61,6 +61,22 @@ export interface IJobApplication extends Document {
   isArchived: boolean;
   // Phase 4: Intelligence & Automation fields
   matchScore?: number; // 0-100, job-specific match score (NULL for draft jobs)
+  trustScore?: number; // 0-100, trust score derived from ghost-risk + transparency signals
+  trustSnapshot?: {
+    applicantsCount?: number;
+    postedDateText?: string; // raw string (e.g., "2 weeks ago")
+    postedAgeDays?: number;
+    wasReposted?: boolean;
+    repostCount?: number;
+    ghostRiskLevel?: 'low' | 'medium' | 'high';
+    lowProbability?: boolean;
+  };
+  transparencySnapshot?: {
+    workMode?: 'remote' | 'hybrid' | 'onsite' | 'unknown';
+    workModeStrict?: boolean;
+    salaryDisclosed?: boolean;
+    salarySource?: 'extracted' | 'estimated' | 'unknown';
+  };
   missingKeywords?: string[]; // Job-specific missing keywords
   matchedSkills?: string[]; // Skills that match THIS job
   skillGapAnalysis?: {
@@ -255,6 +271,34 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: Number,
     min: 0,
     max: 100
+  },
+  trustScore: {
+    type: Number,
+    min: 0,
+    max: 100
+  },
+  trustSnapshot: {
+    applicantsCount: { type: Number, min: 0 },
+    postedDateText: { type: String, trim: true, maxlength: 100 },
+    postedAgeDays: { type: Number, min: 0 },
+    wasReposted: { type: Boolean },
+    repostCount: { type: Number, min: 0 },
+    ghostRiskLevel: { type: String, enum: ['low', 'medium', 'high'] },
+    lowProbability: { type: Boolean }
+  },
+  transparencySnapshot: {
+    workMode: {
+      type: String,
+      enum: ['remote', 'hybrid', 'onsite', 'unknown'],
+      default: 'unknown'
+    },
+    workModeStrict: { type: Boolean },
+    salaryDisclosed: { type: Boolean },
+    salarySource: {
+      type: String,
+      enum: ['extracted', 'estimated', 'unknown'],
+      default: 'unknown'
+    }
   },
   missingKeywords: [{ type: String, trim: true }],
   matchedSkills: [{ type: String, trim: true }],
