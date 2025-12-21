@@ -280,18 +280,42 @@ export class ApplicationJourneyRelationshipService {
   }
 
   /**
-   * Update CV Journey with ATS Score
+   * Update CV Journey with ATS Score (with history capping and content hash)
    */
-  static async updateJourneyATSScore(journeyId: string, atsScore: number): Promise<boolean> {
+  static async updateJourneyATSScore(
+    journeyId: string, 
+    atsScore: number,
+    jobId?: string,
+    factorBreakdown?: any,
+    cvHash?: string
+  ): Promise<boolean> {
     try {
       const journey = await ApplicationJourney.findById(journeyId);
       if (!journey) return false;
 
       journey.atsScore = atsScore;
+      if (jobId) {
+        journey.atsScoreJobId = jobId;
+      }
       journey.currentStep = 3; // Move to ATS score step
       journey.steps[2].status = 'completed'; // Mark ATS score as completed
       journey.metadata.updatedAt = new Date();
       journey.metadata.lastAccessedAt = new Date();
+
+      // Add to score history (with content hash for versioning)
+      if (!journey.atsScoreHistory) {
+        journey.atsScoreHistory = [];
+      }
+      journey.atsScoreHistory.push({
+        score: atsScore,
+        calculatedAt: new Date(),
+        cvVersion: cvHash || journey.cvId?.toString() // Use hash if provided
+      });
+
+      // Strictly cap history to last 10 entries (Critical Action Item #4)
+      if (journey.atsScoreHistory.length > 10) {
+        journey.atsScoreHistory = journey.atsScoreHistory.slice(-10);
+      }
 
       await journey.save();
       return true;
@@ -346,6 +370,7 @@ export class ApplicationJourneyRelationshipService {
       if (!masterCV) return null;
 
       // Create new CV with Master CV data
+      // Determine cvType: if journeyId exists, it's a journey CV, otherwise standalone
       const tailoredCV = new CV({
         userId,
         title,
@@ -353,6 +378,7 @@ export class ApplicationJourneyRelationshipService {
         status: 'draft',
         version: 1,
         isMaster: false,
+        cvType: 'standalone', // Default to standalone, will be updated if linked to journey
         styling: masterCV.styling,
         metadata: {
           lastModified: new Date(),
@@ -371,6 +397,10 @@ export class ApplicationJourneyRelationshipService {
       const journey = await ApplicationJourney.findOne({ jobId, userId });
       if (journey) {
         await this.linkCVToJourney(journey._id.toString(), tailoredCV._id.toString());
+        // Update cvType to 'journey' since it's now linked
+        tailoredCV.cvType = 'journey';
+        tailoredCV.journeyId = journey._id;
+        await tailoredCV.save();
       }
 
       return tailoredCV._id.toString();

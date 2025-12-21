@@ -22,7 +22,6 @@ import JobsListView from './jobs/JobsListView';
 import JobsKanbanView from './jobs/JobsKanbanView';
 import JobsFilters from './jobs/JobsFilters';
 import JobParserDialog from './jobs/JobParserDialog';
-import SkillGapAnalysisSidebar from './jobs/SkillGapAnalysisSidebar';
 import { useJobsPersistence } from '@/lib/hooks/useJobsPersistence';
 import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
@@ -97,8 +96,6 @@ const JobsTracker: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('list');
-  const [skillGapAnalysisOpen, setSkillGapAnalysisOpen] = useState(false);
-  const [selectedJobForAnalysis, setSelectedJobForAnalysis] = useState<JobApplication | null>(null);
 
   // Use persistence hook
   const { preferences, savePreferences } = useJobsPersistence();
@@ -204,11 +201,22 @@ const JobsTracker: React.FC = () => {
     try {
       setLoading(true);
 
-      // Load jobs
-      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs?limit=all', userId || undefined);
+      // Load jobs and journeys in parallel
+      const [jobsResponse, journeysResponse] = await Promise.all([
+        authenticatedFetchWithUserId('/api/jobs?limit=all', userId || undefined),
+        authenticatedFetchWithUserId('/api/application-journey', userId || undefined, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        })
+      ]);
+
       const jobsResult = await jobsResponse.json();
+      const journeysResult = await journeysResponse.json();
+
+      let transformedJobs: JobApplication[] = [];
+      
       if (jobsResult.success) {
-        const transformedJobs = jobsResult.data.jobs.map((job: any) => {
+        transformedJobs = jobsResult.data.jobs.map((job: any) => {
           // Preserve optimistic updates for jobs that are currently being updated
           const existingJob = jobs.find(j => j.id === job.id);
           const isBeingUpdated = isUpdatingJobStatus.has(job.id);
@@ -248,19 +256,51 @@ const JobsTracker: React.FC = () => {
             updatedAt: job.updatedAt
           };
         });
-        setJobs(transformedJobs);
       }
 
-      // Load CV journeys
-      const journeysResponse = await authenticatedFetchWithUserId('/api/application-journey', userId || undefined, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      const journeysResult = await journeysResponse.json();
+      // Load CV journeys and populate ATS scores
       if (journeysResult.success) {
         const loadedJourneys = journeysResult.data.journeys || [];
         setJourneys(loadedJourneys);
+        
+        // Populate ATS scores from journeys to jobs (same approach as Canvas)
+        // Journey is the source of truth for ATS scores
+        transformedJobs = transformedJobs.map(job => {
+          // Find journeys for this job (normalize IDs for comparison)
+          const jobIdStr = job.id || job._id;
+          const jobJourneys = loadedJourneys.filter((journey: any) => {
+            const journeyJobId = journey.jobId?.toString() || journey.jobId;
+            return journeyJobId === jobIdStr;
+          });
+          
+          if (jobJourneys.length === 0) {
+            return job; // No journeys found for this job
+          }
+          
+          // Get ATS score from the most recent journey with a score
+          // Priority: journey.atsScore (source of truth, same as Canvas)
+          const journeyWithScore = jobJourneys
+            .filter((journey: any) => journey.atsScore !== undefined && journey.atsScore !== null)
+            .sort((a: any, b: any) => {
+              // Sort by updatedAt descending to get most recent
+              const aDate = new Date(a.metadata?.updatedAt || a.updatedAt || 0);
+              const bDate = new Date(b.metadata?.updatedAt || b.updatedAt || 0);
+              return bDate.getTime() - aDate.getTime();
+            })[0];
+          
+          // Use journey ATS score (journey is source of truth, same as Canvas)
+          if (journeyWithScore && journeyWithScore.atsScore !== undefined && journeyWithScore.atsScore !== null) {
+            return {
+              ...job,
+              atsScore: journeyWithScore.atsScore
+            };
+          }
+          
+          return job;
+        });
       }
+      
+      setJobs(transformedJobs);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -1300,10 +1340,6 @@ const JobsTracker: React.FC = () => {
                     getJobJourneys={getJobJourneys}
                     getJourneyProgress={getJourneyProgress}
                     getJourneyStatusText={getJourneyStatusText}
-                    onSkillGapAnalysis={(job) => {
-                      setSelectedJobForAnalysis(job);
-                      setSkillGapAnalysisOpen(true);
-                    }}
                   />
                 </div>
               )}
@@ -1368,19 +1404,6 @@ const JobsTracker: React.FC = () => {
         />
       )}
 
-      {/* Skill Gap Analysis Sidebar */}
-      {selectedJobForAnalysis && (
-        <SkillGapAnalysisSidebar
-          isOpen={skillGapAnalysisOpen}
-          onClose={() => {
-            setSkillGapAnalysisOpen(false);
-            setSelectedJobForAnalysis(null);
-          }}
-          jobId={selectedJobForAnalysis.id || selectedJobForAnalysis._id}
-          jobTitle={selectedJobForAnalysis.jobTitle || selectedJobForAnalysis.title}
-          company={selectedJobForAnalysis.company}
-        />
-      )}
 
     </React.Fragment>
   );

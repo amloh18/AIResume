@@ -29,6 +29,11 @@ function PromotionRenderer() {
       });
 
       if (promotion) {
+        // Don't show upgrade-free-user promotion for paid users
+        if (promotion.id === 'upgrade-free-user' && contextData.isPaidUser) {
+          return;
+        }
+        
         // Small delay to avoid showing immediately on page load
         const timer = setTimeout(() => {
           showPromotion(promotion);
@@ -52,15 +57,26 @@ function PromotionRenderer() {
     showPromotion,
   ]);
 
+  // Dismiss upgrade-free-user promotion if user becomes paid
+  useEffect(() => {
+    if (currentPromotion?.id === 'upgrade-free-user' && contextData.isPaidUser) {
+      dismissPromotion(currentPromotion.id);
+    }
+  }, [currentPromotion, contextData.isPaidUser, dismissPromotion]);
+
   const handleDismiss = () => {
     if (currentPromotion) {
       dismissPromotion(currentPromotion.id);
     }
   };
 
+  // Don't render upgrade-free-user promotion for paid users
+  const shouldShowPromotion = currentPromotion && 
+    !(currentPromotion.id === 'upgrade-free-user' && contextData.isPaidUser);
+
   return (
     <>
-      {currentPromotion && (
+      {shouldShowPromotion && (
         <FeaturePromotionCard
           promotion={currentPromotion}
           onDismiss={handleDismiss}

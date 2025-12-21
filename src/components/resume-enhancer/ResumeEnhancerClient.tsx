@@ -15,15 +15,15 @@ import dynamic from 'next/dynamic';
 import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 
 // Dynamically import step components
-const ChoosePathStep = dynamic(() => import('@/components/ai-career-report/ChoosePathStep'), {
+const ChoosePathStep = dynamic(() => import('@/components/resume-enhancer/steps/ChoosePathStep'), {
     loading: () => <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--accent-primary)]"></div></div>
 });
 
-const ChooseTemplateStep = dynamic(() => import('@/components/ai-career-report/ChooseTemplateStep'), {
+const ChooseTemplateStep = dynamic(() => import('@/components/resume-enhancer/steps/ChooseTemplateStep'), {
     loading: () => <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--accent-primary)]"></div></div>
 });
 
-const MasterCVBuilderStep = dynamic(() => import('@/components/ai-career-report/MasterCVBuilderStep'), {
+const MasterCVBuilderStep = dynamic(() => import('@/components/resume-enhancer/steps/MasterCVBuilderStep'), {
     loading: () => <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--accent-primary)]"></div></div>
 });
 

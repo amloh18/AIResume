@@ -51,10 +51,38 @@ export async function POST(
       );
     }
 
-    // Check if CV is already a journey CV
+    // EDGE CASE 2: Check if CV is already linked to a journey
     if (cv.cvType === 'journey' && cv.journeyId) {
+      // Check if it's linked to the same journey (idempotent operation)
+      if (jobId && cv.journeyId.toString() === jobId) {
+        const existingJourney = await ApplicationJourney.findOne({
+          jobId: finalJobId,
+          userId: new mongoose.Types.ObjectId(userId)
+        });
+        
+        if (existingJourney && existingJourney._id.toString() === cv.journeyId.toString()) {
+          return NextResponse.json({
+            success: true,
+            message: 'CV is already linked to this journey',
+            data: {
+              cv: {
+                id: cv._id.toString(),
+                cvType: cv.cvType,
+                journeyId: cv.journeyId?.toString()
+              },
+              journey: {
+                id: existingJourney._id.toString(),
+                jobId: existingJourney.jobId.toString(),
+                cvId: existingJourney.cvId,
+                status: existingJourney.status
+              }
+            }
+          });
+        }
+      }
+      
       return NextResponse.json(
-        { success: false, error: 'CV is already linked to a journey' },
+        { success: false, error: 'CV is already linked to another journey. Please use a different CV or unlink it first.' },
         { status: 400 }
       );
     }
@@ -65,23 +93,32 @@ export async function POST(
     // Create job if not provided
     if (!jobId && jobData) {
       console.log('📝 Creating new job application...');
-      job = await JobApplication.create({
-        userId: new mongoose.Types.ObjectId(userId),
-        jobTitle: jobData.title || 'Unknown Role',
-        company: jobData.company || 'Unknown Company',
-        jobDescription: jobData.description || jobData.jobDescription,
-        status: 'created',
-        source: 'resume-enhancer',
-        priority: 'medium',
-        tags: [],
-        contacts: [],
-        interviews: [],
-        followUps: [],
-        attachments: [],
-        isArchived: false
-      });
-      finalJobId = job._id.toString();
-      console.log('✅ Job created:', finalJobId);
+      try {
+        job = await JobApplication.create({
+          userId: new mongoose.Types.ObjectId(userId),
+          jobTitle: jobData.title || 'Unknown Role',
+          company: jobData.company || 'Unknown Company',
+          jobDescription: jobData.description || jobData.jobDescription,
+          status: 'created',
+          source: 'resume-enhancer',
+          priority: 'medium',
+          tags: [],
+          contacts: [],
+          interviews: [],
+          followUps: [],
+          attachments: [],
+          isArchived: false
+        });
+        finalJobId = job._id.toString();
+        console.log('✅ Job created:', finalJobId);
+      } catch (jobError) {
+        // EDGE CASE 3: Job creation fails - don't proceed with CV conversion
+        console.error('❌ Convert-to-Journey API - Job creation failed:', jobError);
+        return NextResponse.json(
+          { success: false, error: 'Job not found. Cannot convert CV to journey.' },
+          { status: 400 }
+        );
+      }
     } else if (jobId) {
       // Verify job exists and belongs to user
       job = await JobApplication.findOne({
@@ -90,8 +127,9 @@ export async function POST(
       });
 
       if (!job) {
+        // EDGE CASE 3: Job not found
         return NextResponse.json(
-          { success: false, error: 'Job not found' },
+          { success: false, error: 'Job not found. Cannot convert CV to journey.' },
           { status: 404 }
         );
       }
@@ -111,6 +149,21 @@ export async function POST(
     let journey: any;
 
     if (existingJourney) {
+      // EDGE CASE 8: Check if journey already has auto-created CV
+      if (existingJourney.cvId && existingJourney.cvId.toString() !== cvId) {
+        console.log('⚠️ Convert-to-Journey API - Journey already has CV, deleting auto-created CV:', existingJourney.cvId);
+        try {
+          const autoCreatedCV = await CV.findById(existingJourney.cvId);
+          if (autoCreatedCV) {
+            await CV.deleteOne({ _id: autoCreatedCV._id });
+            console.log('✅ Convert-to-Journey API - Auto-created CV deleted:', existingJourney.cvId);
+          }
+        } catch (deleteError) {
+          console.error('⚠️ Convert-to-Journey API - Failed to delete auto-created CV (non-critical):', deleteError);
+          // Continue with linking even if deletion fails
+        }
+      }
+
       // Update existing journey with CV
       journey = existingJourney;
       journey.cvId = cvId;
@@ -175,13 +228,40 @@ export async function POST(
         }
       });
       console.log('✅ Journey created:', journey._id.toString());
+      
+      // EDGE CASE 6: If journey creation fails, rollback would happen in catch block
+      // But since we're using create(), if it fails, it will throw and be caught
     }
 
-    // Update CV to journey type
-    cv.cvType = 'journey';
-    cv.journeyId = journey._id;
-    await cv.save();
-    console.log('✅ CV converted to journey type');
+    // EDGE CASE 7: Retry mechanism for CV update with exponential backoff
+    let cvUpdateSuccess = false;
+    const maxRetries = 3;
+    const retryDelays = [1000, 2000, 4000]; // 1s, 2s, 4s
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Update CV to journey type
+        cv.cvType = 'journey';
+        cv.journeyId = journey._id;
+        await cv.save();
+        
+        cvUpdateSuccess = true;
+        console.log('✅ CV converted to journey type');
+        break;
+      } catch (updateError) {
+        console.error(`⚠️ Convert-to-Journey API - CV update attempt ${attempt + 1} failed:`, updateError);
+        if (attempt < maxRetries - 1) {
+          await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+        } else {
+          console.error('❌ Convert-to-Journey API - CV update failed after all retries');
+          throw new Error('Failed to update CV after multiple attempts. Please try again.');
+        }
+      }
+    }
+
+    if (!cvUpdateSuccess) {
+      throw new Error('Failed to update CV');
+    }
 
     // Return success response
     return NextResponse.json({

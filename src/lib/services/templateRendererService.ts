@@ -96,13 +96,34 @@ export class ReactTemplateRenderer implements IRenderer {
           })
         );
 
-      // Wrap in full HTML document with styles
+      // ATS-friendly font validation - ensure standard fonts (Arial, Calibri, Helvetica, Roboto)
+      const templateFont = template?.globalStyles?.fontFamily || 'Calibri, Arial, Helvetica, Roboto, sans-serif';
+      
+      // Validate font is ATS-friendly (standard fonts only)
+      const standardFonts = ['Arial', 'Calibri', 'Helvetica', 'Roboto', 'Times New Roman', 'Georgia'];
+      const hasStandardFont = standardFonts.some(font => 
+        templateFont.toLowerCase().includes(font.toLowerCase())
+      );
+      
+      if (!hasStandardFont) {
+        logger.warn('Template uses non-standard font, falling back to Arial for ATS compatibility');
+      }
+      
+      // Use standard font with fallbacks for ATS compatibility
+      const atsFontFamily = hasStandardFont 
+        ? templateFont 
+        : `Arial, Calibri, Helvetica, Roboto, ${templateFont}`;
+
+      // Wrap in full HTML document with ATS-friendly styles and metadata
       const fullHTML = `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Professional CV/Resume">
+  <!-- ATS-friendly metadata -->
+  <meta name="format-detection" content="telephone=yes">
   <style>
     * {
       margin: 0;
@@ -110,18 +131,43 @@ export class ReactTemplateRenderer implements IRenderer {
       box-sizing: border-box;
     }
     body {
-      font-family: ${template?.globalStyles?.fontFamily || 'Calibri, Arial, sans-serif'};
+      font-family: ${atsFontFamily}, sans-serif;
       font-size: ${template?.globalStyles?.fontSize || '11pt'};
       line-height: ${template?.globalStyles?.lineHeight || '1.2'};
       background-color: ${template?.globalStyles?.backgroundColor || '#ffffff'};
       color: ${template?.globalStyles?.primaryColor || '#000000'};
       padding: 20px;
+      /* Ensure text is selectable for ATS parsing */
+      -webkit-user-select: text;
+      -moz-user-select: text;
+      -ms-user-select: text;
+      user-select: text;
     }
     .cv-container {
       width: 100%;
       max-width: ${options.paperSize === 'Letter' ? '8.5in' : '210mm'};
       margin: 0 auto;
       background: white;
+      /* Single-column layout for ATS compatibility */
+      display: block;
+    }
+    /* Ensure standard section headers are identifiable */
+    h1, h2, h3, h4, h5, h6 {
+      font-family: ${atsFontFamily}, sans-serif;
+      font-weight: bold;
+    }
+    /* Prevent text in images (ATS can't read image text) */
+    img {
+      alt: attr(alt);
+    }
+    /* Page break prevention - prevent text splitting (Edge Case #29) */
+    p, li, div {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    /* Ensure minimum font size for ATS compatibility (Edge Case #41) */
+    body, p, li, span {
+      font-size: ${Math.max(10, parseInt(template?.globalStyles?.fontSize || '11pt'))}pt;
     }
     @media print {
       body {
@@ -129,6 +175,16 @@ export class ReactTemplateRenderer implements IRenderer {
       }
       .cv-container {
         max-width: 100%;
+      }
+      /* Ensure text remains selectable in print */
+      * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      /* Prevent orphans and widows */
+      p, li {
+        orphans: 3;
+        widows: 3;
       }
     }
   </style>

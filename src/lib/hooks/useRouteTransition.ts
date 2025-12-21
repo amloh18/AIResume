@@ -14,10 +14,11 @@ interface RouteTransitionConfig {
 // Define which route transitions should show loading animations
 const ROUTE_TRANSITIONS: RouteTransitionConfig[] = [
   // Full CVCircle animation for major transitions
-  { from: '/auth/signin', to: '/ai-career-report', type: 'full' },
-  { from: '/auth/signup', to: '/ai-career-report', type: 'full' },
-  { from: '/ai-career-report', to: '/dashboard', type: 'full' },
-  { from: '/dashboard', to: '/studio', type: 'full' },
+  // NOTE: ai-career-report and studio routes have been removed
+  // { from: '/auth/signin', to: '/ai-career-report', type: 'full' },
+  // { from: '/auth/signup', to: '/ai-career-report', type: 'full' },
+  // { from: '/ai-career-report', to: '/dashboard', type: 'full' },
+  // { from: '/dashboard', to: '/studio', type: 'full' },
   
   // DISABLED: Minimal loading for dashboard page switches - too annoying
   // { from: '/dashboard', to: '/dashboard/application-tracker', type: 'minimal' },

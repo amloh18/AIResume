@@ -46,7 +46,8 @@ export async function GET(request: NextRequest) {
     
     // If no user draft, try session ID (for anonymous users)
     if (!draft) {
-      const sessionId = request.cookies.get('cv-draft-session-id')?.value;
+      const sessionId = request.cookies.get('cv-draft-session-id')?.value || 
+                        new URL(request.url).searchParams.get('sessionId');
       if (sessionId) {
         draft = await TemporaryCVDraft.findOne({ 
           sessionId, 
@@ -85,9 +86,14 @@ export async function GET(request: NextRequest) {
         currentStep: draft.currentStep,
         jobId: draft.jobId?.toString(),
         jobData: draft.jobData,
-        completedSteps: draft.completedSteps,
+        completedSteps: draft.completedSteps || [],
         activeSection: draft.activeSection,
-        availableSections: draft.availableSections,
+        availableSections: draft.availableSections || [],
+        targetRole: (draft as any).targetRole,
+        seniorityLevel: (draft as any).seniorityLevel,
+        templateId: (draft as any).templateId,
+        template: (draft as any).template,
+        cvTitle: (draft as any).cvTitle,
         lastSaved: draft.updatedAt
       }
     });

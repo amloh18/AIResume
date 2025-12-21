@@ -81,6 +81,14 @@ export async function createJourneyDocuments(
     let cvId: string | null = currentJourney.cvId;
     let coverLetterId: string | null = currentJourney.coverLetterId;
 
+    // EDGE CASE 1: Race Condition - Check if CV is already linked (atomic check)
+    // Refresh journey from DB one more time to get latest state before checking
+    const latestJourney = await ApplicationJourney.findById(currentJourney._id);
+    if (latestJourney && latestJourney.cvId) {
+      cvId = latestJourney.cvId.toString();
+      console.log('✅ Journey Document Service - CV already linked to journey (race condition handled):', cvId);
+    }
+
     // Create CV if not exists
     if (!cvId) {
       // Check if a CV already exists for this journey (atomic check)
@@ -165,6 +173,7 @@ export async function createJourneyDocuments(
             status: 'draft',
             isMaster: false,
             journeyId: currentJourney._id.toString(),
+            cvType: 'journey', // CVs created in journey context are journey-based
             templateId: templateId,
             templateName: templateName,
             templateData: templateData ? JSON.parse(JSON.stringify(templateData)) : templateData, // Deep copy template data
@@ -194,8 +203,70 @@ export async function createJourneyDocuments(
           // Note: Thumbnail will be generated when CV is opened in studio and exited
         }
       } else {
-        console.error('❌ Journey Document Service - Master CV not found');
-        throw new Error('Master CV not found');
+        // EDGE CASE 5: No Master CV - Fallback to standalone CV or create basic structure
+        console.warn('⚠️ Journey Document Service - Master CV not found, checking for standalone CVs...');
+        
+        // Check for standalone CVs (most recently modified)
+        const standaloneCVs = await CV.find({
+          userId: new mongoose.Types.ObjectId(userId),
+          cvType: 'standalone',
+          journeyId: null
+        }).sort({ updatedAt: -1 }).limit(1);
+
+        if (standaloneCVs.length > 0) {
+          // EDGE CASE 4: Multiple Standalone CVs - Use most recently modified
+          const standaloneCV = standaloneCVs[0];
+          console.log('✅ Journey Document Service - Using standalone CV as source:', standaloneCV._id);
+          
+          // Link standalone CV to journey instead of creating new one
+          standaloneCV.cvType = 'journey';
+          standaloneCV.journeyId = currentJourney._id.toString();
+          await standaloneCV.save();
+          
+          cvId = standaloneCV._id.toString();
+          currentJourney.cvId = cvId;
+          await currentJourney.save();
+          
+          console.log('✅ Journey Document Service - Standalone CV linked to journey:', cvId);
+        } else {
+          // EDGE CASE 5: No source CV exists - Create basic CV structure
+          console.error('❌ Journey Document Service - No master CV or standalone CV found');
+          console.error('❌ Journey Document Service - Creating basic CV structure as fallback');
+          
+          const cvTitle = `${currentJourney.company}_${currentJourney.jobTitle} | CV`;
+          const basicCV = new CV({
+            title: cvTitle,
+            cvData: {
+              personalInfo: {},
+              workExperience: [],
+              education: [],
+              skills: [],
+              projects: [],
+              certifications: [],
+              languages: [],
+              summary: ''
+            },
+            status: 'draft',
+            isMaster: false,
+            journeyId: currentJourney._id.toString(),
+            cvType: 'journey',
+            templateId: 'executive-professional-layout-template',
+            templateName: 'Executive Professional',
+            userId: new mongoose.Types.ObjectId(userId),
+            metadata: {
+              isMaster: false,
+              createdVia: 'journey',
+              lastModified: new Date(),
+              viewCount: 0,
+              downloadCount: 0,
+              fallbackCreation: true // Flag to indicate this was a fallback creation
+            }
+          });
+
+          const savedCV = await basicCV.save();
+          cvId = savedCV._id.toString();
+          console.log('⚠️ Journey Document Service - Basic CV structure created as fallback:', cvId);
+        }
       }
     }
 
@@ -274,10 +345,36 @@ export async function createJourneyDocuments(
         };
       }
 
-      // Generate cover letter content using AI with the new 3-paragraph, experience-level-based logic
-      let generatedContent = '';
+      // Generate cover letter using new format: header, body, footer
+      const { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
+      
+      // Generate header from CV and job data
+      let header = '';
+      let footer = '';
+      let body = '';
+      
       try {
-        console.log('🚀 Journey Document Service - Generating cover letter content with AI (3-paragraph, experience-level-based)...');
+        // Generate header
+        header = formatCoverLetterHeader(cvDataWithAnalysis, {
+          title: currentJourney.jobTitle,
+          company: currentJourney.company,
+          jobDescription: job.jobDescription || job.description || '',
+          location: job.location || '',
+          contactPerson: job.contactPerson || 'Hiring Manager',
+          ...job.toObject()
+        });
+        
+        // Generate footer
+        footer = formatCoverLetterFooter(cvDataWithAnalysis);
+        
+        console.log('✅ Journey Document Service - Generated header and footer from CV/job data');
+      } catch (headerFooterError) {
+        console.error('⚠️ Journey Document Service - Failed to generate header/footer:', headerFooterError);
+      }
+
+      // Generate body content using AI
+      try {
+        console.log('🚀 Journey Document Service - Generating cover letter body with AI...');
 
         // Call cover letter generation API with cvData including metadata
         const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -299,40 +396,41 @@ export async function createJourneyDocuments(
 
         if (generateResponse.ok) {
           const generateResult = await generateResponse.json();
-          if (generateResult.success && generateResult.content) {
-            generatedContent = generateResult.content;
-            console.log('✅ Journey Document Service - Cover letter content generated successfully with new logic');
+          if (generateResult.success && (generateResult.body || generateResult.content)) {
+            body = generateResult.body || generateResult.content;
+            console.log('✅ Journey Document Service - Cover letter body generated successfully');
           }
         }
       } catch (generateError) {
-        console.error('⚠️ Journey Document Service - Failed to generate cover letter content, using template:', generateError);
+        console.error('⚠️ Journey Document Service - Failed to generate cover letter body, using template:', generateError);
       }
 
       // Fallback to template if AI generation failed
-      if (!generatedContent) {
+      if (!body) {
         // Check if user has any existing cover letters (to use as template)
         const existingCoverLetter = await CoverLetter.findOne({
           userId: new mongoose.Types.ObjectId(userId)
         }).sort({ createdAt: -1 });
 
-        if (existingCoverLetter) {
-          generatedContent = existingCoverLetter.content || '';
-          console.log('✅ Journey Document Service - Using existing cover letter as template:', existingCoverLetter._id);
+        if (existingCoverLetter && existingCoverLetter.body) {
+          body = existingCoverLetter.body;
+          console.log('✅ Journey Document Service - Using existing cover letter body as template:', existingCoverLetter._id);
         } else {
-          // Create default template content
-          generatedContent = `Dear Hiring Manager,
+          // Create default template body content (ONLY body with salutation, no header/footer)
+          const recipientName = job?.contactPerson || currentJourney.contactPerson || 'Hiring Manager';
+          body = `Dear ${recipientName},
 
 I am writing to express my strong interest in the ${currentJourney.jobTitle} position at ${currentJourney.company}. With my background and experience, I am excited about the opportunity to contribute to your team.
 
 I am particularly drawn to ${currentJourney.company} and am confident that my skills and experience make me a strong candidate for this position.
 
-I would welcome the opportunity to discuss how my qualifications align with your needs. Thank you for considering my application. I look forward to hearing from you.
-
-Sincerely,
-[Your Name]`;
-          console.log('✅ Journey Document Service - Using default cover letter template');
+I would welcome the opportunity to discuss how my qualifications align with your needs.`;
+          console.log('✅ Journey Document Service - Using default cover letter body template');
         }
       }
+
+      // DO NOT merge content - store header, body, footer separately
+      // Content will be generated on-the-fly in preview only
 
       const coverLetterTitle = `${currentJourney.company}_${currentJourney.jobTitle} | Cover_Letter`;
 
@@ -348,7 +446,10 @@ Sincerely,
       } else {
         const duplicatedCoverLetter = new CoverLetter({
           title: coverLetterTitle,
-          content: generatedContent || '',
+          content: '', // Leave empty - will be generated in preview only
+          header: header || undefined,
+          body: body || undefined,
+          footer: footer || undefined,
           status: 'draft',
           userId: new mongoose.Types.ObjectId(userId),
           jobId: currentJourney.jobId,

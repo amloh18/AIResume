@@ -354,6 +354,10 @@ export async function PUT(
     ];
     
     const updateData: Record<string, any> = {};
+
+    // Avoid overwriting existing nested metadata fields with `undefined` during merges
+    const removeUndefinedKeys = (obj: Record<string, any>) =>
+      Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
     
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
@@ -367,10 +371,77 @@ export async function PUT(
           });
         } else if (field === 'metadata') {
           // CRITICAL: Merge metadata instead of replacing it to preserve master CV status
-          updateData[field] = {
-            ...cv.metadata,
-            ...body[field]
+          const incomingMetadata =
+            body[field] && typeof body[field] === 'object' ? removeUndefinedKeys(body[field]) : {};
+          
+          // CRITICAL: Remove surgeonAnalysis if it's undefined, null, or not a valid object
+          // This prevents Mongoose validation errors when converting standalone to journey CVs
+          if ('surgeonAnalysis' in incomingMetadata) {
+            const surgeonAnalysis = incomingMetadata.surgeonAnalysis;
+            // Check for invalid values: undefined, null, string "undefined", empty object, or non-object types
+            const isValidSurgeonAnalysis = surgeonAnalysis !== undefined && 
+                                          surgeonAnalysis !== null && 
+                                          surgeonAnalysis !== 'undefined' &&
+                                          typeof surgeonAnalysis === 'object' &&
+                                          surgeonAnalysis !== null &&
+                                          Object.keys(surgeonAnalysis).length > 0;
+            
+            if (!isValidSurgeonAnalysis) {
+              console.log('⚠️ CV UPDATE API - Removing invalid surgeonAnalysis from incoming metadata:', {
+                type: typeof surgeonAnalysis,
+                value: surgeonAnalysis
+              });
+              delete (incomingMetadata as any).surgeonAnalysis;
+            }
+          }
+          
+          // CRITICAL: Clean existing CV metadata before merging to remove any undefined surgeonAnalysis
+          // This prevents Mongoose validation errors when Object.assign is called
+          const existingMetadata = cv.metadata ? { ...(cv.metadata as any) } : {};
+          
+          // Remove invalid surgeonAnalysis from existing metadata before merge
+          if ('surgeonAnalysis' in existingMetadata) {
+            const existingSurgeonAnalysis = existingMetadata.surgeonAnalysis;
+            const isValidExisting = existingSurgeonAnalysis !== undefined && 
+                                   existingSurgeonAnalysis !== null && 
+                                   existingSurgeonAnalysis !== 'undefined' &&
+                                   typeof existingSurgeonAnalysis === 'object' &&
+                                   existingSurgeonAnalysis !== null &&
+                                   Object.keys(existingSurgeonAnalysis).length > 0;
+            
+            if (!isValidExisting) {
+              console.log('⚠️ CV UPDATE API - Removing invalid surgeonAnalysis from existing CV metadata:', {
+                type: typeof existingSurgeonAnalysis,
+                value: existingSurgeonAnalysis
+              });
+              delete existingMetadata.surgeonAnalysis;
+            }
+          }
+          
+          // Merge metadata, preserving existing surgeonAnalysis if incoming doesn't have a valid one
+          const mergedMetadata = {
+            ...existingMetadata,
+            ...incomingMetadata
           };
+          
+          // Final cleanup: ensure surgeonAnalysis is either a valid object or doesn't exist
+          const finalSurgeonAnalysis = mergedMetadata.surgeonAnalysis;
+          const isValidFinalSurgeonAnalysis = finalSurgeonAnalysis !== undefined && 
+                                             finalSurgeonAnalysis !== null && 
+                                             finalSurgeonAnalysis !== 'undefined' &&
+                                             typeof finalSurgeonAnalysis === 'object' &&
+                                             finalSurgeonAnalysis !== null &&
+                                             Object.keys(finalSurgeonAnalysis).length > 0;
+          
+          if (!isValidFinalSurgeonAnalysis && 'surgeonAnalysis' in mergedMetadata) {
+            console.log('⚠️ CV UPDATE API - Removing invalid surgeonAnalysis from merged metadata:', {
+              type: typeof finalSurgeonAnalysis,
+              value: finalSurgeonAnalysis
+            });
+            delete mergedMetadata.surgeonAnalysis;
+          }
+          
+          updateData[field] = mergedMetadata;
         } else {
           updateData[field] = body[field];
         }
@@ -442,6 +513,26 @@ export async function PUT(
       updateData.metadata = { ...cv.metadata };
     }
     updateData.metadata.lastModified = new Date();
+
+    // Guard: never save metadata.surgeonAnalysis as undefined, null, or invalid values (can trigger schema cast issues)
+    // This is critical when converting standalone CVs to journey CVs
+    if (updateData.metadata && 'surgeonAnalysis' in updateData.metadata) {
+      const surgeonAnalysis = updateData.metadata.surgeonAnalysis;
+      const isValidSurgeonAnalysis = surgeonAnalysis !== undefined && 
+                                     surgeonAnalysis !== null && 
+                                     surgeonAnalysis !== 'undefined' &&
+                                     typeof surgeonAnalysis === 'object' &&
+                                     surgeonAnalysis !== null &&
+                                     Object.keys(surgeonAnalysis).length > 0;
+      
+      if (!isValidSurgeonAnalysis) {
+        console.log('⚠️ CV UPDATE API - Removing invalid surgeonAnalysis from updateData.metadata:', {
+          type: typeof surgeonAnalysis,
+          value: surgeonAnalysis
+        });
+        delete updateData.metadata.surgeonAnalysis;
+      }
+    }
     
     // Final safety check: if CV was a master CV, ensure it stays that way unless explicitly changed
     if (isCurrentlyMasterCV && updateData.metadata.isMaster !== false && updateData.metadata.isMaster !== 'false') {
@@ -451,9 +542,124 @@ export async function PUT(
     console.log('🔍 CV UPDATE API - Updating CV with data:', Object.keys(updateData));
     console.log('🔍 CV UPDATE API - Update data values:', updateData);
     
-    // Update CV
-    Object.assign(cv, updateData);
-    await cv.save();
+    // CRITICAL: Final cleanup of updateData.metadata.surgeonAnalysis before Object.assign
+    // Ensure it's completely removed if invalid to prevent Mongoose cast errors
+    if (updateData.metadata && 'surgeonAnalysis' in updateData.metadata) {
+      const surgeonAnalysis = updateData.metadata.surgeonAnalysis;
+      const isValidSurgeonAnalysis = surgeonAnalysis !== undefined && 
+                                     surgeonAnalysis !== null && 
+                                     surgeonAnalysis !== 'undefined' &&
+                                     typeof surgeonAnalysis === 'object' &&
+                                     surgeonAnalysis !== null &&
+                                     Object.keys(surgeonAnalysis).length > 0;
+      
+      if (!isValidSurgeonAnalysis) {
+        console.log('⚠️ CV UPDATE API - Final cleanup: Removing invalid surgeonAnalysis from updateData.metadata:', {
+          type: typeof surgeonAnalysis,
+          value: surgeonAnalysis
+        });
+        delete updateData.metadata.surgeonAnalysis;
+      }
+    }
+    
+    // CRITICAL: Use Mongoose updateOne with $set/$unset to avoid setter validation issues
+    // Object.assign triggers Mongoose setters which can cause validation errors with undefined values
+    const mongoUpdate: any = { $set: {} };
+    const mongoUnset: any = { $unset: {} };
+    
+    // Build $set operations
+    for (const [key, value] of Object.entries(updateData)) {
+      if (key === 'metadata') {
+        // Handle metadata specially - ensure surgeonAnalysis is valid or removed
+        const cleanMetadata = { ...value };
+        
+        // Remove invalid surgeonAnalysis from metadata before setting
+        if ('surgeonAnalysis' in cleanMetadata) {
+          const surgeonAnalysis = cleanMetadata.surgeonAnalysis;
+          const isValidSurgeonAnalysis = surgeonAnalysis !== undefined && 
+                                         surgeonAnalysis !== null && 
+                                         surgeonAnalysis !== 'undefined' &&
+                                         typeof surgeonAnalysis === 'object' &&
+                                         surgeonAnalysis !== null &&
+                                         Object.keys(surgeonAnalysis).length > 0;
+          
+          if (!isValidSurgeonAnalysis) {
+            console.log('⚠️ CV UPDATE API - Removing invalid surgeonAnalysis before MongoDB update:', {
+              type: typeof surgeonAnalysis,
+              value: surgeonAnalysis
+            });
+            delete cleanMetadata.surgeonAnalysis;
+            // If surgeonAnalysis exists in existing CV and is invalid, unset it
+            if (cv.metadata && 'surgeonAnalysis' in cv.metadata) {
+              const existingSurgeonAnalysis = (cv.metadata as any).surgeonAnalysis;
+              const isValidExisting = existingSurgeonAnalysis !== undefined && 
+                                     existingSurgeonAnalysis !== null && 
+                                     existingSurgeonAnalysis !== 'undefined' &&
+                                     typeof existingSurgeonAnalysis === 'object' &&
+                                     existingSurgeonAnalysis !== null &&
+                                     Object.keys(existingSurgeonAnalysis).length > 0;
+              if (!isValidExisting) {
+                mongoUnset.$unset['metadata.surgeonAnalysis'] = '';
+              }
+            }
+          }
+        }
+        
+        mongoUpdate.$set.metadata = cleanMetadata;
+      } else {
+        mongoUpdate.$set[key] = value;
+      }
+    }
+    
+    // Perform MongoDB update
+    const updateOperations: any = { $set: mongoUpdate.$set };
+    if (Object.keys(mongoUnset.$unset).length > 0) {
+      updateOperations.$unset = mongoUnset.$unset;
+    }
+    
+    await CV.updateOne(
+      { _id: cvId, userId: new mongoose.Types.ObjectId(session.user.id) },
+      updateOperations
+    );
+    
+    // Reload the CV document to get updated data
+    const updatedCVDoc = await CV.findById(cvId);
+    if (!updatedCVDoc) {
+      return NextResponse.json(
+        { success: false, error: 'CV not found after update' },
+        { status: 404 }
+      );
+    }
+    
+    // Update cv properties from reloaded document for subsequent operations
+    // We update properties individually to avoid Object.assign issues with Mongoose documents
+    cv.title = updatedCVDoc.title;
+    cv.cvData = updatedCVDoc.cvData;
+    cv.templateId = updatedCVDoc.templateId;
+    cv.cvType = updatedCVDoc.cvType;
+    cv.status = updatedCVDoc.status;
+    cv.metadata = updatedCVDoc.metadata;
+    cv.journeyId = updatedCVDoc.journeyId;
+    cv.updatedAt = updatedCVDoc.updatedAt;
+    
+    // Link CV to journey if journeyId is provided (for journey mode)
+    if (body.journeyId && cv._id) {
+      try {
+        const { ApplicationJourneyRelationshipService } = await import('@/lib/services/cvJourneyRelationshipService');
+        const linked = await ApplicationJourneyRelationshipService.linkCVToJourney(
+          body.journeyId,
+          cv._id.toString()
+        );
+        if (linked) {
+          console.log('✅ CV UPDATE API - CV linked to journey:', { journeyId: body.journeyId, cvId: cv._id.toString() });
+        } else {
+          console.warn('⚠️ CV UPDATE API - Failed to link CV to journey:', { journeyId: body.journeyId, cvId: cv._id.toString() });
+        }
+      } catch (linkError) {
+        console.error('❌ CV UPDATE API - Error linking CV to journey:', linkError);
+        // Don't fail the save if linking fails - log and continue
+      }
+    }
     
     // Log CV update activity
     try {

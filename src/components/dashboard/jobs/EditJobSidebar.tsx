@@ -35,6 +35,8 @@ import { getCountryFlag } from '@/lib/config/adminConstants';
 import { LocationService } from '@/lib/payment/locationService';
 import { DuplicateJobService, DuplicateCheckResult } from '@/lib/services/duplicateJobService';
 import DuplicateJobWarningModal from './DuplicateJobWarningModal';
+import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
+import UpgradeCard from '@/components/dashboard/UpgradeCard';
 
 interface Job {
   id?: string;
@@ -134,6 +136,8 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
   // Global credit exhaustion handler
   const { checkUsageAndHandleExhaustion, showExhaustionModal } = useCreditExhaustionHandler();
+  const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
+  const [showUpgradeCard, setShowUpgradeCard] = useState(false);
 
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -775,6 +779,12 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             },
             'pro_monthly'
           );
+          
+          // Also trigger UpgradeCard
+          if (userId) {
+            setShowUpgradeCard(true);
+          }
+          
           if (!isAutoSave) setIsSaving(false);
           return;
         }
@@ -1552,6 +1562,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           // This would require passing a callback from JobsTracker
           console.log('View existing job:', jobId);
         }}
+        />
+      )}
+
+      {/* Upgrade Card */}
+      {showUpgradeCard && userId && (
+        <UpgradeCard
+          userId={userId}
+          onClose={() => setShowUpgradeCard(false)}
         />
       )}
     </AnimatePresence>

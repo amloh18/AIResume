@@ -282,20 +282,17 @@ export async function DELETE(
     }
 
     const cvId = toObjectId(id);
-    const cv = await CV.findOne({ _id: cvId, userId });
-    
-    if (!cv) {
+    // Use $unset to clear the nested object reliably (avoid casting/validation issues)
+    const result = await CV.updateOne(
+      { _id: cvId, userId },
+      { $unset: { 'metadata.surgeonAnalysis': 1 } }
+    );
+
+    if (!result.matchedCount) {
       return NextResponse.json(
         { success: false, error: 'CV not found' },
         { status: 404 }
       );
-    }
-
-    // Clear surgeon analysis
-    if (cv.metadata) {
-      (cv.metadata as any).surgeonAnalysis = undefined;
-      cv.markModified('metadata.surgeonAnalysis');
-      await cv.save();
     }
 
     console.log('✅ Cleared surgeon analysis cache for CV:', id);

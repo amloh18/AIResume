@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getJobParserService } from '@/lib/services/jobParserService';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { verifySponsorship } from '@/lib/services/sponsorshipVerificationService';
+import usageLimitsService from '@/lib/services/usageLimitsService';
+import { connectToDatabase } from '@/lib/database';
+import User from '@/models/User';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Job Parse API - Request received');
+    
     const auth = await authenticateRequest(request);
     if (!auth) {
+      console.error('❌ Job Parse API - Unauthorized');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -14,11 +20,58 @@ export async function POST(request: NextRequest) {
     }
     
     const userId = auth.userId;
+    console.log('✅ Job Parse API - Authenticated user:', userId);
+
+    // Check credits/membership BEFORE parsing to save AI tokens
+    await connectToDatabase();
+    const user = await User.findById(userId);
+    if (!user) {
+      console.error('❌ Job Parse API - User not found');
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    const planKey = user.currentPlanKey || 'free';
+    const isFreeUser = planKey === 'free';
+    const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey);
+
+    // For free users, check if they have credits available
+    if (isFreeUser || !isUnlimitedPlan) {
+      const usageCheck = await usageLimitsService.checkUsageLimit({
+        userId: userId.toString(),
+        action: 'job_create'
+      });
+
+      console.log('🔍 Job Parse API - Credit check result:', {
+        allowed: usageCheck.allowed,
+        reason: usageCheck.reason,
+        currentUsage: usageCheck.currentUsage,
+        limit: usageCheck.limit,
+        planKey
+      });
+
+      if (!usageCheck.allowed) {
+        console.log('❌ Job Parse API - Credit check failed:', usageCheck.reason);
+        return NextResponse.json(
+          {
+            error: usageCheck.reason || 'You have no credits remaining. Please upgrade to parse job descriptions.',
+            requiresUpgrade: true,
+            creditsRemaining: usageCheck.limit === -1 ? -1 : (usageCheck.limit - usageCheck.currentUsage),
+            limit: usageCheck.limit
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     const body = await request.json();
     const { text, url } = body;
+    console.log('🔍 Job Parse API - Input:', { hasText: !!text, hasUrl: !!url, textLength: text?.length });
 
     if (!text && !url) {
+      console.error('❌ Job Parse API - Missing input');
       return NextResponse.json(
         { error: 'Either text or url is required' },
         { status: 400 }
@@ -29,47 +82,68 @@ export async function POST(request: NextRequest) {
     let parsedData;
 
     try {
+      console.log('🔍 Job Parse API - Starting parsing...');
       if (url) {
         // Try URL parsing first (uses puppeteer)
         try {
+          console.log('🔍 Job Parse API - Attempting URL parsing:', url);
           parsedData = await parserService.parseJobFromUrl(url);
+          console.log('✅ Job Parse API - URL parsing successful');
         } catch (error) {
           // Fallback to LLM parsing if URL fetch fails
-          console.log('URL parsing failed, falling back to LLM:', error);
+          console.log('⚠️ Job Parse API - URL parsing failed, falling back to LLM:', error);
           parsedData = await parserService.parseJobDescription(url, true);
+          console.log('✅ Job Parse API - LLM fallback parsing successful');
         }
       } else {
         // Use LLM to parse text
+        console.log('🔍 Job Parse API - Parsing text with LLM, length:', text.length);
         parsedData = await parserService.parseJobDescription(text, false);
+        console.log('✅ Job Parse API - Text parsing successful');
       }
 
       // Verify sponsorship based on company and location
       let sponsorship: 'yes' | 'no' | 'unknown' = 'unknown';
       if (parsedData.company && parsedData.location) {
         try {
+          console.log('🔍 Job Parse API - Verifying sponsorship:', { company: parsedData.company, location: parsedData.location });
           const sponsorshipResult = await verifySponsorship(parsedData.company, parsedData.location);
           // If any country shows verified, set to 'yes', otherwise 'no'
           if (sponsorshipResult.results && sponsorshipResult.results.length > 0) {
             const hasVerified = sponsorshipResult.results.some(result => result.isVerified === true);
             sponsorship = hasVerified ? 'yes' : 'no';
+            console.log('✅ Job Parse API - Sponsorship verified:', sponsorship);
           }
         } catch (sponsorshipError) {
-          console.error('Error verifying sponsorship:', sponsorshipError);
+          console.error('⚠️ Job Parse API - Error verifying sponsorship (non-fatal):', sponsorshipError);
           // Keep as 'unknown' if verification fails
         }
       }
+
+      // Validate parsedData structure
+      if (!parsedData) {
+        throw new Error('Parser returned null or undefined data');
+      }
+
+      console.log('🔍 Job Parse API - Parsed data received:', {
+        hasTitle: !!parsedData.title,
+        hasCompany: !!parsedData.company,
+        hasDescription: !!parsedData.description,
+        hasRequirements: !!parsedData.requirements,
+        hasBenefits: !!parsedData.benefits
+      });
 
       // Build job description with requirements and benefits
       let jobDescription = parsedData.description || '';
       
       // Add requirements if available
-      if (parsedData.requirements && parsedData.requirements.length > 0) {
+      if (parsedData.requirements && Array.isArray(parsedData.requirements) && parsedData.requirements.length > 0) {
         const requirementsText = `\n\nRequirements:\n${parsedData.requirements.join('\n')}`;
         jobDescription += requirementsText;
       }
       
       // Add benefits if available
-      if (parsedData.benefits && parsedData.benefits.length > 0) {
+      if (parsedData.benefits && Array.isArray(parsedData.benefits) && parsedData.benefits.length > 0) {
         const benefitsText = `\n\nBenefits:\n${parsedData.benefits.join('\n')}`;
         jobDescription += benefitsText;
       }
@@ -107,6 +181,7 @@ export async function POST(request: NextRequest) {
         notes: undefined // Notes are now empty since requirements/benefits moved to description
       };
 
+      console.log('✅ Job Parse API - Parsing complete, returning response');
       return NextResponse.json({
         success: true,
         data: jobData,
@@ -120,19 +195,30 @@ export async function POST(request: NextRequest) {
         }
       });
     } catch (error) {
-      console.error('Error parsing job:', error);
+      console.error('❌ Job Parse API - Error parsing job:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('❌ Job Parse API - Error details:', { errorMessage, errorStack });
       return NextResponse.json(
         { 
           error: 'Failed to parse job description',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: errorMessage,
+          ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
         },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Parse job API error:', error);
+    console.error('❌ Job Parse API - Outer catch error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    console.error('❌ Job Parse API - Outer error details:', { errorMessage, errorStack });
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: errorMessage,
+        ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
+      },
       { status: 500 }
     );
   }

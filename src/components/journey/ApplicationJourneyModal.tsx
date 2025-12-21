@@ -20,7 +20,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import toast from 'react-hot-toast';
-import { useStudioNavigation } from '@/lib/studio-navigation';
+// TODO: studio-navigation was deleted - need to implement navigation logic directly or create replacement
+// import { useStudioNavigation } from '@/lib/studio-navigation';
 
 interface ApplicationJourneyModalProps {
   journey: {
@@ -67,7 +68,20 @@ export default function ApplicationJourneyModal({
   onClose
 }: ApplicationJourneyModalProps) {
   const router = useRouter();
-  const { journeyActions } = useStudioNavigation(router, userId);
+  // TODO: useStudioNavigation was deleted - need to implement navigation logic directly
+  // const { journeyActions } = useStudioNavigation(router, userId);
+  
+  // Temporary replacement - basic navigation functions
+  const journeyActions = (journeyId: string, params: any) => ({
+    openCVEditor: () => {
+      // TODO: Implement CV editor navigation
+      console.log('CV editor navigation needs to be implemented');
+    },
+    openCoverLetterEditor: () => {
+      // TODO: Implement cover letter editor navigation
+      console.log('Cover letter editor navigation needs to be implemented');
+    }
+  });
 
   if (!isOpen) return null;
 

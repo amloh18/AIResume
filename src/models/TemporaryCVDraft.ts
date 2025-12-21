@@ -26,6 +26,13 @@ export interface ITemporaryCVDraft extends Document {
   activeSection?: string;
   availableSections?: string[];
   
+  // Guest onboarding fields
+  targetRole?: string;
+  seniorityLevel?: string;
+  templateId?: string | mongoose.Types.ObjectId;
+  template?: any; // Full template data
+  cvTitle?: string;
+  
   // Flag to track if this should become a Master CV
   isForMasterCV: boolean;
   
@@ -66,7 +73,7 @@ const temporaryCVDraftSchema = new Schema<ITemporaryCVDraft>({
     type: Number,
     default: 1,
     min: 1,
-    max: 3
+    max: 4
   },
   jobId: {
     type: Schema.Types.ObjectId,
@@ -88,6 +95,26 @@ const temporaryCVDraftSchema = new Schema<ITemporaryCVDraft>({
   availableSections: {
     type: [String],
     default: []
+  },
+  targetRole: {
+    type: String,
+    required: false
+  },
+  seniorityLevel: {
+    type: String,
+    required: false
+  },
+  templateId: {
+    type: Schema.Types.Mixed, // Allow both ObjectId and String
+    required: false
+  },
+  template: {
+    type: Schema.Types.Mixed, // Full template data
+    required: false
+  },
+  cvTitle: {
+    type: String,
+    required: false
   },
   isForMasterCV: {
     type: Boolean,

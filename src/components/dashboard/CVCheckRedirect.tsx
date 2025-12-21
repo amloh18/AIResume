@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
-import OnboardingCarouselModal from './OnboardingCarouselModal';
+import CreateMasterCVCard from './CreateMasterCVCard';
 
 interface CVCheckRedirectProps {
   children: React.ReactNode;
@@ -13,6 +13,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
   const [isChecking, setIsChecking] = useState(true);
   const [hasRedirected, setHasRedirected] = useState(false);
   const [hasMasterCV, setHasMasterCV] = useState(false);
+  const [showMasterCVCard, setShowMasterCVCard] = useState(false);
   const router = useRouter();
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const hasCheckedRef = useRef(false);
@@ -34,6 +35,8 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
       // Force a re-check by resetting state
       setHasMasterCV(false);
       setIsChecking(false);
+      // Hide the master CV card when dismissed
+      setShowMasterCVCard(false);
     };
 
     const handleStorageChange = (e: StorageEvent) => {
@@ -271,15 +274,29 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 sessionStorage.removeItem('needsCVSetup');
               }
             } else {
-              console.log('📝 User has CVs but no master CV, showing onboarding modal');
+              console.log('📝 User has CVs but no master CV, showing master CV card');
               setHasMasterCV(false);
               setIsChecking(false);
+              // Check if card was dismissed in this session
+              const wasDismissed = typeof window !== 'undefined' && 
+                sessionStorage.getItem('masterCVCardDismissed') === 'true';
+              // Show card if not dismissed (dismissal doesn't prevent showing on add job)
+              if (!wasDismissed) {
+                setShowMasterCVCard(true);
+              }
               return;
             }
           } else {
-            console.log('📝 User has no CVs, showing onboarding modal');
+            console.log('📝 User has no CVs, showing master CV card');
             setHasMasterCV(false);
             setIsChecking(false);
+            // Check if card was dismissed in this session
+            const wasDismissed = typeof window !== 'undefined' && 
+              sessionStorage.getItem('masterCVCardDismissed') === 'true';
+            // Show card if not dismissed (dismissal doesn't prevent showing on add job)
+            if (!wasDismissed) {
+              setShowMasterCVCard(true);
+            }
             return;
           }
         } else {
@@ -290,9 +307,16 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
             error: result.error,
             message: result.message
           });
-          // Fallback: show onboarding modal if we can't check
+          // Fallback: show master CV card if we can't check
           setHasMasterCV(false);
           setIsChecking(false);
+          // Check if card was dismissed in this session
+          const wasDismissed = typeof window !== 'undefined' && 
+            sessionStorage.getItem('masterCVCardDismissed') === 'true';
+          // Show card if not dismissed
+          if (!wasDismissed) {
+            setShowMasterCVCard(true);
+          }
           return;
         }
       } catch (error) {
@@ -315,14 +339,25 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
     userId: user?.id
   });
 
+  const handleMasterCVCardClose = () => {
+    // Store dismissal in sessionStorage (temporary, allows showing on add job)
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('masterCVCardDismissed', 'true');
+    }
+    setShowMasterCVCard(false);
+  };
+
   return (
     <>
       {/* Always render children - they handle their own loading states */}
       {children}
       
-      {/* Conditionally show onboarding modal overlay if needed */}
-      {!isChecking && !hasMasterCV && user?.id && (
-        <OnboardingCarouselModal userId={user.id} />
+      {/* Conditionally show master CV card if needed */}
+      {!isChecking && !hasMasterCV && user?.id && showMasterCVCard && (
+        <CreateMasterCVCard 
+          userId={user.id} 
+          onClose={handleMasterCVCardClose}
+        />
       )}
     </>
   );

@@ -17,6 +17,8 @@ interface RoleSelectorModalProps {
     hasJD: boolean;
   }) => void;
   onOpenJobParser?: () => void;
+  isOnboardingMode?: boolean;
+  isGuestMode?: boolean;
 }
 
 const SENIORITY_LEVELS = [
@@ -32,7 +34,9 @@ export default function RoleSelectorModal({
   onClose,
   cvData,
   onSubmit,
-  onOpenJobParser
+  onOpenJobParser,
+  isOnboardingMode = false,
+  isGuestMode = false
 }: RoleSelectorModalProps) {
   const [targetRole, setTargetRole] = useState('');
   const [seniorityLevel, setSeniorityLevel] = useState('');
@@ -119,6 +123,12 @@ export default function RoleSelectorModal({
   };
 
   const handleSubmit = (submitType: 'role_only' | 'with_jd' | 'skip') => {
+    // For onboarding/guest mode, don't allow skipping
+    if (submitType === 'skip' && (isOnboardingMode || isGuestMode)) {
+      // Don't allow skip in onboarding/guest mode
+      return;
+    }
+    
     if (submitType === 'skip') {
       onSubmit({
         targetRole: '',
@@ -162,7 +172,9 @@ export default function RoleSelectorModal({
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <Target className="w-8 h-8 text-gray-900 dark:text-white" />
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Define Your Target Role</h2>
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {isOnboardingMode || isGuestMode ? 'Create Your Master CV - Define Target Role' : 'Define Your Target Role'}
+              </h2>
                 </div>
                 <button
                   onClick={onClose}
@@ -172,7 +184,9 @@ export default function RoleSelectorModal({
                 </button>
               </div>
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
-                Help us tailor your resume for maximum impact
+                {isOnboardingMode || isGuestMode 
+                  ? "Your Master CV will be optimized for this role and serve as the foundation for all your job applications."
+                  : "Help us tailor your resume for maximum impact"}
               </p>
             </div>
 
@@ -276,12 +290,15 @@ export default function RoleSelectorModal({
 
             {/* Footer */}
             <div className="border-t border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] px-6 py-4 flex flex-wrap items-center justify-between gap-3">
-              <button
-                onClick={() => handleSubmit('skip')}
-                className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition-colors"
-              >
-                Skip
-              </button>
+              {!(isOnboardingMode || isGuestMode) && (
+                <button
+                  onClick={() => handleSubmit('skip')}
+                  className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium transition-colors"
+                >
+                  Skip
+                </button>
+              )}
+              {isOnboardingMode || isGuestMode && <div />}
               <div className="flex space-x-3">
                 <button
                   onClick={() => handleSubmit('role_only')}
@@ -290,24 +307,27 @@ export default function RoleSelectorModal({
                 >
                   Role Only
                 </button>
-                <button
-                  onClick={() => {
-                    if (onOpenJobParser && targetRole && seniorityLevel) {
-                      // Pass role data to parent before opening parser
-                      onOpenJobParser({ targetRole, seniorityLevel });
-                    } else if (!targetRole || !seniorityLevel) {
-                      // Don't do anything if required fields are missing
-                      return;
-                    } else {
-                      // Fallback to old behavior
-                      handleSubmit('with_jd');
-                    }
-                  }}
-                  disabled={!targetRole || !seniorityLevel}
-                  className="px-6 py-2.5 bg-[#80FF00] text-black rounded-lg hover:bg-[#70e600] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-lg hover:shadow-xl hover:scale-105"
-                >
-                  <span>Add JD & Track</span>
-                </button>
+                {/* Hide "Add JD & Track" for onboarding/guest mode (master CVs don't use JD) */}
+                {!(isOnboardingMode || isGuestMode) && (
+                  <button
+                    onClick={() => {
+                      if (onOpenJobParser && targetRole && seniorityLevel) {
+                        // Pass role data to parent before opening parser
+                        onOpenJobParser({ targetRole, seniorityLevel });
+                      } else if (!targetRole || !seniorityLevel) {
+                        // Don't do anything if required fields are missing
+                        return;
+                      } else {
+                        // Fallback to old behavior
+                        handleSubmit('with_jd');
+                      }
+                    }}
+                    disabled={!targetRole || !seniorityLevel}
+                    className="px-6 py-2.5 bg-[#80FF00] text-black rounded-lg hover:bg-[#70e600] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
+                    <span>Add JD & Track</span>
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

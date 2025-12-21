@@ -112,11 +112,20 @@ export async function POST(request: NextRequest) {
     await getConnection();
     
     const body = await request.json();
-    const { userId, title, content, targetCompany, targetPosition, keywords, jobId, cvId, journeyId, status, metadata } = body;
+    const { userId, title, content, header, body: bodyContent, footer, targetCompany, targetPosition, keywords, jobId, cvId, journeyId, status, metadata } = body;
 
-    if (!userId || !title || !content) {
+    if (!userId || !title) {
       return NextResponse.json(
-        { success: false, message: 'User ID, title, and content are required' },
+        { success: false, message: 'User ID and title are required' },
+        { status: 400 }
+      );
+    }
+
+    // If header/body/footer are provided, use them; otherwise use content
+    // If content is not provided and header/body/footer are not provided, return error
+    if (!content && !header && !bodyContent && !footer) {
+      return NextResponse.json(
+        { success: false, message: 'Either content or header/body/footer must be provided' },
         { status: 400 }
       );
     }
@@ -161,10 +170,15 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // DO NOT merge content - store header, body, footer separately
+    // Content will be generated on-the-fly in preview only
     const coverLetter = new CoverLetter({
       userId,
       title,
-      content,
+      content: '', // Leave empty - will be generated in preview only
+      header: header || undefined,
+      body: bodyContent || undefined,
+      footer: footer || undefined,
       status: status || 'draft',
       jobId,
       cvId,
@@ -208,7 +222,7 @@ export async function PUT(request: NextRequest) {
     await getConnection();
     
     const body = await request.json();
-    const { id, title, content, status, targetCompany, targetPosition, keywords } = body;
+    const { id, title, content, header, body: bodyContent, footer, status, targetCompany, targetPosition, keywords } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -219,11 +233,16 @@ export async function PUT(request: NextRequest) {
 
     const updateData: any = {};
     if (title) updateData.title = title;
-    if (content) updateData.content = content;
+    if (header !== undefined) updateData.header = header;
+    if (bodyContent !== undefined) updateData.body = bodyContent;
+    if (footer !== undefined) updateData.footer = footer;
     if (status) updateData.status = status;
     if (targetCompany !== undefined) updateData['metadata.targetCompany'] = targetCompany;
     if (targetPosition !== undefined) updateData['metadata.targetPosition'] = targetPosition;
     if (keywords) updateData['metadata.keywords'] = keywords;
+    
+    // DO NOT merge into content - leave content empty or undefined
+    // Content will be generated on-the-fly in preview only
 
     const coverLetter = await CoverLetter.findByIdAndUpdate(
       id,
@@ -244,6 +263,9 @@ export async function PUT(request: NextRequest) {
         id: coverLetter._id,
         title: coverLetter.title,
         content: coverLetter.content,
+        header: coverLetter.header,
+        body: coverLetter.body,
+        footer: coverLetter.footer,
         status: coverLetter.status,
         lastModified: coverLetter.metadata.lastModified,
         createdAt: coverLetter.createdAt,

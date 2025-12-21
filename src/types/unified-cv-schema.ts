@@ -180,11 +180,16 @@ export interface UnifiedCVDocument {
   status: 'draft' | 'published' | 'archived';
   version: number;
   
+  // Journey and Type Information
+  journeyId?: string; // Optional link to an application journey
+  cvType?: 'master' | 'journey' | 'standalone'; // CV type for Resume Enhancer
+  
   // Metadata
   metadata: {
     isMaster: boolean;
     lastModified: Date;
     createdFrom?: string;
+    createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'journey')
     tags: string[];
     isPublic: boolean;
     viewCount: number;
@@ -194,6 +199,7 @@ export interface UnifiedCVDocument {
     thumbnailUrl?: string;
     thumbnailGeneratedAt?: Date;
     starred: boolean;
+    cvType?: 'master' | 'journey' | 'standalone'; // Also in metadata for backward compatibility
   };
   
   // Timestamps

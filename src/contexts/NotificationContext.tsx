@@ -31,11 +31,13 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [eventSource, setEventSource] = useState<EventSource | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null); // Ref to track eventSource without causing re-renders
   const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
   // Track if we've already fetched to prevent duplicate calls
   const hasFetchedRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null); // Ref to track polling interval
 
   // Check if we're on admin route - skip session logic if so
   const isAdminRoute = pathname ? pathname.startsWith('/admin') : false;
@@ -136,11 +138,45 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
       }
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        console.log(`✅ NotificationContext - Fetched ${data.notifications?.length || 0} notifications`);
-        const filtered = filterExpiredNotifications(data.notifications || []);
-        console.log(`🧹 NotificationContext - After expiration filter: ${filtered.length}`);
-        setNotifications(filtered);
+      const data = await response.json();
+      console.log(`✅ NotificationContext - Fetched ${data.notifications?.length || 0} notifications`);
+      const filtered = filterExpiredNotifications(data.notifications || []);
+      console.log(`🧹 NotificationContext - After expiration filter: ${filtered.length}`);
+      
+      // Log unread count for debugging
+      const unreadCount = filtered.filter((n: INotification) => !n.read).length;
+      console.log(`📊 NotificationContext - Unread notifications: ${unreadCount}`);
+      
+      // Set notifications - this will trigger the toast display effect
+      setNotifications(filtered);
+      
+      // Manually trigger toast display for unread notifications IMMEDIATELY
+      // This is a fallback when SSE isn't working - show toasts for all unread notifications
+      if (unreadCount > 0) {
+        console.log(`🔄 NotificationContext - Found ${unreadCount} unread notifications, showing toasts immediately`);
+        // Use requestAnimationFrame to ensure DOM is ready, then show toasts
+        requestAnimationFrame(() => {
+          filtered.forEach((notification: INotification) => {
+            const notifId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
+            if (!notification.read && notifId && !displayedToastIdsRef.current.has(notifId)) {
+              // Check if notification has in-app channel (default to true if not set)
+              const channels = notification.channels || ['in-app'];
+              if (channels.includes('in-app')) {
+                console.log('🍞 NotificationContext - Showing toast for unread notification from fetch:', {
+                  id: notifId,
+                  title: notification.title,
+                  read: notification.read,
+                  channels: notification.channels
+                });
+                // Show toast immediately
+                showToastForNotification(notification);
+              } else {
+                console.log('⏭️ NotificationContext - Skipping toast (no in-app channel):', notification.title);
+              }
+            }
+          });
+        });
+      }
       } else {
         console.error('Notifications response is not JSON. Content-Type:', contentType);
         setNotifications([]);
@@ -286,12 +322,21 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
   const showToastForNotification = useCallback(
     (notification: INotification, allowReschedule: boolean = true) => {
+      console.log('🔍 showToastForNotification called:', {
+        id: notification._id,
+        title: notification.title,
+        read: notification.read,
+        channels: notification.channels,
+        isAuthenticated
+      });
+      
       if (!shouldShowToast(notification)) {
-        console.debug('🚫 Toast suppressed: Not eligible', {
+        console.warn('🚫 Toast suppressed: Not eligible', {
           id: notification._id,
           title: notification.title,
           read: notification.read,
-          channels: notification.channels
+          channels: notification.channels,
+          isAuthenticated
         });
         return;
       }
@@ -393,16 +438,27 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         return;
       }
 
-      const isRecent = isRecentNotification(notification.createdAt, now, INITIAL_FETCH_TOAST_WINDOW_MS);
-
-      // Show toast for recent notifications or if we've already hydrated (for new notifications via SSE)
-      if (initialToastHydrationRef.current || isRecent) {
+      // Show toast for ALL unread notifications (not just recent ones)
+      // This ensures users see notifications even if SSE isn't working or they refresh the page
+      // Only skip if we've already shown this toast
+      if (!notification.read) {
+        console.log('🍞 NotificationContext - Showing toast for unread notification:', notification.title, {
+          id: notifId,
+          read: notification.read,
+          createdAt: notification.createdAt
+        });
         showToastForNotification(notification);
+      } else {
+        console.log('⏭️ NotificationContext - Skipping toast (already read):', notification.title);
       }
     });
 
-    initialToastHydrationRef.current = true;
+    // Mark as hydrated after first run
+    if (!initialToastHydrationRef.current) {
+      initialToastHydrationRef.current = true;
+    }
 
+    // Clean up displayed toast IDs for notifications that no longer exist
     displayedToastIdsRef.current.forEach((_, id) => {
       if (!activeIds.has(id)) {
         displayedToastIdsRef.current.delete(id);
@@ -412,13 +468,43 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
   // Set up Server-Sent Events for real-time notifications - only if authenticated
   useEffect(() => {
+    // Debug authentication state
+    console.log('🔍 NotificationContext - SSE setup check:', {
+      isWindow: typeof window !== 'undefined',
+      isAuthenticated,
+      isMounted,
+      status,
+      hasSession: !!session?.user,
+      pathname,
+      isPublicRoute,
+      isAdminRoute
+    });
+    
     // Only set up SSE if we're in the browser and user is authenticated
     if (typeof window === 'undefined' || !isAuthenticated) {
       // Close any existing connection if user is not authenticated
       if (eventSource) {
+        console.log('🔌 NotificationContext - Closing SSE (not authenticated)', {
+          reason: typeof window === 'undefined' ? 'SSR' : 'not authenticated',
+          isAuthenticated,
+          status
+        });
         eventSource.close();
         setEventSource(null);
+      } else {
+        console.warn('🚫 NotificationContext - SSE setup blocked:', {
+          isWindow: typeof window !== 'undefined',
+          isAuthenticated,
+          status,
+          pathname
+        });
       }
+      return;
+    }
+
+    // Skip if already connected
+    if (eventSource && eventSource.readyState !== EventSource.CLOSED) {
+      console.log('🔌 NotificationContext - SSE already connected, skipping setup');
       return;
     }
 
@@ -428,31 +514,87 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         eventSource.close();
       }
 
-      console.log('🔌 NotificationContext - Connecting to SSE stream...');
+      console.log('🔌 NotificationContext - Connecting to SSE stream...', {
+        isAuthenticated,
+        pathname,
+        isPublicRoute,
+        isAdminRoute
+      });
       const es = new EventSource('/api/stream-notifications');
 
       es.onopen = () => {
-        console.log('🟢 NotificationContext - SSE Connection established');
+        console.log('🟢 NotificationContext - SSE Connection established successfully!');
       };
 
       es.onmessage = (event) => {
         try {
           console.log('📨 NotificationContext - SSE Message received raw:', event.data);
-          const notification = JSON.parse(event.data) as INotification;
-          console.log('📦 NotificationContext - Parsed notification:', notification.title);
+          const data = JSON.parse(event.data);
+          
+          // Handle different message types
+          if (data.type === 'heartbeat') {
+            // Heartbeat message - just acknowledge
+            if (process.env.NODE_ENV === 'development') {
+              console.debug('💓 SSE heartbeat received');
+            }
+            return;
+          }
+
+          if (data.type === 'connected') {
+            console.log('✅ SSE connection confirmed');
+            return;
+          }
+
+          // Handle notification messages
+          if (data.type !== 'notification') {
+            console.log('⚠️ NotificationContext - Unknown message type:', data.type, data);
+            return;
+          }
+
+          console.log('🔔 NotificationContext - Received notification message type');
+          const notification = data.notification;
+          
+          if (!notification || !notification._id) {
+            console.warn('⚠️ NotificationContext - Invalid notification data in message:', {
+              hasNotification: !!data.notification,
+              notificationId: data.notification?._id,
+              fullData: data
+            });
+            return;
+          }
+          
+          console.log('📦 NotificationContext - Processing notification from SSE:', {
+            id: notification._id,
+            title: notification.title,
+            read: notification.read,
+            channels: notification.channels,
+            isAuthenticated
+          });
 
           // Filter expired notifications
           const filtered = filterExpiredNotifications([notification]);
+          console.log('🔍 NotificationContext - After filtering:', {
+            originalCount: 1,
+            filteredCount: filtered.length,
+            notification: filtered[0] ? {
+              id: filtered[0]._id,
+              title: filtered[0].title,
+              expired: filtered.length === 0
+            } : null
+          });
+          
           if (filtered.length > 0) {
+            const newNotification = filtered[0];
+            console.log('✅ NotificationContext - Notification passed filtering, adding to state:', newNotification.title);
+            
             setNotifications((prev) => {
               // Ensure prev is an array
               if (!prev || !Array.isArray(prev)) {
-                return [notification];
+                return [newNotification];
               }
 
               // Check if notification already exists (avoid duplicates)
-              // Fix 4: Safely convert _id to string for comparison
-              const notificationId = notification._id ? (typeof notification._id === 'string' ? notification._id : String(notification._id)) : '';
+              const notificationId = newNotification._id ? (typeof newNotification._id === 'string' ? newNotification._id : String(newNotification._id)) : '';
               const exists = prev.some((n) => {
                 const nId = n._id ? (typeof n._id === 'string' ? n._id : String(n._id)) : '';
                 return nId === notificationId;
@@ -465,7 +607,17 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
               console.log('🆕 NotificationContext - Adding new notification to state');
               // Add new notification at the beginning
-              return filterExpiredNotifications([notification, ...prev]);
+              const updated = filterExpiredNotifications([newNotification, ...prev]);
+              
+              // Immediately show toast for new notification from SSE
+              // Use a small delay to ensure state is updated
+              console.log('⏰ NotificationContext - Scheduling toast display for:', newNotification.title);
+              setTimeout(() => {
+                console.log('🎯 NotificationContext - Attempting to show toast for:', newNotification.title);
+                showToastForNotification(newNotification);
+              }, 100);
+              
+              return updated;
             });
           } else {
             console.log('🗑️ NotificationContext - Notification filtered out (expired or invalid)');
@@ -485,71 +637,130 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
 
       es.onerror = (event: Event) => {
         // EventSource onerror receives an Event object, not an Error
-        // Safely handle it without converting to string which causes "[object Event]"
         // Check connection state to determine error type
         const isLocal = process.env.NODE_ENV === 'development';
         const reconnectDelay = isLocal ? 2000 : 5000; // Faster reconnection for local
 
+        const readyStateText = es.readyState === EventSource.CONNECTING ? 'CONNECTING' : 
+                              es.readyState === EventSource.OPEN ? 'OPEN' : 
+                              es.readyState === EventSource.CLOSED ? 'CLOSED' : 'UNKNOWN';
+
+        console.error('❌ SSE connection error:', {
+          readyState: es.readyState,
+          readyStateText,
+          url: es.url,
+          isAuthenticated,
+          status
+        });
+
         if (es.readyState === EventSource.CLOSED) {
-          if (isLocal) {
-            console.debug('SSE connection closed. Will attempt to reconnect...');
-          } else {
-            console.warn('SSE connection closed. Will attempt to reconnect...');
-          }
+          console.warn('🔌 SSE connection closed. Will attempt to reconnect...');
         } else if (es.readyState === EventSource.CONNECTING) {
-          if (isLocal) {
-            console.debug('SSE connection lost. Reconnecting...');
-          } else {
-            console.warn('SSE connection lost. Reconnecting...');
-          }
+          console.warn('🔄 SSE connection lost. Reconnecting...');
         } else {
-          // Log Event object details safely without stringifying the Event
-          try {
-            const errorInfo = {
-              type: event?.type || 'error',
-              readyState: es.readyState,
-              url: es.url,
-              timestamp: event?.timeStamp || Date.now()
-            };
-            if (isLocal) {
-              console.debug(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`, errorInfo);
-            } else {
-              console.warn(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`, errorInfo);
-            }
-          } catch (e) {
-            // Fallback: just log a simple message if we can't extract event details
-            if (isLocal) {
-              console.debug(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`);
-            } else {
-              console.warn(`SSE connection error. Reconnecting in ${reconnectDelay / 1000} seconds...`);
-            }
-          }
+          console.warn(`⚠️ SSE connection error (readyState: ${readyStateText}). Reconnecting in ${reconnectDelay / 1000} seconds...`);
         }
 
         // Close current connection before reconnecting
         es.close();
+        setEventSource(null);
 
         // Only reconnect if still authenticated
         if (isAuthenticated) {
           setTimeout(() => {
+            console.log('🔄 Attempting to reconnect SSE...');
             setupSSE();
           }, reconnectDelay);
+        } else {
+          console.warn('🚫 Not reconnecting SSE - user not authenticated');
         }
       };
 
       setEventSource(es);
+      eventSourceRef.current = es; // Update ref as well
     };
 
-    setupSSE();
+    // Add a small delay to ensure session is fully loaded
+    const setupTimer = setTimeout(() => {
+      console.log('⏰ NotificationContext - Setting up SSE after delay...');
+      setupSSE();
+    }, 500);
+
+    // Fallback: Poll for new notifications when SSE isn't working
+    // This ensures notifications appear even if SSE connection fails
+    let lastPollTime = Date.now();
+    
+    const startPolling = () => {
+      if (pollIntervalRef.current) {
+        console.log('🔄 NotificationContext - Polling already active, skipping');
+        return; // Already polling
+      }
+      
+      console.log('🔄 NotificationContext - Starting fallback polling (SSE may not be working)');
+      pollIntervalRef.current = setInterval(async () => {
+        // Check if SSE is connected
+        const currentEventSource = eventSourceRef.current;
+        const isSSEConnected = currentEventSource && currentEventSource.readyState === EventSource.OPEN;
+        
+        if (!isSSEConnected) {
+          const now = Date.now();
+          // Poll every 5 seconds for new notifications (faster than 10 seconds)
+          if (now - lastPollTime >= 5000) {
+            lastPollTime = now;
+            console.log('🔄 NotificationContext - Polling for new notifications (SSE fallback)');
+            await fetchNotifications();
+          }
+        } else {
+          // SSE is working, stop polling
+          if (pollIntervalRef.current) {
+            console.log('✅ NotificationContext - SSE is working, stopping polling');
+            clearInterval(pollIntervalRef.current);
+            pollIntervalRef.current = null;
+          }
+        }
+      }, 5000); // Poll every 5 seconds (faster polling)
+    };
+
+    // Start polling immediately (don't wait for SSE)
+    // This ensures notifications are fetched even if SSE never connects
+    const pollTimer = setTimeout(() => {
+      if (isAuthenticated) {
+        // Always start polling as a fallback
+        // It will stop automatically if SSE connects
+        console.log('🔄 NotificationContext - Starting polling fallback (will stop if SSE connects)', {
+          isAuthenticated,
+          status,
+          pathname,
+          hasEventSource: !!eventSourceRef.current
+        });
+        startPolling();
+      } else {
+        console.warn('🚫 NotificationContext - Cannot start polling (not authenticated)', {
+          isAuthenticated,
+          status,
+          pathname,
+          isMounted
+        });
+      }
+    }, 2000); // Start polling 2 seconds after mount (even faster start)
 
     // Cleanup on unmount or when authentication changes
     return () => {
-      if (eventSource) {
-        eventSource.close();
+      clearTimeout(setupTimer);
+      clearTimeout(pollTimer);
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+        pollIntervalRef.current = null;
+      }
+      const currentEventSource = eventSourceRef.current;
+      if (currentEventSource) {
+        console.log('🔌 NotificationContext - Cleaning up SSE connection');
+        currentEventSource.close();
         setEventSource(null);
+        eventSourceRef.current = null;
       }
     };
-  }, [handleNotificationAction, filterExpiredNotifications, toast, isAuthenticated]); // Include isAuthenticated
+  }, [filterExpiredNotifications, isAuthenticated, status, fetchNotifications]); // Removed eventSource from dependencies to prevent re-render loops
 
   // Clear notifications when user logs out or navigates to public route
   useEffect(() => {

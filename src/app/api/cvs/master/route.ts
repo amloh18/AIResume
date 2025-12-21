@@ -211,6 +211,11 @@ export async function POST(request: NextRequest) {
     
     const duplicatedTitle = await generateUniqueTitle(baseTitle, userId);
 
+    // Determine cvType for duplicated CV
+    // If jobId is provided, it might be linked to a journey (default to standalone)
+    // Otherwise, it's a standalone CV
+    const duplicatedCvType: 'master' | 'journey' | 'standalone' = 'standalone';
+
     // Prepare duplicated CV data
     const duplicatedCVData = {
       title: duplicatedTitle,
@@ -218,6 +223,7 @@ export async function POST(request: NextRequest) {
       status: 'draft',
       version: 1,
       isMaster: false, // Duplicated CV is not a master
+      cvType: duplicatedCvType, // Set cvType
       templateId: masterCV.templateId,
       jobId: jobId, // Link to specific job if provided
       styling: masterCV.styling,
