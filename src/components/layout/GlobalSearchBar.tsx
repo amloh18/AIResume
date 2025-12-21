@@ -8,7 +8,9 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { formatCardTime } from '@/lib/utils/timeUtils';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-import CVPreviewModal from '@/components/ai-career-report/CVPreviewModal';
+// TODO: CVPreviewModal was deleted with ai-career-report cleanup - using CVPreviewContent as replacement
+// import CVPreviewModal from '@/components/ai-career-report/CVPreviewModal';
+import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 import CoverLetterPreviewModal from '@/components/notifications/CoverLetterPreviewModal';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
@@ -634,14 +636,28 @@ const GlobalSearchBar: React.FC = () => {
 
       {/* CV Preview Modal */}
       {showCVModal && selectedCVData && (
-        <CVPreviewModal
-          isOpen={showCVModal}
-          onClose={() => {
-            setShowCVModal(false);
-            setSelectedCVData(null);
-          }}
-          cvData={selectedCVData}
-        />
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => {
+          setShowCVModal(false);
+          setSelectedCVData(null);
+        }}>
+          <div className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-white/10">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">CV Preview</h2>
+              <button
+                onClick={() => {
+                  setShowCVModal(false);
+                  setSelectedCVData(null);
+                }}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <CVPreviewContent cvData={selectedCVData} />
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Cover Letter Preview Modal */}

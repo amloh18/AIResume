@@ -147,6 +147,17 @@ export async function POST(request: NextRequest) {
       createdVia = sourceCV.metadata.createdVia;
     }
 
+    // Determine cvType for duplicated CV
+    // If journeyId is provided, it's a journey CV
+    // Otherwise, preserve source cvType or default to standalone
+    let duplicatedCvType: 'master' | 'journey' | 'standalone' = 'standalone';
+    if (journeyId) {
+      duplicatedCvType = 'journey';
+    } else if (sourceCV.cvType && ['master', 'journey', 'standalone'].includes(sourceCV.cvType)) {
+      // Preserve source cvType, but never duplicate as master
+      duplicatedCvType = sourceCV.cvType === 'master' ? 'standalone' : sourceCV.cvType;
+    }
+
     // Create the duplicated CV with deep copies to preserve all data
     const duplicatedCV = new CV({
       userId: toObjectId(userId),
@@ -155,6 +166,7 @@ export async function POST(request: NextRequest) {
       data: sourceCV.data ? JSON.parse(JSON.stringify(sourceCV.data)) : sourceCV.data, // Deep copy legacy data
       status: 'draft',
       isMaster: false, // Duplicated CVs are never master CVs
+      cvType: duplicatedCvType, // Set cvType based on journeyId or source
       journeyId: journeyId ? toObjectId(journeyId) : null, // Link to journey if provided
       templateId: sourceCV.templateId,
       templateName: sourceCV.templateName,

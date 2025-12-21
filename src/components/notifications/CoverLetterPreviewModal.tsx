@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail } from 'lucide-react';
-import CoverLetterPreview from '@/components/studio/CoverLetterPreview';
+import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 
 interface CoverLetterPreviewModalProps {
   isOpen: boolean;

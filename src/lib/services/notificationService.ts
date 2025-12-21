@@ -218,6 +218,60 @@ class NotificationService {
       deliveredAt: new Date(),
     };
     await notification.save();
+
+    // Send notification via SSE immediately if connection exists
+    try {
+      // Dynamic import to avoid circular dependencies
+      const streamRoute = await import('@/app/api/stream-notifications/route');
+      if (streamRoute.sendNotificationToUser) {
+        const userId = notification.userId.toString();
+        // Convert Mongoose document to plain object for SSE transmission
+        let notificationData: any;
+        if (notification.toObject) {
+          notificationData = notification.toObject();
+        } else if (notification.toJSON) {
+          notificationData = notification.toJSON();
+        } else {
+          // Fallback: manually extract all fields
+          notificationData = {
+            _id: notification._id,
+            userId: notification.userId,
+            type: notification.type,
+            title: notification.title,
+            message: notification.message,
+            actionType: notification.actionType,
+            actionData: notification.actionData || {},
+            read: notification.read || false,
+            readAt: notification.readAt,
+            interactive: notification.interactive || false,
+            priority: notification.priority || 'medium',
+            expiresAt: notification.expiresAt,
+            persistent: notification.persistent || false,
+            channels: notification.channels || ['in-app'],
+            deliveryStatus: notification.deliveryStatus || {},
+            metadata: notification.metadata || {},
+            createdAt: notification.createdAt || new Date(),
+            updatedAt: notification.updatedAt || new Date(),
+          };
+        }
+        
+        // Ensure channels array exists and includes 'in-app'
+        if (!notificationData.channels || !Array.isArray(notificationData.channels)) {
+          notificationData.channels = ['in-app'];
+        }
+        
+        await streamRoute.sendNotificationToUser(userId, notificationData);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`📤 Notification sent via SSE to user ${userId}:`, notificationData.title);
+        }
+      }
+    } catch (error) {
+      // SSE might not be available or user might not be connected - that's okay
+      // The polling mechanism will pick it up
+      if (process.env.NODE_ENV === 'development') {
+        console.debug('Could not send notification via SSE (user may not be connected):', error);
+      }
+    }
   }
 
   /**

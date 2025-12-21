@@ -33,6 +33,76 @@ export interface CoverLetterTemplate {
   };
 }
 
+// Mapping from cover letter template IDs to CV template IDs
+export const COVER_LETTER_TO_CV_TEMPLATE_MAP: Record<string, string> = {
+  'data-driven-pro-cover-letter': 'data-driven-pro-template',
+  'designer-modern-cover-letter': 'designer-modern-template',
+  'elegant-timeline-cover-letter': 'elegant-timeline-template',
+  'executive-professional-cover-letter': 'executive-professional-layout-template',
+  'executive-standard-cover-letter': 'executive-standard-template',
+  'tech-pro-blue-cover-letter': 'tech-pro-blue-template',
+};
+
+// CV template styling data (matching hardcoded-templates.ts)
+const CV_TEMPLATE_STYLES: Record<string, {
+  fontFamily: string;
+  primaryColor: string;
+  secondaryColor: string;
+  fontSize: string;
+  lineHeight: string;
+}> = {
+  'data-driven-pro-template': {
+    fontFamily: 'Inter, sans-serif',
+    primaryColor: '#1E40AF',
+    secondaryColor: '#374151',
+    fontSize: '14px',
+    lineHeight: '1.4',
+  },
+  'designer-modern-template': {
+    fontFamily: 'Helvetica Neue, sans-serif',
+    primaryColor: '#000000',
+    secondaryColor: '#666666',
+    fontSize: '14px',
+    lineHeight: '1.6',
+  },
+  'elegant-timeline-template': {
+    fontFamily: 'Playfair Display, serif',
+    primaryColor: '#1F2937',
+    secondaryColor: '#6B7280',
+    fontSize: '14px',
+    lineHeight: '1.5',
+  },
+  'executive-professional-layout-template': {
+    fontFamily: 'Montserrat, Arial, sans-serif',
+    primaryColor: '#000000',
+    secondaryColor: '#666666',
+    fontSize: '14px',
+    lineHeight: '1.5',
+  },
+  'executive-standard-template': {
+    fontFamily: 'Calibri, sans-serif',
+    primaryColor: '#1E3A8A',
+    secondaryColor: '#334155',
+    fontSize: '14px',
+    lineHeight: '1.3',
+  },
+  'tech-pro-blue-template': {
+    fontFamily: 'Inter, sans-serif',
+    primaryColor: '#2563EB',
+    secondaryColor: '#374151',
+    fontSize: '14px',
+    lineHeight: '1.4',
+  },
+};
+
+/**
+ * Get CV template styling for a cover letter template
+ */
+export function getCVTemplateStyleForCoverLetter(coverLetterTemplateId: string) {
+  const cvTemplateId = COVER_LETTER_TO_CV_TEMPLATE_MAP[coverLetterTemplateId];
+  return cvTemplateId ? CV_TEMPLATE_STYLES[cvTemplateId] : null;
+}
+
 export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
   // Cover letter templates derived from first 6 CV templates
   {
@@ -59,10 +129,10 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
         fontFamily: 'Inter, sans-serif',
         headerFontSize: '16px',
         bodyFontSize: '12px',
-        dateFormat: 'MMM DD, YYYY',
+        dateFormat: 'MM/DD/YYYY',
       },
       styling: {
-        headerStyle: 'underline',
+        headerStyle: 'minimal',
         useAccentColor: true,
         primaryColor: '#1E40AF',
         secondaryColor: '#374151',
@@ -91,9 +161,9 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
       },
       typography: {
         fontFamily: 'Helvetica Neue, sans-serif',
-        headerFontSize: '18px',
+        headerFontSize: '16px',
         bodyFontSize: '12px',
-        dateFormat: 'MMMM DD, YYYY',
+        dateFormat: 'MM/DD/YYYY',
       },
       styling: {
         headerStyle: 'minimal',
@@ -111,26 +181,26 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
     category: 'cover-letter',
     tier: 'premium',
     layout: {
-      headerAlignment: 'center',
-      datePosition: 'left',
+      headerAlignment: 'left',
+      datePosition: 'right',
       spacing: {
         paragraphSpacing: '20px',
         lineHeight: '1.5',
         margins: {
-          top: '45px',
-          bottom: '45px',
-          left: '45px',
-          right: '45px',
+          top: '40px',
+          bottom: '40px',
+          left: '40px',
+          right: '40px',
         },
       },
       typography: {
         fontFamily: 'Playfair Display, serif',
-        headerFontSize: '17px',
+        headerFontSize: '16px',
         bodyFontSize: '12px',
-        dateFormat: 'MMMM DD, YYYY',
+        dateFormat: 'MM/DD/YYYY',
       },
       styling: {
-        headerStyle: 'border',
+        headerStyle: 'minimal',
         useAccentColor: false,
         primaryColor: '#1F2937',
         secondaryColor: '#6B7280',
@@ -159,12 +229,12 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
       },
       typography: {
         fontFamily: 'Montserrat, Arial, sans-serif',
-        headerFontSize: '17px',
+        headerFontSize: '16px',
         bodyFontSize: '12px',
-        dateFormat: 'MMMM DD, YYYY',
+        dateFormat: 'MM/DD/YYYY',
       },
       styling: {
-        headerStyle: 'bold',
+        headerStyle: 'minimal',
         useAccentColor: false,
         primaryColor: '#000000',
         secondaryColor: '#666666',
@@ -198,7 +268,7 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
         dateFormat: 'MM/DD/YYYY',
       },
       styling: {
-        headerStyle: 'bold',
+        headerStyle: 'minimal',
         useAccentColor: true,
         primaryColor: '#1E3A8A',
         secondaryColor: '#334155',
@@ -229,10 +299,10 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
         fontFamily: 'Inter, sans-serif',
         headerFontSize: '16px',
         bodyFontSize: '12px',
-        dateFormat: 'MMM DD, YYYY',
+        dateFormat: 'MM/DD/YYYY',
       },
       styling: {
-        headerStyle: 'underline',
+        headerStyle: 'minimal',
         useAccentColor: true,
         primaryColor: '#2563EB',
         secondaryColor: '#374151',

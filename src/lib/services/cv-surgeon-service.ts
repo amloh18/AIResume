@@ -1,5 +1,6 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { normalizeSurgicalFixesToAnnotations, type FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
+import { generateFixSignatureHash } from '@/lib/services/fix-suppression-service';
 
 export interface SurgicalFix {
     id: string;
@@ -73,8 +74,20 @@ function replaceSnippet(source: string, originalText: string, replacementText: s
 
 export class CVSurgeonService {
     /**
+     * Generate fix signature hash for a fix
+     */
+    static generateFixSignatureHash(fix: SurgicalFix): string {
+        return generateFixSignatureHash({
+            issue: fix.issue,
+            fieldPath: fix.fieldPath || fix.section,
+            originalText: fix.original_text
+        });
+    }
+
+    /**
      * Analyze CV with database caching support
      * This is the preferred method - checks cache first to save AI tokens
+     * Now includes suppression filtering
      */
     static async analyzeCVWithCache(
         cvData: UnifiedCVDataStructure,
@@ -82,8 +95,23 @@ export class CVSurgeonService {
         seniorityLevel: string,
         cvId?: string,
         userId?: string,
-        jobData?: any
-    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[]; cached: boolean }> {
+        jobData?: any,
+        suppressedFixHashes?: string[]
+    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[]; cached: boolean; suppressedCount: number }> {
+        // Load suppressed fixes from API if not provided
+        let suppressedHashes = suppressedFixHashes || [];
+        if (cvId && userId && !suppressedFixHashes) {
+            try {
+                const suppressedResponse = await fetch(`/api/cvs/${cvId}/suppressed-fixes`);
+                if (suppressedResponse.ok) {
+                    const suppressedData = await suppressedResponse.json();
+                    suppressedHashes = suppressedData.suppressedFixHashes || [];
+                }
+            } catch (error) {
+                console.warn('⚠️ CVSurgeonService - Failed to load suppressed fixes:', error);
+            }
+        }
+
         // If we have cvId and userId, try to get cached analysis first
         if (cvId && userId) {
             try {
@@ -100,11 +128,21 @@ export class CVSurgeonService {
 
                 if (cacheResult.success && cacheResult.cached && cacheResult.analysis) {
                     console.log('✅ CVSurgeonService - Using cached analysis from database');
+                    // Filter suppressed fixes
+                    const fixes = (cacheResult.analysis.fixes || []).filter((fix: SurgicalFix) => {
+                        const hash = this.generateFixSignatureHash(fix);
+                        return !suppressedHashes.includes(hash);
+                    });
+                    
+                    // Regenerate annotations with filtered fixes
+                    const annotations = normalizeSurgicalFixesToAnnotations(cvData, fixes);
+                    
                     return {
                         score: cacheResult.analysis.score,
-                        fixes: cacheResult.analysis.fixes || [],
-                        annotations: cacheResult.analysis.annotations || [],
-                        cached: true
+                        fixes,
+                        annotations,
+                        cached: true,
+                        suppressedCount: (cacheResult.analysis.fixes || []).length - fixes.length
                     };
                 }
                 console.log('🔄 CVSurgeonService - Cache miss or invalid, running new analysis');
@@ -116,7 +154,18 @@ export class CVSurgeonService {
         // Run fresh analysis
         const result = await this.analyzeCV(cvData, targetRole, seniorityLevel, jobData);
 
-        // Save to cache if we have cvId and userId
+        // Filter suppressed fixes
+        const filteredFixes = result.fixes.filter((fix) => {
+            const hash = this.generateFixSignatureHash(fix);
+            return !suppressedHashes.includes(hash);
+        });
+        
+        // Regenerate annotations with filtered fixes
+        const filteredAnnotations = normalizeSurgicalFixesToAnnotations(cvData, filteredFixes);
+        
+        const suppressedCount = result.fixes.length - filteredFixes.length;
+
+        // Save to cache if we have cvId and userId (save all fixes, filtering happens on read)
         if (cvId && userId) {
             try {
                 await fetch(`/api/cvs/${cvId}/surgeon-analysis`, {
@@ -125,7 +174,7 @@ export class CVSurgeonService {
                     body: JSON.stringify({
                         userId,
                         score: result.score,
-                        fixes: result.fixes,
+                        fixes: result.fixes, // Save all fixes, filtering happens on read
                         annotations: result.annotations,
                         targetRole,
                         seniorityLevel,
@@ -138,7 +187,13 @@ export class CVSurgeonService {
             }
         }
 
-        return { ...result, cached: false };
+        return {
+            score: result.score,
+            fixes: filteredFixes,
+            annotations: filteredAnnotations,
+            cached: false,
+            suppressedCount
+        };
     }
 
     /**
@@ -179,13 +234,39 @@ export class CVSurgeonService {
 
             if (result.success) {
                 const fixes: SurgicalFix[] = result.fixes || [];
+                // Generate fixSignatureHash for each fix
+                const fixesWithHash = fixes.map(fix => ({
+                    ...fix,
+                    // Hash will be generated when needed, but we can pre-compute it
+                }));
+                
                 return {
                     score: result.score || 0,
-                    fixes,
+                    fixes: fixesWithHash,
                     // Normalize immediately so UI can use report/overlay features even before backend is upgraded
                     annotations: (result.annotations && Array.isArray(result.annotations))
-                        ? (result.annotations as FixAnnotation[])
-                        : normalizeSurgicalFixesToAnnotations(cvData, fixes)
+                        ? (result.annotations as FixAnnotation[]).map(ann => ({
+                            ...ann,
+                            fixSignatureHash: ann.fixSignatureHash || this.generateFixSignatureHash({
+                                id: ann.id,
+                                issue: ann.issue,
+                                original_text: ann.originalText,
+                                fixed_text: ann.replacementText,
+                                fieldPath: ann.fieldPath,
+                                section: ann.fieldPath
+                            } as SurgicalFix)
+                        }))
+                        : normalizeSurgicalFixesToAnnotations(cvData, fixesWithHash).map(ann => ({
+                            ...ann,
+                            fixSignatureHash: ann.fixSignatureHash || this.generateFixSignatureHash({
+                                id: ann.id,
+                                issue: ann.issue,
+                                original_text: ann.originalText,
+                                fixed_text: ann.replacementText,
+                                fieldPath: ann.fieldPath,
+                                section: ann.fieldPath
+                            } as SurgicalFix)
+                        }))
                 };
             } else {
                 throw new Error(result.error || 'Unknown error');

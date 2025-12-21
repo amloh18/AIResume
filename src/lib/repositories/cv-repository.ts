@@ -204,16 +204,44 @@ export class CVRepository extends BaseRepository<ICV> {
   }
 
   /**
-   * Update ATS score
+   * Update ATS score with content hash versioning
    */
-  async updateATSScore(cvId: string, score: number): Promise<ICV | null> {
-    return this.updateById(cvId, {
+  async updateATSScore(
+    cvId: string, 
+    score: number, 
+    cvHash?: string,
+    factorBreakdown?: any
+  ): Promise<ICV | null> {
+    const updateData: any = {
       $set: {
         'metadata.atsScore': score,
         'metadata.atsScoreDate': new Date(),
         'metadata.lastModified': new Date(),
       },
-    } as any);
+    };
+
+    // Add content hash for versioning
+    if (cvHash) {
+      updateData.$set['metadata.atsScoreHash'] = cvHash;
+    }
+
+    // Optionally store factor breakdown
+    if (factorBreakdown) {
+      updateData.$set['metadata.atsScoreBreakdown'] = factorBreakdown;
+    }
+
+    return this.updateById(cvId, updateData);
+  }
+
+  /**
+   * Check if ATS score is stale (content hash mismatch)
+   */
+  async isATSScoreStale(cvId: string, currentHash: string): Promise<boolean> {
+    const cv = await this.findById(cvId);
+    if (!cv || !cv.metadata?.atsScoreHash) {
+      return true; // No hash means score is stale
+    }
+    return cv.metadata.atsScoreHash !== currentHash;
   }
 
   /**

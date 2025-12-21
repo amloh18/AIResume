@@ -22,7 +22,8 @@ import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
-import ComprehensiveATSAnalyzer from '@/components/studio/ComprehensiveATSAnalyzer';
+// TODO: ComprehensiveATSAnalyzer was deleted - need to reimplement or remove this feature
+// import ComprehensiveATSAnalyzer from '@/components/studio/ComprehensiveATSAnalyzer';
 import PaymentPastDueBanner from './PaymentPastDueBanner';
 import SubscriptionExpiryBanner from './SubscriptionExpiryBanner';
 import { useUsageLimits } from '@/lib/hooks/useUsageLimits';
@@ -303,6 +304,61 @@ const CVManagementSection: React.FC<{
   };
 
   const profile = getProfessionalProfile();
+
+  // If no master CV, show CTA to create one
+  if (!masterCV) {
+    const handleCreateMasterCV = () => {
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('fromOnboarding', 'true');
+        sessionStorage.setItem('welcomeDismissed', 'true');
+      }
+      router.push('/resume-enhancer');
+    };
+
+    return (
+      <div
+        className="glass-widget-premium rounded-xl p-4 h-full flex flex-col w-full"
+        data-analytics-widget="cv-management"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">CV Management</h2>
+          <div className="flex items-center gap-2">
+            <MasterCVBadge />
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4 py-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-lime-400 to-lime-600 rounded-2xl flex items-center justify-center mb-4">
+            <FileText className="w-10 h-10 text-white" />
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+              Create Your Master CV
+            </h3>
+            <p className="text-gray-600 dark:text-white/70 text-sm max-w-md mx-auto leading-relaxed">
+              Your Master CV acts as the foundation for all your tailored CVs and job tracking. Create it once, and we'll use it as a base for every job application you track.
+            </p>
+          </div>
+
+          <div className="space-y-3 mt-6 w-full max-w-sm">
+            <motion.button
+              onClick={handleCreateMasterCV}
+              className="w-full px-6 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-semibold transition-all duration-200 flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Plus size={18} />
+              Create Master CV
+            </motion.button>
+            <p className="text-xs text-gray-500 dark:text-white/50">
+              Required for tailored CVs and job tracking
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

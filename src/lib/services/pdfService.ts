@@ -143,7 +143,11 @@ export class PDFService extends BaseService {
           waitUntil: 'networkidle0'
         });
 
-        // Generate PDF
+        // Extract name for PDF metadata
+        const name = (cvData.basics?.name || 'Resume').trim();
+        const title = `${name} - Resume`;
+        
+        // Generate text-based PDF (not image-based) for ATS compatibility
         const pdfBuffer = await page.pdf({
           format: options.paperSize || 'A4',
           landscape: options.orientation === 'landscape',
@@ -153,7 +157,20 @@ export class PDFService extends BaseService {
             right: '0mm',
             bottom: '0mm',
             left: '0mm'
-          }
+          },
+          // Ensure text is selectable (not rendered as image)
+          preferCSSPageSize: true,
+          // Add metadata for ATS compatibility (Critical Action Item - Edge Case #36)
+          displayHeaderFooter: false,
+          // Ensure proper encoding
+          tagged: true, // PDF/A compliance for better ATS parsing
+          // Inject PDF metadata for ATS compatibility
+          title: title,
+          author: name,
+          subject: 'Resume',
+          keywords: 'Resume, CV, Curriculum Vitae',
+          creator: 'CVCircle.io',
+          producer: 'CVCircle.io'
         });
 
         return Buffer.from(pdfBuffer);

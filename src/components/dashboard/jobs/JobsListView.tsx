@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, X, TrendingUp } from 'lucide-react';
+import { CheckCircle, X } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
@@ -48,7 +48,6 @@ interface JobsListViewProps {
   getJobJourneys: (jobId: string) => CVJourney[];
   getJourneyProgress: (journey: CVJourney) => number;
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
-  onSkillGapAnalysis?: (job: JobApplication) => void;
 }
 
 const JobsListView: React.FC<JobsListViewProps> = ({
@@ -110,7 +109,7 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                 Application Date
               </th>
               <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
-                Status
+                Stage
               </th>
               <th className="px-6 py-4 text-left text-gray-900 dark:text-white font-semibold text-sm uppercase tracking-wide">
                 Priority
@@ -267,20 +266,6 @@ const JobsListView: React.FC<JobsListViewProps> = ({
                               );
                             })()}
                           </>
-                        )}
-                        {(job.jobDescription || job.description) && onSkillGapAnalysis && (
-                          <motion.button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onSkillGapAnalysis(job);
-                            }}
-                            className="p-1.5 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors text-purple-600 dark:text-purple-400"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            title="Skill Gap Analysis"
-                          >
-                            <TrendingUp size={16} />
-                          </motion.button>
                         )}
                       </div>
                     </td>

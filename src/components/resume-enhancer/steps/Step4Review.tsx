@@ -3,8 +3,10 @@
 import React, { useState, useRef } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AlertCircle, Eye, Palette, X, FileText, Download } from 'lucide-react';
-import CVPreview from '@/components/studio/CVPreview';
-import TemplateSelector from '@/components/studio/TemplateSelector';
+// TODO: CVPreview and TemplateSelector were deleted - need to replace
+// import CVPreview from '@/components/studio/CVPreview';
+// import TemplateSelector from '@/components/studio/TemplateSelector';
+import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -216,9 +218,9 @@ export default function Step4Review() {
           </div>
           <div className="flex-1 overflow-y-auto p-4" ref={previewRef}>
           {state.selectedTemplate ? (
-            <CVPreview
+            <CVPreviewContent
               cvData={state.cvData}
-              template={state.selectedTemplate}
+              selectedTemplate={state.selectedTemplate}
               jobData={state.jobData}
               zoom={zoom}
               setZoom={setZoom}
@@ -269,11 +271,18 @@ export default function Step4Review() {
 
               {/* Modal Content */}
               <div className="flex-1 overflow-y-auto p-6">
+                {/* TODO: TemplateSelector was deleted - need to implement replacement */}
+                <div className="text-center py-12 text-[color:var(--text-secondary)]">
+                  <p>Template selector component needs to be reimplemented</p>
+                  <p className="text-sm mt-2">Template selection temporarily disabled</p>
+                </div>
+                {/* 
                 <TemplateSelector
                   selectedTemplate={state.selectedTemplate}
                   onTemplateSelect={handleTemplateSelect}
                   cvData={state.cvData}
                 />
+                */}
               </div>
             </motion.div>
           </motion.div>

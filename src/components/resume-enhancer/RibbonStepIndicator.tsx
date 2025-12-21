@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check, User, Palette, Sparkles, Eye } from 'lucide-react';
 
@@ -44,8 +44,42 @@ export default function RibbonStepIndicator({
   onStepClick,
   className = ''
 }: RibbonStepIndicatorProps) {
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Show at the top (within 10px of top)
+      if (currentScrollY < 10) {
+        setIsVisible(true);
+      } 
+      // Hide when scrolling down, show when scrolling up
+      else if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        setIsVisible(false);
+      } 
+      else if (currentScrollY < lastScrollY) {
+        setIsVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   return (
-    <div className={`w-full bg-[#141810] border-t border-white/10 sticky top-[64px] z-30 ${className}`}>
+    <motion.div
+      animate={{ 
+        y: isVisible ? 0 : -100,
+        opacity: isVisible ? 1 : 0
+      }}
+      transition={{ duration: 0.2, ease: 'easeInOut' }}
+      className={`w-full bg-[#141810] border-t border-white/10 sticky top-[48px] z-[50] ${className}`}
+      style={{ pointerEvents: isVisible ? 'auto' : 'none' }}
+    >
       <div className="max-w-7xl mx-auto px-4 py-2">
         <div className="flex items-center justify-center gap-0 overflow-x-auto">
           {steps.map((step, index) => {
@@ -123,7 +157,7 @@ export default function RibbonStepIndicator({
           })}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

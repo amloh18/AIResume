@@ -54,7 +54,28 @@ export class DOCXService extends BaseService {
           try {
       // For high-fidelity conversion, we'll use structured docx generation
       // This preserves formatting better than HTML conversion
+      // ATS-friendly: Use standard fonts and proper document structure
       const doc = new Document({
+        creator: 'CVCircle',
+        title: 'CV/Resume',
+        description: 'Professional CV/Resume',
+        // Use standard fonts for ATS compatibility
+        styles: {
+          default: {
+            document: {
+              run: {
+                font: 'Calibri', // Standard ATS-friendly font
+                size: 22 // 11pt
+              },
+              paragraph: {
+                spacing: {
+                  line: 276, // 1.15 line spacing
+                  lineRule: 'auto'
+                }
+              }
+            }
+          }
+        },
         sections: [{
           properties: {
             page: {
@@ -130,7 +151,8 @@ export class DOCXService extends BaseService {
           children: contactInfo.map((info, index) => 
             new TextRun({
               text: info + (index < contactInfo.length - 1 ? ' | ' : ''),
-              size: 22 // 11pt
+              size: 22, // 11pt
+              font: 'Calibri' // Standard ATS-friendly font
             })
           ),
           alignment: AlignmentType.CENTER,
@@ -175,10 +197,12 @@ export class DOCXService extends BaseService {
             children: [
               new TextRun({
                 text: `${work.name || ''} | `,
-                bold: true
+                bold: true,
+                font: 'Calibri' // Standard ATS-friendly font
               }),
               new TextRun({
-                text: `${work.startDate || ''} - ${work.endDate || 'Present'}`
+                text: `${work.startDate || ''} - ${work.endDate || 'Present'}`,
+                font: 'Calibri' // Standard ATS-friendly font
               })
             ],
             spacing: { after: 100 }
@@ -231,10 +255,12 @@ export class DOCXService extends BaseService {
             children: [
               new TextRun({
                 text: `${edu.institution || ''} | `,
-                bold: true
+                bold: true,
+                font: 'Calibri' // Standard ATS-friendly font
               }),
               new TextRun({
-                text: `${edu.startDate || ''} - ${edu.endDate || 'Present'}`
+                text: `${edu.startDate || ''} - ${edu.endDate || 'Present'}`,
+                font: 'Calibri' // Standard ATS-friendly font
               })
             ],
             spacing: { after: 200 }
@@ -278,10 +304,12 @@ export class DOCXService extends BaseService {
             children: [
               new TextRun({
                 text: `${category}: `,
-                bold: true
+                bold: true,
+                font: 'Calibri' // Standard ATS-friendly font
               }),
               new TextRun({
-                text: skills.join(', ')
+                text: skills.join(', '),
+                font: 'Calibri' // Standard ATS-friendly font
               })
             ],
             spacing: { after: 100 }
@@ -348,10 +376,12 @@ export class DOCXService extends BaseService {
             children: [
               new TextRun({
                 text: `${cert.name || ''} | `,
-                bold: true
+                bold: true,
+                font: 'Calibri' // Standard ATS-friendly font
               }),
               new TextRun({
-                text: cert.issuer || ''
+                text: cert.issuer || '',
+                font: 'Calibri' // Standard ATS-friendly font
               })
             ],
             spacing: { after: 100 }

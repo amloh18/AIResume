@@ -1,29 +1,98 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
 import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
+import { ATSProvider } from '@/contexts/ATSContext';
 import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancerContainer';
 import RouteGuard from '@/components/auth/RouteGuard';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
+import guestCVService from '@/lib/services/guestCVService';
 
 function ResumeEnhancerPageContent() {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const searchParams = useSearchParams();
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [isCheckingGuestMode, setIsCheckingGuestMode] = useState(true);
+  const [restoreDraft, setRestoreDraft] = useState(false);
 
   // Get parameters from URL
-  const mode = searchParams.get('mode') as 'create' | 'edit' | 'edit-master' | 'journey' || 'create';
+  const modeParam = searchParams.get('mode');
+  const mode: 'create' | 'edit' | 'edit-master' | 'journey' = 
+    (modeParam === 'edit' || modeParam === 'edit-master' || modeParam === 'journey') 
+      ? modeParam 
+      : 'create';
   const cvId = searchParams.get('cvId') || undefined;
   const journeyId = searchParams.get('journeyId') || undefined;
+  const restoreDraftParam = searchParams.get('restoreDraft') === 'true';
 
-  // Show loading while authenticating
-  if (authLoading) {
+  // Check if user has CVs to determine guest mode
+  useEffect(() => {
+    const checkGuestMode = async () => {
+      if (authLoading) return;
+
+      // If authenticated, check if user has any CVs
+      if (isAuthenticated && user?.id) {
+        try {
+          const response = await fetch(`/api/cvs?projection=summary&limit=1`);
+          if (response.ok) {
+            const data = await response.json();
+            const hasCVs = data.success && data.data?.cvs?.length > 0;
+            
+            // Guest mode: not authenticated OR (authenticated but no CVs and creating new CV)
+            setIsGuestMode(!isAuthenticated || (!hasCVs && mode === 'create' && !cvId));
+          } else {
+            // On error, allow guest mode if not authenticated
+            setIsGuestMode(!isAuthenticated);
+          }
+        } catch (error) {
+          console.error('Error checking CVs:', error);
+          setIsGuestMode(!isAuthenticated);
+        }
+      } else {
+        // Not authenticated - allow guest mode for new CV creation
+        setIsGuestMode(mode === 'create' && !cvId);
+      }
+
+      // Check for restore draft param
+      if (restoreDraftParam) {
+        setRestoreDraft(true);
+      }
+
+      setIsCheckingGuestMode(false);
+    };
+
+    checkGuestMode();
+  }, [authLoading, isAuthenticated, user?.id, mode, cvId, restoreDraftParam]);
+
+  // Show loading while checking guest mode or authenticating
+  if (authLoading || isCheckingGuestMode) {
     return <LoadingAnimation progress={0.5} showProgressBar={false} />;
   }
 
-  // Show error if not authenticated
+  // For guest mode, allow access without authentication
+  if (isGuestMode) {
+    return (
+      <JobJourneyProvider>
+        <ResumeEnhancerProvider>
+          <ATSProvider>
+            <ResumeEnhancerContainer
+              userId="guest"
+              mode={mode}
+              cvId={cvId}
+              journeyId={journeyId}
+              isGuestMode={true}
+              restoreDraft={restoreDraft}
+            />
+          </ATSProvider>
+        </ResumeEnhancerProvider>
+      </JobJourneyProvider>
+    );
+  }
+
+  // For authenticated users or editing existing CVs, require auth
   if (!isAuthenticated || !user?.id) {
     return (
       <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex items-center justify-center">
@@ -50,12 +119,15 @@ function ResumeEnhancerPageContent() {
     <RouteGuard requireAuth={true}>
       <JobJourneyProvider>
         <ResumeEnhancerProvider>
-          <ResumeEnhancerContainer
-            userId={user.id}
-            mode={mode}
-            cvId={cvId}
-            journeyId={journeyId}
-          />
+          <ATSProvider>
+            <ResumeEnhancerContainer
+              userId={user.id}
+              mode={mode}
+              cvId={cvId}
+              journeyId={journeyId}
+              isGuestMode={false}
+            />
+          </ATSProvider>
         </ResumeEnhancerProvider>
       </JobJourneyProvider>
     </RouteGuard>

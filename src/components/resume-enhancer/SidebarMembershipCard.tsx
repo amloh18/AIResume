@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { AlertCircle, Clock, Star, Zap } from 'lucide-react';
 import { getPlanName, PlanKey } from '@/lib/utils/userPlanUtils';
+import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 
 type CreditsInfo = {
   remaining: number;
@@ -30,6 +31,7 @@ export default function SidebarMembershipCard() {
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Keep day pass countdown fresh (match dashboard sidebar behavior)
   useEffect(() => {
@@ -37,6 +39,7 @@ export default function SidebarMembershipCard() {
     return () => clearInterval(interval);
   }, []);
 
+  // Load on mount only
   useEffect(() => {
     let cancelled = false;
 
@@ -63,6 +66,35 @@ export default function SidebarMembershipCard() {
     load();
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Listen for credit update events (only refresh when credits are actually used)
+  useEffect(() => {
+    const handleCreditUpdate = () => {
+      console.log('🔄 SidebarMembershipCard - Credit update event received, refreshing credit info');
+      // Reload credit info when credits are used
+      const load = async () => {
+        try {
+          const res = await fetch('/api/user/usage-limits', { method: 'GET' });
+          if (res.ok) {
+            const json = await res.json();
+            if (json?.success) {
+              setCredits(json?.credits ?? null);
+              setSubscription(json?.subscription ?? null);
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing credit info:', error);
+        }
+      };
+      load();
+    };
+
+    window.addEventListener('creditsUpdated', handleCreditUpdate);
+
+    return () => {
+      window.removeEventListener('creditsUpdated', handleCreditUpdate);
     };
   }, []);
 
@@ -132,7 +164,8 @@ export default function SidebarMembershipCard() {
   // --- Free Plan (purple) ---
   if (planKey === 'free') {
     return (
-      <div className="rounded-2xl p-3 text-white shadow-sm shadow-black/20 dark:shadow-black/40" style={{ backgroundColor: '#603a86' }}>
+      <>
+        <div className="rounded-2xl p-3 text-white shadow-sm shadow-black/20 dark:shadow-black/40" style={{ backgroundColor: '#603a86' }}>
         <div className="text-sm font-semibold mb-2">
           Your Free Plan
         </div>
@@ -184,7 +217,7 @@ export default function SidebarMembershipCard() {
           </motion.button>
 
           <motion.button
-            onClick={openMembership}
+            onClick={() => setShowPaymentModal(true)}
             className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
             whileHover={{ scale: 1.03 }}
             whileTap={{ scale: 0.97 }}
@@ -194,6 +227,17 @@ export default function SidebarMembershipCard() {
           </motion.button>
         </div>
       </div>
+      <UniversalPaymentModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        onSuccess={() => {
+          setShowPaymentModal(false);
+          // Refresh credits after successful payment
+          window.location.reload();
+        }}
+        triggerContext="sidebar-view-all-plans"
+      />
+      </>
     );
   }
 
