@@ -180,7 +180,8 @@ export async function POST(request: NextRequest) {
       trustScore,
       trustSnapshot,
       transparencySnapshot,
-      source: bodySource // Allow source to be passed in body as fallback
+      source: bodySource, // Allow source to be passed in body as fallback
+      cvId // Optional CV ID to link to journey
     } = body;
 
     // If source is not set from auth, use body source or default based on auth method
@@ -685,6 +686,82 @@ export async function POST(request: NextRequest) {
         newJourney = await ApplicationJourney.create(journeyData);
         console.log('✅ ApplicationJourney created successfully:', newJourney._id);
 
+        // EDGE CASE 6: Only link CV after journey is successfully created
+        // If cvId is provided, link CV to journey BEFORE document creation runs
+        if (cvId && jobStatus === 'created') {
+          try {
+            console.log('🔗 Jobs API - Linking CV to journey:', cvId);
+            
+            // EDGE CASE 2: Verify CV exists and is standalone (not already linked)
+            const CV = (await import('@/models/CV')).default;
+            const cv = await CV.findOne({
+              _id: new mongoose.Types.ObjectId(cvId),
+              userId: normalizedUserId
+            });
+
+            if (!cv) {
+              console.error('❌ Jobs API - CV not found or does not belong to user:', cvId);
+              // Don't fail the request, just log error and continue without linking
+            } else if (cv.journeyId && cv.journeyId.toString() !== newJourney._id.toString()) {
+              // EDGE CASE 2: CV already linked to another journey
+              console.error('❌ Jobs API - CV is already linked to another journey:', cv.journeyId);
+              // Don't fail the request, just log error and continue without linking
+            } else {
+              // EDGE CASE 8: Check if journey already has auto-created CV
+              if (newJourney.cvId && newJourney.cvId.toString() !== cvId) {
+                console.log('⚠️ Jobs API - Journey already has CV, deleting auto-created CV:', newJourney.cvId);
+                try {
+                  const existingCV = await CV.findById(newJourney.cvId);
+                  if (existingCV) {
+                    await CV.deleteOne({ _id: existingCV._id });
+                    console.log('✅ Jobs API - Auto-created CV deleted:', newJourney.cvId);
+                  }
+                } catch (deleteError) {
+                  console.error('⚠️ Jobs API - Failed to delete auto-created CV (non-critical):', deleteError);
+                  // Continue with linking even if deletion fails
+                }
+              }
+
+              // EDGE CASE 7: Retry mechanism for CV update with exponential backoff
+              let cvUpdateSuccess = false;
+              const maxRetries = 3;
+              const retryDelays = [1000, 2000, 4000]; // 1s, 2s, 4s
+
+              for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                  // Update CV to link to journey
+                  cv.cvType = 'journey';
+                  cv.journeyId = newJourney._id;
+                  await cv.save();
+
+                  // Update journey with CV ID
+                  newJourney.cvId = cvId;
+                  await newJourney.save();
+
+                  cvUpdateSuccess = true;
+                  console.log('✅ Jobs API - CV linked to journey successfully:', cvId);
+                  break;
+                } catch (updateError) {
+                  console.error(`⚠️ Jobs API - CV update attempt ${attempt + 1} failed:`, updateError);
+                  if (attempt < maxRetries - 1) {
+                    await new Promise(resolve => setTimeout(resolve, retryDelays[attempt]));
+                  } else {
+                    console.error('❌ Jobs API - CV update failed after all retries');
+                    // Log error but continue - journey will have CV linked on next check
+                  }
+                }
+              }
+
+              if (!cvUpdateSuccess) {
+                console.error('⚠️ Jobs API - CV linking failed, but continuing. Journey will be updated on next check.');
+              }
+            }
+          } catch (cvLinkError) {
+            console.error('❌ Jobs API - Error linking CV to journey (non-critical):', cvLinkError);
+            // Don't fail the request if CV linking fails - document creation will handle it
+          }
+        }
+
         // If documents need to be created, trigger async creation
         if (needsDocuments && newJourney.status === 'processing_documents') {
           // Call document creation service directly (no HTTP request needed)
@@ -733,20 +810,45 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build response data
+    const responseData: any = {
+      id: jobApplication._id.toString(),
+      jobTitle: jobApplication.jobTitle,
+      company: jobApplication.company,
+      location: jobApplication.location,
+      source: jobApplication.source,
+      status: jobApplication.status,
+      priority: jobApplication.priority,
+      createdAt: jobApplication.createdAt
+    };
+
+    // Include journey data if it was created
+    if (jobStatus === 'created') {
+      const journey = await ApplicationJourney.findOne({
+        jobId: jobApplication._id.toString(),
+        userId: normalizedUserId
+      });
+
+      if (journey) {
+        responseData.jobApplication = {
+          _id: jobApplication._id.toString(),
+          jobTitle: jobApplication.jobTitle,
+          company: jobApplication.company
+        };
+        responseData.journey = {
+          _id: journey._id.toString(),
+          journeyId: journey.journeyId,
+          cvId: journey.cvId,
+          status: journey.status
+        };
+      }
+    }
+
     return setCorsHeaders(
       NextResponse.json({
         success: true,
         message: 'Job saved to application tracker successfully',
-        data: {
-          id: jobApplication._id.toString(),
-          jobTitle: jobApplication.jobTitle,
-          company: jobApplication.company,
-          location: jobApplication.location,
-          source: jobApplication.source,
-          status: jobApplication.status,
-          priority: jobApplication.priority,
-          createdAt: jobApplication.createdAt
-        }
+        data: responseData
       }),
       request
     );

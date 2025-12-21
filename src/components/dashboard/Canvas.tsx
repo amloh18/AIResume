@@ -48,7 +48,7 @@ import {
   SortAsc
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
-import CVPreviewContent from '@/components/studio/CVPreviewContent';
+import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 import PageHeader from './PageHeader';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
@@ -628,7 +628,8 @@ const Canvas: React.FC = () => {
             templateName: cv.templateName,
             templateData: cv.templateData, // Include saved template data
             journeyId: cv.journeyId,
-            cvType: cv.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'), // Include CV type
+            // Prioritize explicit cvType from API, then check metadata.cvType, then infer from journeyId/isMaster
+            cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'), // Include CV type
             completionPercentage: calculateCompletionPercentage(cv),
             // Include master flag - Master CV: isMaster: true OR createdVia: 'ai-career-report'
             // Regular CV: isMaster: false (and if createdVia: 'journey', it's definitely a regular CV)
@@ -931,7 +932,9 @@ const Canvas: React.FC = () => {
   // Cover Letter editing states
   const [editingCoverLetterId, setEditingCoverLetterId] = useState<string | null>(null);
   const [editingCoverLetterTitle, setEditingCoverLetterTitle] = useState('');
-  const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>('cv');
+  // Initialize activeTab from URL parameter if present, otherwise default to 'cv'
+  const initialTab = searchParams.get('tab') === 'coverLetter' ? 'coverLetter' : 'cv';
+  const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>(initialTab as 'cv' | 'coverLetter');
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
   // availableJobs is already defined above (line 850) before fetchAvailableJobs
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
@@ -1022,6 +1025,16 @@ const Canvas: React.FC = () => {
       isMounted = false;
     };
   }, [user?.id, loadAllCVData, fetchAvailableJobs]);
+
+  // Handle URL parameters to set active tab
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'coverLetter' && activeTab !== 'coverLetter') {
+      setActiveTab('coverLetter');
+    } else if (tabParam === 'cv' && activeTab !== 'cv') {
+      setActiveTab('cv');
+    }
+  }, [searchParams, activeTab]);
 
   // Handle URL parameters to open report sidebar for master CV
   useEffect(() => {
@@ -2033,6 +2046,31 @@ const Canvas: React.FC = () => {
       }
     });
   }, [coverLetters, searchQuery, sortBy]);
+
+  // Authentication check - redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      console.log('🔒 Canvas - User not authenticated, redirecting to sign-in');
+      router.push('/sign-in?callbackUrl=' + encodeURIComponent('/dashboard/canvas'));
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-lime-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render UI if not authenticated (redirect will happen)
+  if (!isAuthenticated || !user) {
+    return null;
+  }
 
   return (
     <div className="space-y-6">

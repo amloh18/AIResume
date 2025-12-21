@@ -28,18 +28,18 @@ function CoverLetterEditorPageContent() {
   // Show error if not authenticated
   if (!isAuthenticated || !user?.id) {
     return (
-      <div className="dashboard-page cover-letter-editor-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex items-center justify-center">
+      <div className="dashboard-page cover-letter-editor-page min-h-screen bg-gray-50 dark:bg-[#1a230f] text-gray-900 dark:text-white flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
-          <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-2">
+          <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
             Authentication Required
           </h2>
-          <p className="text-[color:var(--text-secondary)] mb-4">
+          <p className="text-gray-600 dark:text-gray-200 mb-4">
             Please log in to access the Cover Letter Editor.
           </p>
           <button
             onClick={() => window.location.href = '/sign-in'}
-            className="px-4 py-2 bg-[var(--accent-primary)] text-black rounded-lg hover:bg-[var(--accent-hover)] transition-colors font-semibold"
+            className="px-4 py-2 bg-lime-500 dark:bg-[#99FF00] text-black rounded-lg hover:bg-lime-600 dark:hover:bg-[#88e600] transition-colors font-semibold"
           >
             Go to Login
           </button>

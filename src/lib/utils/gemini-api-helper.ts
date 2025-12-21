@@ -20,6 +20,9 @@ interface GeminiResponse {
   apiKeyUsed: string;
 }
 
+// Round-robin key rotation counter (module-level to persist across calls)
+let currentKeyIndex = 0;
+
 /**
  * Check if error is a quota/rate limit error (429)
  */
@@ -135,9 +138,9 @@ async function callGemini(options: GeminiCallOptions, apiKey: string): Promise<s
 }
 
 /**
- * Call Gemini API with automatic fallback
- * Tries all available keys: gemini_api_key2 (primary), gemini_api_key, gemini_api_key3
- * Automatically falls back to next key on quota/rate limit errors
+ * Call Gemini API with automatic fallback and round-robin key rotation
+ * Uses round-robin rotation to distribute load evenly across all keys
+ * Automatically falls back to next key ONLY on quota/rate limit errors
  */
 export async function callGeminiWithFallback(options: GeminiCallOptions): Promise<GeminiResponse> {
   const apiKeys = getGeminiApiKeys();
@@ -146,14 +149,20 @@ export async function callGeminiWithFallback(options: GeminiCallOptions): Promis
     throw new Error('No Gemini API keys configured. Please set gemini_api_key, gemini_api_key2, or gemini_api_key3');
   }
 
+  // Round-robin: start with next key in rotation to distribute load evenly
+  const startIndex = currentKeyIndex % apiKeys.length;
+  currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length;
+
   let lastError: Error | null = null;
 
+  // Try keys starting from the rotated position
   for (let i = 0; i < apiKeys.length; i++) {
-    const { name, key } = apiKeys[i];
+    const actualIndex = (startIndex + i) % apiKeys.length;
+    const { name, key } = apiKeys[actualIndex];
     const isLastKey = i === apiKeys.length - 1;
     
     try {
-      console.log(`🔑 Attempting Gemini API call with ${name}...`);
+      console.log(`🔑 Attempting Gemini API call with ${name} (round-robin position ${actualIndex + 1}/${apiKeys.length})...`);
 
       const content = await callGemini(options, key);
 
@@ -167,21 +176,26 @@ export async function callGeminiWithFallback(options: GeminiCallOptions): Promis
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isQuota = isQuotaError(error);
       
-      if (isQuota) {
-        console.warn(`⚠️ ${name} quota exceeded (429), falling back to next key...`);
-      } else {
-        console.error(`❌ ${name} failed:`, errorMessage);
-      }
-      
       lastError = error instanceof Error ? error : new Error(String(error));
 
-      // If this is the last key, throw the error
-      if (isLastKey) {
-        throw new Error(`All Gemini API keys failed. Last error (${name}): ${errorMessage}`);
+      // ONLY fallback to next key if it's a quota/rate limit error
+      if (isQuota) {
+        console.warn(`⚠️ ${name} quota exceeded (429), falling back to next key...`);
+        
+        // If this is the last key, throw the error
+        if (isLastKey) {
+          throw new Error(`All Gemini API keys quota exhausted. Last error (${name}): ${errorMessage}`);
+        }
+        
+        // Otherwise, continue to next key
+        console.log(`⏭️  Continuing to next API key...`);
+        continue;
+      } else {
+        // For non-quota errors (network, parsing, invalid response, etc.), fail immediately
+        // Don't waste other keys on errors that won't be fixed by trying another key
+        console.error(`❌ ${name} failed with non-quota error:`, errorMessage);
+        throw new Error(`Gemini API error (${name}): ${errorMessage}`);
       }
-
-      // Otherwise, continue to next key
-      console.log(`⏭️  Continuing to next API key...`);
     }
   }
 

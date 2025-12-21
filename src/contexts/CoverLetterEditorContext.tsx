@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { CoverLetterTemplate } from '@/lib/templates/cover-letter-templates';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { formatCoverLetterHeader, mergeCoverLetterContent, extractHeaderFromContent, extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
+import { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent, extractHeaderFromContent, extractBodyFromContent, extractFooterFromContent, cleanHeaderContent } from '@/lib/utils/coverLetterUtils';
 
 // Cover Letter Data Structure
 export interface CoverLetterData {
@@ -12,6 +12,7 @@ export interface CoverLetterData {
   content: string;
   header?: string;
   body?: string;
+  footer?: string;
   status?: 'draft' | 'published' | 'archived';
   cvId?: string;
   jobId?: string;
@@ -23,7 +24,7 @@ export interface CoverLetterData {
 export interface CoverLetterEditorState {
   // Mode and navigation
   mode: 'create' | 'edit' | 'journey';
-  currentStep: 1 | 2 | 3;
+  currentStep: 1 | 2;
   
   // Cover letter identification
   coverLetterId?: string;
@@ -53,13 +54,14 @@ export interface CoverLetterEditorState {
 // Action Types
 type CoverLetterEditorAction =
   | { type: 'SET_MODE'; payload: 'create' | 'edit' | 'journey' }
-  | { type: 'SET_STEP'; payload: 1 | 2 | 3 }
+  | { type: 'SET_STEP'; payload: 1 | 2 }
   | { type: 'SET_COVER_LETTER_ID'; payload: string | undefined }
   | { type: 'SET_COVER_LETTER_TITLE'; payload: string }
   | { type: 'UPDATE_COVER_LETTER_DATA'; payload: Partial<CoverLetterData> }
   | { type: 'SET_COVER_LETTER_DATA'; payload: CoverLetterData }
   | { type: 'UPDATE_HEADER'; payload: string }
   | { type: 'UPDATE_BODY'; payload: string }
+  | { type: 'UPDATE_FOOTER'; payload: string }
   | { type: 'SET_TEMPLATE'; payload: CoverLetterTemplate | null }
   | { type: 'SET_CV_DATA'; payload: UnifiedCVDataStructure | null }
   | { type: 'SET_JOB_DATA'; payload: any }
@@ -125,39 +127,65 @@ function coverLetterEditorReducer(
         }
       };
 
-    case 'UPDATE_COVER_LETTER_DATA':
+    case 'UPDATE_COVER_LETTER_DATA': {
       const updatedData = { ...state.coverLetterData, ...action.payload };
+      
+      // DO NOT merge content here - it will be merged in preview only
+      // Remove content from payload if it exists (we don't store merged content)
+      if (action.payload.content !== undefined && 
+          (action.payload.header !== undefined || action.payload.body !== undefined || action.payload.footer !== undefined)) {
+        // If header/body/footer are being updated, don't use provided content
+        delete updatedData.content;
+      }
+      
       return {
         ...state,
         coverLetterData: updatedData
       };
+    }
 
     case 'SET_COVER_LETTER_DATA':
       return { ...state, coverLetterData: action.payload };
 
-    case 'UPDATE_HEADER':
-      const newHeader = action.payload;
-      const mergedContent = mergeCoverLetterContent(newHeader, state.coverLetterData.body || '');
+    case 'UPDATE_HEADER': {
+      // Clean header to remove body content but keep header structure
+      const newHeader = cleanHeaderContent(action.payload);
+      // DO NOT merge content here - it will be merged in preview only
       return {
         ...state,
         coverLetterData: {
           ...state.coverLetterData,
-          header: newHeader,
-          content: mergedContent
+          header: newHeader
+          // content will be generated on-the-fly in preview
         }
       };
+    }
 
-    case 'UPDATE_BODY':
+    case 'UPDATE_BODY': {
       const newBody = action.payload;
-      const mergedContentWithBody = mergeCoverLetterContent(state.coverLetterData.header || '', newBody);
+      // DO NOT merge content here - it will be merged in preview only
       return {
         ...state,
         coverLetterData: {
           ...state.coverLetterData,
-          body: newBody,
-          content: mergedContentWithBody
+          body: newBody
+          // content will be generated on-the-fly in preview
         }
       };
+    }
+
+    case 'UPDATE_FOOTER': {
+      const newFooter = action.payload;
+      // DO NOT merge content here - it will be merged in preview only
+      return {
+        ...state,
+        coverLetterData: {
+          ...state.coverLetterData,
+          footer: newFooter
+          // content will be generated on-the-fly in preview
+        }
+      };
+    }
 
     case 'SET_TEMPLATE':
       return { ...state, selectedTemplate: action.payload };
@@ -180,40 +208,70 @@ function coverLetterEditorReducer(
     case 'SET_SAVE_STATUS':
       return { ...state, saveStatus: action.payload };
 
-    case 'AUTO_POPULATE_HEADER':
+    case 'AUTO_POPULATE_HEADER': {
       if (!state.cvData) return state;
-      const autoHeader = formatCoverLetterHeader(state.cvData);
-      const autoMergedContent = mergeCoverLetterContent(autoHeader, state.coverLetterData.body || '');
+      const autoHeader = formatCoverLetterHeader(state.cvData, state.jobData);
+      const autoFooter = formatCoverLetterFooter(state.cvData);
+      // DO NOT merge content here - it will be merged in preview only
       return {
         ...state,
         coverLetterData: {
           ...state.coverLetterData,
           header: autoHeader,
-          content: autoMergedContent
+          footer: autoFooter
+          // content will be generated on-the-fly in preview
         }
       };
+    }
 
     case 'LOAD_COVER_LETTER':
       const loadedData = action.payload.coverLetterData;
-      // Extract header and body if not present
-      let header = loadedData.header;
-      let body = loadedData.body;
+      // Extract header, body, and footer if not present
+      let extractedHeader = loadedData.header || extractHeaderFromContent(loadedData.content);
+      let extractedBody = loadedData.body || extractBodyFromContent(loadedData.content);
+      let extractedFooter = loadedData.footer || extractFooterFromContent(loadedData.content);
       
-      if (!header || !body) {
-        header = header || extractHeaderFromContent(loadedData.content);
-        body = body || extractBodyFromContent(loadedData.content);
+      // If header doesn't have date/recipient info and CV/job data is available, auto-populate
+      if (extractedHeader && action.payload.cvData) {
+        const headerLines = extractedHeader.split('\n').filter(line => line.trim());
+        const hasDate = headerLines.some(line => /^\d{1,2}\/\d{1,2}\/\d{4}/.test(line.trim()));
+        const hasRecipient = headerLines.some(line => /^(Hiring Manager|Recruitment Team|Human Resources)/i.test(line.trim()));
+        
+        // If missing date or recipient info, regenerate header with full info
+        if (!hasDate || !hasRecipient) {
+          extractedHeader = formatCoverLetterHeader(action.payload.cvData, action.payload.jobData);
+        }
+      } else if (!extractedHeader && action.payload.cvData) {
+        // If no header at all, generate it
+        extractedHeader = formatCoverLetterHeader(action.payload.cvData, action.payload.jobData);
       }
+      
+      // If footer is still empty and CV data is available, generate it
+      if (!extractedFooter && action.payload.cvData) {
+        extractedFooter = formatCoverLetterFooter(action.payload.cvData);
+      }
+      
+      // Clean header to remove body content but keep header structure
+      let finalHeader = extractedHeader;
+      if (finalHeader) {
+        finalHeader = cleanHeaderContent(finalHeader);
+      }
+      
+      // DO NOT merge content here - it will be merged in preview only
+      // Store header, body, and footer separately
       
       return {
         ...state,
         mode: 'edit',
-        currentStep: 1, // Start at template selection
+        currentStep: 1, // Start at editor
         coverLetterId: action.payload.coverLetterId,
         coverLetterTitle: loadedData.title,
         coverLetterData: {
           ...loadedData,
-          header,
-          body
+          header: finalHeader,
+          body: extractedBody,
+          footer: extractedFooter
+          // content will be generated on-the-fly in preview
         },
         selectedTemplate: action.payload.template || state.selectedTemplate,
         cvData: action.payload.cvData || state.cvData,
@@ -240,12 +298,13 @@ interface CoverLetterEditorContextType {
   dispatch: React.Dispatch<CoverLetterEditorAction>;
   
   // Helper functions
-  goToStep: (step: 1 | 2 | 3) => void;
+  goToStep: (step: 1 | 2) => void;
   nextStep: () => void;
   prevStep: () => void;
   updateCoverLetter: (data: Partial<CoverLetterData>) => void;
   updateHeader: (header: string) => void;
   updateBody: (body: string) => void;
+  updateFooter: (footer: string) => void;
   setTemplate: (template: CoverLetterTemplate | null) => void;
   setCVData: (cvData: UnifiedCVDataStructure | null) => void;
   setJobData: (jobData: any) => void;
@@ -266,12 +325,12 @@ export function CoverLetterEditorProvider({ children }: { children: ReactNode })
   };
 
   const nextStep = () => {
-    const next = Math.min(3, (state.currentStep + 1)) as 1 | 2 | 3;
+    const next = Math.min(2, (state.currentStep + 1)) as 1 | 2;
     dispatch({ type: 'SET_STEP', payload: next });
   };
 
   const prevStep = () => {
-    const prev = Math.max(1, (state.currentStep - 1)) as 1 | 2 | 3;
+    const prev = Math.max(1, (state.currentStep - 1)) as 1 | 2;
     dispatch({ type: 'SET_STEP', payload: prev });
   };
 
@@ -285,6 +344,10 @@ export function CoverLetterEditorProvider({ children }: { children: ReactNode })
 
   const updateBody = (body: string) => {
     dispatch({ type: 'UPDATE_BODY', payload: body });
+  };
+
+  const updateFooter = (footer: string) => {
+    dispatch({ type: 'UPDATE_FOOTER', payload: footer });
   };
 
   const setTemplate = (template: CoverLetterTemplate | null) => {
@@ -320,6 +383,7 @@ export function CoverLetterEditorProvider({ children }: { children: ReactNode })
     updateCoverLetter,
     updateHeader,
     updateBody,
+    updateFooter,
     setTemplate,
     setCVData,
     setJobData,

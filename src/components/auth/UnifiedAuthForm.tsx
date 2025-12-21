@@ -3,8 +3,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, Loader2, CheckCircle, AlertCircle, ArrowRight } from 'lucide-react';
-import { useConsoleLoggerContext } from '@/contexts/ConsoleLoggerProvider';
-import InlineMessages from '@/components/auth/InlineMessages';
+// Console logger disabled in auth forms to avoid showing irrelevant warnings
+// import { useConsoleLoggerContext } from '@/contexts/ConsoleLoggerProvider';
+// import InlineMessages from '@/components/auth/InlineMessages';
 
 interface FormField {
   name: string;
@@ -44,7 +45,8 @@ export default function UnifiedAuthForm({
   autoFocus = true,
   onInputChange
 }: UnifiedAuthFormProps) {
-  const { messages, clearMessages } = useConsoleLoggerContext();
+  // Console logger disabled in auth forms
+  // const { messages, clearMessages } = useConsoleLoggerContext();
   const [formData, setFormData] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
@@ -284,12 +286,13 @@ export default function UnifiedAuthForm({
           </motion.div>
         )}
 
-        {/* Inline Messages from Console Logs */}
-        <InlineMessages 
+        {/* Inline Messages from Console Logs - Hidden in auth forms to avoid showing irrelevant warnings */}
+        {/* Don't show console messages in sign-in/signup forms as they're not relevant to authentication */}
+        {/* <InlineMessages 
           messages={messages} 
           onClear={clearMessages}
           className="mt-4"
-        />
+        /> */}
 
         {/* Submit Button */}
         <motion.button

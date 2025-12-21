@@ -68,7 +68,7 @@ export async function PUT(
     await getConnection();
     const { id } = await params;
     const body = await request.json();
-    const { jobId, userId, title, content, status, metadata, targetCompany, targetPosition, keywords, cvId } = body;
+    const { jobId, userId, title, content, header, body: bodyContent, footer, status, metadata, targetCompany, targetPosition, keywords, cvId } = body;
 
     // Build update object dynamically based on provided fields
     const updateData: any = {
@@ -77,10 +77,15 @@ export async function PUT(
 
     // Update core fields if provided
     if (title !== undefined) updateData.title = title;
-    if (content !== undefined) updateData.content = content;
+    if (header !== undefined) updateData.header = header;
+    if (bodyContent !== undefined) updateData.body = bodyContent;
+    if (footer !== undefined) updateData.footer = footer;
     if (status !== undefined) updateData.status = status;
     if (jobId !== undefined) updateData.jobId = jobId;
     if (cvId !== undefined) updateData.cvId = cvId;
+    
+    // DO NOT merge into content - leave content empty or undefined
+    // Content will be generated on-the-fly in preview only
     
     // Update metadata fields if provided
     if (targetCompany !== undefined) updateData['metadata.targetCompany'] = targetCompany;
@@ -116,6 +121,9 @@ export async function PUT(
         id: updatedCoverLetter._id,
         title: updatedCoverLetter.title,
         content: updatedCoverLetter.content,
+        header: updatedCoverLetter.header,
+        body: updatedCoverLetter.body,
+        footer: updatedCoverLetter.footer,
         status: updatedCoverLetter.status,
         jobId: updatedCoverLetter.jobId,
         cvId: updatedCoverLetter.cvId,

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useCoverLetterEditor } from '@/contexts/CoverLetterEditorContext';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
-import { AISuggestionsPanel } from '@/components/studio/AISuggestionsPanel';
-import CoverLetterPreview from '@/components/studio/CoverLetterPreview';
+import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
+import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { formatCoverLetterHeader } from '@/lib/utils/coverLetterUtils';
 
 export default function Step2Edit() {
@@ -113,9 +113,9 @@ export default function Step2Edit() {
         {/* Left Pane (50%) - Editors */}
         <div className="w-1/2 flex flex-col gap-4 overflow-y-auto pr-2">
           {/* Header Section */}
-          <div className="bg-[var(--bg-secondary)] rounded-xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-[#141810] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">Header</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Header</h3>
               <WYSIWYGToolbar showAIButton={false} />
             </div>
             
@@ -125,15 +125,15 @@ export default function Step2Edit() {
               rows={3}
               placeholder="Your Name&#10;Your Email | Your Phone&#10;Your Address"
             />
-            <p className="mt-2 text-xs text-[color:var(--text-secondary)]">
+            <p className="mt-2 text-xs text-gray-600 dark:text-gray-200">
               Include your contact information here (name, email, phone, address)
             </p>
           </div>
 
           {/* Body Section */}
-          <div className="bg-[var(--bg-secondary)] rounded-xl p-6 shadow-sm">
+          <div className="bg-white dark:bg-[#141810] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">Body</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Body</h3>
               <WYSIWYGToolbar
                 showAIButton={true}
                 fieldType="other"
@@ -158,10 +158,10 @@ export default function Step2Edit() {
               placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in the [Position] role at [Company]...&#10;&#10;[Your compelling content here]&#10;&#10;Sincerely,&#10;[Your Name]"
             />
             <div className="mt-2 flex items-center justify-between">
-              <p className="text-xs text-[color:var(--text-secondary)]">
+              <p className="text-xs text-gray-600 dark:text-gray-200">
                 Use formatting tools above to style your text
               </p>
-              <span className="text-xs text-[color:var(--text-secondary)]">
+              <span className="text-xs text-gray-600 dark:text-gray-200">
                 {(headerContent + bodyContent).length} characters
               </span>
             </div>
@@ -169,9 +169,9 @@ export default function Step2Edit() {
         </div>
 
         {/* Right Pane (50%) - Live Preview */}
-        <div className="w-1/2 flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm">
-          <div className="p-4 border-b border-[color:var(--border-color)]">
-            <h3 className="text-base font-bold text-[color:var(--text-primary)]">Live Preview</h3>
+        <div className="w-1/2 flex flex-col bg-white dark:bg-[#141810] rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Live Preview</h3>
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             <CoverLetterPreview

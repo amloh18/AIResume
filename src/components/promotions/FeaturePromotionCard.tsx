@@ -119,7 +119,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
               {/* Title */}
               <h3
                 id="promotion-title"
-                className="text-xl font-bold text-gray-900 dark:text-white"
+                className="text-xl font-bold text-black"
               >
                 {promotion.title}
               </h3>
@@ -127,7 +127,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
               {/* Description */}
               <p
                 id="promotion-description"
-                className="text-sm text-gray-600 dark:text-gray-400"
+                className="text-sm text-black"
               >
                 {promotion.description}
               </p>
@@ -138,7 +138,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
                   {promotion.benefits.map((benefit, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                      <span className="text-sm text-black">
                         {benefit}
                       </span>
                     </li>

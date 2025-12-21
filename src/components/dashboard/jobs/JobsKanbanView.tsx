@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import {
   CheckCircle, X, ChevronDown, MapPin, DollarSign, Calendar, Clock,
-  Target, Eye, ArrowRight, AlertCircle, TrendingUp, Mail, Linkedin, GraduationCap
+  Target, Eye, ArrowRight, AlertCircle, Mail, Linkedin, GraduationCap
 } from 'lucide-react';
 import JourneyTimelineCard from '../JourneyTimelineCard';
 import { CVJourney } from '@/types/cv';
@@ -75,7 +75,6 @@ interface JobsKanbanViewProps {
   getJourneyProgress: (journey: CVJourney) => number;
   getJourneyStatusText: (jobJourneys: CVJourney[], jobStatus?: string) => string;
   isFocusMode?: boolean;
-  onSkillGapAnalysis?: (job: JobApplication) => void;
   journeys?: CVJourney[];
   onJobStatusUpdate?: (jobId: string, newStatus: string) => Promise<void>;
   onCreateJourney?: (job: JobApplication) => Promise<void>;
@@ -103,7 +102,6 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   getJourneyProgress,
   getJourneyStatusText,
   isFocusMode = false,
-  onSkillGapAnalysis,
   journeys = [],
   onJobStatusUpdate,
   onCreateJourney,
@@ -639,22 +637,6 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                     </motion.button>
                                   ) : null}
 
-                                    {/* Skill Gap Analysis Button */}
-                                    {(job.jobDescription || job.description) && onSkillGapAnalysis && (
-                                      <motion.button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onSkillGapAnalysis(job);
-                                        }}
-                                        className="px-3 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 flex-shrink-0"
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                        title="Skill Gap Analysis"
-                                      >
-                                        <TrendingUp size={12} />
-                                        <span className="hidden sm:inline">Analysis</span>
-                                      </motion.button>
-                                    )}
                                   </div>
                                 </div>
                               </div>

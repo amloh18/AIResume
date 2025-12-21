@@ -36,11 +36,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Clean up the generated content to remove any headers, greetings, or closings
+    // AI should ONLY generate the body content (main paragraphs)
     content = cleanupCoverLetterContent(content, cvData);
 
     return NextResponse.json({
       success: true,
-      content: content.trim(),
+      content: content.trim(), // This is the BODY only
+      body: content.trim(), // Explicitly return as body
       timestamp: new Date().toISOString()
     });
 
@@ -334,5 +336,15 @@ ${skillsGap.skills ? skillsGap.skills.map((skill: any) => `- ${skill.name}: ${sk
 EXPERIENCE LEVEL: ${experienceLevel}
 ${experienceGuidance}
 
-Output ONLY the cover letter text (300-400 words). No salutations (e.g., "Dear Hiring Manager") or closings (e.g., "Sincerely"). Use placeholders [Name], [Date], [Phone], [Email] where needed.`;
+IMPORTANT FORMATTING INSTRUCTIONS:
+- Generate the body content starting with the salutation "Dear Hiring Manager,"
+- Include the salutation as the FIRST line of the body
+- Do NOT include:
+  * Header information (name, contact info, date, recipient)
+  * Closing/signature (e.g., "Sincerely", "Thank you for considering")
+- Start with: "Dear Hiring Manager," followed by the body paragraphs
+- End with the last paragraph of the body
+- Output 300-400 words of compelling body content (including salutation)
+
+Output the cover letter body text starting with "Dear Hiring Manager," followed by 3 paragraphs (300-400 words total). No headers or closings.`;
 }

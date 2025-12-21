@@ -55,6 +55,10 @@ export interface ResumeEnhancerState {
   // Session tracking
   sessionStartTime: number;
   stepStartTimes: Record<number, number>;
+  
+  // Loop breaker state
+  currentCVHash?: string; // Hash of current CV to detect fundamental changes
+  suppressedFixHashes: string[]; // List of suppressed fix signature hashes
 }
 
 // Action Types
@@ -83,6 +87,8 @@ type ResumeEnhancerAction =
   | { type: 'SET_ACTIVE_FIX'; payload: string | undefined }
   | { type: 'MARK_FIX_APPLIED'; payload: string }
   | { type: 'MARK_FIX_DISMISSED'; payload: string }
+  | { type: 'MARK_FIX_SUPPRESSED'; payload: { fixId: string; reason: 'manual_override' | 'semantic_detected' | 'conflict_resolution'; fixSignatureHash?: string } }
+  | { type: 'MARK_FIX_SEMANTIC_MATCH'; payload: { fixId: string; foundTerm: string; confidence: number } }
   | { type: 'SET_ANALYZING'; payload: boolean }
   | { type: 'SET_SHOW_PROFILER_MODAL'; payload: boolean }
   | { type: 'SET_SHOW_SURGEON_OVERLAY'; payload: boolean }
@@ -118,7 +124,9 @@ const initialState: ResumeEnhancerState = {
   isSaving: false,
   saveError: null,
   sessionStartTime: Date.now(),
-  stepStartTimes: { 1: Date.now() }
+  stepStartTimes: { 1: Date.now() },
+  currentCVHash: undefined,
+  suppressedFixHashes: []
 };
 
 // Reducer
@@ -247,6 +255,46 @@ function resumeEnhancerReducer(
         )
       };
 
+    case 'MARK_FIX_SUPPRESSED':
+      return {
+        ...state,
+        fixAnnotations: state.fixAnnotations.map((f) =>
+          f.id === action.payload.fixId
+            ? {
+                ...f,
+                status: 'suppressed',
+                suppression: {
+                  timestamp: Date.now(),
+                  reason: action.payload.reason,
+                  userId: '' // Will be set by the service
+                },
+                fixSignatureHash: action.payload.fixSignatureHash
+              }
+            : f
+        ),
+        suppressedFixHashes: action.payload.fixSignatureHash
+          ? [...state.suppressedFixHashes.filter(h => h !== action.payload.fixSignatureHash), action.payload.fixSignatureHash]
+          : state.suppressedFixHashes
+      };
+
+    case 'MARK_FIX_SEMANTIC_MATCH':
+      return {
+        ...state,
+        fixAnnotations: state.fixAnnotations.map((f) =>
+          f.id === action.payload.fixId
+            ? {
+                ...f,
+                status: 'semantic_match',
+                semanticMatch: {
+                  requiredTerm: f.replacementText || f.originalText,
+                  foundTerm: action.payload.foundTerm,
+                  confidenceScore: action.payload.confidence
+                }
+              }
+            : f
+        )
+      };
+
     case 'SET_ANALYZING':
       return { ...state, isAnalyzing: action.payload };
 
@@ -312,7 +360,9 @@ function resumeEnhancerReducer(
       return {
         ...initialState,
         sessionStartTime: Date.now(),
-        stepStartTimes: { 1: Date.now() }
+        stepStartTimes: { 1: Date.now() },
+        currentCVHash: undefined,
+        suppressedFixHashes: []
       };
 
     default:

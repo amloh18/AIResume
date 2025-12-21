@@ -19,7 +19,14 @@ export async function POST(request: NextRequest) {
       jobData, 
       completedSteps, 
       activeSection, 
-      availableSections 
+      availableSections,
+      targetRole,
+      seniorityLevel,
+      templateId,
+      template,
+      cvTitle,
+      sessionId: providedSessionId,
+      isForMasterCV
     } = body;
     
     if (!cvData) {
@@ -88,7 +95,8 @@ export async function POST(request: NextRequest) {
     await getConnection();
 
     // Get or create session ID for anonymous users
-    let sessionId = request.cookies.get('cv-draft-session-id')?.value;
+    // Use provided sessionId first (from guestCVService), then cookie, then generate new
+    let sessionId = providedSessionId || request.cookies.get('cv-draft-session-id')?.value;
     
     if (!sessionId) {
       // Generate new session ID
@@ -96,9 +104,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Find existing draft by session ID (or user ID if authenticated)
+    // For guest users, prioritize sessionId; for authenticated, use userId
     const query = session?.user?.id 
-      ? { userId: session.user.id, isForMasterCV: true }
-      : { sessionId, isForMasterCV: true };
+      ? { userId: session.user.id, isForMasterCV: isForMasterCV !== false }
+      : { sessionId, isForMasterCV: isForMasterCV !== false };
 
     let draft = await TemporaryCVDraft.findOne(query);
 
@@ -112,6 +121,11 @@ export async function POST(request: NextRequest) {
       draft.completedSteps = completedSteps || draft.completedSteps;
       draft.activeSection = activeSection || draft.activeSection;
       draft.availableSections = availableSections || draft.availableSections;
+      draft.targetRole = targetRole !== undefined ? targetRole : draft.targetRole;
+      draft.seniorityLevel = seniorityLevel !== undefined ? seniorityLevel : draft.seniorityLevel;
+      draft.templateId = templateId !== undefined ? templateId : draft.templateId;
+      draft.template = template !== undefined ? template : draft.template;
+      draft.cvTitle = cvTitle !== undefined ? cvTitle : draft.cvTitle;
       
       // If user just authenticated, link to user
       if (session?.user?.id && !draft.userId) {
@@ -145,7 +159,12 @@ export async function POST(request: NextRequest) {
         completedSteps: completedSteps || [],
         activeSection,
         availableSections: availableSections || [],
-        isForMasterCV: true // Mark as Master CV draft
+        targetRole,
+        seniorityLevel,
+        templateId,
+        template,
+        cvTitle,
+        isForMasterCV: isForMasterCV !== false // Default to true for Master CV draft
       });
       
       // CRITICAL FIX: Mark cvData as modified for Mongoose Mixed type

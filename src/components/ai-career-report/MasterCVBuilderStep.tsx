@@ -31,18 +31,18 @@ import {
 } from 'lucide-react';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 // Import reusable form components
-import PersonalInfoForm from '@/components/studio/forms/PersonalInfoForm';
-import WorkExperienceSection from '@/components/studio/forms/WorkExperienceSection';
-import EducationSection from '@/components/studio/forms/EducationSection';
-import SkillsSection from '@/components/studio/forms/SkillsSection';
-import ProjectsSection from '@/components/studio/forms/ProjectsSection';
-import CertificatesSection from '@/components/studio/forms/CertificatesSection';
-import VolunteerSection from '@/components/studio/forms/VolunteerSection';
-import AwardsSection from '@/components/studio/forms/AwardsSection';
-import PublicationsSection from '@/components/studio/forms/PublicationsSection';
-import LanguagesSection from '@/components/studio/forms/LanguagesSection';
-import InterestsSection from '@/components/studio/forms/InterestsSection';
-import ReferencesSection from '@/components/studio/forms/ReferencesSection';
+import PersonalInfoForm from '@/components/forms/PersonalInfoForm';
+import WorkExperienceSection from '@/components/forms/WorkExperienceSection';
+import EducationSection from '@/components/forms/EducationSection';
+import SkillsSection from '@/components/forms/SkillsSection';
+import ProjectsSection from '@/components/forms/ProjectsSection';
+import CertificatesSection from '@/components/forms/CertificatesSection';
+import VolunteerSection from '@/components/forms/VolunteerSection';
+import AwardsSection from '@/components/forms/AwardsSection';
+import PublicationsSection from '@/components/forms/PublicationsSection';
+import LanguagesSection from '@/components/forms/LanguagesSection';
+import InterestsSection from '@/components/forms/InterestsSection';
+import ReferencesSection from '@/components/forms/ReferencesSection';
 // Import selectors and migration utilities
 import { getVisibleCVSections, getAddableCVSections } from '@/lib/selectors/cv-section-selectors';
 import { migrateLegacyCV, hasStructure } from '@/lib/migrations/cv-structure-migration';

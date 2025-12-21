@@ -12,7 +12,7 @@ export type FixCategory =
 
 export type FixSeverity = 'low' | 'medium' | 'high';
 
-export type FixStatus = 'open' | 'applied' | 'dismissed';
+export type FixStatus = 'open' | 'applied' | 'dismissed' | 'suppressed' | 'semantic_match';
 
 export type FixMatchStrategy = 'exact' | 'fuzzy' | 'field';
 
@@ -31,6 +31,17 @@ export interface FixAnnotation {
   issue: string;
   impactScoreDelta: number;
   status: FixStatus;
+  suppression?: {
+    timestamp: number;
+    reason: 'manual_override' | 'semantic_detected' | 'conflict_resolution';
+    userId: string;
+  };
+  semanticMatch?: {
+    requiredTerm: string;
+    foundTerm: string;
+    confidenceScore: number; // 0.0 to 1.0
+  };
+  fixSignatureHash?: string; // Hash of fix signature for persistent suppression
 }
 
 type PathToken = string | number;
@@ -151,12 +162,84 @@ export function normalizeSurgicalFixesToAnnotations(
         primary = { path: fix.fieldPath, value: current };
       }
     }
+    
+    // Determine expected section based on fix properties
+    const isSkillsFix = fix.section?.toLowerCase().includes('skill') || 
+                       fix.category === 'keywords' ||
+                       (fix.fieldPath && fix.fieldPath.includes('skills')) ||
+                       (fix.issue && /skill|keyword|reorder.*skill|prioritize.*skill/i.test(fix.issue));
+    
+    // Validate that skills fixes are not assigned to name field
+    if (primary && isSkillsFix && primary.path === 'basics.name') {
+      console.warn('⚠️ Rejecting skills fix assigned to basics.name, searching for correct field:', fix.issue);
+      primary = null; // Force re-search
+    }
+    
     if (!primary) {
-      const candidates = leaves.filter((l) => l.value && fix.original_text && l.value.includes(fix.original_text));
-      primary = candidates[0] || leaves.find((l) => l.value && l.value.length > 0) || { path: 'basics.summary', value: '' };
+      // Filter candidates based on section/category to avoid mismatches
+      let candidates = leaves.filter((l) => {
+        if (!l.value || !fix.original_text) return false;
+        
+        // Never assign skills fixes to name field
+        if (isSkillsFix && l.path === 'basics.name') {
+          return false;
+        }
+        
+        // If this is a skills fix, only consider skills fields
+        if (isSkillsFix) {
+          return l.path.includes('skills') && l.value.includes(fix.original_text);
+        }
+        
+        // If this is NOT a skills fix, exclude skills fields and name field
+        if (!isSkillsFix && (l.path.includes('skills') || l.path === 'basics.name')) {
+          return false;
+        }
+        
+        return l.value.includes(fix.original_text);
+      });
+      
+      // If no candidates found, use section-aware fallback
+      if (candidates.length === 0) {
+        if (isSkillsFix) {
+          // For skills fixes, try to find any skills field
+          const skillsLeaves = leaves.filter(l => l.path.includes('skills') && l.value && l.value.length > 0);
+          primary = skillsLeaves[0] || { path: 'skills[0].skills[0]', value: '' };
+        } else {
+          // For non-skills fixes, exclude name and skills fields
+          const validLeaves = leaves.filter(l => 
+            l.value && 
+            l.value.length > 0 && 
+            l.path !== 'basics.name' && 
+            !l.path.includes('skills')
+          );
+          primary = validLeaves[0] || { path: 'basics.summary', value: '' };
+        }
+      } else {
+        primary = candidates[0];
+      }
+    }
+    
+    // Final validation: ensure skills fixes never end up on name field
+    if (isSkillsFix && primary.path === 'basics.name') {
+      console.error('❌ Critical: Skills fix still assigned to basics.name after validation. Using skills fallback.');
+      const skillsLeaves = leaves.filter(l => l.path.includes('skills') && l.value && l.value.length > 0);
+      primary = skillsLeaves[0] || { path: 'skills[0].skills[0]', value: '' };
     }
 
     const match = findBestMatch(primary.value, fix.original_text);
+
+    // Generate fix signature hash for persistent suppression
+    const fixSignatureHash = (fix as any).fixSignatureHash || (() => {
+      // Simple hash function (client-side)
+      const signature = `${fix.issue || ''}|${primary.path || 'basics.summary'}|${fix.original_text || ''}`;
+      let hash = 0;
+      for (let i = 0; i < signature.length; i++) {
+        const char = signature.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(16).padStart(16, '0').substring(0, 16);
+    })();
 
     return {
       id: fix.id,
@@ -170,7 +253,8 @@ export function normalizeSurgicalFixesToAnnotations(
       match: { start: match.start, end: match.end, matchStrategy: match.strategy },
       issue: fix.issue || '',
       impactScoreDelta: fix.impact_score_delta || 0,
-      status: 'open'
+      status: 'open',
+      fixSignatureHash
     };
   });
 }

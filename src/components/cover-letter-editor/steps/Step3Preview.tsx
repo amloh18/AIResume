@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useCoverLetterEditor } from '@/contexts/CoverLetterEditorContext';
-import CoverLetterPreview from '@/components/studio/CoverLetterPreview';
+import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { Save, CheckCircle2, XCircle, Loader2, Eye, ZoomIn, ZoomOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -102,39 +102,39 @@ export default function Step3Preview({ userId, onSave }: Step3PreviewProps) {
       {/* Split View: Info Left, Preview Right */}
       <div className="flex-1 flex gap-4 overflow-hidden">
         {/* Left Pane (50%) - Save controls and summary */}
-        <div className="w-1/2 flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm">
+        <div className="w-1/2 flex flex-col bg-white dark:bg-[#141810] rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="p-6">
-            <h2 className="text-xl font-bold text-[color:var(--text-primary)] mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
               Review & Save
             </h2>
             
             {/* Cover Letter Info */}
             <div className="space-y-4 mb-6">
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-4">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Title</p>
-                <p className="font-semibold text-[color:var(--text-primary)] text-sm">
+              <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Title</p>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">
                   {state.coverLetterTitle}
                 </p>
               </div>
               
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-4">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Template</p>
-                <p className="font-semibold text-[color:var(--text-primary)] text-sm">
+              <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Template</p>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">
                   {state.selectedTemplate?.name || 'None selected'}
                 </p>
               </div>
               
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-4">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Statistics</p>
-                <div className="flex gap-4 text-sm text-[color:var(--text-primary)]">
+              <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Statistics</p>
+                <div className="flex gap-4 text-sm text-gray-900 dark:text-white">
                   <span>{wordCount} words</span>
                   <span>{characterCount} characters</span>
                 </div>
               </div>
               
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-4">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Status</p>
-                <p className="font-semibold text-[color:var(--text-primary)] text-sm capitalize">
+              <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Status</p>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm capitalize">
                   {state.coverLetterData.status || 'draft'}
                 </p>
               </div>
@@ -149,7 +149,7 @@ export default function Step3Preview({ userId, onSave }: Step3PreviewProps) {
                   ? 'bg-green-500 text-white'
                   : saveStatus === 'error'
                   ? 'bg-red-500 text-white'
-                  : 'bg-[var(--accent-primary)] text-black hover:bg-[var(--accent-hover)]'
+                  : 'bg-lime-500 dark:bg-[#99FF00] text-black hover:bg-lime-600 dark:hover:bg-[#88e600]'
               } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSaving ? (
@@ -185,25 +185,25 @@ export default function Step3Preview({ userId, onSave }: Step3PreviewProps) {
         </div>
 
         {/* Right Pane (50%) - Final Preview */}
-        <div className="w-1/2 flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm">
+        <div className="w-1/2 flex flex-col bg-white dark:bg-[#141810] rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
           {/* Preview Header with Controls */}
-          <div className="p-4 border-b border-[color:var(--border-color)] flex items-center justify-between">
-            <h3 className="text-base font-bold text-[color:var(--text-primary)]">Final Preview</h3>
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white">Final Preview</h3>
             <div className="flex items-center gap-2">
-              <Eye className="w-4 h-4 text-[color:var(--text-secondary)]" />
-              <span className="text-xs text-[color:var(--text-secondary)]">
+              <Eye className="w-4 h-4 text-gray-600 dark:text-gray-200" />
+              <span className="text-xs text-gray-600 dark:text-gray-200">
                 Zoom: {Math.round(zoom * 100)}%
               </span>
               <div className="flex gap-1">
                 <button
                   onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                  className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs"
+                  className="px-2 py-1 bg-gray-100 dark:bg-[#313a28] hover:bg-gray-200 dark:hover:bg-[#3a4530] text-gray-900 dark:text-white rounded text-xs"
                 >
                   <ZoomOut className="w-3 h-3" />
                 </button>
                 <button
                   onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                  className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs"
+                  className="px-2 py-1 bg-gray-100 dark:bg-[#313a28] hover:bg-gray-200 dark:hover:bg-[#3a4530] text-gray-900 dark:text-white rounded text-xs"
                 >
                   <ZoomIn className="w-3 h-3" />
                 </button>

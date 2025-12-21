@@ -37,7 +37,8 @@
     "setup:test-users": "npx tsx scripts/setup-test-users.ts",
     "test:user-flows": "npx tsx scripts/test-user-flows.ts",
     "create:mock-jobs": "npx tsx scripts/create-mock-jobs.ts",
-    "fix:source-field": "npx tsx scripts/fix-missing-source-field.ts"
+    "fix:source-field": "npx tsx scripts/fix-missing-source-field.ts",
+    "migrate:cv-type": "npx tsx scripts/migrate-cv-type.ts"
   },
   "keywords": [
     "cv",

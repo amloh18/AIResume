@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { CV, JobApplication } from '@/models';
+import { CV, JobApplication, ApplicationJourney } from '@/models';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { ApplicationJourneyRelationshipService } from '@/lib/services/cvJourneyRelationshipService';
+import { CVRepository } from '@/lib/repositories/cv-repository';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
+import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
+
+// Race condition prevention: In-memory lock map (for single instance)
+// In production, use Redis or similar for distributed locking
+const calculationLocks = new Map<string, Promise<any>>();
 
 // Helper function to get userId from either session, extension token, or request body
 async function getUserIdFromRequest(request: NextRequest, bodyUserId?: string): Promise<{ userId: string; source: 'session' | 'extension' | 'body' } | null> {
@@ -61,15 +68,46 @@ async function getUserIdFromRequest(request: NextRequest, bodyUserId?: string): 
 }
 
 /**
+ * Generate content hash for CV versioning
+ */
+function generateContentHash(cvData: UnifiedCVDataStructure): string {
+  // Create a stable string representation of CV data
+  const cvString = JSON.stringify({
+    basics: cvData.basics,
+    work: cvData.work,
+    education: cvData.education,
+    skills: cvData.skills,
+    projects: cvData.projects
+  });
+  
+  // Generate SHA-256 hash
+  return crypto.createHash('sha256').update(cvString).digest('hex');
+}
+
+/**
  * POST /api/ats/calculate-score
  * Calculate ATS score for a CV against a job
+ * 
+ * Race condition prevention: Uses idempotency key from request
  */
 export async function POST(request: NextRequest) {
   try {
     await getConnection();
 
     const body = await request.json();
-    const { cvId, jobId, userId: bodyUserId } = body;
+    const { cvId, jobId, userId: bodyUserId, idempotencyKey } = body;
+    
+    // Race condition prevention: Check if calculation is already in progress
+    if (idempotencyKey && calculationLocks.has(idempotencyKey)) {
+      console.log('⏳ ATS Calculate Score API - Calculation already in progress, waiting...');
+      try {
+        const existingResult = await calculationLocks.get(idempotencyKey);
+        return NextResponse.json(existingResult);
+      } catch (error) {
+        // If existing calculation failed, proceed with new one
+        calculationLocks.delete(idempotencyKey);
+      }
+    }
 
     if (!cvId || !jobId) {
       return NextResponse.json(
@@ -167,27 +205,120 @@ export async function POST(request: NextRequest) {
       jobTitle: jobData.title
     });
 
-    // Calculate ATS score using AIAssistantService
-    const analysis = await AIAssistantService.calculateATSScore(cvData, jobData);
+    // Generate content hash for versioning (Critical Action Item #5)
+    const contentHash = generateContentHash(cvData);
+    
+    // Check if score is stale (content hash mismatch)
+    const cvRepository = new CVRepository();
+    const isStale = await cvRepository.isATSScoreStale(cvId, contentHash);
+    
+    if (!isStale && cv.metadata?.atsScore !== undefined) {
+      console.log('📊 ATS Calculate Score API - Using cached score (content unchanged)');
+      // Return existing score if content hasn't changed
+      return NextResponse.json({
+        success: true,
+        data: {
+          score: cv.metadata.atsScore,
+          atsScore: cv.metadata.atsScore,
+          cached: true,
+          factorBreakdown: cv.metadata.atsScoreBreakdown,
+          knockOutFactors: cv.metadata.knockOutFactors
+        }
+      });
+    }
 
-    console.log('✅ ATS Calculate Score API - Score calculated:', {
-      score: analysis.score,
-      missingKeywords: analysis.missingKeywords.length,
-      strengths: analysis.strengths.length
-    });
+    // Create calculation promise for race condition prevention
+    const calculationPromise = (async () => {
+      // Calculate ATS score using AIAssistantService
+      const analysis = await AIAssistantService.calculateATSScore(cvData, jobData);
 
-    // Return result in expected format
-    return NextResponse.json({
-      success: true,
-      data: {
+      console.log('✅ ATS Calculate Score API - Score calculated:', {
         score: analysis.score,
-        atsScore: analysis.score, // Alias for compatibility
-        missingKeywords: analysis.missingKeywords,
-        strengths: analysis.strengths,
-        suggestions: analysis.suggestions,
-        analysis
+        missingKeywords: analysis.missingKeywords.length,
+        strengths: analysis.strengths.length
+      });
+
+      // Save ATS score to database (atomic operation)
+      try {
+        // Find journey by jobId and userId (or cvId and jobId)
+        let journey = await ApplicationJourney.findOne({ 
+          jobId, 
+          userId: new (await import('mongoose')).Types.ObjectId(userId) 
+        });
+
+        // If not found by jobId, try finding by cvId and jobId
+        if (!journey) {
+          journey = await ApplicationJourney.findOne({ 
+            cvId, 
+            jobId,
+            userId: new (await import('mongoose')).Types.ObjectId(userId) 
+          });
+        }
+
+        // Atomic transaction: Save to both Journey and CV
+        const savePromises: Promise<any>[] = [];
+
+        // Save to Journey if found
+        if (journey) {
+          const journeyId = journey._id.toString();
+          savePromises.push(
+            ApplicationJourneyRelationshipService.updateJourneyATSScore(
+              journeyId,
+              analysis.score,
+              jobId,
+              analysis.factorBreakdown,
+              contentHash
+            )
+          );
+          console.log('✅ ATS Calculate Score API - Score saved to journey:', journeyId);
+        } else {
+          console.log('⚠️ ATS Calculate Score API - No journey found for cvId and jobId');
+        }
+
+        // Save to CV metadata with content hash
+        savePromises.push(
+          cvRepository.updateATSScore(
+            cvId, 
+            analysis.score, 
+            contentHash,
+            analysis.factorBreakdown
+          )
+        );
+
+        // Execute all saves in parallel
+        await Promise.all(savePromises);
+        console.log('✅ ATS Calculate Score API - Score saved to database with content hash');
+
+      } catch (dbError) {
+        console.error('⚠️ ATS Calculate Score API - Error saving to database:', dbError);
+        // Continue even if database save fails - return the calculated score
       }
-    });
+
+      return {
+        success: true,
+        data: {
+          score: analysis.score,
+          atsScore: analysis.score,
+          missingKeywords: analysis.missingKeywords,
+          strengths: analysis.strengths,
+          suggestions: analysis.suggestions,
+          factorBreakdown: analysis.factorBreakdown,
+          knockOutFactors: analysis.knockOutFactors,
+          contentHash, // Include hash in response
+          analysis
+        }
+      };
+    })();
+
+    // Store calculation promise for idempotency
+    if (idempotencyKey) {
+      calculationLocks.set(idempotencyKey, calculationPromise);
+      // Clean up after 5 minutes
+      setTimeout(() => calculationLocks.delete(idempotencyKey), 5 * 60 * 1000);
+    }
+
+    const result = await calculationPromise;
+    return NextResponse.json(result);
 
   } catch (error) {
     console.error('❌ ATS Calculate Score API - Error:', error);

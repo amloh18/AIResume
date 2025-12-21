@@ -120,6 +120,37 @@ const CVListView: React.FC<CVListViewProps> = ({
         }
     };
 
+    const getCVType = (cv: CV): 'master' | 'journey' | 'standalone' => {
+        // Check explicit cvType field first
+        if (cv.cvType) return cv.cvType;
+        if (cv.metadata?.cvType) return cv.metadata.cvType;
+        
+        // Check if it's a master CV
+        if (cv.isMaster === true || 
+            cv.metadata?.isMaster === true || 
+            cv.metadata?.isMaster === 'true' ||
+            cv.metadata?.createdVia === 'ai-career-report') {
+            return 'master';
+        }
+        
+        // Check if it has a journeyId (journey CV)
+        if (cv.journeyId || cv.metadata?.journeyId) {
+            return 'journey';
+        }
+        
+        // Default to standalone
+        return 'standalone';
+    };
+
+    const getCVTypeColor = (type: 'master' | 'journey' | 'standalone') => {
+        switch (type) {
+            case 'master': return 'bg-lime-100 text-lime-700 dark:bg-lime-900/30 dark:text-lime-400';
+            case 'journey': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+            case 'standalone': return 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-400';
+            default: return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+        }
+    };
+
     const getRandomColor = (id: string) => {
         const colors = [
             '#F0FDF4', '#FEF3C7', '#FEE2E2', '#E0E7FF', '#F3E8FF',
@@ -139,6 +170,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                     <thead>
                         <tr className="bg-gray-50 dark:bg-[#141810] border-b border-gray-200 dark:border-white/10">
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
+                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Type</th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                                 {showATSScore ? 'ATS Score' : 'CV Score'}
@@ -212,6 +244,13 @@ const CVListView: React.FC<CVListViewProps> = ({
                                         )}
                                         {cv.description && <span className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{cv.description}</span>}
                                     </div>
+                                </td>
+
+                                {/* Type */}
+                                <td className="px-6 py-3">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getCVTypeColor(getCVType(cv))}`}>
+                                        {getCVType(cv)}
+                                    </span>
                                 </td>
 
                                 {/* Status */}
@@ -302,7 +341,7 @@ const CVListView: React.FC<CVListViewProps> = ({
                         ))}
                         {cvs.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                                <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                                     <div className="flex flex-col items-center justify-center">
                                         <FileText size={32} className="opacity-20 mb-2" />
                                         <p>No CVs found</p>

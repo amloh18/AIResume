@@ -3,7 +3,10 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface ICoverLetter extends Document {
   userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
   title: string;
-  content: string;
+  content: string; // Full content (kept for backward compatibility, auto-generated from header+body+footer)
+  header?: string; // Header section: name, contact info, date, recipient info
+  body?: string; // Body section: main cover letter content (AI-generated)
+  footer?: string; // Footer section: closing with name, date, phone, email
   status?: string; // draft, published, archived
   jobId?: mongoose.Types.ObjectId; // Optional link to a job
   cvId?: mongoose.Types.ObjectId; // Optional link to a CV
@@ -45,6 +48,21 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     required: [true, 'Cover letter content is required'],
     trim: true,
     maxlength: [10000, 'Content cannot exceed 10000 characters']
+  },
+  header: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Header cannot exceed 500 characters']
+  },
+  body: {
+    type: String,
+    trim: true,
+    maxlength: [8000, 'Body cannot exceed 8000 characters']
+  },
+  footer: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Footer cannot exceed 500 characters']
   },
   status: {
     type: String,
@@ -151,17 +169,33 @@ coverLetterSchema.index({ journeyId: 1, userId: 1 }); // Unique cover letter per
 coverLetterSchema.index({ 'metadata.tags': 1 }); // Tag-based searches
 coverLetterSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Public cover letters
 
-// Pre-save middleware to update metadata
+// Pre-save middleware to update metadata (DO NOT merge content - merging happens in preview only)
 coverLetterSchema.pre('save', function(next) {
   // Update lastModified
   this.metadata.lastModified = new Date();
   
-  // Calculate word and character count
-  if (this.content) {
+  // DO NOT merge header+body+footer into content here
+  // Content will be generated on-the-fly in preview only
+  // Store header, body, and footer separately in database
+  
+  // Calculate word and character count from merged content for metadata purposes only
+  if (this.header || this.body || this.footer) {
+    const { mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
+    const mergedContent = mergeCoverLetterContent(
+      this.header || '',
+      this.body || '',
+      this.footer || ''
+    );
+    
+    if (mergedContent) {
+      this.metadata.characterCount = mergedContent.length;
+      this.metadata.wordCount = mergedContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+      this.metadata.estimatedReadingTime = Math.ceil(this.metadata.wordCount / 200);
+    }
+  } else if (this.content) {
+    // Fallback: if only content exists (old format), use it for metadata
     this.metadata.characterCount = this.content.length;
     this.metadata.wordCount = this.content.trim().split(/\s+/).filter(word => word.length > 0).length;
-    
-    // Estimate reading time (average 200 words per minute)
     this.metadata.estimatedReadingTime = Math.ceil(this.metadata.wordCount / 200);
   }
   

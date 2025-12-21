@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
                 try {
                     // Store connection
                     connections.set(userId, controller);
+                    console.log(`🔗 SSE connection stored for user ${userId}. Total active connections: ${connections.size}`);
 
                     // Send initial connection message
                     controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'connected' })}\n\n`));
@@ -208,9 +209,14 @@ export async function sendNotificationToUser(userId: string, notification: any) 
         });
         try {
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+            console.log(`✅ Notification enqueued to SSE stream for user ${userId}:`, notification.title);
         } catch (error) {
             console.error('Error sending notification via SSE:', error);
             connections.delete(userId);
         }
+    } else {
+        const activeUserIds = Array.from(connections.keys());
+        console.warn(`⚠️ No SSE connection found for user ${userId}. Active connections:`, activeUserIds);
+        console.warn(`⚠️ Notification will not be delivered via SSE. User may need to refresh the page.`);
     }
 }

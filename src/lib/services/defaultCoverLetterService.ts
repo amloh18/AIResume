@@ -96,10 +96,13 @@ class DefaultCoverLetterServiceImpl implements DefaultCoverLetterService {
   }
   
   /**
-   * Returns the default content for a new cover letter template
-   * @returns string - Default cover letter content
+   * Returns the default body content for a new cover letter template
+   * Note: This returns ONLY the body (with salutation), not header or footer
+   * @returns string - Default cover letter body content
    */
   getDefaultCoverLetterContent(): string {
+    // Return ONLY body content starting with salutation
+    // Header and footer will be generated from CV data
     return `Dear Hiring Manager,
 
 I am writing to express my strong interest in the [Position Title] position at [Company Name]. With my background in [Your Field/Industry] and passion for [Relevant Skills/Interests], I am excited about the opportunity to contribute to your team.
@@ -108,13 +111,7 @@ In my current role as [Current Position] at [Current Company], I have developed 
 
 I am particularly drawn to [Company Name] because of [Specific Reason - Company Values, Mission, Recent News, etc.]. I am confident that my skills in [Relevant Skills] and my experience with [Relevant Experience] make me a strong candidate for this position.
 
-I would welcome the opportunity to discuss how my qualifications align with your needs. Thank you for considering my application. I look forward to hearing from you.
-
-Sincerely,
-[Your Name]
-
----
-This is a template cover letter. Please customize the content to match your specific experience and the job you're applying for.`;
+I would welcome the opportunity to discuss how my qualifications align with your needs.`;
   }
 }
 

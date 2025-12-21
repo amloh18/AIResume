@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       title: 'Master CV',
       cvData,
       journeyId: null, // Master CV is not tied to any specific journey
+      cvType: 'master', // Master CV type
       templateId: 'default', // Use default template
       status: 'draft',
       metadata: {

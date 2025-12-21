@@ -282,61 +282,24 @@ export function useUsageLimits() {
     return Math.abs(hash).toString(36);
   }, []);
 
-  // Load usage limits on mount
+  // Load usage limits on mount only
   useEffect(() => {
     fetchUsageLimits();
   }, [fetchUsageLimits]);
 
-  // Real-time credit sync: Poll for updates every 30 seconds when modal/page is active
+  // Listen for credit update events (only refresh when credits are actually used)
   useEffect(() => {
     if (!session?.user?.email) return;
 
-    // Only poll when document is visible (tab is active)
-    const isDocumentVisible = () => !document.hidden;
-
-    // Polling interval: 30 seconds
-    const POLL_INTERVAL = 30000; // 30 seconds
-
-    let pollInterval: NodeJS.Timeout | null = null;
-
-    const startPolling = () => {
-      if (pollInterval) return; // Already polling
-
-      pollInterval = setInterval(() => {
-        // Only fetch if document is visible
-        if (isDocumentVisible()) {
-          fetchUsageLimits();
-        }
-      }, POLL_INTERVAL);
+    const handleCreditUpdate = () => {
+      console.log('🔄 useUsageLimits - Credit update event received, refreshing usage limits');
+      fetchUsageLimits();
     };
 
-    const stopPolling = () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-      }
-    };
+    window.addEventListener('creditsUpdated', handleCreditUpdate);
 
-    // Start polling when component mounts
-    startPolling();
-
-    // Handle visibility change - pause polling when tab is hidden
-    const handleVisibilityChange = () => {
-      if (isDocumentVisible()) {
-        startPolling();
-        // Immediately fetch when tab becomes visible
-        fetchUsageLimits();
-      } else {
-        stopPolling();
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Cleanup on unmount
     return () => {
-      stopPolling();
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('creditsUpdated', handleCreditUpdate);
     };
   }, [session?.user?.email, fetchUsageLimits]);
 

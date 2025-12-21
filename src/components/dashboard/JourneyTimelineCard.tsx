@@ -1291,7 +1291,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
   };
 
-  const fetchATSScore = async (cvId: string, jobId: string) => {
+  const fetchATSScore = async (cvId: string, jobId: string, forceRecalculate: boolean = false) => {
     if (!cvId || !jobId || atsScoreLoading) {
       console.log('🚫 JourneyTimelineCard - ATS calculation skipped:', {
         hasCvId: !!cvId,
@@ -1305,7 +1305,50 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     try {
       console.log('🔍 JourneyTimelineCard - Fetching ATS score for CV:', cvId, 'Job:', jobId);
 
-      // Use real ATS API endpoint
+      // Primary source: Fetch from database first (journey.atsScore)
+      if (!forceRecalculate && journey.atsScore !== undefined && journey.atsScore !== null) {
+        console.log('📊 JourneyTimelineCard - Using cached ATS score from journey:', journey.atsScore);
+        setAtsScore(journey.atsScore);
+        updateAtsScore(journey.atsScore);
+        setAtsScoreLoading(false);
+        return;
+      }
+
+      // If not in journey, check CV metadata
+      if (!forceRecalculate && linkedCV?.metadata?.atsScore !== undefined && linkedCV.metadata.atsScore !== null) {
+        console.log('📊 JourneyTimelineCard - Using cached ATS score from CV metadata:', linkedCV.metadata.atsScore);
+        const cachedScore = linkedCV.metadata.atsScore;
+        setAtsScore(cachedScore);
+        updateAtsScore(cachedScore);
+        
+        // Also update journey with cached score
+        const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            atsScore: cachedScore,
+            metadata: {
+              updatedAt: new Date(),
+              lastAccessedAt: new Date()
+            }
+          })
+        });
+        
+        if (journeyResponse.ok) {
+          console.log('✅ JourneyTimelineCard - Cached score synced to journey');
+        }
+        
+        setAtsScoreLoading(false);
+        return;
+      }
+
+      // No cached score found - calculate new score
+      console.log('🔄 JourneyTimelineCard - No cached score found, calculating new score...');
+
+      // Generate idempotency key for race condition prevention
+      const idempotencyKey = `ats-${cvId}-${jobId}-${Date.now()}`;
+
+      // Use real ATS API endpoint (will check content hash and return cached if unchanged)
       const response = await fetch('/api/ats/calculate-score', {
         method: 'POST',
         headers: {
@@ -1314,7 +1357,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         body: JSON.stringify({
           cvId,
           jobId,
-          userId: mongoDBUserId
+          userId: mongoDBUserId,
+          idempotencyKey: forceRecalculate ? undefined : idempotencyKey // Only use key if not forcing
         }),
       });
 
@@ -1327,32 +1371,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 
       if (result.success && result.data) {
         const score = result.data.score || result.data.atsScore;
+        const isCached = result.data.cached === true;
+        
         if (score !== undefined && score !== null) {
           setAtsScore(score);
 
           // Update journey context
           updateAtsScore(score);
 
-          // Update journey with ATS score using PUT endpoint with journey.id
-          const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              atsScore: score,
-              metadata: {
-                updatedAt: new Date(),
-                lastAccessedAt: new Date()
-              }
-            })
-          });
-
-          if (journeyResponse.ok) {
-            console.log('✅ JourneyTimelineCard - ATS score saved to journey');
-          } else {
-            console.error('❌ JourneyTimelineCard - Failed to save ATS score to journey');
-          }
-
-          // Update parent component with new score
+          // Score is already saved to database by API endpoint (atomic operation)
+          // Just update parent component if needed
           if (onUpdateJourney) {
             onUpdateJourney(journey.id, {
               atsScore: score,
@@ -1364,11 +1392,19 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           if (score >= 80) {
             updateJourneyStatus('ats-checked');
             updateCurrentStep(4);
-            toast.success(`ATS score calculated: ${score}% - Great match!`);
+            toast.success(
+              isCached 
+                ? `ATS score: ${score}% (cached)` 
+                : `ATS score calculated: ${score}% - Great match!`
+            );
           } else {
             updateJourneyStatus('ats-checked');
             updateCurrentStep(3);
-            toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
+            toast.success(
+              isCached 
+                ? `ATS score: ${score}% (cached)` 
+                : `ATS score calculated: ${score}% - Consider optimizing for better match`
+            );
           }
         } else {
           throw new Error('Invalid score in response');
@@ -1393,79 +1429,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     try {
       console.log('🔍 JourneyTimelineCard - Running ATS check for CV:', journey.cvId, 'Job:', journey.jobId);
 
-      // Use real ATS API endpoint
-      const response = await fetch('/api/ats/calculate-score', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cvId: journey.cvId,
-          jobId: journey.jobId,
-          userId: mongoDBUserId
-        })
-      });
-
-      console.log('🔍 JourneyTimelineCard - ATS check response status:', response.status);
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ JourneyTimelineCard - ATS check result:', result);
-
-        if (result.success && result.data) {
-          const score = result.data.score || result.data.atsScore;
-          if (score !== undefined && score !== null) {
-            // Update local state first
-            setAtsScore(score);
-
-            // Update journey context
-            updateAtsScore(score);
-
-            // Update journey with ATS score using PUT endpoint with journey.id
-            const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                atsScore: score,
-                metadata: {
-                  updatedAt: new Date(),
-                  lastAccessedAt: new Date()
-                }
-              })
-            });
-
-            if (journeyResponse.ok) {
-              console.log('✅ JourneyTimelineCard - ATS score saved to journey');
-            } else {
-              console.error('❌ JourneyTimelineCard - Failed to save ATS score to journey');
-            }
-
-            // Update parent component with new score
-            if (onUpdateJourney) {
-              onUpdateJourney(journey.id, {
-                atsScore: score,
-                currentStep: score >= 80 ? 4 : 3
-              });
-            }
-
-            // Update journey status based on score
-            if (score >= 80) {
-              updateJourneyStatus('ats-checked');
-              updateCurrentStep(4);
-              toast.success(`ATS score calculated: ${score}% - Great match!`);
-            } else {
-              updateJourneyStatus('ats-checked');
-              updateCurrentStep(3);
-              toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
-            }
-          }
-        } else {
-          console.error('❌ JourneyTimelineCard - ATS check failed:', result);
-          toast.error('ATS calculation failed. Please try again.');
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('❌ JourneyTimelineCard - ATS check API error:', response.status, errorData);
-        toast.error('ATS calculation failed. Please try again later.');
-      }
+      // Force recalculation (user explicitly requested)
+      await fetchATSScore(journey.cvId, journey.jobId, true);
     } catch (error) {
       console.error('❌ JourneyTimelineCard - Error running ATS check:', error);
       toast.error('Network error during ATS calculation. Please check your connection.');

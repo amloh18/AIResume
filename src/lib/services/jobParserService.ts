@@ -444,6 +444,11 @@ Return JSON matching this structure:
         model: 'gemini-2.5-flash-lite'
       });
 
+      // Validate result
+      if (!result || !result.content) {
+        throw new Error('Gemini API returned empty or invalid response');
+      }
+
       // Parse JSON from response
       let jsonText = result.content;
       

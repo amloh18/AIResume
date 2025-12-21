@@ -31,6 +31,7 @@ const publicRoutes = [
   '/terms',
   '/cookie-policy',
   '/force-logout',
+  '/resume-enhancer', // Allow guest access to resume-enhancer for onboarding
 ]
 
 const isProtectedRoute = (req: NextRequest) => {

@@ -411,7 +411,7 @@ ${experienceGuidance}
 
 CONSTRAINTS AND OUTPUT DIRECTIVES (STRICTLY ENFORCE):
 
-OUTPUT FOCUS: Generate EXACTLY 3 paragraphs - no more, no less. Do not include a salutation (e.g., "Dear Hiring Manager,"), a subject line, or a closing/sign-off (e.g., "Sincerely,").
+OUTPUT FOCUS: Generate EXACTLY 3 paragraphs - no more, no less. Start with the salutation "Dear Hiring Manager," as the first line, followed by the 3 paragraphs. Do not include a subject line or a closing/sign-off (e.g., "Sincerely,").
 
 PARAGRAPH STRUCTURE: Each paragraph must be substantial (3-5 sentences) and serve a distinct purpose:
 - Paragraph 1: Hook and immediate value proposition

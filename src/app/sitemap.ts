@@ -14,12 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // Tier 2: Core Product Pages (High Priority)
     {
-      url: `${baseUrl}/ai-career-report`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.9, // AI Career Guide / ATS Analysis Tool
-    },
-    {
       url: `${baseUrl}/features`,
       lastModified: now,
       changeFrequency: 'weekly',

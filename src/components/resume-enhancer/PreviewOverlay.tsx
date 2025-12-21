@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { X, Download, Loader2, FileText } from 'lucide-react';
-import CVPreview from '@/components/studio/CVPreview';
+// TODO: CVPreview was deleted - need to replace with CVPreviewContent or create new preview component
+// import CVPreview from '@/components/studio/CVPreview';
+import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 
 export default function PreviewOverlay() {
     const { state, dispatch } = useResumeEnhancer();
@@ -77,9 +79,9 @@ export default function PreviewOverlay() {
                 <div className="max-w-4xl mx-auto">
                     {state.selectedTemplate ? (
                         <div className="bg-white rounded-lg shadow-2xl border border-black/10 dark:border-white/10">
-                            <CVPreview
+                            <CVPreviewContent
                                 cvData={state.cvData}
-                                template={state.selectedTemplate}
+                                selectedTemplate={state.selectedTemplate}
                                 jobData={state.jobData}
                             />
                         </div>

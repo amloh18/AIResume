@@ -3,7 +3,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import TemplateSelector from '@/components/studio/TemplateSelector';
+// TODO: TemplateSelector was deleted - need to create replacement or use alternative
+// import TemplateSelector from '@/components/studio/TemplateSelector';
 import { ITemplate } from '@/types/template';
 
 interface Step2TemplateProps {
@@ -41,11 +42,11 @@ export default function Step2Template({ onComplete }: Step2TemplateProps) {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
-        <TemplateSelector
-          selectedTemplate={state.selectedTemplate}
-          onTemplateSelect={handleTemplateSelect}
-          cvData={state.cvData}
-        />
+        {/* TODO: TemplateSelector was deleted - need to implement replacement */}
+        <div className="text-center py-12 text-[color:var(--text-secondary)]">
+          <p>Template selector component needs to be reimplemented</p>
+          <p className="text-sm mt-2">Selected template functionality temporarily disabled</p>
+        </div>
       </motion.div>
 
       {state.selectedTemplate && (

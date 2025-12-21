@@ -6,6 +6,9 @@ import { X, Sparkles, FileText, Loader2, CheckCircle, AlertCircle, ScanLine } fr
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
+import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
+import { useCredits } from '@/lib/hooks/useCredits';
+import UpgradeCard from '@/components/dashboard/UpgradeCard';
 
 interface ParsedJobData {
   jobTitle: string;
@@ -32,18 +35,31 @@ interface JobParserDialogProps {
   onClose: () => void;
   onParseComplete: (data: ParsedJobData) => void;
   customDescription?: string;
+  showSaveAndTrack?: boolean; // New prop to show "Save and Track" option
+  onSaveAndTrack?: (data: ParsedJobData) => void; // Callback for "Save and Track"
 }
 
 const JobParserDialog: React.FC<JobParserDialogProps> = ({
   isOpen,
   onClose,
   onParseComplete,
-  customDescription
+  customDescription,
+  showSaveAndTrack = false,
+  onSaveAndTrack
 }) => {
+  const { user } = useUnifiedAuth();
+  const { credits, loading: creditsLoading } = useCredits();
   const [inputText, setInputText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedJobData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showUpgradePopup, setShowUpgradePopup] = useState(false);
+  
+  // Editable fields state
+  const [editedJobTitle, setEditedJobTitle] = useState('');
+  const [editedCompany, setEditedCompany] = useState('');
+  const [editedLocation, setEditedLocation] = useState('');
+  const [editedSalary, setEditedSalary] = useState<{ min?: number; max?: number; currency?: string; period?: 'hourly' | 'monthly' | 'yearly' } | null>(null);
 
   // Reset form when dialog closes
   useEffect(() => {
@@ -53,6 +69,10 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       setParsedData(null);
       setError(null);
       setIsParsing(false);
+      setEditedJobTitle('');
+      setEditedCompany('');
+      setEditedLocation('');
+      setEditedSalary(null);
     }
   }, [isOpen]);
 
@@ -62,6 +82,35 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       return;
     }
 
+    // Wait for credits to load before checking
+    if (creditsLoading) {
+      setError('Loading membership information...');
+      return;
+    }
+
+    // Check if user is on free plan and show upgrade popup BEFORE parsing to save AI tokens
+    if (credits && user?.id) {
+      const isFreeUser = credits.planKey === 'free';
+      const hasNoCredits = credits.creditsRemaining <= 0 && credits.limit !== -1;
+      
+      if (isFreeUser || hasNoCredits) {
+        // Show upgrade popup before parsing - this saves AI tokens by prompting upgrade first
+        setShowUpgradePopup(true);
+        return; // Don't parse yet - wait for user to upgrade or dismiss
+      }
+    } else if (!user?.id) {
+      setError('Please sign in to parse job descriptions');
+      return;
+    } else if (!credits) {
+      setError('Unable to verify membership. Please try again.');
+      return;
+    }
+
+    // Proceed with parsing if user has credits or is paid user
+    await performParse();
+  };
+
+  const performParse = async () => {
     setIsParsing(true);
     setError(null);
     setParsedData(null);
@@ -79,6 +128,15 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // If credit check failed, show upgrade popup
+        if (errorData.requiresUpgrade && response.status === 403) {
+          setShowUpgradePopup(true);
+          setError(errorData.error || 'You need to upgrade to parse job descriptions');
+          setIsParsing(false);
+          return;
+        }
+        
         throw new Error(errorData.error || 'Failed to parse job description');
       }
 
@@ -86,6 +144,11 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       
       if (result.success && result.data) {
         setParsedData(result.data);
+        // Initialize editable fields with parsed data
+        setEditedJobTitle(result.data.jobTitle || '');
+        setEditedCompany(result.data.company || '');
+        setEditedLocation(result.data.location || '');
+        setEditedSalary(result.data.salary || null);
         toast.success('Job description parsed successfully!');
       } else {
         throw new Error('Invalid response from server');
@@ -101,8 +164,31 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
 
   const handleSave = () => {
     if (parsedData) {
+      // Merge edited fields with parsed data
+      const updatedData: ParsedJobData = {
+        ...parsedData,
+        jobTitle: editedJobTitle || parsedData.jobTitle,
+        company: editedCompany || parsedData.company,
+        location: editedLocation || parsedData.location,
+        salary: editedSalary || parsedData.salary,
+      };
       // Always save as draft - credit check will happen when moving to 'created' stage
-      onParseComplete(parsedData);
+      onParseComplete(updatedData);
+      handleClose();
+    }
+  };
+
+  const handleSaveAndTrack = () => {
+    if (parsedData && onSaveAndTrack) {
+      // Merge edited fields with parsed data
+      const updatedData: ParsedJobData = {
+        ...parsedData,
+        jobTitle: editedJobTitle || parsedData.jobTitle,
+        company: editedCompany || parsedData.company,
+        location: editedLocation || parsedData.location,
+        salary: editedSalary || parsedData.salary,
+      };
+      onSaveAndTrack(updatedData);
       handleClose();
     }
   };
@@ -204,6 +290,31 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
                 </div>
               </div>
 
+              {/* Info Section - How to Copy Description */}
+              <div className="p-2">
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  💡 How to copy job description:
+                </p>
+                <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                  <li className="flex items-start gap-2">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">1.</span>
+                    <span>Copy everything from the job board page - we'll do the cleaning for you!</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">2.</span>
+                    <span>We automatically extract: <strong>company name</strong>, <strong>salary</strong>, <strong>location</strong>, and <strong>job description</strong></span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">3.</span>
+                    <span>No need to format or clean up - just paste everything as-is</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">4.</span>
+                    <span>Our AI will parse and organize all the details automatically</span>
+                  </li>
+                </ul>
+              </div>
+
               {/* Error Message */}
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -247,40 +358,89 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
                 </p>
               </div>
 
-              {/* Preview Fields */}
+              {/* Editable Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                     Job Title
                   </label>
-                  <div className="p-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-gray-200 dark:border-lime-500/20 text-gray-900 dark:text-white">
-                    {parsedData.jobTitle || 'N/A'}
-                  </div>
+                  <input
+                    type="text"
+                    value={editedJobTitle}
+                    onChange={(e) => setEditedJobTitle(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
+                    placeholder="Enter job title"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                     Company
                   </label>
-                  <div className="p-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-gray-200 dark:border-lime-500/20 text-gray-900 dark:text-white">
-                    {parsedData.company || 'N/A'}
-                  </div>
+                  <input
+                    type="text"
+                    value={editedCompany}
+                    onChange={(e) => setEditedCompany(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
+                    placeholder="Enter company name"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                     Location
                   </label>
-                  <div className="p-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-gray-200 dark:border-lime-500/20 text-gray-900 dark:text-white">
-                    {parsedData.location || 'N/A'}
-                  </div>
+                  <input
+                    type="text"
+                    value={editedLocation}
+                    onChange={(e) => setEditedLocation(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
+                    placeholder="Enter location"
+                  />
                 </div>
-                <div>
+                <div className="col-span-2">
                   <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
                     Salary
                   </label>
-                  <div className="p-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-gray-200 dark:border-lime-500/20 text-gray-900 dark:text-white">
-                    {parsedData.salary?.min && parsedData.salary?.max
-                      ? `${parsedData.salary.currency || 'USD'} ${parsedData.salary.min}-${parsedData.salary.max} ${parsedData.salary.period || 'yearly'}`
-                      : 'N/A'}
+                  <div className="flex gap-1.5 flex-wrap">
+                    <input
+                      type="text"
+                      value={editedSalary?.min || ''}
+                      onChange={(e) => {
+                        const min = e.target.value ? parseFloat(e.target.value) : undefined;
+                        setEditedSalary(prev => ({ ...prev, min, currency: prev?.currency || 'USD', period: prev?.period || 'yearly' }));
+                      }}
+                      className="flex-1 min-w-[80px] px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
+                      placeholder="Min"
+                    />
+                    <input
+                      type="text"
+                      value={editedSalary?.max || ''}
+                      onChange={(e) => {
+                        const max = e.target.value ? parseFloat(e.target.value) : undefined;
+                        setEditedSalary(prev => ({ ...prev, max, currency: prev?.currency || 'USD', period: prev?.period || 'yearly' }));
+                      }}
+                      className="flex-1 min-w-[80px] px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
+                      placeholder="Max"
+                    />
+                    <select
+                      value={editedSalary?.currency || 'USD'}
+                      onChange={(e) => setEditedSalary(prev => ({ ...prev, currency: e.target.value as string, period: prev?.period || 'yearly' }))}
+                      className="px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50 min-w-[70px]"
+                    >
+                      <option value="USD">USD</option>
+                      <option value="EUR">EUR</option>
+                      <option value="GBP">GBP</option>
+                      <option value="CAD">CAD</option>
+                      <option value="AUD">AUD</option>
+                    </select>
+                    <select
+                      value={editedSalary?.period || 'yearly'}
+                      onChange={(e) => setEditedSalary(prev => ({ ...prev, period: e.target.value as 'hourly' | 'monthly' | 'yearly' }))}
+                      className="px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50 min-w-[60px]"
+                    >
+                      <option value="hourly">/hr</option>
+                      <option value="monthly">/mo</option>
+                      <option value="yearly">/yr</option>
+                    </select>
                   </div>
                 </div>
               </div>
@@ -291,25 +451,51 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
               </p>
 
               {/* Action Buttons */}
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <Button
-                  onClick={() => setParsedData(null)}
+                  onClick={() => {
+                    setParsedData(null);
+                    setEditedJobTitle('');
+                    setEditedCompany('');
+                    setEditedLocation('');
+                    setEditedSalary(null);
+                  }}
                   variant="outline"
-                  className="flex-1 border-gray-300 dark:border-lime-500/30 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#232f1c]"
+                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'flex-1'} border-gray-300 dark:border-lime-500/30 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#232f1c]`}
                 >
                   Parse Again
                 </Button>
                 <Button
                   onClick={handleSave}
-                  className="flex-1 bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] dark:hover:bg-[#80FF00]/80 text-black dark:text-black"
+                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'flex-1'} bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] dark:hover:bg-[#80FF00]/80 text-black dark:text-black`}
                 >
                   Save Job
                 </Button>
+                {showSaveAndTrack && onSaveAndTrack && (
+                  <Button
+                    onClick={handleSaveAndTrack}
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
+                  >
+                    Save and Track
+                  </Button>
+                )}
               </div>
             </motion.div>
           )}
         </div>
       </DialogContent>
+
+      {/* Upgrade Card - shown before parsing for free users to save AI tokens */}
+      {showUpgradePopup && user?.id && (
+        <UpgradeCard
+          userId={user.id}
+          onClose={() => {
+            setShowUpgradePopup(false);
+            // Don't automatically parse - user must click parse again after dismissing
+            // This prevents wasting AI tokens if they dismiss without upgrading
+          }}
+        />
+      )}
     </Dialog>
   );
 };

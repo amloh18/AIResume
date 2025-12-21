@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
 
     // Apply projection for list view (minimal fields)
     if (projection === 'list') {
-      query = query.select('id title status metadata.starred metadata.lastModified metadata.viewCount metadata.downloadCount createdAt updatedAt');
+      query = query.select('id title status cvType journeyId metadata.starred metadata.lastModified metadata.viewCount metadata.downloadCount createdAt updatedAt');
     }
     // Note: For summary projection, we'll populate templateId after query execution
     // to avoid CastError when templateId is a string (hardcoded templates)
@@ -197,7 +197,9 @@ export async function GET(request: NextRequest) {
         title: cv.title,
         isMaster: cv.metadata?.isMaster,
         status: cv.status,
-        userId: cv.userId
+        userId: cv.userId,
+        cvType: cv.cvType,
+        journeyId: cv.journeyId
       });
     });
 
@@ -240,6 +242,22 @@ export async function GET(request: NextRequest) {
         }
         : cv.metadata;
 
+      // Determine cvType - prioritize explicit cvType field from database
+      // Check if cvType exists and is a valid value (not null, undefined, or empty string)
+      const dbCvType = cv.cvType && cv.cvType.trim() ? cv.cvType.trim() : null;
+      const inferredCvType = cv.journeyId ? 'journey' : (cv.metadata?.isMaster || cv.isMaster) ? 'master' : 'standalone';
+      // Only use inferred if dbCvType is not a valid value
+      const finalCvType = (dbCvType && ['master', 'journey', 'standalone'].includes(dbCvType)) ? dbCvType : inferredCvType;
+      
+      console.log(`🔍 CV API - CV Type determination for ${cv._id}:`, {
+        rawCvType: cv.cvType,
+        dbCvType,
+        journeyId: cv.journeyId,
+        isMaster: cv.metadata?.isMaster || cv.isMaster,
+        inferredCvType,
+        finalCvType
+      });
+
       return {
         id: cv._id,
         title: cv.title,
@@ -251,6 +269,8 @@ export async function GET(request: NextRequest) {
         downloadCount: cv.metadata?.downloadCount || 0,
         createdAt: cv.createdAt,
         updatedAt: cv.updatedAt,
+        journeyId: cv.journeyId ? (typeof cv.journeyId === 'string' ? cv.journeyId : cv.journeyId.toString()) : undefined, // Include journeyId
+        cvType: finalCvType, // Use determined cvType
         metadata: baseMetadata, // Use filtered metadata for list views
         ...(projection === 'full' && {
           cvData: cv.cvData,
@@ -325,6 +345,8 @@ export async function GET(request: NextRequest) {
       templateId: cv.templateId,
       status: cv.status,
       version: 1, // Default version
+      journeyId: cv.journeyId, // Include journeyId in unified format
+      cvType: cv.cvType, // Include cvType in unified format
       metadata: {
         isMaster: cv.isMaster,
         lastModified: cv.lastModified,
@@ -346,7 +368,8 @@ export async function GET(request: NextRequest) {
           ? undefined
           : cv.metadata?.thumbnailGeneratedAt,
         starred: cv.starred,
-        aiAnalysis: projection === 'full' ? cv.metadata?.aiAnalysis : undefined // Include AI analysis for full projection
+        aiAnalysis: projection === 'full' ? cv.metadata?.aiAnalysis : undefined, // Include AI analysis for full projection
+        cvType: cv.cvType // Also include cvType in metadata for backward compatibility
       },
       createdAt: cv.createdAt,
       updatedAt: cv.updatedAt
@@ -418,10 +441,6 @@ export async function POST(request: NextRequest) {
     const userId = authResult.userId;
     console.log('🔍 CV POST API - Using authenticated user:', authResult.userEmail);
 
-    // Note: Credit check removed - CV creation is unlimited
-    // Master CV can be created/edited unlimited times
-    // Journey CVs are auto-created with job (credit already spent at job creation)
-
     const body = await request.json();
     console.log('🚀 CV POST API - Request body received');
 
@@ -452,8 +471,154 @@ export async function POST(request: NextRequest) {
       metadata?.isMaster === true ||
       metadata?.isMaster === 'true';
 
+    // Check if this is user's first CV - first CV automatically becomes Master CV
+    const cvCount = await CV.countDocuments({
+      userId: new mongoose.Types.ObjectId(userId)
+    });
+    const isFirstCV = cvCount === 0;
+
+    // Determine CV type early for limit checking
+    let finalCvType = cvType || 'standalone';
+    if (!cvType) {
+      if (isFirstCV) {
+        // First CV = Master CV automatically
+        finalCvType = 'master';
+        console.log('✅ CV POST API - First CV detected, setting as Master CV');
+      } else if (isCreatingMasterCV) {
+        finalCvType = 'master';
+      } else if (journeyId) {
+        finalCvType = 'journey';
+      }
+    }
+
+    // Override: If first CV, force master CV type
+    // Create a new metadata object to avoid reassigning const
+    let finalMetadata = metadata ? { ...metadata } : {};
+    if (isFirstCV) {
+      finalCvType = 'master';
+      // Also set isMaster flag
+      finalMetadata.isMaster = true;
+      finalMetadata.isFirstCV = true;
+      console.log('✅ CV POST API - First CV: Forcing Master CV type');
+    }
+
+    // Check if this is from resume-enhancer
+    const isFromResumeEnhancer = finalMetadata?.createdVia === 'resume-enhancer';
+
+    // Security: Check CV creation limits for free users
+    if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'journey') {
+      // Get user to check plan
+      const User = (await import('@/models/User')).default;
+      const user = await User.findById(userId);
+      
+      if (user && user.currentPlanKey === 'free') {
+        // Count existing CVs by type for free users
+        const [masterCount, journeyCount, standaloneCount] = await Promise.all([
+          CV.countDocuments({
+            userId: new mongoose.Types.ObjectId(userId),
+            $or: [
+              { cvType: 'master' },
+              { 'metadata.isMaster': true },
+              { 'metadata.isMaster': 'true' }
+            ]
+          }),
+          CV.countDocuments({
+            userId: new mongoose.Types.ObjectId(userId),
+            cvType: 'journey'
+          }),
+          CV.countDocuments({
+            userId: new mongoose.Types.ObjectId(userId),
+            cvType: 'standalone'
+          })
+        ]);
+
+        console.log('🔍 CV POST API - Free user CV counts:', {
+          master: masterCount,
+          journey: journeyCount,
+          standalone: standaloneCount,
+          creating: finalCvType
+        });
+
+        // Check limits based on CV type being created
+        if (isCreatingMasterCV || finalCvType === 'master') {
+          if (masterCount >= 1) {
+            console.log('❌ CV POST API - Free user already has master CV');
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Free users can only create 1 Master CV. Please upgrade to create more CVs.',
+                requiresUpgrade: true
+              },
+              { status: 403 }
+            );
+          }
+        } else if (finalCvType === 'journey') {
+          if (journeyCount >= 1) {
+            console.log('❌ CV POST API - Free user already has journey CV');
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Free users can only create 1 Journey CV. Please upgrade to create more CVs.',
+                requiresUpgrade: true
+              },
+              { status: 403 }
+            );
+          }
+        } else if (finalCvType === 'standalone') {
+          if (standaloneCount >= 1) {
+            console.log('❌ CV POST API - Free user already has standalone CV');
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Free users can only create 1 Standalone CV. Please upgrade to create more CVs.',
+                requiresUpgrade: true
+              },
+              { status: 403 }
+            );
+          }
+        }
+
+        // Check if all three CV types are already created (limit exhausted)
+        if (masterCount >= 1 && journeyCount >= 1 && standaloneCount >= 1) {
+          console.log('❌ CV POST API - Free user has exhausted all CV creation limits');
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'You have reached the limit for all CV types (1 Master, 1 Journey, 1 Standalone). Please upgrade to create more CVs.',
+              requiresUpgrade: true
+            },
+            { status: 403 }
+          );
+        }
+
+        // Check if user has at least 1 credit available (for free users)
+        // The primary limit is count-based (1 of each type), but we still check credits
+        // Journey CVs don't need credit check here as they're created with jobs (credit already spent)
+        if (isCreatingMasterCV || finalCvType === 'master' || (finalCvType === 'standalone' && isFromResumeEnhancer)) {
+          const { default: creditService } = await import('@/lib/services/creditService');
+          const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
+          
+          // For free users, require at least 1 credit to create master or standalone CVs
+          // The count-based limits above are the primary restriction
+          if (!creditCheck.available || (creditCheck.limit !== -1 && creditCheck.creditsRemaining <= 0)) {
+            console.log('❌ CV POST API - Free user has no credits available');
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'You have no credits remaining. Please upgrade to create more CVs.',
+                requiresUpgrade: true,
+                creditsRemaining: creditCheck.creditsRemaining,
+                limit: creditCheck.limit
+              },
+              { status: 403 }
+            );
+          }
+        }
+      }
+    }
+
     if (isCreatingMasterCV) {
-      // Check if Master CV already exists
+      // Check if Master CV already exists (additional check for non-free users)
       const existingMasterCV = await CV.findOne({
         userId: new mongoose.Types.ObjectId(userId),
         $or: [
@@ -565,15 +730,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Determine CV type (auto-detect if not provided)
-    let finalCvType = cvType || 'standalone';
-    if (!cvType) {
-      if (isCreatingMasterCV) {
-        finalCvType = 'master';
-      } else if (journeyId) {
-        finalCvType = 'journey';
-      }
-    }
+    // CV type already determined above for limit checking
 
     // Prepare CV data for creation (clean schema - no styling data)
     const cvDataToCreate = {
@@ -585,13 +742,13 @@ export async function POST(request: NextRequest) {
       status: status || 'draft',
       journeyId: journeyId || undefined, // Store journeyId if provided
       metadata: {
-        isMaster: isMaster || metadata?.isMaster || false, // Set isMaster in metadata, not top-level
+        isMaster: isFirstCV || isMaster || finalMetadata?.isMaster || false, // First CV or explicit master flag
         lastModified: new Date(),
-        tags: metadata?.tags || [],
-        isPublic: metadata?.isPublic || false,
+        tags: finalMetadata?.tags || [],
+        isPublic: finalMetadata?.isPublic || false,
         viewCount: 0,
         downloadCount: 0,
-        ...metadata
+        ...finalMetadata
       }
     };
 
@@ -613,13 +770,32 @@ export async function POST(request: NextRequest) {
 
     await newCV.save();
 
+    // Link CV to journey if journeyId is provided (for journey mode)
+    if (journeyId && newCV._id) {
+      try {
+        const { ApplicationJourneyRelationshipService } = await import('@/lib/services/cvJourneyRelationshipService');
+        const linked = await ApplicationJourneyRelationshipService.linkCVToJourney(
+          journeyId,
+          newCV._id.toString()
+        );
+        if (linked) {
+          console.log('✅ CV POST API - CV linked to journey:', { journeyId, cvId: newCV._id.toString() });
+        } else {
+          console.warn('⚠️ CV POST API - Failed to link CV to journey:', { journeyId, cvId: newCV._id.toString() });
+        }
+      } catch (linkError) {
+        console.error('❌ CV POST API - Error linking CV to journey:', linkError);
+        // Don't fail the save if linking fails - log and continue
+      }
+    }
+
     // Log CV creation activity
     try {
       const { ActivityLogService } = await import('@/lib/services/activityLogService');
       await ActivityLogService.logUserAction({
         userId: userId,
         userEmail: authResult.userEmail,
-        action: isCreatingMasterCV ? 'master_cv_created' : 'cv_created',
+        action: (isFirstCV || isCreatingMasterCV) ? 'master_cv_created' : 'cv_created',
         resourceType: 'cv',
         resourceId: newCV._id.toString(),
         resourceName: title,
@@ -627,7 +803,8 @@ export async function POST(request: NextRequest) {
         metadata: {
           templateId: finalTemplateId?.toString(),
           templateName: templateName,
-          isMaster: isCreatingMasterCV,
+          isMaster: isFirstCV || isCreatingMasterCV,
+          isFirstCV: isFirstCV,
           journeyId: journeyId
         }
       });
@@ -636,8 +813,28 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if logging fails
     }
 
-    // Note: Credit spending removed - CV creation is unlimited
-    // Credits are only spent at job creation
+    // Spend credit for CV creation (for free users)
+    // Only spend credit for master CVs and standalone CVs from resume-enhancer
+    // Journey CVs don't need credit spending as they're created with jobs (credit already spent)
+    if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'master') {
+      const User = (await import('@/models/User')).default;
+      const userForCredit = await User.findById(userId);
+      
+      if (userForCredit && userForCredit.currentPlanKey === 'free') {
+        if (isCreatingMasterCV || finalCvType === 'master' || (finalCvType === 'standalone' && isFromResumeEnhancer)) {
+          const { default: creditService } = await import('@/lib/services/creditService');
+          const creditSpent = await creditService.spendCredit(userId, 'job_create');
+          
+          if (!creditSpent) {
+            console.error('❌ CV POST API - Failed to spend credit for CV creation');
+            // Don't fail the CV creation if credit spending fails, but log it
+            // The credit check above should have prevented this
+          } else {
+            console.log('✅ CV POST API - Credit spent for CV creation');
+          }
+        }
+      }
+    }
 
     // Save CV with template to S3 as backup
     try {

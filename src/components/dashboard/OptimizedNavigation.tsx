@@ -164,10 +164,10 @@ const OptimizedNavigation: React.FC = () => {
     }
   }, [userData?.id]);
 
-  // Initial fetch and refetch when user data changes
+  // Initial fetch only on mount and when subscription plan changes (not on every userData change)
   useEffect(() => {
     fetchCreditInfo();
-  }, [fetchCreditInfo, userData?.currentPlanKey, userData?.subscription?.planKey]);
+  }, [fetchCreditInfo]); // Removed userData dependencies - only fetch on mount and when explicitly requested
 
   // Listen for credit update events (real-time updates when credits are used)
   useEffect(() => {

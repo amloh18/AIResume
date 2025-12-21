@@ -15,13 +15,14 @@ import {
 import JourneyTimelineCard from '../JourneyTimelineCard';
 import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
-import SkillGapAnalysisSidebar from './SkillGapAnalysisSidebar';
 import InterviewPrepSidebar from './InterviewPrepSidebar';
 import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
 import { useRouter } from 'next/navigation';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
+import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
+import UpgradeCard from '../UpgradeCard';
 
 interface JobApplication {
   id: string;
@@ -86,6 +87,8 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const { user } = useUnifiedAuth();
   const router = useRouter();
   const { showExhaustionModal } = useCreditExhaustionHandler();
+  const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
+  const [showUpgradePopupState, setShowUpgradePopupState] = useState(false);
   const [isCreatingJourney, setIsCreatingJourney] = useState(false);
   const [isMovingToCreated, setIsMovingToCreated] = useState(false);
   const [journeys, setJourneys] = useState<CVJourney[]>(initialJourneys);
@@ -97,7 +100,6 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
-  const [skillGapAnalysisOpen, setSkillGapAnalysisOpen] = useState(false);
   const [interviewPrepOpen, setInterviewPrepOpen] = useState(false);
 
   // EditJobSidebar state for layered sidebar
@@ -690,6 +692,18 @@ ${userName}`
           toast.success('CV journey already exists with current data');
         } else {
           toast.success('CV journey created successfully!');
+          
+          // Check if this is the first journey and show upgrade popup
+          // Check journey count before this creation
+          const journeyCountBefore = journeys.length;
+          if (journeyCountBefore === 0) {
+            // This is the first journey, trigger upgrade popup
+            // Wait a bit for the activity status API to update
+            setTimeout(() => {
+              showUpgradePopup();
+              setShowUpgradePopupState(true);
+            }, 1000);
+          }
         }
 
         // Reload journeys immediately to show the new journey card
@@ -1212,17 +1226,6 @@ ${userName}`
               )}
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              {(job.jobDescription || job.description) && job.status !== 'draft' && (
-                <motion.button
-                  onClick={() => setSkillGapAnalysisOpen(true)}
-                  className="p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-lg transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  title="Skill Gap Analysis"
-                >
-                  <TrendingUp size={20} className="text-purple-600 dark:text-purple-400" />
-                </motion.button>
-              )}
               <motion.button
                 onClick={handleOpenEditModal}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
@@ -1883,14 +1886,17 @@ ${userName}`
           </motion.div>
         )}
 
-        {/* Skill Gap Analysis Sidebar */}
-        <SkillGapAnalysisSidebar
-          isOpen={skillGapAnalysisOpen}
-          onClose={() => setSkillGapAnalysisOpen(false)}
-          jobId={job.id || job._id}
-          jobTitle={job.jobTitle || job.title}
-          company={job.company}
-        />
+
+        {/* Upgrade Card - shown after first journey creation */}
+        {showUpgradePopupState && shouldShowUpgradePopup && user?.id && (
+          <UpgradeCard
+            userId={user.id}
+            onClose={() => {
+              setShowUpgradePopupState(false);
+              dismissUpgradePopup();
+            }}
+          />
+        )}
 
         {/* Interview Prep Sidebar */}
         {job.status === 'interview' && (

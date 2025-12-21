@@ -2,15 +2,16 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
 import { useCoverLetterEditor } from '@/contexts/CoverLetterEditorContext';
-import Step1Template from './steps/Step1Template';
-import Step2Edit from './steps/Step2Edit';
-import Step3Preview from './steps/Step3Preview';
+import Step1Edit from './steps/Step1Edit';
+import Step2Review from './steps/Step2Review';
 import { CoverLetterTemplate } from '@/lib/templates/cover-letter-templates';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { extractHeaderFromContent, extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
+// TODO: CoverLetterTemplateContent was deleted - need to reimplement or use alternative
+// import CoverLetterTemplateContent from '@/components/studio/CoverLetterTemplateContent';
 
 interface CoverLetterEditorContainerProps {
   userId: string;
@@ -30,9 +31,10 @@ export default function CoverLetterEditorContainer({
   jobId
 }: CoverLetterEditorContainerProps) {
   const router = useRouter();
-  const { state, dispatch, goToStep, nextStep, prevStep, setCVData, setJobData, loadCoverLetter, autoPopulateHeader } = useCoverLetterEditor();
+  const { state, dispatch, goToStep, nextStep, prevStep, setCVData, setJobData, loadCoverLetter, autoPopulateHeader, setTemplate } = useCoverLetterEditor();
   const [isLoading, setIsLoading] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const initializedRef = useRef(false);
 
   // Initialize based on mode
@@ -46,11 +48,36 @@ export default function CoverLetterEditorContainer({
         // Set mode
         dispatch({ type: 'SET_MODE', payload: mode });
         
-        // Load CV data if cvId provided
-        let loadedCVData: UnifiedCVDataStructure | null = null;
-        if (cvId) {
+        // If journey mode, fetch CV and job from journey
+        let effectiveCvId = cvId;
+        let effectiveJobId = jobId;
+        
+        if (mode === 'journey' && journeyId) {
           try {
-            const cvResponse = await fetch(`/api/cvs/${cvId}`);
+            const journeyResponse = await fetch(`/api/application-journey/${journeyId}?userId=${userId}`);
+            if (journeyResponse.ok) {
+              const journeyResult = await journeyResponse.json();
+              const journey = journeyResult.data?.journey || journeyResult.journey;
+              if (journey) {
+                // Use CV and job from journey if not provided directly
+                if (journey.cvId && !effectiveCvId) {
+                  effectiveCvId = journey.cvId.toString();
+                }
+                if (journey.jobId && !effectiveJobId) {
+                  effectiveJobId = journey.jobId.toString();
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Failed to load journey:', error);
+          }
+        }
+        
+        // Load CV data if cvId provided (from direct prop or journey)
+        let loadedCVData: UnifiedCVDataStructure | null = null;
+        if (effectiveCvId) {
+          try {
+            const cvResponse = await fetch(`/api/cvs/${effectiveCvId}?userId=${userId}`);
             if (cvResponse.ok) {
               const cvResult = await cvResponse.json();
               const cv = cvResult.data?.cv || cvResult.cv;
@@ -64,10 +91,10 @@ export default function CoverLetterEditorContainer({
           }
         }
         
-        // Load job data if jobId provided
-        if (jobId) {
+        // Load job data if jobId provided (from direct prop or journey)
+        if (effectiveJobId) {
           try {
-            const jobResponse = await fetch(`/api/jobs/${jobId}`);
+            const jobResponse = await fetch(`/api/jobs/${effectiveJobId}?userId=${userId}`);
             if (jobResponse.ok) {
               const jobResult = await jobResponse.json();
               const job = jobResult.data?.job || jobResult.job;
@@ -83,10 +110,10 @@ export default function CoverLetterEditorContainer({
         // Load existing cover letter if editing
         if (mode === 'edit' && coverLetterId) {
           try {
-            const clResponse = await fetch(`/api/cover-letters/${coverLetterId}`);
+            const clResponse = await fetch(`/api/cover-letters/${coverLetterId}?userId=${userId}`);
             if (clResponse.ok) {
               const clResult = await clResponse.json();
-              const coverLetter = clResult.data?.coverLetter || clResult.coverLetter;
+              const coverLetter = clResult.coverLetter || clResult.data?.coverLetter;
               
               if (coverLetter) {
                 // Extract header and body if not present
@@ -105,6 +132,44 @@ export default function CoverLetterEditorContainer({
                   template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || null;
                 }
                 
+                // Load CV data if cvId exists in cover letter (or from journey if not set)
+                let loadedCVDataForCL: UnifiedCVDataStructure | null = null;
+                const cvIdToLoad = coverLetter.cvId || effectiveCvId;
+                if (cvIdToLoad && !loadedCVData) {
+                  try {
+                    const cvResponse = await fetch(`/api/cvs/${cvIdToLoad}?userId=${userId}`);
+                    if (cvResponse.ok) {
+                      const cvResult = await cvResponse.json();
+                      const cv = cvResult.data?.cv || cvResult.cv;
+                      if (cv?.cvData) {
+                        loadedCVDataForCL = cv.cvData as UnifiedCVDataStructure;
+                        setCVData(loadedCVDataForCL);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Failed to load CV for cover letter:', error);
+                  }
+                }
+
+                // Load job data if jobId exists in cover letter (or from journey if not set)
+                let loadedJobDataForCL: any = null;
+                const jobIdToLoad = coverLetter.jobId || effectiveJobId;
+                if (jobIdToLoad && !state.jobData) {
+                  try {
+                    const jobResponse = await fetch(`/api/jobs/${jobIdToLoad}?userId=${userId}`);
+                    if (jobResponse.ok) {
+                      const jobResult = await jobResponse.json();
+                      const job = jobResult.data?.job || jobResult.job;
+                      if (job) {
+                        loadedJobDataForCL = job;
+                        setJobData(loadedJobDataForCL);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Failed to load job for cover letter:', error);
+                  }
+                }
+                
                 loadCoverLetter({
                   coverLetterId: coverLetter.id || coverLetter._id,
                   coverLetterData: {
@@ -120,12 +185,12 @@ export default function CoverLetterEditorContainer({
                     templateId: coverLetter.templateId || coverLetter.metadata?.templateId
                   },
                   template,
-                  cvData: state.cvData || undefined,
-                  jobData: state.jobData || undefined,
+                  cvData: loadedCVDataForCL || state.cvData || undefined,
+                  jobData: loadedJobDataForCL || state.jobData || undefined,
                   journeyId: journeyId || coverLetter.journeyId
                 });
                 
-                setCompletedSteps([1, 2]); // Assume template and edit steps completed
+                setCompletedSteps([1]); // Editor step completed
               }
             }
           } catch (error) {
@@ -156,6 +221,44 @@ export default function CoverLetterEditorContainer({
                   template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || null;
                 }
                 
+                // Load CV data if cvId exists (prefer journey's CV if available)
+                let loadedCVDataForJourney: UnifiedCVDataStructure | null = null;
+                const cvIdToLoadForJourney = effectiveCvId || existingCL.cvId;
+                if (cvIdToLoadForJourney && !loadedCVData) {
+                  try {
+                    const cvResponse = await fetch(`/api/cvs/${cvIdToLoadForJourney}?userId=${userId}`);
+                    if (cvResponse.ok) {
+                      const cvResult = await cvResponse.json();
+                      const cv = cvResult.data?.cv || cvResult.cv;
+                      if (cv?.cvData) {
+                        loadedCVDataForJourney = cv.cvData as UnifiedCVDataStructure;
+                        setCVData(loadedCVDataForJourney);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Failed to load CV for journey cover letter:', error);
+                  }
+                }
+
+                // Load job data if jobId exists (prefer journey's job if available)
+                let loadedJobDataForJourney: any = null;
+                const jobIdToLoadForJourney = effectiveJobId || existingCL.jobId;
+                if (jobIdToLoadForJourney && !state.jobData) {
+                  try {
+                    const jobResponse = await fetch(`/api/jobs/${jobIdToLoadForJourney}?userId=${userId}`);
+                    if (jobResponse.ok) {
+                      const jobResult = await jobResponse.json();
+                      const job = jobResult.data?.job || jobResult.job;
+                      if (job) {
+                        loadedJobDataForJourney = job;
+                        setJobData(loadedJobDataForJourney);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Failed to load job for journey cover letter:', error);
+                  }
+                }
+                
                 loadCoverLetter({
                   coverLetterId: existingCL.id || existingCL._id,
                   coverLetterData: {
@@ -171,12 +274,12 @@ export default function CoverLetterEditorContainer({
                     templateId: existingCL.templateId || existingCL.metadata?.templateId
                   },
                   template,
-                  cvData: state.cvData || undefined,
-                  jobData: state.jobData || undefined,
+                  cvData: loadedCVDataForJourney || state.cvData || undefined,
+                  jobData: loadedJobDataForJourney || state.jobData || undefined,
                   journeyId: journeyId
                 });
                 
-                setCompletedSteps([1, 2]);
+                setCompletedSteps([1]);
               } else {
                 // Create new cover letter for journey
                 dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
@@ -244,116 +347,124 @@ export default function CoverLetterEditorContainer({
 
   const canGoToNextStep = () => {
     if (state.currentStep === 1) {
-      return state.selectedTemplate !== null;
-    }
-    if (state.currentStep === 2) {
       return state.coverLetterData.content.trim().length > 0;
     }
     return true;
   };
 
+  const handleTemplateSelect = (template: CoverLetterTemplate) => {
+    setTemplate(template);
+    setShowTemplateModal(false);
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-[#1a230f]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--accent-primary)] mx-auto mb-4"></div>
-          <p className="text-[color:var(--text-secondary)]">Loading cover letter editor...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-500 dark:border-[#99FF00] mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-200">Loading cover letter editor...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)]">
+    <div className="dashboard-page cover-letter-editor-page h-screen flex flex-col bg-gray-50 dark:bg-[#1a230f] text-gray-900 dark:text-white overflow-hidden">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-[var(--bg-primary)] border-b border-[color:var(--border-color)]">
+      <div className="flex-shrink-0 bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={handleExit}
-              className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-100 dark:hover:bg-[#313a28] rounded-lg transition-colors text-gray-700 dark:text-gray-200"
             >
               <X className="w-5 h-5" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-[color:var(--text-primary)]">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 Cover Letter Editor
               </h1>
-              <p className="text-sm text-[color:var(--text-secondary)]">
+              <p className="text-sm text-gray-600 dark:text-gray-200">
                 {state.coverLetterTitle}
               </p>
             </div>
           </div>
 
-          {/* Step Indicator */}
-          <div className="flex items-center gap-2">
-            {[1, 2, 3].map((step) => {
-              const isActive = state.currentStep === step;
-              const isCompleted = completedSteps.includes(step);
-              
-              return (
-                <React.Fragment key={step}>
-                  <div
-                    className={`
-                      w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold
-                      ${isCompleted ? 'bg-[#80FF00] text-black' : ''}
-                      ${isActive && !isCompleted ? 'bg-[var(--bg-tertiary)] text-[color:var(--text-primary)]' : ''}
-                      ${!isActive && !isCompleted ? 'bg-[var(--bg-tertiary)] text-[color:var(--text-tertiary)]' : ''}
-                    `}
-                  >
-                    {isCompleted ? '✓' : step}
-                  </div>
-                  {step < 3 && (
-                    <div className={`w-8 h-[2px] ${isCompleted ? 'bg-[#80FF00]' : 'bg-[var(--bg-tertiary)]'}`} />
-                  )}
-                </React.Fragment>
-              );
-            })}
+          {/* Template Button and Navigation */}
+          <div className="flex items-center gap-4">
+            {/* Template Button - Only show on step 1 */}
+            {state.currentStep === 1 && (
+              <button
+                onClick={() => setShowTemplateModal(true)}
+                className="px-3 py-2 bg-gray-100 dark:bg-[#313a28] hover:bg-gray-200 dark:hover:bg-[#3a4530] text-gray-900 dark:text-white rounded-lg transition-colors flex items-center gap-2 text-sm font-medium"
+              >
+                <FileText className="w-4 h-4" />
+                {state.selectedTemplate ? state.selectedTemplate.name : 'Choose Template'}
+              </button>
+            )}
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center gap-2">
+              {state.currentStep === 2 && (
+                <button
+                  onClick={prevStep}
+                  className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-gray-100 dark:bg-[#313a28] hover:bg-gray-200 dark:hover:bg-[#3a4530] text-gray-900 dark:text-white"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </button>
+              )}
+
+              {state.currentStep === 1 && (
+                <button
+                  onClick={handleStepComplete}
+                  disabled={!canGoToNextStep()}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
+                    !canGoToNextStep()
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'bg-lime-500 dark:bg-[#99FF00] hover:bg-lime-600 dark:hover:bg-[#88e600] text-black'
+                  }`}
+                >
+                  Review
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-6 h-[calc(100vh-80px)]">
-        {state.currentStep === 1 && <Step1Template />}
-        {state.currentStep === 2 && <Step2Edit />}
-        {state.currentStep === 3 && <Step3Preview userId={userId} />}
-      </div>
-
-      {/* Navigation Footer */}
-      <div className="sticky bottom-0 z-10 bg-[var(--bg-primary)] border-t border-[color:var(--border-color)]">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <button
-            onClick={prevStep}
-            disabled={state.currentStep === 1}
-            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              state.currentStep === 1
-                ? 'opacity-50 cursor-not-allowed'
-                : 'bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)]'
-            }`}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Previous
-          </button>
-
-          <div className="text-sm text-[color:var(--text-secondary)]">
-            Step {state.currentStep} of 3
-          </div>
-
-          <button
-            onClick={handleStepComplete}
-            disabled={!canGoToNextStep() || state.currentStep === 3}
-            className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-              !canGoToNextStep() || state.currentStep === 3
-                ? 'opacity-50 cursor-not-allowed'
-                : 'bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-black'
-            }`}
-          >
-            Next
-            <ChevronRight className="w-4 h-4" />
-          </button>
+      {/* Main Content - Scrollable */}
+      <div className="flex-1 overflow-hidden">
+        <div className="h-full max-w-7xl mx-auto px-6 py-6">
+          {state.currentStep === 1 && <Step1Edit />}
+          {state.currentStep === 2 && <Step2Review userId={userId} />}
         </div>
       </div>
+
+      {/* Template Selection Modal */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70" onClick={() => setShowTemplateModal(false)}>
+          <div className="bg-white dark:bg-[#141810] rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Choose a Template</h2>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-[#313a28] rounded-lg transition-colors text-gray-600 dark:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6">
+              <CoverLetterTemplateContent
+                selectedTemplate={state.selectedTemplate}
+                onTemplateSelect={handleTemplateSelect}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

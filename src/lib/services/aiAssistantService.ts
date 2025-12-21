@@ -1,12 +1,26 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { AISuggestion } from '@/lib/stores/aiStore';
+import { TextNormalizationService } from './textNormalizationService';
+import { getStandardSectionName, isStandardSection } from '@/lib/data/sectionSynonyms';
 
 export interface ATSAnalysis {
   score: number;
   missingKeywords: string[];
   strengths: string[];
   suggestions: string[];
+  factorBreakdown?: {
+    hardKeywords: { score: number; weight: number; matched: number; total: number };
+    jobTitles: { score: number; weight: number; matched: boolean };
+    experienceLength: { score: number; weight: number; years: number };
+    formatting: { score: number; weight: number; issues: string[] };
+    softSkills: { score: number; weight: number; matched: number; total: number };
+  };
+  knockOutFactors?: {
+    fileFormat: { passed: boolean; issue?: string };
+    sectionHeaders: { passed: boolean; issues: string[] };
+    contactInfo: { passed: boolean; issues: string[] };
+  };
 }
 
 export class AIAssistantService {
@@ -42,125 +56,782 @@ export class AIAssistantService {
     }
   };
 
+  // ============================================================================
+  // ATS SCORING HELPER METHODS
+  // ============================================================================
+
+  /**
+   * Check knock-out factors (pass/fail - score = 0 if failed)
+   */
+  private static checkKnockOutFactors(cvData: UnifiedCVDataStructure): {
+    fileFormat: { passed: boolean; issue?: string };
+    sectionHeaders: { passed: boolean; issues: string[] };
+    contactInfo: { passed: boolean; issues: string[] };
+  } {
+    const issues: string[] = [];
+    
+    // File Format - Note: This is validated at download time, not here
+    // We assume text-based PDF/DOCX will be generated
+    const fileFormat = { passed: true };
+
+    // Section Headers - Check for standard headers (with synonym support)
+    const sectionHeaders = this.extractStandardSections(cvData);
+    const hasStandardHeaders = sectionHeaders.length > 0 && 
+      sectionHeaders.some(section => isStandardSection(section));
+    
+    const sectionHeaderIssues: string[] = [];
+    if (!hasStandardHeaders && cvData.work && cvData.work.length > 0) {
+      sectionHeaderIssues.push('Use standard section headers like "Work Experience", "Education", "Skills"');
+    }
+
+    // Contact Information - Must have name, email, phone (with normalization)
+    const contactIssues: string[] = [];
+    if (!cvData.basics?.name || cvData.basics.name.trim().length === 0) {
+      contactIssues.push('Name is required');
+    }
+    
+    // Normalize and validate email (handles obfuscation)
+    const normalizedEmail = TextNormalizationService.normalizeEmail(cvData.basics?.email || '');
+    if (!normalizedEmail || normalizedEmail.trim().length === 0) {
+      // Also try extracting from text if email field is empty
+      const extracted = TextNormalizationService.extractContactInfo(
+        `${cvData.basics?.email || ''} ${cvData.basics?.summary || ''}`
+      );
+      if (extracted.emails.length === 0) {
+        contactIssues.push('Email is required');
+      }
+    }
+    
+    // Normalize and validate phone (handles icons, patterns)
+    const normalizedPhone = TextNormalizationService.normalizePhone(cvData.basics?.phone || '');
+    if (!normalizedPhone || normalizedPhone.length < 10) {
+      // Also try extracting from text if phone field is empty
+      const extracted = TextNormalizationService.extractContactInfo(
+        `${cvData.basics?.phone || ''} ${cvData.basics?.summary || ''}`
+      );
+      if (extracted.phones.length === 0) {
+        contactIssues.push('Phone number is required');
+      }
+    }
+
+    return {
+      fileFormat,
+      sectionHeaders: {
+        passed: sectionHeaderIssues.length === 0,
+        issues: sectionHeaderIssues
+      },
+      contactInfo: {
+        passed: contactIssues.length === 0,
+        issues: contactIssues
+      }
+    };
+  }
+
+  /**
+   * Extract standard sections from CV (with synonym support)
+   */
+  private static extractStandardSections(cvData: UnifiedCVDataStructure): string[] {
+    const sections: string[] = [];
+    
+    if (cvData.work && cvData.work.length > 0) {
+      sections.push(TextNormalizationService.normalizeSectionHeader('Work Experience'));
+    }
+    if (cvData.education && cvData.education.length > 0) {
+      sections.push(TextNormalizationService.normalizeSectionHeader('Education'));
+    }
+    if (cvData.skills && cvData.skills.length > 0) {
+      sections.push(TextNormalizationService.normalizeSectionHeader('Skills'));
+    }
+    if (cvData.projects && cvData.projects.length > 0) {
+      sections.push(TextNormalizationService.normalizeSectionHeader('Projects'));
+    }
+    if (cvData.certificates && cvData.certificates.length > 0) {
+      sections.push(TextNormalizationService.normalizeSectionHeader('Certificates'));
+    }
+    
+    return sections;
+  }
+
+  /**
+   * Detect keyword stuffing and apply diminishing returns
+   */
+  private static detectKeywordStuffing(keyword: string, text: string): number {
+    const normalizedKeyword = TextNormalizationService.normalizeKeyword(keyword);
+    const normalizedText = TextNormalizationService.normalizeText(text);
+    
+    // Count occurrences with word boundaries (prevents matching "Go" in "Golang")
+    const regex = new RegExp(`\\b${normalizedKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+    const matches = normalizedText.match(regex);
+    const count = matches ? matches.length : 0;
+    
+    // Diminishing returns: first 3 mentions = full points, 4-5 = half points, >5 = 0 additional
+    if (count <= 3) return count;
+    if (count <= 5) return 3 + (count - 3) * 0.5;
+    return 4; // Max 4 points regardless of count
+  }
+
+  /**
+   * Calculate hard keywords score (40% weight) with normalization, boundary checks, and keyword stuffing detection
+   */
+  private static calculateHardKeywordsScore(
+    cvData: UnifiedCVDataStructure,
+    jobData: Job,
+    cvTextWithContext: { text: string; section: string }[]
+  ): { score: number; matched: number; total: number; missing: string[] } {
+    const jobText = `${jobData.title} ${jobData.description || ''} ${jobData.requirements || ''}`;
+    const jobKeywords = this.extractKeywords(jobText);
+    
+    // Extract keywords from CV with placement context
+    const cvKeywordsInExperience: Map<string, number> = new Map(); // keyword -> count
+    const cvKeywordsInProjects: Map<string, number> = new Map(); // Projects = Tier 1.5
+    const cvKeywordsInSkills: Map<string, number> = new Map();
+    const cvKeywordsOther: Map<string, number> = new Map();
+    
+    cvTextWithContext.forEach(({ text, section }) => {
+      const normalizedText = TextNormalizationService.normalizeText(text);
+      const keywords = this.extractKeywords(normalizedText);
+      
+      keywords.forEach(keyword => {
+        const normalizedKw = TextNormalizationService.normalizeKeyword(keyword);
+        
+        if (section === 'work' || section === 'experience') {
+          cvKeywordsInExperience.set(normalizedKw, (cvKeywordsInExperience.get(normalizedKw) || 0) + 1);
+        } else if (section === 'projects') {
+          cvKeywordsInProjects.set(normalizedKw, (cvKeywordsInProjects.get(normalizedKw) || 0) + 1);
+        } else if (section === 'skills') {
+          cvKeywordsInSkills.set(normalizedKw, (cvKeywordsInSkills.get(normalizedKw) || 0) + 1);
+        } else {
+          cvKeywordsOther.set(normalizedKw, (cvKeywordsOther.get(normalizedKw) || 0) + 1);
+        }
+      });
+    });
+
+    // Match keywords with normalization and boundary checks
+    const matchedInExperience: string[] = [];
+    const matchedInProjects: string[] = [];
+    const matchedInSkills: string[] = [];
+    const matchedOther: string[] = [];
+    const missing: string[] = [];
+
+    // Combine all CV text for keyword stuffing detection
+    const allCvText = cvTextWithContext.map(c => c.text).join(' ');
+
+    jobKeywords.forEach(jobKeyword => {
+      const normalizedJobKw = TextNormalizationService.normalizeKeyword(jobKeyword);
+      
+      // Check with boundary matching and normalization
+      const inExperience = Array.from(cvKeywordsInExperience.keys()).some(cvKw => 
+        TextNormalizationService.keywordMatches(cvKw, normalizedJobKw)
+      );
+      const inProjects = Array.from(cvKeywordsInProjects.keys()).some(cvKw => 
+        TextNormalizationService.keywordMatches(cvKw, normalizedJobKw)
+      );
+      const inSkills = Array.from(cvKeywordsInSkills.keys()).some(cvKw => 
+        TextNormalizationService.keywordMatches(cvKw, normalizedJobKw)
+      );
+      const inOther = Array.from(cvKeywordsOther.keys()).some(cvKw => 
+        TextNormalizationService.keywordMatches(cvKw, normalizedJobKw)
+      );
+
+      // Apply keyword stuffing penalty
+      const stuffingScore = this.detectKeywordStuffing(jobKeyword, allCvText);
+      const hasMatch = inExperience || inProjects || inSkills || inOther;
+
+      if (hasMatch && stuffingScore > 0) {
+        if (inExperience) {
+          matchedInExperience.push(jobKeyword);
+        } else if (inProjects) {
+          matchedInProjects.push(jobKeyword);
+        } else if (inSkills) {
+          matchedInSkills.push(jobKeyword);
+        } else if (inOther) {
+          matchedOther.push(jobKeyword);
+        }
+      } else if (!hasMatch) {
+        missing.push(jobKeyword);
+      }
+    });
+
+    // Calculate score with weights: Experience = 1.0, Projects = 0.85 (Tier 1.5), Skills = 0.7, Other = 0.5
+    const experienceScore = (matchedInExperience.length / jobKeywords.length) * 100;
+    const projectsScore = (matchedInProjects.length / jobKeywords.length) * 100 * 0.85;
+    const skillsScore = (matchedInSkills.length / jobKeywords.length) * 100 * 0.7;
+    const otherScore = (matchedOther.length / jobKeywords.length) * 100 * 0.5;
+    
+    const totalMatched = matchedInExperience.length + matchedInProjects.length + matchedInSkills.length + matchedOther.length;
+    const score = Math.min(100, experienceScore + projectsScore + skillsScore + otherScore);
+
+    return {
+      score: Math.round(score),
+      matched: totalMatched,
+      total: jobKeywords.length,
+      missing: missing.slice(0, 10)
+    };
+  }
+
+  /**
+   * Calculate job title score (20% weight) with normalization and abbreviation expansion
+   */
+  private static calculateJobTitleScore(
+    cvData: UnifiedCVDataStructure,
+    jobData: Job
+  ): { score: number; matched: boolean } {
+    if (!jobData.title) {
+      return { score: 50, matched: false };
+    }
+
+    // Normalize target title (expand abbreviations)
+    const normalizedTargetTitle = TextNormalizationService.normalizeJobTitle(jobData.title);
+    const targetTitle = normalizedTargetTitle.toLowerCase();
+    const targetTitleWords = targetTitle.split(/\s+/).filter(w => w.length > 2);
+    
+    // Check if any work position matches the target title
+    let bestMatch = 0;
+    if (cvData.work && cvData.work.length > 0) {
+      cvData.work.forEach(work => {
+        // Normalize position title
+        const normalizedPosition = TextNormalizationService.normalizeJobTitle(work.position || '');
+        const position = normalizedPosition.toLowerCase();
+        const positionWords = position.split(/\s+/).filter(w => w.length > 2);
+        
+        // Count matching words (with stemming support for variations)
+        const matches = targetTitleWords.filter(tw => 
+          positionWords.some(pw => 
+            pw.includes(tw) || 
+            tw.includes(pw) ||
+            TextNormalizationService.wordsMatchWithStemming(tw, pw)
+          )
+        ).length;
+        
+        const matchRatio = matches / Math.max(targetTitleWords.length, 1);
+        bestMatch = Math.max(bestMatch, matchRatio);
+      });
+    }
+
+    // Also check summary for title mentions
+    const summary = TextNormalizationService.normalizeText(cvData.basics?.summary || '').toLowerCase();
+    const summaryMatches = targetTitleWords.filter(tw => 
+      summary.includes(tw) ||
+      summary.split(/\s+/).some(word => TextNormalizationService.wordsMatchWithStemming(tw, word))
+    ).length;
+    const summaryMatchRatio = summaryMatches / Math.max(targetTitleWords.length, 1);
+    bestMatch = Math.max(bestMatch, summaryMatchRatio);
+
+    const score = Math.round(bestMatch * 100);
+    return { score, matched: score >= 50 };
+  }
+
+  /**
+   * Validate and normalize date formats (uses normalization service)
+   */
+  private static validateDateFormats(dateStr: string | undefined | null): { valid: boolean; normalized?: Date } {
+    if (!dateStr || typeof dateStr !== 'string' || !dateStr.trim()) {
+      return { valid: false };
+    }
+    const result = TextNormalizationService.normalizeDate(dateStr);
+    return {
+      valid: result.valid,
+      normalized: result.normalized
+    };
+  }
+
+  /**
+   * Calculate experience length score (15% weight) with overlap merging and gap detection
+   */
+  private static calculateExperienceScore(
+    cvData: UnifiedCVDataStructure
+  ): { score: number; years: number; gaps: Array<{ months: number }> } {
+    if (!cvData.work || cvData.work.length === 0) {
+      return { score: 0, years: 0, gaps: [] };
+    }
+
+    // Build date ranges with normalization
+    const dateRanges: Array<{ start: Date; end: Date }> = [];
+
+    cvData.work.forEach(work => {
+      // Handle missing or empty dates
+      if (!work.startDate || !work.startDate.trim()) {
+        return; // Skip entries without start dates
+      }
+
+      const startDate = this.validateDateFormats(work.startDate);
+      // For endDate, use empty string if missing, which will be treated as "Present"
+      const endDate = TextNormalizationService.normalizeDate(work.endDate || '');
+
+      if (startDate.valid && endDate.valid && startDate.normalized && endDate.normalized) {
+        if (endDate.normalized >= startDate.normalized) {
+          dateRanges.push({
+            start: startDate.normalized,
+            end: endDate.normalized
+          });
+        }
+      }
+    });
+
+    if (dateRanges.length === 0) {
+      return { score: 0, years: 0, gaps: [] };
+    }
+
+    // Merge overlapping ranges to prevent double-counting
+    const mergedRanges = TextNormalizationService.mergeDateRanges(dateRanges);
+    
+    // Calculate total months from merged ranges
+    const totalMonths = TextNormalizationService.calculateTotalMonths(mergedRanges);
+    const totalYears = totalMonths / 12;
+
+    // Detect gaps > 6 months
+    const gaps = TextNormalizationService.detectGaps(mergedRanges, 6);
+    
+    // Score based on years: 0-1 years = 30, 1-3 = 60, 3-5 = 80, 5+ = 100
+    // Apply slight penalty for gaps (>6 months = -5 points per gap, max -15)
+    let score = 0;
+    if (totalYears >= 5) score = 100;
+    else if (totalYears >= 3) score = 80;
+    else if (totalYears >= 1) score = 60;
+    else if (totalYears > 0) score = 30;
+
+    // Apply gap penalty
+    const gapPenalty = Math.min(15, gaps.length * 5);
+    score = Math.max(0, score - gapPenalty);
+
+    return { 
+      score, 
+      years: Math.round(totalYears * 10) / 10,
+      gaps: gaps.map(g => ({ months: Math.round(g.months) }))
+    };
+  }
+
+  /**
+   * Calculate formatting/parsing score (15% weight) with gap detection
+   */
+  private static calculateFormattingScore(
+    cvData: UnifiedCVDataStructure,
+    experienceGaps?: Array<{ months: number }>
+  ): { score: number; issues: string[] } {
+    const issues: string[] = [];
+    let score = 100;
+
+    // Check for standard sections
+    const hasWork = cvData.work && cvData.work.length > 0;
+    const hasEducation = cvData.education && cvData.education.length > 0;
+    const hasSkills = cvData.skills && cvData.skills.length > 0;
+
+    if (!hasWork) {
+      issues.push('Missing work experience section');
+      score -= 30;
+    }
+    if (!hasEducation) {
+      issues.push('Missing education section');
+      score -= 20;
+    }
+    if (!hasSkills) {
+      issues.push('Missing skills section');
+      score -= 15;
+    }
+
+    // Check for proper text content (normalized)
+    const cvTextWithContext = this.extractCVTextWithContext(cvData);
+    const cvText = cvTextWithContext.map(s => s.text).join(' ');
+    const normalizedText = TextNormalizationService.normalizeText(cvText);
+    
+    if (normalizedText.length < 200) {
+      issues.push('CV content is too short');
+      score -= 20;
+    }
+
+    // Check for hidden text patterns
+    if (TextNormalizationService.detectHiddenText(cvText)) {
+      issues.push('Hidden or white text detected - may affect ATS parsing');
+      score -= 15;
+    }
+
+    // Check for special characters that might cause parsing issues
+    const specialCharPattern = /[^\w\s.,;:!?()\-'"/\n\u00A0-\uFFFF]/g;
+    const specialCharMatches = normalizedText.match(specialCharPattern);
+    if (specialCharMatches && specialCharMatches.length > 10) {
+      issues.push('Too many special characters that may affect ATS parsing');
+      score -= 10;
+    }
+
+    // Add gap warnings if provided
+    if (experienceGaps && experienceGaps.length > 0) {
+      const totalGapMonths = experienceGaps.reduce((sum, gap) => sum + gap.months, 0);
+      if (totalGapMonths > 12) {
+        issues.push(`Employment gaps detected (${Math.round(totalGapMonths)} months total) - consider explaining`);
+        score -= 5;
+      }
+    }
+
+    return { score: Math.max(0, score), issues };
+  }
+
+  /**
+   * Calculate soft skills score (10% weight) with sentiment analysis
+   */
+  private static calculateSoftSkillsScore(
+    cvData: UnifiedCVDataStructure,
+    jobData: Job
+  ): { score: number; matched: number; total: number } {
+    const softSkillsKeywords = [
+      'leadership', 'communication', 'teamwork', 'collaboration', 'problem-solving',
+      'analytical', 'creative', 'mentoring', 'presentation', 'negotiation',
+      'management', 'coordination', 'facilitation', 'strategic', 'initiative'
+    ];
+
+    const jobText = `${jobData.title} ${jobData.description || ''} ${jobData.requirements || ''}`.toLowerCase();
+    const requiredSoftSkills = softSkillsKeywords.filter(skill => jobText.includes(skill));
+
+    if (requiredSoftSkills.length === 0) {
+      return { score: 100, matched: 0, total: 0 };
+    }
+
+    const cvTextWithContext = this.extractCVTextWithContext(cvData);
+    const cvText = cvTextWithContext.map(s => s.text).join(' ');
+    const normalizedCvText = TextNormalizationService.normalizeText(cvText).toLowerCase();
+
+    // Match soft skills with sentiment analysis (ignore negative mentions)
+    const matchedSoftSkills = requiredSoftSkills.filter(skill => {
+      const skillLower = skill.toLowerCase();
+      const skillIndex = normalizedCvText.indexOf(skillLower);
+      
+      if (skillIndex === -1) return false;
+
+      // Check for negative context (stop phrases)
+      const stopPhrases = ['lack of', 'poor', 'weak', 'no', 'not', 'without', 'missing', 'improve'];
+      const contextStart = Math.max(0, skillIndex - 20);
+      const contextEnd = Math.min(normalizedCvText.length, skillIndex + skill.length + 20);
+      const context = normalizedCvText.substring(contextStart, contextEnd);
+
+      // If skill is mentioned in negative context, don't count it
+      const hasNegativeContext = stopPhrases.some(phrase => 
+        context.includes(phrase) && context.indexOf(phrase) < context.indexOf(skillLower)
+      );
+
+      return !hasNegativeContext;
+    });
+
+    const score = Math.round((matchedSoftSkills.length / requiredSoftSkills.length) * 100);
+    return {
+      score,
+      matched: matchedSoftSkills.length,
+      total: requiredSoftSkills.length
+    };
+  }
+
+  /**
+   * Apply recency bias to keywords (detects sort order)
+   */
+  private static applyRecencyBias(
+    keywords: string[],
+    cvData: UnifiedCVDataStructure
+  ): Map<string, number> {
+    const keywordWeights = new Map<string, number>();
+    
+    if (!cvData.work || cvData.work.length === 0) {
+      keywords.forEach(kw => keywordWeights.set(kw, 1.0));
+      return keywordWeights;
+    }
+
+    // Detect sort order by comparing first two jobs' dates
+    let isNewestFirst = true; // Default assumption: newest first
+    if (cvData.work.length >= 2) {
+      const date0 = this.validateDateFormats(cvData.work[0].startDate);
+      const date1 = this.validateDateFormats(cvData.work[1].startDate);
+      
+      if (date0.valid && date1.valid && date0.normalized && date1.normalized) {
+        // If first job is older than second, it's oldest-first
+        isNewestFirst = date0.normalized >= date1.normalized;
+      }
+    }
+
+    // Sort work by date (most recent first)
+    const sortedWork = [...cvData.work].sort((a, b) => {
+      const dateA = this.validateDateFormats(a.startDate);
+      const dateB = this.validateDateFormats(b.startDate);
+      if (!dateA.valid || !dateB.valid) return 0;
+      return (dateB.normalized?.getTime() || 0) - (dateA.normalized?.getTime() || 0);
+    });
+
+    keywords.forEach(keyword => {
+      let maxWeight = 0.5; // Default weight for keywords not in work experience
+      
+      sortedWork.forEach((work, index) => {
+        const normalizedText = TextNormalizationService.normalizeText(
+          `${work.position || ''} ${work.summary || ''} ${work.highlights?.join(' ') || ''}`
+        ).toLowerCase();
+        const normalizedKeyword = TextNormalizationService.normalizeKeyword(keyword);
+        
+        if (normalizedText.includes(normalizedKeyword) || 
+            normalizedText.split(/\s+/).some(word => 
+              TextNormalizationService.keywordMatches(word, normalizedKeyword)
+            )) {
+          // Most recent (index 0) = 1.0, second = 0.8, third = 0.6, etc.
+          const weight = Math.max(0.3, 1.0 - (index * 0.2));
+          maxWeight = Math.max(maxWeight, weight);
+        }
+      });
+
+      keywordWeights.set(keyword, maxWeight);
+    });
+
+    return keywordWeights;
+  }
+
+  /**
+   * Extract CV text with section context (with normalization)
+   */
+  private static extractCVTextWithContext(cvData: UnifiedCVDataStructure): { text: string; section: string }[] {
+    const sections: { text: string; section: string }[] = [];
+
+    // Basics/Summary (normalized)
+    if (cvData.basics?.summary) {
+      const normalized = TextNormalizationService.normalizeText(cvData.basics.summary);
+      sections.push({ text: normalized, section: 'summary' });
+    }
+
+    // Work Experience (normalized)
+    if (cvData.work && Array.isArray(cvData.work)) {
+      cvData.work.forEach(work => {
+        const workText = `${work.position || ''} ${work.name || ''} ${work.summary || ''} `;
+        const highlightsText = work.highlights && Array.isArray(work.highlights) 
+          ? work.highlights.join(' ') 
+          : '';
+        const normalized = TextNormalizationService.normalizeText(workText + highlightsText);
+        sections.push({ text: normalized, section: 'work' });
+      });
+    }
+
+    // Skills (normalized)
+    if (cvData.skills && Array.isArray(cvData.skills)) {
+      cvData.skills.forEach(skill => {
+        let skillText = '';
+        if ('category' in skill) {
+          skillText += `${skill.category} `;
+          if (skill.skills && Array.isArray(skill.skills)) {
+            skillText += skill.skills.join(' ');
+          }
+        } else {
+          const skillAny = skill as any;
+          if (skillAny && 'name' in skillAny && typeof skillAny.name === 'string') {
+            skillText += `${skillAny.name} `;
+            if (skillAny.keywords && Array.isArray(skillAny.keywords)) {
+              skillText += skillAny.keywords.join(' ');
+            }
+          }
+        }
+        if (skillText.trim().length > 0) {
+          const normalized = TextNormalizationService.normalizeText(skillText);
+          sections.push({ text: normalized, section: 'skills' });
+        }
+      });
+    }
+
+    // Projects (normalized) - Tier 1.5
+    if (cvData.projects && Array.isArray(cvData.projects)) {
+      cvData.projects.forEach(project => {
+        const projectText = `${project.name || ''} ${project.description || ''}`;
+        const normalized = TextNormalizationService.normalizeText(projectText);
+        sections.push({ text: normalized, section: 'projects' });
+      });
+    }
+
+    // Education (normalized)
+    if (cvData.education && Array.isArray(cvData.education)) {
+      cvData.education.forEach(edu => {
+        const eduText = `${edu.institution || ''} ${edu.studyType || ''} ${edu.area || ''}`;
+        const normalized = TextNormalizationService.normalizeText(eduText);
+        sections.push({ text: normalized, section: 'education' });
+      });
+    }
+
+    return sections;
+  }
+
   static async calculateATSScore(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
     try {
-      console.log('🔍 AIAssistantService - Starting ATS score calculation');
+      console.log('🔍 AIAssistantService - Starting weighted ATS score calculation');
       
-      // Extract text from CV
-      const cvText = this.extractCVText(cvData);
-      console.log('📄 AIAssistantService - CV text length:', cvText.length);
+      // Check knock-out factors first
+      const knockOutFactors = this.checkKnockOutFactors(cvData);
+      const hasKnockOutFailure = !knockOutFactors.contactInfo.passed || 
+                                 !knockOutFactors.sectionHeaders.passed;
       
-      if (!jobData) {
-        console.log('📊 AIAssistantService - No job data, returning baseline score');
-        // Baseline analysis without job context
+      if (hasKnockOutFailure) {
+        console.log('❌ AIAssistantService - Knock-out factors failed, returning score 0');
         return {
-          score: 75, // Baseline score
+          score: 0,
           missingKeywords: [],
-          strengths: ['Professional experience', 'Education background'],
-          suggestions: ['Add more specific skills', 'Include quantifiable achievements']
+          strengths: [],
+          suggestions: [
+            ...knockOutFactors.contactInfo.issues.map(issue => `Contact Info: ${issue}`),
+            ...knockOutFactors.sectionHeaders.issues.map(issue => `Section Headers: ${issue}`)
+          ],
+          knockOutFactors
         };
       }
 
-      // Extract job requirements
-      const jobText = `${jobData.title} ${jobData.description || ''} ${jobData.requirements || ''}`;
-      console.log('📄 AIAssistantService - Job text length:', jobText.length);
+      if (!jobData) {
+        console.log('📊 AIAssistantService - No job data, returning baseline score (General Best Practices)');
+        // Baseline analysis without job context - "General Best Practices" mode
+        const experienceScore = this.calculateExperienceScore(cvData);
+        const formattingScore = this.calculateFormattingScore(cvData, experienceScore.gaps);
+        
+        // Baseline: 50% formatting + 50% experience structure
+        const baselineScore = Math.max(0, Math.min(100, Math.round(
+          (formattingScore.score * 0.5) + (experienceScore.score * 0.5)
+        )));
+        
+        return {
+          score: baselineScore,
+          missingKeywords: [],
+          strengths: ['Professional experience', 'Education background'],
+          suggestions: [
+            'Add more specific skills',
+            'Include quantifiable achievements',
+            ...formattingScore.issues.slice(0, 3)
+          ],
+          factorBreakdown: {
+            hardKeywords: { score: 0, weight: 0.4, matched: 0, total: 0 },
+            jobTitles: { score: 0, weight: 0.2, matched: false },
+            experienceLength: { 
+              score: Math.max(0, Math.min(100, experienceScore.score)), 
+              weight: 0.15, 
+              years: experienceScore.years 
+            },
+            formatting: { 
+              score: Math.max(0, Math.min(100, formattingScore.score)), 
+              weight: 0.15, 
+              issues: formattingScore.issues 
+            },
+            softSkills: { score: 0, weight: 0.1, matched: 0, total: 0 }
+          },
+          knockOutFactors
+        };
+      }
+
+      // Extract CV text with context for placement analysis
+      const cvTextWithContext = this.extractCVTextWithContext(cvData);
+      const cvText = cvTextWithContext.map(s => s.text).join(' ');
       
-      // Try to use AI API for ATS analysis
-      try {
-        const { callAIWithFallback } = await import('@/lib/utils/ai-api-helper');
-        
-        const systemPrompt = `You are an expert ATS (Applicant Tracking System) analyst. Analyze CVs against job descriptions and provide accurate ATS scores, missing keywords, and improvement suggestions.`;
-        
-        const prompt = `Analyze this CV against the job description and provide an ATS score analysis.
+      console.log('📄 AIAssistantService - CV text length:', cvText.length);
 
-CV Content:
-${cvText.substring(0, 4000)}
+      // Calculate weighted factor scores
+      const hardKeywordsResult = this.calculateHardKeywordsScore(cvData, jobData, cvTextWithContext);
+      const jobTitleResult = this.calculateJobTitleScore(cvData, jobData);
+      const experienceResult = this.calculateExperienceScore(cvData);
+      const formattingResult = this.calculateFormattingScore(cvData, experienceResult.gaps);
+      const softSkillsResult = this.calculateSoftSkillsScore(cvData, jobData);
 
-Job Description:
-${jobText.substring(0, 2000)}
+      // Apply weights
+      const weights = {
+        hardKeywords: 0.4,
+        jobTitles: 0.2,
+        experienceLength: 0.15,
+        formatting: 0.15,
+        softSkills: 0.1
+      };
 
-Please provide a JSON response with this exact structure:
-{
-  "score": number (0-100),
-  "missingKeywords": ["keyword1", "keyword2", ...],
-  "strengths": ["strength1", "strength2", ...],
-  "suggestions": ["suggestion1", "suggestion2", ...]
-}
+      // Calculate weighted score (clamp each factor to 0-100 first)
+      const clampedHardKeywords = Math.max(0, Math.min(100, hardKeywordsResult.score));
+      const clampedJobTitles = Math.max(0, Math.min(100, jobTitleResult.score));
+      const clampedExperience = Math.max(0, Math.min(100, experienceResult.score));
+      const clampedFormatting = Math.max(0, Math.min(100, formattingResult.score));
+      const clampedSoftSkills = Math.max(0, Math.min(100, softSkillsResult.score));
 
-Consider:
-- Keyword matching between CV and job description
-- Skills alignment
-- Experience relevance
-- Education requirements
-- Overall ATS optimization
+      const weightedScore = 
+        (clampedHardKeywords * weights.hardKeywords) +
+        (clampedJobTitles * weights.jobTitles) +
+        (clampedExperience * weights.experienceLength) +
+        (clampedFormatting * weights.formatting) +
+        (clampedSoftSkills * weights.softSkills);
 
-Respond ONLY with valid JSON, no other text.`;
+      // Final score clamped to 0-100 (prevent negative scores)
+      const finalScore = Math.max(0, Math.min(100, Math.round(weightedScore)));
 
-        const aiResponse = await callAIWithFallback({
-          prompt,
-          systemPrompt,
-          temperature: 0.3,
-          maxTokens: 1024
-        });
-        
-        console.log('✅ AIAssistantService - AI API call successful');
-        
-        // Try to parse JSON from response
-        const jsonMatch = aiResponse.content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          
-          // Validate and return AI analysis
-          if (parsed.score !== undefined && parsed.missingKeywords && parsed.strengths && parsed.suggestions) {
-            return {
-              score: Math.max(0, Math.min(100, parsed.score)),
-              missingKeywords: Array.isArray(parsed.missingKeywords) ? parsed.missingKeywords.slice(0, 10) : [],
-              strengths: Array.isArray(parsed.strengths) ? parsed.strengths.slice(0, 5) : [],
-              suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : this.generateSuggestions(parsed.missingKeywords || [])
-            };
-          }
-        }
-        
-        console.warn('⚠️ AIAssistantService - AI response format invalid, falling back to keyword matching');
-      } catch (aiError) {
-        console.warn('⚠️ AIAssistantService - AI API call failed, falling back to keyword matching:', aiError);
+      // Generate suggestions
+      const suggestions: string[] = [];
+      
+      if (hardKeywordsResult.missing.length > 0) {
+        suggestions.push(`Add missing keywords: ${hardKeywordsResult.missing.slice(0, 5).join(', ')}`);
+        suggestions.push('Move keywords to work experience section for higher weight');
       }
       
-      // Fallback to keyword matching if AI fails
-      const cvKeywords = this.extractKeywords(cvText);
-      const jobKeywords = this.extractKeywords(jobText);
+      if (!jobTitleResult.matched) {
+        suggestions.push('Align job titles with target role');
+      }
       
-      console.log('🔑 AIAssistantService - Keywords found:', {
-        cvKeywords: cvKeywords.length,
-        jobKeywords: jobKeywords.length
+      // Add gap suggestions
+      if (experienceResult.gaps && experienceResult.gaps.length > 0) {
+        const totalGapMonths = experienceResult.gaps.reduce((sum, gap) => sum + gap.months, 0);
+        if (totalGapMonths > 12) {
+          suggestions.push(`Employment gaps detected (${Math.round(totalGapMonths)} months) - consider explaining in cover letter or summary`);
+        }
+      }
+      
+      if (formattingResult.issues.length > 0) {
+        suggestions.push(...formattingResult.issues.slice(0, 5)); // Limit to 5 issues
+      }
+      
+      if (softSkillsResult.matched < softSkillsResult.total) {
+        suggestions.push(`Add soft skills: ${softSkillsResult.total - softSkillsResult.matched} missing`);
+      }
+
+      // Generate strengths
+      const strengths: string[] = [];
+      if (hardKeywordsResult.matched > 0) {
+        strengths.push(`Matched ${hardKeywordsResult.matched} of ${hardKeywordsResult.total} keywords`);
+      }
+      if (jobTitleResult.matched) {
+        strengths.push('Job title alignment');
+      }
+      if (experienceResult.years >= 3) {
+        strengths.push(`${experienceResult.years} years of experience`);
+      }
+
+      console.log('📊 AIAssistantService - Weighted ATS calculation results:', {
+        finalScore,
+        hardKeywords: hardKeywordsResult.score,
+        jobTitles: jobTitleResult.score,
+        experience: experienceResult.score,
+        formatting: formattingResult.score,
+        softSkills: softSkillsResult.score
       });
-      
-      const matchingKeywords = cvKeywords.filter(keyword => 
-        jobKeywords.some(jobKeyword => 
-          jobKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
-          keyword.toLowerCase().includes(jobKeyword.toLowerCase())
-        )
-      );
-      
-      const score = Math.min(100, Math.round((matchingKeywords.length / jobKeywords.length) * 100));
-      const missingKeywords = jobKeywords.filter(keyword => 
-        !cvKeywords.some(cvKeyword => 
-          cvKeyword.toLowerCase().includes(keyword.toLowerCase()) ||
-          keyword.toLowerCase().includes(cvKeyword.toLowerCase())
-        )
-      );
-      
-      console.log('📊 AIAssistantService - ATS calculation results:', {
-        matchingKeywords: matchingKeywords.length,
-        missingKeywords: missingKeywords.length,
-        score
-      });
-      
+
       return {
-        score,
-        missingKeywords: missingKeywords.slice(0, 10),
-        strengths: matchingKeywords.slice(0, 5),
-        suggestions: this.generateSuggestions(missingKeywords)
+        score: finalScore,
+        missingKeywords: hardKeywordsResult.missing,
+        strengths,
+        suggestions: suggestions.length > 0 ? suggestions : this.generateSuggestions(hardKeywordsResult.missing),
+        factorBreakdown: {
+          hardKeywords: {
+            score: clampedHardKeywords,
+            weight: weights.hardKeywords,
+            matched: hardKeywordsResult.matched,
+            total: hardKeywordsResult.total
+          },
+          jobTitles: {
+            score: clampedJobTitles,
+            weight: weights.jobTitles,
+            matched: jobTitleResult.matched
+          },
+          experienceLength: {
+            score: clampedExperience,
+            weight: weights.experienceLength,
+            years: experienceResult.years
+          },
+          formatting: {
+            score: clampedFormatting,
+            weight: weights.formatting,
+            issues: formattingResult.issues
+          },
+          softSkills: {
+            score: clampedSoftSkills,
+            weight: weights.softSkills,
+            matched: softSkillsResult.matched,
+            total: softSkillsResult.total
+          }
+        },
+        knockOutFactors
       };
     } catch (error) {
       console.error('ATS calculation error:', error);

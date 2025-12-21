@@ -28,6 +28,7 @@ import { formatCardTime } from '@/lib/utils/timeUtils';
 import { CVJourney } from '@/types/cv';
 import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
+import CreateMasterCVCard from './CreateMasterCVCard';
 
 interface JobApplication {
   id: string;
@@ -169,6 +170,8 @@ const ApplicationTracker: React.FC = () => {
   const [showAddJobModal, setShowAddJobModal] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
+  const [showMasterCVCard, setShowMasterCVCard] = useState(false);
+  const [isCheckingMasterCV, setIsCheckingMasterCV] = useState(false);
   const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
   const [emailSentStatus, setEmailSentStatus] = useState<Record<string, Record<number, boolean>>>({});
@@ -789,9 +792,34 @@ ${userName}`
     setSelectedJob(null);
   };
 
-  const handleAddJob = () => {
-    setEditingJob(null);
-    setShowAddJobModal(true);
+  const handleAddJob = async () => {
+    // Check if user has Master CV before allowing job creation
+    // Master CV is required because journeys auto-create CV and cover letter
+    if (!userId) {
+      toast.error('Please log in to add a job');
+      return;
+    }
+
+    setIsCheckingMasterCV(true);
+    try {
+      const response = await fetch(`/api/cvs/master?userId=${userId}`);
+      const result = await response.json();
+
+      if (result.success && result.data?.masterCV) {
+        // User has Master CV, proceed with adding job
+        setEditingJob(null);
+        setShowAddJobModal(true);
+      } else {
+        // No Master CV, show the popup card
+        setShowMasterCVCard(true);
+      }
+    } catch (error) {
+      console.error('Error checking Master CV:', error);
+      // On error, still show the card to be safe
+      setShowMasterCVCard(true);
+    } finally {
+      setIsCheckingMasterCV(false);
+    }
   };
 
   const handleJobSaved = (job: any) => {
@@ -2141,6 +2169,14 @@ ${userName}`
         resetTime={creditInfo?.resetTime}
         preselectedPlanKey="pro_monthly"
       />
+
+      {/* Master CV Card - shown when trying to add job without Master CV */}
+      {showMasterCVCard && userId && (
+        <CreateMasterCVCard
+          userId={userId}
+          onClose={() => setShowMasterCVCard(false)}
+        />
+      )}
     </React.Fragment>
   );
 };
