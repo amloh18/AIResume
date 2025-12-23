@@ -90,24 +90,24 @@ const CVListView: React.FC<CVListViewProps> = ({
         // Check if it has a journeyId
         if (cv.journeyId || cv.metadata?.journeyId) return true;
         // Check if it's NOT a master CV (non-master CVs in "My CVs" section should show ATS Score)
-        const isMaster = cv.isMaster === true || 
-                        cv.metadata?.isMaster === true || 
-                        cv.metadata?.isMaster === 'true' ||
-                        cv.metadata?.createdVia === 'ai-career-report';
+        const isMaster = cv.isMaster === true ||
+            cv.metadata?.isMaster === true ||
+            cv.metadata?.isMaster === 'true' ||
+            cv.metadata?.createdVia === 'ai-career-report';
         // If it's not a master CV, show ATS Score
         return !isMaster;
     });
-    
+
     // Alternative: If all CVs are non-master, show ATS Score
     // This ensures "My CVs" section always shows "ATS Score"
     const allNonMaster = cvs.length > 0 && cvs.every(cv => {
-        const isMaster = cv.isMaster === true || 
-                        cv.metadata?.isMaster === true || 
-                        cv.metadata?.isMaster === 'true' ||
-                        cv.metadata?.createdVia === 'ai-career-report';
+        const isMaster = cv.isMaster === true ||
+            cv.metadata?.isMaster === true ||
+            cv.metadata?.isMaster === 'true' ||
+            cv.metadata?.createdVia === 'ai-career-report';
         return !isMaster;
     });
-    
+
     // Show "ATS Score" if there are any journey CVs OR if all CVs are non-master
     const showATSScore = hasJourneyCVs || allNonMaster;
 
@@ -124,20 +124,20 @@ const CVListView: React.FC<CVListViewProps> = ({
         // Check explicit cvType field first
         if (cv.cvType) return cv.cvType;
         if (cv.metadata?.cvType) return cv.metadata.cvType;
-        
+
         // Check if it's a master CV
-        if (cv.isMaster === true || 
-            cv.metadata?.isMaster === true || 
+        if (cv.isMaster === true ||
+            cv.metadata?.isMaster === true ||
             cv.metadata?.isMaster === 'true' ||
             cv.metadata?.createdVia === 'ai-career-report') {
             return 'master';
         }
-        
+
         // Check if it has a journeyId (journey CV)
         if (cv.journeyId || cv.metadata?.journeyId) {
             return 'journey';
         }
-        
+
         // Default to standalone
         return 'standalone';
     };
@@ -321,20 +321,26 @@ const CVListView: React.FC<CVListViewProps> = ({
                                         >
                                             <BarChart3 size={14} />
                                         </button>
-                                        <button
-                                            onClick={() => onDownload(cv)}
-                                            className="p-1.5 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            title="Download"
-                                        >
-                                            <Download size={14} />
-                                        </button>
-                                        <button
-                                            onClick={() => onDelete(cv)}
-                                            className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
+                                        {/* Hide download button for master CVs */}
+                                        {!(cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true' || cv.metadata?.createdVia === 'ai-career-report') && (
+                                            <button
+                                                onClick={() => onDownload(cv)}
+                                                className="p-1.5 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                title="Download"
+                                            >
+                                                <Download size={14} />
+                                            </button>
+                                        )}
+                                        {/* Hide delete button for master CVs */}
+                                        {!(cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.isMaster === 'true' || cv.metadata?.createdVia === 'ai-career-report') && (
+                                            <button
+                                                onClick={() => onDelete(cv)}
+                                                className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                title="Delete"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

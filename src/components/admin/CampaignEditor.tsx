@@ -154,6 +154,43 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     }
   }, [campaign]);
 
+  // Auto-update recipient count when filters change
+  useEffect(() => {
+    const fetchRecipientCount = async () => {
+      try {
+        const response = await fetch(
+          "/api/admin/email-campaigns/preview-targets",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              targetFilters: formData.targetFilters,
+              limit: 0, // Just get count, no preview emails needed
+            }),
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setTargetedCount(data.totalCount || 0);
+            console.log('✅ Auto-updated recipient count:', data.totalCount);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to auto-fetch recipient count:', error);
+        // Don't set to 0 on error - keep previous count
+      }
+    };
+
+    // Debounce the API call to avoid too many requests
+    const timeoutId = setTimeout(() => {
+      fetchRecipientCount();
+    }, 500); // Wait 500ms after last filter change
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.targetFilters]);
+
   useEffect(() => {
     if (selectedTemplate) {
       setFormData((prev) => ({
@@ -650,30 +687,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                   Select Target Users
                 </h3>
 
-                {/* Filter Presets */}
-                <div className="mb-6">
-                  <FilterPresets
-                    onApplyPreset={handleApplyFilterPreset}
-                    currentFilters={formData.targetFilters}
-                    onSaveCustomPreset={handleSaveCustomPreset}
-                  />
-                </div>
-
-                {/* Target Audience Filters */}
-                <div className="mb-6">
-                  <h4 className="text-lg font-semibold text-white mb-4">
-                    Refine Audience (Optional)
-                  </h4>
-                  <CampaignFilters
-                    filters={formData.targetFilters}
-                    onChange={(filters) =>
-                      handleInputChange("targetFilters", filters)
-                    }
-                    twoColumn={true}
-                  />
-                </div>
-
-                {/* Estimated Recipients */}
+                {/* Estimated Recipients - MOVED TO TOP */}
                 <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-lg p-6">
                   <div className="flex items-center justify-between">
                     <div>
@@ -698,6 +712,51 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                       {previewingTargets ? "Loading..." : "Preview Users"}
                     </button>
                   </div>
+
+                  {/* Preview Users List */}
+                  {previewedEmails.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-blue-500/20">
+                      <h5 className="text-sm font-semibold text-white mb-2">
+                        Sample Recipients:
+                      </h5>
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {previewedEmails.map((email: string, idx: number) => (
+                          <div
+                            key={idx}
+                            className="text-sm text-gray-300 bg-gray-800/50 px-3 py-1.5 rounded"
+                          >
+                            {email}
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-2">
+                        Showing {previewedEmails.length} of {targetedCount} recipients
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Filter Presets */}
+                <div className="mb-6">
+                  <FilterPresets
+                    onApplyPreset={handleApplyFilterPreset}
+                    currentFilters={formData.targetFilters}
+                    onSaveCustomPreset={handleSaveCustomPreset}
+                  />
+                </div>
+
+                {/* Target Audience Filters */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-semibold text-white mb-4">
+                    Refine Audience (Optional)
+                  </h4>
+                  <CampaignFilters
+                    filters={formData.targetFilters}
+                    onChange={(filters) =>
+                      handleInputChange("targetFilters", filters)
+                    }
+                    twoColumn={true}
+                  />
                 </div>
 
                 {targetedCount > 0 && (

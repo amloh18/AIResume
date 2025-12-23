@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getJobParserService } from '@/lib/services/jobParserService';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { verifySponsorship } from '@/lib/services/sponsorshipVerificationService';
-import usageLimitsService from '@/lib/services/usageLimitsService';
+import { checkJobLimit } from '@/lib/utils/subscription-helpers';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 
@@ -34,36 +34,34 @@ export async function POST(request: NextRequest) {
     }
 
     const planKey = user.currentPlanKey || 'free';
-    const isFreeUser = planKey === 'free';
-    const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey);
+    
+    // Check job limit (count-based, not credit-based)
+    const jobLimitCheck = await checkJobLimit(
+      userId.toString(),
+      planKey,
+      user.subscription
+    );
 
-    // For free users, check if they have credits available
-    if (isFreeUser || !isUnlimitedPlan) {
-      const usageCheck = await usageLimitsService.checkUsageLimit({
-        userId: userId.toString(),
-        action: 'job_create'
-      });
+    console.log('🔍 Job Parse API - Job limit check result:', {
+      allowed: jobLimitCheck.allowed,
+      message: jobLimitCheck.message,
+      currentCount: jobLimitCheck.currentCount,
+      limit: jobLimitCheck.limit,
+      planKey
+    });
 
-      console.log('🔍 Job Parse API - Credit check result:', {
-        allowed: usageCheck.allowed,
-        reason: usageCheck.reason,
-        currentUsage: usageCheck.currentUsage,
-        limit: usageCheck.limit,
-        planKey
-      });
-
-      if (!usageCheck.allowed) {
-        console.log('❌ Job Parse API - Credit check failed:', usageCheck.reason);
-        return NextResponse.json(
-          {
-            error: usageCheck.reason || 'You have no credits remaining. Please upgrade to parse job descriptions.',
-            requiresUpgrade: true,
-            creditsRemaining: usageCheck.limit === -1 ? -1 : (usageCheck.limit - usageCheck.currentUsage),
-            limit: usageCheck.limit
-          },
-          { status: 403 }
-        );
-      }
+    if (!jobLimitCheck.allowed) {
+      console.log('❌ Job Parse API - Job limit check failed:', jobLimitCheck.message);
+      return NextResponse.json(
+        {
+          error: jobLimitCheck.message || 'Job limit exceeded. Please upgrade to parse job descriptions.',
+          requiresUpgrade: jobLimitCheck.upgradeRequired,
+          currentCount: jobLimitCheck.currentCount,
+          limit: jobLimitCheck.limit,
+          gateType: 'hard'
+        },
+        { status: 403 }
+      );
     }
 
     const body = await request.json();
