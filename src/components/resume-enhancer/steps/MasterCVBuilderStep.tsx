@@ -1071,7 +1071,7 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
 
       {/* Add Section Modal */}
       {showAddSectionModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[110]">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

@@ -47,6 +47,14 @@ export interface IUser extends Document {
       jobs: number;
     };
   };
+  // Resume Enhancer Career Ecosystem limits (free tier)
+  resumeEnhancerLimits?: {
+    journeyCVsCreated: number; // Count for free tier (max 3)
+    surgeonRunsThisMonth: number; // AI analysis runs per month
+    surgeonRunsResetAt: Date; // When monthly surgeon runs reset
+    downloadsThisMonth: number; // PDF downloads per month
+    downloadsResetAt: Date; // When monthly downloads reset
+  };
   // Day pass tracking (for cumulative usage across multiple passes)
   dayPassPurchases?: Array<{
     purchaseDate: Date;
@@ -286,6 +294,32 @@ const userSchema = new Schema<IUser>({
         default: 0,
         min: 0
       }
+    }
+  },
+  // Resume Enhancer Career Ecosystem limits (free tier)
+  resumeEnhancerLimits: {
+    journeyCVsCreated: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    surgeonRunsThisMonth: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    surgeonRunsResetAt: {
+      type: Date,
+      default: Date.now
+    },
+    downloadsThisMonth: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    downloadsResetAt: {
+      type: Date,
+      default: Date.now
     }
   },
   // Day pass tracking (for cumulative usage across multiple passes)

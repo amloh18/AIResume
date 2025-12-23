@@ -127,17 +127,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         console.log('Detecting user location...');
         const location = await Promise.race([
           LocationService.getLocationData(),
-          new Promise<LocationData>((_, reject) => 
+          new Promise<LocationData>((_, reject) =>
             setTimeout(() => reject(new Error('Location detection timeout')), 4000)
           )
         ]);
-        
+
         clearTimeout(timeoutId);
         console.log('Location detected:', location);
-        
+
         setLocationData(location);
         setSelectedCurrency(location.currency);
-        
+
         // Get regional pricing from database API
         let pricingSet = false;
         let pricingTimeoutId: NodeJS.Timeout | null = null;
@@ -180,7 +180,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
             console.error('Error fetching pricing from database:', pricingError);
           }
         }
-        
+
         // Fallback: try to get default pricing if regional pricing wasn't set
         if (!pricingSet) {
           let defaultTimeoutId: NodeJS.Timeout | null = null;
@@ -317,8 +317,8 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         try {
           const offersController = new AbortController();
           offersTimeoutId = setTimeout(() => offersController.abort(), 5000);
-          offersResponse = await fetch('/api/promotional-offers/active?userType=all', { 
-            signal: offersController.signal 
+          offersResponse = await fetch('/api/promotional-offers/active?userType=all', {
+            signal: offersController.signal
           });
           if (offersTimeoutId) {
             clearTimeout(offersTimeoutId);
@@ -350,32 +350,32 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
             setPlans([]);
           } else {
             const responseData = await plansResponse.json();
-            
+
             // Extract plans from response - API returns { plans: [...], region: {...} }
-            fetchedPlans = Array.isArray(responseData) 
-              ? responseData 
+            fetchedPlans = Array.isArray(responseData)
+              ? responseData
               : (responseData?.plans || []);
-          
-          // Ensure fetchedPlans is always an array
-          if (!Array.isArray(fetchedPlans)) {
-            console.error('Plans data is not an array:', fetchedPlans);
-            fetchedPlans = [];
-          }
-          
-          // Filter plans that should be displayed on landing page
-          if (options.publicOnly) {
-            fetchedPlans = fetchedPlans.filter((plan: DatabasePricingPlan) => 
-              plan.displayOnLanding && plan.targetAudience === 'all'
-            );
-          }
-          
-          // Exclude free plan if requested
-          if (options.excludeFree) {
-            fetchedPlans = fetchedPlans.filter((plan: DatabasePricingPlan) => 
-              plan.key !== 'free' && plan.status === 'active'
-            );
-          }
-          
+
+            // Ensure fetchedPlans is always an array
+            if (!Array.isArray(fetchedPlans)) {
+              console.error('Plans data is not an array:', fetchedPlans);
+              fetchedPlans = [];
+            }
+
+            // Filter plans that should be displayed on landing page
+            if (options.publicOnly) {
+              fetchedPlans = fetchedPlans.filter((plan: DatabasePricingPlan) =>
+                plan.displayOnLanding && plan.targetAudience === 'all'
+              );
+            }
+
+            // Exclude free plan if requested
+            if (options.excludeFree) {
+              fetchedPlans = fetchedPlans.filter((plan: DatabasePricingPlan) =>
+                plan.key !== 'free' && plan.status === 'active'
+              );
+            }
+
             setPlans(fetchedPlans);
           }
         } else {
@@ -396,7 +396,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
             console.error('Promotional offers response is not JSON. Content-Type:', contentType);
           }
         } else {
-          console.error('Error fetching promotional offers:', offersResponse.status);
+          console.error('Error fetching promotional offers:', offersResponse ? offersResponse.status : 'No response');
         }
 
         // Update cache with fetched data
@@ -429,10 +429,20 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
   // Get regional price for a plan (returns price string with currency symbol)
   const getRegionalPrice = (plan: DatabasePricingPlan): string => {
     if (!regionalPricing) {
-      // Fallback to default prices if regional pricing not loaded yet
-      const fallbackPrice = plan.price_one_time || plan.price_monthly || plan.price_quarterly || plan.price_yearly || 0;
-      // Use currency symbol if available, otherwise use currency code
-      const currencySymbol = plan.currency === 'USD' ? '$' : plan.currency === 'GBP' ? '£' : plan.currency === 'EUR' ? '€' : plan.currency || '£';
+      // Fallback: Use the pre-calculated regional pricing from the plan object itself (computed by API)
+      // This handles the case where the separate regional pricing fetch fails
+      if ((plan as any).regionalPricing?.displayPrice) {
+        return (plan as any).regionalPricing.displayPrice;
+      }
+
+      // Secondary Fallback: Use the raw price field computed by the API
+      const fallbackPrice = (plan as any).price || 0;
+      if (fallbackPrice === 0) {
+        console.warn(`[Pricing] Zero price fallback for plan ${plan.key}. Missing regional data.`);
+      }
+
+      const currencySymbol = (plan as any).currencySymbol ||
+        (plan.currency === 'USD' ? '$' : plan.currency === 'GBP' ? '£' : plan.currency === 'EUR' ? '€' : plan.currency || '£');
       return `${currencySymbol}${fallbackPrice}`;
     }
 
@@ -447,7 +457,8 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
       case 'pro_yearly':
         return regionalPricing.yearly;
       default:
-        const fallbackPrice = plan.price_one_time || plan.price_monthly || 0;
+        // Use plan.price as fallback if specific key not found in regional pricing
+        const fallbackPrice = (plan as any).price || 0;
         return `${regionalPricing.currencySymbol}${fallbackPrice}`;
     }
   };
@@ -514,9 +525,9 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
 
   // Check if plan has promotional pricing
   const hasPromotionalPricing = (plan: DatabasePricingPlan): boolean => {
-    return Boolean(plan.isPromotionActive && plan.effectivePrice && 
-           ((plan.effectivePrice.oneTime && plan.effectivePrice.oneTime < (plan.price_one_time || 0)) ||
-            (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0))));
+    return Boolean(plan.isPromotionActive && plan.effectivePrice &&
+      ((plan.effectivePrice.oneTime && plan.effectivePrice.oneTime < (plan.price_one_time || 0)) ||
+        (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0))));
   };
 
   return {

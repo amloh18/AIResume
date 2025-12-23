@@ -564,6 +564,11 @@ const OptimizedNavigation: React.FC = () => {
 
             // Free plan card
             if (currentPlan === 'free') {
+              // Determine what user can do based on credits
+              const canCreateMasterCV = true; // Master CV is always free
+              const canAddJob = hasCredits; // Based on job credits
+              const canCreateStandaloneCV = true; // Standalone CVs are free (unlimited for free tier)
+
               return (
                 <div className="hidden 2xl:block rounded-2xl p-3 text-white border-2 border-white/20" style={{ backgroundColor: '#603a86' }}>
                   <div className="text-sm font-semibold mb-2">
@@ -573,7 +578,7 @@ const OptimizedNavigation: React.FC = () => {
                   {!isUnlimited && limit > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
-                        <span>Credits used</span>
+                        <span>Job credits used</span>
                         <span>{used}/{limit}</span>
                       </div>
                       <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -589,20 +594,27 @@ const OptimizedNavigation: React.FC = () => {
 
                   {!hasCredits && (
                     <div className="text-xs text-yellow-300 mb-2 font-medium">
-                      ⚠️ Credits exhausted. Upgrade to continue creating jobs.
+                      ⚠️ Job credits exhausted. Upgrade to continue tracking jobs.
                     </div>
                   )}
 
                   <div className="text-xs font-semibold mb-1.5">
-                    Go Pro to get:
+                    What you can do:
                   </div>
 
                   <ul className="text-xs text-white/90 space-y-0.5 mb-3">
-                    <li>• Unlimited job creation</li>
-                    <li>• Unlimited CVs & cover letters</li>
-                    <li>• Unlimited ATS checks per job</li>
-                    <li>• Premium templates</li>
-                    <li>• Priority support</li>
+                    <li className="flex items-center gap-1.5">
+                      {canCreateMasterCV ? '✓' : '✗'}
+                      <span className={canCreateMasterCV ? '' : 'opacity-50'}>Create Master CV (Free Forever)</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      {canAddJob ? '✓' : '✗'}
+                      <span className={canAddJob ? '' : 'opacity-50'}>Add {remaining} more tracked {remaining === 1 ? 'job' : 'jobs'}</span>
+                    </li>
+                    <li className="flex items-center gap-1.5">
+                      {canCreateStandaloneCV ? '✓' : '✗'}
+                      <span className={canCreateStandaloneCV ? '' : 'opacity-50'}>Create 1 standalone CV</span>
+                    </li>
                   </ul>
 
                   <div className="space-y-2">

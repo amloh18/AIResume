@@ -19,6 +19,7 @@ interface RoleSelectorModalProps {
   onOpenJobParser?: () => void;
   isOnboardingMode?: boolean;
   isGuestMode?: boolean;
+  cvType?: 'master' | 'standalone' | 'journey';
 }
 
 const SENIORITY_LEVELS = [
@@ -36,7 +37,8 @@ export default function RoleSelectorModal({
   onSubmit,
   onOpenJobParser,
   isOnboardingMode = false,
-  isGuestMode = false
+  isGuestMode = false,
+  cvType
 }: RoleSelectorModalProps) {
   const [targetRole, setTargetRole] = useState('');
   const [seniorityLevel, setSeniorityLevel] = useState('');
@@ -159,7 +161,7 @@ export default function RoleSelectorModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -307,8 +309,8 @@ export default function RoleSelectorModal({
                 >
                   Role Only
                 </button>
-                {/* Hide "Add JD & Track" for onboarding/guest mode (master CVs don't use JD) */}
-                {!(isOnboardingMode || isGuestMode) && (
+                {/* Hide "Add JD & Track" for onboarding/guest mode and master CVs (master CVs don't use JD) */}
+                {!(isOnboardingMode || isGuestMode || cvType === 'master') && (
                   <button
                     onClick={() => {
                       if (onOpenJobParser && targetRole && seniorityLevel) {

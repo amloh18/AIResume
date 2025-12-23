@@ -7,10 +7,10 @@
  * All CV operations (CRUD) must use this service to ensure consistency.
  */
 
-import { 
-  UnifiedCVDataStructure, 
-  UnifiedCVDocument, 
-  UnifiedCVAPIResponse, 
+import {
+  UnifiedCVDataStructure,
+  UnifiedCVDocument,
+  UnifiedCVAPIResponse,
   UnifiedCVRequest,
   DEFAULT_UNIFIED_CV_DATA
 } from '@/types/unified-cv-schema';
@@ -28,30 +28,30 @@ export class UnifiedCVService {
     if (userId) {
       params.append('userId', userId);
     }
-    
+
     const response = await authenticatedFetch(`${url}?${params.toString()}`, {
       headers: {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to fetch CV: ${response.status} ${errorText}`);
     }
-    
+
     // Get response text once and check if it's empty
     const responseText = await response.text();
     if (!responseText || responseText.trim().length === 0) {
       throw new Error('Empty response from server');
     }
-    
+
     // Check content type
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error(`Invalid response format. Expected JSON, got: ${contentType || 'empty'}. Response: ${responseText.substring(0, 100)}`);
     }
-    
+
     let result: UnifiedCVAPIResponse;
     try {
       result = JSON.parse(responseText);
@@ -60,16 +60,16 @@ export class UnifiedCVService {
       console.error('❌ UnifiedCVService.getCV - Response text:', responseText.substring(0, 200));
       throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
-    
+
     if (!result.success || !result.data?.cv) {
       throw new Error('CV not found or access denied');
     }
-    
+
     // Clean up summary fields to remove highlights that were incorrectly appended
     if (result.data.cv.cvData) {
       result.data.cv.cvData = cleanupSummaryFields(result.data.cv.cvData);
     }
-    
+
     return result.data.cv;
   }
 
@@ -99,30 +99,30 @@ export class UnifiedCVService {
     if (filters?.projection) {
       params.append('projection', filters.projection);
     }
-    
+
     const response = await authenticatedFetch(`/api/cvs?${params.toString()}`, {
       headers: {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to fetch CVs: ${response.status} ${errorText}`);
     }
-    
+
     // Get response text once and check if it's empty
     const responseText = await response.text();
     if (!responseText || responseText.trim().length === 0) {
       throw new Error('Empty response from server');
     }
-    
+
     // Check content type
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error(`Invalid response format. Expected JSON, got: ${contentType || 'empty'}. Response: ${responseText.substring(0, 100)}`);
     }
-    
+
     let result: UnifiedCVAPIResponse;
     try {
       result = JSON.parse(responseText);
@@ -131,11 +131,11 @@ export class UnifiedCVService {
       console.error('❌ UnifiedCVService.getCVs - Response text:', responseText.substring(0, 200));
       throw new Error(`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
     }
-    
+
     if (!result.success || !result.data?.cvs) {
       throw new Error('Failed to fetch CVs');
     }
-    
+
     // Clean up summary fields for CVs that have full cvData (not summary projection)
     const cleanedCVs = result.data.cvs.map(cv => {
       if (cv.cvData) {
@@ -143,7 +143,7 @@ export class UnifiedCVService {
       }
       return cv;
     });
-    
+
     return cleanedCVs;
   }
 
@@ -162,31 +162,31 @@ export class UnifiedCVService {
         userId
       }),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to create CV: ${response.status} ${errorText}`);
     }
-    
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Invalid response format from server');
     }
-    
+
     const result: any = await response.json();
-    
+
     // Handle both response formats:
     // 1. { success: true, data: { cv: {...} } } - Unified format
     // 2. { success: true, cv: {...} } - Direct format (from POST /api/cvs)
     if (!result.success) {
       throw new Error(result.error || 'Failed to create CV');
     }
-    
+
     const cv = result.data?.cv || result.cv;
     if (!cv) {
       throw new Error('Failed to create CV: No CV data in response');
     }
-    
+
     return cv;
   }
 
@@ -196,21 +196,21 @@ export class UnifiedCVService {
    * Includes updatedAt for conflict detection
    */
   static async updateCV(
-    cvId: string, 
-    cvData: Partial<UnifiedCVRequest> & { updatedAt?: string | Date }, 
+    cvId: string,
+    cvData: Partial<UnifiedCVRequest> & { updatedAt?: string | Date },
     userId?: string
   ): Promise<UnifiedCVDocument> {
     const params = new URLSearchParams();
     if (userId) {
       params.append('userId', userId);
     }
-    
+
     // Include updatedAt if provided (for conflict detection)
     const updatePayload = {
       ...cvData,
       updatedAt: cvData.updatedAt ? (typeof cvData.updatedAt === 'string' ? cvData.updatedAt : cvData.updatedAt.toISOString()) : undefined
     };
-    
+
     const response = await authenticatedFetch(`/api/cvs/${cvId}?${params.toString()}`, {
       method: 'PUT',
       headers: {
@@ -218,7 +218,7 @@ export class UnifiedCVService {
       },
       body: JSON.stringify(updatePayload),
     });
-    
+
     // Check for conflict (409 status)
     if (response.status === 409) {
       const conflictData = await response.json();
@@ -230,23 +230,23 @@ export class UnifiedCVService {
         throw conflictError;
       }
     }
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to update CV: ${response.status} ${errorText}`);
     }
-    
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Invalid response format from server');
     }
-    
+
     const result: UnifiedCVAPIResponse = await response.json();
-    
+
     if (!result.success || !result.data?.cv) {
       throw new Error('Failed to update CV');
     }
-    
+
     return result.data.cv;
   }
 
@@ -258,14 +258,14 @@ export class UnifiedCVService {
     if (userId) {
       params.append('userId', userId);
     }
-    
+
     const response = await authenticatedFetch(`/api/cvs/${cvId}?${params.toString()}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to delete CV: ${response.status} ${errorText}`);
@@ -282,23 +282,23 @@ export class UnifiedCVService {
         'Content-Type': 'application/json',
       },
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to fetch master CV: ${response.status} ${errorText}`);
     }
-    
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Invalid response format from server');
     }
-    
+
     const result: UnifiedCVAPIResponse = await response.json();
-    
+
     if (!result.success || !result.data?.cv) {
       return null;
     }
-    
+
     return result.data.cv;
   }
 
@@ -316,23 +316,23 @@ export class UnifiedCVService {
         userId
       }),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to set master CV: ${response.status} ${errorText}`);
     }
-    
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Invalid response format from server');
     }
-    
+
     const result: UnifiedCVAPIResponse = await response.json();
-    
+
     if (!result.success || !result.data?.cv) {
       throw new Error('Failed to set master CV');
     }
-    
+
     return result.data.cv;
   }
 
@@ -347,28 +347,28 @@ export class UnifiedCVService {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        cvId,
-        title: newTitle,
+        sourceCvId: cvId,
+        customTitle: newTitle,
         userId
       }),
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(`Failed to duplicate CV: ${response.status} ${errorText}`);
     }
-    
+
     const contentType = response.headers.get('content-type');
     if (!contentType || !contentType.includes('application/json')) {
       throw new Error('Invalid response format from server');
     }
-    
+
     const result: UnifiedCVAPIResponse = await response.json();
-    
+
     if (!result.success || !result.data?.cv) {
       throw new Error('Failed to duplicate CV');
     }
-    
+
     return result.data.cv;
   }
 

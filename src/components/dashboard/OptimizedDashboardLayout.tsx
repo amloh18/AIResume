@@ -28,7 +28,10 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
       <div className="flex h-screen">
         {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
         {/* Always render sidebar shell for layout stability */}
-        <div className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible pointer-events-auto">
+        <div
+          data-dashboard-sidebar
+          className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible pointer-events-auto transition-all duration-300"
+        >
           <OptimizedNavigation />
         </div>
 

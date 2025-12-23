@@ -279,8 +279,8 @@ const CleanUnlinkedButton: React.FC<CleanUnlinkedButtonProps> = ({
 
     // Filter items that are not linked to any journeys
     const unlinked = items.filter(item => {
-      // Skip master CVs
-      if (type === 'cv' && item.isMaster) {
+      // Skip master CVs and non-journey CVs (only clean journey CVs)
+      if (type === 'cv' && (item.isMaster || item.cvType !== 'journey')) {
         return false;
       }
 
@@ -1128,66 +1128,57 @@ const Canvas: React.FC = () => {
 
   const handleDuplicateMasterCV = async (masterCV: any) => {
     try {
-
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
-      // Use ApplicationPackageService to properly duplicate CV
-      const duplicateResult = await ApplicationPackageService.duplicateCV({
-        sourceCvId: masterCV.id,
-        userId,
-        newTitle: `${masterCV.title} (Copy)`
-      });
+      // Use UnifiedCVService to duplicate CV (Standard CRUD operation)
+      const duplicateCV = await UnifiedCVService.duplicateCV(
+        masterCV.id,
+        `${masterCV.title} (Copy)`,
+        userId
+      );
 
-      if (duplicateResult.success && duplicateResult.data?.cvId) {
-        const duplicatedCVId = duplicateResult.data.cvId;
-
-        // Navigate to studio with duplicated CV (standalone mode, ready for job linking)
-        router.push(`/studio?cvId=${duplicatedCVId}&returnUrl=/dashboard/canvas`);
-
-        // Removed notification:'success', 'Master CV duplicated successfully! You can now link it to a job.');
+      if (duplicateCV && duplicateCV.id) {
+        // Navigate to resume-enhancer with duplicated CV (standalone mode, ready for job linking)
+        router.push(`/resume-enhancer?mode=edit&cvId=${duplicateCV.id}`);
       } else {
-        throw new Error(duplicateResult.message || 'Failed to duplicate master CV');
+        throw new Error('Failed to duplicate master CV');
       }
     } catch (error) {
-      // Removed notification:'error', 'Failed to duplicate master CV');
+      console.error('Failed to duplicate master CV', error);
     }
   };
 
   // CV Card handlers (moved after load functions and wrapped in useCallback to ensure loadCVs is available)
   const handleDuplicateCV = useCallback(async (cv: CV) => {
     try {
-
       const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
       if (!userId) {
-        // Removed notification:'error', 'User not authenticated');
         return;
       }
 
-      // Use ApplicationPackageService to properly duplicate CV
-      const duplicateResult = await ApplicationPackageService.duplicateCV({
-        sourceCvId: cv.id,
-        userId,
-        newTitle: `${cv.title} (Copy)`
-      });
+      // Use UnifiedCVService to duplicate CV
+      const duplicateCV = await UnifiedCVService.duplicateCV(
+        cv.id,
+        `${cv.title} (Copy)`,
+        userId
+      );
 
-      if (duplicateResult.success && duplicateResult.data?.cvId) {
-        // Refresh CVs list to show the new freestanding duplicate
+      if (duplicateCV && duplicateCV.id) {
+        // Refresh CVs list
         loadAllCVData();
-        // Removed notification:'success', 'CV duplicated successfully! The copy is ready to be linked to a new job.');
 
         // If the source CV was linked to a journey, inform user about the duplication principle
         if (cv.journeyId) {
-          // Removed notification:'info', 'A new freestanding copy was created. You can now link it to a different job application.', 5000);
+          // Logic for notification can be added here if needed
         }
       } else {
-        throw new Error(duplicateResult.message || 'Failed to duplicate CV');
+        throw new Error('Failed to duplicate CV');
       }
     } catch (error) {
-      // Removed notification:'error', 'Failed to duplicate CV');
+      console.error('Failed to duplicate CV', error);
     }
   }, [user, loadAllCVData]);
 

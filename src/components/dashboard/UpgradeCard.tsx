@@ -14,7 +14,7 @@ interface UpgradeCardProps {
 const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
-  
+
   // Get location-based pricing
   const { plans, getRegionalPrice, getMonthlyEquivalent, getCurrencySymbol, loading: pricingLoading } = usePricingPlans({});
 
@@ -53,36 +53,36 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
         currencySymbol: '£'
       };
     }
-    
+
     const currencySymbol = getCurrencySymbol();
     const monthlyEquivalent = getMonthlyEquivalent(plan);
     const quarterlyPriceString = getRegionalPrice(plan);
-    
+
     // Extract numeric values for calculations
     const extractNumeric = (str: string): number => {
       return parseFloat(str.replace(/[^\d.,]/g, '').replace(',', '')) || 0;
     };
-    
+
     const quarterlyPrice = extractNumeric(quarterlyPriceString);
     const monthlyPlan = plans.find((p: DatabasePricingPlan) => p.key === 'pro_monthly');
     const monthlyPrice = monthlyPlan ? extractNumeric(getRegionalPrice(monthlyPlan)) : 0;
-    
+
     // Calculate savings percentage
     const quarterlyMonthlyEquivalent = quarterlyPrice / 3;
-    const savings = monthlyPrice > 0 
+    const savings = monthlyPrice > 0
       ? Math.round(((monthlyPrice - quarterlyMonthlyEquivalent) / monthlyPrice) * 100)
       : 14;
-    
+
     return {
       key: plan.key,
       name: plan.name,
       price: quarterlyPrice,
       priceString: quarterlyPriceString,
       period: 'quarter',
-      monthlyEquivalent: monthlyEquivalent.showMonthly 
+      monthlyEquivalent: monthlyEquivalent.showMonthly
         ? extractNumeric(monthlyEquivalent.price)
         : quarterlyMonthlyEquivalent,
-      monthlyEquivalentString: monthlyEquivalent.showMonthly 
+      monthlyEquivalentString: monthlyEquivalent.showMonthly
         ? monthlyEquivalent.price
         : `${currencySymbol}${quarterlyMonthlyEquivalent.toFixed(2)}`,
       savings: `${savings}%`,
@@ -92,10 +92,12 @@ const UpgradeCard: React.FC<UpgradeCardProps> = ({ userId, onClose }) => {
   }, [plans, getRegionalPrice, getMonthlyEquivalent, getCurrencySymbol, pricingLoading]);
 
   const benefits = [
-    'Unlimited CVs & Cover Letters',
-    'All premium templates',
-    'Job tracking & ATS optimization',
-    'Priority support'
+    'Unlimited Journey CVs',
+    'Unlimited Job Applications',
+    'Full AI Rewrite & Keyword Injection',
+    'AI-Generated Cover Letters',
+    'Premium Templates & DOCX Export',
+    'Priority Support'
   ];
 
   if (!isVisible) return null;

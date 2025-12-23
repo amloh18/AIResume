@@ -26,14 +26,14 @@ interface SurgeonReportModalProps {
 // Competitor Benchmarking Component
 function CompetitorBenchmark({ fix }: { fix: FixAnnotation }) {
   // Extract skill name from fix
-  const skillMatch = fix.replacementText?.match(/\b([A-Z][a-zA-Z]+(?:\.js|\.py)?)\b/) || 
-                    fix.issue?.match(/['"]([A-Z][a-zA-Z]+(?:\.js|\.py)?)['"]/) ||
-                    fix.replacementText?.match(/Add\s+([A-Z][a-zA-Z]+(?:\.js|\.py)?)/i);
+  const skillMatch = fix.replacementText?.match(/\b([A-Z][a-zA-Z]+(?:\.js|\.py)?)\b/) ||
+    fix.issue?.match(/['"]([A-Z][a-zA-Z]+(?:\.js|\.py)?)['"]/) ||
+    fix.replacementText?.match(/Add\s+([A-Z][a-zA-Z]+(?:\.js|\.py)?)/i);
   const skillName = skillMatch?.[1] || 'this skill';
-  
+
   // Generate a realistic percentage (80-95% for common skills)
   const percentage = Math.floor(Math.random() * 16) + 80; // 80-95%
-  
+
   return (
     <div className="mb-3 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent p-4">
       <div className="flex items-start gap-3">
@@ -53,7 +53,7 @@ function CompetitorBenchmark({ fix }: { fix: FixAnnotation }) {
           </div>
           {/* Mini progress bar */}
           <div className="mt-3 h-2 bg-white/10 rounded-full overflow-hidden">
-            <div 
+            <div
               className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-500"
               style={{ width: `${percentage}%` }}
             />
@@ -107,12 +107,12 @@ function whyItMatters(fix?: FixAnnotation) {
 
 export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: SurgeonReportModalProps) {
   const { state, dispatch } = useResumeEnhancer();
-  const { 
-    surgeonAnalysis: contextSurgeonAnalysis, 
-    atsScore, 
+  const {
+    surgeonAnalysis: contextSurgeonAnalysis,
+    atsScore,
     atsAnalysis,
     updateSurgeonAnalysis,
-    refreshSurgeonAnalysis 
+    refreshSurgeonAnalysis
   } = useATS();
 
   const [isCriticalExpanded, setIsCriticalExpanded] = useState(true);
@@ -131,7 +131,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
     seniorityLevel: state.seniorityLevel || '',
     analyzedAt: new Date(),
   } : null);
-  
+
   // Calculate JD reference status before using it
   const jdText =
     (typeof state.jobData?.description === 'string' && state.jobData.description) ||
@@ -140,7 +140,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
     '';
   const isJDReferenced = jdText.trim().length > 0;
   const scoreLabel = isJDReferenced ? 'ATS score' : 'CV score';
-  
+
   // Use ATS score from context if available (more accurate), otherwise use surgeon score
   const displayScore = (atsScore !== null && isJDReferenced) ? atsScore : (surgeonAnalysis?.score ?? 0);
 
@@ -204,9 +204,9 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
       // Look for fixes related to missing skills
       if (fix.fieldPath.includes('skills') || fix.category === 'keywords') {
         // Extract skill name from replacement text or issue
-        const skillMatch = fix.replacementText?.match(/\b([A-Z][a-zA-Z]+(?:\.js|\.py)?)\b/) || 
-                          fix.issue?.match(/['"]([A-Z][a-zA-Z]+(?:\.js|\.py)?)['"]/) ||
-                          fix.replacementText?.match(/Add\s+([A-Z][a-zA-Z]+(?:\.js|\.py)?)/i);
+        const skillMatch = fix.replacementText?.match(/\b([A-Z][a-zA-Z]+(?:\.js|\.py)?)\b/) ||
+          fix.issue?.match(/['"]([A-Z][a-zA-Z]+(?:\.js|\.py)?)['"]/) ||
+          fix.replacementText?.match(/Add\s+([A-Z][a-zA-Z]+(?:\.js|\.py)?)/i);
         if (skillMatch && skillMatch[1]) {
           const skillName = skillMatch[1];
           // Check if skill is not already in CV
@@ -356,19 +356,19 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
 
   const handleApplyFix = async (fix: FixAnnotation) => {
     // Validate that skills fixes only apply to skills fields, not name or other fields
-    if ((fix.fieldPath.includes('skills') || fix.category === 'keywords') && 
-        (fix.fieldPath.includes('basics.name') || (fix.fieldPath.includes('name') && !fix.fieldPath.includes('skills')))) {
+    if ((fix.fieldPath.includes('skills') || fix.category === 'keywords') &&
+      (fix.fieldPath.includes('basics.name') || (fix.fieldPath.includes('name') && !fix.fieldPath.includes('skills')))) {
       console.warn('⚠️ Skipping fix - fieldPath points to name field but fix is for skills:', fix.fieldPath);
       return;
     }
-    
+
     // Preserve the original name before applying fix
     const originalName = state.cvData.basics?.name;
-    
+
     // Apply the fix
     const result = CVSurgeonService.applyFixAnnotation(state.cvData, fix);
     let updatedCV = result.updatedCV;
-    
+
     // Always restore the name if it was accidentally changed (safety check)
     if (originalName && updatedCV.basics?.name !== originalName) {
       updatedCV = {
@@ -379,46 +379,46 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         }
       };
     }
-    
+
     dispatch({ type: 'SET_CV_DATA', payload: updatedCV });
     dispatch({ type: 'MARK_FIX_APPLIED', payload: fix.id });
-    
+
     // Recalculate score dynamically after applying fix (more strict scoring)
     if (state.surgeonAnalysis) {
       // Get current applied and open fixes (accounting for the one we just applied)
       const previouslyApplied = (state.fixAnnotations || []).filter((f) => f.status === 'applied');
       const openFixes = (state.fixAnnotations || []).filter((f) => f.status === 'open' && f.id !== fix.id);
-      
+
       // Calculate new score: start with base score, add impact of applied fixes
       let newScore = state.surgeonAnalysis.score;
-      
+
       // Add impact of the fix we just applied (more strict: only count 75% of the impact to be conservative)
       const appliedImpact = Math.round((fix.impactScoreDelta || 0) * 0.75);
       newScore = Math.min(100, newScore + appliedImpact);
-      
+
       // More strict: Apply penalty for remaining critical open fixes (10% of their impact)
       const criticalOpenFixes = openFixes.filter((f) => f.severity === 'high');
       const criticalPenalty = criticalOpenFixes.reduce((sum, f) => sum + Math.max(0, (f.impactScoreDelta || 0) * 0.1), 0);
-      
+
       // More strict: Apply smaller penalty for medium severity open fixes (5% of their impact)
       const mediumOpenFixes = openFixes.filter((f) => f.severity === 'medium');
       const mediumPenalty = mediumOpenFixes.reduce((sum, f) => sum + Math.max(0, (f.impactScoreDelta || 0) * 0.05), 0);
-      
+
       const totalPenalty = criticalPenalty + mediumPenalty;
       newScore = Math.max(0, newScore - Math.round(totalPenalty));
-      
+
       // Ensure score doesn't exceed 100
       newScore = Math.min(100, Math.max(0, newScore));
-      
+
       // Update score in state immediately for live feedback
-      dispatch({ 
-        type: 'SET_SURGEON_ANALYSIS', 
-        payload: { 
-          score: newScore, 
-          fixes: state.surgeonAnalysis.fixes 
-        } 
+      dispatch({
+        type: 'SET_SURGEON_ANALYSIS',
+        payload: {
+          score: newScore,
+          fixes: state.surgeonAnalysis.fixes
+        }
       });
-      
+
       // Update ATS Context if available
       if (state.cvId && surgeonAnalysis) {
         updateSurgeonAnalysis({
@@ -429,7 +429,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         });
       }
     }
-    
+
     logResumeEnhancerEvent({
       action: 'resume_enhancer_fix_applied',
       resourceType: 'cv',
@@ -456,7 +456,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         const cat = String(s?.category || s?.name || '').toLowerCase();
         return cat === categoryName.toLowerCase();
       });
-      
+
       if (existingCategory) {
         // Add to existing category
         const items = getSkillItems(existingCategory);
@@ -491,7 +491,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
 
   const handleSuppressFix = async (fix: FixAnnotation) => {
     if (!state.cvId) return;
-    
+
     // Suppress the fix
     await suppressFix(fix.id, 'manual_override', {
       cvId: state.cvId,
@@ -501,7 +501,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
       originalText: fix.originalText,
       fixSignatureHash: fix.fixSignatureHash
     });
-    
+
     // Update state
     dispatch({
       type: 'MARK_FIX_SUPPRESSED',
@@ -511,7 +511,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         fixSignatureHash: fix.fixSignatureHash
       }
     });
-    
+
     // Optimistically update score
     if (state.surgeonAnalysis) {
       const newScore = Math.min(100, state.surgeonAnalysis.score + Math.round((fix.impactScoreDelta || 0) * 0.5));
@@ -523,14 +523,14 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
         }
       });
     }
-    
+
     logResumeEnhancerEvent({
       action: 'resume_enhancer_fix_suppressed',
       resourceType: 'cv',
       resourceId: state.cvId,
       metadata: { fixId: fix.id, reason: 'manual_override' }
     });
-    
+
     const next = (state.fixAnnotations || []).find((f) => f.status === 'open' && f.id !== fix.id);
     dispatch({ type: 'SET_ACTIVE_FIX', payload: next?.id });
   };
@@ -560,7 +560,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
     // Determine icon and color based on status
     let IconComponent: typeof CheckCircle2 | typeof AlertTriangle | typeof CheckCircle;
     let iconColor: string;
-    
+
     if (disabled || fix.status === 'applied') {
       IconComponent = CheckCircle2;
       iconColor = 'text-emerald-400';
@@ -680,204 +680,229 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
     <AnimatePresence>
       {/* Live Keyword Validator */}
       <LiveKeywordValidator
+        key="keyword-validator"
         cvData={state.cvData}
         fixAnnotations={state.fixAnnotations}
         onFixStatusUpdate={handleFixStatusUpdate}
       />
-      
-      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 lg:p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 12, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 12, scale: 0.98 }}
-          transition={{ duration: 0.22 }}
-          className="w-full h-full max-w-[1600px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col"
-        >
-          {/* Top Bar (HUD) */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-            <div className="flex items-center gap-3 min-w-0">
-              <Sparkles className="w-4 h-4 text-[#80FF00]" />
-              <InfoTooltip content="Issues are highlighted directly on your CV. Select a fix on the left, then apply it from the right panel.">
-                <div className="text-white font-semibold cursor-help truncate">CVCircle Optimisation Report</div>
-              </InfoTooltip>
-              <div className="hidden md:flex items-center gap-3 text-xs text-white/70">
-                <span className="whitespace-nowrap">{openFixes.length} open</span>
-                {state.targetRole && (
-                  <span className="whitespace-nowrap">
-                    Optimizing for: <span className="text-white/90 font-semibold">{state.targetRole}</span>
-                  </span>
-                )}
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <div className="hidden lg:flex items-center gap-3">
-                <div className="text-xs text-white/60">
-                  <div className="uppercase tracking-wide">{scoreLabel}</div>
-                  <div className="mt-0.5 flex items-end gap-2">
-                    <AnimatedScore value={displayScore} suffix="/100" size="md" showChange={true} />
-                    <div className="w-36">
-                      <AnimatedProgressBar
-                        value={displayScore}
-                        height={8}
-                        showLabel={false}
-                        colorStops={[
-                          { threshold: 0, color: '#ef4444' },
-                          { threshold: 50, color: '#f59e0b' },
-                          { threshold: 70, color: '#80FF00' }
-                        ]}
-                      />
+      {isOpen && (
+        <div key="surgeon-modal" className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 lg:p-6">
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            transition={{ duration: 0.22 }}
+            className="w-full h-full max-w-[1600px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col"
+          >
+            {/* Top Bar (HUD) */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+              <div className="flex items-center gap-3 min-w-0">
+                <Sparkles className="w-4 h-4 text-[#80FF00]" />
+                <InfoTooltip content="Issues are highlighted directly on your CV. Select a fix on the left, then apply it from the right panel.">
+                  <div className="text-white font-semibold cursor-help truncate">CVCircle Optimisation Report</div>
+                </InfoTooltip>
+                <div className="hidden md:flex items-center gap-3 text-xs text-white/70">
+                  <span className="whitespace-nowrap">{openFixes.length} open</span>
+                  {state.targetRole && (
+                    <span className="whitespace-nowrap">
+                      Optimizing for: <span className="text-white/90 font-semibold">{state.targetRole}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="hidden lg:flex items-center gap-3">
+                  <div className="text-xs text-white/60">
+                    <div className="uppercase tracking-wide">{scoreLabel}</div>
+                    <div className="mt-0.5 flex items-end gap-2">
+                      <AnimatedScore value={displayScore} suffix="/100" size="md" showChange={true} />
+                      <div className="w-36">
+                        <AnimatedProgressBar
+                          value={displayScore}
+                          height={8}
+                          showLabel={false}
+                          colorStops={[
+                            { threshold: 0, color: '#ef4444' },
+                            { threshold: 50, color: '#f59e0b' },
+                            { threshold: 70, color: '#80FF00' }
+                          ]}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-white/70">
+                    <div className="uppercase tracking-wide">Quick wins</div>
+                    <div className="mt-0.5 flex items-center gap-2">
+                      <span className="text-red-400 font-semibold">{criticalFixes.length} critical</span>
+                      <span className="text-amber-300 font-semibold">{improvementFixes.length} improvements</span>
+                      {suppressedFixes.length > 0 && (
+                        <span className="text-gray-400 font-semibold">
+                          [{suppressedFixes.length} suppressed]
+                        </span>
+                      )}
+                      {topCategory && (
+                        <span className="text-white/70">
+                          Top: <span className="text-white/90 font-semibold">{CATEGORY_LABELS[topCategory]}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="text-xs text-white/70">
-                  <div className="uppercase tracking-wide">Quick wins</div>
-                  <div className="mt-0.5 flex items-center gap-2">
-                    <span className="text-red-400 font-semibold">{criticalFixes.length} critical</span>
-                    <span className="text-amber-300 font-semibold">{improvementFixes.length} improvements</span>
-                    {suppressedFixes.length > 0 && (
-                      <span className="text-gray-400 font-semibold">
-                        [{suppressedFixes.length} suppressed]
-                      </span>
-                    )}
-                    {topCategory && (
-                      <span className="text-white/70">
-                        Top: <span className="text-white/90 font-semibold">{CATEGORY_LABELS[topCategory]}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
 
-              <InfoTooltip content="Toggle Recruiter Vision: Blur everything except job titles, companies, dates, and section headers to see what recruiters scan in 6 seconds.">
-                <button
-                  onClick={() => setRecruiterView((v) => !v)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 ${
-                    recruiterView
+                <InfoTooltip content="Toggle Recruiter Vision: Blur everything except job titles, companies, dates, and section headers to see what recruiters scan in 6 seconds.">
+                  <button
+                    onClick={() => setRecruiterView((v) => !v)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-2 ${recruiterView
                       ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
                       : 'bg-white/10 text-white/90 hover:bg-white/15'
-                  }`}
-                >
-                  {recruiterView ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  <span>Recruiter View</span>
-                </button>
-              </InfoTooltip>
+                      }`}
+                  >
+                    {recruiterView ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>Recruiter View</span>
+                  </button>
+                </InfoTooltip>
 
-              <InfoTooltip content={openFixes.length === 0 ? "Refresh to run a new analysis scan" : "Apply all suggested fixes to your CV automatically."}>
-                <button
-                  onClick={async () => {
-                    if (openFixes.length === 0) {
-                      // Refresh analysis - clear cache and trigger re-analysis
-                      if (state.cvId && state.targetRole && state.seniorityLevel) {
-                        try {
-                          // Clear the cache to force fresh analysis
-                          await CVSurgeonService.clearAnalysisCache(state.cvId, state.cvId);
-                          // Trigger new analysis
-                          const result = await CVSurgeonService.analyzeCVWithCache(
-                            state.cvData,
-                            state.targetRole,
-                            state.seniorityLevel,
-                            state.cvId,
-                            undefined,
-                            state.jobData
-                          );
-                          dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
-                          dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
-                          
-                          // Update ATS Context
-                          if (state.cvId) {
-                            updateSurgeonAnalysis({
-                              score: result.score,
-                              fixes: result.fixes,
-                              annotations: result.annotations,
-                              targetRole: state.targetRole || '',
-                              seniorityLevel: state.seniorityLevel || '',
-                              analyzedAt: new Date(),
-                            }, state.cvId).catch(err => {
-                              console.warn('Failed to update surgeon analysis in context:', err);
+                <InfoTooltip content={openFixes.length === 0 ? "Refresh to run a new analysis scan" : "Apply all suggested fixes to your CV automatically and save in background."}>
+                  <button
+                    onClick={async () => {
+                      if (openFixes.length === 0) {
+                        // Refresh analysis - clear cache and trigger re-analysis
+                        if (state.cvId && state.targetRole && state.seniorityLevel) {
+                          try {
+                            // Clear the cache to force fresh analysis
+                            await CVSurgeonService.clearAnalysisCache(state.cvId, state.cvId);
+                            // Trigger new analysis
+                            const result = await CVSurgeonService.analyzeCVWithCache(
+                              state.cvData,
+                              state.targetRole,
+                              state.seniorityLevel,
+                              state.cvId,
+                              undefined,
+                              state.jobData
+                            );
+                            dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
+                            dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
+
+                            // Update ATS Context
+                            if (state.cvId) {
+                              updateSurgeonAnalysis({
+                                score: result.score,
+                                fixes: result.fixes,
+                                annotations: result.annotations,
+                                targetRole: state.targetRole || '',
+                                seniorityLevel: state.seniorityLevel || '',
+                                analyzedAt: new Date(),
+                              }, state.cvId).catch(err => {
+                                console.warn('Failed to update surgeon analysis in context:', err);
+                              });
+                            }
+
+                            const firstOpen = result.annotations.find((f) => f.status === 'open');
+                            if (firstOpen) {
+                              dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
+                            }
+                          } catch (error) {
+                            console.error('Failed to refresh analysis:', error);
+                          }
+                        }
+                      } else {
+                        // Save CV in background without redirecting
+                        if (state.cvId && state.cvData) {
+                          try {
+                            await fetch(`/api/cvs/${state.cvId}`, {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                cvData: state.cvData,
+                                title: state.cvTitle,
+                                templateId: state.selectedTemplate?.id
+                              })
                             });
+                            console.log('✅ CV saved in background after applying fixes');
+                          } catch (error) {
+                            console.error('Failed to save CV in background:', error);
                           }
-                          
-                          const firstOpen = result.annotations.find((f) => f.status === 'open');
-                          if (firstOpen) {
-                            dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
-                          }
-                        } catch (error) {
-                          console.error('Failed to refresh analysis:', error);
+                        }
+
+                        // Set review mode without closing modal
+                        dispatch({ type: 'SET_REVIEW_MODE', payload: true });
+                        const firstOpen = (state.fixAnnotations || []).find((f) => f.status === 'open');
+                        if (!state.activeFixId && firstOpen) {
+                          dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
                         }
                       }
-                    } else {
-                      handleReviewAndFix();
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#80FF00] hover:bg-[#70e600] text-black transition-colors"
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#80FF00] hover:bg-[#70e600] text-black transition-colors"
+                  >
+                    {openFixes.length === 0 ? 'Refresh' : 'Fix All'}
+                  </button>
+                </InfoTooltip>
+
+                <button
+                  onClick={onClose}
+                  className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                  aria-label="Close report"
                 >
-                  {openFixes.length === 0 ? 'Refresh' : 'Fix All'}
+                  <X className="w-4 h-4 text-white/70" />
                 </button>
-              </InfoTooltip>
-
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                aria-label="Close report"
-              >
-                <X className="w-4 h-4 text-white/70" />
-              </button>
-            </div>
-          </div>
-
-          {/* Body: Column-wise layout (Left rail | CV | Right panel stacked vertically) */}
-          <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-            {/* Left rail */}
-            <aside className="hidden lg:block w-80 flex-shrink-0 border-r border-white/10 bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3" style={{ maxHeight: '100%' }}>
-                <Bucket
-                  title="Critical"
-                  count={criticalFixes.length}
-                  expanded={isCriticalExpanded}
-                  onToggle={() => setIsCriticalExpanded((v) => !v)}
-                  badgeClassName="bg-red-500/20 text-red-300"
-                >
-                  {criticalFixes.length === 0 ? (
-                    <div className="text-xs text-white/50 italic">No critical fixes.</div>
-                  ) : (
-                    criticalFixes.map((fix) => <FixRow key={fix.id} fix={fix} />)
-                  )}
-                </Bucket>
-
-                <Bucket
-                  title="Improvements"
-                  count={improvementFixes.length}
-                  expanded={isImprovementsExpanded}
-                  onToggle={() => setIsImprovementsExpanded((v) => !v)}
-                  badgeClassName="bg-amber-500/20 text-amber-200"
-                >
-                  {improvementFixes.length === 0 ? (
-                    <div className="text-xs text-white/50 italic">No improvements available.</div>
-                  ) : (
-                    improvementFixes.map((fix) => <FixRow key={fix.id} fix={fix} />)
-                  )}
-                </Bucket>
-
-                <Bucket
-                  title="Good"
-                  count={appliedFixes.length}
-                  expanded={isGoodExpanded}
-                  onToggle={() => setIsGoodExpanded((v) => !v)}
-                  badgeClassName="bg-emerald-500/20 text-emerald-200"
-                >
-                  {appliedFixes.length === 0 ? (
-                    <div className="text-xs text-white/50 italic">No applied fixes yet.</div>
-                  ) : (
-                    appliedFixes.slice(0, 20).map((fix) => <FixRow key={fix.id} fix={fix} disabled={true} />)
-                  )}
-                </Bucket>
               </div>
-            </aside>
+            </div>
 
-            {/* Center: CV preview with contextual highlights */}
-            <div className={`flex-1 min-h-0 bg-black/10 relative overflow-hidden cv-report-container ${recruiterView ? 'recruiter-view-active' : ''}`}>
-              <div ref={docScrollRef} className="h-full overflow-y-auto overscroll-contain">
+            {/* Body: Column-wise layout (Left rail | CV | Right panel stacked vertically) */}
+            <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+              {/* Left rail */}
+              <aside className="hidden lg:block w-80 flex-shrink-0 border-r border-white/10 bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3" style={{ maxHeight: '100%' }}>
+                  <Bucket
+                    title="Critical"
+                    count={criticalFixes.length}
+                    expanded={isCriticalExpanded}
+                    onToggle={() => setIsCriticalExpanded((v) => !v)}
+                    badgeClassName="bg-red-500/20 text-red-300"
+                  >
+                    {criticalFixes.length === 0 ? (
+                      <div className="text-xs text-white/50 italic">No critical fixes.</div>
+                    ) : (
+                      criticalFixes.map((fix, idx) => <FixRow key={fix.id || `critical-${idx}`} fix={fix} />)
+                    )}
+                  </Bucket>
+
+                  <Bucket
+                    title="Improvements"
+                    count={improvementFixes.length}
+                    expanded={isImprovementsExpanded}
+                    onToggle={() => setIsImprovementsExpanded((v) => !v)}
+                    badgeClassName="bg-amber-500/20 text-amber-200"
+                  >
+                    {improvementFixes.length === 0 ? (
+                      <div className="text-xs text-white/50 italic">No improvements available.</div>
+                    ) : (
+                      improvementFixes.map((fix, idx) => <FixRow key={fix.id || `improvement-${idx}`} fix={fix} />)
+                    )}
+                  </Bucket>
+
+                  <Bucket
+                    title="Good"
+                    count={appliedFixes.length}
+                    expanded={isGoodExpanded}
+                    onToggle={() => setIsGoodExpanded((v) => !v)}
+                    badgeClassName="bg-emerald-500/20 text-emerald-200"
+                  >
+                    {appliedFixes.length === 0 ? (
+                      <div className="text-xs text-white/50 italic">No applied fixes yet.</div>
+                    ) : (
+                      appliedFixes.slice(0, 20).map((fix, idx) => <FixRow key={fix.id || `applied-${idx}`} fix={fix} disabled={true} />)
+                    )}
+                  </Bucket>
+                </div>
+              </aside>
+
+              {/* Center: CV preview with contextual highlights - Restricted to A4 width */}
+              <div className={`flex-1 min-h-0 bg-black/10 relative overflow-hidden cv-report-container ${recruiterView ? 'recruiter-view-active' : ''}`}>
+                <div ref={docScrollRef} className="h-full overflow-y-auto overscroll-contain flex justify-center">
+                  <div className="w-full max-w-[210mm] mx-auto">
                     <CVPreviewContent
                       cvData={state.cvData}
                       theme="light"
@@ -1006,70 +1031,72 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                       }
                     ` : ''}
                       `}
-                  overlaysEnabled={true}
-                  annotations={state.fixAnnotations}
-                  activeFixId={state.activeFixId}
-                  onSelectFix={handleSelectFix}
-                  onApplyFix={handleApplyFix}
-                  onDismissFix={handleDismissFix}
-                  ignoreStructureVisibility={true}
-                  renderMode="continuous"
-                  overlayInlineCard={false}
-                  ghostSkills={ghostSkills}
-                  onAddGhostSkill={handleAddGhostSkill}
+                      overlaysEnabled={true}
+                      annotations={state.fixAnnotations}
+                      activeFixId={state.activeFixId}
+                      onSelectFix={handleSelectFix}
+                      onApplyFix={handleApplyFix}
+                      onDismissFix={handleDismissFix}
+                      ignoreStructureVisibility={true}
+                      renderMode="continuous"
+                      overlayInlineCard={false}
+                      ghostSkills={ghostSkills}
+                      onAddGhostSkill={handleAddGhostSkill}
                     />
                   </div>
-            </div>
+                </div>
+              </div>
 
-            {/* Right panel: Fix it zone */}
-            <aside className="hidden lg:block w-96 flex-shrink-0 border-l border-white/10 bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
-              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3" style={{ maxHeight: '100%' }}>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <div className="text-xs text-white/60 uppercase tracking-wide">Selected</div>
-                  {selectedFix ? (
-                    <>
-                      <div className="mt-1 text-sm font-semibold text-white break-words">{selectedFix.issue}</div>
-                      <div className="mt-2 flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
-                          {CATEGORY_LABELS[selectedFix.category] || selectedFix.category}
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
-                          {selectedFix.severity === 'high' ? 'Critical' : 'Improvement'}
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80 tabular-nums">
-                          +{selectedFix.impactScoreDelta || 0}
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
-                          {getFieldPathLabel(selectedFix.fieldPath)}
-                        </span>
+              {/* Right panel: Fix it zone */}
+              <aside className="hidden lg:block w-96 flex-shrink-0 border-l border-white/10 bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3" style={{ maxHeight: '100%' }}>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs text-white/60 uppercase tracking-wide">Selected</div>
+                    {selectedFix ? (
+                      <>
+                        <div className="mt-1 text-sm font-semibold text-white break-words">{selectedFix.issue}</div>
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                            {CATEGORY_LABELS[selectedFix.category] || selectedFix.category}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                            {selectedFix.severity === 'high' ? 'Critical' : 'Improvement'}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80 tabular-nums">
+                            +{selectedFix.impactScoreDelta || 0}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
+                            {getFieldPathLabel(selectedFix.fieldPath)}
+                          </span>
+                        </div>
+                        <div className="mt-3 text-xs text-white/70">{whyItMatters(selectedFix)}</div>
+                      </>
+                    ) : (
+                      <div className="mt-2 text-xs text-white/50">
+                        Select an issue from the left rail (or click a highlight on the CV).
                       </div>
-                      <div className="mt-3 text-xs text-white/70">{whyItMatters(selectedFix)}</div>
+                    )}
+                  </div>
+
+                  {selectedFix && selectedFix.status === 'open' ? (
+                    <>
+                      {/* Competitor Benchmarking for skill-related fixes */}
+                      {(selectedFix.category === 'keywords' || selectedFix.fieldPath.includes('skills')) && (
+                        <CompetitorBenchmark fix={selectedFix} />
+                      )}
+                      <FieldFixOverlay fix={selectedFix} onApply={handleApplyFix} onDismiss={handleDismissFix} onSuppress={handleSuppressFix} />
                     </>
                   ) : (
-                    <div className="mt-2 text-xs text-white/50">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
                       Select an issue from the left rail (or click a highlight on the CV).
                     </div>
                   )}
                 </div>
-
-                {selectedFix && selectedFix.status === 'open' ? (
-                  <>
-                    {/* Competitor Benchmarking for skill-related fixes */}
-                    {(selectedFix.category === 'keywords' || selectedFix.fieldPath.includes('skills')) && (
-                      <CompetitorBenchmark fix={selectedFix} />
-                    )}
-                    <FieldFixOverlay fix={selectedFix} onApply={handleApplyFix} onDismiss={handleDismissFix} onSuppress={handleSuppressFix} />
-                  </>
-                ) : (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/60">
-                    Select an issue from the left rail (or click a highlight on the CV).
-                  </div>
-                )}
-              </div>
-            </aside>
-          </div>
-        </motion.div>
-      </div>
+              </aside>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 }

@@ -29,6 +29,11 @@ export interface ICV extends Document {
     starred: boolean;
     aiAnalysis?: any; // AI career analysis data
     createdVia?: string; // How the CV was created (e.g., 'ai-career-report', 'manual')
+    // Resume Enhancer Career Ecosystem fields
+    atsScoreCap?: number; // Max ATS score based on template (null = 100, creative = 70)
+    parentMasterId?: mongoose.Types.ObjectId; // For Standalone CVs forked from Master
+    isUserMaster?: boolean; // Definitive flag for THE Master CV (single per user)
+    fresherMode?: boolean; // Education/Projects first layout (no work experience)
     // CV Surgeon Analysis Cache
     surgeonAnalysis?: {
       score: number;
@@ -109,6 +114,11 @@ const cvSchema = new Schema<ICV>({
     starred: { type: Boolean, default: false },
     aiAnalysis: { type: Schema.Types.Mixed },
     createdVia: { type: String, trim: true },
+    // Resume Enhancer Career Ecosystem fields
+    atsScoreCap: { type: Number, min: 0, max: 100, default: 100 }, // Template-based ATS score cap
+    parentMasterId: { type: Schema.Types.ObjectId, ref: 'CV' }, // Source Master CV for forks
+    isUserMaster: { type: Boolean, default: false }, // Definitive single Master flag
+    fresherMode: { type: Boolean, default: false }, // Education/Projects first layout
     // CV Surgeon Analysis Cache
     surgeonAnalysis: {
       score: { type: Number },

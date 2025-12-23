@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle } from 'lucide-react';
+import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
 
@@ -77,22 +77,23 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   }>({ stripe: null, razorpay: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
   const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
+  const [isDayPassOpen, setIsDayPassOpen] = useState(false);
 
   // Use the shared pricing hook only if props are not provided
   // Hooks must be called unconditionally at top level
   const hookResult = usePricingPlans({});
-  
+
   // Use props if provided and non-empty, otherwise fall back to hook result
   // This ensures we always have plans if available from either source
-  const pricingPlansRaw = (propPlans && propPlans.length > 0) 
-    ? propPlans 
+  const pricingPlansRaw = (propPlans && propPlans.length > 0)
+    ? propPlans
     : (hookResult.plans.length > 0 ? hookResult.plans : (propPlans ?? hookResult.plans));
   const promotionalOffers = propPromotionalOffers ?? hookResult.promotionalOffers;
   const locationData = propLocationData ?? hookResult.locationData;
   const regionalPricing = propRegionalPricing ?? hookResult.regionalPricing;
   // Show loading if: we're using hook and it's loading, OR props are provided but empty and hook is loading
-  const plansLoading = (propPlans && propPlans.length > 0) 
-    ? false 
+  const plansLoading = (propPlans && propPlans.length > 0)
+    ? false
     : hookResult.loading;
   const plansError = (propPlans && propPlans.length > 0) ? null : hookResult.error;
   const getRegionalPrice = propGetRegionalPrice ?? hookResult.getRegionalPrice;
@@ -103,22 +104,22 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   // Convert DatabasePricingPlan to PricingPlan format
   // Ensure pricingPlans is always an array to prevent filter errors
-  const basePricingPlans: PricingPlan[] = Array.isArray(pricingPlansRaw) 
+  const basePricingPlans: PricingPlan[] = Array.isArray(pricingPlansRaw)
     ? (pricingPlansRaw as unknown as PricingPlan[])
     : [];
 
   // Ensure current user's plan is always included in the list, even if it was filtered out
   // This allows the "Current Plan" label to be shown when invoked from settings
   const [enhancedPricingPlans, setEnhancedPricingPlans] = useState<PricingPlan[]>(basePricingPlans);
-  
+
   useEffect(() => {
     if (isOpen && currentUserPlan) {
       const currentPlanExists = basePricingPlans.some(plan => plan.key === currentUserPlan);
-      
+
       if (!currentPlanExists && hookResult.plans.length > 0) {
         // Find current plan from the hook result (which has all plans, not filtered)
         const currentPlan = hookResult.plans.find((plan: DatabasePricingPlan) => plan.key === currentUserPlan);
-        
+
         if (currentPlan) {
           // Add current plan to the list so it can be displayed with "Current Plan" label
           setEnhancedPricingPlans([...basePricingPlans, currentPlan as unknown as PricingPlan]);
@@ -132,7 +133,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       setEnhancedPricingPlans(basePricingPlans);
     }
   }, [isOpen, currentUserPlan, basePricingPlans, hookResult.plans]);
-  
+
   // Use enhanced pricing plans (includes current plan if it was filtered out)
   const pricingPlans = enhancedPricingPlans;
 
@@ -200,7 +201,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           } else {
             planPrice = getEffectivePrice(dbPlan) || 0;
           }
-          
+
           const currencySymbol = getCurrencySymbol();
           const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
           const regionalPriceStr = getRegionalPrice(dbPlan);
@@ -212,7 +213,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             return parseFloat(cleaned) || 0;
           };
           const finalPrice = regionalPriceStr ? extractNumericFromString(regionalPriceStr) : planPrice;
-          
+
           const planWithPricing = {
             ...plan,
             regionalPricing: {
@@ -232,16 +233,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     } else if (!selectedPlan && pricingPlans.length > 0) {
       // Default to first paid plan (prefer professional plans)
       // Try to find a professional plan first
-      const professionalPlan = pricingPlans.find((p: PricingPlan) => 
+      const professionalPlan = pricingPlans.find((p: PricingPlan) =>
         p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_yearly'
       );
-      
+
       // If no professional plan, try day pass
       const dayPassPlan = pricingPlans.find((p: PricingPlan) => p.key === 'day_pass');
-      
+
       // Fallback to first paid plan (not free)
       const paidPlan = professionalPlan || dayPassPlan || pricingPlans.find((p: PricingPlan) => p.key !== 'free');
-      
+
       if (paidPlan) {
         // Attach regional pricing to default plan
         const dbPlan = paidPlan as unknown as DatabasePricingPlan;
@@ -258,7 +259,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         } else {
           planPrice = getEffectivePrice(dbPlan) || 0;
         }
-        
+
         // Use regional currency symbol, not hardcoded
         const currencySymbol = getCurrencySymbol();
         const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
@@ -271,7 +272,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           return parseFloat(cleaned) || 0;
         };
         const finalPrice = regionalPriceStr ? extractNumericFromString(regionalPriceStr) : planPrice;
-        
+
         const planWithPricing = {
           ...paidPlan,
           regionalPricing: {
@@ -291,7 +292,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   // Check if any plans have promotional pricing
   useEffect(() => {
     if (promotionalOffers.length > 0) {
-      const hasPromo = promotionalOffers.some((offer: any) => 
+      const hasPromo = promotionalOffers.some((offer: any) =>
         offer.promotionalPricing && offer.promotionalPricing.length > 0
       );
       setShowPromotionalPricing(hasPromo);
@@ -342,19 +343,19 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
+
         const response = await fetch(`/api/payment/${provider}/health`, {
           signal: controller.signal,
           cache: 'no-store', // Prevent caching of health check results
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           console.warn(`${provider} health check failed:`, response.status, response.statusText);
           return false;
         }
-        
+
         const data = await response.json();
         return data.healthy === true;
       } catch (error: any) {
@@ -369,7 +370,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
     const checkAllProviders = async () => {
       if (!isOpen) return;
-      
+
       setProviderHealthLoading(true);
       try {
         const [stripeHealthy, razorpayHealthy] = await Promise.all([
@@ -447,7 +448,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.async = true;
       document.body.appendChild(script);
-      
+
       return () => {
         // Cleanup script on unmount
         const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
@@ -464,7 +465,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       let userName = '';
       let userEmail = '';
       let userContact = '';
-      
+
       try {
         const userResponse = await fetch('/api/user/current');
         if (userResponse.ok) {
@@ -481,8 +482,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
       // According to Razorpay docs: amount should be in currency subunits (paise for INR)
       // The amount from server is already in paise, ensure it's a number
-      const amount = typeof checkoutData.amount === 'string' 
-        ? parseInt(checkoutData.amount, 10) 
+      const amount = typeof checkoutData.amount === 'string'
+        ? parseInt(checkoutData.amount, 10)
         : Math.round(checkoutData.amount);
 
       if (!amount || amount <= 0) {
@@ -493,10 +494,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
       // Razorpay checkout.js expects uppercase currency code (ISO 4217 format)
       const currency = (checkoutData.currency || 'INR').toUpperCase();
-      
+
       // For subscriptions, use subscription_id; for orders, use order_id
       const isSubscription = !!checkoutData.subscription_id;
-      
+
       const options: any = {
         key: checkoutData.key_id || '',
         name: 'CV Circle',
@@ -505,12 +506,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           color: '#84cc16' // lime-500
         },
         modal: {
-          ondismiss: function() {
+          ondismiss: function () {
             setLoading(false);
           }
         },
         // Handle payment failure
-        'onPayment.failed': function(response: any) {
+        'onPayment.failed': function (response: any) {
           console.error('Payment failed:', response);
           setLoading(false);
           alert(`Payment failed: ${response.error?.description || response.error?.reason || 'Unknown error'}. Please try again.`);
@@ -519,7 +520,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           // Payment successful - verify signature and poll for subscription activation
           try {
             setLoading(true);
-            
+
             // Step 1: Verify payment signature
             // For subscriptions, use subscription_id; for orders, use order_id
             const verifyBody: any = {
@@ -529,13 +530,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
               couponId: checkoutData.coupon?.id
             };
-            
+
             if (isSubscription) {
               verifyBody.razorpay_subscription_id = response.razorpay_subscription_id || checkoutData.subscription_id;
             } else {
               verifyBody.razorpay_order_id = response.razorpay_order_id || checkoutData.order_id;
             }
-            
+
             const verifyResponse = await fetch('/api/payment/razorpay/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -544,7 +545,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             });
 
             const verifyData = await verifyResponse.json();
-            
+
             if (!verifyData.success) {
               throw new Error(verifyData.error || 'Payment verification failed');
             }
@@ -559,28 +560,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             // Step 3: If pending, poll for subscription activation (webhook processes it)
             if (verifyData.pending) {
               console.log('Payment verified, waiting for webhook to activate subscription...');
-              
+
               // Poll for subscription status (webhook should activate within 1-2 seconds)
               const maxAttempts = 20; // 20 attempts = ~60 seconds max wait
               const pollInterval = 3000; // Poll every 3 seconds
               let attempts = 0;
-              
+
               const pollSubscription = async (): Promise<any> => {
                 attempts++;
-                
+
                 try {
                   const subscriptionResponse = await fetch('/api/user/subscription', {
                     credentials: 'include',
                     cache: 'no-store'
                   });
-                  
+
                   if (subscriptionResponse.ok) {
                     const subscriptionData = await subscriptionResponse.json();
-                    
+
                     if (subscriptionData.success && subscriptionData.subscription) {
                       const currentPlanKey = subscriptionData.subscription.planKey;
                       const expectedPlanKey = selectedPlan?.key;
-                      
+
                       // Check if the plan has been activated
                       if (currentPlanKey === expectedPlanKey && currentPlanKey !== 'free') {
                         console.log('Subscription activated!', subscriptionData.subscription);
@@ -588,7 +589,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       }
                     }
                   }
-                  
+
                   // If not activated yet and haven't exceeded max attempts, continue polling
                   if (attempts < maxAttempts) {
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
@@ -605,7 +606,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   throw pollError;
                 }
               };
-              
+
               try {
                 const activatedSubscription = await pollSubscription();
                 onSuccess?.(activatedSubscription);
@@ -620,7 +621,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               // Already processed case (shouldn't reach here, but handle it)
               onSuccess?.(verifyData.subscription || { planKey: selectedPlan?.key });
             }
-            
+
             setLoading(false);
           } catch (error) {
             console.error('Payment verification error:', error);
@@ -635,7 +636,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           contact: userContact, // Phone number improves conversion rates per Razorpay docs
         }
       };
-      
+
       // Set subscription_id or order_id based on what's available
       if (isSubscription) {
         options.subscription_id = checkoutData.subscription_id;
@@ -694,7 +695,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free') return 0;
-    
+
     // Use regional pricing if available (attached when plan is selected)
     // This should already contain the full price for quarterly/yearly plans
     const regionalPrice = (plan as any).regionalPricing;
@@ -718,7 +719,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       // Regional price should already be the full price for the selected plan
       return regionalPrice.price;
     }
-    
+
     // Fallback: Get price from plan based on key - use FULL price for quarterly/yearly
     const dbPlan = plan as unknown as DatabasePricingPlan;
     let planPrice = 0;
@@ -736,13 +737,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       // Fallback to effective price from hook
       planPrice = getEffectivePrice(dbPlan) || 0;
     }
-    
+
     return planPrice;
   };
 
   const getFinalPrice = () => {
     if (!selectedPlan) return 0;
-    
+
     const basePrice = getPlanPrice(selectedPlan);
     if (!appliedDiscount) return basePrice;
 
@@ -769,9 +770,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   // Get promotional pricing for a plan
   const getPromotionalPricing = (plan: PricingPlan) => {
     if (!showPromotionalPricing || !promotionalOffers.length) return null;
-    
+
     for (const offer of promotionalOffers) {
-      const promotionalPricing = offer.promotionalPricing?.find((pp: any) => 
+      const promotionalPricing = offer.promotionalPricing?.find((pp: any) =>
         pp.planId === plan._id || pp.planId === plan.key
       );
       if (promotionalPricing) {
@@ -893,7 +894,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
         const response = await fetch('/api/checkout/session', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
           },
           credentials: 'include', // Include cookies for authentication
@@ -914,7 +915,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             }
             return;
           }
-          
+
           if (data.redirect_url) {
             // Stripe Checkout - redirect to Stripe
             window.location.href = data.redirect_url;
@@ -928,19 +929,19 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         } else {
           let errorMessage = 'Failed to create checkout session';
           let shouldRetryWithStripe = false;
-          
+
           // Clone the response to read it multiple times if needed
           const responseClone = response.clone();
           const contentType = response.headers.get('content-type');
           let errorData: any = {};
-          
+
           try {
             if (contentType && contentType.includes('application/json')) {
               errorData = await response.json();
-              
+
               // Only log if errorData has meaningful content
               if (errorData && Object.keys(errorData).length > 0) {
-            console.error('Checkout session error:', errorData);
+                console.error('Checkout session error:', errorData);
                 errorMessage = errorData.error || errorData.details || errorData.message || errorMessage;
               } else {
                 // Empty object response
@@ -961,13 +962,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 body: errorText.substring(0, 200)
               });
             }
-            
+
             // If currency is not supported by Razorpay, automatically retry with Stripe
             if (errorData && errorData.unsupportedCurrency && errorData.suggestedProvider === 'stripe' && paymentProvider === 'razorpay') {
               console.log('Currency not supported by Razorpay, switching to Stripe');
               shouldRetryWithStripe = true;
               setPaymentProvider('stripe');
-              
+
               // Retry the payment with Stripe
               const retryBody = {
                 planKey: selectedPlan?.key,
@@ -978,14 +979,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 returnUrl: returnUrl || window.location.href,
                 triggerContext
               };
-              
+
               const retryResponse = await fetch('/api/checkout/session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include', // Include cookies for authentication
                 body: JSON.stringify(retryBody)
               });
-              
+
               if (retryResponse.ok) {
                 const retryData = await retryResponse.json();
                 if (retryData.redirect_url) {
@@ -1016,7 +1017,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               errorMessage = `Server error (${response.status}): ${response.statusText || 'Unknown error'}`;
             }
           }
-          
+
           if (!shouldRetryWithStripe) {
             throw new Error(errorMessage);
           }
@@ -1024,7 +1025,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       }
     } catch (error) {
       console.error('Error processing payment:', error);
-      
+
       // Provide more detailed error messages
       let errorMsg = 'An unknown error occurred';
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
@@ -1037,7 +1038,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       } else if (error instanceof Error) {
         errorMsg = error.message;
       }
-      
+
       alert(`Payment Error: ${errorMsg}`);
     } finally {
       setLoading(false);
@@ -1047,7 +1048,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const canUpgrade = (plan: PricingPlan) => {
     if (plan.key === 'free') return false;
     if (currentUserPlan === 'free') return true;
-    
+
     const planOrder = { free: 0, day_pass: 1, pro_monthly: 2, pro_quarterly: 3, pro_yearly: 4 };
     return planOrder[plan.key as keyof typeof planOrder] > planOrder[currentUserPlan as keyof typeof planOrder];
   };
@@ -1080,11 +1081,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -1148,10 +1149,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       {isOpen && (
         <>
           {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="fixed bg-black/50 backdrop-blur-sm z-[99999]"
             style={{
@@ -1171,7 +1172,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[99999] flex bg-white"
+            className="fixed inset-0 z-[99999] flex bg-white dark:bg-[#141810]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Left Side - Features & Info */}
@@ -1179,20 +1180,20 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               initial={{ x: '-100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
-              transition={{ 
-                type: 'spring', 
-                damping: 25, 
+              transition={{
+                type: 'spring',
+                damping: 25,
                 stiffness: 200,
                 mass: 0.8
               }}
-              className="w-full tablet:w-1/2 bg-white overflow-y-auto hidden tablet:block border-r border-gray-200"
+              className="w-full tablet:w-1/2 bg-white dark:bg-[#141810] overflow-y-auto hidden tablet:block"
             >
               <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col">
                 {/* Logo */}
                 <div className="mb-8 flex items-center gap-3">
-                  <img 
-                    src="/images/logo.png" 
-                    alt="CVCircle Logo" 
+                  <img
+                    src="/images/logo.png"
+                    alt="CVCircle Logo"
                     className="w-10 h-10 object-contain"
                     loading="eager"
                     onError={(e) => {
@@ -1206,52 +1207,52 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                 {/* Main Heading */}
                 <div className="mb-8">
-                  <h1 className="text-3xl tablet:text-4xl font-bold mb-4 text-gray-900">
+                  <h1 className="text-3xl tablet:text-4xl font-bold mb-4 text-gray-900 dark:text-white">
                     Unlock Your Full Career Potential
                   </h1>
-                  <p className="text-gray-600 text-base leading-relaxed">
+                  <p className="text-gray-600 dark:text-gray-300 text-base leading-relaxed">
                     All-in-one solution for your career growth. Create professional CVs, optimize for ATS systems, and track your job applications—all in one place.
                   </p>
                 </div>
 
                 {/* Premium Toolkit Section */}
                 <div className="mb-8 flex-1">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">What's Included</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">What's Included</h2>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <strong className="text-gray-900">Smart Extension:</strong> Save and autofill job data instantly from any board. Never copy-paste again.
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">Smart Extension:</strong> Save and autofill job data instantly from any board. Never copy-paste again.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <strong className="text-gray-900">ATS-Optimized Documents:</strong> Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high scores.
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">ATS-Optimized Documents:</strong> Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high scores.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <strong className="text-gray-900">Skills Gap Analysis:</strong> Identify missing skills and get actionable recommendations to bridge the gap for your dream role.
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">Skills Gap Analysis:</strong> Identify missing skills and get actionable recommendations to bridge the gap for your dream role.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <strong className="text-gray-900">Global Opportunities:</strong> Access sponsored jobs with visa sponsorship tags for the UK and USA.
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">Global Opportunities:</strong> Access sponsored jobs with visa sponsorship tags for the UK and USA.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <strong className="text-gray-900">Deep Career Insights:</strong> Get detailed reports highlighting career gaps, strengths, and improvement areas.
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">Deep Career Insights:</strong> Get detailed reports highlighting career gaps, strengths, and improvement areas.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
-                      <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                      <div className="text-sm text-gray-700 leading-relaxed">
-                        <strong className="text-gray-900">One-Click Export:</strong> Download your complete application kit instantly.
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">One-Click Export:</strong> Download your complete application kit instantly.
                       </div>
                     </li>
                   </ul>
@@ -1262,14 +1263,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   <div className="grid grid-cols-1 gap-4">
                     {/* 100% Satisfaction Guarantee */}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-xs font-semibold text-gray-900 mb-0.5">100% Satisfaction Guarantee</h3>
-                        <p className="text-xs text-gray-600">
+                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">100% Satisfaction Guarantee</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           If you are not completely satisfied with your purchase, you can receive a full refund with no questions asked.
                         </p>
                       </div>
@@ -1277,36 +1278,36 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                     {/* No Obligation */}
                     <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <div>
-                        <h3 className="text-xs font-semibold text-gray-900 mb-0.5">No Obligation</h3>
-                        <p className="text-xs text-gray-600">
+                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">No Obligation</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
                           If you find another provider with better pricing or any reasons, you are free to move from CV Circle anytime.
                         </p>
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Terms and Conditions Link */}
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <p className="text-xs text-gray-500 text-center">
                       By proceeding, you agree to our{' '}
-                      <a 
-                        href="/terms" 
-                        target="_blank" 
+                      <a
+                        href="/terms"
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-700 underline"
                       >
                         Terms of Service
                       </a>
                       {' '}and{' '}
-                      <a 
-                        href="/privacy-policy" 
-                        target="_blank" 
+                      <a
+                        href="/privacy-policy"
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-600 hover:text-blue-700 underline"
                       >
@@ -1323,28 +1324,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               initial={{ x: '100%', opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '100%', opacity: 0 }}
-              transition={{ 
-                type: 'spring', 
-                damping: 25, 
+              transition={{
+                type: 'spring',
+                damping: 25,
                 stiffness: 200,
                 mass: 0.8,
                 delay: 0.1
               }}
-              className="w-full tablet:w-1/2 bg-white overflow-y-auto relative"
+              className="w-full tablet:w-1/2 bg-white dark:bg-[#141810] overflow-y-auto relative"
             >
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0 z-10"
+                className="absolute top-6 right-6 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0 z-10"
               >
-                <X className="w-5 h-5 text-gray-600 hover:text-gray-900" />
+                <X className="w-5 h-5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" />
               </button>
-              
-              <div className="p-6 tablet:p-8 max-w-2xl mx-auto">
+
+              <div className="p-4 tablet:p-6 max-w-5xl mx-auto">
 
                 {/* Header */}
                 <div className="mb-8">
-                  <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 mb-2">
+                  <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                     {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : step === 1 ? 'Choose Your Plan' : 'Complete Your Order'}
                   </h2>
                   {adminMode && (
@@ -1357,10 +1358,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       Preview
                     </span>
                   )}
-                  <p className="text-sm text-gray-600 mt-2">
-                    {adminMode 
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    {adminMode
                       ? 'Grant a plan to the selected user'
-                      : previewMode 
+                      : previewMode
                         ? 'Preview available plans and pricing'
                         : 'Review your plan selection and complete payment'
                     }
@@ -1369,668 +1370,574 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                 {/* Content */}
                 <div className="space-y-6">
-            {step === 1 && (
-              <>
-                {/* Current Plan Info - Displayed outside cards */}
-                {(() => {
-                  // Find current plan from pricing plans
-                  const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
-                  
-                  // Hide current plan section if it's the free plan (user is upgrading)
-                  // Only show current plan if it's a paid plan
-                  if (currentPlan && !adminMode && currentPlan.key !== 'free') {
-                    const dbPlan = currentPlan as unknown as DatabasePricingPlan;
-                    const regionalPrice = getRegionalPrice(dbPlan);
-                    const currencySymbol = getCurrencySymbol();
-                    const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
-                    const Icon = getPlanIcon(currentPlan.key);
-                    
-                    return (
-                      <div className="mb-6 p-4 tablet:p-5">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
-                              <Icon size={24} className="text-white" />
-                            </div>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-4 flex-wrap">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="text-lg tablet:text-xl font-bold text-gray-900">
-                                    {currentPlan.name}
-                                  </h3>
-                                  <span className="bg-lime-100 text-lime-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                    Current Plan
-                                  </span>
+                  {step === 1 && (
+                    <>
+                      {/* Current Plan Info - Displayed outside cards */}
+                      {(() => {
+                        // Find current plan from pricing plans
+                        const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
+
+                        // Hide current plan section if it's the free plan (user is upgrading)
+                        // Only show current plan if it's a paid plan
+                        if (currentPlan && !adminMode && currentPlan.key !== 'free') {
+                          const dbPlan = currentPlan as unknown as DatabasePricingPlan;
+                          const regionalPrice = getRegionalPrice(dbPlan);
+                          const currencySymbol = getCurrencySymbol();
+                          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+                          const Icon = getPlanIcon(currentPlan.key);
+
+                          return (
+                            <div className="mb-6 p-4 tablet:p-5">
+                              <div className="flex items-start gap-4">
+                                <div className="flex-shrink-0">
+                                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
+                                    <Icon size={24} className="text-white" />
+                                  </div>
                                 </div>
-                                <p className="text-sm text-gray-600">
-                                  {currentPlan.description}
-                                </p>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <h3 className="text-lg tablet:text-xl font-bold text-gray-900">
+                                          {currentPlan.name}
+                                        </h3>
+                                        <span className="bg-lime-100 text-lime-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                                          Current Plan
+                                        </span>
+                                      </div>
+                                      <p className="text-sm text-gray-600">
+                                        {currentPlan.description}
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      {/* Selected Plan Display (if preselected and different from current) - REMOVED DUPLICATE BLOCK */}
+
+
+                      {/* Plans Logic */}
+                      {(() => {
+                        // Filter out free plan and current plan
+                        const availablePlans = Array.isArray(pricingPlans) && pricingPlans.length > 0
+                          ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
+                          : [];
+
+                        // Split into subscriptions and day pass
+                        const subscriptionPlans = availablePlans.filter(plan => plan.key !== 'day_pass');
+                        const dayPassPlans = availablePlans.filter(plan => plan.key === 'day_pass');
+
+                        // Sort subscription plans to put Yearly first (usually best value) or consistent order
+                        // Order: Monthly, Quarterly, Yearly (or whatever is preferred, usually Yearly top if "Individual Plan" style)
+                        // User image shows Annual then Monthly. Let's try to sort logic if needed, or rely on API order.
+                        // For now assuming API order is sensible or handled elsewhere.
+
+                        return (
+                          <div className="flex flex-col gap-6 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 max-w-[34rem] mx-auto w-full">
+                            {/* Subscription Plans - Vertical Radio Group */}
+                            {subscriptionPlans.length > 0 && (
+                              <div className="flex flex-col gap-3">
+                                {subscriptionPlans.map((plan) => {
+                                  const dbPlan = plan as unknown as DatabasePricingPlan;
+                                  const regionalPrice = getRegionalPrice(dbPlan);
+                                  const currencySymbol = getCurrencySymbol();
+                                  const effectivePrice = getEffectivePrice(dbPlan); // This is monthly effective for subs
+                                  const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
+                                  const isSelected = selectedPlan?.key === plan.key;
+                                  const Icon = getPlanIcon(plan.key);
+
+                                  // Determine display price
+                                  // If monthly equivalent is shown, use that as the big number
+                                  // Then show billed amount
+
+                                  const displayPrice = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : (regionalPrice || `${currencySymbol}${effectivePrice}`);
+                                  const billedAmountText = monthlyEquivalent.showMonthly
+                                    ? `${regionalPrice || `${currencySymbol}${effectivePrice}`} billed ${plan.key === 'pro_quarterly' ? 'quarterly' : 'annually'}`
+                                    : '';
+
+                                  return (
+                                    <div
+                                      key={plan.key}
+                                      onClick={() => {
+                                        setUserChangedPlan(true);
+                                        // Same selection logic as before
+                                        let planPrice = 0;
+                                        if (plan.key === 'pro_monthly') planPrice = dbPlan.price_monthly || 0;
+                                        else if (plan.key === 'pro_quarterly') planPrice = dbPlan.price_quarterly || 0;
+                                        else if (plan.key === 'pro_yearly') planPrice = dbPlan.price_yearly || 0;
+                                        else planPrice = effectivePrice || 0;
+
+                                        // Regional override logic
+                                        if (regionalPricing) {
+                                          let regionalPriceValue = planPrice;
+                                          let hasRegionalPrice = false;
+
+                                          // ... (reusing exact logic would be verbose, but necessary for correctness)
+                                          // Simplified for this view: assume standard selection works or copy full logic.
+                                          // To avoid huge block, I'll use the exact logic from previous version but inline here.
+
+                                          if (plan.key === 'pro_quarterly' && regionalPricing.quarterly) {
+                                            const extracted = extractNumericPrice(regionalPricing.quarterly);
+                                            if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
+                                          } else if (plan.key === 'pro_yearly' && regionalPricing.yearly) {
+                                            const extracted = extractNumericPrice(regionalPricing.yearly);
+                                            if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
+                                          } else if (plan.key === 'pro_monthly' && regionalPricing.monthly) {
+                                            const extracted = extractNumericPrice(regionalPricing.monthly);
+                                            if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
+                                          }
+
+                                          if (hasRegionalPrice) {
+                                            const planWithRegionalPrice = {
+                                              ...plan,
+                                              regionalPricing: {
+                                                price: regionalPriceValue,
+                                                currencySymbol: regionalPricing.currencySymbol || currencySymbol,
+                                                currency: regionalPricing.currency || 'USD'
+                                              },
+                                              durationInfo: monthlyEquivalent.showMonthly ? { displayText: monthlyEquivalent.price } : undefined
+                                            } as unknown as PricingPlan;
+                                            setSelectedPlan(planWithRegionalPrice);
+                                            return;
+                                          }
+                                        }
+                                        setSelectedPlan(plan);
+                                      }}
+                                      className={`relative flex items-center p-4 rounded-xl border-2 cursor-pointer transition-all ${isSelected
+                                        ? 'border-gray-900 bg-gray-900 dark:border-lime-500 dark:bg-lime-500/10'
+                                        : 'border-gray-200 hover:border-gray-300 dark:border-gray-700 dark:hover:border-gray-600 bg-white dark:bg-[#232f1c]'
+                                        }`}
+                                    >
+                                      {/* Radio Circle */}
+                                      <div className={`w-5 h-5 rounded-full border-[1.5px] mr-4 flex items-center justify-center flex-shrink-0 ${isSelected
+                                        ? 'border-white dark:border-lime-500'
+                                        : 'border-gray-400 dark:border-gray-500'
+                                        }`}>
+                                        {isSelected && (
+                                          <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-lime-500" />
+                                        )}
+                                      </div>
+
+                                      {/* Plan Name */}
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <Icon size={20} className={isSelected ? 'text-white' : 'text-gray-900 dark:text-white'} />
+                                          <div className={`font-semibold text-lg ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                            {plan.name.replace('Pro ', '')}
+                                          </div>
+                                        </div>
+
+                                        {/* Embedded Features List for Active Card */}
+                                        {isSelected && (
+                                          <div className="mt-3">
+                                            <p className="text-sm font-bold text-white mb-2">This package includes:</p>
+                                            <ul className="space-y-1.5">
+                                              {plan.features.map((feature, i) => (
+                                                <li key={i} className="flex items-start gap-2 text-xs tablet:text-sm text-gray-200">
+                                                  <Check className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
+                                                  <span>{feature}</span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Badges */}
+                                      {plan.key === 'pro_yearly' && (
+                                        <div className="mr-auto ml-2 px-2 py-0.5 bg-[rgb(129,255,0)] text-black text-xs font-bold rounded">
+                                          Save ~25%
+                                        </div>
+                                      )}
+
+                                      {/* Price */}
+                                      <div className="text-right">
+                                        <div className="flex items-baseline justify-end gap-1">
+                                          <span className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>{displayPrice.replace(/\/mo$/, '').replace(/\/month$/, '')}</span>
+                                          <span className={`text-sm ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>/month</span>
+                                        </div>
+                                        {billedAmountText && (
+                                          <div className={`text-xs mt-0.5 ${isSelected ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                            {billedAmountText}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+
+
+
+                            {/* Divider for Day Pass */}
+                            {dayPassPlans.length > 0 && (
+                              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <button
+                                  onClick={() => setIsDayPassOpen(!isDayPassOpen)}
+                                  className="w-full flex items-center justify-between group p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                                >
+                                  <span className="font-bold text-black dark:text-white">Want to try out for a day?</span>
+                                  {isDayPassOpen ? (
+                                    <ChevronUp className="w-5 h-5 text-black dark:text-white" />
+                                  ) : (
+                                    <ChevronDown className="w-5 h-5 text-black dark:text-white" />
+                                  )}
+                                </button>
+
+                                <AnimatePresence>
+                                  {isDayPassOpen && (
+                                    <motion.div
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: 'auto', opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="pt-4 pb-2">
+                                        {dayPassPlans.map((plan) => {
+                                          // Render Day Pass as a similar row or simpler card
+                                          const dbPlan = plan as unknown as DatabasePricingPlan;
+                                          const regionalPrice = getRegionalPrice(dbPlan);
+                                          const currencySymbol = getCurrencySymbol();
+                                          const effectivePrice = getEffectivePrice(dbPlan);
+                                          const isSelected = selectedPlan?.key === plan.key;
+                                          const Icon = getPlanIcon(plan.key);
+
+                                          return (
+                                            <div
+                                              key={plan.key}
+                                              onClick={() => {
+                                                setUserChangedPlan(true);
+                                                // Day pass pricing logic
+                                                let planPrice = dbPlan.price_one_time || effectivePrice || 0;
+                                                if (regionalPricing && regionalPricing.dayPass) {
+                                                  const extracted = extractNumericPrice(regionalPricing.dayPass);
+                                                  if (extracted > 0) {
+                                                    setSelectedPlan({
+                                                      ...plan,
+                                                      regionalPricing: {
+                                                        price: extracted,
+                                                        currencySymbol: regionalPricing.currencySymbol || currencySymbol,
+                                                        currency: regionalPricing.currency || 'USD'
+                                                      }
+                                                    } as unknown as PricingPlan);
+                                                    return;
+                                                  }
+                                                }
+                                                setSelectedPlan(plan);
+                                              }}
+                                              className={`relative flex items-center p-4 m-1 rounded-xl border-2 cursor-pointer transition-all ${isSelected
+                                                ? 'border-gray-900 bg-gray-900 dark:border-lime-500 dark:bg-lime-500/10'
+                                                : 'border-transparent bg-gray-50 dark:bg-[#1A201A] hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                                                }`}
+                                            >
+                                              <div className={`w-5 h-5 rounded-full border-[1.5px] mr-4 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-white dark:border-lime-500' : 'border-gray-400 dark:border-gray-500'
+                                                }`}>
+                                                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-lime-500" />}
+                                              </div>
+                                              <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                  <Icon size={20} className={isSelected ? 'text-white' : 'text-gray-900 dark:text-white'} />
+                                                  <div className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Day Pass</div>
+                                                </div>
+                                                <div className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>Full access for 24 hours</div>
+
+                                                {/* Day Pass Details/Features */}
+                                                <ul className={`mt-2 space-y-1 text-xs ${isSelected ? 'text-gray-200' : 'text-gray-600 dark:text-gray-400'}`}>
+                                                  {plan.features.slice(0, 3).map((feature, idx) => (
+                                                    <li key={idx} className="flex items-start gap-1.5">
+                                                      <Check size={12} className={`mt-0.5 flex-shrink-0 ${isSelected ? 'text-white' : 'text-lime-600 dark:text-lime-500'}`} />
+                                                      <span>{feature}</span>
+                                                    </li>
+                                                  ))}
+                                                </ul>
+                                              </div>
+                                              <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                                                {regionalPricing?.dayPass || regionalPrice || `${currencySymbol}${effectivePrice}`}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )}
+
+                            {/* Empty State */}
+                            {availablePlans.length === 0 && (
+                              <div className="py-12 text-center text-gray-500">
+                                {plansLoading ? 'Loading plans...' : 'No plans available. Please try refreshing the page.'}
+                              </div>
+                            )}
+
                           </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
+                        );
+                      })()}
 
-                {/* Selected Plan Display (if preselected and different from current) */}
-                {selectedPlan && preselectedPlanKey && !isCurrentPlan(selectedPlan) && (
-                  <div className="mb-6 p-4 bg-lime-50 border border-lime-200 rounded-xl">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-1">
-                          Selected Plan: {selectedPlan.name}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {(() => {
-                            const billingInterval = getBillingInterval(selectedPlan);
-                            if (billingInterval === 'one-time') {
-                              return 'One-time payment';
-                            } else if (billingInterval === 'yearly') {
-                              return 'Billed yearly';
-                            } else if (billingInterval === 'quarterly') {
-                              return 'Billed quarterly';
-                            } else {
-                              return 'Billed monthly';
-                            }
-                          })()}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {(() => {
-                            const regionalPrice = (selectedPlan as any).regionalPricing;
-                            const currencySymbol = regionalPrice?.currencySymbol || getCurrencySymbol();
-                            // Use the regional pricing price if available, otherwise fall back to getPlanPrice
-                            const price = regionalPrice?.price ?? getPlanPrice(selectedPlan);
-                            // If price is 0, try to get it from the plan's database pricing
-                            if (price === 0 || !price) {
-                              const dbPlan = selectedPlan as unknown as DatabasePricingPlan;
-                              let planPrice = 0;
-                              if (selectedPlan.key === 'pro_monthly') {
-                                planPrice = dbPlan.price_monthly || 0;
-                              } else if (selectedPlan.key === 'pro_quarterly') {
-                                planPrice = dbPlan.price_quarterly || 0;
-                              } else if (selectedPlan.key === 'pro_yearly') {
-                                planPrice = dbPlan.price_yearly || 0;
-                              } else if (selectedPlan.key === 'day_pass') {
-                                planPrice = dbPlan.price_one_time || 0;
-                              }
-                              // Get regional price for this specific plan
-                              if (planPrice > 0 && regionalPricing) {
-                                let regionalPriceValue = planPrice;
-                                if (selectedPlan.key === 'pro_quarterly' && regionalPricing.quarterly) {
-                                  const extracted = extractNumericPrice(regionalPricing.quarterly);
-                                  if (extracted > 0) regionalPriceValue = extracted;
-                                } else if (selectedPlan.key === 'pro_yearly' && regionalPricing.yearly) {
-                                  const extracted = extractNumericPrice(regionalPricing.yearly);
-                                  if (extracted > 0) regionalPriceValue = extracted;
-                                } else if (selectedPlan.key === 'pro_monthly' && regionalPricing.monthly) {
-                                  const extracted = extractNumericPrice(regionalPricing.monthly);
-                                  if (extracted > 0) regionalPriceValue = extracted;
-                                } else if (selectedPlan.key === 'day_pass' && regionalPricing.dayPass) {
-                                  const extracted = extractNumericPrice(regionalPricing.dayPass);
-                                  if (extracted > 0) regionalPriceValue = extracted;
-                                }
-                                return `${currencySymbol}${regionalPriceValue.toFixed(2)}`;
-                              }
-                              return `${currencySymbol}${planPrice.toFixed(2)}`;
-                            }
-                            return `${currencySymbol}${price.toFixed(2)}`;
-                          })()}
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedPlan(null);
-                        setUserChangedPlan(true); // Mark that user manually changed plan
-                      }}
-                      className="mt-3 text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium"
-                    >
-                      Change Plan
-                    </button>
-                  </div>
-                )}
 
-                {/* Plans - Horizontal Scrollable */}
-                {(() => {
-                  // Filter out free plan and current plan, show all other plans
-                  const filteredPlans = Array.isArray(pricingPlans) && pricingPlans.length > 0 
-                    ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
-                    : [];
-                  
-                  return (
-                    <>
-                      <style dangerouslySetInnerHTML={{ __html: `
-                        .plan-cards-scroll::-webkit-scrollbar {
-                          display: none;
-                        }
-                        .plan-cards-scroll {
-                          -ms-overflow-style: none;
-                          scrollbar-width: none;
-                        }
-                      `}} />
-                      {/* Selected Plan Display */}
-                      {selectedPlan && (
-                        <div className="mb-6 p-4 bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                                Selected Plan: {selectedPlan.name}
-                              </h3>
-                              <p className="text-sm text-gray-600 dark:text-white/60">
+                      {/* Continue Button */}
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => setStep(2)}
+                          disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
+                          className="px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+
+                  {
+                    step === 2 && selectedPlan && (
+                      <>
+                        {/* Back Button */}
+                        <button
+                          onClick={() => setStep(1)}
+                          className="flex items-center text-sm tablet:text-base text-gray-600 hover:text-gray-900 mb-4 tablet:mb-6"
+                        >
+                          <span className="hidden tablet:inline">← Back to Plans</span>
+                          <span className="tablet:hidden">← Back</span>
+                        </button>
+
+                        {/* Single Column Layout for Side Panel */}
+                        <div className="flex flex-col gap-4 tablet:gap-6">
+                          {/* Order Summary */}
+                          <div className="p-4 tablet:p-6 flex flex-col bg-gray-50 dark:bg-[#232f1c] rounded-2xl border border-gray-200 dark:border-lime-500/20">
+                            {/* Title */}
+                            <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-4 tablet:mb-6">
+                              Complete Your Order
+                            </h2>
+
+                            {/* Plan Details Box */}
+                            <div className="rounded-lg p-3 tablet:p-4 mb-4 tablet:mb-6 bg-white dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20">
+                              <div className="mb-2">
+                                <h3 className="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white mb-1">
+                                  {(() => {
+                                    if (!selectedPlan) return 'No Plan Selected';
+                                    if (selectedPlan.key === 'pro_yearly') return 'Pro Annual Plan';
+                                    if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
+                                    if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
+                                    if (selectedPlan.key === 'day_pass') return 'Day Pass';
+                                    return selectedPlan.name || `Plan ${selectedPlan.key}`;
+                                  })()}
+                                </h3>
+                                <p className="text-gray-600 dark:text-white/60 text-xs tablet:text-sm">
+                                  {(() => {
+                                    if (!selectedPlan) return 'Please select a plan';
+                                    const billingInterval = getBillingInterval(selectedPlan);
+                                    if (billingInterval === 'one-time') {
+                                      return 'One-time payment. Access to all premium features.';
+                                    } else if (billingInterval === 'yearly') {
+                                      return 'Billed once yearly. Access to all premium features.';
+                                    } else if (billingInterval === 'quarterly') {
+                                      return 'Billed once quarterly. Access to all premium features.';
+                                    } else {
+                                      return 'Billed monthly. Access to all premium features.';
+                                    }
+                                  })()}
+                                </p>
+                              </div>
+                              <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
                                 {(() => {
-                                  const billingInterval = getBillingInterval(selectedPlan);
-                                  if (billingInterval === 'one-time') {
-                                    return 'One-time payment';
-                                  } else if (billingInterval === 'yearly') {
-                                    return 'Billed once yearly';
-                                  } else if (billingInterval === 'quarterly') {
-                                    return 'Billed once quarterly';
-                                  } else {
-                                    return 'Billed monthly';
-                                  }
-                                })()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {(() => {
+                                  if (!selectedPlan) return 'N/A';
                                   const regionalPrice = (selectedPlan as any).regionalPricing;
                                   const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
                                   return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
                                 })()}
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      )}
 
-                      <div 
-                        className="plan-cards-scroll overflow-x-auto pb-4 mb-6 -mx-4 tablet:-mx-6 px-4 tablet:px-6"
-                      >
-                        <div className="flex gap-4">
-                      {filteredPlans.length > 0 ? (
-                        filteredPlans.map((plan, index) => {
-                          // Convert to DatabasePricingPlan format for hook functions
-                          const dbPlan = plan as unknown as DatabasePricingPlan;
-                          const regionalPrice = getRegionalPrice(dbPlan);
-                          const currencySymbol = getCurrencySymbol();
-                          const effectivePrice = getEffectivePrice(dbPlan);
-                          const hasPromo = hasPromotionalPricing(dbPlan);
-                          const Icon = getPlanIcon(plan.key);
-                          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
-                          const isCurrent = isCurrentPlan(plan);
-                          const isSelected = selectedPlan?.key === plan.key;
-                          
-                          // If this is the preselected plan, ensure it's selected
-                          const isPreselected = preselectedPlanKey === plan.key;
-
-                          return (
-                            <motion.div
-                              key={plan.key}
-                              className={`group relative bg-gray-50 dark:bg-[#232f1c] border rounded-2xl p-4 flex flex-col cursor-pointer transition-all flex-shrink-0 min-w-[280px] tablet:min-w-[300px] ${
-                                isSelected || isPreselected
-                                  ? 'border-2 border-lime-500 dark:border-lime-500 ring-2 ring-lime-500/20'
-                                  : 'border-gray-200 dark:border-lime-500/20'
-                              }`}
-                              initial={{ opacity: 0, x: 50 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ duration: 0.6, delay: 0.1 * index }}
-                              onClick={() => {
-                                // Mark that user manually changed plan
-                                setUserChangedPlan(true);
-                                
-                                // Determine the correct FULL price based on plan key and billing interval
-                                // IMPORTANT: Use the actual plan price, not regional price string which might be monthly equivalent
-                                let planPrice = 0;
-                                if (plan.key === 'pro_monthly') {
-                                  planPrice = dbPlan.price_monthly || 0;
-                                } else if (plan.key === 'pro_quarterly') {
-                                  // Use FULL quarterly price (one-time charge), not monthly equivalent
-                                  planPrice = dbPlan.price_quarterly || 0;
-                                } else if (plan.key === 'pro_yearly') {
-                                  // Use FULL yearly price (one-time charge), not monthly equivalent
-                                  planPrice = dbPlan.price_yearly || 0;
-                                } else if (plan.key === 'day_pass') {
-                                  planPrice = dbPlan.price_one_time || 0;
-                                } else {
-                                  // Fallback to effective price
-                                  planPrice = effectivePrice || 0;
-                                }
-                                
-                                // For regional pricing, we need to get the regional price for the SPECIFIC interval
-                                // Don't extract from regionalPrice string as it might be the wrong interval
-                                let regionalPriceValue = planPrice; // Default to plan price
-                                
-                                // If we have regional pricing data, get the correct interval price
-                                if (regionalPricing) {
-                                  if (plan.key === 'pro_quarterly' && regionalPricing.quarterly) {
-                                    regionalPriceValue = extractNumericPrice(regionalPricing.quarterly);
-                                  } else if (plan.key === 'pro_yearly' && regionalPricing.yearly) {
-                                    regionalPriceValue = extractNumericPrice(regionalPricing.yearly);
-                                  } else if (plan.key === 'pro_monthly' && regionalPricing.monthly) {
-                                    regionalPriceValue = extractNumericPrice(regionalPricing.monthly);
-                                  } else if (plan.key === 'day_pass' && regionalPricing.dayPass) {
-                                    regionalPriceValue = extractNumericPrice(regionalPricing.dayPass);
-                                  }
-                                }
-                                
-                                // Use the regional price if available, otherwise use plan price
-                                const finalPrice = regionalPriceValue || planPrice;
-                                
-                                // Attach regional pricing to plan before selecting
-                                const planWithPricing = {
-                                  ...plan,
-                                  regionalPricing: {
-                                    price: finalPrice, // This is the FULL price for the selected interval
-                                    currencySymbol: currencySymbol,
-                                    currency: regionalPricing?.currency || locationData?.currency || 'USD'
-                                  },
-                                  durationInfo: monthlyEquivalent.showMonthly ? {
-                                    displayText: monthlyEquivalent.price
-                                  } : undefined
-                                };
-                                setSelectedPlan(planWithPricing);
-                              }}
-                            >
-                              
-                              {/* Current Plan Badge - Removed since it's shown above cards */}
-                              
-                              {/* Popular Badge */}
-                              {plan.isPopular && !isCurrent && (
-                                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 z-10">
-                                  <span className="bg-lime-500 text-white text-xs font-medium px-2 py-0.5 rounded-full shadow-lg">
-                                    Most Popular
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Promotional Badge */}
-                              {hasPromo && (
-                                <div className="absolute -top-2 right-2 z-10">
-                                  <span className="bg-lime-500 text-white text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 shadow-lg">
-                                    <Gift size={9} />
-                                    Limited Time!
-                                  </span>
-                                </div>
-                              )}
-
-                              {/* Plan Icon */}
-                              <div className="inline-flex items-center justify-center w-10 h-10 rounded-lg mb-3 bg-lime-500 shadow-lg relative z-10">
-                                <Icon size={20} className="text-white" />
+                            {/* Coupon Code Section */}
+                            <div className="mb-4 tablet:mb-6">
+                              <p className="text-gray-900 dark:text-white mb-2 tablet:mb-3 text-xs tablet:text-sm font-medium">Have a coupon code?</p>
+                              <div className="flex flex-col tablet:flex-row gap-2">
+                                <input
+                                  type="text"
+                                  value={discountCode}
+                                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                                  placeholder="Enter code here"
+                                  className="flex-1 px-3 tablet:px-4 py-2 tablet:py-2.5 rounded-lg text-sm tablet:text-base bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#80FF00]/50 focus:border-lime-500 dark:focus:border-[#80FF00]/50 transition-colors"
+                                />
+                                <button
+                                  onClick={applyDiscountCode}
+                                  disabled={!discountCode.trim() || loading}
+                                  className="w-full tablet:w-auto px-4 tablet:px-6 py-2 tablet:py-2.5 bg-gray-800 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white dark:text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm tablet:text-base"
+                                >
+                                  Apply
+                                </button>
                               </div>
 
-                              {/* Plan Name */}
-                              <h3 className="text-base font-bold mb-2 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>
+                              {appliedDiscount && (
+                                <div className="mt-3 flex items-center justify-between rounded-lg p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-500/30">
+                                  <div className="flex items-center">
+                                    <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
+                                    <span className="text-sm text-lime-700 dark:text-lime-300">
+                                      {appliedDiscount.description}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={removeDiscountCode}
+                                    className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
 
-                              {/* Plan Description */}
-                              <p className="text-gray-600 dark:text-white/60 mb-3 text-xs leading-relaxed relative z-10">
-                                {plan.description}
-                              </p>
+                              {discountError && (
+                                <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                                  {discountError}
+                                </div>
+                              )}
+                            </div>
 
-                              {/* Pricing */}
-                              <div className="mb-4 relative z-10">
-                                {plan.key === 'free' ? (
-                                  <div className="text-xl font-bold text-gray-900 dark:text-white">Free</div>
-                                ) : (
-                                  <div>
-                                    {hasPromo ? (
-                                      <div>
-                                        <div className="flex flex-col gap-0.5">
-                                          <div className="flex items-baseline gap-2 flex-wrap">
-                                            <span className="text-xl font-bold text-gray-900 dark:text-white">
-                                              {regionalPrice}
-                                            </span>
-                                            <span className="text-sm text-gray-400 dark:text-white/50 line-through">
-                                              {(() => {
-                                                // Get original price for strikethrough
-                                                const originalPrice = plan.price_quarterly || plan.price_yearly || plan.price_monthly || plan.price_one_time || 0;
-                                                return originalPrice > 0 ? `${currencySymbol}${originalPrice}` : '';
-                                              })()}
-                                            </span>
-                                          </div>
-                                          {monthlyEquivalent.showMonthly && (
-                                            <div className="text-xs text-gray-600 dark:text-white/60">
-                                              {monthlyEquivalent.price} equivalent
-                                            </div>
+                            {/* Price Summary */}
+                            <div className="mb-4 tablet:mb-6 space-y-2 tablet:space-y-3">
+                              <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
+                                <span>Subtotal</span>
+                                <span>
+                                  {(() => {
+                                    const regionalPrice = (selectedPlan as any).regionalPricing;
+                                    const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                    return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
+                                  })()}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
+                                <span>Discount</span>
+                                <span className={appliedDiscount ? 'text-green-600 dark:text-lime-400' : 'text-gray-600 dark:text-white/60'}>
+                                  {appliedDiscount ? (
+                                    <>
+                                      -{(() => {
+                                        const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                        const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                        const discountAmount = getPlanPrice(selectedPlan) - getFinalPrice();
+                                        return `${currencySymbol}${discountAmount.toFixed(2)}`;
+                                      })()}
+                                    </>
+                                  ) : (
+                                    <>
+                                      -{(() => {
+                                        const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                        const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                        return `${currencySymbol}0.00`;
+                                      })()}
+                                    </>
+                                  )}
+                                </span>
+                              </div>
+
+                              <div className="flex justify-between text-gray-900 dark:text-white font-bold text-base tablet:text-lg pt-2 border-t border-gray-200 dark:border-lime-500/20">
+                                <span>Total</span>
+                                <span className="text-blue-600 dark:text-lime-400">
+                                  {(() => {
+                                    const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
+                                    const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
+                                    return `${currencySymbol}${getFinalPrice().toFixed(2)}`;
+                                  })()}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Provider Health Status */}
+                            {providerHealthLoading ? (
+                              <div className="mb-4 p-3 bg-gray-100 dark:bg-[#1a2e1a] rounded-lg text-sm text-gray-600 dark:text-white/60">
+                                Checking payment provider status...
+                              </div>
+                            ) : (
+                              <>
+                                {providerHealth[paymentProvider] === false && (
+                                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
+                                    <div className="flex items-start gap-2">
+                                      <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                                      <div className="flex-1">
+                                        <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                                          {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is currently unavailable
+                                        </p>
+                                        <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
+                                          {providerHealth.stripe && providerHealth.razorpay ? (
+                                            'Both providers are available. Please try again.'
+                                          ) : providerHealth.stripe ? (
+                                            'Switched to Stripe. Please try again.'
+                                          ) : providerHealth.razorpay ? (
+                                            'Switched to Razorpay. Please try again.'
+                                          ) : (
+                                            'Payment processing is temporarily unavailable. Please try again later.'
                                           )}
-                                        </div>
-                                        <div className="text-xs text-lime-600 dark:text-lime-400 font-medium mt-0.5">
-                                          Limited Time Offer!
-                                        </div>
+                                        </p>
                                       </div>
-                                    ) : (
-                                      <div>
-                                        <div className="text-xl font-bold text-gray-900 dark:text-white">
-                                          {regionalPrice}
-                                        </div>
-                                        {monthlyEquivalent.showMonthly && (
-                                          <div className="text-xs text-gray-600 dark:text-white/60 mt-0.5">
-                                            {monthlyEquivalent.price} equivalent
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                    <div className="text-gray-600 dark:text-white/60 text-xs mt-0.5">
-                                      {plan.key === 'day_pass' 
-                                        ? 'one-time' 
-                                        : (plan.price_quarterly ? 'quarterly' : plan.price_yearly ? 'yearly' : plan.price_monthly ? 'monthly' : 'one-time')}
                                     </div>
                                   </div>
                                 )}
-                              </div>
+                                {providerHealth[paymentProvider] === true && (
+                                  <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-lg">
+                                    <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
+                                      <Check className="w-4 h-4" />
+                                      <span>Payment via {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is available</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            )}
 
-                              {/* Features */}
-                              <ul className="space-y-2 mb-4 relative z-10 flex-grow">
-                                {plan.features.map((feature: string, featureIndex: number) => (
-                                  <li key={featureIndex} className="flex items-start gap-1.5">
-                                    <motion.div
-                                      initial={{ opacity: 0, scale: 0 }}
-                                      animate={{ opacity: 1, scale: 1 }}
-                                      transition={{ delay: 0.5 + featureIndex * 0.1 }}
-                                      whileHover={{ scale: 1.2 }}
-                                    >
-                                      <Check size={14} className="text-lime-500 dark:text-lime-400 flex-shrink-0 mt-0.5" />
-                                    </motion.div>
-                                    <span className="text-gray-700 dark:text-gray-300 text-xs leading-relaxed">{feature}</span>
-                                  </li>
-                                ))}
-                              </ul>
-
-                              {/* Not Included Features */}
-                              {(plan as any).notIncludedFeatures && (plan as any).notIncludedFeatures.length > 0 && (
-                                <div className="mb-3 relative z-10">
-                                  <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Not Included:</h4>
-                                  <ul className="space-y-1">
-                                    {(plan as any).notIncludedFeatures.slice(0, 2).map((feature: string, featureIndex: number) => (
-                                      <li key={featureIndex} className="flex items-start gap-1.5">
-                                        <div className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                                          <div className="w-1 h-1 bg-gray-400 dark:bg-gray-500 rounded-full"></div>
-                                        </div>
-                                        <span className="text-gray-500 dark:text-gray-400 text-xs">{feature}</span>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
+                            {/* Proceed to Payment Button */}
+                            <button
+                              onClick={handlePayment}
+                              disabled={loading || providerHealth[paymentProvider] === false || providerHealthLoading}
+                              className="w-full py-3 tablet:py-3.5 bg-blue-600 dark:bg-lime-500 hover:bg-blue-700 dark:hover:bg-lime-600 text-white dark:text-black font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
+                            >
+                              {loading ? (
+                                <>
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
+                                  <span className="hidden tablet:inline">Processing...</span>
+                                  <span className="tablet:hidden">Processing</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span className="hidden tablet:inline">Proceed to Payment</span>
+                                  <span className="tablet:hidden">Proceed</span>
+                                  <ArrowRight className="w-4 h-4" />
+                                </>
                               )}
+                            </button>
 
-                              {/* Current Plan Indicator - Removed since it's shown above cards */}
-                            </motion.div>
-                          );
-                        })
-                      ) : (
-                        <div className="text-center py-8 w-full">
-                          <p className="text-gray-500 dark:text-gray-400">
-                            {plansLoading ? 'Loading plans...' : 'No plans available. Please try refreshing the page.'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                      </div>
-                    </>
-                  );
-                })()}
-
-                {/* Continue Button */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setStep(2)}
-                    disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                    className="px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
-                  </button>
-                </div>
-              </>
-            )}
-
-            {step === 2 && selectedPlan && (
-              <>
-                {/* Back Button */}
-                <button
-                  onClick={() => setStep(1)}
-                  className="flex items-center text-sm tablet:text-base text-gray-600 hover:text-gray-900 mb-4 tablet:mb-6"
-                >
-                  <span className="hidden tablet:inline">← Back to Plans</span>
-                  <span className="tablet:hidden">← Back</span>
-                </button>
-
-                {/* Single Column Layout for Side Panel */}
-                <div className="flex flex-col gap-4 tablet:gap-6">
-                  {/* Order Summary */}
-                  <div className="p-4 tablet:p-6 flex flex-col bg-gray-50 dark:bg-[#232f1c] rounded-2xl border border-gray-200 dark:border-lime-500/20">
-                    {/* Title */}
-                    <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-4 tablet:mb-6">
-                      Complete Your Order
-                    </h2>
-
-                    {/* Plan Details Box */}
-                    <div className="rounded-lg p-3 tablet:p-4 mb-4 tablet:mb-6 bg-white dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20">
-                      <div className="mb-2">
-                        <h3 className="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white mb-1">
-                          {(() => {
-                            if (!selectedPlan) return 'No Plan Selected';
-                            if (selectedPlan.key === 'pro_yearly') return 'Pro Annual Plan';
-                            if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
-                            if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
-                            if (selectedPlan.key === 'day_pass') return 'Day Pass';
-                            return selectedPlan.name || `Plan ${selectedPlan.key}`;
-                          })()}
-                        </h3>
-                        <p className="text-gray-600 dark:text-white/60 text-xs tablet:text-sm">
-                          {(() => {
-                            if (!selectedPlan) return 'Please select a plan';
-                            const billingInterval = getBillingInterval(selectedPlan);
-                            if (billingInterval === 'one-time') {
-                              return 'One-time payment. Access to all premium features.';
-                            } else if (billingInterval === 'yearly') {
-                              return 'Billed once yearly. Access to all premium features.';
-                            } else if (billingInterval === 'quarterly') {
-                              return 'Billed once quarterly. Access to all premium features.';
-                            } else {
-                              return 'Billed monthly. Access to all premium features.';
-                            }
-                          })()}
-                        </p>
-                      </div>
-                      <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
-                        {(() => {
-                          if (!selectedPlan) return 'N/A';
-                          const regionalPrice = (selectedPlan as any).regionalPricing;
-                          const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                          return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
-                        })()}
-                      </div>
-                    </div>
-
-                    {/* Coupon Code Section */}
-                    <div className="mb-4 tablet:mb-6">
-                      <p className="text-gray-900 dark:text-white mb-2 tablet:mb-3 text-xs tablet:text-sm font-medium">Have a coupon code?</p>
-                      <div className="flex flex-col tablet:flex-row gap-2">
-                        <input
-                          type="text"
-                          value={discountCode}
-                          onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
-                          placeholder="Enter code here"
-                          className="flex-1 px-3 tablet:px-4 py-2 tablet:py-2.5 rounded-lg text-sm tablet:text-base bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 border border-gray-300 dark:border-white/20 focus:outline-none focus:ring-2 focus:ring-lime-500 dark:focus:ring-[#80FF00]/50 focus:border-lime-500 dark:focus:border-[#80FF00]/50 transition-colors"
-                        />
-                        <button
-                          onClick={applyDiscountCode}
-                          disabled={!discountCode.trim() || loading}
-                          className="w-full tablet:w-auto px-4 tablet:px-6 py-2 tablet:py-2.5 bg-gray-800 dark:bg-lime-500 hover:bg-gray-900 dark:hover:bg-lime-600 text-white dark:text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium text-sm tablet:text-base"
-                        >
-                          Apply
-                        </button>
-                      </div>
-                  
-                      {appliedDiscount && (
-                        <div className="mt-3 flex items-center justify-between rounded-lg p-3 bg-lime-50 dark:bg-lime-900/20 border border-lime-300 dark:border-lime-500/30">
-                          <div className="flex items-center">
-                            <Gift className="w-4 h-4 mr-2 text-lime-600 dark:text-lime-400" />
-                            <span className="text-sm text-lime-700 dark:text-lime-300">
-                              {appliedDiscount.description}
-                            </span>
-                          </div>
-                          <button
-                            onClick={removeDiscountCode}
-                            className="text-lime-600 dark:text-lime-400 hover:opacity-80 transition-opacity"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      )}
-                  
-                  {discountError && (
-                        <div className="mt-2 text-sm text-red-600 dark:text-red-400">
-                      {discountError}
-                    </div>
-                  )}
-                </div>
-
-                    {/* Price Summary */}
-                    <div className="mb-4 tablet:mb-6 space-y-2 tablet:space-y-3">
-                      <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
-                        <span>Subtotal</span>
-                        <span>
-                          {(() => {
-                            const regionalPrice = (selectedPlan as any).regionalPricing;
-                            const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                            return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
-                          })()}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between text-gray-900 dark:text-white text-sm tablet:text-base">
-                        <span>Discount</span>
-                        <span className={appliedDiscount ? 'text-green-600 dark:text-lime-400' : 'text-gray-600 dark:text-white/60'}>
-                          {appliedDiscount ? (
-                            <>
-                              -{(() => {
-                                const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
-                                const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                const discountAmount = getPlanPrice(selectedPlan) - getFinalPrice();
-                                return `${currencySymbol}${discountAmount.toFixed(2)}`;
-                              })()}
-                            </>
-                          ) : (
-                            <>
-                              -{(() => {
-                                const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
-                                const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                return `${currencySymbol}0.00`;
-                              })()}
-                            </>
-                          )}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between text-gray-900 dark:text-white font-bold text-base tablet:text-lg pt-2 border-t border-gray-200 dark:border-lime-500/20">
-                        <span>Total</span>
-                        <span className="text-blue-600 dark:text-lime-400">
-                          {(() => {
-                            const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
-                            const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                            return `${currencySymbol}${getFinalPrice().toFixed(2)}`;
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Provider Health Status */}
-                    {providerHealthLoading ? (
-                      <div className="mb-4 p-3 bg-gray-100 dark:bg-[#1a2e1a] rounded-lg text-sm text-gray-600 dark:text-white/60">
-                        Checking payment provider status...
-                      </div>
-                    ) : (
-                      <>
-                        {providerHealth[paymentProvider] === false && (
-                          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
-                            <div className="flex items-start gap-2">
-                              <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                              <div className="flex-1">
-                                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                                  {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is currently unavailable
-                                </p>
-                                <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                                  {providerHealth.stripe && providerHealth.razorpay ? (
-                                    'Both providers are available. Please try again.'
-                                  ) : providerHealth.stripe ? (
-                                    'Switched to Stripe. Please try again.'
-                                  ) : providerHealth.razorpay ? (
-                                    'Switched to Razorpay. Please try again.'
-                                  ) : (
-                                    'Payment processing is temporarily unavailable. Please try again later.'
-                                  )}
-                                </p>
-                              </div>
+                            {/* Terms and Conditions */}
+                            <div className="mt-4 text-center">
+                              <p className="text-xs text-gray-600 dark:text-white/60">
+                                By proceeding, you agree to our{' '}
+                                <a
+                                  href="/terms"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
+                                >
+                                  Terms of Service
+                                </a>
+                                {' '}and{' '}
+                                <a
+                                  href="/privacy-policy"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
+                                >
+                                  Privacy Policy
+                                </a>
+                              </p>
                             </div>
                           </div>
-                        )}
-                        {providerHealth[paymentProvider] === true && (
-                          <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-lg">
-                            <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
-                              <Check className="w-4 h-4" />
-                              <span>Payment via {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is available</span>
-                            </div>
-                          </div>
-                        )}
+                        </div>
                       </>
-                    )}
-
-                    {/* Proceed to Payment Button */}
-                    <button
-                      onClick={handlePayment}
-                      disabled={loading || providerHealth[paymentProvider] === false || providerHealthLoading}
-                      className="w-full py-3 tablet:py-3.5 bg-blue-600 dark:bg-lime-500 hover:bg-blue-700 dark:hover:bg-lime-600 text-white dark:text-black font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
-                    >
-                      {loading ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
-                          <span className="hidden tablet:inline">Processing...</span>
-                          <span className="tablet:hidden">Processing</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="hidden tablet:inline">Proceed to Payment</span>
-                          <span className="tablet:hidden">Proceed</span>
-                          <ArrowRight className="w-4 h-4" />
-                        </>
-                      )}
-                    </button>
-
-                    {/* Terms and Conditions */}
-                    <div className="mt-4 text-center">
-                      <p className="text-xs text-gray-600 dark:text-white/60">
-                        By proceeding, you agree to our{' '}
-                        <a 
-                          href="/terms" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
-                        >
-                          Terms of Service
-                        </a>
-                        {' '}and{' '}
-                        <a 
-                          href="/privacy-policy" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-lime-600 dark:text-[rgb(129,255,0)] hover:underline"
-                        >
-                          Privacy Policy
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+                    )
+                  }
                 </div>
               </div>
             </motion.div>

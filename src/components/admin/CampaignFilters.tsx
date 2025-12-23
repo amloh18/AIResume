@@ -16,6 +16,7 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
   }));
   const [availablePlans, setAvailablePlans] = useState<string[]>([]);
   const [availableRegions, setAvailableRegions] = useState<string[]>([]);
+  const isSyncingFromProps = React.useRef(false);
 
   useEffect(() => {
     fetchAvailablePlans();
@@ -65,8 +66,23 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
     }
   };
 
+  // Sync localFilters when filters prop changes (e.g., when preset is applied)
   useEffect(() => {
-    onChange(localFilters);
+    isSyncingFromProps.current = true;
+    setLocalFilters({
+      ...(filters || {}),
+      usageMetrics: filters?.usageMetrics || {},
+    });
+    setTimeout(() => {
+      isSyncingFromProps.current = false;
+    }, 0);
+  }, [filters]);
+
+  useEffect(() => {
+    // Don't call onChange if we're syncing from props (to avoid infinite loop)
+    if (!isSyncingFromProps.current) {
+      onChange(localFilters);
+    }
   }, [localFilters]);
 
   const handlePlanChange = (plan: string, checked: boolean) => {

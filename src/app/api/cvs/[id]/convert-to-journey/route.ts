@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import CV from '@/models/CV';
-import { JobApplication } from '@/models';
+import { JobApplication, CoverLetter } from '@/models';
 import ApplicationJourney from '@/models/ApplicationJourney';
 import mongoose from 'mongoose';
+import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 /**
  * POST /api/cvs/[id]/convert-to-journey
  * Converts a Standalone CV to a Journey CV
+ * Also auto-generates a cover letter draft for the journey
  */
 export async function POST(
   request: NextRequest,
@@ -49,6 +52,43 @@ export async function POST(
         { success: false, error: 'CV not found' },
         { status: 404 }
       );
+    }
+
+    // Get user to check plan and subscription
+    const User = (await import('@/models/User')).default;
+    const user = await User.findById(userId).select('currentPlanKey subscription');
+    
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    // EDGE CASE 5: Check if user already has a Journey CV before allowing conversion
+    if (cv.cvType === 'standalone') {
+      const { checkJourneyCVLimit } = await import('@/lib/utils/subscription-helpers');
+      const journeyLimitCheck = await checkJourneyCVLimit(
+        userId,
+        user.currentPlanKey || 'free',
+        user.subscription
+      );
+      
+      if (!journeyLimitCheck.allowed && journeyLimitCheck.currentActiveCount > 0) {
+        // EDGE CASE 1: Hard gate for 2nd Journey CV
+        return NextResponse.json(
+          {
+            success: false,
+            error: journeyLimitCheck.message || 'You already have an active Journey CV. Archive or delete it to create a new one.',
+            requiresUpgrade: journeyLimitCheck.upgradeRequired,
+            currentActiveCount: journeyLimitCheck.currentActiveCount,
+            limit: journeyLimitCheck.limit,
+            canDeleteToMakeSpace: journeyLimitCheck.canDeleteToMakeSpace,
+            gateType: 'hard'
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // EDGE CASE 2: Check if CV is already linked to a journey
@@ -263,6 +303,88 @@ export async function POST(
       throw new Error('Failed to update CV');
     }
 
+    // AUTO-GENERATE COVER LETTER (Phase 7)
+    // Generate a draft cover letter immediately upon conversion
+    let coverLetterId: string | undefined;
+    let coverLetterDraft: string | undefined;
+    
+    try {
+      console.log('📝 Auto-generating cover letter for journey...');
+      
+      // Check if cover letter already exists for this journey
+      const existingCoverLetter = await CoverLetter.findOne({
+        journeyId: journey._id
+      });
+      
+      if (existingCoverLetter) {
+        coverLetterId = existingCoverLetter._id.toString();
+        coverLetterDraft = existingCoverLetter.body;
+        console.log('✅ Using existing cover letter:', coverLetterId);
+      } else {
+        // Generate cover letter body using AI
+        const cvData = cv.cvData;
+        const jobDescription = job.jobDescription || jobData?.description || '';
+        
+        if (cvData && jobDescription) {
+          const coverLetterBody = await generateCoverLetterBody(
+            cvData,
+            job.jobTitle,
+            job.company,
+            jobDescription
+          );
+          
+          if (coverLetterBody) {
+            // Create cover letter record
+            const coverLetter = await CoverLetter.create({
+              userId: new mongoose.Types.ObjectId(userId),
+              journeyId: journey._id,
+              jobId: finalJobId,
+              cvId: cvId,
+              status: 'draft',
+              header: {
+                senderName: cvData.basics?.name || '',
+                senderEmail: cvData.basics?.email || '',
+                senderPhone: cvData.basics?.phone || '',
+                senderAddress: cvData.basics?.location || '',
+                recipientName: '',
+                recipientTitle: 'Hiring Manager',
+                recipientCompany: job.company,
+                recipientAddress: '',
+                date: new Date().toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              },
+              body: coverLetterBody,
+              footer: {
+                closing: 'Sincerely,',
+                signature: cvData.basics?.name || ''
+              },
+              metadata: {
+                targetRole: job.jobTitle,
+                targetCompany: job.company,
+                isAIGenerated: true,
+                generatedAt: new Date()
+              }
+            });
+            
+            coverLetterId = coverLetter._id.toString();
+            coverLetterDraft = coverLetterBody;
+            
+            // Update journey with cover letter
+            journey.coverLetterId = coverLetter._id;
+            await journey.save();
+            
+            console.log('✅ Cover letter auto-generated:', coverLetterId);
+          }
+        }
+      }
+    } catch (coverLetterError) {
+      // Non-critical - log but don't fail the conversion
+      console.error('⚠️ Failed to auto-generate cover letter (non-critical):', coverLetterError);
+    }
+
     // Return success response
     return NextResponse.json({
       success: true,
@@ -277,13 +399,18 @@ export async function POST(
           id: journey._id.toString(),
           jobId: journey.jobId.toString(),
           cvId: journey.cvId,
+          coverLetterId,
           status: journey.status
         },
         job: {
           id: job._id.toString(),
           title: job.jobTitle,
           company: job.company
-        }
+        },
+        coverLetter: coverLetterDraft ? {
+          id: coverLetterId,
+          draft: coverLetterDraft
+        } : undefined
       }
     });
 
@@ -296,6 +423,80 @@ export async function POST(
       },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Generate cover letter body using AI
+ */
+async function generateCoverLetterBody(
+  cvData: any,
+  jobTitle: string,
+  company: string,
+  jobDescription: string
+): Promise<string | null> {
+  try {
+    const candidateName = cvData.basics?.name || 'Candidate';
+    const candidateSummary = cvData.basics?.summary || '';
+    
+    // Extract key experiences
+    const experiences = (cvData.work || []).slice(0, 3).map((job: any) => 
+      `${job.position || 'Role'} at ${job.name || job.company || 'Company'}`
+    ).join(', ');
+    
+    // Extract top skills
+    const skills = (cvData.skills || []).slice(0, 8).map((s: any) => 
+      s.name || s
+    ).join(', ');
+
+    const prompt = `Generate a professional cover letter body for a job application.
+
+## CANDIDATE INFO
+Name: ${candidateName}
+Summary: ${candidateSummary}
+Key Experience: ${experiences}
+Top Skills: ${skills}
+
+## JOB DETAILS
+Position: ${jobTitle}
+Company: ${company}
+Job Description: ${jobDescription.substring(0, 1500)}
+
+## INSTRUCTIONS
+Write a compelling cover letter body (2-3 paragraphs) that:
+1. Opens with enthusiasm for the role and company
+2. Highlights relevant experience and skills that match the job requirements
+3. Demonstrates understanding of the company/role
+4. Closes with a call to action
+
+IMPORTANT RULES:
+- Do NOT include salutation (Dear...) or closing (Sincerely...) - just the body paragraphs
+- Do NOT hallucinate or invent experiences not mentioned in the candidate info
+- Keep it professional and concise (200-300 words)
+- Use first person perspective
+- Match the tone to the job level
+
+Return ONLY the cover letter body text, no formatting or labels.`;
+
+    const result = await callGeminiWithAllKeysFallback(prompt);
+    
+    if (result) {
+      // Clean up the response
+      let cleanedResult = result.trim();
+      
+      // Remove any accidental salutation/closing
+      cleanedResult = cleanedResult
+        .replace(/^(Dear|To Whom)[^,]+,?\s*/i, '')
+        .replace(/\n?(Sincerely|Best regards|Regards|Yours truly)[,\n].*/is, '')
+        .trim();
+      
+      return cleanedResult;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Cover letter generation failed:', error);
+    return null;
   }
 }
 

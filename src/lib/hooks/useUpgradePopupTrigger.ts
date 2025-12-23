@@ -24,19 +24,19 @@ export function useUpgradePopupTrigger(): UseUpgradePopupTriggerReturn {
   // Check if popup was already dismissed
   const checkDismissal = useCallback((userId: string): boolean => {
     if (typeof window === 'undefined') return false;
-    
+
     // Check localStorage for dismissal
     const dismissalKey = `upgradePopupDismissed_${userId}`;
     const dismissed = localStorage.getItem(dismissalKey);
-    
+
     if (dismissed === 'true') {
       return true; // Already dismissed
     }
-    
+
     // Also check for timestamp-based dismissals (old format)
     const keys = Object.keys(localStorage);
     const dismissalKeys = keys.filter(key => key.startsWith(`upgradePopupDismissed_${userId}_`));
-    
+
     return dismissalKeys.length > 0; // If any dismissal key exists, consider it dismissed
   }, []);
 
@@ -49,12 +49,12 @@ export function useUpgradePopupTrigger(): UseUpgradePopupTriggerReturn {
 
       if (result.success && result.data) {
         setActivityStatus(result.data);
-        
+
         // Show popup if user has created at least 1 journey OR 1 standalone CV
         // and hasn't dismissed it
         const hasActivity = result.data.hasJourney || result.data.hasStandaloneCV;
         const isDismissed = checkDismissal(userId);
-        
+
         setShouldShow(hasActivity && !isDismissed);
       } else {
         setShouldShow(false);
@@ -70,6 +70,19 @@ export function useUpgradePopupTrigger(): UseUpgradePopupTriggerReturn {
   // Check on mount and when user changes
   useEffect(() => {
     if (user?.id) {
+      // Don't show on landing page or admin pages
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname;
+        const isLandingPage = pathname === '/' || pathname === '/home';
+        const isAdminPage = pathname.startsWith('/admin');
+
+        if (isLandingPage || isAdminPage) {
+          setIsChecking(false);
+          setShouldShow(false);
+          return;
+        }
+      }
+
       checkActivityStatus(user.id);
     } else {
       setIsChecking(false);

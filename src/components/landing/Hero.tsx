@@ -128,7 +128,7 @@ const Hero = () => {
           style={{ willChange: 'auto' }}
         >
           <motion.a
-            href="/sign-up"
+            href="/sign-up?callbackUrl=/dashboard"
             className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-semibold text-xs tablet:text-sm desktop:text-base shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden btn-hover"
             whileHover={{
               scale: 1.05,

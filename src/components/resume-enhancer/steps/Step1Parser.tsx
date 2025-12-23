@@ -1,25 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Upload, FileText, Edit3, CheckCircle2, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Upload, FileText, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
+import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
+import { useJourneyCVLimit } from '@/hooks/useJourneyCVLimit';
 
 interface Step1ParserProps {
   onComplete: (cvData: UnifiedCVDataStructure) => void;
+  /** Check if user already has a Master CV */
+  userHasMasterCV?: boolean;
+  /** Current mode of the enhancer */
+  mode?: 'create' | 'edit' | 'edit-master' | 'journey';
+  /** CV type being edited */
+  cvType?: 'master' | 'standalone' | 'journey';
 }
 
-export default function Step1Parser({ onComplete }: Step1ParserProps) {
-  const { state, dispatch } = useResumeEnhancer();
-  const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | null>(null);
+export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType }: Step1ParserProps) {
+  const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText } = useResumeEnhancer();
+  const { limitInfo: journeyLimitInfo } = useJourneyCVLimit();
+  const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [parsingStep, setParsingStep] = useState<string>('');
   const [currentParsingStepIndex, setCurrentParsingStepIndex] = useState<number>(-1);
+  const [showJDInput, setShowJDInput] = useState(false);
   const [parsingSteps] = useState([
     { label: 'Extracting text...', progress: 20 },
     { label: 'Structuring sections...', progress: 40 },
@@ -28,6 +38,51 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
     { label: 'Extracting education...', progress: 85 },
     { label: 'Finalizing structure...', progress: 95 }
   ]);
+
+  // Set hasMasterCV in context on mount
+  useEffect(() => {
+    dispatch({ type: 'SET_HAS_MASTER_CV', payload: userHasMasterCV });
+  }, [userHasMasterCV, dispatch]);
+
+  /**
+   * Detect if CV data indicates a fresher (no work experience)
+   * This triggers projects-focused layout
+   */
+  const checkFresherMode = (cvData: UnifiedCVDataStructure): boolean => {
+    const work = cvData.work;
+    if (!work || !Array.isArray(work) || work.length === 0) {
+      return true;
+    }
+    // Check if work entries have meaningful content
+    const hasValidWork = work.some((w: any) =>
+      w && (w.name || w.company || w.position)
+    );
+    return !hasValidWork;
+  };
+
+  /**
+   * Determine CV type based on current state and complete the step
+   */
+  const completeParsing = (cvData: UnifiedCVDataStructure) => {
+    // Detect fresher mode
+    const isFresher = checkFresherMode(cvData);
+    setFresherMode(isFresher);
+    dispatch({ type: 'SET_FRESHER_MODE', payload: isFresher });
+
+    // Determine CV type based on state
+    const cvType = determineCVType();
+    dispatch({ type: 'SET_CV_TYPE', payload: cvType });
+
+    // If this is the first CV and no Master exists, mark as Master
+    if (cvType === 'master') {
+      dispatch({ type: 'SET_IS_USER_MASTER', payload: true });
+    }
+
+    // Update context with parsed data
+    dispatch({ type: 'SET_CV_DATA', payload: cvData });
+
+    onComplete(cvData);
+  };
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -58,7 +113,7 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
       setTimeout(() => {
         if (uploadInterval) clearInterval(uploadInterval);
         setUploadStatus('parsing');
-        
+
         // Simulate parsing steps with progress
         let currentStepIndex = 0;
         setCurrentParsingStepIndex(0);
@@ -95,24 +150,21 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
       }
 
       const result = await response.json();
-      
+
       setUploadProgress(100);
       setParsingStep('Complete!');
       setUploadStatus('success');
 
-      // Update context with parsed data
-      dispatch({ type: 'SET_CV_DATA', payload: result });
-
-      // Wait a moment to show success, then complete
+      // Wait a moment to show success, then complete with fresher detection
       setTimeout(() => {
-        onComplete(result);
+        completeParsing(result);
       }, 1000);
 
     } catch (error) {
       // Clear intervals on error
       if (uploadInterval) clearInterval(uploadInterval);
       if (parsingInterval) clearInterval(parsingInterval);
-      
+
       console.error('CV parsing error:', error);
       setUploadStatus('error');
       setErrorMessage(sanitizeErrorMessage(error, 'Failed to parse CV'));
@@ -124,14 +176,65 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
   const handleManualEntry = () => {
     // For manual entry, use default empty CV data
     // User will fill in forms in next steps
+    // This will be a fresher by default (no work experience yet)
+    setFresherMode(true);
+    dispatch({ type: 'SET_FRESHER_MODE', payload: true });
+
+    const cvType = determineCVType();
+    dispatch({ type: 'SET_CV_TYPE', payload: cvType });
+
+    if (cvType === 'master') {
+      dispatch({ type: 'SET_IS_USER_MASTER', payload: true });
+    }
+
     dispatch({ type: 'SET_CV_DATA', payload: state.cvData });
     onComplete(state.cvData);
   };
 
+  /**
+   * Handle JD input for Journey CV flow
+   */
+  const handleJDSubmit = (jdText: string) => {
+    setJdText(jdText);
+    setShowJDInput(false);
+    // JD submitted - now need to get CV data (upload or manual)
+    // Show the regular parse options but with Journey mode active
+    setParseMethod(null);
+  };
+
+  /**
+   * Handle starting with a job (Journey CV flow)
+   */
+  const handleStartWithJob = () => {
+    // EDGE CASE 1: Check Journey CV limit before allowing JD input
+    if (journeyLimitInfo && !journeyLimitInfo.allowed) {
+      alert(journeyLimitInfo.currentActiveCount > 0
+        ? `You have ${journeyLimitInfo.currentActiveCount} active Journey CV${journeyLimitInfo.currentActiveCount !== 1 ? 's' : ''}. Archive or delete one to create a new one, or upgrade to Pro.`
+        : 'Journey CV limit reached. Please upgrade to Pro for unlimited Journey CVs.');
+      return;
+    }
+    setShowJDInput(true);
+  };
+
+  // Show JD input panel if user chose to start with a job
+  if (showJDInput) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px] mt-8">
+        <div className="w-full max-w-2xl px-6">
+          <JDInputPanel
+            onSubmit={handleJDSubmit}
+            onCancel={() => setShowJDInput(false)}
+            showJourneyIndicator={true}
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (parseMethod === null) {
     return (
       <div className="flex items-center justify-center min-h-[500px] mt-8">
-        <div className="w-full max-w-4xl px-6">
+        <div className="w-full max-w-5xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -143,26 +246,78 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
             <p className="text-lg text-[color:var(--text-secondary)]">
               Choose how you'd like to get started
             </p>
+
+            {/* Journey mode indicator if JD was already provided */}
+            {state.jdText && state.jdWordCount >= 10 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 rounded-full"
+              >
+                <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />
+                <span className="text-sm font-medium text-[var(--accent-primary)]">
+                  Creating a Journey CV for your job
+                </span>
+              </motion.div>
+            )}
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className={`grid gap-8 ${mode === 'edit-master' || cvType === 'master' ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'md:grid-cols-3'}`}>
+            {/* Apply to Job Option - Most prominent for Journey CV */}
+            {/* Hide for master CV mode (edit-master or cvType === 'master') */}
+            {!(mode === 'edit-master' || cvType === 'master') && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.05 }}
+                onClick={handleStartWithJob}
+                className="group relative bg-gradient-to-br from-[#141810] to-[#1a1f14] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--accent-primary)]/20 hover:scale-105 border border-[var(--accent-primary)]/20"
+              >
+                {/* Popular badge */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="px-3 py-1 bg-[var(--accent-primary)] text-black text-xs font-bold rounded-full shadow-lg">
+                    RECOMMENDED
+                  </span>
+                </div>
+                <div className="flex flex-col items-center text-center space-y-4 pt-2">
+                  <div className="w-16 h-16 bg-[#80FF00]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Briefcase className="w-8 h-8 text-[#80FF00]" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
+                    Apply to a Job
+                  </h3>
+                  <p className="text-[color:var(--text-secondary)] text-sm">
+                    Paste a job description and we'll tailor your CV with ATS optimization
+                  </p>
+                  <div className="flex flex-wrap gap-2 justify-center pt-2">
+                    <span className="text-xs px-3 py-1 bg-[var(--accent-primary)]/15 rounded-full text-[var(--accent-primary)]">
+                      ATS Optimized
+                    </span>
+                    <span className="text-xs px-3 py-1 bg-[var(--accent-primary)]/15 rounded-full text-[var(--accent-primary)]">
+                      Cover Letter
+                    </span>
+                  </div>
+                </div>
+              </motion.button>
+            )}
+
             {/* Upload Option */}
             <motion.button
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               onClick={() => setParseMethod('upload')}
-              className="group relative bg-[#141810] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105"
+              className={`group relative bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
             >
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Upload className="w-8 h-8 text-[#80FF00]" />
+                <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
+                  <Upload className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
                 </div>
-                <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
-                  Upload Existing Resume
+                <h3 className={`font-semibold text-[color:var(--text-primary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
+                  Upload Resume
                 </h3>
-                <p className="text-[color:var(--text-secondary)]">
-                  Upload your current resume and we'll extract the information automatically
+                <p className={`text-[color:var(--text-secondary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
+                  Upload your current resume and we'll extract the information
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center pt-2">
                   <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
@@ -171,39 +326,50 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
                   <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
                     DOCX
                   </span>
-                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
-                    Image
-                  </span>
                 </div>
               </div>
             </motion.button>
 
             {/* Manual Entry Option */}
             <motion.button
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
               onClick={() => handleManualEntry()}
-              className="group relative bg-[#141810] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105"
+              className={`group relative bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
             >
               <div className="flex flex-col items-center text-center space-y-4">
-                <div className="w-16 h-16 bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Edit3 className="w-8 h-8 text-[#80FF00]" />
+                <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
+                  <Edit3 className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
                 </div>
-                <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
-                  Start from Scratch
+                <h3 className={`font-semibold text-[color:var(--text-primary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
+                  Start Fresh
                 </h3>
-                <p className="text-[color:var(--text-secondary)]">
-                  Build your resume from the ground up with our guided forms
+                <p className={`text-[color:var(--text-secondary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
+                  Build your resume from scratch with our guided forms
                 </p>
                 <div className="flex items-center gap-2 justify-center pt-2">
-                  <span className="text-xs px-3 py-1 bg-[color:var(--accent-primary)]/15 rounded-full text-[color:var(--accent-primary)]">
-                    Recommended for fresh starts
+                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
+                    For beginners
                   </span>
                 </div>
               </div>
             </motion.button>
           </div>
+
+          {/* First CV info banner */}
+          {!userHasMasterCV && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-center"
+            >
+              <p className="text-sm text-blue-400">
+                <strong>First resume?</strong> This will become your Master CV - your source of truth for all future applications.
+              </p>
+            </motion.div>
+          )}
         </div>
       </div>
     );
@@ -261,7 +427,7 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
                 <h3 className="text-2xl font-bold text-[color:var(--text-primary)] mb-6">
                   {uploadStatus === 'uploading' ? 'Uploading...' : 'Parsing Your Resume...'}
                 </h3>
-                
+
                 {uploadStatus === 'parsing' && (
                   <div className="mb-6">
                     <ul className="space-y-3 text-left max-w-md mx-auto">
@@ -269,17 +435,16 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
                         const isCompleted = index < currentParsingStepIndex;
                         const isCurrent = index === currentParsingStepIndex;
                         const isPending = index > currentParsingStepIndex;
-                        
+
                         return (
                           <li
                             key={index}
-                            className={`flex items-center gap-3 text-sm transition-colors ${
-                              isCompleted
-                                ? 'text-[#80FF00]'
-                                : isCurrent
+                            className={`flex items-center gap-3 text-sm transition-colors ${isCompleted
+                              ? 'text-[#80FF00]'
+                              : isCurrent
                                 ? 'text-[#80FF00] font-medium'
                                 : 'text-[color:var(--text-tertiary)]'
-                            }`}
+                              }`}
                           >
                             {isCompleted ? (
                               <CheckCircle2 className="w-5 h-5 text-[#80FF00] flex-shrink-0" />
@@ -295,7 +460,7 @@ export default function Step1Parser({ onComplete }: Step1ParserProps) {
                     </ul>
                   </div>
                 )}
-                
+
                 <div className="w-full bg-black/10 dark:bg-white/10 rounded-full h-2 mb-4 overflow-hidden">
                   <div
                     className="bg-[#80FF00] h-2 rounded-full transition-all duration-300"

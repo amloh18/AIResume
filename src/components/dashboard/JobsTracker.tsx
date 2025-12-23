@@ -27,6 +27,7 @@ import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
+import { useJobLimit } from '@/hooks/useJobLimit';
 
 interface JobApplication {
   id: string;
@@ -105,6 +106,9 @@ const JobsTracker: React.FC = () => {
 
   // Credit exhaustion handler
   const { showExhaustionModal } = useCreditExhaustionHandler();
+  
+  // Job limit hook
+  const { limitInfo } = useJobLimit();
 
   // Initialize from persisted preferences
   useEffect(() => {
@@ -143,7 +147,7 @@ const JobsTracker: React.FC = () => {
   const [showJobParserDialog, setShowJobParserDialog] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [creditInfo, setCreditInfo] = useState<{ creditsRemaining: number; limit: number; resetTime?: Date } | null>(null);
+  const [paywallInfo, setPaywallInfo] = useState<{ currentCount: number; limit: number } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
   const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
 
@@ -493,11 +497,31 @@ const JobsTracker: React.FC = () => {
 
   // Handlers
   const handleAddJob = () => {
+    // EDGE CASE 4: Block "Add Job" button when limit reached
+    if (limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0) {
+      setShowPaywall(true);
+      setPaywallInfo({
+        currentCount: limitInfo.currentCount,
+        limit: limitInfo.limit
+      });
+      toast.error('Tracker full. Upgrade to track unlimited applications.');
+      return;
+    }
     setEditingJob(null);
     setShowAddJobModal(true);
   };
 
   const handleQuickAdd = () => {
+    // EDGE CASE 4: Block "Quick Add" when limit reached
+    if (limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0) {
+      setShowPaywall(true);
+      setPaywallInfo({
+        currentCount: limitInfo.currentCount,
+        limit: limitInfo.limit
+      });
+      toast.error('Tracker full. Upgrade to track unlimited applications.');
+      return;
+    }
     setShowJobParserDialog(true);
   };
 
@@ -1156,6 +1180,7 @@ const JobsTracker: React.FC = () => {
                 subscription: userData?.subscription,
                 isEmailVerified: userData?.isEmailVerified,
               }}
+              jobLimitInfo={limitInfo}
             />
           </div>
 
@@ -1395,12 +1420,12 @@ const JobsTracker: React.FC = () => {
         onParseComplete={handleParseComplete}
       />
 
-      {showPaywall && creditInfo && (
+      {showPaywall && paywallInfo && (
         <JobCreationPaywall
           isOpen={showPaywall}
           onClose={() => setShowPaywall(false)}
-          creditsRemaining={creditInfo.creditsRemaining}
-          limit={creditInfo.limit}
+          currentCount={paywallInfo.currentCount}
+          limit={paywallInfo.limit}
         />
       )}
 

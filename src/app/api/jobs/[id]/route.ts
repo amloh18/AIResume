@@ -344,16 +344,10 @@ export async function PUT(
         const PricingPlan = await getAdminPricingPlan();
 
         await withTransaction(async (session) => {
-          // 1. CREDIT CHECK: Check credits WITHIN transaction (locks user record to prevent race conditions)
+          // 1. JOB LIMIT CHECK: Check count-based limit WITHIN transaction (locks user record to prevent race conditions)
           const user = await User.findById(normalizedUserId).session(session);
           if (!user) {
             throw new Error('User not found');
-          }
-
-          // Fast credit check using already-fetched user (avoid redundant queries)
-          const plan = await PricingPlan.findOne({ key: user.currentPlanKey }).session(session).lean();
-          if (!plan) {
-            throw new Error('Plan not found');
           }
 
           // Check time-based access quickly
@@ -369,40 +363,28 @@ export async function PUT(
             throw new Error('Subscription access expired');
           }
 
-          // Quick credit availability check using user data
-          const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(user.currentPlanKey);
-          const hasActiveSubscription = user.subscription?.status === 'active' && hasTimeAccess;
+          // Check job limit (count-based, not credit-based)
+          const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
+          const jobLimitCheck = await checkJobLimit(
+            normalizedUserId.toString(),
+            user.currentPlanKey || 'free',
+            user.subscription
+          );
 
-          let creditsRemaining = 0;
-          let limit = 1;
-
-          if (isUnlimitedPlan && hasActiveSubscription) {
-            creditsRemaining = -1;
-            limit = -1;
-          } else {
-            // Get plan credits
-            const planCredits = await creditService.default.getPlanCredits(user.currentPlanKey || 'free');
-            limit = planCredits.jobCredits;
-            creditsRemaining = user.credits?.jobCredits ?? 0;
-          }
-
-          const allowed = limit === -1 || creditsRemaining > 0;
-          const currentUsage = limit === -1 ? -1 : limit - creditsRemaining;
-
-          console.log(`🔍 Job Update API - Credit check result (in transaction):`, {
-            allowed,
-            currentUsage,
-            limit,
-            creditsRemaining
+          console.log(`🔍 Job Update API - Job limit check result (in transaction):`, {
+            allowed: jobLimitCheck.allowed,
+            currentCount: jobLimitCheck.currentCount,
+            limit: jobLimitCheck.limit,
+            message: jobLimitCheck.message
           });
 
-          if (!allowed) {
-            const reason = `Plan limit exceeded. You have used ${currentUsage}/${limit === -1 ? 'unlimited' : limit} job creates`;
-            console.log(`❌ Job Update API - Credit check failed (in transaction):`, reason);
+          if (!jobLimitCheck.allowed) {
+            const reason = jobLimitCheck.message || `Job limit exceeded. You have ${jobLimitCheck.currentCount}/${jobLimitCheck.limit} jobs`;
+            console.log(`❌ Job Update API - Job limit check failed (in transaction):`, reason);
             throw new Error(reason);
           }
 
-          // 2. Update job status within transaction (only if credits are available)
+          // 2. Update job status within transaction (only if limit allows)
           // Merge with other update data if provided
           const statusUpdateData = {
             ...updateData,
@@ -426,48 +408,42 @@ export async function PUT(
           // Store updated job for later use
           job = updatedJob;
 
-          // 3. Spend credit within same transaction (atomic with status update)
-          const isUnlimited = limit === -1;
-
-          // Build update operation for credit spending
-          const creditUpdateData: any = {
+          // 3. Track job creation (no credit spending - jobs are count-based now)
+          // Still track total created for analytics
+          const updateData: any = {
             $inc: {
               'credits.totalCreated.jobs': 1
             }
           };
 
-          if (!isUnlimited) {
-            creditUpdateData.$inc['credits.jobCredits'] = -1;
-          }
-
           // Ensure nested structure exists
           if (!user.credits?.totalCreated || user.credits.totalCreated.jobs === undefined) {
             const currentJobs = user.credits?.totalCreated?.jobs ?? 0;
-            creditUpdateData.$set = {
+            updateData.$set = {
               'credits.totalCreated.jobs': currentJobs + 1,
               'credits.totalCreated.cvs': user.credits?.totalCreated?.cvs ?? 0,
               'credits.totalCreated.exports': user.credits?.totalCreated?.exports ?? 0,
               'credits.totalCreated.atsChecks': user.credits?.totalCreated?.atsChecks ?? 0
             };
-            if (creditUpdateData.$inc && 'credits.totalCreated.jobs' in creditUpdateData.$inc) {
-              delete creditUpdateData.$inc['credits.totalCreated.jobs'];
-              if (Object.keys(creditUpdateData.$inc).length === 0) {
-                delete creditUpdateData.$inc;
+            if (updateData.$inc && 'credits.totalCreated.jobs' in updateData.$inc) {
+              delete updateData.$inc['credits.totalCreated.jobs'];
+              if (Object.keys(updateData.$inc).length === 0) {
+                delete updateData.$inc;
               }
             }
           }
 
-          // Update user credits within transaction
+          // Update user job count tracking within transaction
           await User.findByIdAndUpdate(
             normalizedUserId,
-            creditUpdateData,
+            updateData,
             { session, new: true, runValidators: true }
           );
 
-          console.log(`✅ Job Update API - Credit spent in transaction for user: ${normalizedUserId.toString()}`);
+          console.log(`✅ Job Update API - Job status updated in transaction for user: ${normalizedUserId.toString()}`);
         });
 
-        // Log job status change and credit usage OUTSIDE transaction for better performance
+        // Log job status change OUTSIDE transaction for better performance
         try {
           const updatedJobForLog = await JobApplication.findById(resolvedParams.id).lean();
           const userForLog = await User.findById(normalizedUserId).lean();
@@ -492,24 +468,8 @@ export async function PUT(
                 metadata: {
                   oldStatus: 'draft',
                   newStatus: 'created',
-                  isUnlimited: isUnlimited
-                }
-              }),
-              !isUnlimited && ActivityLogService.logUserAction({
-                userId: normalizedUserId.toString(),
-                userEmail: userForLog.email || '',
-                action: 'credit_used',
-                status: 'success',
-                ipAddress: request.headers.get('x-forwarded-for')?.split(',')[0] ||
-                  request.headers.get('x-real-ip') ||
-                  undefined,
-                metadata: {
-                  creditType: 'job_credit',
-                  creditsUsed: 1,
-                  creditsRemaining: (userForLog.credits?.jobCredits ?? 0),
-                  planKey: userForLog.currentPlanKey || 'free',
-                  resourceType: 'job',
-                  resourceId: resolvedParams.id
+                  isUnlimited: jobLimitCheck.limit === -1,
+                  jobsRemaining: jobLimitCheck.limit === -1 ? -1 : Math.max(0, jobLimitCheck.limit - jobLimitCheck.currentCount - 1)
                 }
               })
             ]).catch(logError => {
@@ -529,48 +489,54 @@ export async function PUT(
           name: creditError.name
         });
 
-        // Transaction automatically rolled back - status remains 'draft', credits not spent
+        // Transaction automatically rolled back - status remains 'draft', limit check prevents status change
 
-        // Check if error is due to insufficient credits
-        const isCreditError = creditError.message?.includes('limit exceeded') ||
-          creditError.message?.includes('insufficient credits') ||
-          creditError.message?.includes('Insufficient credits') ||
-          creditError.message?.includes('Job creation limit exceeded');
+        // Check if error is due to job limit exceeded
+        const isLimitError = creditError.message?.includes('limit exceeded') ||
+          creditError.message?.includes('Job limit exceeded') ||
+          creditError.message?.includes('Tracker full');
 
-        if (isCreditError) {
-          // Extract credit info from error if available
-          const usageLimitsService = await import('@/lib/services/usageLimitsService');
-          let creditInfo: any = {};
+        if (isLimitError) {
+          // Extract job limit info from error if available
+          const { checkJobLimit } = await import('@/lib/utils/subscription-helpers');
+          let limitInfo: any = {};
           try {
-            const creditCheck = await usageLimitsService.default.checkUsageLimit({
-              userId,
-              action: 'job_create'
-            });
-            creditInfo = {
-              currentUsage: creditCheck.currentUsage,
-              limit: creditCheck.limit,
-              reason: creditCheck.reason
-            };
+            const user = await User.findById(normalizedUserId).select('currentPlanKey subscription');
+            if (user) {
+              const jobLimitCheck = await checkJobLimit(
+                normalizedUserId.toString(),
+                user.currentPlanKey || 'free',
+                user.subscription
+              );
+              limitInfo = {
+                currentCount: jobLimitCheck.currentCount,
+                limit: jobLimitCheck.limit,
+                message: jobLimitCheck.message,
+                requiresUpgrade: jobLimitCheck.upgradeRequired
+              };
+            }
           } catch (e) {
-            // Fallback if credit check fails - use defaults
-            console.error('⚠️ Job Update API - Failed to get credit info:', e);
-            creditInfo = {
-              currentUsage: 1,
-              limit: 1,
-              reason: creditError.message
+            // Fallback if limit check fails - use defaults
+            console.error('⚠️ Job Update API - Failed to get job limit info:', e);
+            limitInfo = {
+              currentCount: 3,
+              limit: 3,
+              message: creditError.message || 'Job limit exceeded',
+              requiresUpgrade: true
             };
           }
 
           const errorResponse = {
             success: false,
-            error: creditError.message || 'Insufficient credits to create job application',
-            requiresUpgrade: true,
-            currentUsage: creditInfo.currentUsage ?? 1,
-            limit: creditInfo.limit ?? 1,
-            message: 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+            error: creditError.message || limitInfo.message || 'Job limit exceeded',
+            requiresUpgrade: limitInfo.requiresUpgrade ?? true,
+            currentCount: limitInfo.currentCount ?? 3,
+            limit: limitInfo.limit ?? 3,
+            gateType: 'hard',
+            message: 'Upgrade to Pro for unlimited job applications'
           };
 
-          console.log('🔍 Job Update API - Returning credit error response:', errorResponse);
+          console.log('🔍 Job Update API - Returning job limit error response:', errorResponse);
 
           return NextResponse.json(
             errorResponse,

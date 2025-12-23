@@ -276,7 +276,7 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
       className="flex-shrink-0 overflow-hidden h-full"
       initial={false}
       animate={{
-        width: isHovered ? 288 : 80, // 288px expanded, 80px collapsed
+        width: isHovered ? 320 : 80, // 320px expanded, 80px collapsed
       }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
     >
