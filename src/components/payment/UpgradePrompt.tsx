@@ -118,19 +118,23 @@ const UpgradePrompt: React.FC<UpgradePromptProps> = ({
             <div className="space-y-2">
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                Unlimited {feature.toLowerCase()}s
+                {feature === 'Journey CV' ? 'Unlimited Journey CVs' : feature === 'Job' ? 'Unlimited Job Applications' : `Unlimited ${feature.toLowerCase()}s`}
               </div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                Advanced AI features
+                Full AI Rewrite & Keyword Injection
               </div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                Priority support
+                AI-Generated Cover Letters
               </div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
-                Premium templates
+                Premium Templates & DOCX Export
+              </div>
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                <Star className="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" />
+                Priority Support
               </div>
             </div>
           </div>

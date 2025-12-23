@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Filter, ChevronDown, Plus, Menu, X, Columns3, List } from 'lucide-react';
+import { Filter, ChevronDown, Plus, Menu, X, Columns3, List, AlertCircle } from 'lucide-react';
 import FocusModeToggle from './FocusModeToggle';
 import PageHeader from '@/components/dashboard/PageHeader';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import { useJobLimit } from '@/hooks/useJobLimit';
 
 interface JobsHeaderProps {
   onAddJob?: () => void; // Deprecated - kept for backward compatibility
@@ -36,8 +37,12 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
   isMobileMenuOpen = false,
   viewMode,
   onViewModeChange,
-  user
+  user,
+  jobLimitInfo
 }) => {
+  const { limitInfo: hookLimitInfo } = useJobLimit();
+  const limitInfo = jobLimitInfo || hookLimitInfo;
+
   return (
     <div className="space-y-3 sm:space-y-4 pb-2">
       <PageHeader
@@ -48,6 +53,29 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
         isMobileMenuOpen={isMobileMenuOpen}
         rightContent={
           <>
+            {/* Job Limit Indicator */}
+            {limitInfo && !limitInfo.isUnlimited && (
+              <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
+                limitInfo.remaining === 0 
+                  ? 'bg-red-500/10 text-red-500 border border-red-500/20' 
+                  : limitInfo.remaining <= 1
+                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}>
+                <span className="font-medium">
+                  Jobs: {limitInfo.currentCount}/{limitInfo.limit}
+                </span>
+                {limitInfo.remaining === 0 && (
+                  <>
+                    <span>•</span>
+                    <span className="font-semibold flex items-center gap-1">
+                      <AlertCircle size={14} />
+                      Limit Reached
+                    </span>
+                  </>
+                )}
+              </div>
+            )}
             {/* Mobile: Show hamburger menu */}
             <button
               onClick={onMobileMenuToggle}
@@ -68,13 +96,20 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
           {onQuickAdd && (
             <motion.button
               onClick={onQuickAdd}
-              className="p-2 tablet:px-3 tablet:px-4 tablet:py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg h-[36px]"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              title="Quick Add (Magic Paste)"
+              disabled={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0}
+              className={`p-2 tablet:px-3 tablet:px-4 tablet:py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg h-[36px] ${
+                limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0
+                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50'
+                  : 'bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black'
+              }`}
+              whileHover={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? {} : { scale: 1.02 }}
+              whileTap={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? {} : { scale: 0.98 }}
+              title={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? 'Tracker Full - Upgrade' : 'Quick Add (Magic Paste)'}
             >
               <Plus size={16} />
-              <span className="hidden tablet:inline">Quick Add</span>
+              <span className="hidden tablet:inline">
+                {limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? 'Limit Reached' : 'Quick Add'}
+              </span>
             </motion.button>
           )}
 

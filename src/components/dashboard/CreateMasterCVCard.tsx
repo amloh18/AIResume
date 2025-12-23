@@ -13,6 +13,23 @@ interface CreateMasterCVCardProps {
 const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose }) => {
   const router = useRouter();
 
+  // Blur sidebar when modal is shown
+  React.useEffect(() => {
+    // Add blur class to sidebar
+    const sidebar = document.querySelector('[data-dashboard-sidebar]');
+    if (sidebar) {
+      sidebar.classList.add('blur-sm');
+    }
+
+    // Cleanup: remove blur when modal is closed
+    return () => {
+      const sidebar = document.querySelector('[data-dashboard-sidebar]');
+      if (sidebar) {
+        sidebar.classList.remove('blur-sm');
+      }
+    };
+  }, []);
+
   const handleCreateMasterCV = () => {
     // Set flag to indicate user is creating master CV
     if (typeof window !== 'undefined') {

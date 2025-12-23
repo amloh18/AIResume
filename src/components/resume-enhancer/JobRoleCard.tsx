@@ -9,6 +9,7 @@ interface JobRoleCardProps {
   seniorityLevel?: string;
   optimizationScore?: number;
   cvType?: 'master' | 'standalone';
+  mode?: 'create' | 'edit' | 'edit-master' | 'journey';
   onEditRole?: () => void;
 }
 
@@ -32,12 +33,14 @@ export default function JobRoleCard({
   seniorityLevel,
   optimizationScore,
   cvType = 'master',
+  mode = 'create',
   onEditRole
 }: JobRoleCardProps) {
   const role = targetRole || 'Not set';
   const seniority = seniorityLevel ? seniorityLabels[seniorityLevel] || seniorityLevel : 'Not set';
   const scoreColor = getScoreColor(optimizationScore);
   const isMaster = cvType === 'master';
+  const isEditMode = mode === 'edit' || mode === 'edit-master';
 
   return (
     <motion.div
@@ -47,9 +50,9 @@ export default function JobRoleCard({
     >
       {/* Card Background */}
       <div className="absolute inset-0 bg-white dark:bg-[#1a2015] border border-gray-200 dark:border-white/20 rounded-lg shadow-sm group-hover:shadow-md transition-all duration-200" />
-      
+
       {/* Card Content */}
-      <div className="relative z-10 p-3 space-y-2">
+      <div className="relative p-3 space-y-2">
         {/* Header with Badge */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -64,11 +67,23 @@ export default function JobRoleCard({
               <span className="truncate">{seniority}</span>
             </div>
           </div>
-          {isMaster && (
-            <span className="px-2 py-0.5 text-[10px] font-medium bg-[#80FF00]/20 text-[#80FF00] rounded border border-[#80FF00]/30">
-              Master CV
-            </span>
-          )}
+          <div className="flex flex-col gap-1">
+            {isMaster && (
+              <span className="px-2 py-0.5 text-[10px] font-medium bg-[#80FF00]/20 text-[#80FF00] rounded border border-[#80FF00]/30">
+                Master CV
+              </span>
+            )}
+            {isEditMode && (
+              <span className="px-2 py-0.5 text-[10px] font-medium bg-blue-500/20 text-blue-400 rounded border border-blue-400/30">
+                Edit Mode
+              </span>
+            )}
+            {!isEditMode && mode === 'create' && (
+              <span className="px-2 py-0.5 text-[10px] font-medium bg-purple-500/20 text-purple-400 rounded border border-purple-400/30">
+                Create Mode
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Optimization Score */}

@@ -166,77 +166,77 @@ export default function SidebarMembershipCard() {
     return (
       <>
         <div className="rounded-2xl p-3 text-white shadow-sm shadow-black/20 dark:shadow-black/40" style={{ backgroundColor: '#603a86' }}>
-        <div className="text-sm font-semibold mb-2">
-          Your Free Plan
-        </div>
-
-        {!isUnlimited && limit > 0 && (
-          <div className="mb-3">
-            <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
-              <span>Credits used</span>
-              <span>{used}/{limit}</span>
-            </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.5 }}
-                className="h-2 bg-white rounded-full"
-              />
-            </div>
+          <div className="text-sm font-semibold mb-2">
+            Your Free Plan
           </div>
-        )}
 
-        {!hasCredits && (
-          <div className="text-xs text-yellow-300 mb-2 font-medium">
-            ⚠️ Credits exhausted. Upgrade to continue creating jobs.
+          {!isUnlimited && limit > 0 && (
+            <div className="mb-3">
+              <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
+                <span>Credits used</span>
+                <span>{used}/{limit}</span>
+              </div>
+              <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progressPercent}%` }}
+                  transition={{ duration: 0.5 }}
+                  className="h-2 bg-white rounded-full"
+                />
+              </div>
+            </div>
+          )}
+
+          {!hasCredits && (
+            <div className="text-xs text-yellow-300 mb-2 font-medium">
+              ⚠️ Credits exhausted. Upgrade to continue.
+            </div>
+          )}
+
+          <div className="text-xs font-semibold mb-1.5">
+            Go Pro to get:
           </div>
-        )}
 
-        <div className="text-xs font-semibold mb-1.5">
-          Go Pro to get:
+          <ul className="text-xs text-white/90 space-y-0.5 mb-3">
+            <li>• Unlimited job creation</li>
+            <li>• Unlimited CVs & cover letters</li>
+            <li>• Unlimited ATS checks per job</li>
+            <li>• Premium templates</li>
+            <li>• Priority support</li>
+          </ul>
+
+          <div className="space-y-2">
+            <motion.button
+              onClick={openMembership}
+              className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <Star className="w-3 h-3" />
+              Buy Day Pass
+            </motion.button>
+
+            <motion.button
+              onClick={() => setShowPaymentModal(true)}
+              className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+            >
+              <Zap className="w-3 h-3" />
+              View All Plans
+            </motion.button>
+          </div>
         </div>
-
-        <ul className="text-xs text-white/90 space-y-0.5 mb-3">
-          <li>• Unlimited job creation</li>
-          <li>• Unlimited CVs & cover letters</li>
-          <li>• Unlimited ATS checks per job</li>
-          <li>• Premium templates</li>
-          <li>• Priority support</li>
-        </ul>
-
-        <div className="space-y-2">
-          <motion.button
-            onClick={openMembership}
-            className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <Star className="w-3 h-3" />
-            Buy Day Pass
-          </motion.button>
-
-          <motion.button
-            onClick={() => setShowPaymentModal(true)}
-            className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <Zap className="w-3 h-3" />
-            View All Plans
-          </motion.button>
-        </div>
-      </div>
-      <UniversalPaymentModal
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        onSuccess={() => {
-          setShowPaymentModal(false);
-          // Refresh credits after successful payment
-          window.location.reload();
-        }}
-        triggerContext="sidebar-view-all-plans"
-      />
+        <UniversalPaymentModal
+          isOpen={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onSuccess={() => {
+            setShowPaymentModal(false);
+            // Refresh credits after successful payment
+            window.location.reload();
+          }}
+          triggerContext="sidebar-view-all-plans"
+        />
       </>
     );
   }

@@ -94,13 +94,13 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         color: 'bg-green-500/10 border-green-500/30 hover:border-green-500/50'
     },
     {
-        id: 'basic-to-premium',
-        name: 'Basic to Premium Upgrade',
-        description: 'Basic plan users active in last 7 days',
+        id: 'day-pass-users',
+        name: 'Day Pass Users',
+        description: 'Users currently on day pass plan',
         icon: <TrendingUp className="w-5 h-5" />,
         category: 'upsale',
         filters: {
-            membershipPlans: ['basic'],
+            membershipPlans: ['day_pass'],
             lastActiveRange: {
                 preset: 'last7days',
                 startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -110,13 +110,13 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         color: 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50'
     },
     {
-        id: 'subscription-ending',
-        name: 'Retention - Subscription Ending',
-        description: 'Premium users with subscriptions ending soon',
+        id: 'pro-users',
+        name: 'Pro Plan Members',
+        description: 'All users on pro plans (monthly/quarterly/yearly)',
         icon: <Heart className="w-5 h-5" />,
         category: 'retention',
         filters: {
-            membershipPlans: ['premium', 'pro']
+            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly']
         },
         color: 'bg-pink-500/10 border-pink-500/30 hover:border-pink-500/50'
     },
@@ -149,26 +149,15 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         color: 'bg-purple-500/10 border-purple-500/30 hover:border-purple-500/50'
     },
     {
-        id: 'premium-users',
-        name: 'Premium Members Only',
-        description: 'All active premium and pro plan users',
+        id: 'all-pro-users',
+        name: 'All Pro Members',
+        description: 'All users on any pro plan',
         icon: <Star className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            membershipPlans: ['premium', 'pro']
+            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly']
         },
         color: 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50'
-    },
-    {
-        id: 'enterprise-users',
-        name: 'Enterprise Customers',
-        description: 'All enterprise plan users',
-        icon: <Star className="w-5 h-5" />,
-        category: 'promotional',
-        filters: {
-            membershipPlans: ['enterprise']
-        },
-        color: 'bg-amber-500/10 border-amber-500/30 hover:border-amber-500/50'
     },
     {
         id: 'all-active',

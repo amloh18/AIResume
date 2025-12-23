@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
       const inferredCvType = cv.journeyId ? 'journey' : (cv.metadata?.isMaster || cv.isMaster) ? 'master' : 'standalone';
       // Only use inferred if dbCvType is not a valid value
       const finalCvType = (dbCvType && ['master', 'journey', 'standalone'].includes(dbCvType)) ? dbCvType : inferredCvType;
-      
+
       console.log(`🔍 CV API - CV Type determination for ${cv._id}:`, {
         rawCvType: cv.cvType,
         dbCvType,
@@ -510,7 +510,7 @@ export async function POST(request: NextRequest) {
       // Get user to check plan
       const User = (await import('@/models/User')).default;
       const user = await User.findById(userId);
-      
+
       if (user && user.currentPlanKey === 'free') {
         // Count existing CVs by type for free users
         const [masterCount, journeyCount, standaloneCount] = await Promise.all([
@@ -553,13 +553,26 @@ export async function POST(request: NextRequest) {
             );
           }
         } else if (finalCvType === 'journey') {
-          if (journeyCount >= 1) {
-            console.log('❌ CV POST API - Free user already has journey CV');
+          // Use the new Journey CV limit check function
+          const { checkJourneyCVLimit } = await import('@/lib/utils/subscription-helpers');
+          const journeyLimitCheck = await checkJourneyCVLimit(
+            userId,
+            user.currentPlanKey || 'free',
+            user.subscription
+          );
+
+          if (!journeyLimitCheck.allowed) {
+            // EDGE CASE 1: Hard gate for 2nd Journey CV
+            console.log('❌ CV POST API - Journey CV limit check failed:', journeyLimitCheck.message);
             return NextResponse.json(
               {
                 success: false,
-                error: 'Free users can only create 1 Journey CV. Please upgrade to create more CVs.',
-                requiresUpgrade: true
+                error: journeyLimitCheck.message || 'Journey CV limit exceeded',
+                requiresUpgrade: journeyLimitCheck.upgradeRequired,
+                currentActiveCount: journeyLimitCheck.currentActiveCount,
+                limit: journeyLimitCheck.limit,
+                canDeleteToMakeSpace: journeyLimitCheck.canDeleteToMakeSpace,
+                gateType: 'hard'
               },
               { status: 403 }
             );
@@ -594,14 +607,15 @@ export async function POST(request: NextRequest) {
         // Check if user has at least 1 credit available (for free users)
         // The primary limit is count-based (1 of each type), but we still check credits
         // Journey CVs don't need credit check here as they're created with jobs (credit already spent)
-        if (isCreatingMasterCV || finalCvType === 'master' || (finalCvType === 'standalone' && isFromResumeEnhancer)) {
+        // Master CVs don't need credit check - they're always free (1 per user limit already enforced above)
+        if (finalCvType === 'standalone' && isFromResumeEnhancer) {
           const { default: creditService } = await import('@/lib/services/creditService');
           const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
-          
-          // For free users, require at least 1 credit to create master or standalone CVs
+
+          // For free users, require at least 1 credit to create standalone CVs
           // The count-based limits above are the primary restriction
           if (!creditCheck.available || (creditCheck.limit !== -1 && creditCheck.creditsRemaining <= 0)) {
-            console.log('❌ CV POST API - Free user has no credits available');
+            console.log('❌ CV POST API - Free user has no credits available for standalone CV');
             return NextResponse.json(
               {
                 success: false,
@@ -819,12 +833,12 @@ export async function POST(request: NextRequest) {
     if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'master') {
       const User = (await import('@/models/User')).default;
       const userForCredit = await User.findById(userId);
-      
+
       if (userForCredit && userForCredit.currentPlanKey === 'free') {
         if (isCreatingMasterCV || finalCvType === 'master' || (finalCvType === 'standalone' && isFromResumeEnhancer)) {
           const { default: creditService } = await import('@/lib/services/creditService');
           const creditSpent = await creditService.spendCredit(userId, 'job_create');
-          
+
           if (!creditSpent) {
             console.error('❌ CV POST API - Failed to spend credit for CV creation');
             // Don't fail the CV creation if credit spending fails, but log it

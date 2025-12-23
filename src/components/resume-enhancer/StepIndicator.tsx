@@ -39,7 +39,7 @@ export default function StepIndicator({
             <div
               key={step.number}
               className={`
-                rounded-xl px-3 pt-2 pb-0 transition-colors
+                group rounded-xl px-3 pt-2 pb-0 transition-colors
                 ${isActive ? 'bg-black/5 dark:bg-white/5 shadow-sm shadow-black/10 dark:shadow-black/30' : ''}
                 ${isClickable ? 'cursor-pointer hover:bg-black/5 dark:hover:bg-white/5' : ''}
               `}
@@ -89,7 +89,7 @@ export default function StepIndicator({
                 )}
                 </div>
 
-                <div className="min-w-0 pt-0.5">
+                <div className="min-w-0 pt-0.5 flex-1">
                   <div className="flex items-center gap-2">
                     <div
                       className={`
@@ -107,7 +107,8 @@ export default function StepIndicator({
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-[color:var(--text-tertiary)] mt-0.5">
+                  {/* Description - hidden by default, shown on step hover */}
+                  <div className="text-xs text-[color:var(--text-tertiary)] mt-0.5 max-h-0 overflow-hidden opacity-0 group-hover:max-h-20 group-hover:opacity-100 transition-all duration-200 ease-in-out">
                     {step.description}
                   </div>
                 </div>

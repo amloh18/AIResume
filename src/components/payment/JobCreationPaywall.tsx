@@ -8,18 +8,16 @@ import { usePaymentModal } from '@/contexts/PaymentModalContext';
 interface JobCreationPaywallProps {
   isOpen: boolean;
   onClose: () => void;
-  creditsRemaining: number;
+  currentCount: number;
   limit: number;
-  resetTime?: Date;
   preselectedPlanKey?: string;
 }
 
 const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
   isOpen,
   onClose,
-  creditsRemaining,
+  currentCount,
   limit,
-  resetTime,
   preselectedPlanKey = 'pro_monthly'
 }) => {
   const { openPaymentModal } = usePaymentModal();
@@ -37,11 +35,11 @@ const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
     if (!resetTime) return 'next month';
     const now = new Date();
     const reset = new Date(resetTime);
-    
+
     if (reset.getMonth() === now.getMonth() && reset.getFullYear() === now.getFullYear()) {
       return `on ${reset.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
     }
-    
+
     return `on ${reset.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
@@ -91,10 +89,10 @@ const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
               <Crown className="w-8 h-8 text-black" />
             </div>
             <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-              You've used all your credits for this month
+              Tracker Full
             </h4>
             <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Upgrade to Pro to create unlimited jobs and continue building your career.
+              You have reached your job limit ({limit} jobs). Archive or delete a job to add more, or upgrade to Pro for unlimited jobs.
             </p>
           </div>
 
@@ -105,34 +103,32 @@ const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
               <div className="text-sm text-blue-800 dark:text-blue-200">
                 <p className="font-medium mb-1">Full Access to Existing Work</p>
                 <p className="text-blue-700 dark:text-blue-300">
-                  You can still view, edit, and use all your existing jobs and CVs. This limit only applies to creating new jobs.
+                  You can still view, edit, and use all your existing jobs and CVs. This limit only applies to creating new jobs. Archive or delete a job to free up space.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Credit Info */}
+          {/* Job Limit Info */}
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Job Credits
+                <Briefcase className="w-4 h-4" />
+                Jobs in Tracker
               </span>
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {creditsRemaining} / {limit}
+                {currentCount} / {limit}
               </span>
             </div>
             <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
               <div
                 className="bg-gradient-to-r from-[#80FF00] to-lime-500 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${Math.min(100, (creditsRemaining / limit) * 100)}%` }}
+                style={{ width: `${Math.min(100, (currentCount / limit) * 100)}%` }}
               />
             </div>
-            {resetTime && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                Credits reset {formatResetTime()}
-              </p>
-            )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Archive or delete a job to free up space, or upgrade for unlimited jobs.
+            </p>
           </div>
 
           {/* Benefits */}
@@ -143,19 +139,23 @@ const JobCreationPaywall: React.FC<JobCreationPaywallProps> = ({
             <div className="space-y-2">
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-[#80FF00] mr-2 flex-shrink-0" />
-                Unlimited job creation
+                Unlimited Job Applications
               </div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-[#80FF00] mr-2 flex-shrink-0" />
-                Unlimited CVs and cover letters
+                Unlimited Journey CVs
               </div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-[#80FF00] mr-2 flex-shrink-0" />
-                Unlimited ATS checks per job
+                Full AI Rewrite & Keyword Injection
               </div>
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <Check className="w-4 h-4 text-[#80FF00] mr-2 flex-shrink-0" />
-                Priority support
+                AI-Generated Cover Letters
+              </div>
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                <Check className="w-4 h-4 text-[#80FF00] mr-2 flex-shrink-0" />
+                Premium Templates & DOCX Export
               </div>
             </div>
           </div>

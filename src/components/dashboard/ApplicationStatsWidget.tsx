@@ -208,14 +208,14 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
-                <PolarGrid stroke="#e5e7eb" strokeOpacity={0.3} />
-                <PolarAngleAxis 
-                  dataKey="metric" 
+                <PolarGrid stroke="#6b7280" strokeOpacity={0.4} />
+                <PolarAngleAxis
+                  dataKey="metric"
                   tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
                   className="dark:[&_text]:fill-gray-400"
                 />
-                <PolarRadiusAxis 
-                  angle={90} 
+                <PolarRadiusAxis
+                  angle={90}
                   domain={maxValue === 0 ? [0, 1] : [0, maxValue]}
                   tick={{ fill: '#9ca3af', fontSize: 10 }}
                   tickFormatter={(value) => Math.round(value).toString()}

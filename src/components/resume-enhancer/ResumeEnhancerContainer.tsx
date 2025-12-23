@@ -6,7 +6,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronDown, ChevronUp, Minimize2, Maximize2, Home } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
-import RibbonStepIndicator from './RibbonStepIndicator';
 import Step1Parser from './steps/Step1Parser';
 import Step2Template from './steps/Step2Template';
 import Step3BuilderSurgeon from './steps/Step3BuilderSurgeon';
@@ -48,6 +47,10 @@ import { useATS } from '@/contexts/ATSContext';
 import guestCVService from '@/lib/services/guestCVService';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
+import { generateCVTitle } from '@/lib/utils/cv-title-generator';
+import ModeValidationBanner from '@/components/resume-enhancer/components/ModeValidationBanner';
+import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
+import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode } from '@/lib/utils/analysis-mode';
 
 interface ResumeEnhancerContainerProps {
   userId: string;
@@ -73,7 +76,8 @@ export default function ResumeEnhancerContainer({
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showRoleModal, setShowRoleModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error' | 'offline'>('idle');
+  const [hasOfflineBackup, setHasOfflineBackup] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSidebarAnalyzing, setIsSidebarAnalyzing] = useState(false);
   const { data: session, status: sessionStatus } = useSession();
@@ -87,6 +91,10 @@ export default function ResumeEnhancerContainer({
   const initialCVDataRef = useRef<UnifiedCVDataStructure | null>(null);
   const initialCVTitleRef = useRef<string>('');
   const initialTemplateRef = useRef<ITemplate | null>(null);
+  // Track if role was explicitly set by user (via modal or sidebar)
+  const roleExplicitlySetRef = useRef<boolean>(false);
+  // Track if we just saved to prevent re-initialization from resetting state
+  const justSavedRef = useRef<boolean>(false);
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
   const [showJobSidebar, setShowJobSidebar] = useState(false);
@@ -102,14 +110,20 @@ export default function ResumeEnhancerContainer({
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [hasShownAuthPrompt, setHasShownAuthPrompt] = useState(false);
   const [isTransferringDraft, setIsTransferringDraft] = useState(false);
+  const [showModeTransitionDialog, setShowModeTransitionDialog] = useState(false);
+  const [modeTransitionData, setModeTransitionData] = useState<{
+    fromMode: AnalysisMode;
+    toMode: AnalysisMode;
+    transitionType: string;
+  } | null>(null);
 
   // Use ATS Context for shared ATS data
-  const { 
-    atsScore, 
-    atsAnalysis, 
+  const {
+    atsScore,
+    atsAnalysis,
     isATSLoading,
     refreshATSScore,
-    refreshAll 
+    refreshAll
   } = useATS();
 
   // Calculate JD reference status
@@ -163,12 +177,12 @@ export default function ResumeEnhancerContainer({
       }));
       return [...matched, ...missing];
     }
-    
+
     // Fall back to skill gap analysis
     if (!skillGapAnalysis?.categories) return [];
-    
+
     const keywords: { keyword: string; inResume: boolean; inJobAd: number }[] = [];
-    
+
     skillGapAnalysis.categories.forEach((category) => {
       category.skills.forEach((skill) => {
         keywords.push({
@@ -178,7 +192,7 @@ export default function ResumeEnhancerContainer({
         });
       });
     });
-    
+
     return keywords;
   }, [atsAnalysis, skillGapAnalysis]);
 
@@ -202,7 +216,7 @@ export default function ResumeEnhancerContainer({
     const matchPercentage = total > 0 ? Math.round((matched / total) * 100) : 0;
     const allMatched = total > 0 && missing === 0;
     const hasKeywords = total > 0;
-    
+
     return { total, matched, missing, matchPercentage, allMatched, hasKeywords };
   }, [atsKeywords]);
 
@@ -250,7 +264,7 @@ export default function ResumeEnhancerContainer({
     skillGapFetchingRef.current = true;
     setIsLoadingSkillGap(true);
     skillGapFetchAttemptedRef.current = fetchKey;
-    
+
     try {
       const response = await authenticatedFetchWithUserId(
         `/api/jobs/${jobId}/skill-gap-analysis`,
@@ -294,7 +308,7 @@ export default function ResumeEnhancerContainer({
     if (skillGapErrorRef.current === jobId) return;
     if (skillGapFetchAttemptedRef.current === `${jobId}-${userId}`) return;
     if (isLoadingSkillGap || skillGapFetchingRef.current) return;
-    
+
     fetchSkillGapAnalysis();
   }, [jobId, hasCVData, state.currentStep, userId, isLoadingSkillGap, fetchSkillGapAnalysis]);
 
@@ -314,7 +328,7 @@ export default function ResumeEnhancerContainer({
 
   const cvSections = useMemo(() => {
     if (state.currentStep !== 3) return [];
-    
+
     const mappedSections = visibleSections.map(section => {
       const sectionIdMap: Record<string, string> = {
         'personal_header': 'personal',
@@ -330,10 +344,10 @@ export default function ResumeEnhancerContainer({
         'interests': 'interests',
         'references': 'references'
       };
-      
+
       const sidebarId = sectionIdMap[section.type] || section.type;
       const IconComponent = getSectionIcon(section.type);
-      
+
       return {
         id: sidebarId,
         type: section.type,
@@ -482,49 +496,49 @@ export default function ResumeEnhancerContainer({
           if (result.success && result.data) {
             const draft = result.data;
             console.log('📦 Restoring guest draft:', draft);
-            
+
             // Restore CV data
             if (draft.cvData) {
               dispatch({ type: 'SET_CV_DATA', payload: draft.cvData });
             }
-            
+
             // Restore step
             if (draft.currentStep) {
               goToStep(draft.currentStep as 1 | 2 | 3 | 4);
             }
-            
+
             // Restore completed steps
             if (draft.completedSteps) {
               setCompletedSteps(draft.completedSteps);
             }
-            
+
             // Restore role context
             if (draft.targetRole && draft.seniorityLevel) {
               setRoleContext(draft.targetRole, draft.seniorityLevel);
             }
-            
+
             // Restore template
             if (draft.template) {
               dispatch({ type: 'SET_TEMPLATE', payload: draft.template });
             }
-            
+
             // Restore title
             if (draft.cvTitle) {
               dispatch({ type: 'SET_CV_TITLE', payload: draft.cvTitle });
             }
-            
+
             // Restore active section
             if (draft.activeSection) {
               setActiveSection(draft.activeSection);
             }
-            
+
             console.log('✅ Guest draft restored successfully');
           }
         } catch (error) {
           console.error('Failed to load guest draft:', error);
         }
       };
-      
+
       loadGuestDraft();
     }
   }, [isGuestMode, restoreDraft, dispatch, goToStep, setRoleContext]);
@@ -573,57 +587,230 @@ export default function ResumeEnhancerContainer({
     }
   }, [isGuestMode, state.cvData, state.currentStep, completedSteps, activeSection, state.targetRole, state.seniorityLevel, state.selectedTemplate, state.cvTitle]);
 
+  // Track transfer attempts to prevent loops
+  const transferAttemptedRef = useRef<boolean>(false);
+
   // Guest mode: Check for authentication after signup/signin
   useEffect(() => {
-    if (isGuestMode && sessionStatus === 'authenticated' && session?.user?.id) {
+    // Only attempt transfer if we are in guest mode, user is authenticated, and we haven't tried yet
+    if (isGuestMode && sessionStatus === 'authenticated' && session?.user?.id && !transferAttemptedRef.current) {
       const transferDraft = async () => {
-        if (isTransferringDraft) return;
-        
+        // Mark as attempted immediately to prevent concurrent or repeat calls
+        transferAttemptedRef.current = true;
+
+        if (isTransferringDraft) {
+          console.log('⏳ Draft transfer already in progress, skipping...');
+          return;
+        }
+
+        // Add a small delay to ensure session is fully established
+        await new Promise(resolve => setTimeout(resolve, 500));
+
         setIsTransferringDraft(true);
         try {
           const sessionId = guestCVService.getSessionId();
+          if (!sessionId) {
+            console.log('ℹ️ No session ID available for transfer, skipping...');
+            setIsTransferringDraft(false);
+            return;
+          }
+
+          // CRITICAL FIX: Check if we actually have a draft to transfer before calling API
+          // This prevents infinite loops of 404s when user logs in with a fresh guest session
+          const hasDraft = await guestCVService.hasDraft(sessionId);
+          if (!hasDraft) {
+            console.log('ℹ️ No guest draft found to transfer, skipping...');
+            setIsTransferringDraft(false);
+            return;
+          }
+
+          console.log('🔄 Transferring draft with sessionId:', sessionId, 'userId:', session.user.id);
           const result = await guestCVService.transferDraftToUser(sessionId, session.user.id);
-          
+
           if (result.success && result.cvId) {
             console.log('✅ Draft transferred successfully:', result);
             // Reload page to switch to authenticated mode
             window.location.href = `/resume-enhancer?cvId=${result.cvId}&mode=edit&step=${result.step || 3}`;
           } else {
-            console.error('Failed to transfer draft:', result.error);
-            alert('Failed to transfer your draft. Please try again.');
+            // Check for specific error indicating draft not found or already transferred
+            if (result.error?.includes('Draft not found') || result.error?.includes('already transferred')) {
+              console.warn('⚠️ Draft transfer skipped:', result.error);
+            } else {
+              console.error('❌ Failed to transfer draft:', result.error);
+              const errorMsg = result.error || 'Unknown error occurred';
+              // Only alert on standard errors, not expected "not found" flows
+              alert(`Failed to transfer your draft: ${errorMsg}. Please try refreshing the page or contact support.`);
+            }
+            setIsTransferringDraft(false);
           }
-        } catch (error) {
-          console.error('Error transferring draft:', error);
-          alert('Error transferring your draft. Please try again.');
-        } finally {
+        } catch (error: any) {
+          console.error('❌ Error transferring draft:', error);
+          const errorMsg = error?.message || 'Network error';
+          alert(`Error transferring your draft: ${errorMsg}. Please try refreshing the page.`);
           setIsTransferringDraft(false);
         }
       };
-      
+
       transferDraft();
     }
-  }, [isGuestMode, sessionStatus, session?.user?.id, isTransferringDraft]);
+  }, [isGuestMode, sessionStatus, session?.user?.id]); // Removed isTransferringDraft from deps to prevent loop
 
-  // Guest mode: Show auth prompt at Step 3
-  useEffect(() => {
-    if (isGuestMode && state.currentStep === 3 && !hasShownAuthPrompt && state.targetRole && state.seniorityLevel) {
-      // Show auth prompt after a short delay
-      const timer = setTimeout(() => {
-        setShowAuthPrompt(true);
-        setHasShownAuthPrompt(true);
-      }, 2000);
-      
-      return () => clearTimeout(timer);
+  // Helper function to show auth prompt for guest users
+  const checkAndShowAuthPrompt = (action: 'save' | 'fix-cv') => {
+    if (isGuestMode && !hasShownAuthPrompt) {
+      setShowAuthPrompt(true);
+      setHasShownAuthPrompt(true);
+      return true; // Indicates auth prompt was shown
     }
-  }, [isGuestMode, state.currentStep, hasShownAuthPrompt, state.targetRole, state.seniorityLevel]);
+    return false; // No auth prompt needed
+  };
+
+  // Auto-update role from CV professional title when it changes (unless explicitly set by user)
+  useEffect(() => {
+    // Only auto-update in create mode and if role wasn't explicitly set
+    if (mode !== 'create' || roleExplicitlySetRef.current) {
+      return;
+    }
+
+    // Only update if we have a professional title and no current role, or if professional title changed
+    const professionalTitle = state.cvData?.basics?.label;
+    if (!professionalTitle || !professionalTitle.trim()) {
+      return;
+    }
+
+    // If we already have a role that matches the professional title, don't update
+    if (state.targetRole && state.targetRole.trim() === professionalTitle.trim()) {
+      return;
+    }
+
+    // Infer role from professional title
+    const inferred = inferRoleContextFromCVData(state.cvData);
+    if (inferred.targetRole && inferred.targetRole.trim() === professionalTitle.trim()) {
+      // Only update if we don't have a role, or if the professional title is different from current role
+      if (!state.targetRole || state.targetRole.trim() !== professionalTitle.trim()) {
+        setRoleContext(inferred.targetRole, inferred.seniorityLevel || state.seniorityLevel || 'professional');
+      }
+    }
+  }, [state.cvData?.basics?.label, mode, state.targetRole, state.seniorityLevel]);
+
+  // Auto-update CV title when CV type or job data changes
+  useEffect(() => {
+    // Only auto-update if we have CV data
+    if (!state.cvData || !state.cvData.basics) return;
+
+    // Generate new title based on current state
+    const newTitle = generateCVTitle(
+      state.cvType || 'standalone',
+      state.cvData,
+      state.jobData
+    );
+
+    // Update title if it's different from current
+    if (state.cvTitle !== newTitle) {
+      dispatch({ type: 'SET_CV_TITLE', payload: newTitle });
+      console.log('✅ Auto-updated CV title:', newTitle, 'for cvType:', state.cvType);
+    }
+  }, [state.cvType, state.jobData?.company, state.jobData?.jobTitle, state.cvData?.basics?.name, state.cvData?.basics?.label]);
+
+  // Mode Monitoring Effect - Track analysis mode changes and invalidate cached scores
+  useEffect(() => {
+    // Skip if context not fully loaded
+    if (!state.cvType) return;
+
+    // Get current mode info with validation
+    const modeInfo = getAnalysisModeWithValidation(
+      state.cvType,
+      state.targetRole,
+      state.seniorityLevel,
+      jdText,
+      state.jobData
+    );
+
+    // Detect if mode or context changed significantly
+    const currentMode = state.analysisModeInfo?.mode;
+    const modeChanged = state.lastAnalysisContext?.mode !== modeInfo.mode;
+    const roleHashChanged = state.lastAnalysisContext?.roleHash !== modeInfo.roleHash;
+    const jdHashChanged = state.lastAnalysisContext?.jdHash !== modeInfo.jdHash;
+
+    // Only trigger if we have a previous context to compare against (skip initial load)
+    if (state.lastAnalysisContext && (modeChanged || roleHashChanged || jdHashChanged)) {
+      console.log('🔄 Analysis context changed - invalidating cached scores:', {
+        from: state.lastAnalysisContext?.mode,
+        to: modeInfo.mode,
+        roleChanged: roleHashChanged,
+        jdChanged: jdHashChanged
+      });
+
+      // Invalidate cached analysis
+      dispatch({ type: 'INVALIDATE_ANALYSIS' });
+
+      // Check if we need to show a transition dialog
+      if (modeChanged && currentMode && currentMode !== 'insufficient-data') {
+        const isAddingJD = currentMode === 'role-based' && modeInfo.mode !== 'role-based';
+        const isRemovingJD = currentMode !== 'role-based' && modeInfo.mode === 'role-based';
+
+        let transitionType = 'generic';
+        if (isAddingJD) transitionType = 'add-jd';
+        else if (isRemovingJD) transitionType = 'remove-jd';
+
+        // Don't show dialog for minor changes or initial setup
+        if (state.currentStep === 3) {
+          setModeTransitionData({
+            fromMode: currentMode,
+            toMode: modeInfo.mode,
+            transitionType
+          });
+          // Only show dialog if user hasn't opted out and it's a significant change
+          const hideDialog = sessionStorage.getItem(`hide_transition_${transitionType}`);
+          if (!hideDialog) {
+            setShowModeTransitionDialog(true);
+          }
+        }
+      }
+    }
+
+    // Always update mode info and context
+    if (!state.analysisModeInfo ||
+      state.analysisModeInfo.mode !== modeInfo.mode ||
+      state.analysisModeInfo.warnings.length !== modeInfo.warnings.length) {
+      dispatch({ type: 'SET_ANALYSIS_MODE_INFO', payload: modeInfo });
+
+      // Update last analysis context
+      dispatch({
+        type: 'UPDATE_LAST_ANALYSIS_CONTEXT',
+        payload: {
+          mode: modeInfo.mode,
+          roleHash: modeInfo.roleHash,
+          jdHash: modeInfo.jdHash
+        }
+      });
+
+      // Show transition warnings if any
+      if (modeInfo.warnings.length > 0) {
+        dispatch({ type: 'SET_MODE_WARNINGS', payload: modeInfo.warnings });
+      } else {
+        dispatch({ type: 'CLEAR_MODE_WARNINGS' });
+      }
+    }
+  }, [state.cvType, state.targetRole, state.seniorityLevel, jdText, state.jobData, dispatch]);
 
   // Initialize based on mode
   useEffect(() => {
+    // CRITICAL FIX: Skip re-initialization if we just saved and got a new cvId
+    // This prevents losing parsed data and surgeon analysis when saving in create mode
+    if (justSavedRef.current) {
+      console.log('⏭️ Skipping re-initialization - we just saved and got a new cvId');
+      justSavedRef.current = false; // Reset flag
+      // Update initializedRef to prevent future re-initialization with same params
+      initializedRef.current = { mode, cvId };
+      return;
+    }
+
     // Prevent re-initialization if already initialized with same params
     const initKey = `${mode}-${cvId || 'no-cv'}`;
-    if (initializedRef.current && 
-        initializedRef.current.mode === mode && 
-        initializedRef.current.cvId === cvId) {
+    if (initializedRef.current &&
+      initializedRef.current.mode === mode &&
+      initializedRef.current.cvId === cvId) {
       return;
     }
 
@@ -639,7 +826,7 @@ export default function ResumeEnhancerContainer({
         try {
           const response = await fetch(`/api/cvs/${cvId}`);
           if (!response.ok) throw new Error('Failed to load CV');
-          
+
           const result = await response.json();
           const cv = result.data.cv;
 
@@ -647,7 +834,7 @@ export default function ResumeEnhancerContainer({
           // 1. If mode is 'journey', force journey type
           // 2. Otherwise, prioritize cvType field, then infer from metadata/journeyId
           let resolvedCvType: 'master' | 'journey' | 'standalone' =
-            mode === 'journey' 
+            mode === 'journey'
               ? 'journey'
               : cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
 
@@ -701,7 +888,7 @@ export default function ResumeEnhancerContainer({
               journeyId: undefined,
               jobData: undefined
             });
-            
+
             // Store initial data for unsaved changes detection
             initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
             initialCVTitleRef.current = cv.title;
@@ -717,7 +904,7 @@ export default function ResumeEnhancerContainer({
               journeyId: cv.journeyId,
               jobData: cv.jobData
             });
-            
+
             // Store initial data for unsaved changes detection
             initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
             initialCVTitleRef.current = cv.title;
@@ -740,7 +927,7 @@ export default function ResumeEnhancerContainer({
               setRoleContext(inferredRole, inferredSeniority);
             }
           }
-          
+
           // Journey CVs use job description for analysis - no need to set targetRole/seniorityLevel
           // They will use jobData.jobDescription for ATS and other analysis
 
@@ -748,7 +935,19 @@ export default function ResumeEnhancerContainer({
           // Skip to Step 3 for editing
           goToStep(3);
           setCompletedSteps([1, 2]);
-          
+
+          // Update URL to include mode parameter
+          // For master CVs, use 'edit-master' mode in URL
+          const urlMode = resolvedCvType === 'master' ? 'edit-master' : 'edit';
+          const currentParams = new URLSearchParams(window.location.search);
+          if (!currentParams.has('mode')) {
+            currentParams.set('mode', urlMode);
+            currentParams.set('cvId', cvId);
+            const newUrl = `${pathname}?${currentParams.toString()}`;
+            router.replace(newUrl);
+            console.log('✅ Updated URL with mode:', urlMode);
+          }
+
           // Mark as initialized
           initializedRef.current = { mode, cvId };
         } catch (error) {
@@ -766,7 +965,7 @@ export default function ResumeEnhancerContainer({
           try {
             const response = await fetch(`/api/cvs/${cvId}`);
             if (!response.ok) throw new Error('Failed to load CV');
-            
+
             const result = await response.json();
             const cv = result.data.cv;
 
@@ -805,7 +1004,7 @@ export default function ResumeEnhancerContainer({
               journeyId: cv.journeyId || journeyId,
               jobData: cv.jobData
             });
-            
+
             initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
             initialCVTitleRef.current = cv.title;
             initialTemplateRef.current = cv.template || null;
@@ -813,7 +1012,7 @@ export default function ResumeEnhancerContainer({
             dispatch({ type: 'SET_MODE', payload: 'edit' });
             goToStep(3);
             setCompletedSteps([1, 2]);
-            
+
             initializedRef.current = { mode, cvId };
           } catch (error) {
             console.error('Failed to load CV:', error);
@@ -827,7 +1026,7 @@ export default function ResumeEnhancerContainer({
           dispatch({ type: 'SET_MODE', payload: 'create' });
           dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
           dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-          
+
           // Fetch job data from journey
           (async () => {
             try {
@@ -837,7 +1036,7 @@ export default function ResumeEnhancerContainer({
                 const journeyResult = await journeyResponse.json();
                 if (journeyResult.success && journeyResult.data) {
                   const { journey, jobData } = journeyResult.data;
-                  
+
                   if (jobData) {
                     dispatch({ type: 'SET_JOB_DATA', payload: jobData });
                     console.log('✅ Resume Enhancer - Job data loaded from journey:', jobData);
@@ -862,7 +1061,7 @@ export default function ResumeEnhancerContainer({
               console.error('Failed to load journey/job data:', error);
             }
           })();
-          
+
           goToStep(1);
           initializedRef.current = { mode, cvId };
         } else {
@@ -872,12 +1071,12 @@ export default function ResumeEnhancerContainer({
       } else {
         // Create mode (default)
         dispatch({ type: 'SET_MODE', payload: 'create' });
-        
+
         // If journeyId is provided, set cvType to 'journey' and load job data
         if (journeyId) {
           dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
           dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-          
+
           // Fetch job data from journey
           (async () => {
             try {
@@ -887,7 +1086,7 @@ export default function ResumeEnhancerContainer({
                 const journeyResult = await journeyResponse.json();
                 if (journeyResult.success && journeyResult.data) {
                   const { journey, jobData } = journeyResult.data;
-                  
+
                   // Set job data if available
                   if (jobData) {
                     dispatch({ type: 'SET_JOB_DATA', payload: jobData });
@@ -932,9 +1131,9 @@ export default function ResumeEnhancerContainer({
             dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
           }
         }
-        
+
         goToStep(1);
-        
+
         // Mark as initialized
         initializedRef.current = { mode, cvId };
       }
@@ -946,13 +1145,19 @@ export default function ResumeEnhancerContainer({
   const handleStep1Complete = (cvData: UnifiedCVDataStructure) => {
     dispatch({ type: 'SET_CV_DATA', payload: cvData });
     setCompletedSteps([...completedSteps, 1]);
-    
+
+    // Generate automatic title based on CV type
+    const cvType = state.cvType || (isGuestMode ? 'master' : 'standalone');
+    const autoTitle = generateCVTitle(cvType, cvData, state.jobData);
+    dispatch({ type: 'SET_CV_TITLE', payload: autoTitle });
+    console.log('✅ Auto-generated CV title:', autoTitle, 'for cvType:', cvType);
+
     // For create mode, set initial data when first data is entered
     if (mode === 'create') {
       initialCVDataRef.current = JSON.parse(JSON.stringify(cvData));
-      initialCVTitleRef.current = state.cvTitle;
+      initialCVTitleRef.current = autoTitle;
     }
-    
+
     // Auto-extract role from CV data for master and standalone CVs in edit mode
     // In create mode, show role selector modal
     if (mode === 'edit' || mode === 'edit-master') {
@@ -970,13 +1175,44 @@ export default function ResumeEnhancerContainer({
       if (inferredRole || inferredSeniority) {
         setRoleContext(inferredRole, inferredSeniority);
       }
-      
+
       // Proceed directly to template selection (Step 2) without showing role modal
       goToStep(2);
       return;
     }
-    
-    // Guest mode: Save draft
+
+    // For create mode: Try to auto-infer role from CV data
+    // If role can be inferred, set it automatically and skip modal
+    // Only show modal if role cannot be inferred
+    if (mode === 'create') {
+      // Try to infer role from CV data (professional title or latest position)
+      const inferred = inferRoleContextFromCVData(cvData);
+
+      if (inferred.targetRole && inferred.seniorityLevel) {
+        // Role can be inferred - set it automatically and skip modal
+        setRoleContext(inferred.targetRole, inferred.seniorityLevel);
+
+        // Guest mode: Save draft with inferred role
+        if (isGuestMode) {
+          guestCVService.saveGuestDraft({
+            cvData: cvData,
+            currentStep: 2,
+            completedSteps: [...completedSteps, 1],
+            targetRole: inferred.targetRole,
+            seniorityLevel: inferred.seniorityLevel,
+            templateId: state.selectedTemplate?.id || state.selectedTemplate?._id,
+            template: state.selectedTemplate,
+            cvTitle: state.cvTitle
+          }).catch(err => console.error('Failed to save draft:', err));
+        }
+
+        // Proceed directly to template selection (Step 2) without showing role modal
+        goToStep(2);
+        return;
+      }
+    }
+
+    // Guest mode: Save draft (when role cannot be inferred)
     if (isGuestMode) {
       guestCVService.saveGuestDraft({
         cvData: cvData,
@@ -989,8 +1225,8 @@ export default function ResumeEnhancerContainer({
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
     }
-    
-    // Show role selector modal only in create mode
+
+    // Show role selector modal only if role cannot be inferred from CV data
     setShowRoleModal(true);
   };
 
@@ -1002,65 +1238,81 @@ export default function ResumeEnhancerContainer({
   }) => {
     setShowRoleModal(false);
 
+    // Mark role as explicitly set by user
+    roleExplicitlySetRef.current = true;
+
     // Set role context
     setRoleContext(data.targetRole, data.seniorityLevel);
 
-    // Guest mode: First CV = Master CV (no JD allowed)
-    if (isGuestMode) {
-      // Guest users creating first CV - it will be master CV
-      dispatch({ type: 'SET_CV_TYPE', payload: 'master' });
-    } else if (data.hasJD && data.jobDescription) {
-      // If JD provided, create journey (only for authenticated users)
-      try {
-        // Create job application
-        const jobResponse = await fetch('/api/jobs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobTitle: data.targetRole,
-            company: 'Unknown Company',
-            jobDescription: data.jobDescription,
-            status: 'created'
-          })
-        });
+    // CRITICAL FIX: Preserve existing CV type when editing
+    // Only modify cvType when creating a new CV
+    const isEditingExistingCV = mode === 'edit' || mode === 'edit-master' || state.cvId;
 
-        if (!jobResponse.ok) throw new Error('Failed to create job');
-
-        const jobResult = await jobResponse.json();
-        const newJourneyId = jobResult.data.journey._id;
-
-        dispatch({ type: 'SET_JOURNEY_ID', payload: newJourneyId });
-        dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-        dispatch({ type: 'SET_JOB_DATA', payload: { description: data.jobDescription, title: data.targetRole } });
-      } catch (error) {
-        console.error('Failed to create journey:', error);
-        // Continue as standalone
-        dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
-      }
+    if (isEditingExistingCV) {
+      // In edit mode, preserve the existing CV type
+      // Don't allow changing master CVs to standalone/journey via role modal
+      console.log('📝 Edit mode: Preserving existing CV type:', state.cvType);
+      // No cvType change - just update role context
+      // Do not proceed to step 2 - we're just updating the role
     } else {
-      // Set as standalone (for authenticated users without JD)
-      // For guest mode, this is handled above
-      if (!isGuestMode) {
-        dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
+      // Create mode logic (existing behavior)
+      // Guest mode: First CV = Master CV (no JD allowed)
+      if (isGuestMode) {
+        // Guest users creating first CV - it will be master CV
+        dispatch({ type: 'SET_CV_TYPE', payload: 'master' });
+      } else if (data.hasJD && data.jobDescription) {
+        // If JD provided, create journey (only for authenticated users)
+        try {
+          // Create job application
+          const jobResponse = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobTitle: data.targetRole,
+              company: 'Unknown Company',
+              jobDescription: data.jobDescription,
+              status: 'created'
+            })
+          });
+
+          if (!jobResponse.ok) throw new Error('Failed to create job');
+
+          const jobResult = await jobResponse.json();
+          const newJourneyId = jobResult.data.journey._id;
+
+          dispatch({ type: 'SET_JOURNEY_ID', payload: newJourneyId });
+          dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
+          dispatch({ type: 'SET_JOB_DATA', payload: { description: data.jobDescription, title: data.targetRole } });
+        } catch (error) {
+          console.error('Failed to create journey:', error);
+          // Continue as standalone
+          dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
+        }
+      } else {
+        // Set as standalone (for authenticated users without JD)
+        // For guest mode, this is handled above
+        if (!isGuestMode) {
+          dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
+        }
       }
-    }
 
-    // Guest mode: Save draft after role selection
-    if (isGuestMode) {
-      guestCVService.saveGuestDraft({
-        cvData: state.cvData,
-        currentStep: 2,
-        completedSteps: completedSteps,
-        targetRole: data.targetRole,
-        seniorityLevel: data.seniorityLevel,
-        templateId: state.selectedTemplate?.id || state.selectedTemplate?._id,
-        template: state.selectedTemplate,
-        cvTitle: state.cvTitle
-      }).catch(err => console.error('Failed to save draft:', err));
-    }
+      // Guest mode: Save draft after role selection
+      if (isGuestMode) {
+        guestCVService.saveGuestDraft({
+          cvData: state.cvData,
+          currentStep: 2,
+          completedSteps: completedSteps,
+          targetRole: data.targetRole,
+          seniorityLevel: data.seniorityLevel,
+          templateId: state.selectedTemplate?.id || state.selectedTemplate?._id,
+          template: state.selectedTemplate,
+          cvTitle: state.cvTitle
+        }).catch(err => console.error('Failed to save draft:', err));
+      }
 
-    // Proceed to template selection
-    goToStep(2);
+      // Proceed to template selection (only in create mode)
+      goToStep(2);
+    }
   };
 
   const handleOpenJobParser = (roleData?: { targetRole: string; seniorityLevel: string }) => {
@@ -1089,7 +1341,7 @@ export default function ResumeEnhancerContainer({
     // For standalone CVs, automatically convert to journey when JD is added
     if (state.cvType === 'standalone') {
       const jobDescription = parsedData.jobDescription || parsedData.jobDescriptionRaw || parsedData.description || '';
-      
+
       if (jobDescription && jobDescription.trim().length > 100) {
         try {
           // WORKAROUND: Ensure CV is saved first if cvId is missing
@@ -1143,7 +1395,7 @@ export default function ResumeEnhancerContainer({
                   if (cvResponse.ok) {
                     const cvResult = await cvResponse.json();
                     const updatedCV = cvResult.data.cv;
-                    
+
                     // Reload CV with journey context using loadCV
                     loadCV({
                       cvId: updatedCV.id,
@@ -1163,29 +1415,29 @@ export default function ResumeEnhancerContainer({
                         location: parsedData.location
                       }
                     });
-                    
+
                     // Update initial data refs
                     initialCVDataRef.current = JSON.parse(JSON.stringify(updatedCV.cvData));
                     initialCVTitleRef.current = updatedCV.title;
                     initialTemplateRef.current = updatedCV.template || null;
-                    
+
                     // Journey CVs use job description for analysis - no need to set targetRole/seniorityLevel
-                    
+
                     // Update URL params to reflect journey mode
                     const currentSearchParams = new URLSearchParams(searchParams.toString());
                     currentSearchParams.set('mode', 'journey');
                     currentSearchParams.set('cvId', updatedCV.id);
                     currentSearchParams.set('journeyId', journeyId);
                     router.replace(`${pathname}?${currentSearchParams.toString()}`);
-                    
+
                     console.log('✅ CV reloaded with journey context dynamically');
                   } else {
                     // Fallback: update state manually if fetch fails
                     dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
                     dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-                    dispatch({ 
-                      type: 'SET_JOB_DATA', 
-                      payload: { 
+                    dispatch({
+                      type: 'SET_JOB_DATA',
+                      payload: {
                         id: jobId,
                         _id: jobId,
                         jobTitle: parsedData.jobTitle || state.targetRole,
@@ -1194,7 +1446,7 @@ export default function ResumeEnhancerContainer({
                         description: jobDescription,
                         jobDescription: jobDescription,
                         location: parsedData.location
-                      } 
+                      }
                     });
                   }
                 } catch (reloadError) {
@@ -1202,9 +1454,9 @@ export default function ResumeEnhancerContainer({
                   // Fallback: update state manually
                   dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
                   dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-                  dispatch({ 
-                    type: 'SET_JOB_DATA', 
-                    payload: { 
+                  dispatch({
+                    type: 'SET_JOB_DATA',
+                    payload: {
                       id: jobId,
                       _id: jobId,
                       jobTitle: parsedData.jobTitle || state.targetRole,
@@ -1213,15 +1465,15 @@ export default function ResumeEnhancerContainer({
                       description: jobDescription,
                       jobDescription: jobDescription,
                       location: parsedData.location
-                    } 
+                    }
                   });
                 }
               } else {
                 // Journey creation failed, keep CV standalone
                 console.warn('Journey creation failed, keeping CV standalone');
-                dispatch({ 
-                  type: 'SET_JOB_DATA', 
-                  payload: { 
+                dispatch({
+                  type: 'SET_JOB_DATA',
+                  payload: {
                     ...state.jobData,
                     jobTitle: parsedData.jobTitle || state.targetRole,
                     title: parsedData.jobTitle || state.targetRole,
@@ -1229,25 +1481,25 @@ export default function ResumeEnhancerContainer({
                     description: jobDescription,
                     jobDescription: jobDescription,
                     location: parsedData.location
-                  } 
+                  }
                 });
               }
             } else {
               // EDGE CASE 3 & 9: Handle job creation failure
               const errorData = await jobResponse.json().catch(() => ({}));
               const errorMessage = errorData.error || errorData.message || 'Failed to create job';
-              
+
               // EDGE CASE 9: Check for credit errors
               if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
                 alert('Insufficient credits. Please upgrade your plan to track jobs.');
               } else {
                 alert(`Failed to create job: ${errorMessage}`);
               }
-              
+
               // Keep CV as standalone if job creation fails
-              dispatch({ 
-                type: 'SET_JOB_DATA', 
-                payload: { 
+              dispatch({
+                type: 'SET_JOB_DATA',
+                payload: {
                   ...state.jobData,
                   jobTitle: parsedData.jobTitle || state.targetRole,
                   title: parsedData.jobTitle || state.targetRole,
@@ -1255,12 +1507,12 @@ export default function ResumeEnhancerContainer({
                   description: jobDescription,
                   jobDescription: jobDescription,
                   location: parsedData.location
-                } 
+                }
               });
             }
           } catch (fetchError: any) {
             clearTimeout(timeoutId);
-            
+
             // EDGE CASE 10: Handle network timeout
             if (fetchError.name === 'AbortError') {
               alert('Request timed out. Please check your connection and try again.');
@@ -1272,11 +1524,11 @@ export default function ResumeEnhancerContainer({
           // EDGE CASE 3: Job creation failure - keep CV standalone
           console.error('Failed to convert standalone to journey:', error);
           alert(`Failed to create job: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          
+
           // Fallback: just update jobData, keep CV standalone
-          dispatch({ 
-            type: 'SET_JOB_DATA', 
-            payload: { 
+          dispatch({
+            type: 'SET_JOB_DATA',
+            payload: {
               ...state.jobData,
               jobTitle: parsedData.jobTitle || state.targetRole,
               title: parsedData.jobTitle || state.targetRole,
@@ -1284,14 +1536,14 @@ export default function ResumeEnhancerContainer({
               description: jobDescription,
               jobDescription: jobDescription,
               location: parsedData.location
-            } 
+            }
           });
         }
       } else {
         // If JD is too short, just update jobData without converting
-        dispatch({ 
-          type: 'SET_JOB_DATA', 
-          payload: { 
+        dispatch({
+          type: 'SET_JOB_DATA',
+          payload: {
             ...state.jobData,
             jobTitle: parsedData.jobTitle || state.targetRole,
             title: parsedData.jobTitle || state.targetRole,
@@ -1299,10 +1551,10 @@ export default function ResumeEnhancerContainer({
             description: jobDescription,
             jobDescription: jobDescription,
             location: parsedData.location
-          } 
+          }
         });
       }
-      
+
       setShowJobParserDialog(false);
       setPendingRoleData(null);
       return;
@@ -1347,7 +1599,7 @@ export default function ResumeEnhancerContainer({
         if (!jobResponse.ok) {
           const errorData = await jobResponse.json().catch(() => ({}));
           const errorMessage = errorData.error || errorData.message || 'Failed to create job';
-          
+
           // EDGE CASE 9: Check for credit errors
           if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
             throw new Error('Insufficient credits. Please upgrade your plan to track jobs.');
@@ -1363,9 +1615,9 @@ export default function ResumeEnhancerContainer({
         if (newJourneyId) {
           dispatch({ type: 'SET_JOURNEY_ID', payload: newJourneyId });
           dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-          dispatch({ 
-            type: 'SET_JOB_DATA', 
-            payload: { 
+          dispatch({
+            type: 'SET_JOB_DATA',
+            payload: {
               id: jobId,
               _id: jobId,
               jobTitle: parsedData.jobTitle || roleData.targetRole,
@@ -1375,7 +1627,7 @@ export default function ResumeEnhancerContainer({
               jobDescription: parsedData.jobDescription || parsedData.description || '',
               location: parsedData.location,
               status: 'created'
-            } 
+            }
           });
 
           // Proceed to template selection
@@ -1386,7 +1638,7 @@ export default function ResumeEnhancerContainer({
         }
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
-        
+
         // EDGE CASE 10: Handle network timeout
         if (fetchError.name === 'AbortError') {
           throw new Error('Request timed out. Please check your connection and try again.');
@@ -1421,18 +1673,18 @@ export default function ResumeEnhancerContainer({
       }).catch(err => console.error('Failed to save draft:', err));
     }
     setCompletedSteps([...completedSteps, 2]);
-    
+
     // For create mode, update initial template when Step 2 completes
     if (mode === 'create' && state.selectedTemplate && !initialTemplateRef.current) {
       initialTemplateRef.current = state.selectedTemplate;
     }
-    
+
     goToStep(3);
   };
 
   const handleStep3Complete = () => {
     setCompletedSteps([...completedSteps, 3]);
-    
+
     // Guest mode: Save draft before moving to Step 4
     if (isGuestMode) {
       guestCVService.saveGuestDraft({
@@ -1446,7 +1698,7 @@ export default function ResumeEnhancerContainer({
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
     }
-    
+
     goToStep(4);
   };
 
@@ -1465,40 +1717,40 @@ export default function ResumeEnhancerContainer({
         const templateChanged = currentTemplateId !== initialTemplateId;
         return dataChanged || titleChanged || templateChanged;
       }
-      
+
       // If initial data not set yet, check if any meaningful content exists
-      const hasContent = 
+      const hasContent =
         (state.cvData.basics?.name && state.cvData.basics.name.trim() !== '') ||
         (state.cvData.work && state.cvData.work.length > 0) ||
         (state.cvData.education && state.cvData.education.length > 0) ||
         (state.cvData.skills && state.cvData.skills.length > 0);
-      
+
       return hasContent;
     }
-    
+
     // For edit mode, compare with initial data
     if (!initialCVDataRef.current) return false;
-    
+
     // Deep comparison of CV data
     const currentDataStr = JSON.stringify(state.cvData);
     const initialDataStr = JSON.stringify(initialCVDataRef.current);
     const dataChanged = currentDataStr !== initialDataStr;
-    
+
     // Check if title changed
     const titleChanged = state.cvTitle !== initialCVTitleRef.current;
-    
+
     // Check if template changed
     const currentTemplateId = state.selectedTemplate?.id || (state.selectedTemplate as any)?._id;
     const initialTemplateId = initialTemplateRef.current?.id || (initialTemplateRef.current as any)?._id;
     const templateChanged = currentTemplateId !== initialTemplateId;
-    
+
     return dataChanged || titleChanged || templateChanged;
   }, [mode, state.cvData, state.cvTitle, state.selectedTemplate]);
 
   const handleExit = () => {
     // Determine where to navigate back based on how user arrived
     let returnPath = '/dashboard'; // Default
-    
+
     if (journeyId) {
       // User came from tracker (journey-based editing)
       returnPath = '/dashboard/tracker';
@@ -1506,7 +1758,7 @@ export default function ResumeEnhancerContainer({
       // User came from canvas/documents page
       returnPath = '/dashboard/canvas';
     }
-    
+
     // Only show confirmation if there are unsaved changes
     if (hasUnsavedChanges) {
       if (confirm('Are you sure you want to exit? Unsaved changes will be lost.')) {
@@ -1535,14 +1787,22 @@ export default function ResumeEnhancerContainer({
   };
 
   const extractCvIdFromResponse = (result: any): string | null => {
-    return (
+    // Try multiple possible response structures
+    const cvId =
       result?.data?.cv?.id ||
       result?.data?.cv?._id ||
+      result?.data?.id ||
       result?.cv?.id ||
       result?.cv?._id ||
       result?.id ||
-      null
-    );
+      null;
+
+    // Convert to string if it's an ObjectId
+    if (cvId) {
+      return String(cvId);
+    }
+
+    return null;
   };
 
   // Helper function to ensure CV is saved and return cvId
@@ -1577,7 +1837,7 @@ export default function ResumeEnhancerContainer({
 
     // CV not saved yet - save it first
     console.log('💾 CV not saved yet, saving CV first before saving job...');
-    
+
     try {
       const completionPercentage = calculateCompletionPercentage();
       const payload = {
@@ -1609,12 +1869,12 @@ export default function ResumeEnhancerContainer({
       if (savedCvId) {
         console.log('✅ CV saved successfully with ID:', savedCvId);
         dispatch({ type: 'SET_CV_ID', payload: savedCvId });
-        
+
         // Update initial data refs
         initialCVDataRef.current = JSON.parse(JSON.stringify(state.cvData));
         initialCVTitleRef.current = state.cvTitle || 'My CV';
         initialTemplateRef.current = state.selectedTemplate;
-        
+
         // Check if this is a standalone CV (not master or journey) and trigger upgrade popup if first
         const isStandaloneCV = payload.cvType === 'standalone' && !payload.metadata.isMaster;
         if (isStandaloneCV) {
@@ -1635,7 +1895,7 @@ export default function ResumeEnhancerContainer({
             }
           }, 1000);
         }
-        
+
         return savedCvId;
       } else {
         throw new Error('CV saved but no ID returned');
@@ -1648,6 +1908,22 @@ export default function ResumeEnhancerContainer({
 
   const handleSmartSave = async () => {
     if (saveStatus === 'saving') return;
+
+    // Check if auth prompt should be shown for guest users
+    if (checkAndShowAuthPrompt('save')) {
+      return; // Stop execution, auth prompt will be shown
+    }
+
+    // CRITICAL FIX: Clear any old offline backups at the start to prevent stale state
+    // This ensures we don't show "Saved Offline" status due to residual localStorage data
+    if (typeof window !== 'undefined' && !isGuestMode) {
+      const hadBackup = !!localStorage.getItem('unsaved_master_cv');
+      if (hadBackup) {
+        console.log('🧹 Clearing old offline backup before save attempt');
+        localStorage.removeItem('unsaved_master_cv');
+        setHasOfflineBackup(false);
+      }
+    }
 
     setSaveStatus('saving');
     setSaveError(null);
@@ -1703,35 +1979,108 @@ export default function ResumeEnhancerContainer({
       // This prevents trying to create a duplicate Master CV
       const isMasterCV = state.cvType === 'master' || mode === 'edit-master';
       const isEditMode = mode === 'edit' || mode === 'edit-master' || mode === 'journey';
-      
+
       // Use cvId from state, or fallback to prop, or use the one from URL params
       const effectiveCvId = state.cvId || cvId;
-      
-      // If we're in edit mode or have a cvId, we should update, not create
-      const shouldUpdate = isEditMode || effectiveCvId;
-      
+
+      // LAYER 1: UPSERT PATTERN - If Master CV has no ID, create instead of erroring
+      // This fixes the "CV ID missing" error by automatically switching to CREATE mode
+      let shouldUpdate = isEditMode || effectiveCvId;
+      let apiUrl = shouldUpdate && effectiveCvId ? `/api/cvs/${effectiveCvId}` : '/api/cvs';
+      let apiMethod = shouldUpdate && effectiveCvId ? 'PUT' : 'POST';
+
+      // If Master CV has no ID, switch to CREATE mode (upsert pattern)
       if (isMasterCV && !effectiveCvId) {
-        throw new Error('Cannot save Master CV: CV ID is missing. Please reload the page and try again.');
+        console.log('🔄 Layer 1 Defense: Master CV missing ID, switching to CREATE mode');
+        shouldUpdate = false;
+        apiUrl = '/api/cvs';
+        apiMethod = 'POST';
+        // Note: localStorage backup is only saved if save fails (see error handler below)
       }
-      
-      const response = await fetch(
-        shouldUpdate && effectiveCvId ? `/api/cvs/${effectiveCvId}` : '/api/cvs',
-        {
-          method: shouldUpdate && effectiveCvId ? 'PUT' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }
-      );
+
+      const response = await fetch(apiUrl, {
+        method: apiMethod,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
       const result = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        // LAYER 3: If save fails, ensure data is in localStorage
+        try {
+          const backupData = {
+            ...payload,
+            attemptedSaveAt: Date.now(),
+            error: result?.error || 'Failed to save',
+            userId,
+            mode: isMasterCV ? 'master-create' : 'create'
+          };
+          localStorage.setItem('unsaved_master_cv', JSON.stringify(backupData));
+          console.log('💾 Layer 3 Defense: Save failed, saved to localStorage');
+        } catch (storageError) {
+          console.warn('⚠️ Failed to save to localStorage after error:', storageError);
+        }
         throw new Error(result?.error || 'Failed to save');
       }
 
       const savedCvId = extractCvIdFromResponse(result);
+      console.log('💾 Save response:', {
+        responseOk: response.ok,
+        result,
+        savedCvId,
+        effectiveCvId,
+        resultKeys: Object.keys(result || {}),
+        resultCv: result?.cv,
+        resultData: result?.data
+      });
+
       if (savedCvId) {
+        console.log('✅ CV saved successfully with ID:', savedCvId);
         dispatch({ type: 'SET_CV_ID', payload: savedCvId });
+
+        // Update URL with new ID without reloading (Layer 1 enhancement)
+        // Handle both /studio and /resume-enhancer paths
+        if (!effectiveCvId && savedCvId) {
+          // CRITICAL FIX: Set flag to prevent re-initialization from resetting state
+          justSavedRef.current = true;
+
+          if (pathname.includes('/studio')) {
+            const newPath = `/studio/${savedCvId}`;
+            router.replace(newPath);
+            console.log('✅ Layer 1 Defense: Updated URL with new CV ID:', savedCvId);
+          } else if (pathname.includes('/resume-enhancer')) {
+            // Update resume-enhancer URL to include cvId
+            const currentSearchParams = new URLSearchParams(window.location.search);
+            currentSearchParams.set('cvId', savedCvId);
+            const newPath = `${pathname}?${currentSearchParams.toString()}`;
+            router.replace(newPath);
+            console.log('✅ Layer 1 Defense: Updated resume-enhancer URL with new CV ID:', savedCvId);
+          } else {
+            // For any other path, try to add cvId as query param
+            const currentSearchParams = new URLSearchParams(window.location.search);
+            currentSearchParams.set('cvId', savedCvId);
+            const newPath = `${pathname}?${currentSearchParams.toString()}`;
+            router.replace(newPath);
+            console.log('✅ Layer 1 Defense: Updated URL with new CV ID:', savedCvId);
+          }
+        }
+
+        // Clear localStorage backup on successful save
+        try {
+          localStorage.removeItem('unsaved_master_cv');
+          setHasOfflineBackup(false);
+          console.log('✅ Layer 3 Defense: Cleared localStorage backup after successful save');
+        } catch (storageError) {
+          console.warn('⚠️ Failed to clear localStorage:', storageError);
+        }
+
+        // Ensure offline status is cleared on successful save
+        setHasOfflineBackup(false);
+      } else {
+        console.error('❌ Save succeeded but no CV ID returned in response. Full response:', JSON.stringify(result, null, 2));
+        // Even if no ID, clear offline status since save succeeded
+        setHasOfflineBackup(false);
       }
 
       // Note: CV to journey linking is now handled server-side in the API route
@@ -1744,25 +2093,103 @@ export default function ResumeEnhancerContainer({
 
       setSaveStatus('success');
 
-      if (isContinuing) {
-        // Move to review after a successful save
-        handleStep3Complete();
-      } else if (isFinishing && savedCvId) {
+      // CRITICAL FIX: Don't auto-navigate from step 3 - stay on current step
+      // This preserves parsed data and surgeon analysis
+      if (isFinishing && savedCvId) {
         router.push(`/dashboard?tab=cvs&highlight=${savedCvId}`);
       }
+      // Removed: isContinuing navigation that was moving to step 4
 
       // Reset success state after a short delay (if we didn't navigate away)
       setTimeout(() => setSaveStatus('idle'), 1200);
     } catch (error) {
       console.error('Save failed:', error);
       const message = error instanceof Error ? error.message : 'Failed to save';
-      setSaveError(message);
-      setSaveStatus('error');
-      dispatch({ type: 'SET_SAVE_ERROR', payload: message });
+
+      // LAYER 3: Show user-friendly message if data was saved offline
+      const offlineBackupExists = typeof window !== 'undefined' && localStorage.getItem('unsaved_master_cv');
+      setHasOfflineBackup(!!offlineBackupExists);
+
+      const errorMessage = offlineBackupExists
+        ? 'Connection unstable. Your work has been saved locally and will sync when connection is restored.'
+        : message;
+
+      setSaveError(errorMessage);
+      setSaveStatus(offlineBackupExists ? 'offline' : 'error');
+      dispatch({ type: 'SET_SAVE_ERROR', payload: errorMessage });
+
+      // Show toast notification for offline save
+      if (offlineBackupExists) {
+        console.log('💾 Layer 3 Defense: Data saved offline, will retry on next save');
+      }
     } finally {
       dispatch({ type: 'SET_SAVING', payload: false });
     }
   };
+
+  // LAYER 3: Recovery mechanism - Check localStorage on mount and attempt to restore
+  useEffect(() => {
+    if (typeof window === 'undefined' || isGuestMode || mode !== 'create') return;
+
+    const checkForOfflineBackup = async () => {
+      try {
+        const backupDataStr = localStorage.getItem('unsaved_master_cv');
+        if (!backupDataStr) return;
+
+        const backupData = JSON.parse(backupDataStr);
+        const backupAge = Date.now() - (backupData.attemptedSaveAt || 0);
+
+        // Only restore if backup is recent (within 24 hours)
+        if (backupAge > 24 * 60 * 60 * 1000) {
+          localStorage.removeItem('unsaved_master_cv');
+          return;
+        }
+
+        // Check if CV was already saved (by checking if we have a CV ID now)
+        if (state.cvId || cvId) {
+          // CV exists, clear backup
+          localStorage.removeItem('unsaved_master_cv');
+          return;
+        }
+
+        // Restore data from backup
+        console.log('🔄 Layer 3 Defense: Found offline backup, attempting to restore...');
+
+        // Restore CV data
+        if (backupData.cvData) {
+          dispatch({ type: 'SET_CV_DATA', payload: backupData.cvData });
+        }
+        if (backupData.title) {
+          dispatch({ type: 'SET_CV_TITLE', payload: backupData.title });
+        }
+        if (backupData.templateId) {
+          // Template restoration would need template lookup
+          console.log('📋 Template ID found in backup:', backupData.templateId);
+        }
+
+        // Attempt to save again
+        console.log('🔄 Layer 3 Defense: Retrying save after recovery...');
+        setTimeout(() => {
+          handleSmartSave().catch(err => {
+            console.warn('⚠️ Recovery save failed:', err);
+          });
+        }, 1000);
+      } catch (error) {
+        console.warn('⚠️ Failed to restore from localStorage backup:', error);
+        // Clear corrupted backup
+        try {
+          localStorage.removeItem('unsaved_master_cv');
+        } catch (e) {
+          // Ignore
+        }
+      }
+    };
+
+    // Only check on initial mount
+    if (!initializedRef.current) {
+      checkForOfflineBackup();
+    }
+  }, []); // Empty deps - only run on mount
 
   if (isLoading) {
     return (
@@ -1777,18 +2204,6 @@ export default function ResumeEnhancerContainer({
 
   return (
     <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex flex-col">
-      {/* Guest Mode Indicator */}
-      {isGuestMode && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800 px-4 py-2 text-center">
-          <p className="text-sm text-blue-900 dark:text-blue-100">
-            <span className="font-medium">Guest Mode:</span> Your progress is being saved. 
-            {state.currentStep >= 3 && (
-              <span> Sign up to unlock all features and save your CV permanently.</span>
-            )}
-          </p>
-        </div>
-      )}
-      
       {/* Header */}
       <header className="bg-[#141810] sticky top-0 z-[100] shadow-sm shadow-black/10 dark:shadow-black/30 backdrop-blur-sm w-full">
         <div className="w-full px-4 py-1.5">
@@ -1810,11 +2225,6 @@ export default function ResumeEnhancerContainer({
                   <span className="text-[color:var(--text-primary)]">Circle</span>
                 </span>
               </h1>
-              {isMasterCV && (
-                <span className="px-2 py-0.5 bg-[color:var(--accent-primary)]/15 text-[color:var(--accent-primary)] rounded-full text-xs font-medium">
-                  Master
-                </span>
-              )}
               {state.cvType && !isMasterCV && (
                 <span className="px-2 py-0.5 bg-[color:var(--accent-primary)]/15 text-[color:var(--accent-primary)] rounded-full text-xs font-medium capitalize">
                   {state.cvType}
@@ -1840,8 +2250,13 @@ export default function ResumeEnhancerContainer({
                     </>
                   ) : saveStatus === 'success' ? (
                     <>
-                      <Save className="w-3.5 h-3.5" />
+                      <CheckCircle2 className="w-3.5 h-3.5" />
                       <span>Saved!</span>
+                    </>
+                  ) : saveStatus === 'offline' ? (
+                    <>
+                      <Save className="w-3.5 h-3.5" />
+                      <span>Saved Offline</span>
                     </>
                   ) : (
                     <>
@@ -1851,12 +2266,19 @@ export default function ResumeEnhancerContainer({
                   )}
                 </button>
               )}
-              
+
               {/* Save Status Indicator - Animated */}
               {(saveStatus === 'saving' || saveStatus === 'success') && (
                 <SaveIndicator status={saveStatus} className="hidden sm:flex" />
               )}
-              
+
+              {/* Guest Mode Tag */}
+              {isGuestMode && (
+                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium">
+                  Guest
+                </span>
+              )}
+
               {/* Notification Center */}
               <NotificationCenter />
             </div>
@@ -1873,23 +2295,28 @@ export default function ResumeEnhancerContainer({
         )}
       </header>
 
-      {/* Ribbon Step Indicator - Below Header */}
-      <RibbonStepIndicator
-        currentStep={state.currentStep}
-        completedSteps={completedSteps}
-        onStepClick={(step) => {
-          if (completedSteps.includes(step)) {
-            goToStep(step);
-          }
-        }}
-      />
-
       {/* Content Area (Left Sticky Steps + Main Content) */}
       <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)]">
         {/* Floating / Sticky vertical steps panel (desktop) */}
-        <aside className="hidden lg:block w-52 flex-shrink-0 mt-2 mb-2 ml-2 rounded-xl overflow-y-auto overscroll-contain bg-[#141810] border border-white/10 h-[calc(100vh-64px-80px)]">
+        <aside className="hidden lg:block w-72 flex-shrink-0 mt-2 mb-2 ml-2 rounded-xl overflow-y-auto overscroll-contain bg-[#141810] border border-white/10 h-[calc(100%-1rem)]">
           <div className="flex flex-col h-full p-3">
             <div className="flex-1 space-y-3 overflow-y-auto">
+              {/* Step Indicator Card */}
+              <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden">
+                <div className="p-3">
+                  <StepIndicator
+                    orientation="vertical"
+                    currentStep={state.currentStep}
+                    completedSteps={completedSteps}
+                    onStepClick={(step) => {
+                      if (completedSteps.includes(step)) {
+                        goToStep(step);
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+
               {/* Job Role Card - Show for master and standalone CVs (including guest mode) */}
               {(state.cvType === 'master' || state.cvType === 'standalone' || (isGuestMode && !state.cvType)) && (
                 <JobRoleCard
@@ -1897,7 +2324,11 @@ export default function ResumeEnhancerContainer({
                   seniorityLevel={state.seniorityLevel}
                   optimizationScore={analysisScore}
                   cvType={state.cvType || (isGuestMode ? 'master' : 'standalone')}
-                  onEditRole={() => setShowRoleModal(true)}
+                  mode={mode}
+                  onEditRole={() => {
+                    roleExplicitlySetRef.current = true;
+                    setShowRoleModal(true);
+                  }}
                 />
               )}
 
@@ -1910,7 +2341,7 @@ export default function ResumeEnhancerContainer({
                     if (!jobId || (userId === 'guest' ? false : !userId)) return;
 
                     setSelectedJob(state.jobData);
-                    
+
                     // Load journeys for this job (skip for guest users)
                     if (userId !== 'guest') {
                       try {
@@ -1925,7 +2356,7 @@ export default function ResumeEnhancerContainer({
                         setJourneysForJob([]);
                       }
                     }
-                    
+
                     setShowJobSidebar(true);
                   }}
                 />
@@ -1933,7 +2364,34 @@ export default function ResumeEnhancerContainer({
 
               {/* ATS Check Card - Redesigned (Step 3) */}
               {state.currentStep === 3 && (
-                <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden">
+                <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden relative">
+                  {/* Blur overlay for guest users - always show for guest mode */}
+                  {isGuestMode && (
+                    <div className="absolute inset-0 bg-[#1a230f]/90 backdrop-blur-md z-20 rounded-xl flex items-center justify-center">
+                      <div className="text-center px-4 space-y-3">
+                        <p className="text-sm font-semibold text-[color:var(--accent-primary)] mb-2">
+                          Sign in to view analysis
+                        </p>
+                        <p className="text-xs text-[color:var(--text-secondary)] mb-3">
+                          Create an account to see your CV score and get personalized suggestions
+                        </p>
+                        <button
+                          onClick={() => {
+                            const currentPath = pathname;
+                            const currentSearch = searchParams.toString();
+                            const callbackUrl = currentSearch
+                              ? `${currentPath}?${currentSearch}`
+                              : currentPath;
+                            router.push(`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+                          }}
+                          className="px-4 py-2 bg-[#39FF14] hover:bg-[#32E614] text-black rounded-lg text-xs font-semibold transition-all shadow-lg hover:shadow-[#39FF14]/50 hover:scale-105"
+                        >
+                          Sign Up Free
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Header */}
                   <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
                     <div className="flex items-center gap-2">
@@ -1960,13 +2418,14 @@ export default function ResumeEnhancerContainer({
                   </div>
 
                   <div className="p-3 space-y-3">
+
                     {/* Score Bar - Animated */}
                     <div className="bg-[#252a1f] rounded-full p-1 flex items-center gap-2">
                       <div className="px-2">
-                        <AnimatedScore 
-                          value={analysisScore} 
-                          suffix="%" 
-                          size="sm" 
+                        <AnimatedScore
+                          value={analysisScore}
+                          suffix="%"
+                          size="sm"
                           showChange={true}
                           className="text-sm"
                         />
@@ -1988,199 +2447,199 @@ export default function ResumeEnhancerContainer({
                       <>
                         {/* Keywords Status Section - Only show for non-Master CVs */}
                         {!isMasterCV && (
-                        <div>
+                          <div>
                             <div className="space-y-2">
                               {/* Dynamic Header based on state */}
-                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
+                                {(() => {
+                                  // Determine header based on state
+                                  if (isLoadingSkillGap) {
+                                    return (
+                                      <>
+                                        <Loader2 className="w-3 h-3 text-[color:var(--accent-primary)] animate-spin" />
+                                        <InfoTooltip content="Analyzing keywords from job description...">
+                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Analyzing Keywords</span>
+                                        </InfoTooltip>
+                                      </>
+                                    );
+                                  }
+
+                                  if (!isJDReferenced) {
+                                    return (
+                                      <>
+                                        <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                                        <InfoTooltip content="Add a job description to analyze keyword matching">
+                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">No Job Description</span>
+                                        </InfoTooltip>
+                                      </>
+                                    );
+                                  }
+
+                                  if (keywordStats.allMatched && keywordStats.hasKeywords) {
+                                    return (
+                                      <>
+                                        <CheckCircle2 className="w-3 h-3 text-[#80FF00]" />
+                                        <InfoTooltip content="All keywords from the job description are present in your CV">
+                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">All Keywords Matched</span>
+                                        </InfoTooltip>
+                                      </>
+                                    );
+                                  }
+
+                                  if (keywordStats.missing > 0) {
+                                    return (
+                                      <>
+                                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                        <InfoTooltip content={`${keywordStats.missing} keywords from the job description are missing from your resume`}>
+                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Missing Keywords</span>
+                                        </InfoTooltip>
+                                      </>
+                                    );
+                                  }
+
+                                  return (
+                                    <>
+                                      <div className="w-2 h-2 rounded-full bg-gray-500"></div>
+                                      <InfoTooltip content="Keyword analysis status">
+                                        <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Keywords</span>
+                                      </InfoTooltip>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+
+                              {/* Dynamic Status Message */}
                               {(() => {
-                                // Determine header based on state
                                 if (isLoadingSkillGap) {
                                   return (
-                                    <>
-                                      <Loader2 className="w-3 h-3 text-[color:var(--accent-primary)] animate-spin" />
-                                      <InfoTooltip content="Analyzing keywords from job description...">
-                                        <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Analyzing Keywords</span>
-                                      </InfoTooltip>
-                                    </>
+                                    <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
+                                      Analyzing keywords from job description...
+                                    </div>
                                   );
                                 }
-                                
+
                                 if (!isJDReferenced) {
                                   return (
-                                    <>
-                                      <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                                      <InfoTooltip content="Add a job description to analyze keyword matching">
-                                        <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">No Job Description</span>
-                                      </InfoTooltip>
-                                    </>
+                                    <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2">
+                                      <span className="block mb-1">Add a job description to see keyword matching</span>
+                                      <span className="text-[8px] text-[color:var(--text-tertiary)] italic">Link a job from your tracker or paste a job description</span>
+                                    </div>
                                   );
                                 }
-                                
+
                                 if (keywordStats.allMatched && keywordStats.hasKeywords) {
                                   return (
-                                    <>
-                                      <CheckCircle2 className="w-3 h-3 text-[#80FF00]" />
-                                      <InfoTooltip content="All keywords from the job description are present in your CV">
-                                        <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">All Keywords Matched</span>
-                                      </InfoTooltip>
-                                    </>
-                                  );
-                                }
-                                
-                                if (keywordStats.missing > 0) {
-                                  return (
-                                    <>
-                                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                      <InfoTooltip content={`${keywordStats.missing} keywords from the job description are missing from your resume`}>
-                                        <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Missing Keywords</span>
-                                      </InfoTooltip>
-                                    </>
-                                  );
-                                }
-                                
-                                return (
-                                  <>
-                                    <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-                                    <InfoTooltip content="Keyword analysis status">
-                                      <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Keywords</span>
-                                    </InfoTooltip>
-                                  </>
-                                );
-                              })()}
-                            </div>
-
-                            {/* Dynamic Status Message */}
-                            {(() => {
-                              if (isLoadingSkillGap) {
-                                return (
-                                  <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
-                                    Analyzing keywords from job description...
-                                  </div>
-                                );
-                              }
-                              
-                              if (!isJDReferenced) {
-                                return (
-                                  <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2">
-                                    <span className="block mb-1">Add a job description to see keyword matching</span>
-                                    <span className="text-[8px] text-[color:var(--text-tertiary)] italic">Link a job from your tracker or paste a job description</span>
-                                  </div>
-                                );
-                              }
-                              
-                              if (keywordStats.allMatched && keywordStats.hasKeywords) {
-                                return (
-                                  <div className="bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-lg p-2 space-y-1">
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle2 className="w-3 h-3 text-[#80FF00] flex-shrink-0" />
-                                      <span className="text-[9px] font-semibold text-[#80FF00]">
-                                        Your CV now contains all keywords from JD
-                                      </span>
-                                    </div>
-                                    <div className="text-[8px] text-[color:var(--text-secondary)] pl-5">
-                                      {keywordStats.matched} of {keywordStats.total} keywords matched ({keywordStats.matchPercentage}%)
-                                    </div>
-                                    {fixesApplied && (
-                                      <div className="text-[8px] text-[color:var(--text-secondary)] pl-5 italic">
-                                        ✓ Fixes have been applied
+                                    <div className="bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-lg p-2 space-y-1">
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle2 className="w-3 h-3 text-[#80FF00] flex-shrink-0" />
+                                        <span className="text-[9px] font-semibold text-[#80FF00]">
+                                          Your CV now contains all keywords from JD
+                                        </span>
                                       </div>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              
-                              if (keywordStats.missing > 0 && keywordStats.hasKeywords) {
-                                return (
-                                  <>
-                                    {/* Keywords Table Header */}
-                                    <div className="grid grid-cols-3 gap-1 text-[9px] font-medium text-[color:var(--text-secondary)] px-1">
-                                      <span>Keyword</span>
-                                      <span className="text-center">In Resume</span>
-                                      <span className="text-center">In Job Ad</span>
-                                    </div>
-
-                                    {/* Missing Keywords List */}
-                                    <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                                      {atsKeywords
-                                        .filter(kw => !kw.inResume)
-                                        .slice(0, 5)
-                                        .map((kw, idx) => (
-                                          <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
-                                            <span className="text-[color:var(--text-primary)] truncate" title={kw.keyword}>
-                                              {kw.keyword}
-                                            </span>
-                                            <div className="flex justify-center">
-                                              <XCircle className="w-3 h-3 text-red-400" />
-                                            </div>
-                                            <span className="text-center text-[color:var(--text-secondary)]">{kw.inJobAd}</span>
-                                          </div>
-                                        ))}
-                                      
-                                      {keywordStats.missing > 5 && (
-                                        <div className="text-[8px] text-[color:var(--text-tertiary)] text-center py-1 italic">
-                                          +{keywordStats.missing - 5} more missing keywords
+                                      <div className="text-[8px] text-[color:var(--text-secondary)] pl-5">
+                                        {keywordStats.matched} of {keywordStats.total} keywords matched ({keywordStats.matchPercentage}%)
+                                      </div>
+                                      {fixesApplied && (
+                                        <div className="text-[8px] text-[color:var(--text-secondary)] pl-5 italic">
+                                          ✓ Fixes have been applied
                                         </div>
                                       )}
                                     </div>
-                                    
-                                    {/* Match Statistics */}
-                                    <div className="bg-[#252a1f] rounded-lg p-2 space-y-1">
-                                      <div className="text-[9px] text-[color:var(--text-secondary)]">
-                                        <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.matched}</span> of{' '}
-                                        <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.total}</span> keywords matched
+                                  );
+                                }
+
+                                if (keywordStats.missing > 0 && keywordStats.hasKeywords) {
+                                  return (
+                                    <>
+                                      {/* Keywords Table Header */}
+                                      <div className="grid grid-cols-3 gap-1 text-[9px] font-medium text-[color:var(--text-secondary)] px-1">
+                                        <span>Keyword</span>
+                                        <span className="text-center">In Resume</span>
+                                        <span className="text-center">In Job Ad</span>
                                       </div>
-                                      <div className="flex items-center gap-2">
-                                        <div className="flex-1 h-1.5 bg-[#1a230f] rounded-full overflow-hidden">
-                                          <div
-                                            className="h-full bg-[#80FF00] transition-all duration-500"
-                                            style={{ width: `${keywordStats.matchPercentage}%` }}
-                                          />
-                                        </div>
-                                        <span className="text-[8px] text-[color:var(--text-secondary)]">{keywordStats.matchPercentage}%</span>
-                                      </div>
-                                    </div>
-                                  </>
-                                );
-                              }
-                              
-                              // Fallback: No keywords found
-                              if (!keywordStats.hasKeywords && !isLoadingSkillGap) {
-                                return (
-                                  <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
-                                    No keywords found in job description
-                                  </div>
-                                );
-                              }
-                              
-                              // Fallback: Show fix annotations if available
-                              if ((state.fixAnnotations || []).filter(f => f.category === 'keywords' && f.status === 'open').length > 0) {
-                                return (
-                                  <>
-                                    <div className="grid grid-cols-3 gap-1 text-[9px] font-medium text-[color:var(--text-secondary)] px-1">
-                                      <span>Keyword</span>
-                                      <span className="text-center">In Resume</span>
-                                      <span className="text-center">In Job Ad</span>
-                                    </div>
-                                    <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                                      {(state.fixAnnotations || [])
-                                        .filter(f => f.category === 'keywords' && f.status === 'open')
-                                        .slice(0, 3)
-                                        .map((fix, idx) => (
-                                          <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
-                                            <span className="text-[color:var(--text-primary)] truncate">{fix.issue?.split(' ').slice(0, 2).join(' ') || 'Keyword'}</span>
-                                            <div className="flex justify-center">
-                                              <span className="text-red-400">✕</span>
+
+                                      {/* Missing Keywords List */}
+                                      <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                                        {atsKeywords
+                                          .filter(kw => !kw.inResume)
+                                          .slice(0, 5)
+                                          .map((kw, idx) => (
+                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
+                                              <span className="text-[color:var(--text-primary)] truncate" title={kw.keyword}>
+                                                {kw.keyword}
+                                              </span>
+                                              <div className="flex justify-center">
+                                                <XCircle className="w-3 h-3 text-red-400" />
+                                              </div>
+                                              <span className="text-center text-[color:var(--text-secondary)]">{kw.inJobAd}</span>
                                             </div>
-                                            <span className="text-center text-[color:var(--text-secondary)]">1</span>
+                                          ))}
+
+                                        {keywordStats.missing > 5 && (
+                                          <div className="text-[8px] text-[color:var(--text-tertiary)] text-center py-1 italic">
+                                            +{keywordStats.missing - 5} more missing keywords
                                           </div>
-                                        ))}
+                                        )}
+                                      </div>
+
+                                      {/* Match Statistics */}
+                                      <div className="bg-[#252a1f] rounded-lg p-2 space-y-1">
+                                        <div className="text-[9px] text-[color:var(--text-secondary)]">
+                                          <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.matched}</span> of{' '}
+                                          <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.total}</span> keywords matched
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <div className="flex-1 h-1.5 bg-[#1a230f] rounded-full overflow-hidden">
+                                            <div
+                                              className="h-full bg-[#80FF00] transition-all duration-500"
+                                              style={{ width: `${keywordStats.matchPercentage}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-[8px] text-[color:var(--text-secondary)]">{keywordStats.matchPercentage}%</span>
+                                        </div>
+                                      </div>
+                                    </>
+                                  );
+                                }
+
+                                // Fallback: No keywords found
+                                if (!keywordStats.hasKeywords && !isLoadingSkillGap) {
+                                  return (
+                                    <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
+                                      No keywords found in job description
                                     </div>
-                                  </>
-                                );
-                              }
-                              
-                              return null;
-                            })()}
+                                  );
+                                }
+
+                                // Fallback: Show fix annotations if available
+                                if ((state.fixAnnotations || []).filter(f => f.category === 'keywords' && f.status === 'open').length > 0) {
+                                  return (
+                                    <>
+                                      <div className="grid grid-cols-3 gap-1 text-[9px] font-medium text-[color:var(--text-secondary)] px-1">
+                                        <span>Keyword</span>
+                                        <span className="text-center">In Resume</span>
+                                        <span className="text-center">In Job Ad</span>
+                                      </div>
+                                      <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                                        {(state.fixAnnotations || [])
+                                          .filter(f => f.category === 'keywords' && f.status === 'open')
+                                          .slice(0, 3)
+                                          .map((fix, idx) => (
+                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
+                                              <span className="text-[color:var(--text-primary)] truncate">{fix.issue?.split(' ').slice(0, 2).join(' ') || 'Keyword'}</span>
+                                              <div className="flex justify-center">
+                                                <span className="text-red-400">✕</span>
+                                              </div>
+                                              <span className="text-center text-[color:var(--text-secondary)]">1</span>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    </>
+                                  );
+                                }
+
+                                return null;
+                              })()}
                             </div>
                           </div>
                         )}
@@ -2196,7 +2655,7 @@ export default function ResumeEnhancerContainer({
                                 </div>
                               );
                             }
-                            
+
                             if (openIssuesCount === 0 && keywordStats.allMatched) {
                               return (
                                 <div className="flex items-center gap-1.5">
@@ -2205,7 +2664,7 @@ export default function ResumeEnhancerContainer({
                                 </div>
                               );
                             }
-                            
+
                             if (openIssuesCount > 0) {
                               return (
                                 <span className="text-[10px] text-[color:var(--text-secondary)]">
@@ -2213,7 +2672,7 @@ export default function ResumeEnhancerContainer({
                                 </span>
                               );
                             }
-                            
+
                             if (!isJDReferenced && !isMasterCV) {
                               return (
                                 <span className="text-[10px] text-[color:var(--text-tertiary)] italic">
@@ -2221,7 +2680,7 @@ export default function ResumeEnhancerContainer({
                                 </span>
                               );
                             }
-                            
+
                             return (
                               <span className="text-[10px] text-[color:var(--text-secondary)]">
                                 No suggestions at this time
@@ -2238,11 +2697,10 @@ export default function ResumeEnhancerContainer({
                     <InfoTooltip content="Review mode highlights suggestions directly on your CV. Turn it on to see inline fixes and improvements.">
                       <button
                         onClick={() => dispatch({ type: 'SET_REVIEW_MODE', payload: !state.reviewMode })}
-                        className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                          state.reviewMode
-                            ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
-                            : 'bg-[#2a3520] text-[color:var(--text-secondary)] hover:bg-[#353f28]'
-                        }`}
+                        className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${state.reviewMode
+                          ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
+                          : 'bg-[#2a3520] text-[color:var(--text-secondary)] hover:bg-[#353f28]'
+                          }`}
                       >
                         Review mode: {state.reviewMode ? 'ON' : 'OFF'}
                       </button>
@@ -2268,122 +2726,137 @@ export default function ResumeEnhancerContainer({
                     )}
 
                     {/* Fix ATS Button (renamed from View report) */}
-                  <button
-                    onClick={async () => {
-                      if (isSidebarAnalyzing) return;
+                    <button
+                      onClick={async () => {
+                        if (isSidebarAnalyzing) return;
 
-                      // NOTE: Journey CVs use job description for analysis, don't require targetRole/seniorityLevel
-                      // Only standalone/master CVs need targetRole/seniorityLevel
-                      const isJourneyCV = state.cvType === 'journey' && (state.jobData || state.journeyId);
-                      
-                      if (!isJourneyCV) {
-                        // For standalone/master CVs, require targetRole and seniorityLevel
-                        let role = state.targetRole;
-                        let seniority = state.seniorityLevel;
-                        if (!role || !seniority) {
-                          const inferred = inferRoleContextFromCVData(state.cvData);
-                          if (inferred.targetRole && inferred.seniorityLevel) {
-                            role = inferred.targetRole;
-                            seniority = inferred.seniorityLevel;
-                            dispatch({
-                              type: 'SET_ROLE_CONTEXT',
-                              payload: { targetRole: inferred.targetRole, seniorityLevel: inferred.seniorityLevel }
-                            });
-                          } else {
-                            alert('Please set your target role and seniority level first.');
-                            return;
-                          }
+                        // For guest users, always show auth prompt when clicking Fix CV
+                        if (isGuestMode) {
+                          setShowAuthPrompt(true);
+                          setHasShownAuthPrompt(true);
+                          return; // Stop execution, auth prompt will be shown
                         }
-                      }
 
-                      // Check for JD requirement for standalone CVs
-                      if (state.cvType === 'standalone' && !isJDReferenced) {
-                        // Navigate to Step 3 if not already there, then open job parser
-                        if (state.currentStep !== 3) {
-                          goToStep(3);
-                        }
-                        setShowJobParserDialog(true);
-                        return;
-                      }
+                        // NOTE: Journey CVs use job description for analysis, don't require targetRole/seniorityLevel
+                        // Only standalone/master CVs need targetRole/seniorityLevel
+                        const isJourneyCV = state.cvType === 'journey' && (state.jobData || state.journeyId);
 
-                      setIsSidebarAnalyzing(true);
-                      try {
-                        // Ensure we have analysis + annotations before opening report
-                        // Use cache-aware method to avoid regenerating analysis unnecessarily
-                        if (!state.surgeonAnalysis || (state.fixAnnotations || []).length === 0) {
-                          const result = await CVSurgeonService.analyzeCVWithCache(
-                            state.cvData,
-                            role,
-                            seniority,
-                            state.cvId,
-                            userId,
-                            state.jobData
-                          );
-                          dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
-                          dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
+                        // Define role and seniority for both journey and non-journey CVs
+                        let role: string;
+                        let seniority: string;
 
-                          const firstOpenFromResult = result.annotations.find((f) => f.status === 'open');
-                          if (!state.activeFixId && firstOpenFromResult) {
-                            dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpenFromResult.id });
-                          }
-                          
-                          if (result.cached) {
-                            console.log('✅ Loaded cached analysis - no AI tokens used');
+                        if (isJourneyCV) {
+                          // For journey CVs, use job title and default seniority
+                          role = state.jobData?.jobTitle || state.jobData?.title || '';
+                          seniority = 'professional';
+                        } else {
+                          // For standalone/master CVs, require targetRole and seniorityLevel
+                          role = state.targetRole || '';
+                          seniority = state.seniorityLevel || '';
+                          if (!role || !seniority) {
+                            const inferred = inferRoleContextFromCVData(state.cvData);
+                            if (inferred.targetRole && inferred.seniorityLevel) {
+                              role = inferred.targetRole;
+                              seniority = inferred.seniorityLevel;
+                              dispatch({
+                                type: 'SET_ROLE_CONTEXT',
+                                payload: { targetRole: inferred.targetRole, seniorityLevel: inferred.seniorityLevel }
+                              });
+                            } else {
+                              alert('Please set your target role and seniority level first.');
+                              return;
+                            }
                           }
                         }
 
-                        // If we already had annotations, ensure an active issue is selected.
-                        const firstOpen = (state.fixAnnotations || []).find((f) => f.status === 'open');
-                        if (!state.activeFixId && firstOpen) dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
+                        // Check for JD requirement for standalone CVs (only for authenticated users)
+                        if (state.cvType === 'standalone' && !isJDReferenced) {
+                          // Navigate to Step 3 if not already there, then open job parser
+                          if (state.currentStep !== 3) {
+                            goToStep(3);
+                          }
+                          setShowJobParserDialog(true);
+                          return;
+                        }
 
-                        logResumeEnhancerEvent({
-                          action: 'resume_enhancer_report_opened',
-                          resourceType: 'cv',
-                          resourceId: state.cvId,
-                          metadata: { cvType: state.cvType, score: state.surgeonAnalysis?.score ?? null, source: 'sidebar' }
-                        });
+                        setIsSidebarAnalyzing(true);
+                        try {
+                          // Ensure we have analysis + annotations before opening report
+                          // Use cache-aware method to avoid regenerating analysis unnecessarily
+                          if (!state.surgeonAnalysis || (state.fixAnnotations || []).length === 0) {
+                            const result = await CVSurgeonService.analyzeCVWithCache(
+                              state.cvData,
+                              role,
+                              seniority,
+                              state.cvId,
+                              userId,
+                              state.jobData
+                            );
+                            dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
+                            dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
 
-                        dispatch({ type: 'SET_REPORT_OPEN', payload: true });
-                      } catch (error) {
-                        console.error('CV Surgeon analysis failed (sidebar View report):', error);
-                        const message = error instanceof Error ? error.message : 'CV Surgeon analysis failed';
-                        alert(message);
-                      } finally {
-                        setIsSidebarAnalyzing(false);
-                      }
-                    }}
-                    className="w-full px-3 py-2 rounded-lg bg-[#80FF00] hover:bg-[#70e600] text-black text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed"
-                    disabled={isSidebarAnalyzing}
-                  >
-                    {isSidebarAnalyzing ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Analyzing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3.5 h-3.5" />
-                          <span>Fix ATS</span>
-                      </>
-                    )}
-                  </button>
+                            const firstOpenFromResult = result.annotations.find((f) => f.status === 'open');
+                            if (!state.activeFixId && firstOpenFromResult) {
+                              dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpenFromResult.id });
+                            }
+
+                            if (result.cached) {
+                              console.log('✅ Loaded cached analysis - no AI tokens used');
+                            }
+                          }
+
+                          // If we already had annotations, ensure an active issue is selected.
+                          const firstOpen = (state.fixAnnotations || []).find((f) => f.status === 'open');
+                          if (!state.activeFixId && firstOpen) dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
+
+                          logResumeEnhancerEvent({
+                            action: 'resume_enhancer_report_opened',
+                            resourceType: 'cv',
+                            resourceId: state.cvId,
+                            metadata: { cvType: state.cvType, score: state.surgeonAnalysis?.score ?? null, source: 'sidebar' }
+                          });
+
+                          dispatch({ type: 'SET_REPORT_OPEN', payload: true });
+                        } catch (error) {
+                          console.error('CV Surgeon analysis failed (sidebar View report):', error);
+                          const message = error instanceof Error ? error.message : 'CV Surgeon analysis failed';
+                          alert(message);
+                        } finally {
+                          setIsSidebarAnalyzing(false);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-[#80FF00] hover:bg-[#70e600] text-black text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed"
+                      disabled={isSidebarAnalyzing}
+                    >
+                      {isSidebarAnalyzing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Analyzing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>{isJourneyCV ? 'Fix ATS' : 'Fix CV'}</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
 
-            {/* Vertical Step Indicator - Hidden on desktop since we have ribbon, shown on mobile if needed */}
-            <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-white/5 hidden">
-              <StepIndicator
-                orientation="vertical"
-                currentStep={state.currentStep}
-                completedSteps={completedSteps}
-                onStepClick={(step) => {
-                  if (completedSteps.includes(step)) {
-                    goToStep(step);
-                  }
-                }}
-              />
-            </div>
+              {/* Vertical Step Indicator - Hidden on desktop since we have ribbon, shown on mobile if needed */}
+              <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-white/5 hidden">
+                <StepIndicator
+                  orientation="vertical"
+                  currentStep={state.currentStep}
+                  completedSteps={completedSteps}
+                  onStepClick={(step) => {
+                    if (completedSteps.includes(step)) {
+                      goToStep(step);
+                    }
+                  }}
+                />
+              </div>
 
               {/* Membership Card (from dashboard sidebar concept) */}
               <SidebarMembershipCard />
@@ -2404,31 +2877,35 @@ export default function ResumeEnhancerContainer({
                     onMouseLeave={handleMenuContentMouseLeave}
                   >
                     <div className="p-2 space-y-1">
-                      {/* View Profile */}
-                      <motion.button
-                        onClick={handleProfileClick}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <User className="w-5 h-5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">View Profile</div>
-                        </div>
-                      </motion.button>
+                      {/* View Profile - Hidden in guest mode */}
+                      {!isGuestMode && (
+                        <motion.button
+                          onClick={handleProfileClick}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <User className="w-5 h-5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">View Profile</div>
+                          </div>
+                        </motion.button>
+                      )}
 
-                      {/* Settings */}
-                      <motion.button
-                        onClick={handleSettingsClick}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Settings className="w-5 h-5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">Settings</div>
-                        </div>
-                      </motion.button>
+                      {/* Settings - Hidden in guest mode */}
+                      {!isGuestMode && (
+                        <motion.button
+                          onClick={handleSettingsClick}
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Settings className="w-5 h-5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium truncate">Settings</div>
+                          </div>
+                        </motion.button>
+                      )}
 
                       {/* Theme Toggle */}
                       <div className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
@@ -2442,18 +2919,16 @@ export default function ResumeEnhancerContainer({
                         </div>
                         <button
                           onClick={toggleTheme}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${
-                            theme === 'dark'
-                              ? 'bg-lime-500'
-                              : 'bg-gray-200 dark:bg-gray-700'
-                          }`}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${theme === 'dark'
+                            ? 'bg-lime-500'
+                            : 'bg-gray-200 dark:bg-gray-700'
+                            }`}
                           type="button"
                           aria-label="Toggle theme"
                         >
                           <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                            }`}
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
+                              }`}
                           />
                         </button>
                       </div>
@@ -2486,18 +2961,28 @@ export default function ResumeEnhancerContainer({
                   whileTap={{ scale: 0.98 }}
                 >
                   <UserAvatar
-                    src={getUserAvatar(userData)}
-                    name={getUserDisplayName(userData)}
+                    src={isGuestMode ? undefined : getUserAvatar(userData)}
+                    name={
+                      isGuestMode
+                        ? 'Guest'
+                        : (state.cvData?.basics?.name?.trim() || getUserDisplayName(userData))
+                    }
                     size="sm"
                     className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0"
                   />
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {getUserDisplayName(userData)}
+                      {isGuestMode
+                        ? 'Guest'
+                        : (state.cvData?.basics?.name?.trim() || getUserDisplayName(userData))
+                      }
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {userData?.email || ''}
+                      {isGuestMode
+                        ? 'Not signed in'
+                        : (state.cvData?.basics?.email?.trim() || userData?.email || '')
+                      }
                     </div>
                   </div>
                   {/* Chevron Icon */}
@@ -2540,6 +3025,23 @@ export default function ResumeEnhancerContainer({
         {/* Main Content */}
         <main className="flex-1 min-h-0 overflow-hidden bg-[#1a230f]">
           <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
+            {/* Mode Validation Banner */}
+            {state.analysisModeInfo && state.currentStep === 3 && (
+              <div className="px-4 pt-4">
+                <ModeValidationBanner
+                  modeInfo={state.analysisModeInfo}
+                  onDismiss={() => dispatch({ type: 'CLEAR_MODE_WARNINGS' })}
+                  onActionClick={(action) => {
+                    if (action.toLowerCase().includes('role')) {
+                      setShowRoleModal(true);
+                    } else if (action.toLowerCase().includes('jd') || action.toLowerCase().includes('job')) {
+                      setShowJobParserDialog(true);
+                    }
+                  }}
+                  className="mb-2"
+                />
+              </div>
+            )}
             <AnimatePresence mode="wait">
               <motion.div
                 key={state.currentStep}
@@ -2550,7 +3052,11 @@ export default function ResumeEnhancerContainer({
                 className="h-full min-h-0 flex flex-col"
               >
                 {state.currentStep === 1 && (
-                  <Step1Parser onComplete={handleStep1Complete} />
+                  <Step1Parser
+                    onComplete={handleStep1Complete}
+                    mode={mode}
+                    cvType={state.cvType}
+                  />
                 )}
                 {state.currentStep === 2 && (
                   <Step2Template onComplete={handleStep2Complete} />
@@ -2562,9 +3068,9 @@ export default function ResumeEnhancerContainer({
                     onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
                   />
                 )}
-              {state.currentStep === 4 && (
-                <Step4Review />
-              )}
+                {state.currentStep === 4 && (
+                  <Step4Review />
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -2582,6 +3088,7 @@ export default function ResumeEnhancerContainer({
         }}
         isOnboardingMode={false}
         isGuestMode={isGuestMode}
+        cvType={state.cvType}
       />
 
       {/* Auth Prompt Modal - For guest users at Step 3 */}
@@ -2608,7 +3115,7 @@ export default function ResumeEnhancerContainer({
             setShowRoleModal(true);
           }
         }}
-        customDescription={state.cvType === 'standalone' 
+        customDescription={state.cvType === 'standalone'
           ? 'Add a Job Description for ATS check. This helps us provide more accurate analysis tailored to your target role by matching your CV against the job requirements.'
           : undefined
         }
@@ -2640,7 +3147,7 @@ export default function ResumeEnhancerContainer({
             if (selectedJob && userId) {
               const jobId = selectedJob.id || selectedJob._id;
               if (!jobId) return;
-              
+
               try {
                 const journeysResponse = await authenticatedFetchWithUserId(
                   `/api/application-journey?jobId=${jobId}`,
@@ -2661,6 +3168,24 @@ export default function ResumeEnhancerContainer({
         isOpen={showATSDeepDive}
         onClose={() => setShowATSDeepDive(false)}
         userId={userId}
+      />
+
+      {/* Mode Transition Dialog */}
+      <ModeTransitionDialog
+        isOpen={showModeTransitionDialog}
+        onClose={() => {
+          setShowModeTransitionDialog(false);
+          setModeTransitionData(null);
+        }}
+        onConfirm={() => {
+          setShowModeTransitionDialog(false);
+          setModeTransitionData(null);
+          dispatch({ type: 'CLEAR_MODE_WARNINGS' });
+        }}
+        fromMode={modeTransitionData?.fromMode || 'insufficient-data'}
+        toMode={modeTransitionData?.toMode || 'insufficient-data'}
+        transitionType={modeTransitionData?.transitionType as any || 'generic'}
+        cvType={state.cvType}
       />
     </div>
   );

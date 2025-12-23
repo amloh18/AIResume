@@ -206,19 +206,30 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       return [];
     }
 
+    console.log('🔍 getTargetedUsers called with filters:', JSON.stringify(filters, null, 2));
+
     // Note: Empty filters object {} is valid and means "all users" (excluding unsubscribed)
 
     await getConnection();
 
-    const AdminUserModel = await getAdminUser();
+    // Query the MAIN users collection, not adminusers
+    const UserModel = User;
+
+    // First, check total count of users
+    const totalUsers = await UserModel.countDocuments({});
+    console.log('📊 Total users in database:', totalUsers);
 
     const query: any = {
-      'emailCampaigns.unsubscribed': false, // Never target unsubscribed users
+      // Exclude deleted users
+      isDeleted: { $ne: true }
     };
+
+    console.log('🔍 Initial query (exclude deleted):', JSON.stringify(query, null, 2));
 
     // Apply membership plan filter
     if (filters.membershipPlans && Array.isArray(filters.membershipPlans) && filters.membershipPlans.length > 0) {
       query.currentPlanKey = { $in: filters.membershipPlans };
+      console.log('✅ Applied membershipPlans filter:', filters.membershipPlans);
     }
 
     // Apply user age filter (new users) - only if registrationDateRange is not set
@@ -226,33 +237,39 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
       const now = new Date();
       if (filters.userAge.type === 'new_users' && typeof filters.userAge.days === 'number') {
         const daysAgo = new Date(now.getTime() - filters.userAge.days * 24 * 60 * 60 * 1000);
-        query.registrationDate = { $gte: daysAgo };
+        query.createdAt = { $gte: daysAgo };
+        console.log('✅ Applied userAge filter (new_users):', filters.userAge.days, 'days, since:', daysAgo);
       } else if (filters.userAge.type === 'existing_users' && typeof filters.userAge.days === 'number') {
         const daysAgo = new Date(now.getTime() - filters.userAge.days * 24 * 60 * 60 * 1000);
-        query.registrationDate = { $lt: daysAgo };
+        query.createdAt = { $lt: daysAgo };
+        console.log('✅ Applied userAge filter (existing_users):', filters.userAge.days, 'days, before:', daysAgo);
       }
     }
 
     // Apply registration date range (takes precedence over userAge)
+    // Use createdAt field from User model
     if (filters.registrationDateRange) {
-      query.registrationDate = {};
+      query.createdAt = {};
       if (filters.registrationDateRange.startDate) {
-        query.registrationDate.$gte = new Date(filters.registrationDateRange.startDate);
+        query.createdAt.$gte = new Date(filters.registrationDateRange.startDate);
       }
       if (filters.registrationDateRange.endDate) {
-        query.registrationDate.$lte = new Date(filters.registrationDateRange.endDate);
+        query.createdAt.$lte = new Date(filters.registrationDateRange.endDate);
       }
+      console.log('✅ Applied registrationDateRange filter:', filters.registrationDateRange);
     }
 
     // Apply last active range
+    // User model uses 'lastLogin' not 'lastActiveAt'
     if (filters.lastActiveRange) {
-      query.lastActiveAt = {};
+      query.lastLogin = {};
       if (filters.lastActiveRange.startDate) {
-        query.lastActiveAt.$gte = new Date(filters.lastActiveRange.startDate);
+        query.lastLogin.$gte = new Date(filters.lastActiveRange.startDate);
       }
       if (filters.lastActiveRange.endDate) {
-        query.lastActiveAt.$lte = new Date(filters.lastActiveRange.endDate);
+        query.lastLogin.$lte = new Date(filters.lastActiveRange.endDate);
       }
+      console.log('✅ Applied lastActiveRange filter (using lastLogin field):', filters.lastActiveRange);
     }
 
     // Apply usage metrics
@@ -275,28 +292,49 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
           $lte: filters.usageMetrics.maxJourneysCompleted
         };
       }
+      console.log('✅ Applied usageMetrics filter:', filters.usageMetrics);
     }
 
     // Apply email verified filter
     if (filters.emailVerified !== undefined) {
       query.isEmailVerified = filters.emailVerified;
+      console.log('✅ Applied emailVerified filter:', filters.emailVerified);
     }
 
     // Apply deleted users filter
     if (filters.isDeleted !== undefined) {
       query.isDeleted = filters.isDeleted;
+      console.log('✅ Applied isDeleted filter:', filters.isDeleted);
     }
 
     // Apply region filter
     if (filters.region) {
       query.region = filters.region;
+      console.log('✅ Applied region filter:', filters.region);
     }
 
-    const users = await AdminUserModel.find(query).lean();
+    console.log('🔍 Final MongoDB query:', JSON.stringify(query, null, 2));
+
+    const users = await UserModel.find(query).lean();
+    console.log('📊 Query returned', users.length, 'users');
+
+    if (users.length > 0) {
+      console.log('👤 Sample user:', JSON.stringify(users[0], null, 2));
+    } else {
+      console.warn('⚠️ No users found! Checking if any users exist in User collection...');
+      const sampleUser = await UserModel.findOne({}).lean();
+      if (sampleUser) {
+        console.log('👤 Sample user (for comparison):', JSON.stringify(sampleUser, null, 2));
+      } else {
+        console.error('❌ NO USERS EXIST!');
+      }
+    }
+
     return users;
 
   } catch (error: any) {
     console.error('❌ Get targeted users failed:', error);
+    console.error('Stack:', error.stack);
     return [];
   }
 }
