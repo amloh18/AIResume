@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -275,7 +275,8 @@ const OptimizedNavigation: React.FC = () => {
       'jobs': '/dashboard/tracker',
       'canvas': '/dashboard/canvas',
       'settings': '/dashboard/settings',
-      'resume-enhancer': '/resume-enhancer'
+      'resume-enhancer': '/resume-enhancer',
+      'cover-letter-generator': '/cover-letter-editor?mode=create'
     };
 
     const targetRoute = routes[sectionId as keyof typeof routes];
@@ -333,12 +334,23 @@ const OptimizedNavigation: React.FC = () => {
       description: 'Saved CVs/ CL and Reports',
       route: '/dashboard/canvas'
     },
+
+  ];
+
+  const toolSections = [
     {
       id: 'resume-enhancer',
-      name: '✨ Resume Enhancer',
+      name: 'Resume Enhancer',
       icon: Target,
       description: 'AI-powered CV optimization',
       route: '/resume-enhancer'
+    },
+    {
+      id: 'cover-letter-generator',
+      name: 'Cover Letter Generator',
+      icon: PenTool,
+      description: 'Create custom cover letters',
+      route: '/cover-letter-editor?mode=create'
     },
     {
       id: 'extension',
@@ -453,6 +465,65 @@ const OptimizedNavigation: React.FC = () => {
             </Component>
           );
         })}
+
+
+        {/* Tools Section */}
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-2">
+          <div className="px-3 mb-2 hidden 2xl:block">
+            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Tools
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 2xl:grid-cols-2 gap-2">
+            {toolSections.map((section) => {
+              const Icon = section.icon;
+              const isActive = activeSection === section.id;
+              const isExternal = (section as any).external === true;
+
+              const Component = isExternal ? motion.a : motion.button;
+              const componentProps = isExternal
+                ? {
+                  href: section.route,
+                  target: '_blank',
+                  rel: 'noopener noreferrer',
+                  onClick: () => {
+                    if (isMobileMenuOpen) {
+                      setIsOpen(false);
+                    }
+                  }
+                }
+                : {
+                  onClick: () => handleNavigation(section.id),
+                  onMouseEnter: () => {
+                    if (!isExternal && section.route.startsWith('/')) {
+                      router.prefetch(section.route);
+                      preloadOnHover(section.id);
+                    }
+                  }
+                };
+
+              return (
+                <Component
+                  key={section.id}
+                  {...componentProps}
+                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-200 text-center border ${isActive
+                    ? 'bg-[rgb(129,255,0)]/10 border-[rgb(129,255,0)] text-black dark:text-white'
+                    : 'bg-gray-50 dark:bg-gray-800/50 border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' ? 'text-[var(--accent-primary)]' : ''}`} />
+                  <div className="hidden 2xl:block">
+                    <div className="text-xs font-medium leading-tight line-clamp-2">
+                      {section.name}
+                    </div>
+                  </div>
+                </Component>
+              );
+            })}
+          </div>
+        </div>
       </nav>
 
       {/* Admin Button - Only show for admin users */}

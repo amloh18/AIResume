@@ -7,7 +7,6 @@ import FocusModeToggle from './FocusModeToggle';
 import PageHeader from '@/components/dashboard/PageHeader';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
-import { useJobLimit } from '@/hooks/useJobLimit';
 
 interface JobsHeaderProps {
   onAddJob?: () => void; // Deprecated - kept for backward compatibility
@@ -18,6 +17,7 @@ interface JobsHeaderProps {
   isMobileMenuOpen?: boolean;
   viewMode: 'kanban' | 'list';
   onViewModeChange: (mode: 'kanban' | 'list') => void;
+  jobLimitInfo?: any; // Added to receive limit info from parent
   user: {
     name: string;
     email: string;
@@ -40,8 +40,7 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
   user,
   jobLimitInfo
 }) => {
-  const { limitInfo: hookLimitInfo } = useJobLimit();
-  const limitInfo = jobLimitInfo || hookLimitInfo;
+  const limitInfo = jobLimitInfo;
 
   return (
     <div className="space-y-3 sm:space-y-4 pb-2">
@@ -55,13 +54,12 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
           <>
             {/* Job Limit Indicator */}
             {limitInfo && !limitInfo.isUnlimited && (
-              <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${
-                limitInfo.remaining === 0 
-                  ? 'bg-red-500/10 text-red-500 border border-red-500/20' 
-                  : limitInfo.remaining <= 1
-                    ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-              }`}>
+              <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-lg ${limitInfo.remaining === 0
+                ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                : limitInfo.remaining <= 1
+                  ? 'bg-yellow-500/10 text-yellow-600 border border-yellow-500/20'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                }`}>
                 <span className="font-medium">
                   Jobs: {limitInfo.currentCount}/{limitInfo.limit}
                 </span>
@@ -97,11 +95,10 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
             <motion.button
               onClick={onQuickAdd}
               disabled={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0}
-              className={`p-2 tablet:px-3 tablet:px-4 tablet:py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg h-[36px] ${
-                limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0
-                  ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50'
-                  : 'bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black'
-              }`}
+              className={`p-2 tablet:px-3 tablet:px-4 tablet:py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg h-[36px] ${limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0
+                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed opacity-50'
+                : 'bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black'
+                }`}
               whileHover={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? {} : { scale: 1.02 }}
               whileTap={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? {} : { scale: 0.98 }}
               title={limitInfo && !limitInfo.isUnlimited && limitInfo.remaining === 0 ? 'Tracker Full - Upgrade' : 'Quick Add (Magic Paste)'}
@@ -121,8 +118,8 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
             <motion.button
               onClick={() => onViewModeChange('kanban')}
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 h-full ${viewMode === 'kanban'
-                  ? 'bg-white dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -134,8 +131,8 @@ const JobsHeader: React.FC<JobsHeaderProps> = ({
             <motion.button
               onClick={() => onViewModeChange('list')}
               className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2 h-full ${viewMode === 'list'
-                  ? 'bg-white dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                ? 'bg-white dark:bg-[#2a3a1f] text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
                 }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

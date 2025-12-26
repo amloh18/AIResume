@@ -16,6 +16,9 @@ export interface IJob extends Document {
   sponsorship?: 'yes' | 'no' | 'unknown';
   status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn'; // Single status field for Kanban board
   priority: 'low' | 'medium' | 'high';
+
+  // Active vs. Archived categorization for limit enforcement
+  isArchived: boolean; // If true, doesn't count against active job limit
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
@@ -49,11 +52,11 @@ export interface IJob extends Document {
     size: number;
     uploadedAt: Date;
   }>;
-  
+
   // Job source tracking
   source?: 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other';
   sourceUrl?: string;
-  
+
   // ATS tracking
   atsScore?: number;
   atsAnalysis?: {
@@ -62,14 +65,14 @@ export interface IJob extends Document {
     suggestions: string[];
     analyzedAt: Date;
   };
-  
+
   // Status change tracking
   statusHistory: Array<{
     status: string;
     changedAt: Date;
     previousStatus?: string;
   }>;
-  
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -143,6 +146,11 @@ const jobSchema = new Schema<IJob>({
     type: String,
     enum: ['low', 'medium', 'high'],
     default: 'medium'
+  },
+  // Active vs. Archived categorization for limit enforcement
+  isArchived: {
+    type: Boolean,
+    default: false
   },
   applicationDate: {
     type: Date
@@ -324,7 +332,7 @@ const jobSchema = new Schema<IJob>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret: any) {
+    transform: function (doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -343,7 +351,7 @@ jobSchema.index({ userId: 1, deadline: 1 }); // Deadline tracking
 jobSchema.index({ company: 'text', jobTitle: 'text' }); // Text search
 
 // Update lastModified on save
-jobSchema.pre('save', function(next) {
+jobSchema.pre('save', function (next) {
   if (this.isModified()) {
     this.updatedAt = new Date();
   }
@@ -351,7 +359,7 @@ jobSchema.pre('save', function(next) {
 });
 
 // Track status changes
-jobSchema.pre('save', function(next) {
+jobSchema.pre('save', function (next) {
   if (this.isModified('status') && !this.isNew) {
     if (!this.statusHistory) {
       this.statusHistory = [];
@@ -366,15 +374,15 @@ jobSchema.pre('save', function(next) {
 });
 
 // Auto-sync to calendar after save (only for non-created status)
-jobSchema.post('save', async function(doc) {
+jobSchema.post('save', async function (doc) {
   try {
     // Only sync if status is not 'created'
     if (doc.status !== 'created') {
       const { AutoSyncService } = await import('@/lib/services/autoSyncService');
-      
+
       // Get user identifier
       const userId = doc.userId?.toString();
-      
+
       if (userId) {
         // Run sync in background to avoid blocking the save operation
         setImmediate(() => {

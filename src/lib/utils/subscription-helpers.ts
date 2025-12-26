@@ -105,16 +105,16 @@ export function canUsePremiumTemplate(
   if (templateTier === 'free') {
     return { allowed: true };
   }
-  
+
   const limits = getPlanLimits(planKey);
-  
+
   if (!limits.premiumTemplates) {
     return {
       allowed: false,
       message: 'Premium templates require a Pro subscription. Upgrade to unlock all templates.'
     };
   }
-  
+
   return { allowed: true };
 }
 
@@ -151,17 +151,17 @@ export function handlePlanDowngrade(
     unlimitedDownloads: !isUnlimited(newLimits.downloads),
     unlimitedSurgeon: !isUnlimited(newLimits.surgeonRuns)
   };
-  
+
   let message = 'Your existing CVs and cover letters are preserved and can be viewed. ';
-  
+
   if (lockedResources.premiumTemplates) {
     message += 'Premium templates will switch to free alternatives on next edit. ';
   }
-  
+
   if (lockedResources.unlimitedDownloads) {
     message += `Downloads are now limited to ${newLimits.downloads}/month. `;
   }
-  
+
   return {
     preservedResources: {
       cvs: [], // Populated by caller
@@ -189,19 +189,19 @@ export function getExportWarnings(
   hasSpecialFormatting: boolean
 ): ExportWarning {
   const warnings: string[] = [];
-  
+
   if (format === 'docx') {
     if (templateLayout === 'two-column' || templateLayout === 'three-column') {
       warnings.push('Multi-column layouts may not preserve alignment in DOCX format');
     }
-    
+
     if (hasSpecialFormatting) {
       warnings.push('Some styling (gradients, shadows) will be simplified in DOCX');
     }
-    
+
     warnings.push('For best results, use PDF format for job applications');
   }
-  
+
   return {
     format,
     warnings,
@@ -233,7 +233,7 @@ export function calculatePagination(
   const page = Math.max(1, Math.min(currentPage, totalPages));
   const startIndex = (page - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalItems);
-  
+
   return {
     page,
     pageSize,
@@ -269,17 +269,17 @@ export function checkJDCache(
       message: 'No cached job description available'
     };
   }
-  
+
   const now = new Date();
   const cacheDate = new Date(cachedAt || 0);
   const daysSinceCached = (now.getTime() - cacheDate.getTime()) / (1000 * 60 * 60 * 24);
   const isStale = daysSinceCached > staleDays;
-  
+
   return {
     hasCache: true,
     cachedAt: cacheDate,
     isStale,
-    message: isStale 
+    message: isStale
       ? `Using cached job description from ${Math.round(daysSinceCached)} days ago. The job may have changed.`
       : undefined
   };
@@ -298,23 +298,23 @@ export interface PIIDetection {
 export function detectPII(cvData: any): PIIDetection {
   const detectedFields: string[] = [];
   const anonymizedData: Record<string, string> = {};
-  
+
   // Check common PII fields
   if (cvData.basics?.name) {
     detectedFields.push('name');
     anonymizedData['name'] = '[REDACTED NAME]';
   }
-  
+
   if (cvData.basics?.email) {
     detectedFields.push('email');
     anonymizedData['email'] = '[REDACTED EMAIL]';
   }
-  
+
   if (cvData.basics?.phone) {
     detectedFields.push('phone');
     anonymizedData['phone'] = '[REDACTED PHONE]';
   }
-  
+
   if (cvData.basics?.location) {
     detectedFields.push('location');
     // Keep city/country, remove specific address
@@ -323,7 +323,7 @@ export function detectPII(cvData: any): PIIDetection {
       anonymizedData['location'] = location.replace(/\d+[^,]*/g, '[ADDRESS]');
     }
   }
-  
+
   // Check for social profiles
   if (cvData.basics?.profiles) {
     cvData.basics.profiles.forEach((profile: any, index: number) => {
@@ -332,7 +332,7 @@ export function detectPII(cvData: any): PIIDetection {
       }
     });
   }
-  
+
   return {
     hasPII: detectedFields.length > 0,
     detectedFields,
@@ -386,7 +386,7 @@ export function handleEmailError(
       message: 'Could not send email. Download the CV and attach manually.'
     }
   };
-  
+
   return errorHandlers[errorCode.toString()] || errorHandlers['default'];
 }
 
@@ -403,11 +403,11 @@ export function isSubscriptionActive(
   if (subscription.status === 'inactive' || subscription.status === 'cancelled') {
     return { isActive: false, reason: 'Subscription is inactive' };
   }
-  
+
   if (subscription.status === 'expired') {
     return { isActive: false, reason: 'Subscription has expired' };
   }
-  
+
   // Check end date
   if (subscription.endDate) {
     const endDate = new Date(subscription.endDate);
@@ -415,7 +415,7 @@ export function isSubscriptionActive(
       return { isActive: false, reason: 'Subscription period has ended' };
     }
   }
-  
+
   // Check access expiry (for day passes)
   if (subscription.accessExpiresAt) {
     const expiresAt = new Date(subscription.accessExpiresAt);
@@ -423,7 +423,7 @@ export function isSubscriptionActive(
       return { isActive: false, reason: 'Access period has expired' };
     }
   }
-  
+
   return { isActive: true };
 }
 
@@ -436,26 +436,26 @@ export function getSubscriptionTimeRemaining(
   if (!endDate) {
     return { days: 0, hours: 0, isExpiringSoon: false, message: 'No expiry date' };
   }
-  
+
   const now = new Date();
   const end = new Date(endDate);
   const diffMs = end.getTime() - now.getTime();
-  
+
   if (diffMs <= 0) {
     return { days: 0, hours: 0, isExpiringSoon: true, message: 'Subscription has expired' };
   }
-  
+
   const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const isExpiringSoon = days < 7;
-  
+
   let message = '';
   if (days > 0) {
     message = `${days} day${days !== 1 ? 's' : ''} remaining`;
   } else {
     message = `${hours} hour${hours !== 1 ? 's' : ''} remaining`;
   }
-  
+
   return { days, hours, isExpiringSoon, message };
 }
 
@@ -475,7 +475,7 @@ export async function checkJourneyCVLimit(
   canDeleteToMakeSpace?: boolean;
 }> {
   const limits = getPlanLimits(planKey);
-  
+
   // Day Pass: Check if within 24h window
   if (planKey === 'day_pass' && subscription?.accessExpiresAt) {
     const expiresAt = new Date(subscription.accessExpiresAt);
@@ -485,12 +485,12 @@ export async function checkJourneyCVLimit(
     // Expired day pass reverts to free limits
     return checkJourneyCVLimit(userId, 'free');
   }
-  
+
   // Unlimited plans
   if (limits.activeJourneyCVs === -1) {
     return { allowed: true, currentActiveCount: -1, limit: -1 };
   }
-  
+
   // Count active (non-frozen) Journey CVs
   const CV = (await import('@/models/CV')).default;
   const currentActiveCount = await CV.countDocuments({
@@ -498,42 +498,42 @@ export async function checkJourneyCVLimit(
     cvType: 'journey',
     'metadata.isFrozen': { $ne: true }  // Exclude frozen CVs
   });
-  
+
   // For Pro Monthly: Check monthly limit (50)
   if (planKey === 'pro_monthly' && limits.activeJourneyCVs > 0) {
     // Count CVs created this month
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
-    
+
     const monthlyCount = await CV.countDocuments({
       userId,
       cvType: 'journey',
       createdAt: { $gte: startOfMonth },
       'metadata.isFrozen': { $ne: true }
     });
-    
+
     const remaining = Math.max(0, limits.activeJourneyCVs - monthlyCount);
-    
+
     return {
       allowed: remaining > 0,
       currentActiveCount: monthlyCount,
       limit: limits.activeJourneyCVs,
-      message: remaining === 0 
+      message: remaining === 0
         ? 'You have reached your monthly limit (50 Journey CVs). Archive old applications to create new ones, or upgrade to Yearly for unlimited.'
         : undefined,
       upgradeRequired: remaining === 0
     };
   }
-  
+
   // Free tier: 1 Active Journey CV
   const remaining = Math.max(0, limits.activeJourneyCVs - currentActiveCount);
-  
+
   return {
     allowed: remaining > 0,
     currentActiveCount,
     limit: limits.activeJourneyCVs,
-    message: remaining === 0 
+    message: remaining === 0
       ? 'You have 1 active Journey CV. Archive or delete it to create a new one, or Upgrade to Pro.'
       : undefined,
     upgradeRequired: remaining === 0,
@@ -542,7 +542,7 @@ export async function checkJourneyCVLimit(
 }
 
 /**
- * Check Job Tracker limit (3 for Free, unlimited for others)
+ * Check Job Tracker limit (3 active jobs for Free, unlimited for paid plans)
  */
 export async function checkJobLimit(
   userId: string,
@@ -555,38 +555,50 @@ export async function checkJobLimit(
   message?: string;
   upgradeRequired?: boolean;
 }> {
-  const limits = getPlanLimits(planKey);
-  
+  // CRITICAL FIX: Paid users (pro_monthly, pro_quarterly, pro_yearly) should always have unlimited
+  const isPaidPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey);
+
+  if (isPaidPlan) {
+    console.log(`✅ Job Limit Check - Paid user (${planKey}): Unlimited jobs allowed`);
+    return { allowed: true, currentCount: -1, limit: -1 };
+  }
+
   // Day Pass: Check if within 24h window
   if (planKey === 'day_pass' && subscription?.accessExpiresAt) {
     const expiresAt = new Date(subscription.accessExpiresAt);
     if (new Date() <= expiresAt) {
+      console.log(`✅ Job Limit Check - Active Day Pass: Unlimited jobs allowed`);
       return { allowed: true, currentCount: -1, limit: -1 };
     }
     // Expired day pass reverts to free limits
+    console.log(`⚠️ Job Limit Check - Expired Day Pass, reverting to free limits`);
     return checkJobLimit(userId, 'free');
   }
-  
-  // Unlimited plans
-  if (limits.maxJobs === -1) {
-    return { allowed: true, currentCount: -1, limit: -1 };
-  }
-  
-  // Count ALL jobs (including archived) for free users
+
+  // Free users: Only count ACTIVE (non-archived) jobs
+  // Limit: 3 active jobs, unlimited archived jobs
   const JobApplication = (await import('@/models/JobApplication')).default;
-  const currentCount = await JobApplication.countDocuments({
-    userId
-    // No filter - count all including archived
+
+  // CRITICAL FIX: Only count active jobs (isArchived !== true) for free users
+  const activeJobCount = await JobApplication.countDocuments({
+    userId,
+    $or: [
+      { isArchived: { $exists: false } }, // Old jobs without isArchived field
+      { isArchived: false }
+    ]
   });
-  
-  const remaining = Math.max(0, limits.maxJobs - currentCount);
-  
+
+  const FREE_TIER_LIMIT = 3;
+  const remaining = Math.max(0, FREE_TIER_LIMIT - activeJobCount);
+
+  console.log(`🔍 Job Limit Check - Free user: ${activeJobCount}/${FREE_TIER_LIMIT} active jobs`);
+
   return {
     allowed: remaining > 0,
-    currentCount,
-    limit: limits.maxJobs,
-    message: remaining === 0 
-      ? 'Tracker full. Upgrade to track unlimited applications.'
+    currentCount: activeJobCount,
+    limit: FREE_TIER_LIMIT,
+    message: remaining === 0
+      ? `You have ${activeJobCount}/${FREE_TIER_LIMIT} active jobs. Archive a job or upgrade to Pro for unlimited applications.`
       : undefined,
     upgradeRequired: remaining === 0
   };

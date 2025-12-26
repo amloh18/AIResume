@@ -7,7 +7,6 @@ import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
-import { useJourneyCVLimit } from '@/hooks/useJourneyCVLimit';
 
 interface Step1ParserProps {
   onComplete: (cvData: UnifiedCVDataStructure) => void;
@@ -21,7 +20,6 @@ interface Step1ParserProps {
 
 export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType }: Step1ParserProps) {
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText } = useResumeEnhancer();
-  const { limitInfo: journeyLimitInfo } = useJourneyCVLimit();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -202,38 +200,25 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     setParseMethod(null);
   };
 
-  /**
-   * Handle starting with a job (Journey CV flow)
-   */
   const handleStartWithJob = () => {
-    // EDGE CASE 1: Check Journey CV limit before allowing JD input
-    if (journeyLimitInfo && !journeyLimitInfo.allowed) {
-      alert(journeyLimitInfo.currentActiveCount > 0
-        ? `You have ${journeyLimitInfo.currentActiveCount} active Journey CV${journeyLimitInfo.currentActiveCount !== 1 ? 's' : ''}. Archive or delete one to create a new one, or upgrade to Pro.`
-        : 'Journey CV limit reached. Please upgrade to Pro for unlimited Journey CVs.');
-      return;
-    }
     setShowJDInput(true);
   };
 
-  // Show JD input panel if user chose to start with a job
+  // Show JD input as a magic paste modal if user chose to start with a job
   if (showJDInput) {
     return (
-      <div className="flex items-center justify-center min-h-[500px] mt-8">
-        <div className="w-full max-w-2xl px-6">
-          <JDInputPanel
-            onSubmit={handleJDSubmit}
-            onCancel={() => setShowJDInput(false)}
-            showJourneyIndicator={true}
-          />
-        </div>
-      </div>
+      <JDInputPanel
+        isModal={true}
+        onSubmit={handleJDSubmit}
+        onCancel={() => setShowJDInput(false)}
+        showJourneyIndicator={true}
+      />
     );
   }
 
   if (parseMethod === null) {
     return (
-      <div className="flex items-center justify-center min-h-[500px] mt-8">
+      <div className="flex items-center justify-center h-full min-h-[calc(100vh-200px)]">
         <div className="w-full max-w-5xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -273,13 +258,11 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 onClick={handleStartWithJob}
                 className="group relative bg-gradient-to-br from-[#141810] to-[#1a1f14] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--accent-primary)]/20 hover:scale-105 border border-[var(--accent-primary)]/20"
               >
-                {/* Popular badge */}
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-3 py-1 bg-[var(--accent-primary)] text-black text-xs font-bold rounded-full shadow-lg">
+                <div className="flex flex-col items-center text-center space-y-4">
+                  {/* RECOMMENDED chip badge - above icon */}
+                  <span className="inline-flex items-center px-4 py-1.5 bg-[#80FF00] text-black text-xs font-bold tracking-wide rounded-full">
                     RECOMMENDED
                   </span>
-                </div>
-                <div className="flex flex-col items-center text-center space-y-4 pt-2">
                   <div className="w-16 h-16 bg-[#80FF00]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Briefcase className="w-8 h-8 text-[#80FF00]" />
                   </div>
@@ -377,7 +360,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
   if (parseMethod === 'upload') {
     return (
-      <div className="flex items-center justify-center min-h-[500px] mt-8">
+      <div className="flex items-center justify-center h-full min-h-[calc(100vh-200px)]">
         <div className="w-full max-w-2xl px-6">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

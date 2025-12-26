@@ -66,6 +66,8 @@ export interface ResumeEnhancerState {
   isUserMaster: boolean; // Is this THE user's single Master CV
   fresherMode: boolean; // Education/Projects first layout (no work experience)
   hasMasterCV: boolean; // Does user already have a Master CV
+  isFirstCVCreation: boolean; // Is this the first CV the user is creating (0 CVs exist)
+  enforceMasterCVMode: boolean; // Lock UI to Master CV mode when creating first CV
 
   // Career Ecosystem: ATS Score & Template Cap
   atsScoreCap: number; // Template-based cap (default 100, creative = 70)
@@ -139,6 +141,8 @@ type ResumeEnhancerAction =
   | { type: 'SET_IS_USER_MASTER'; payload: boolean }
   | { type: 'SET_FRESHER_MODE'; payload: boolean }
   | { type: 'SET_HAS_MASTER_CV'; payload: boolean }
+  | { type: 'SET_IS_FIRST_CV_CREATION'; payload: boolean }
+  | { type: 'SET_ENFORCE_MASTER_CV_MODE'; payload: boolean }
   | { type: 'SET_ATS_SCORE_CAP'; payload: number }
   | { type: 'SET_ATS_SCORE'; payload: number }
   | { type: 'SET_KEYWORD_GAPS'; payload: KeywordGap[] }
@@ -186,6 +190,8 @@ const initialState: ResumeEnhancerState = {
   isUserMaster: false,
   fresherMode: false,
   hasMasterCV: false,
+  isFirstCVCreation: false,
+  enforceMasterCVMode: false,
   atsScoreCap: 100,
   atsScore: 0,
   keywordGaps: [],
@@ -449,6 +455,17 @@ function resumeEnhancerReducer(
 
     case 'SET_HAS_MASTER_CV':
       return { ...state, hasMasterCV: action.payload };
+
+    case 'SET_IS_FIRST_CV_CREATION':
+      return { ...state, isFirstCVCreation: action.payload };
+
+    case 'SET_ENFORCE_MASTER_CV_MODE':
+      // When enforcing master CV mode, also set cvType to master
+      return {
+        ...state,
+        enforceMasterCVMode: action.payload,
+        cvType: action.payload ? 'master' : state.cvType
+      };
 
     case 'SET_ATS_SCORE_CAP':
       return { ...state, atsScoreCap: action.payload };

@@ -39,11 +39,11 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
     if (!resetTime) return 'next month';
     const now = new Date();
     const reset = new Date(resetTime);
-    
+
     if (reset.getMonth() === now.getMonth() && reset.getFullYear() === now.getFullYear()) {
       return `on ${reset.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}`;
     }
-    
+
     return `on ${reset.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
   };
 
@@ -155,7 +155,7 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
                   <Crown className="w-4 h-4 text-[#80FF00]" />
                   Unlock Premium Power
                 </h5>
-                
+
                 {/* Feature Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                   {[
@@ -222,18 +222,14 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
                 initial={false}
               />
             </motion.button>
-            
+
             <div className="flex items-center justify-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
               <Shield className="w-3.5 h-3.5" />
               <span>Cancel anytime - with generous trial period</span>
             </div>
-            
-            <button
-              onClick={onClose}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium text-sm"
-            >
-              Continue with Free Plan
-            </button>
+
+
+            {/* Removed "Continue with Free Plan" button as per requirement to enforce upgrade/close choice */}
           </div>
         </motion.div>
       </motion.div>
