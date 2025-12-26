@@ -10,8 +10,8 @@ import { CoverLetterTemplate } from '@/lib/templates/cover-letter-templates';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { extractHeaderFromContent, extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
-// TODO: CoverLetterTemplateContent was deleted - need to reimplement or use alternative
-// import CoverLetterTemplateContent from '@/components/studio/CoverLetterTemplateContent';
+import CoverLetterTemplateContent from '@/components/cover-letter-editor/CoverLetterTemplateContent';
+
 
 interface CoverLetterEditorContainerProps {
   userId: string;
@@ -40,18 +40,18 @@ export default function CoverLetterEditorContainer({
   // Initialize based on mode
   useEffect(() => {
     if (initializedRef.current) return;
-    
+
     const initializeEditor = async () => {
       setIsLoading(true);
-      
+
       try {
         // Set mode
         dispatch({ type: 'SET_MODE', payload: mode });
-        
+
         // If journey mode, fetch CV and job from journey
         let effectiveCvId = cvId;
         let effectiveJobId = jobId;
-        
+
         if (mode === 'journey' && journeyId) {
           try {
             const journeyResponse = await fetch(`/api/application-journey/${journeyId}?userId=${userId}`);
@@ -72,7 +72,7 @@ export default function CoverLetterEditorContainer({
             console.error('Failed to load journey:', error);
           }
         }
-        
+
         // Load CV data if cvId provided (from direct prop or journey)
         let loadedCVData: UnifiedCVDataStructure | null = null;
         if (effectiveCvId) {
@@ -90,7 +90,7 @@ export default function CoverLetterEditorContainer({
             console.error('Failed to load CV:', error);
           }
         }
-        
+
         // Load job data if jobId provided (from direct prop or journey)
         if (effectiveJobId) {
           try {
@@ -106,7 +106,7 @@ export default function CoverLetterEditorContainer({
             console.error('Failed to load job:', error);
           }
         }
-        
+
         // Load existing cover letter if editing
         if (mode === 'edit' && coverLetterId) {
           try {
@@ -114,24 +114,24 @@ export default function CoverLetterEditorContainer({
             if (clResponse.ok) {
               const clResult = await clResponse.json();
               const coverLetter = clResult.coverLetter || clResult.data?.coverLetter;
-              
+
               if (coverLetter) {
                 // Extract header and body if not present
                 let header = coverLetter.header;
                 let body = coverLetter.body;
-                
+
                 if (!header || !body) {
                   header = header || extractHeaderFromContent(coverLetter.content || '');
                   body = body || extractBodyFromContent(coverLetter.content || '');
                 }
-                
+
                 // Find template if templateId exists
                 let template: CoverLetterTemplate | null = null;
                 if (coverLetter.templateId || coverLetter.metadata?.templateId) {
                   const templateId = coverLetter.templateId || coverLetter.metadata?.templateId;
                   template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || null;
                 }
-                
+
                 // Load CV data if cvId exists in cover letter (or from journey if not set)
                 let loadedCVDataForCL: UnifiedCVDataStructure | null = null;
                 const cvIdToLoad = coverLetter.cvId || effectiveCvId;
@@ -169,7 +169,7 @@ export default function CoverLetterEditorContainer({
                     console.error('Failed to load job for cover letter:', error);
                   }
                 }
-                
+
                 loadCoverLetter({
                   coverLetterId: coverLetter.id || coverLetter._id,
                   coverLetterData: {
@@ -189,7 +189,7 @@ export default function CoverLetterEditorContainer({
                   jobData: loadedJobDataForCL || state.jobData || undefined,
                   journeyId: journeyId || coverLetter.journeyId
                 });
-                
+
                 setCompletedSteps([1]); // Editor step completed
               }
             }
@@ -204,23 +204,23 @@ export default function CoverLetterEditorContainer({
               const clResult = await clResponse.json();
               const coverLetters = clResult.data?.coverLetters || [];
               const existingCL = coverLetters.find((cl: any) => cl.journeyId === journeyId);
-              
+
               if (existingCL) {
                 // Load existing cover letter
                 let header = existingCL.header;
                 let body = existingCL.body;
-                
+
                 if (!header || !body) {
                   header = header || extractHeaderFromContent(existingCL.content || '');
                   body = body || extractBodyFromContent(existingCL.content || '');
                 }
-                
+
                 let template: CoverLetterTemplate | null = null;
                 if (existingCL.templateId || existingCL.metadata?.templateId) {
                   const templateId = existingCL.templateId || existingCL.metadata?.templateId;
                   template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || null;
                 }
-                
+
                 // Load CV data if cvId exists (prefer journey's CV if available)
                 let loadedCVDataForJourney: UnifiedCVDataStructure | null = null;
                 const cvIdToLoadForJourney = effectiveCvId || existingCL.cvId;
@@ -258,7 +258,7 @@ export default function CoverLetterEditorContainer({
                     console.error('Failed to load job for journey cover letter:', error);
                   }
                 }
-                
+
                 loadCoverLetter({
                   coverLetterId: existingCL.id || existingCL._id,
                   coverLetterData: {
@@ -278,13 +278,13 @@ export default function CoverLetterEditorContainer({
                   jobData: loadedJobDataForJourney || state.jobData || undefined,
                   journeyId: journeyId
                 });
-                
+
                 setCompletedSteps([1]);
               } else {
                 // Create new cover letter for journey
                 dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
                 dispatch({ type: 'SET_COVER_LETTER_TITLE', payload: `Cover Letter - ${new Date().toLocaleDateString()}` });
-                
+
                 // Auto-populate header if CV data available
                 if (loadedCVData) {
                   setCVData(loadedCVData);
@@ -300,12 +300,12 @@ export default function CoverLetterEditorContainer({
           dispatch({ type: 'SET_COVER_LETTER_TITLE', payload: 'Untitled Cover Letter' });
           // Auto-populate will happen in Step2Edit when CV data is set
         }
-        
+
         // Set journey ID if provided
         if (journeyId) {
           dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
         }
-        
+
         // Set CV and job IDs in cover letter data
         if (cvId) {
           dispatch({ type: 'UPDATE_COVER_LETTER_DATA', payload: { cvId } });
@@ -316,7 +316,7 @@ export default function CoverLetterEditorContainer({
         if (journeyId) {
           dispatch({ type: 'UPDATE_COVER_LETTER_DATA', payload: { journeyId } });
         }
-        
+
         initializedRef.current = true;
       } catch (error) {
         console.error('Failed to initialize editor:', error);
@@ -419,11 +419,10 @@ export default function CoverLetterEditorContainer({
                 <button
                   onClick={handleStepComplete}
                   disabled={!canGoToNextStep()}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${
-                    !canGoToNextStep()
+                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${!canGoToNextStep()
                       ? 'opacity-50 cursor-not-allowed'
                       : 'bg-lime-500 dark:bg-[#99FF00] hover:bg-lime-600 dark:hover:bg-[#88e600] text-black'
-                  }`}
+                    }`}
                 >
                   Review
                   <ChevronRight className="w-4 h-4" />

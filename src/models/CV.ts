@@ -11,6 +11,11 @@ export interface ICV extends Document {
   journeyId?: mongoose.Types.ObjectId; // Optional link to an application journey
   cvType: 'master' | 'journey' | 'standalone'; // NEW: Type of CV for Resume Enhancer
   status: 'draft' | 'published' | 'archived';
+
+  // Document state for limit enforcement (Vault View)
+  documentState: 'editable' | 'frozen' | 'read-only';
+  frozenAt?: Date; // Timestamp when document was frozen
+  frozenReason?: 'plan_downgrade' | 'limit_exceeded' | 'pass_expired' | 'premium_template_restriction';
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -89,6 +94,22 @@ const cvSchema = new Schema<ICV>({
     enum: ['draft', 'published', 'archived'],
     default: 'draft'
   },
+  // Document state for limit enforcement (Vault View)
+  documentState: {
+    type: String,
+    enum: ['editable', 'frozen', 'read-only'],
+    default: 'editable',
+    required: true
+  },
+  frozenAt: {
+    type: Date,
+    default: null
+  },
+  frozenReason: {
+    type: String,
+    enum: ['plan_downgrade', 'limit_exceeded', 'pass_expired', 'premium_template_restriction'],
+    default: null
+  },
   version: {
     type: Number,
     default: 1
@@ -134,7 +155,7 @@ const cvSchema = new Schema<ICV>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret: any) {
+    transform: function (doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -155,18 +176,18 @@ cvSchema.index({ 'metadata.tags': 1 }); // Tag-based searches
 cvSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Public CVs
 
 // Update lastModified on save and ensure only one master CV per user
-cvSchema.pre('save', async function(next) {
+cvSchema.pre('save', async function (next) {
   this.metadata.lastModified = new Date();
-  
-    // If this CV is being set as master, unset any existing master CV for this user
-    if (this.metadata.isMaster && (this.isModified('metadata.isMaster') || this.isNew)) {
-      const CVModel = this.constructor as any;
-      await CVModel.updateMany(
-        { userId: this.userId, _id: { $ne: this._id } },
-        { $set: { 'metadata.isMaster': false } }
-      );
-    }
-  
+
+  // If this CV is being set as master, unset any existing master CV for this user
+  if (this.metadata.isMaster && (this.isModified('metadata.isMaster') || this.isNew)) {
+    const CVModel = this.constructor as any;
+    await CVModel.updateMany(
+      { userId: this.userId, _id: { $ne: this._id } },
+      { $set: { 'metadata.isMaster': false } }
+    );
+  }
+
   next();
 });
 

@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { useCoverLetterEditor } from '@/contexts/CoverLetterEditorContext';
-// TODO: CoverLetterTemplateContent was deleted - need to reimplement or use alternative
-// import CoverLetterTemplateContent from '@/components/studio/CoverLetterTemplateContent';
+import CoverLetterTemplateContent from '@/components/cover-letter-editor/CoverLetterTemplateContent';
 import { CoverLetterTemplate } from '@/lib/templates/cover-letter-templates';
+
 
 export default function Step1Template() {
   const { state, setTemplate } = useCoverLetterEditor();

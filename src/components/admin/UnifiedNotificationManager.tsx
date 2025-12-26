@@ -56,6 +56,7 @@ export default function UnifiedNotificationManager() {
     const [testInteractive, setTestInteractive] = useState(false);
     const [testActionType, setTestActionType] = useState('');
     const [testActionUrl, setTestActionUrl] = useState('');
+    const [testChannels, setTestChannels] = useState<('in-app' | 'email')[]>(['in-app']);
     const [sendingAllTest, setSendingAllTest] = useState(false);
 
     // --- Discount Offer State ---
@@ -138,7 +139,7 @@ export default function UnifiedNotificationManager() {
                     actionType: testActionType || undefined,
                     actionData: testActionUrl ? { url: testActionUrl } : undefined,
                     interactive: testInteractive,
-                    channels: ['in-app', 'email'],
+                    channels: testChannels,
                     persistent: false,
                 }),
             });
@@ -533,6 +534,40 @@ export default function UnifiedNotificationManager() {
                                     <div className="space-y-2">
                                         <Label>Message</Label>
                                         <Textarea value={testMessage} onChange={(e) => setTestMessage(e.target.value)} rows={2} />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label>Delivery Channels</Label>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={testChannels.includes('in-app')}
+                                                    onChange={(e) => {
+                                                        const channels = e.target.checked
+                                                            ? [...testChannels, 'in-app']
+                                                            : testChannels.filter((c) => c !== 'in-app');
+                                                        setTestChannels(channels as ('in-app' | 'email')[]);
+                                                    }}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                <span>In-App</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={testChannels.includes('email')}
+                                                    onChange={(e) => {
+                                                        const channels = e.target.checked
+                                                            ? [...testChannels, 'email']
+                                                            : testChannels.filter((c) => c !== 'email');
+                                                        setTestChannels(channels as ('in-app' | 'email')[]);
+                                                    }}
+                                                    className="rounded border-gray-300"
+                                                />
+                                                <span>Email</span>
+                                            </label>
+                                        </div>
                                     </div>
 
                                     <div className="space-y-4 pt-4 border-t">

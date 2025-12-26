@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { JobApplication, ApplicationJourney } from '@/models';
+import { JobApplication, ApplicationJourney, CV } from '@/models';
 import mongoose from 'mongoose';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
 import { withTransaction } from '@/lib/utils/db-transaction';
@@ -219,6 +219,75 @@ export async function POST(request: NextRequest) {
     const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
       ? new mongoose.Types.ObjectId(userId)
       : userId;
+
+    // MASTER CV CHECK: Ensure user has a Master CV before creating jobs
+    // Exception: Draft jobs can be created without Master CV (with a reminder banner in UI)
+    if (jobStatus === 'created') {
+      const cvCount = await CV.countDocuments({
+        userId: normalizedUserId
+      });
+
+      if (cvCount === 0) {
+        console.log(`❌ [${source.toUpperCase()}] Jobs API - Cannot create job without any CVs`);
+
+        // Use extension error format for extension requests
+        if (source === 'extension') {
+          return setCorsHeaders(
+            NextResponse.json(
+              formatExtensionError(
+                ExtensionErrorCode.JOB_CREATION_FAILED,
+                'Please create your Master CV on the web app first before adding jobs.',
+                {
+                  requiresMasterCV: true,
+                  redirectTo: '/resume-enhancer?mode=create&type=master'
+                }
+              ),
+              { status: 409 }
+            ),
+            request
+          );
+        }
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Please create your Master CV first before adding jobs',
+            requiresMasterCV: true,
+            redirectTo: '/resume-enhancer?mode=create&type=master',
+            suggestedAction: 'Create Master CV',
+            cvCount: 0
+          },
+          { status: 409 } // 409 Conflict
+        );
+      }
+
+      // Check if user has a Master CV specifically (warn but don't block)
+      const hasMasterCV = await CV.findOne({
+        userId: normalizedUserId,
+        $or: [
+          { 'metadata.isMaster': true },
+          { 'metadata.isMaster': 'true' },
+          { cvType: 'master' },
+          { 'metadata.createdVia': 'ai-career-report' }
+        ]
+      });
+
+      if (!hasMasterCV) {
+        console.log(`⚠️ [${source.toUpperCase()}] Jobs API - User has CVs but no Master CV (will proceed with warning)`);
+        // User has CVs but no Master CV - allow but log for analytics
+        // This handles edge case where user somehow has journey/standalone CVs without master
+      }
+    } else if (jobStatus === 'draft') {
+      // For draft jobs, just log if no Master CV exists (UI will show reminder banner)
+      const cvCount = await CV.countDocuments({
+        userId: normalizedUserId
+      });
+
+      if (cvCount === 0) {
+        console.log(`📝 [${source.toUpperCase()}] Jobs API - Creating draft job with no CVs (reminder will be shown in UI)`);
+      }
+    }
+
 
     // ATOMIC OPERATION: Wrap job creation + limit check in transaction (only for 'created' status)
     // EDGE CASE 3: Draft jobs don't count toward limit, so we can create them without transaction
@@ -673,7 +742,7 @@ export async function POST(request: NextRequest) {
         if (cvId && jobStatus === 'created') {
           try {
             console.log('🔗 Jobs API - Linking CV to journey:', cvId);
-            
+
             // EDGE CASE 2: Verify CV exists and is standalone (not already linked)
             const CV = (await import('@/models/CV')).default;
             const cv = await CV.findOne({

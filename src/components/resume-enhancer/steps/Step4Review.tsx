@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { downloadAsPDF } from '@/lib/utils/download';
 import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
+import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch } = useResumeEnhancer();
@@ -18,7 +19,7 @@ export default function Step4Review() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
-  
+
   // Calculate scores using the scoring service
   const scoreResult = useMemo(() => {
     return CVScoringService.getFullScoreResult(
@@ -27,14 +28,14 @@ export default function Step4Review() {
       state.atsScoreCap
     );
   }, [state.cvData, state.keywordGapAnalysis, state.atsScoreCap]);
-  
+
   // Determine which score to show prominently
   const isJourneyCV = state.cvType === 'journey';
-  const primaryScore = isJourneyCV && scoreResult.atsScore 
-    ? scoreResult.atsScore.total 
+  const primaryScore = isJourneyCV && scoreResult.atsScore
+    ? scoreResult.atsScore.total
     : scoreResult.cvScore.total;
   const primaryScoreLabel = isJourneyCV ? 'ATS Match' : 'Profile Strength';
-  
+
   /**
    * Get color for score display
    */
@@ -43,7 +44,7 @@ export default function Step4Review() {
     if (score >= 60) return 'text-yellow-500';
     return 'text-red-500';
   };
-  
+
   const getScoreBgColor = (score: number): string => {
     if (score >= 80) return 'bg-green-500';
     if (score >= 60) return 'bg-yellow-500';
@@ -52,7 +53,7 @@ export default function Step4Review() {
 
   const handleEditCoverLetter = () => {
     const params = new URLSearchParams();
-    
+
     // If CV is a journey CV, use 'journey' mode (which will edit if cover letter exists, otherwise create)
     // If CV is standalone, use 'create' mode
     if (state.cvType === 'journey' && state.journeyId) {
@@ -67,7 +68,7 @@ export default function Step4Review() {
       params.set('mode', 'create');
       if (state.cvId) params.set('cvId', state.cvId);
     }
-    
+
     router.push(`/cover-letter-editor?${params.toString()}`);
   };
 
@@ -80,7 +81,7 @@ export default function Step4Review() {
     setIsDownloading(true);
     try {
       const filename = `${state.cvTitle || 'CV'}.pdf`;
-      
+
       // Find the preview element for client-side fallback
       let previewElement: HTMLElement | null = null;
       if (previewRef.current) {
@@ -88,7 +89,7 @@ export default function Step4Review() {
           previewRef.current.querySelector('[class*="cv-preview"]') as HTMLElement ||
           previewRef.current;
       }
-      
+
       // If cvId exists, use server-side API; otherwise use client-side generation
       await downloadAsPDF(
         previewElement || previewRef.current || document.body,
@@ -156,7 +157,7 @@ export default function Step4Review() {
               <p className="text-xs text-[color:var(--text-secondary)] mt-1">
                 Grade: <span className={`font-bold ${getScoreColor(primaryScore)}`}>{scoreResult.overallGrade}</span>
               </p>
-              
+
               {/* ATS Score Cap Warning for Journey CVs */}
               {isJourneyCV && state.atsScoreCap < 100 && (
                 <div className="mt-2 flex items-center justify-center gap-1 text-xs text-yellow-500">
@@ -172,7 +173,7 @@ export default function Step4Review() {
                 <TrendingUp className="w-4 h-4 text-[var(--accent-primary)]" />
                 <p className="text-xs font-medium text-[color:var(--text-primary)]">Score Breakdown</p>
               </div>
-              
+
               {isJourneyCV && scoreResult.atsScore ? (
                 // ATS Score Breakdown for Journey CVs
                 <div className="space-y-2">
@@ -224,13 +225,12 @@ export default function Step4Review() {
                   {state.keywordGaps.slice(0, 8).map((gap, i) => (
                     <span
                       key={i}
-                      className={`text-xs px-2 py-0.5 rounded-full ${
-                        gap.importance === 'critical'
-                          ? 'bg-red-500/20 text-red-400'
-                          : gap.importance === 'preferred'
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-gray-500/20 text-gray-400'
-                      }`}
+                      className={`text-xs px-2 py-0.5 rounded-full ${gap.importance === 'critical'
+                        ? 'bg-red-500/20 text-red-400'
+                        : gap.importance === 'preferred'
+                          ? 'bg-yellow-500/20 text-yellow-400'
+                          : 'bg-gray-500/20 text-gray-400'
+                        }`}
                     >
                       {gap.keyword}
                     </span>
@@ -249,12 +249,12 @@ export default function Step4Review() {
               <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
                 <div className="flex items-center justify-between">
                   <div>
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">CV Type</p>
+                    <p className="text-xs text-[color:var(--text-tertiary)] mb-1">CV Type</p>
                     <p className="font-semibold text-[color:var(--text-primary)] capitalize text-sm flex items-center gap-1">
                       {state.cvType === 'master' && <Award className="w-3 h-3 text-[var(--accent-primary)]" />}
                       {state.cvType === 'journey' && <Target className="w-3 h-3 text-blue-500" />}
-                  {state.cvType}
-                </p>
+                      {state.cvType}
+                    </p>
                   </div>
                   {state.cvType === 'journey' && state.jobData && (
                     <div className="text-right">
@@ -286,12 +286,12 @@ export default function Step4Review() {
             </div>
 
             {/* Cover Letter Section */}
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
+            <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-[var(--accent-primary)]" />
                   <p className="text-xs font-medium text-[color:var(--text-primary)]">Cover Letter</p>
-              </div>
+                </div>
                 {state.autoGeneratedCoverLetter && (
                   <span className="text-xs text-green-500 flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
@@ -299,13 +299,13 @@ export default function Step4Review() {
                   </span>
                 )}
               </div>
-              
+
               {/* Cover Letter Preview */}
               {state.autoGeneratedCoverLetter && (
                 <div className="mb-2 p-2 bg-[var(--bg-primary)] rounded text-xs text-[color:var(--text-secondary)] max-h-20 overflow-hidden relative">
                   <p className="line-clamp-3">{state.autoGeneratedCoverLetter.substring(0, 200)}...</p>
                   <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
-            </div>
+                </div>
               )}
 
               <button
@@ -314,10 +314,10 @@ export default function Step4Review() {
               >
                 <FileText className="w-4 h-4" />
                 <span>
-                  {state.autoGeneratedCoverLetter 
-                    ? 'Edit Cover Letter' 
-                    : state.cvType === 'journey' 
-                      ? 'Generate Cover Letter' 
+                  {state.autoGeneratedCoverLetter
+                    ? 'Edit Cover Letter'
+                    : state.cvType === 'journey'
+                      ? 'Generate Cover Letter'
                       : 'Create Cover Letter'
                   }
                 </span>
@@ -379,24 +379,24 @@ export default function Step4Review() {
             </div>
           </div>
           <div className="flex-1 overflow-y-auto p-4" ref={previewRef}>
-          {state.selectedTemplate ? (
-            <CVPreviewContent
-              cvData={state.cvData}
-              selectedTemplate={state.selectedTemplate}
-              jobData={state.jobData}
-              zoom={zoom}
-              setZoom={setZoom}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center py-8">
-                <AlertCircle className="w-12 h-12 text-[color:var(--text-tertiary)] mx-auto mb-3" />
-                <p className="text-sm text-[color:var(--text-secondary)]">
-                  No template selected. Please go back and select a template.
-                </p>
+            {state.selectedTemplate ? (
+              <CVPreviewContent
+                cvData={state.cvData}
+                selectedTemplate={state.selectedTemplate}
+                jobData={state.jobData}
+                zoom={zoom}
+                setZoom={setZoom}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 text-[color:var(--text-tertiary)] mx-auto mb-3" />
+                  <p className="text-sm text-[color:var(--text-secondary)]">
+                    No template selected. Please go back and select a template.
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </div>
@@ -433,18 +433,11 @@ export default function Step4Review() {
 
               {/* Modal Content */}
               <div className="flex-1 overflow-y-auto p-6">
-                {/* TODO: TemplateSelector was deleted - need to implement replacement */}
-                <div className="text-center py-12 text-[color:var(--text-secondary)]">
-                  <p>Template selector component needs to be reimplemented</p>
-                  <p className="text-sm mt-2">Template selection temporarily disabled</p>
-                </div>
-                {/* 
                 <TemplateSelector
                   selectedTemplate={state.selectedTemplate}
                   onTemplateSelect={handleTemplateSelect}
                   cvData={state.cvData}
                 />
-                */}
               </div>
             </motion.div>
           </motion.div>
@@ -459,13 +452,13 @@ export default function Step4Review() {
  */
 function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
   const percentage = (value / max) * 100;
-  
+
   const getBarColor = (pct: number): string => {
     if (pct >= 80) return 'bg-green-500';
     if (pct >= 60) return 'bg-yellow-500';
     return 'bg-red-500';
   };
-  
+
   return (
     <div className="flex items-center gap-2">
       <span className="text-xs text-[color:var(--text-tertiary)] w-24 truncate">{label}</span>

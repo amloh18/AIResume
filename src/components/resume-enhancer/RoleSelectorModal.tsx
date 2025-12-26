@@ -101,12 +101,12 @@ export default function RoleSelectorModal({
 
       work.forEach(exp => {
         const startDate = new Date(exp.startDate);
-        const endDate = exp.endDate && exp.endDate !== 'Present' 
-          ? new Date(exp.endDate) 
+        const endDate = exp.endDate && exp.endDate !== 'Present'
+          ? new Date(exp.endDate)
           : now;
 
         const months = (endDate.getFullYear() - startDate.getFullYear()) * 12 +
-                      (endDate.getMonth() - startDate.getMonth());
+          (endDate.getMonth() - startDate.getMonth());
         totalMonths += months;
       });
 
@@ -130,7 +130,7 @@ export default function RoleSelectorModal({
       // Don't allow skip in onboarding/guest mode
       return;
     }
-    
+
     if (submitType === 'skip') {
       onSubmit({
         targetRole: '',
@@ -175,8 +175,8 @@ export default function RoleSelectorModal({
                 <div className="flex items-center space-x-3">
                   <Target className="w-8 h-8 text-gray-900 dark:text-white" />
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {isOnboardingMode || isGuestMode ? 'Create Your Master CV - Define Target Role' : 'Define Your Target Role'}
-              </h2>
+                    {isOnboardingMode || isGuestMode ? 'Create Your Master CV - Define Target Role' : 'Define Your Target Role'}
+                  </h2>
                 </div>
                 <button
                   onClick={onClose}
@@ -186,7 +186,7 @@ export default function RoleSelectorModal({
                 </button>
               </div>
               <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">
-                {isOnboardingMode || isGuestMode 
+                {isOnboardingMode || isGuestMode
                   ? "Your Master CV will be optimized for this role and serve as the foundation for all your job applications."
                   : "Help us tailor your resume for maximum impact"}
               </p>
@@ -209,15 +209,15 @@ export default function RoleSelectorModal({
                   </div>
                 </label>
                 <div className="relative" ref={roleInputRef}>
-                <input
-                  type="text"
-                  value={targetRole}
-                  onChange={(e) => {
-                    setTargetRole(e.target.value);
-                    setRoleAutoFilled(false);
-                  }}
+                  <input
+                    type="text"
+                    value={targetRole}
+                    onChange={(e) => {
+                      setTargetRole(e.target.value);
+                      setRoleAutoFilled(false);
+                    }}
                     onFocus={() => setShowRoleSuggestions(true)}
-                  placeholder="e.g., Software Engineer, Product Manager"
+                    placeholder="e.g., Software Engineer, Product Manager"
                     className="w-full px-4 py-3 rounded-lg focus:outline-none focus:border-[#80FF00] bg-gray-50 dark:bg-[#1a2015] border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
                   />
                   {/* Autocomplete Suggestions */}
@@ -230,7 +230,7 @@ export default function RoleSelectorModal({
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
-                          className="absolute z-10 w-full mt-2 bg-white dark:bg-[#1a2015] rounded-lg shadow-xl shadow-black/20 dark:shadow-black/50 border border-gray-200 dark:border-white/10 max-h-60 overflow-y-auto"
+                          className="absolute z-10 w-full mt-2 bg-white dark:bg-[#1a2015] rounded-lg shadow-xl shadow-black/20 dark:shadow-black/50 border border-gray-200 dark:border-white/10 max-h-40 overflow-y-auto"
                         >
                           {filteredSuggestions.map((role, index) => (
                             <button
@@ -276,11 +276,10 @@ export default function RoleSelectorModal({
                         setSeniorityLevel(level.value);
                         setSeniorityAutoFilled(false);
                       }}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        seniorityLevel === level.value
+                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${seniorityLevel === level.value
                           ? 'bg-[#80FF00] text-black shadow-md'
                           : 'bg-gray-100 dark:bg-[#1a2015] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#222327] border border-gray-200 dark:border-white/10'
-                      }`}
+                        }`}
                     >
                       {level.label}
                     </button>

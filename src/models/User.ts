@@ -5,7 +5,7 @@ export interface IUser extends Document {
   // SINGLE SOURCE OF TRUTH: Authentication linking
   authProviderId: string; // The unique string ID from NextAuth
   authProvider: 'nextauth' | 'local' | 'firebase';
-  
+
   // Core user information
   email: string;
   password?: string; // Optional - only for local auth users
@@ -16,9 +16,9 @@ export interface IUser extends Document {
   role: 'user' | 'admin';
   userRole?: 'Student' | 'Professional' | 'Recruiter';
   isEmailVerified: boolean;
-  
+
   // Note: Authentication tokens are now stored in separate VerificationToken collection
-  
+
   // Subscription and usage tracking
   // STANDARDIZED: All plan keys use underscore format for consistency
   currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
@@ -32,19 +32,25 @@ export interface IUser extends Document {
     lastResetDate: Date;
     deviceFingerprint?: string;
   };
-  // Credit-based usage system
+  // Credit-based usage system (UNIFIED)
   credits?: {
-    cvCredits: number;
-    exportCredits: number;
-    atsCheckCredits: number;
-    jobCredits: number;
+    // General AI credits (used for all AI features)
+    aiCredits: number; // Free: 5/month, Paid: unlimited (-1)
+    jobCredits: number; // Kept for backward compatibility (same as aiCredits)
     lastResetDate: Date;
     resetSchedule: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
-    totalCreated: {
+
+    // Retry guarantee tracking
+    creditRefundCount: number; // Monthly refund count
+    creditRefundResetAt: Date; // Monthly reset for refunds
+    lastRefundDate?: Date; // Track last refund to enforce 1/day limit
+
+    // Total usage tracking (never reset)
+    totalUsage: {
+      aiGenerations: number; // Total AI generations (cover letters, enhancements, etc.)
       cvs: number;
-      exports: number;
-      atsChecks: number;
       jobs: number;
+      downloads: number;
     };
   };
   // Resume Enhancer Career Ecosystem limits (free tier)
@@ -65,7 +71,7 @@ export interface IUser extends Document {
     price: number;
     documentsAllowed: number; // Typically 5 per pass
   }>;
-  
+
   // Grace period for promotional legacy users
   gracePeriod?: {
     isActive: boolean;
@@ -82,7 +88,7 @@ export interface IUser extends Document {
     grantedBy?: string; // Admin user ID who granted the grace period
     grantedAt: Date;
   };
-  
+
   // Core Profile Information
   phone?: string;
   location?: string;
@@ -94,12 +100,12 @@ export interface IUser extends Document {
   jobTitle?: string;
   industry?: string;
   experience?: 'entry' | 'mid' | 'senior' | 'executive';
-  
+
   // Admin tracking fields
   lastLogin?: Date;
   region?: string;
   ip_location?: string; // Location detected from IP address (e.g., "United States (US)")
-  
+
   // Subscription details
   subscription: {
     planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
@@ -124,7 +130,7 @@ export interface IUser extends Document {
     seats: number;
     storageUsed: number;
   };
-  
+
   // Basic UI Settings
   settings: {
     theme: 'light' | 'dark' | 'auto';
@@ -135,7 +141,7 @@ export interface IUser extends Document {
     timezone: string;
     languagePreference: string;
   };
-  
+
   // Granular Notification Preferences
   notificationPreferences?: {
     [key: string]: {
@@ -147,7 +153,7 @@ export interface IUser extends Document {
       };
     };
   };
-  
+
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -170,7 +176,7 @@ const userSchema = new Schema<IUser>({
     default: 'nextauth'
     // Note: Index defined in compound index below for better performance
   },
-  
+
   email: {
     type: String,
     required: [true, 'Email is required'],
@@ -272,11 +278,18 @@ const userSchema = new Schema<IUser>({
       trim: true
     }
   },
-  // Credit-based usage system - only job credits
+  // Credit-based usage system - UNIFIED
   credits: {
+    // General AI credits (used for all AI features)
+    aiCredits: {
+      type: Number,
+      default: 5, // Free plan: 5 credits per month
+      min: -1 // -1 means unlimited
+    },
+    // jobCredits kept for backward compatibility (same value as aiCredits)
     jobCredits: {
       type: Number,
-      default: 1, // Free plan: 1 credit per month
+      default: 5, // Free plan: 5 credits per month
       min: -1 // -1 means unlimited
     },
     lastResetDate: {
@@ -288,8 +301,38 @@ const userSchema = new Schema<IUser>({
       enum: ['monthly', 'quarterly', 'yearly', 'one-time', 'never'],
       default: 'monthly'
     },
-    totalCreated: {
+    // Retry guarantee tracking
+    creditRefundCount: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    creditRefundResetAt: {
+      type: Date,
+      default: Date.now
+    },
+    lastRefundDate: {
+      type: Date,
+      default: null
+    },
+    // Total usage tracking (never reset)
+    totalUsage: {
+      aiGenerations: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      cvs: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
       jobs: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      downloads: {
         type: Number,
         default: 0,
         min: 0
@@ -558,7 +601,7 @@ const userSchema = new Schema<IUser>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret: any) {
+    transform: function (doc, ret: any) {
       delete ret.password;
       delete ret.emailVerificationToken;
       delete ret.emailVerificationExpires;
@@ -570,19 +613,19 @@ const userSchema = new Schema<IUser>({
 });
 
 // Validate authentication method
-userSchema.pre('save', async function(next) {
+userSchema.pre('save', async function (next) {
   try {
     // Hash password if it exists and is modified
     if (this.isModified('password') && this.password) {
       const salt = await bcrypt.genSalt(12);
       this.password = await bcrypt.hash(this.password, salt);
     }
-    
+
     // Set default authProvider for NextAuth users
     if (!this.authProvider) {
       this.authProvider = 'nextauth';
     }
-    
+
     // Set default values for required fields
     if (!this.usage) {
       this.usage = {
@@ -594,7 +637,7 @@ userSchema.pre('save', async function(next) {
         lastResetDate: new Date(),
       };
     }
-    
+
     if (!this.subscription) {
       this.subscription = {
         planKey: 'free',
@@ -606,7 +649,7 @@ userSchema.pre('save', async function(next) {
         storageUsed: 0,
       };
     }
-    
+
     if (!this.settings) {
       this.settings = {
         theme: 'dark',
@@ -618,7 +661,7 @@ userSchema.pre('save', async function(next) {
         languagePreference: 'en',
       };
     }
-    
+
     next();
   } catch (error: any) {
     next(error);
@@ -626,7 +669,7 @@ userSchema.pre('save', async function(next) {
 });
 
 // Compare password method
-userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };

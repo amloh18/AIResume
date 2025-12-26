@@ -6,9 +6,9 @@ import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { Save, CheckCircle2, XCircle, Loader2, Eye, ZoomIn, ZoomOut, Download, FileText } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
-// TODO: CoverLetterTemplateContent was deleted - need to reimplement or use alternative
-// import CoverLetterTemplateContent from '@/components/studio/CoverLetterTemplateContent';
+import CoverLetterTemplateContent from '@/components/cover-letter-editor/CoverLetterTemplateContent';
 import DownloadModal from '@/components/ui/DownloadModal';
+
 
 interface Step2ReviewProps {
   userId: string;
@@ -154,7 +154,7 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
                   placeholder="Enter cover letter title"
                 />
               </div>
-              
+
               <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
                 <label className="block text-xs text-gray-500 dark:text-gray-400 mb-2">Template</label>
                 <div className="flex items-center gap-2">
@@ -175,27 +175,25 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setPageSize('A4')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      pageSize === 'A4'
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pageSize === 'A4'
                         ? 'bg-lime-500 dark:bg-[#99FF00] text-black'
                         : 'bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1f2a15]'
-                    }`}
+                      }`}
                   >
                     A4
                   </button>
                   <button
                     onClick={() => setPageSize('Letter')}
-                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      pageSize === 'Letter'
+                    className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pageSize === 'Letter'
                         ? 'bg-lime-500 dark:bg-[#99FF00] text-black'
                         : 'bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1f2a15]'
-                    }`}
+                      }`}
                   >
                     US Letter
                   </button>
                 </div>
               </div>
-              
+
               <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Statistics</p>
                 <div className="flex gap-4 text-sm text-gray-900 dark:text-white">
@@ -203,7 +201,7 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
                   <span>{characterCount} characters</span>
                 </div>
               </div>
-              
+
               <div className="bg-gray-100 dark:bg-[#313a28] rounded-lg p-4">
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Status</p>
                 <p className="font-semibold text-gray-900 dark:text-white text-sm capitalize">
@@ -234,13 +232,12 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
             <button
               onClick={handleSave}
               disabled={isSaving || saveStatus === 'success'}
-              className={`w-full px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                saveStatus === 'success'
+              className={`w-full px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${saveStatus === 'success'
                   ? 'bg-green-500 text-white'
                   : saveStatus === 'error'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-lime-500 dark:bg-[#99FF00] text-black hover:bg-lime-600 dark:hover:bg-[#88e600]'
-              } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    ? 'bg-red-500 text-white'
+                    : 'bg-lime-500 dark:bg-[#99FF00] text-black hover:bg-lime-600 dark:hover:bg-[#88e600]'
+                } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSaving ? (
                 <>
@@ -309,18 +306,18 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
           setIsDownloading(true);
           try {
             let coverLetterId = state.coverLetterId;
-            
+
             if (!coverLetterId) {
               await handleSave();
               await new Promise(resolve => setTimeout(resolve, 500));
               coverLetterId = state.coverLetterId;
             }
-            
+
             if (coverLetterId && documentType === 'coverLetter') {
               const formatParam = format === 'doc' ? 'docx' : format;
               window.open(`/api/cover-letters/${coverLetterId}/download?format=${formatParam}&paperSize=${pageSize}`, '_blank');
             }
-            
+
             setShowDownloadModal(false);
           } catch (error) {
             console.error('Download error:', error);

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronDown, ChevronUp, Minimize2, Maximize2, Home } from 'lucide-react';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
 import Step1Parser from './steps/Step1Parser';
@@ -19,6 +19,7 @@ import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useU
 import { useSession } from 'next-auth/react';
 import SidebarMembershipCard from '@/components/resume-enhancer/SidebarMembershipCard';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
+import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
 import ATSFactorsList from '@/components/resume-enhancer/ATSFactorsList';
@@ -143,6 +144,15 @@ export default function ResumeEnhancerContainer({
     }
     return Math.max(0, Math.min(100, state.surgeonAnalysis?.score ?? 0));
   }, [atsScore, jdText, state.surgeonAnalysis?.score]);
+
+  // Calculate score breakdown using CVScoringService - same as Step4Review
+  const scoreResult = useMemo(() => {
+    return CVScoringService.getFullScoreResult(
+      state.cvData,
+      state.keywordGapAnalysis || undefined,
+      state.atsScoreCap
+    );
+  }, [state.cvData, state.keywordGapAnalysis, state.atsScoreCap]);
   // Check if this is a master CV - check mode, state, or sessionStorage flag
   const isMasterCV = useMemo(() => {
     if (mode === 'edit-master' || state.cvType === 'master') {
@@ -1682,6 +1692,8 @@ export default function ResumeEnhancerContainer({
     goToStep(3);
   };
 
+
+
   const handleStep3Complete = () => {
     setCompletedSteps([...completedSteps, 3]);
 
@@ -2225,11 +2237,6 @@ export default function ResumeEnhancerContainer({
                   <span className="text-[color:var(--text-primary)]">Circle</span>
                 </span>
               </h1>
-              {state.cvType && !isMasterCV && (
-                <span className="px-2 py-0.5 bg-[color:var(--accent-primary)]/15 text-[color:var(--accent-primary)] rounded-full text-xs font-medium capitalize">
-                  {state.cvType}
-                </span>
-              )}
             </div>
 
 
@@ -2267,6 +2274,17 @@ export default function ResumeEnhancerContainer({
                 </button>
               )}
 
+              {/* Continue to Review button - only show on Step 3 */}
+              {state.currentStep === 3 && (
+                <button
+                  onClick={handleStep3Complete}
+                  className="px-3 py-1.5 bg-white/10 hover:bg-white/15 border border-white/20 text-white rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Review</span>
+                </button>
+              )}
+
               {/* Save Status Indicator - Animated */}
               {(saveStatus === 'saving' || saveStatus === 'success') && (
                 <SaveIndicator status={saveStatus} className="hidden sm:flex" />
@@ -2298,9 +2316,9 @@ export default function ResumeEnhancerContainer({
       {/* Content Area (Left Sticky Steps + Main Content) */}
       <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)]">
         {/* Floating / Sticky vertical steps panel (desktop) */}
-        <aside className="hidden lg:block w-72 flex-shrink-0 mt-2 mb-2 ml-2 rounded-xl overflow-y-auto overscroll-contain bg-[#141810] border border-white/10 h-[calc(100%-1rem)]">
-          <div className="flex flex-col h-full p-3">
-            <div className="flex-1 space-y-3 overflow-y-auto">
+        <aside className="hidden lg:flex lg:flex-col w-72 flex-shrink-0 m-2 rounded-xl bg-[#141810] border border-white/10 h-auto max-h-[calc(100vh-80px)] overflow-hidden">
+          <div className="flex flex-col h-full p-3 overflow-hidden">
+            <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
               {/* Step Indicator Card */}
               <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden">
                 <div className="p-3">
@@ -2325,10 +2343,12 @@ export default function ResumeEnhancerContainer({
                   optimizationScore={analysisScore}
                   cvType={state.cvType || (isGuestMode ? 'master' : 'standalone')}
                   mode={mode}
+                  hasJD={isJDReferenced}
                   onEditRole={() => {
                     roleExplicitlySetRef.current = true;
                     setShowRoleModal(true);
                   }}
+                  onAddJD={() => setShowJobParserDialog(true)}
                 />
               )}
 
@@ -2394,19 +2414,22 @@ export default function ResumeEnhancerContainer({
 
                   {/* Header */}
                   <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-[color:var(--accent-primary)]" />
-                      <InfoTooltip content={isMasterCV || isStandaloneCV
-                        ? "CVCircle Score analyzes your resume's overall quality, structure, and best practices for professional CVs."
-                        : "ATS (Applicant Tracking System) Check analyzes how well your resume matches the job requirements and ATS software requirements."}>
-                        <div className="text-sm font-semibold text-[color:var(--text-primary)] cursor-help">
-                          {isMasterCV || isStandaloneCV ? 'CVCircle Score' : 'ATS Check*'}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Sparkles className="w-4 h-4 text-[color:var(--accent-primary)] flex-shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+                          {isJDReferenced ? 'ATS Score' : 'CVCircle Score'}
                         </div>
-                      </InfoTooltip>
+                        {state.targetRole && (
+                          <div className="text-[9px] text-[color:var(--text-tertiary)] truncate">
+                            for {state.targetRole}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <button
                       onClick={() => setIsScoreAnalysisCompact(!isScoreAnalysisCompact)}
-                      className="p-1 rounded hover:bg-white/5 transition-colors"
+                      className="p-1 rounded hover:bg-white/5 transition-colors flex-shrink-0"
                       aria-label={isScoreAnalysisCompact ? 'Expand' : 'Collapse'}
                     >
                       {isScoreAnalysisCompact ? (
@@ -2443,9 +2466,79 @@ export default function ResumeEnhancerContainer({
                       </div>
                     </div>
 
+                    {/* Score Breakdown - Same as Step4 Review */}
+                    <div className="bg-[#252a1f] rounded-lg p-2 space-y-1 mt-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[8px] font-semibold text-[color:var(--text-tertiary)] uppercase">Score Breakdown</span>
+                        <span className={`text-[10px] font-bold ${scoreResult.cvScore.total >= 80 ? 'text-green-400' :
+                          scoreResult.cvScore.total >= 60 ? 'text-yellow-400' : 'text-red-400'
+                          }`}>
+                          Grade: {scoreResult.overallGrade}
+                        </span>
+                      </div>
+                      {/* Breakdown Bars */}
+                      <div className="space-y-0.5">
+                        {/* Completeness */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Completeness</span>
+                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.completeness / 25) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.completeness / 25) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${(scoreResult.cvScore.completeness / 25) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.completeness}/25</span>
+                        </div>
+                        {/* Impact Verbs */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Impact Verbs</span>
+                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.impactVerbs / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.impactVerbs / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${(scoreResult.cvScore.impactVerbs / 20) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.impactVerbs}/20</span>
+                        </div>
+                        {/* Quantification */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Quantification</span>
+                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.quantification / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.quantification / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${(scoreResult.cvScore.quantification / 20) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.quantification}/20</span>
+                        </div>
+                        {/* Formatting */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Formatting</span>
+                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.formatting / 15) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.formatting / 15) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${(scoreResult.cvScore.formatting / 15) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.formatting}/15</span>
+                        </div>
+                        {/* Readability */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Readability</span>
+                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.readability / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.readability / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                              style={{ width: `${(scoreResult.cvScore.readability / 20) * 100}%` }}
+                            />
+                          </div>
+                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.readability}/20</span>
+                        </div>
+                      </div>
+                    </div>
+
                     {!isScoreAnalysisCompact && (
                       <>
-                        {/* Keywords Status Section - Only show for non-Master CVs */}
+                        {/* Keywords Status Section - Only show for non-Master CVs with JD, or show role info for standalone */}
                         {!isMasterCV && (
                           <div>
                             <div className="space-y-2">
@@ -2465,14 +2558,8 @@ export default function ResumeEnhancerContainer({
                                   }
 
                                   if (!isJDReferenced) {
-                                    return (
-                                      <>
-                                        <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                                        <InfoTooltip content="Add a job description to analyze keyword matching">
-                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">No Job Description</span>
-                                        </InfoTooltip>
-                                      </>
-                                    );
+                                    // No keywords section when no JD - Add JD button is in JobRoleCard
+                                    return null;
                                   }
 
                                   if (keywordStats.allMatched && keywordStats.hasKeywords) {
@@ -2519,12 +2606,8 @@ export default function ResumeEnhancerContainer({
                                 }
 
                                 if (!isJDReferenced) {
-                                  return (
-                                    <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2">
-                                      <span className="block mb-1">Add a job description to see keyword matching</span>
-                                      <span className="text-[8px] text-[color:var(--text-tertiary)] italic">Link a job from your tracker or paste a job description</span>
-                                    </div>
-                                  );
+                                  // No content when no JD - the Add JD button is in JobRoleCard
+                                  return null;
                                 }
 
                                 if (keywordStats.allMatched && keywordStats.hasKeywords) {
@@ -2674,11 +2757,8 @@ export default function ResumeEnhancerContainer({
                             }
 
                             if (!isJDReferenced && !isMasterCV) {
-                              return (
-                                <span className="text-[10px] text-[color:var(--text-tertiary)] italic">
-                                  Add job description for suggestions
-                                </span>
-                              );
+                              // No message when no JD - Add JD button is in JobRoleCard
+                              return null;
                             }
 
                             return (

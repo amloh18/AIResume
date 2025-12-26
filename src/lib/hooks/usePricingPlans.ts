@@ -395,9 +395,11 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
           } else {
             console.error('Promotional offers response is not JSON. Content-Type:', contentType);
           }
-        } else {
-          console.error('Error fetching promotional offers:', offersResponse ? offersResponse.status : 'No response');
+        } else if (offersResponse) {
+          // Only log if we had a response but it wasn't OK
+          console.warn('Promotional offers returned non-OK status:', offersResponse.status);
         }
+        // If offersResponse is null (fetch failed), we already logged it above - no need to log again
 
         // Update cache with fetched data
         if (fetchedPlans.length > 0 || fetchedOffers.length > 0) {

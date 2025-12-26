@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, 
-  AlertTriangle, 
-  CheckCircle2, 
-  X, 
+import {
+  FileText,
+  AlertTriangle,
+  CheckCircle2,
+  X,
   Briefcase,
   Sparkles,
   ArrowRight
@@ -61,7 +61,7 @@ export default function JDInputPanel({
   // Validate JD content
   const validateJD = () => {
     setIsValidating(true);
-    
+
     // Check word count
     if (wordCount < minWords) {
       setValidationMessage(`Job description is too short. Please add at least ${minWords} words for accurate ATS optimization.`);
@@ -86,7 +86,7 @@ export default function JDInputPanel({
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setLocalText(text);
-    
+
     // Clear validation on edit
     if (validationMessage) {
       setValidationMessage(null);
@@ -96,10 +96,10 @@ export default function JDInputPanel({
 
   const handleSubmit = () => {
     if (!validateJD()) return;
-    
+
     // Update context
     setJdText(localText);
-    
+
     // Call parent callback
     onSubmit?.(localText);
   };
@@ -124,14 +124,14 @@ export default function JDInputPanel({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-[var(--accent-primary)]/10 rounded-lg">
-            <Briefcase className="w-5 h-5 text-[var(--accent-primary)]" />
+          <div className="p-2.5 bg-lime-500/20 dark:bg-[#80FF00]/15 rounded-xl">
+            <Briefcase className="w-5 h-5 text-lime-600 dark:text-[#80FF00]" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-[color:var(--text-primary)]">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               Paste Job Description
             </h3>
-            <p className="text-sm text-[color:var(--text-secondary)]">
+            <p className="text-sm text-gray-600 dark:text-white/70">
               We'll analyze and tailor your CV to match
             </p>
           </div>
@@ -151,15 +151,15 @@ export default function JDInputPanel({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-3 bg-[var(--accent-primary)]/10 border border-[var(--accent-primary)]/20 rounded-lg"
+          className="mb-4 p-3 bg-lime-50 dark:bg-[#232f1c] border border-lime-200 dark:border-lime-500/30 rounded-xl"
         >
           <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />
-            <span className="text-sm font-medium text-[var(--accent-primary)]">
+            <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
+            <span className="text-sm font-medium text-lime-700 dark:text-[#80FF00]">
               This will create a Journey CV
             </span>
           </div>
-          <p className="text-xs text-[color:var(--text-secondary)] mt-1">
+          <p className="text-xs text-gray-600 dark:text-white/70 mt-1">
             Your CV will be tailored specifically for this job with keyword optimization and ATS scoring.
           </p>
         </motion.div>
@@ -171,9 +171,9 @@ export default function JDInputPanel({
           value={localText}
           onChange={handleTextChange}
           placeholder="Paste the full job description here...&#10;&#10;Include job title, responsibilities, requirements, and qualifications for best results."
-          className="w-full h-full min-h-[200px] p-4 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-xl text-[color:var(--text-primary)] placeholder:text-[color:var(--text-tertiary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 focus:border-[var(--accent-primary)]"
+          className="w-full h-full min-h-[200px] p-4 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 resize-none focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/30 focus:border-lime-500 dark:focus:border-[#80FF00]/50"
         />
-        
+
         {/* Word count badge */}
         <div className={`absolute bottom-3 right-3 text-xs ${getWordCountColor()}`}>
           {wordCount} words
@@ -190,13 +190,12 @@ export default function JDInputPanel({
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 5 }}
-            className={`mt-3 p-3 rounded-lg flex items-start gap-2 ${
-              validationType === 'error' 
-                ? 'bg-red-500/10 text-red-500' 
-                : validationType === 'warning'
-                  ? 'bg-yellow-500/10 text-yellow-600'
-                  : 'bg-green-500/10 text-green-500'
-            }`}
+            className={`mt-3 p-3 rounded-lg flex items-start gap-2 ${validationType === 'error'
+              ? 'bg-red-500/10 text-red-500'
+              : validationType === 'warning'
+                ? 'bg-yellow-500/10 text-yellow-600'
+                : 'bg-green-500/10 text-green-500'
+              }`}
           >
             {validationType === 'error' && <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
             {validationType === 'warning' && <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />}
@@ -207,22 +206,21 @@ export default function JDInputPanel({
       </AnimatePresence>
 
       {/* Actions */}
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--border-primary)]">
+      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
         <button
           onClick={handleClear}
-          className="px-4 py-2 text-sm text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] transition-colors"
+          className="px-4 py-2 text-sm text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           Clear
         </button>
-        
+
         <button
           onClick={handleSubmit}
           disabled={!isValid || isValidating}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-medium transition-all ${
-            isValid
-              ? 'bg-[var(--accent-primary)] text-black hover:bg-[var(--accent-hover)]'
-              : 'bg-[var(--bg-tertiary)] text-[color:var(--text-tertiary)] cursor-not-allowed'
-          }`}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-medium transition-all shadow-md hover:shadow-lg ${isValid
+            ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
+            : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-white/40 cursor-not-allowed'
+            }`}
         >
           <span>Continue</span>
           <ArrowRight className="w-4 h-4" />
@@ -241,10 +239,11 @@ export default function JDInputPanel({
         onClick={(e) => e.target === e.currentTarget && onCancel?.()}
       >
         <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          className="w-full max-w-2xl max-h-[80vh] bg-[var(--bg-secondary)] rounded-2xl shadow-xl p-6 overflow-auto"
+          initial={{ scale: 0.95, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.95, opacity: 0, y: 20 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="w-full max-w-2xl max-h-[80vh] bg-white dark:bg-[#141810] border-2 border-gray-200 dark:border-lime-500/40 rounded-2xl shadow-2xl p-6 overflow-auto"
         >
           {content}
         </motion.div>

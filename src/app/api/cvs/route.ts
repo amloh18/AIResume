@@ -491,6 +491,35 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // VALIDATION: Ensure user has a Master CV before creating journey/standalone CVs
+    // Exception: First CV can be any type (but will be forced to master below)
+    if (!isFirstCV && (finalCvType === 'journey' || finalCvType === 'standalone')) {
+      // Check if user has a Master CV
+      const hasMasterCV = await CV.findOne({
+        userId: new mongoose.Types.ObjectId(userId),
+        $or: [
+          { 'metadata.isMaster': true },
+          { 'metadata.isMaster': 'true' },
+          { cvType: 'master' },
+          { 'metadata.createdVia': 'ai-career-report' }
+        ]
+      });
+
+      if (!hasMasterCV) {
+        console.log('❌ CV POST API - Cannot create journey/standalone CV without Master CV');
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Please create your Master CV first before creating journey or standalone CVs',
+            requiresMasterCV: true,
+            redirectTo: '/resume-enhancer?mode=create&type=master',
+            suggestedAction: 'Create Master CV'
+          },
+          { status: 409 } // 409 Conflict
+        );
+      }
+    }
+
     // Override: If first CV, force master CV type
     // Create a new metadata object to avoid reassigning const
     let finalMetadata = metadata ? { ...metadata } : {};
@@ -505,130 +534,30 @@ export async function POST(request: NextRequest) {
     // Check if this is from resume-enhancer
     const isFromResumeEnhancer = finalMetadata?.createdVia === 'resume-enhancer';
 
-    // Security: Check CV creation limits for free users
+    // Security: Check CV creation limits using unified limit service
     if (isFromResumeEnhancer || finalCvType === 'standalone' || isCreatingMasterCV || finalCvType === 'journey') {
-      // Get user to check plan
-      const User = (await import('@/models/User')).default;
-      const user = await User.findById(userId);
+      // Import unified limit service
+      const { default: unifiedLimitService } = await import('@/lib/services/unifiedLimitService');
 
-      if (user && user.currentPlanKey === 'free') {
-        // Count existing CVs by type for free users
-        const [masterCount, journeyCount, standaloneCount] = await Promise.all([
-          CV.countDocuments({
-            userId: new mongoose.Types.ObjectId(userId),
-            $or: [
-              { cvType: 'master' },
-              { 'metadata.isMaster': true },
-              { 'metadata.isMaster': 'true' }
-            ]
-          }),
-          CV.countDocuments({
-            userId: new mongoose.Types.ObjectId(userId),
-            cvType: 'journey'
-          }),
-          CV.countDocuments({
-            userId: new mongoose.Types.ObjectId(userId),
-            cvType: 'standalone'
-          })
-        ]);
+      // Check limit based on CV type
+      const limitCheck = await unifiedLimitService.checkCVLimit(userId, finalCvType);
 
-        console.log('🔍 CV POST API - Free user CV counts:', {
-          master: masterCount,
-          journey: journeyCount,
-          standalone: standaloneCount,
-          creating: finalCvType
-        });
-
-        // Check limits based on CV type being created
-        if (isCreatingMasterCV || finalCvType === 'master') {
-          if (masterCount >= 1) {
-            console.log('❌ CV POST API - Free user already has master CV');
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Free users can only create 1 Master CV. Please upgrade to create more CVs.',
-                requiresUpgrade: true
-              },
-              { status: 403 }
-            );
-          }
-        } else if (finalCvType === 'journey') {
-          // Use the new Journey CV limit check function
-          const { checkJourneyCVLimit } = await import('@/lib/utils/subscription-helpers');
-          const journeyLimitCheck = await checkJourneyCVLimit(
-            userId,
-            user.currentPlanKey || 'free',
-            user.subscription
-          );
-
-          if (!journeyLimitCheck.allowed) {
-            // EDGE CASE 1: Hard gate for 2nd Journey CV
-            console.log('❌ CV POST API - Journey CV limit check failed:', journeyLimitCheck.message);
-            return NextResponse.json(
-              {
-                success: false,
-                error: journeyLimitCheck.message || 'Journey CV limit exceeded',
-                requiresUpgrade: journeyLimitCheck.upgradeRequired,
-                currentActiveCount: journeyLimitCheck.currentActiveCount,
-                limit: journeyLimitCheck.limit,
-                canDeleteToMakeSpace: journeyLimitCheck.canDeleteToMakeSpace,
-                gateType: 'hard'
-              },
-              { status: 403 }
-            );
-          }
-        } else if (finalCvType === 'standalone') {
-          if (standaloneCount >= 1) {
-            console.log('❌ CV POST API - Free user already has standalone CV');
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'Free users can only create 1 Standalone CV. Please upgrade to create more CVs.',
-                requiresUpgrade: true
-              },
-              { status: 403 }
-            );
-          }
-        }
-
-        // Check if all three CV types are already created (limit exhausted)
-        if (masterCount >= 1 && journeyCount >= 1 && standaloneCount >= 1) {
-          console.log('❌ CV POST API - Free user has exhausted all CV creation limits');
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'You have reached the limit for all CV types (1 Master, 1 Journey, 1 Standalone). Please upgrade to create more CVs.',
-              requiresUpgrade: true
-            },
-            { status: 403 }
-          );
-        }
-
-        // Check if user has at least 1 credit available (for free users)
-        // The primary limit is count-based (1 of each type), but we still check credits
-        // Journey CVs don't need credit check here as they're created with jobs (credit already spent)
-        // Master CVs don't need credit check - they're always free (1 per user limit already enforced above)
-        if (finalCvType === 'standalone' && isFromResumeEnhancer) {
-          const { default: creditService } = await import('@/lib/services/creditService');
-          const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
-
-          // For free users, require at least 1 credit to create standalone CVs
-          // The count-based limits above are the primary restriction
-          if (!creditCheck.available || (creditCheck.limit !== -1 && creditCheck.creditsRemaining <= 0)) {
-            console.log('❌ CV POST API - Free user has no credits available for standalone CV');
-            return NextResponse.json(
-              {
-                success: false,
-                error: 'You have no credits remaining. Please upgrade to create more CVs.',
-                requiresUpgrade: true,
-                creditsRemaining: creditCheck.creditsRemaining,
-                limit: creditCheck.limit
-              },
-              { status: 403 }
-            );
-          }
-        }
+      if (!limitCheck.allowed) {
+        console.log(`❌ CV POST API - ${finalCvType} CV limit exceeded:`, limitCheck);
+        return NextResponse.json(
+          {
+            success: false,
+            error: limitCheck.reason,
+            requiresUpgrade: limitCheck.requiresUpgrade,
+            current: limitCheck.current,
+            limit: limitCheck.limit,
+            frozenCount: limitCheck.frozenCount
+          },
+          { status: 403 }
+        );
       }
+
+      console.log(`✅ CV POST API - ${finalCvType} CV limit check passed:`, limitCheck);
     }
 
     if (isCreatingMasterCV) {
