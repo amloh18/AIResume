@@ -67,6 +67,7 @@ import DownloadModal, { DocumentType, FormatType } from '@/components/ui/Downloa
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { filterMasterCVs, filterRegularCVs } from '@/lib/utils/cvFilterUtils';
 import CareerReportSidebar from './CareerReportSidebar';
+import CreditExhaustionModal from '@/components/payment/CreditExhaustionModal';
 
 interface CV {
   id: string;
@@ -1146,10 +1147,42 @@ const Canvas: React.FC = () => {
       } else {
         throw new Error('Failed to duplicate master CV');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to duplicate master CV', error);
+
+      // Check for limit exhaustion error (403 with requiresUpgrade flag)
+      try {
+        const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
+        if (!userId) return;
+
+        const response = await authenticatedFetch('/api/cvs/duplicate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sourceCvId: masterCV.id,
+            customTitle: `${masterCV.title} (Copy)`,
+            userId
+          }),
+        });
+
+        if (response.status === 403) {
+          const result = await response.json();
+          if (result.requiresUpgrade) {
+            setShowLimitModal(true);
+            return;
+          }
+        }
+      } catch (innerError) {
+        // If the direct fetch also fails or if we are just falling back
+        console.error("Direct duplicate check failed for master CV", innerError);
+      }
     }
   };
+
+  // Modal state for credit exhaustion
+  const [showLimitModal, setShowLimitModal] = useState(false);
 
   // CV Card handlers (moved after load functions and wrapped in useCallback to ensure loadCVs is available)
   const handleDuplicateCV = useCallback(async (cv: CV) => {
@@ -1177,8 +1210,56 @@ const Canvas: React.FC = () => {
       } else {
         throw new Error('Failed to duplicate CV');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to duplicate CV', error);
+
+      // Check for limit exhaustion error (403 with requiresUpgrade flag)
+      // The UnifiedCVService might throw an error object or we might need to parse the response manually if we were using fetch directly.
+      // Since UnifiedCVService throws Error, we check the error message or properties if attached.
+      // However, UnifiedCVService currently throws generic errors for non-200.
+      // We might need to update UnifiedCVService to pass through the status/data or handle it here if we refactor to use fetch directly or check error props.
+
+      // Let's refactor to use authenticatedFetch directly here to have full control over the response handling for this specific case,
+      // OR better, checking if the error message contains the specific string we sent from backend or if UnifiedCVService attaches the response.
+
+      // Since we didn't modifying UnifiedCVService to pass the 'requiresUpgrade' flag, 
+      // we'll quickly try to use authenticatedFetch directly to catch the 403 cleanly.
+
+      try {
+        const userId = getUserIdForAPI(user) || getUserIdFromLocalStorage();
+        if (!userId) return;
+
+        const response = await authenticatedFetch('/api/cvs/duplicate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sourceCvId: cv.id,
+            customTitle: `${cv.title} (Copy)`,
+            userId
+          }),
+        });
+
+        if (response.status === 403) {
+          const result = await response.json();
+          if (result.requiresUpgrade) {
+            setShowLimitModal(true);
+            return;
+          }
+        }
+
+        if (!response.ok) {
+          throw new Error('Failed to duplicate');
+        }
+
+        // If successful (and redo because the first Service call failed/threw)
+        loadAllCVData();
+
+      } catch (innerError) {
+        // If the direct fetch also fails or if we are just falling back
+        console.error("Direct duplicate attempt failed", innerError);
+      }
     }
   }, [user, loadAllCVData]);
 
@@ -2543,6 +2624,15 @@ const Canvas: React.FC = () => {
           }}
         />
       )}
+      {/* Credit Exhaustion Modal */}
+      <CreditExhaustionModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        creditsRemaining={0}
+        limit={1}
+        reason="Free users can only have 1 Standalone CV. Upgrade to create unlimited CVs."
+        preselectedPlanKey="pro_monthly"
+      />
     </div>
   );
 };

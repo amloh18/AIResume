@@ -179,11 +179,11 @@ const CVManagementSection: React.FC<{
   // Function to navigate to edit Master CV
   const handleEditMasterCV = () => {
     if (masterCV) {
-      // Navigate to master CV mode for editing
-      router.push(`/studio?master=true`);
+      // Navigate to master CV mode for editing in Resume Enhancer
+      router.push(`/resume-enhancer?mode=edit-master&cvId=${masterCV.id}`);
     } else {
-      // If no master CV, navigate to studio (will prompt to create master CV)
-      router.push('/studio?master=true');
+      // If no master CV, navigate to Resume Enhancer to create one
+      router.push('/resume-enhancer');
     }
   };
 
@@ -331,7 +331,7 @@ const CVManagementSection: React.FC<{
           <div className="w-20 h-20 bg-gradient-to-br from-lime-400 to-lime-600 rounded-2xl flex items-center justify-center mb-4">
             <FileText className="w-10 h-10 text-white" />
           </div>
-          
+
           <div className="space-y-2">
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
               Create Your Master CV
@@ -472,7 +472,7 @@ const ApplicationCalendarWidget: React.FC<{
   const upcomingDeadlines = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     return jobs
       .filter(job => {
         if (!job.deadline) return false;
@@ -492,10 +492,10 @@ const ApplicationCalendarWidget: React.FC<{
     today.setHours(0, 0, 0, 0);
     const deadline = new Date(date);
     deadline.setHours(0, 0, 0, 0);
-    
+
     const diffTime = deadline.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) {
       return 'Today';
     } else if (diffDays === 1) {
@@ -635,8 +635,8 @@ const ApplicationCalendarWidget: React.FC<{
                     key={job.id || job._id}
                     className={`
                       flex items-center justify-between p-2 rounded-lg transition-colors
-                      ${isUrgent 
-                        ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20' 
+                      ${isUrgent
+                        ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20'
                         : 'bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10'
                       }
                     `}

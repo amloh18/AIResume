@@ -13,6 +13,7 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
+import AnalyticsOverlay from '@/components/landing/AnalyticsOverlay';
 
 function LandingPageContent() {
   // Handle logout cleanup - client-side only
@@ -130,8 +131,13 @@ function LandingPageContent() {
         {/* Chrome Extension Section */}
         <ChromeExtension />
 
+
+
         {/* Premium Templates Section */}
         <PremiumTemplates />
+
+        {/* Analytics Overlay Section */}
+        <AnalyticsOverlay />
 
         {/* Testimonials Section */}
         <Testimonials />

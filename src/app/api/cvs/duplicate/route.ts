@@ -7,11 +7,11 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 CV Duplicate API - Starting duplication request');
-    
+
     // Ensure database connection
     await getConnection();
     console.log('✅ CV Duplicate API - Database connected');
-    
+
     // Use new authentication system
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -21,10 +21,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = authResult.userId;
     console.log('🔍 CV Duplicate API - Using authenticated user:', authResult.userEmail);
-    
+
     const body = await request.json();
     const { sourceCvId, jobId, journeyId, customTitle } = body;
 
@@ -50,14 +50,14 @@ export async function POST(request: NextRequest) {
     // Find the source CV
     console.log('🔍 CV Duplicate API - Looking for source CV:', sourceCvId);
     console.log('🔍 CV Duplicate API - CV model available:', !!CV);
-    
+
     const sourceCV = await CV.findById(sourceCvId);
     console.log('🔍 CV Duplicate API - CV query result:', {
       found: !!sourceCV,
       id: sourceCV?._id,
       title: sourceCV?.title
     });
-    
+
     if (!sourceCV) {
       console.error('❌ CV Duplicate API - Source CV not found:', sourceCvId);
       return NextResponse.json(
@@ -68,13 +68,13 @@ export async function POST(request: NextRequest) {
 
     // Verify the CV belongs to the user
     const userOwnsCV = sourceCV.userId?.toString() === userId;
-    
+
     console.log('🔍 CV Duplicate API - User ownership check:', {
       userId,
       sourceCVUserId: sourceCV.userId?.toString(),
       userOwnsCV
     });
-    
+
     if (!userOwnsCV) {
       console.error('❌ CV Duplicate API - User does not own CV:', {
         userId,
@@ -101,23 +101,23 @@ export async function POST(request: NextRequest) {
     const generateUniqueTitle = async (baseTitle: string, userId: string) => {
       let finalTitle = baseTitle;
       let counter = 1;
-      
+
       // Check for existing CVs with the same title
       while (true) {
-        const query = { 
-          userId: toObjectId(userId), 
-          title: finalTitle 
+        const query = {
+          userId: toObjectId(userId),
+          title: finalTitle
         };
-          
+
         const existingCV = await CV.findOne(query);
         if (!existingCV) {
           break;
         }
-        
+
         finalTitle = `${baseTitle} ${counter}`;
         counter++;
       }
-      
+
       return finalTitle;
     };
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
     // Deep copy cvData to preserve structure/content map
     // This ensures structure and content are properly preserved during duplication
     const duplicatedCvData = sourceCV.cvData ? JSON.parse(JSON.stringify(sourceCV.cvData)) : sourceCV.cvData;
-    
+
     // Ensure structure and content are preserved
     if (duplicatedCvData && !duplicatedCvData.structure) {
       console.log('⚠️ CV Duplicate API - Source CV missing structure, will be initialized in studio');
@@ -156,6 +156,31 @@ export async function POST(request: NextRequest) {
     } else if (sourceCV.cvType && ['master', 'journey', 'standalone'].includes(sourceCV.cvType)) {
       // Preserve source cvType, but never duplicate as master
       duplicatedCvType = sourceCV.cvType === 'master' ? 'standalone' : sourceCV.cvType;
+    }
+
+    // Check usage limits for free users creating standalone CVs
+    if (duplicatedCvType === 'standalone') {
+      const { default: User } = await import('@/models/User');
+      const user = await User.findById(userId);
+
+      if (user && user.currentPlanKey === 'free') {
+        const standaloneCount = await CV.countDocuments({
+          userId: toObjectId(userId),
+          cvType: 'standalone'
+        });
+
+        if (standaloneCount >= 1) {
+          console.log('❌ CV Duplicate API - Free user already has standalone CV');
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Free users can only create 1 Standalone CV. Please upgrade to create more CVs.',
+              requiresUpgrade: true
+            },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     // Create the duplicated CV with deep copies to preserve all data
@@ -205,17 +230,17 @@ export async function POST(request: NextRequest) {
     if (journeyId && jobId) {
       try {
         const { ApplicationJourney } = await import('@/models');
-        
+
         // Build query
-        const journeyQuery: any = { 
+        const journeyQuery: any = {
           _id: toObjectId(journeyId),
           jobId: toObjectId(jobId),
           userId: toObjectId(userId)
         };
-        
+
         const updatedJourney = await ApplicationJourney.findOneAndUpdate(
           journeyQuery,
-          { 
+          {
             cvId: savedCV._id,
             currentStep: Math.max(2, await ApplicationJourney.findById(toObjectId(journeyId)).then(j => j?.currentStep || 2)),
             status: 'in-progress',
@@ -223,7 +248,7 @@ export async function POST(request: NextRequest) {
           },
           { new: true }
         );
-        
+
         if (updatedJourney) {
           console.log('✅ CV Duplicate API - Journey updated with new CV:', updatedJourney._id);
         } else {
@@ -255,9 +280,9 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined,
       name: error instanceof Error ? error.name : 'Unknown'
     });
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: 'Failed to duplicate CV',
         message: error instanceof Error ? error.message : 'Unknown error occurred',

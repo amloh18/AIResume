@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { User, Mail, Phone, Globe, MapPin, Plus, Trash2, Sparkles, RefreshCw, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
@@ -54,6 +55,11 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   onDismissAnnotation,
   reviewMode = false
 }) => {
+  // Get session for authentication - use this as primary source, with userId as fallback
+  const { data: session, status: sessionStatus } = useSession();
+  const currentUserId = userId || session?.user?.id;
+  const isAuthenticated = sessionStatus === 'authenticated' && !!session?.user;
+
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<Array<{ method: string; content: string }>>([]);
@@ -61,16 +67,20 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Debug logging to understand data structure
   console.log('🔍 PersonalInfoForm - data:', data);
   console.log('🔍 PersonalInfoForm - cvData:', cvData);
-  
+
+  // Get user's profile photo from session as fallback
+  const userProfilePhoto = session?.user?.image || '';
+
   // Ensure we have proper data structure
+  // Use user profile photo as fallback if no CV image
   const safePersonalInfo = {
     name: data?.name || cvData?.basics?.name || '',
     label: data?.label || cvData?.basics?.label || '',
-    image: data?.image || cvData?.basics?.image || '',
+    image: data?.image || cvData?.basics?.image || userProfilePhoto || '',
     email: data?.email || cvData?.basics?.email || '',
     phone: data?.phone || cvData?.basics?.phone || '',
     url: data?.url || cvData?.basics?.url || '',
@@ -84,7 +94,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     },
     profiles: data?.profiles || cvData?.basics?.profiles || []
   };
-  
+
+
   const handleFieldChange = (field: string, value: any) => {
     // Handle top-level fields - pass field name without 'basics.' prefix
     // RestructuredStudioLayout will add the prefix
@@ -132,7 +143,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
 
   const generateAISummary = async () => {
     if (!userId) return;
-    
+
     setIsGeneratingSummary(true);
     try {
       const response = await fetch('/api/ai/generate-summary', {
@@ -164,10 +175,10 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
 
   const generateAISuggestions = async () => {
     if (!userId) return;
-    
+
     setLoadingSuggestions(true);
     setShowSuggestions(true);
-    
+
     try {
       const response = await fetch('/api/ai/generate-suggestions', {
         method: 'POST',
@@ -216,7 +227,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     }
 
     // Check if user is authenticated (required for upload)
-    if (!userId) {
+    // Use isAuthenticated from session rather than userId prop
+    if (!isAuthenticated) {
       setUploadError('Please sign in to upload photos');
       return;
     }
@@ -244,7 +256,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
     } catch (error) {
       console.error('Image upload error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';
-      
+
       // Provide more specific error messages
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('NetworkError')) {
         setUploadError('Network error. Please check your internet connection and try again.');
@@ -321,9 +333,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             />
             <label
               htmlFor="photo-upload"
-              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${
-                isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
               {isUploadingImage ? (
                 <>
@@ -459,8 +470,8 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             <InlineSuggestion
               key={fix.id}
               fix={fix}
-              onApply={onApplyAnnotation || (() => {})}
-              onDismiss={onDismissAnnotation || (() => {})}
+              onApply={onApplyAnnotation || (() => { })}
+              onDismiss={onDismissAnnotation || (() => { })}
             />
           ))}
       </div>

@@ -27,7 +27,6 @@ import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
-import { useJobLimit } from '@/hooks/useJobLimit';
 
 interface JobApplication {
   id: string;
@@ -106,9 +105,9 @@ const JobsTracker: React.FC = () => {
 
   // Credit exhaustion handler
   const { showExhaustionModal } = useCreditExhaustionHandler();
-  
-  // Job limit hook
-  const { limitInfo } = useJobLimit();
+
+  // Job limit info (will be fetched from API or passed as prop)
+  const [limitInfo, setLimitInfo] = useState<any>(null);
 
   // Initialize from persisted preferences
   useEffect(() => {
@@ -218,7 +217,7 @@ const JobsTracker: React.FC = () => {
       const journeysResult = await journeysResponse.json();
 
       let transformedJobs: JobApplication[] = [];
-      
+
       if (jobsResult.success) {
         transformedJobs = jobsResult.data.jobs.map((job: any) => {
           // Preserve optimistic updates for jobs that are currently being updated
@@ -266,7 +265,7 @@ const JobsTracker: React.FC = () => {
       if (journeysResult.success) {
         const loadedJourneys = journeysResult.data.journeys || [];
         setJourneys(loadedJourneys);
-        
+
         // Populate ATS scores from journeys to jobs (same approach as Canvas)
         // Journey is the source of truth for ATS scores
         transformedJobs = transformedJobs.map(job => {
@@ -276,11 +275,11 @@ const JobsTracker: React.FC = () => {
             const journeyJobId = journey.jobId?.toString() || journey.jobId;
             return journeyJobId === jobIdStr;
           });
-          
+
           if (jobJourneys.length === 0) {
             return job; // No journeys found for this job
           }
-          
+
           // Get ATS score from the most recent journey with a score
           // Priority: journey.atsScore (source of truth, same as Canvas)
           const journeyWithScore = jobJourneys
@@ -291,7 +290,7 @@ const JobsTracker: React.FC = () => {
               const bDate = new Date(b.metadata?.updatedAt || b.updatedAt || 0);
               return bDate.getTime() - aDate.getTime();
             })[0];
-          
+
           // Use journey ATS score (journey is source of truth, same as Canvas)
           if (journeyWithScore && journeyWithScore.atsScore !== undefined && journeyWithScore.atsScore !== null) {
             return {
@@ -299,11 +298,11 @@ const JobsTracker: React.FC = () => {
               atsScore: journeyWithScore.atsScore
             };
           }
-          
+
           return job;
         });
       }
-      
+
       setJobs(transformedJobs);
     } catch (error) {
       console.error('Error loading data:', error);

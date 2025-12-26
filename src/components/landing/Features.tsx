@@ -1,19 +1,23 @@
 'use client';
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ArrowRight, Target, BarChart3, Download, Globe, CheckCircle, FileText } from 'lucide-react';
 
 const Features = () => {
+  const [activeFeature, setActiveFeature] = React.useState(0);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const sectionRefs = React.useRef<(HTMLDivElement | null)[]>([]);
+
   const features = [
     {
       id: 'smart-extension',
       title: 'Smart Extension',
       description: 'Save and autofill job data instantly from any job board. Never copy-paste again.',
       icon: Target,
-      color: 'from-lime-400 to-lime-500',
-      bgColor: 'from-lime-400/10 to-lime-500/10',
+      color: 'text-lime-400',
+      gradient: 'from-lime-400 to-lime-500',
       cta: 'Download Extension',
       ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii?utm_source=item-share-cb',
       image: '/images/never_miss_a_role.png'
@@ -21,10 +25,10 @@ const Features = () => {
     {
       id: 'global-opportunities',
       title: 'Global Opportunities',
-      description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies. More countries coming soon.',
+      description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies.',
       icon: Globe,
-      color: 'from-blue-400 to-blue-500',
-      bgColor: 'from-blue-400/10 to-blue-500/10',
+      color: 'text-blue-400',
+      gradient: 'from-blue-400 to-blue-500',
       cta: 'Explore Jobs',
       ctaLink: '/dashboard/jobs',
       image: '/images/global_opportunities.png'
@@ -32,10 +36,10 @@ const Features = () => {
     {
       id: 'skills-gap',
       title: 'Skills Gap Analysis',
-      description: 'Identify missing skills and get actionable recommendations to bridge the gap for your dream role.',
+      description: 'Identify missing skills and get actionable recommendations to bridge the gap.',
       icon: BarChart3,
-      color: 'from-purple-400 to-purple-500',
-      bgColor: 'from-purple-400/10 to-purple-500/10',
+      color: 'text-purple-400',
+      gradient: 'from-purple-400 to-purple-500',
       cta: 'Analyze My Skills',
       ctaLink: '/ai-career-report',
       image: '/images/gain_your_edge.png'
@@ -45,19 +49,19 @@ const Features = () => {
       title: 'Deep Career Insights',
       description: 'Get a detailed CV report highlighting career gaps, strengths, and improvement areas.',
       icon: FileText,
-      color: 'from-orange-400 to-orange-500',
-      bgColor: 'from-orange-400/10 to-orange-500/10',
+      color: 'text-orange-400',
+      gradient: 'from-orange-400 to-orange-500',
       cta: 'Get Report',
       ctaLink: '/ai-career-report',
       image: '/images/deep_career_insights.png'
     },
     {
       id: 'ats-optimized',
-      title: 'ATS-Optimized Documents',
-      description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high scores.',
+      title: 'ATS-Optimized Docs',
+      description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems.',
       icon: CheckCircle,
-      color: 'from-green-400 to-green-500',
-      bgColor: 'from-green-400/10 to-green-500/10',
+      color: 'text-green-400',
+      gradient: 'from-green-400 to-green-500',
       cta: 'Create CV',
       ctaLink: '/studio',
       image: '/images/ats_optimized_documents.png'
@@ -67,193 +71,270 @@ const Features = () => {
       title: 'One-Click Export',
       description: 'Download your complete application kit: CV, Cover Letter, and ATS Report in one click.',
       icon: Download,
-      color: 'from-pink-400 to-pink-500',
-      bgColor: 'from-pink-400/10 to-pink-500/10',
+      color: 'text-pink-400',
+      gradient: 'from-pink-400 to-pink-500',
       cta: 'Start Export',
       ctaLink: '/dashboard',
       image: '/images/one_click_export.png'
     }
   ];
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2
+  // IntersectionObserver to track which feature is in view
+  React.useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = sectionRefs.current.indexOf(entry.target as HTMLDivElement);
+            if (index !== -1) {
+              setActiveFeature(index);
+            }
+          }
+        });
+      },
+      {
+        root: scrollContainerRef.current,
+        threshold: 0.5, // Trigger when 50% of section is visible
       }
-    }
-  };
+    );
 
-  const cardVariants = {
-    hidden: {
-      opacity: 0,
-      y: 30,
-      scale: 0.95
-    },
-    visible: {
-      opacity: 1,
-      y: 0,
-      scale: 1
-    }
+    sectionRefs.current.forEach((section) => {
+      if (section) observer.observe(section);
+    });
+
+    return () => {
+      sectionRefs.current.forEach((section) => {
+        if (section) observer.unobserve(section);
+      });
+    };
+  }, []);
+
+  // Scroll to specific feature when clicked
+  const scrollToFeature = (index: number) => {
+    sectionRefs.current[index]?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
   };
 
   return (
-    <section id="features" className="relative pt-32 pb-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
-      {/* Enhanced Background Effects */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+    <section id="features" className="relative bg-black overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-lime-500/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2" />
       </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 w-full flex flex-col justify-center">
-        {/* Section Header */}
-        <motion.div
-          className="text-center mb-16"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          viewport={{ once: true, margin: "-50px" }}
-        >
-          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-center">
-            Everything you need to{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              succeed
-            </span>
-          </h2>
-          <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl mx-auto leading-relaxed">
-            Powerful tools designed to streamline your job search process and help you stand out from the competition.
-          </p>
-        </motion.div>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 pt-32 pb-20">
+        {/* Header */}
+        <div className="mb-20 text-center">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl tablet:text-4xl desktop:text-5xl font-bold text-white mb-6"
+          >
+            Powerful tools for your <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">Career Growth</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.1 }}
+            className="text-gray-400 max-w-2xl mx-auto text-lg"
+          >
+            Everything you need to land your dream job, from application tracking to AI-powered optimization.
+          </motion.p>
+        </div>
 
-        {/* Two Column Grid Layout */}
-        <motion.div
-          className="grid grid-cols-1 tablet:grid-cols-2 gap-6 max-w-6xl mx-auto"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-        >
-          {features.map((feature, index) => {
-            return (
+        {/* Desktop: Scroll Snap Layout */}
+        <div className="hidden desktop:flex gap-20">
+          {/* Left Column: Feature List - Sticky */}
+          <div className="w-5/12 sticky top-32 self-start space-y-4 h-fit">
+            {features.map((feature, index) => (
               <motion.div
                 key={feature.id}
-                className="group relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden hover:border-lime-400/50 transition-all duration-300 flex flex-col h-full"
-                variants={cardVariants}
-                transition={{
-                  duration: 0.6,
-                  ease: "easeOut",
-                  delay: index * 0.1
-                }}
-                whileHover={{
-                  scale: 1.02,
-                  y: -8,
-                  boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.2)"
-                }}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => scrollToFeature(index)}
+                className={`group flex items-center gap-4 p-2 pr-6 rounded-full cursor-pointer transition-all duration-300 border ${activeFeature === index
+                  ? 'bg-white/10 border-white/10 shadow-lg'
+                  : 'bg-transparent border-transparent hover:bg-white/5'
+                  }`}
               >
-                {/* Glow Effect */}
-                <motion.div
-                  className={`absolute inset-0 rounded-3xl bg-gradient-to-br ${feature.bgColor} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
-                  style={{ filter: 'blur(20px)' }}
-                />
+                <div className={`p-3 rounded-full bg-gradient-to-br ${feature.gradient} bg-opacity-20 shrink-0 transform transition-transform group-hover:scale-110 flex items-center justify-center w-12 h-12`}>
+                  <feature.icon size={20} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className={`text-lg font-bold transition-colors ${activeFeature === index ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                    }`}>
+                    {feature.title}
+                  </h3>
+                  <p className={`text-sm text-gray-500 transition-all duration-300 ${activeFeature === index ? 'max-h-20 opacity-100 mt-1' : 'max-h-0 opacity-0'
+                    }`}>
+                    {feature.description}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
 
-                {/* Image Section with White Background */}
+          {/* Right Column: Scrollable Feature Sections */}
+          <div
+            ref={scrollContainerRef}
+            className="w-7/12 h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {features.map((feature, index) => (
+              <div
+                key={feature.id}
+                ref={(el) => { sectionRefs.current[index] = el; }}
+                className="min-h-screen snap-start flex items-center justify-center perspective-[2000px] py-10"
+              >
                 <motion.div
-                  className="w-full h-48 bg-white relative overflow-hidden"
-                  whileHover={{
-                    scale: 1.05,
-                    transition: { duration: 0.3 }
+                  initial={{ opacity: 0, rotateY: 20, rotateX: 5, scale: 0.9 }}
+                  whileInView={{ opacity: 1, rotateY: -5, rotateX: 2, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  style={{
+                    transformStyle: "preserve-3d",
                   }}
+                  className="relative w-full aspect-[16/10]"
                 >
-                  <div
-                    className="relative w-full h-full"
-                    style={{
-                      transform: feature.id === 'smart-extension'
-                        ? 'scale(0.9)' :
-                        feature.id === 'global-opportunities'
-                          ? 'scale(0.9)' :
-                          feature.id === 'ats-optimized'
-                            ? 'scale(1.1)' :
-                            'scale(1)'
-                    }}
-                  >
-                    {feature.image.endsWith('.svg') ? (
-                      <img
-                        src={feature.image}
-                        alt={feature.title}
-                        className={`w-full h-full object-cover`}
-                      />
-                    ) : (
+                  {/* The Window Frame */}
+                  <div className="absolute inset-0 bg-[#1e1e1e] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+                    {/* Content Area */}
+                    <div className="relative flex-1 bg-gray-900 overflow-hidden group">
                       <Image
                         src={feature.image}
                         alt={feature.title}
                         fill
                         className="object-cover"
+                        quality={90}
                       />
-                    )}
+                      {/* Overlay Gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                      {/* Floating Action Button */}
+                      <div className="absolute bottom-8 right-8 z-20">
+                        <a
+                          href={feature.ctaLink}
+                          target={feature.ctaLink.startsWith('http') ? '_blank' : undefined}
+                          className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full font-bold shadow-2xl hover:bg-gray-100 transition-colors"
+                        >
+                          {feature.cta}
+                          <ArrowRight size={16} />
+                        </a>
+                      </div>
+                    </div>
                   </div>
                 </motion.div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-                {/* Content */}
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className={`p-2 rounded-lg bg-gradient-to-br ${feature.color} bg-opacity-10`}>
-                      <feature.icon size={20} className="text-white" />
-                    </div>
-                    <h3 className="text-lg tablet:text-xl font-bold text-white group-hover:text-lime-400 transition-colors duration-300">
-                      {feature.title}
-                    </h3>
-                  </div>
-
-                  <p className="text-white/70 leading-relaxed text-xs tablet:text-sm desktop:text-base flex-grow">
-                    {feature.description}
-                  </p>
-
-                  {/* CTA Button */}
-                  <motion.a
-                    href={feature.ctaLink}
-                    target={feature.ctaLink.startsWith('http') ? '_blank' : undefined}
-                    rel={feature.ctaLink.startsWith('http') ? 'noopener noreferrer' : undefined}
-                    className="group/btn relative inline-flex items-center gap-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-5 py-2.5 tablet:px-6 tablet:py-3 rounded-full font-semibold text-xs tablet:text-sm shadow-lg hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden mt-6 w-fit"
-                    whileHover={{
-                      scale: 1.05,
-                      boxShadow: "0 15px 30px -8px rgba(132, 204, 22, 0.5)"
-                    }}
-                    whileTap={{ scale: 0.95 }}
-                    style={{ willChange: 'transform' }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-lime-300 to-lime-400 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-500"
-                      style={{ filter: 'blur(20px)' }}
-                    />
-                    <div className="relative flex items-center gap-2">
-                      <span>{feature.cta}</span>
-                      <motion.div
-                        whileHover={{ rotate: 45 }}
-                        transition={{ duration: 0.3 }}
-                      >
-                        <ArrowRight size={16} />
-                      </motion.div>
-                    </div>
-                  </motion.a>
+        {/* Mobile/Tablet: Original Hover-based Layout */}
+        <div className="flex desktop:hidden flex-col gap-12 items-center">
+          {/* Feature List */}
+          <div className="w-full space-y-4">
+            {features.map((feature, index) => (
+              <motion.div
+                key={feature.id}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => setActiveFeature(index)}
+                className={`group flex items-center gap-4 p-2 pr-6 rounded-full cursor-pointer transition-all duration-300 border ${activeFeature === index
+                  ? 'bg-white/10 border-white/10 shadow-lg'
+                  : 'bg-transparent border-transparent hover:bg-white/5'
+                  }`}
+              >
+                <div className={`p-3 rounded-full bg-gradient-to-br ${feature.gradient} bg-opacity-20 shrink-0 transform transition-transform group-hover:scale-110 flex items-center justify-center w-12 h-12`}>
+                  <feature.icon size={20} className="text-white" />
                 </div>
-
-                {/* Arrow Indicator */}
-                <motion.div
-                  className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                  whileHover={{ x: 5, rotate: 45 }}
-                >
-                  <ArrowRight
-                    size={20}
-                    className="text-lime-400 drop-shadow-[0_0_8px_rgba(132,204,22,0.8)]"
-                  />
-                </motion.div>
+                <div className="flex-1">
+                  <h3 className={`text-lg font-bold transition-colors ${activeFeature === index ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                    }`}>
+                    {feature.title}
+                  </h3>
+                  {/* Mobile CTA */}
+                  <div className={`mt-2 overflow-hidden transition-all duration-300 ${activeFeature === index ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
+                    }`}>
+                    <a href={feature.ctaLink} className="text-sm font-semibold text-lime-400 hover:text-lime-300 flex items-center gap-1">
+                      {feature.cta} <ArrowRight size={14} />
+                    </a>
+                  </div>
+                </div>
               </motion.div>
-            );
-          })}
-        </motion.div>
+            ))}
+          </div>
+
+          {/* Visual Display */}
+          <div className="w-full perspective-[2000px]">
+            <motion.div
+              initial={{ opacity: 0, rotateY: 20, rotateX: 5, scale: 0.9 }}
+              whileInView={{ opacity: 1, rotateY: -5, rotateX: 2, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+              style={{
+                transformStyle: "preserve-3d",
+              }}
+              className="relative w-full aspect-[16/10]"
+            >
+              <div className="absolute inset-0 bg-[#1e1e1e] rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col">
+                <div className="relative flex-1 bg-gray-900 overflow-hidden group">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeFeature}
+                      initial={{ opacity: 0, scale: 1.05, filter: "blur(10px)" }}
+                      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0"
+                    >
+                      <Image
+                        src={features[activeFeature].image}
+                        alt={features[activeFeature].title}
+                        fill
+                        className="object-cover"
+                        quality={90}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    </motion.div>
+                  </AnimatePresence>
+
+                  <motion.div
+                    className="absolute bottom-8 right-8 z-20"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key={`btn-${activeFeature}`}
+                  >
+                    <a
+                      href={features[activeFeature].ctaLink}
+                      target={features[activeFeature].ctaLink.startsWith('http') ? '_blank' : undefined}
+                      className="flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full font-bold shadow-2xl hover:bg-gray-100 transition-colors"
+                    >
+                      {features[activeFeature].cta}
+                      <ArrowRight size={16} />
+                    </a>
+                  </motion.div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
+
+      {/* Hide scrollbar globally for the scroll container */}
+      <style jsx>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </section>
   );
 };

@@ -1,7 +1,7 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ResumeEnhancerProvider, useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import ProfilerHeader from '@/components/resume-enhancer/ProfilerHeader';
@@ -11,6 +11,7 @@ import SurgeonOverlay from '@/components/resume-enhancer/SurgeonOverlay';
 import PaneToggleBar from '@/components/resume-enhancer/PaneToggleBar';
 import PreviewOverlay from '@/components/resume-enhancer/PreviewOverlay';
 import dynamic from 'next/dynamic';
+import { Info } from 'lucide-react';
 
 import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 
@@ -31,16 +32,59 @@ function ResumeEnhancerContent() {
     const { state, dispatch, nextStep, prevStep, goToStep, runCVSurgeon } = useResumeEnhancer();
     const { state: aiReportState } = useAICareerReport();
     const searchParams = useSearchParams();
+    const router = useRouter();
     const step = parseInt(searchParams.get('step') || '1');
 
-    React.useEffect(() => {
+    // Check if user has any CVs and if this is their first CV creation
+    useEffect(() => {
+        const checkCVCount = async () => {
+            try {
+                const response = await fetch('/api/cvs/check-first');
+                if (response.ok) {
+                    const data = await response.json();
+                    const isFirstCV = data.isFirstCV || data.cvCount === 0;
+
+                    console.log('🔍 Resume Enhancer - CV count check:', {
+                        isFirstCV,
+                        cvCount: data.cvCount
+                    });
+
+                    if (isFirstCV) {
+                        // This is the first CV - enforce Master CV mode
+                        dispatch({ type: 'SET_IS_FIRST_CV_CREATION', payload: true });
+                        dispatch({ type: 'SET_ENFORCE_MASTER_CV_MODE', payload: true });
+                        dispatch({ type: 'SET_CV_TYPE', payload: 'master' });
+                        dispatch({ type: 'SET_HAS_MASTER_CV', payload: false });
+
+                        console.log('✅ Resume Enhancer - First CV detected, enforcing Master CV mode');
+                    } else {
+                        dispatch({ type: 'SET_IS_FIRST_CV_CREATION', payload: false });
+                        dispatch({ type: 'SET_ENFORCE_MASTER_CV_MODE', payload: false });
+
+                        // Check if user has a Master CV
+                        const masterCVResponse = await fetch('/api/cvs/check-master');
+                        if (masterCVResponse.ok) {
+                            const masterData = await masterCVResponse.json();
+                            dispatch({ type: 'SET_HAS_MASTER_CV', payload: masterData.hasMasterCV });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Resume Enhancer - Failed to check CV count:', error);
+            }
+        };
+
+        checkCVCount();
+    }, []); // Run once on mount
+
+    useEffect(() => {
         if (step && step !== state.currentStep) {
             dispatch({ type: 'SET_CURRENT_STEP', payload: step as 1 | 2 | 3 });
         }
-    }, [step]);
+    }, [step, state.currentStep, dispatch]);
 
     // Sync CV data from AI Career Report context (where ChoosePathStep saves it)
-    React.useEffect(() => {
+    useEffect(() => {
         if (state.currentStep === 1 && aiReportState.cvData && aiReportState.cvData.basics?.name) {
             // Check if we need to sync (avoid infinite loops/unnecessary updates)
             const hasData = state.cvData.basics?.name;
@@ -49,7 +93,7 @@ function ResumeEnhancerContent() {
                 dispatch({ type: 'SET_CV_DATA', payload: aiReportState.cvData });
             }
         }
-    }, [aiReportState.cvData, state.currentStep, state.cvData]);
+    }, [aiReportState.cvData, state.currentStep, state.cvData, dispatch]);
 
     const handleProfilerComplete = async (role: string, seniority: any) => {
         dispatch({ type: 'SET_TARGET_ROLE', payload: role });
@@ -80,13 +124,43 @@ function ResumeEnhancerContent() {
     const renderStep = () => {
         switch (state.currentStep) {
             case 1:
-                return <ChoosePathStep onNext={handleUploadComplete} />;
+                return (
+                    <>
+                        {state.enforceMasterCVMode && (
+                            <div className="bg-gradient-to-r from-[var(--accent-primary)]/10 to-[var(--accent-secondary)]/10 border border-[var(--accent-primary)]/30 rounded-lg p-4 mx-auto max-w-3xl mb-6 mt-6">
+                                <div className="flex items-start gap-3">
+                                    <Info className="w-5 h-5 text-[var(--accent-primary)] flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <h3 className="font-semibold text-[var(--text-primary)] mb-1">
+                                            Creating Your Master CV
+                                        </h3>
+                                        <p className="text-sm text-[var(--text-secondary)]">
+                                            This will be your Master CV — a comprehensive resume that captures your full experience.
+                                            You'll be able to create tailored versions for specific jobs later.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <ChoosePathStep onNext={handleUploadComplete} />
+                    </>
+                );
             case 2:
                 return <ChooseTemplateStep onNext={nextStep} onBack={prevStep} />;
             case 3:
                 return (
                     <div className="dashboard-page resume-enhancer-page h-screen flex flex-col bg-[var(--bg-primary)] text-[color:var(--text-primary)]">
                         <ProfilerHeader />
+                        {state.enforceMasterCVMode && (
+                            <div className="bg-gradient-to-r from-[var(--accent-primary)]/10 to-[var(--accent-secondary)]/10 border-t border-b border-[var(--accent-primary)]/20 px-6 py-3">
+                                <div className="flex items-center justify-center gap-2 max-w-7xl mx-auto">
+                                    <Info className="w-4 h-4 text-[var(--accent-primary)]" />
+                                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                                        Creating your Master CV — this will be the foundation for all your job applications
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div className="flex-1 flex overflow-hidden relative">
                             {/* Main Form Area - Takes remaining space; shrinks when surgeon opens */}
                             <div className="flex-1 min-w-0 overflow-y-auto">
@@ -126,16 +200,16 @@ function ResumeEnhancerContent() {
     );
 }
 
-export default function ResumeEnhancerClient() {
+export default function ResumeEnhancerClientWrapper() {
     return (
-        <Suspense fallback={
-            <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--accent-primary)]"></div>
-            </div>
-        }>
-            <ResumeEnhancerProvider>
+        <ResumeEnhancerProvider>
+            <React.Suspense fallback={
+                <div className="flex items-center justify-center h-screen bg-[var(--bg-primary)]">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[color:var(--accent-primary)]"></div>
+                </div>
+            }>
                 <ResumeEnhancerContent />
-            </ResumeEnhancerProvider>
-        </Suspense>
+            </React.Suspense>
+        </ResumeEnhancerProvider>
     );
 }
