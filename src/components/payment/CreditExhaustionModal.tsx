@@ -13,6 +13,13 @@ interface CreditExhaustionModalProps {
   resetTime?: Date;
   preselectedPlanKey?: string;
   reason?: string;
+  /**
+   * Type of exhaustion to show context-specific messaging:
+   * - 'meter': Throughput limit (e.g., monthly job activations)
+   * - 'quota': Inventory limit (e.g., active jobs count)
+   * - 'gate': Feature gate (e.g., DOCX export requires upgrade)
+   */
+  exhaustionType?: 'meter' | 'quota' | 'gate';
 }
 
 const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
@@ -22,7 +29,8 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
   limit,
   resetTime,
   preselectedPlanKey = 'pro_monthly',
-  reason
+  reason,
+  exhaustionType = 'meter'
 }) => {
   const { openPaymentModal } = usePaymentModal();
 
@@ -75,10 +83,18 @@ const CreditExhaustionModal: React.FC<CreditExhaustionModalProps> = ({
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-black">
-                    Credit Limit Exhausted
+                    {exhaustionType === 'gate'
+                      ? 'Feature Requires Upgrade'
+                      : exhaustionType === 'quota'
+                        ? 'Inventory Full'
+                        : 'Credit Limit Exhausted'}
                   </h3>
                   <p className="text-xs text-black/70 font-medium">
-                    Upgrade to continue
+                    {exhaustionType === 'gate'
+                      ? 'Unlock premium features'
+                      : exhaustionType === 'quota'
+                        ? 'Archive items or upgrade'
+                        : 'Upgrade to continue'}
                   </p>
                 </div>
               </div>

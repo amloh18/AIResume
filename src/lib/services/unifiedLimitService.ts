@@ -55,56 +55,31 @@ class UnifiedLimitService {
     // PLAN LIMITS CONFIGURATION
     // --------------------------------------------------------------------------
 
-    private getPlanLimits(planKey: string) {
-        const limits = {
-            free: {
-                masterCV: 1,
-                journeyCV: 1,
-                standaloneCV: 1,
-                activeJobs: 3,
-                archivedJobs: -1, // Unlimited
-                aiCredits: 5,
-                templates: 'free' as const
-            },
-            day_pass: {
-                masterCV: -1, // Unlimited
-                journeyCV: -1,
-                standaloneCV: -1,
-                activeJobs: -1,
-                archivedJobs: -1,
-                aiCredits: -1,
-                templates: 'all' as const
-            },
-            pro_monthly: {
-                masterCV: -1,
-                journeyCV: -1,
-                standaloneCV: -1,
-                activeJobs: -1,
-                archivedJobs: -1,
-                aiCredits: -1,
-                templates: 'all' as const
-            },
-            pro_quarterly: {
-                masterCV: -1,
-                journeyCV: -1,
-                standaloneCV: -1,
-                activeJobs: -1,
-                archivedJobs: -1,
-                aiCredits: -1,
-                templates: 'all' as const
-            },
-            pro_yearly: {
-                masterCV: -1,
-                journeyCV: -1,
-                standaloneCV: -1,
-                activeJobs: -1,
-                archivedJobs: -1,
-                aiCredits: -1,
-                templates: 'all' as const
-            }
-        };
+    // --------------------------------------------------------------------------
+    // PLAN LIMITS CONFIGURATION
+    // --------------------------------------------------------------------------
 
-        return limits[planKey as keyof typeof limits] || limits.free;
+    // DEPRECATED: Use getPlanLimits from subscription-helpers instead
+    // This local method is kept as a private helper that wraps the shared utility
+    private getPlanLimits(planKey: string) {
+        // Import dynamically to avoid circular dependencies if any
+        // In a real refactor, we would import at top level, but for now we follow the structure
+        const { getPlanLimits } = require('@/lib/utils/subscription-helpers');
+        const limits = getPlanLimits(planKey);
+
+        // Adapt shared limits to local interface if needed
+        // Shared uses 'maxJobs', local used 'activeJobs'
+        // Shared uses 'maxCVs', local used 'masterCV/journeyCV/standaloneCV' generically or specifically
+
+        return {
+            masterCV: limits.maxCVs,
+            journeyCV: limits.journeyCVs, // Note: Shared has journeyCVs separate
+            standaloneCV: limits.maxCVs,
+            activeJobs: limits.maxJobs,
+            archivedJobs: -1, // Always unlimited
+            aiCredits: limits.surgeonRuns === -1 ? -1 : 5, // Approximate mapping, or fetch specific credit limit if added to shared
+            templates: limits.premiumTemplates ? 'all' : 'free'
+        };
     }
 
     // --------------------------------------------------------------------------

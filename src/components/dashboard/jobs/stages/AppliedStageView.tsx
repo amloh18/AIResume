@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface JobApplication {
@@ -11,6 +11,8 @@ interface JobApplication {
   jobTitle: string;
   title?: string;
   company: string;
+  location?: string;
+  status?: string;
   applicationDate?: Date | string;
   deadline?: Date | string;
   updatedAt: string;
@@ -22,6 +24,43 @@ interface AppliedStageViewProps {
   onJobStatusUpdate: (jobId: string, newStatus: string) => Promise<void>;
   isFullScreen?: boolean;
 }
+
+// Check if location is in UK or USA (eligible for sponsorship badge)
+const isUKorUSLocation = (location?: string): 'UK' | 'US' | null => {
+  if (!location) return null;
+  const loc = location.toLowerCase();
+
+  // UK variations
+  if (loc.includes('uk') ||
+    loc.includes('united kingdom') ||
+    loc.includes('london') ||
+    loc.includes('england') ||
+    loc.includes('scotland') ||
+    loc.includes('wales') ||
+    loc.includes('manchester') ||
+    loc.includes('birmingham') ||
+    loc.includes('northern ireland')) {
+    return 'UK';
+  }
+
+  // US variations  
+  if (loc.includes('usa') ||
+    loc.includes('united states') ||
+    loc.includes('america') ||
+    loc.includes('new york') ||
+    loc.includes('california') ||
+    loc.includes('texas') ||
+    loc.includes('san francisco') ||
+    loc.includes('seattle') ||
+    loc.includes('boston') ||
+    loc.includes('chicago') ||
+    loc.includes('los angeles')) {
+    return 'US';
+  }
+
+  return null;
+};
+
 
 const AppliedStageView: React.FC<AppliedStageViewProps> = ({
   jobs,
@@ -55,11 +94,11 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
       // First sort by deadline (ascending, nulls last)
       const deadlineA = a.deadline ? (typeof a.deadline === 'string' ? new Date(a.deadline) : a.deadline).getTime() : Infinity;
       const deadlineB = b.deadline ? (typeof b.deadline === 'string' ? new Date(b.deadline) : b.deadline).getTime() : Infinity;
-      
+
       if (deadlineA !== deadlineB) {
         return deadlineA - deadlineB;
       }
-      
+
       // Then sort by follow-up needed
       const followUpA = isFollowUpNeeded(a) ? 0 : 1;
       const followUpB = isFollowUpNeeded(b) ? 0 : 1;
@@ -71,7 +110,7 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
     e.stopPropagation();
     try {
       // Update job's updatedAt to current time (simulating follow-up completion)
-      await onJobStatusUpdate(job.id || job._id, job.status);
+      await onJobStatusUpdate(job.id || job._id, job.status || 'applied');
       toast.success('Follow-up marked as complete');
     } catch (error) {
       console.error('Error updating follow-up:', error);
@@ -99,14 +138,17 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
         const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
         const daysUntilDeadline = getDaysUntilDeadline(job.deadline);
         const needsFollowUp = isFollowUpNeeded(job);
-        
-        const deadlineStatus = daysUntilDeadline === null 
+
+        const deadlineStatus = daysUntilDeadline === null
           ? 'none'
-          : daysUntilDeadline < 0 
-            ? 'overdue' 
-            : daysUntilDeadline <= 3 
-              ? 'approaching' 
+          : daysUntilDeadline < 0
+            ? 'overdue'
+            : daysUntilDeadline <= 3
+              ? 'approaching'
               : 'normal';
+
+        // Check if job location is in UK or USA for sponsorship badge
+        const sponsorshipRegion = isUKorUSLocation(job.location);
 
         // COMPACT FULL SCREEN LAYOUT
         if (isFullScreen) {
@@ -115,13 +157,12 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
               key={job.id || job._id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${
-                deadlineStatus === 'overdue' 
-                  ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' 
-                  : deadlineStatus === 'approaching'
-                    ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
-                    : 'border-gray-200 dark:border-white/10'
-              }`}
+              className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${deadlineStatus === 'overdue'
+                ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
+                : deadlineStatus === 'approaching'
+                  ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
+                  : 'border-gray-200 dark:border-white/10'
+                }`}
             >
               {/* Left: Compact Job Info */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -134,13 +175,19 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                   </h3>
                   <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
                     <span>{job.company}</span>
+                    {sponsorshipRegion && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-semibold">
+                        <Globe className="w-2.5 h-2.5" />
+                        {sponsorshipRegion} Sponsor
+                      </span>
+                    )}
                     <span>•</span>
                     <span>{daysSinceApplication} days ago</span>
                     {job.deadline && (
                       <>
                         <span>•</span>
                         <span className={deadlineStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-semibold' : deadlineStatus === 'approaching' ? 'text-yellow-600 dark:text-yellow-400' : ''}>
-                          {deadlineStatus === 'overdue' 
+                          {deadlineStatus === 'overdue'
                             ? `Overdue ${Math.abs(daysUntilDeadline!)}d`
                             : deadlineStatus === 'approaching'
                               ? `${daysUntilDeadline}d left`
@@ -194,13 +241,12 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
             key={job.id || job._id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`bg-white dark:bg-[#1a2015] border rounded-lg p-4 md:p-6 hover:shadow-lg transition-all cursor-pointer ${
-              deadlineStatus === 'overdue' 
-                ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' 
-                : deadlineStatus === 'approaching'
-                  ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
-                  : 'border-gray-200 dark:border-white/10'
-            }`}
+            className={`bg-white dark:bg-[#1a2015] border rounded-lg p-4 md:p-6 hover:shadow-lg transition-all cursor-pointer ${deadlineStatus === 'overdue'
+              ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
+              : deadlineStatus === 'approaching'
+                ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
+                : 'border-gray-200 dark:border-white/10'
+              }`}
             onClick={() => onJobClick(job)}
           >
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -214,9 +260,15 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
                       {job.jobTitle || job.title}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {job.company}
-                    </p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <span>{job.company}</span>
+                      {sponsorshipRegion && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-semibold">
+                          <Globe className="w-2.5 h-2.5" />
+                          {sponsorshipRegion} Sponsor
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -225,10 +277,10 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
                   <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                     <Calendar className="w-4 h-4" />
                     <span>
-                      Applied: {job.applicationDate 
-                        ? (typeof job.applicationDate === 'string' 
-                            ? new Date(job.applicationDate).toLocaleDateString() 
-                            : job.applicationDate.toLocaleDateString())
+                      Applied: {job.applicationDate
+                        ? (typeof job.applicationDate === 'string'
+                          ? new Date(job.applicationDate).toLocaleDateString()
+                          : job.applicationDate.toLocaleDateString())
                         : 'N/A'}
                     </span>
                   </div>
@@ -241,16 +293,15 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
 
                   {/* Deadline */}
                   {job.deadline && (
-                    <div className={`flex items-center gap-2 ${
-                      deadlineStatus === 'overdue' 
-                        ? 'text-red-600 dark:text-red-400 font-semibold' 
-                        : deadlineStatus === 'approaching'
-                          ? 'text-yellow-600 dark:text-yellow-400 font-semibold'
-                          : 'text-gray-600 dark:text-gray-400'
-                    }`}>
+                    <div className={`flex items-center gap-2 ${deadlineStatus === 'overdue'
+                      ? 'text-red-600 dark:text-red-400 font-semibold'
+                      : deadlineStatus === 'approaching'
+                        ? 'text-yellow-600 dark:text-yellow-400 font-semibold'
+                        : 'text-gray-600 dark:text-gray-400'
+                      }`}>
                       <AlertCircle className="w-4 h-4" />
                       <span>
-                        {deadlineStatus === 'overdue' 
+                        {deadlineStatus === 'overdue'
                           ? `Overdue by ${Math.abs(daysUntilDeadline!)} days`
                           : deadlineStatus === 'approaching'
                             ? `${daysUntilDeadline} days left`

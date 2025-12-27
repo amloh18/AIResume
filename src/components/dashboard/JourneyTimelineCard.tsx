@@ -675,17 +675,21 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   // Polling for document creation status
   React.useEffect(() => {
     // Poll if status is processing_documents OR if we're missing cvId or coverLetterId but status isn't failed
-    const needsPolling = journey.status === 'processing_documents' ||
-      (journey.status !== 'creation_failed' && (!journey.cvId || !journey.coverLetterId));
+    const isProcessing = journey.status === 'processing_documents';
+    const needsPolling = isProcessing ||
+      (journey.status !== 'creation_failed' && journey.status !== 'ready' && (!journey.cvId || !journey.coverLetterId));
 
     if (needsPolling) {
+      // Poll faster (1.5s) for processing state, then slow down
+      const pollInterval = isProcessing ? 1500 : 2000;
       console.log('🔄 JourneyTimelineCard - Starting polling for journey:', journey.id, {
         status: journey.status,
         hasCvId: !!journey.cvId,
-        hasCoverLetterId: !!journey.coverLetterId
+        hasCoverLetterId: !!journey.coverLetterId,
+        pollInterval
       });
 
-      // Poll every 2 seconds
+      // Poll at the determined interval
       pollingIntervalRef.current = setInterval(async () => {
         try {
           const response = await fetch(`/api/application-journey?jobId=${journey.jobId}`);
@@ -709,6 +713,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                   if (pollingIntervalRef.current) {
                     clearInterval(pollingIntervalRef.current);
                     pollingIntervalRef.current = null;
+                  }
+
+                  // Update journey state directly for immediate UI update
+                  if (onUpdateJourney) {
+                    onUpdateJourney(journey.id, {
+                      cvId: updatedJourney.cvId,
+                      coverLetterId: updatedJourney.coverLetterId,
+                      status: updatedJourney.status
+                    });
                   }
 
                   // Trigger refresh to update the component
@@ -1320,7 +1333,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         const cachedScore = linkedCV.metadata.atsScore;
         setAtsScore(cachedScore);
         updateAtsScore(cachedScore);
-        
+
         // Also update journey with cached score
         const journeyResponse = await fetch(`/api/application-journey/${journey.id}`, {
           method: 'PUT',
@@ -1333,11 +1346,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             }
           })
         });
-        
+
         if (journeyResponse.ok) {
           console.log('✅ JourneyTimelineCard - Cached score synced to journey');
         }
-        
+
         setAtsScoreLoading(false);
         return;
       }
@@ -1372,7 +1385,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       if (result.success && result.data) {
         const score = result.data.score || result.data.atsScore;
         const isCached = result.data.cached === true;
-        
+
         if (score !== undefined && score !== null) {
           setAtsScore(score);
 
@@ -1393,16 +1406,16 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             updateJourneyStatus('ats-checked');
             updateCurrentStep(4);
             toast.success(
-              isCached 
-                ? `ATS score: ${score}% (cached)` 
+              isCached
+                ? `ATS score: ${score}% (cached)`
                 : `ATS score calculated: ${score}% - Great match!`
             );
           } else {
             updateJourneyStatus('ats-checked');
             updateCurrentStep(3);
             toast.success(
-              isCached 
-                ? `ATS score: ${score}% (cached)` 
+              isCached
+                ? `ATS score: ${score}% (cached)`
                 : `ATS score calculated: ${score}% - Consider optimizing for better match`
             );
           }
@@ -2422,25 +2435,27 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCV ? 'Ready for editing' : 'Document linked'}
                           </p>
-                          {/* Only show Edit button */}
-                          <div className="flex items-center gap-2 mt-1">
-                            <motion.button
-                              onClick={() => {
-                                // Navigate to resume-enhancer in journey mode
-                                const params = new URLSearchParams();
-                                params.set('mode', 'journey');
-                                params.set('journeyId', journey.id);
-                                if (journey.cvId) {
-                                  params.set('cvId', journey.cvId);
-                                }
-                                router.push(`/resume-enhancer?${params.toString()}`);
-                              }}
-                              className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Edit
-                            </motion.button>
-                          </div>
+                          {/* Only show Edit button - but hide for post-application stages */}
+                          {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <motion.button
+                                onClick={() => {
+                                  // Navigate to resume-enhancer in journey mode
+                                  const params = new URLSearchParams();
+                                  params.set('mode', 'journey');
+                                  params.set('journeyId', journey.id);
+                                  if (journey.cvId) {
+                                    params.set('cvId', journey.cvId);
+                                  }
+                                  router.push(`/resume-enhancer?${params.toString()}`);
+                                }}
+                                className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Edit
+                              </motion.button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -2453,9 +2468,19 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <p className="text-xs text-white/60">Please wait while we create your CV</p>
                     </div>
                   ) : journey.status === 'creation_failed' ? (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <p className="text-xs text-red-400 font-medium">Failed to create CV</p>
                       <p className="text-xs text-red-300">Document creation encountered an error</p>
+                      <motion.button
+                        onClick={handleRetryDocuments}
+                        disabled={isRetryingDocuments}
+                        className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium rounded transition-colors border border-red-500/30 disabled:opacity-50"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isRetryingDocuments ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        Retry
+                      </motion.button>
                     </div>
                   ) : !hasMasterCV ? (
                     <div className="space-y-2">
@@ -2538,9 +2563,18 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           {/* Improve Score Button */}
                           <motion.button
                             onClick={() => {
-                              // Open Studio with CV type and ATS mode
-                              const studioUrl = `/studio?journeyId=${journey.id}&documentType=cv&mode=atsedit`;
-                              window.open(studioUrl, '_blank');
+                              // Navigate to resume-enhancer step 3 with CV loaded
+                              const params = new URLSearchParams();
+                              params.set('mode', 'journey');
+                              params.set('journeyId', journey.id);
+                              params.set('step', '3');
+                              if (journey.cvId) {
+                                params.set('cvId', journey.cvId);
+                              }
+                              if (journey.jobId) {
+                                params.set('jobId', journey.jobId);
+                              }
+                              router.push(`/resume-enhancer?${params.toString()}`);
                             }}
                             className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium rounded transition-colors border border-purple-500/30"
                             whileHover={{ scale: 1.02 }}
@@ -2603,36 +2637,38 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCoverLetter ? 'Ready for download' : 'Document linked'}
                           </p>
-                          {/* Only show Edit button */}
-                          <div className="flex items-center gap-2 mt-1">
-                            <motion.button
-                              onClick={() => {
-                                // Navigate to cover-letter-editor in journey mode
-                                const params = new URLSearchParams();
-                                params.set('mode', 'journey');
-                                params.set('journeyId', journey.id);
-                                if (journey.coverLetterId) {
-                                  params.set('coverLetterId', journey.coverLetterId);
-                                }
-                                if (journey.cvId) {
-                                  params.set('cvId', journey.cvId);
-                                }
-                                if (journey.jobId) {
-                                  params.set('jobId', journey.jobId);
-                                }
-                                router.push(`/cover-letter-editor?${params.toString()}`);
-                              }}
-                              className={`text-xs flex items-center gap-1 ${liveProgress.status === 'completed'
-                                ? 'text-blue-400 hover:text-blue-300'
-                                : 'text-lime-400 hover:text-lime-300'
-                                }`}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                              Edit
-                            </motion.button>
-                          </div>
+                          {/* Only show Edit button - but hide for post-application stages */}
+                          {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && (
+                            <div className="flex items-center gap-2 mt-1">
+                              <motion.button
+                                onClick={() => {
+                                  // Navigate to cover-letter-editor in journey mode
+                                  const params = new URLSearchParams();
+                                  params.set('mode', 'journey');
+                                  params.set('journeyId', journey.id);
+                                  if (journey.coverLetterId) {
+                                    params.set('coverLetterId', journey.coverLetterId);
+                                  }
+                                  if (journey.cvId) {
+                                    params.set('cvId', journey.cvId);
+                                  }
+                                  if (journey.jobId) {
+                                    params.set('jobId', journey.jobId);
+                                  }
+                                  router.push(`/cover-letter-editor?${params.toString()}`);
+                                }}
+                                className={`text-xs flex items-center gap-1 ${liveProgress.status === 'completed'
+                                  ? 'text-blue-400 hover:text-blue-300'
+                                  : 'text-lime-400 hover:text-lime-300'
+                                  }`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Edit
+                              </motion.button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -2645,18 +2681,132 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                       <p className="text-xs text-white/60">Please wait while we create your cover letter</p>
                     </div>
                   ) : journey.status === 'creation_failed' ? (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <p className="text-xs text-red-400 font-medium">Failed to create Cover Letter</p>
                       <p className="text-xs text-red-300">Document creation encountered an error</p>
+                      <motion.button
+                        onClick={handleRetryDocuments}
+                        disabled={isRetryingDocuments}
+                        className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium rounded transition-colors border border-red-500/30 disabled:opacity-50"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isRetryingDocuments ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        Retry
+                      </motion.button>
                     </div>
                   ) : cvNotFound ? (
                     <div>
                       <p className="text-xs text-red-400 font-medium">CV Not Available</p>
                       <p className="text-xs text-red-300">Cannot create cover letter</p>
                     </div>
+                  ) : journey.cvId ? (
+                    <div className="space-y-2">
+                      <p className="text-xs text-white/60">No cover letter yet</p>
+                      <motion.button
+                        onClick={async () => {
+                          if (!session?.user?.id || !journey.cvId || !journey.jobId) {
+                            toast.error('Missing required data to generate cover letter');
+                            return;
+                          }
+
+                          setIsAutoCreatingCoverLetter(true);
+                          try {
+                            // First fetch CV and Job data
+                            const [cvRes, jobRes] = await Promise.all([
+                              fetch(`/api/cvs/${journey.cvId}?userId=${session.user.id}`),
+                              fetch(`/api/jobs/${journey.jobId}?userId=${session.user.id}`)
+                            ]);
+
+                            if (!cvRes.ok || !jobRes.ok) {
+                              throw new Error('Failed to fetch CV or Job data');
+                            }
+
+                            const cvData = await cvRes.json();
+                            const jobData = await jobRes.json();
+
+                            // Generate cover letter content using AI
+                            const generateRes = await fetch('/api/ai/cover-letter-generate', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                cvData: cvData.data?.cv || cvData.cv || cvData,
+                                jobData: jobData.data?.job || jobData.job || jobData,
+                                userId: session.user.id
+                              })
+                            });
+
+                            if (!generateRes.ok) {
+                              throw new Error('Failed to generate cover letter content');
+                            }
+
+                            const generateResult = await generateRes.json();
+                            const coverLetterContent = generateResult.content || generateResult.body || generateResult.data?.content;
+
+                            // Create cover letter document and link to journey
+                            const createRes = await fetch('/api/cover-letters', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                userId: session.user.id,
+                                title: `Cover Letter - ${journey.jobTitle} at ${journey.company}`,
+                                content: coverLetterContent,
+                                jobId: journey.jobId,
+                                journeyId: journey.id,
+                                status: 'draft'
+                              })
+                            });
+
+                            if (!createRes.ok) {
+                              throw new Error('Failed to create cover letter');
+                            }
+
+                            const createResult = await createRes.json();
+                            const newCoverLetterId = createResult.data?.id || createResult.id;
+
+                            if (newCoverLetterId) {
+                              // Update journey with cover letter ID
+                              await fetch(`/api/application-journey/${journey.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  userId: session.user.id,
+                                  coverLetterId: newCoverLetterId
+                                })
+                              });
+
+                              toast.success('Cover letter generated successfully!');
+                              // Trigger refresh of journey data
+                              window.location.reload();
+                            }
+                          } catch (error) {
+                            console.error('Error generating cover letter:', error);
+                            toast.error('Failed to generate cover letter');
+                          } finally {
+                            setIsAutoCreatingCoverLetter(false);
+                          }
+                        }}
+                        disabled={isAutoCreatingCoverLetter}
+                        className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 text-xs font-medium rounded transition-colors border border-orange-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {isAutoCreatingCoverLetter ? (
+                          <>
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3 w-3" />
+                            Generate Cover Letter
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-white/60">Creating cover letter...</p>
+                      <p className="text-xs text-white/60">Complete Step 2 first</p>
                     </div>
                   )}
                 </div>

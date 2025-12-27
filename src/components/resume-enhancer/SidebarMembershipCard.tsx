@@ -151,7 +151,7 @@ export default function SidebarMembershipCard() {
   // Loading placeholder (keeps layout stable)
   if (loading) {
     return (
-      <div className="rounded-2xl p-3 bg-[#222327] shadow-sm shadow-black/10 dark:shadow-black/30">
+      <div className="rounded-2xl p-3 bg-gray-100 dark:bg-[#222327] shadow-sm shadow-black/10 dark:shadow-black/30">
         <div className="h-4 w-32 bg-black/10 dark:bg-white/10 rounded mb-2" />
         <div className="h-2 w-full bg-black/10 dark:bg-white/10 rounded mb-2" />
         <div className="h-8 w-full bg-black/10 dark:bg-white/10 rounded-xl" />
@@ -384,7 +384,7 @@ export default function SidebarMembershipCard() {
   if (planKey === 'pro_yearly') {
     return (
       <div className="rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40 relative overflow-hidden">
-        <div className="absolute -right-8 top-2 bg-white/20 text-white text-[9px] font-bold px-8 py-0.5 rotate-45 transform">
+        <div className="absolute right-[-35px] top-[10px] bg-white/25 text-white text-[8px] font-bold px-10 py-0.5 rotate-45 transform origin-center shadow-sm">
           BEST VALUE
         </div>
 

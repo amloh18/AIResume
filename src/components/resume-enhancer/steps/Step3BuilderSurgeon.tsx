@@ -1270,11 +1270,11 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     };
 
     return (
-      <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-[#1a230f]">
+      <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
         {/* Main Container */}
         <div className="flex-1 h-full flex overflow-hidden relative p-4">
           {/* Form Content - Full Width */}
-          <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#1a230f] rounded-xl border border-white/10 shadow-2xl">
+          <div className="flex-1 flex flex-col h-full overflow-hidden bg-white dark:bg-[#1a230f] rounded-xl border border-gray-200 dark:border-white/10 shadow-2xl">
             {/* Scrollable Area */}
             <div ref={scrollableContainerRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain overflow-x-hidden px-4 pt-2 pb-20">
               <div className="flex flex-col gap-4">
@@ -1312,17 +1312,17 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     <div
                       key={section.id}
                       id={`section-${section.id}`}
-                      className={`bg-white/5 rounded-2xl border border-white/10 overflow-hidden scroll-mt-4 mt-2 ${state.reviewMode && openFixesForSection.length > 0 ? 'bg-red-500/5' : ''
+                      className={`bg-white dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 overflow-hidden scroll-mt-4 mt-2 ${state.reviewMode && openFixesForSection.length > 0 ? 'bg-red-50 dark:bg-red-500/5 border-red-200 dark:border-red-500/20' : ''
                         }`}
                     >
                       {/* Section Header */}
                       <div
                         onClick={() => toggleSection(section.id)}
-                        className="w-full flex items-center justify-between px-4 py-4 bg-white/5 hover:bg-[#2D332D] transition-colors text-white rounded-t-2xl cursor-pointer"
+                        className="w-full flex items-center justify-between px-4 py-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-[#2D332D] transition-colors text-gray-900 dark:text-white rounded-t-2xl cursor-pointer border-b border-gray-200 dark:border-white/10"
                       >
                         <div className="flex items-center gap-3 flex-1 text-left">
                           <Icon className="w-5 h-5 text-white/70" />
-                          <h3 className="text-base font-semibold text-white">{section.title}</h3>
+                          <h3 className="text-base font-semibold text-gray-900 dark:text-white">{section.title}</h3>
                         </div>
                         <div className="flex items-center gap-2">
                           {/* Eye icon - hide for personal section */}
@@ -1452,10 +1452,10 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="bg-[#141810] rounded-xl p-4 border border-white/10"
+                    className="bg-white dark:bg-[#141810] rounded-xl p-4 border border-gray-200 dark:border-white/10"
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-sm font-semibold text-white">Add New Section</h3>
+                      <h3 className="text-sm font-semibold text- gray-900 dark:text-white">Add New Section</h3>
                       <button
                         onClick={() => setShowAddSectionTiles(false)}
                         className="text-white/60 hover:text-white transition-colors p-1"

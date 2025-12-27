@@ -10,12 +10,14 @@ import { useRouter } from 'next/navigation';
 import { downloadAsPDF } from '@/lib/utils/download';
 import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
+import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch } = useResumeEnhancer();
   const router = useRouter();
   const [zoom, setZoom] = useState(1);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -327,12 +329,12 @@ export default function Step4Review() {
             {/* Download Button */}
             <div className="mt-3">
               <button
-                onClick={handleDownload}
-                disabled={isDownloading || !state.selectedTemplate}
+                onClick={() => setShowDownloadModal(true)}
+                disabled={!state.selectedTemplate}
                 className="w-full px-4 py-3 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-sm shadow-black/10 dark:shadow-black/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-5 h-5" />
-                <span>{isDownloading ? 'Downloading...' : 'Download CV'}</span>
+                <span>Download CV</span>
               </button>
             </div>
 
@@ -340,7 +342,7 @@ export default function Step4Review() {
             {isJourneyCV && (
               <div className="mt-2">
                 <button
-                  onClick={() => router.push('/dashboard/jobs')}
+                  onClick={() => router.push('/dashboard/tracker')}
                   className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
                 >
                   <Target className="w-4 h-4" />
@@ -382,10 +384,17 @@ export default function Step4Review() {
             {state.selectedTemplate ? (
               <CVPreviewContent
                 cvData={state.cvData}
-                selectedTemplate={state.selectedTemplate}
+                templateName={state.selectedTemplate.name}
+                templateStyles={{
+                  primaryColor: state.selectedTemplate.globalStyles?.primaryColor,
+                  secondaryColor: state.selectedTemplate.globalStyles?.secondaryColor,
+                  backgroundColor: state.selectedTemplate.globalStyles?.backgroundColor,
+                  fontFamily: state.selectedTemplate.globalStyles?.fontFamily,
+                  fontSize: state.selectedTemplate.globalStyles?.fontSize,
+                  lineHeight: state.selectedTemplate.globalStyles?.lineHeight,
+                }}
+                customCSS={state.selectedTemplate.globalStyles?.customCSS}
                 jobData={state.jobData}
-                zoom={zoom}
-                setZoom={setZoom}
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -408,14 +417,14 @@ export default function Step4Review() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[110] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4"
             onClick={() => setShowTemplateModal(false)}
           >
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[var(--bg-secondary)] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+              className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
@@ -443,6 +452,22 @@ export default function Step4Review() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Download Modal */}
+      <DownloadModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        onDownload={async (documentType: DocumentType, format: FormatType) => {
+          if (documentType === 'cv' && format === 'pdf') {
+            await handleDownload();
+          }
+          setShowDownloadModal(false);
+        }}
+        hasCV={true}
+        hasCoverLetter={!!state.autoGeneratedCoverLetter}
+        isDownloading={isDownloading}
+        cvId={state.cvId}
+      />
     </div>
   );
 }

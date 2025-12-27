@@ -42,7 +42,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     downloads: -1,
     premiumTemplates: true,
     maxCVs: -1,
-    maxJobs: -1,
+    maxJobs: 100,
     aiSurgeonMode: 'full',      // Full AI rewrite
     coverLetterAI: true,
     docxExport: true
@@ -83,6 +83,19 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     coverLetterAI: true,
     docxExport: true,
     hasVault: true              // NEW: Career Vault feature
+  },
+  pro_lifetime: {
+    journeyCVs: -1,            // Unlimited
+    activeJourneyCVs: -1, // Explicit active count
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    hasVault: true
   }
 };
 
@@ -555,31 +568,40 @@ export async function checkJobLimit(
   message?: string;
   upgradeRequired?: boolean;
 }> {
-  // CRITICAL FIX: Paid users (pro_monthly, pro_quarterly, pro_yearly) should always have unlimited
-  const isPaidPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey);
+  // Determine the effective limit
+  let limit = 3; // Default fallback (Free)
 
-  if (isPaidPlan) {
-    console.log(`✅ Job Limit Check - Paid user (${planKey}): Unlimited jobs allowed`);
+  if (planKey === 'day_pass') {
+    // Check for day pass expiry
+    if (subscription?.accessExpiresAt) {
+      const expiresAt = new Date(subscription.accessExpiresAt);
+      if (new Date() <= expiresAt) {
+        // Active day pass
+        limit = PLAN_LIMITS.day_pass.maxJobs;
+        console.log(`✅ Job Limit Check - Active Day Pass: Limit is ${limit}`);
+      } else {
+        // Expired day pass reverts to free limits
+        limit = PLAN_LIMITS.free.maxJobs;
+        console.log(`⚠️ Job Limit Check - Expired Day Pass, reverting to free limit: ${limit}`);
+      }
+    } else {
+      // Fallback for invalid day pass subscription
+      limit = PLAN_LIMITS.free.maxJobs;
+    }
+  } else {
+    // Standard plans (Free, Pro Monthly/Quarterly/Yearly)
+    const planLimits = getPlanLimits(planKey);
+    limit = planLimits.maxJobs;
+  }
+
+  // If unlimited (-1), early return
+  if (limit === -1) {
+    console.log(`✅ Job Limit Check - Plan (${planKey}): Unlimited jobs allowed`);
     return { allowed: true, currentCount: -1, limit: -1 };
   }
 
-  // Day Pass: Check if within 24h window
-  if (planKey === 'day_pass' && subscription?.accessExpiresAt) {
-    const expiresAt = new Date(subscription.accessExpiresAt);
-    if (new Date() <= expiresAt) {
-      console.log(`✅ Job Limit Check - Active Day Pass: Unlimited jobs allowed`);
-      return { allowed: true, currentCount: -1, limit: -1 };
-    }
-    // Expired day pass reverts to free limits
-    console.log(`⚠️ Job Limit Check - Expired Day Pass, reverting to free limits`);
-    return checkJobLimit(userId, 'free');
-  }
-
-  // Free users: Only count ACTIVE (non-archived) jobs
-  // Limit: 3 active jobs, unlimited archived jobs
+  // Count ACTIVE (non-archived) jobs
   const JobApplication = (await import('@/models/JobApplication')).default;
-
-  // CRITICAL FIX: Only count active jobs (isArchived !== true) for free users
   const activeJobCount = await JobApplication.countDocuments({
     userId,
     $or: [
@@ -588,17 +610,16 @@ export async function checkJobLimit(
     ]
   });
 
-  const FREE_TIER_LIMIT = 3;
-  const remaining = Math.max(0, FREE_TIER_LIMIT - activeJobCount);
+  const remaining = Math.max(0, limit - activeJobCount);
 
-  console.log(`🔍 Job Limit Check - Free user: ${activeJobCount}/${FREE_TIER_LIMIT} active jobs`);
+  console.log(`🔍 Job Limit Check - User (${planKey}): ${activeJobCount}/${limit} active jobs`);
 
   return {
     allowed: remaining > 0,
     currentCount: activeJobCount,
-    limit: FREE_TIER_LIMIT,
+    limit: limit,
     message: remaining === 0
-      ? `You have ${activeJobCount}/${FREE_TIER_LIMIT} active jobs. Archive a job or upgrade to Pro for unlimited applications.`
+      ? `You have searched ${activeJobCount}/${limit} active jobs. Archive a job or upgrade to Pro for unlimited applications.`
       : undefined,
     upgradeRequired: remaining === 0
   };

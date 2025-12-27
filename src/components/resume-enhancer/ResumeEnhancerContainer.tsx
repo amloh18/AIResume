@@ -2217,7 +2217,7 @@ export default function ResumeEnhancerContainer({
   return (
     <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex flex-col">
       {/* Header */}
-      <header className="bg-[#141810] sticky top-0 z-[100] shadow-sm shadow-black/10 dark:shadow-black/30 backdrop-blur-sm w-full">
+      <header className="bg-white dark:bg-[#141810] sticky top-0 z-[100] shadow-sm shadow-black/10 dark:shadow-black/30 backdrop-blur-sm w-full border-b border-gray-200 dark:border-transparent">
         <div className="w-full px-4 py-1.5">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -2248,7 +2248,7 @@ export default function ResumeEnhancerContainer({
                 <button
                   onClick={handleSmartSave}
                   disabled={saveStatus === 'saving'}
-                  className="px-3 py-1.5 bg-[#80FF00] hover:bg-[#70e600] disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-[color:var(--text-tertiary)] rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                  className="px-3 py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
                 >
                   {saveStatus === 'saving' ? (
                     <>
@@ -2316,11 +2316,11 @@ export default function ResumeEnhancerContainer({
       {/* Content Area (Left Sticky Steps + Main Content) */}
       <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)]">
         {/* Floating / Sticky vertical steps panel (desktop) */}
-        <aside className="hidden lg:flex lg:flex-col w-72 flex-shrink-0 m-2 rounded-xl bg-[#141810] border border-white/10 h-auto max-h-[calc(100vh-80px)] overflow-hidden">
+        <aside className="hidden lg:flex lg:flex-col w-72 flex-shrink-0 m-2 rounded-xl bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 h-auto max-h-[calc(100vh-80px)] overflow-hidden">
           <div className="flex flex-col h-full p-3 overflow-hidden">
             <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
               {/* Step Indicator Card */}
-              <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden">
+              <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 overflow-hidden">
                 <div className="p-3">
                   <StepIndicator
                     orientation="vertical"
@@ -2384,10 +2384,10 @@ export default function ResumeEnhancerContainer({
 
               {/* ATS Check Card - Redesigned (Step 3) */}
               {state.currentStep === 3 && (
-                <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden relative">
+                <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 overflow-hidden relative">
                   {/* Blur overlay for guest users - always show for guest mode */}
                   {isGuestMode && (
-                    <div className="absolute inset-0 bg-[#1a230f]/90 backdrop-blur-md z-20 rounded-xl flex items-center justify-center">
+                    <div className="absolute inset-0 bg-white/90 dark:bg-[#1a230f]/90 backdrop-blur-md z-20 rounded-xl flex items-center justify-center">
                       <div className="text-center px-4 space-y-3">
                         <p className="text-sm font-semibold text-[color:var(--accent-primary)] mb-2">
                           Sign in to view analysis
@@ -2443,7 +2443,7 @@ export default function ResumeEnhancerContainer({
                   <div className="p-3 space-y-3">
 
                     {/* Score Bar - Animated */}
-                    <div className="bg-[#252a1f] rounded-full p-1 flex items-center gap-2">
+                    <div className="bg-gray-100 dark:bg-[#80FF00]/10 rounded-full p-1 flex items-center gap-2">
                       <div className="px-2">
                         <AnimatedScore
                           value={analysisScore}
@@ -2467,10 +2467,10 @@ export default function ResumeEnhancerContainer({
                     </div>
 
                     {/* Score Breakdown - Same as Step4 Review */}
-                    <div className="bg-[#252a1f] rounded-lg p-2 space-y-1 mt-2">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[8px] font-semibold text-[color:var(--text-tertiary)] uppercase">Score Breakdown</span>
-                        <span className={`text-[10px] font-bold ${scoreResult.cvScore.total >= 80 ? 'text-green-400' :
+                    <div className="rounded-lg p-1.5 space-y-0.5 mt-2">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="text-[5px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Score Breakdown</span>
+                        <span className={`text-[5px] font-bold ${scoreResult.cvScore.total >= 80 ? 'text-green-400' :
                           scoreResult.cvScore.total >= 60 ? 'text-yellow-400' : 'text-red-400'
                           }`}>
                           Grade: {scoreResult.overallGrade}
@@ -2479,59 +2479,59 @@ export default function ResumeEnhancerContainer({
                       {/* Breakdown Bars */}
                       <div className="space-y-0.5">
                         {/* Completeness */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Completeness</span>
-                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Compl...</span>
+                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.completeness / 25) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.completeness / 25) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.completeness / 25) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.completeness}/25</span>
+                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.completeness}/25</span>
                         </div>
                         {/* Impact Verbs */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Impact Verbs</span>
-                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Impact...</span>
+                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.impactVerbs / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.impactVerbs / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.impactVerbs / 20) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.impactVerbs}/20</span>
+                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.impactVerbs}/20</span>
                         </div>
                         {/* Quantification */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Quantification</span>
-                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Quanti...</span>
+                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.quantification / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.quantification / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.quantification / 20) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.quantification}/20</span>
+                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.quantification}/20</span>
                         </div>
                         {/* Formatting */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Formatting</span>
-                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Forma...</span>
+                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.formatting / 15) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.formatting / 15) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.formatting / 15) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.formatting}/15</span>
+                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.formatting}/15</span>
                         </div>
                         {/* Readability */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-[8px] text-[color:var(--text-tertiary)] w-16 truncate">Readability</span>
-                          <div className="flex-1 h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+                        <div className="flex items-center gap-0.5">
+                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Reada...</span>
+                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.readability / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.readability / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.readability / 20) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[7px] text-[color:var(--text-secondary)] w-6 text-right">{scoreResult.cvScore.readability}/20</span>
+                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.readability}/20</span>
                         </div>
                       </div>
                     </div>
@@ -2647,7 +2647,7 @@ export default function ResumeEnhancerContainer({
                                           .filter(kw => !kw.inResume)
                                           .slice(0, 5)
                                           .map((kw, idx) => (
-                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
+                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-gray-100 dark:bg-[#252a1f] text-[9px]">
                                               <span className="text-[color:var(--text-primary)] truncate" title={kw.keyword}>
                                                 {kw.keyword}
                                               </span>
@@ -2666,13 +2666,13 @@ export default function ResumeEnhancerContainer({
                                       </div>
 
                                       {/* Match Statistics */}
-                                      <div className="bg-[#252a1f] rounded-lg p-2 space-y-1">
+                                      <div className="bg-gray-100 dark:bg-[#252a1f] rounded-lg p-2 space-y-1">
                                         <div className="text-[9px] text-[color:var(--text-secondary)]">
                                           <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.matched}</span> of{' '}
                                           <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.total}</span> keywords matched
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <div className="flex-1 h-1.5 bg-[#1a230f] rounded-full overflow-hidden">
+                                          <div className="flex-1 h-1.5 bg-gray-200 dark:bg-[#1a230f] rounded-full overflow-hidden">
                                             <div
                                               className="h-full bg-[#80FF00] transition-all duration-500"
                                               style={{ width: `${keywordStats.matchPercentage}%` }}
@@ -2708,7 +2708,7 @@ export default function ResumeEnhancerContainer({
                                           .filter(f => f.category === 'keywords' && f.status === 'open')
                                           .slice(0, 3)
                                           .map((fix, idx) => (
-                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-[#252a1f] text-[9px]">
+                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-gray-100 dark:bg-[#252a1f] text-[9px]">
                                               <span className="text-[color:var(--text-primary)] truncate">{fix.issue?.split(' ').slice(0, 2).join(' ') || 'Keyword'}</span>
                                               <div className="flex justify-center">
                                                 <span className="text-red-400">✕</span>
@@ -2798,7 +2798,7 @@ export default function ResumeEnhancerContainer({
                             metadata: { cvType: state.cvType, source: 'sidebar' }
                           });
                         }}
-                        className="w-full px-3 py-2 rounded-lg bg-[#2a3520] hover:bg-[#353f28] text-[color:var(--text-secondary)] text-xs font-semibold transition-colors flex items-center justify-center gap-2"
+                        className="w-full px-3 py-2 rounded-lg bg-gray-200 dark:bg-[#2a3520] hover:bg-gray-300 dark:hover:bg-[#353f28] text-[color:var(--text-secondary)] text-xs font-semibold transition-colors flex items-center justify-center gap-2"
                       >
                         <Eye className="w-3.5 h-3.5" />
                         <span>Report</span>
@@ -2925,7 +2925,7 @@ export default function ResumeEnhancerContainer({
               )}
 
               {/* Vertical Step Indicator - Hidden on desktop since we have ribbon, shown on mobile if needed */}
-              <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-white/5 hidden">
+              <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-gray-200 dark:border-white/5 hidden">
                 <StepIndicator
                   orientation="vertical"
                   currentStep={state.currentStep}
@@ -3103,7 +3103,7 @@ export default function ResumeEnhancerContainer({
         )}
 
         {/* Main Content */}
-        <main className="flex-1 min-h-0 overflow-hidden bg-[#1a230f]">
+        <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
           <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
             {/* Mode Validation Banner */}
             {state.analysisModeInfo && state.currentStep === 3 && (
