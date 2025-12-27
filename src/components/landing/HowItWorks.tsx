@@ -21,7 +21,7 @@ const HowItWorks = () => {
       icon: UserPlus,
       color: 'from-lime-400 to-lime-500',
       delay: 0.1,
-      image: '/images/How it works/step_1.png'
+      image: '/images/Howitworks/step_1.png'
     },
     {
       id: 2,
@@ -33,7 +33,7 @@ const HowItWorks = () => {
       icon: Target,
       color: 'from-blue-400 to-blue-500',
       delay: 0.2,
-      image: '/images/How it works/STEP_2.png'
+      image: '/images/Howitworks/STEP_2.png'
     },
     {
       id: 3,
@@ -45,7 +45,7 @@ const HowItWorks = () => {
       icon: Sparkles,
       color: 'from-purple-400 to-purple-500',
       delay: 0.3,
-      image: '/images/How it works/STEP_3.png'
+      image: '/images/Howitworks/STEP_3.png'
     },
     {
       id: 4,
@@ -57,7 +57,7 @@ const HowItWorks = () => {
       icon: Send,
       color: 'from-emerald-400 to-emerald-500',
       delay: 0.4,
-      image: '/images/How it works/STEP-4.png'
+      image: '/images/Howitworks/STEP-4.png'
     }
   ];
 

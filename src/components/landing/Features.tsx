@@ -76,7 +76,7 @@ const Features = () => {
   ];
 
   return (
-    <section id="features" className="relative py-32 my-24 bg-black overflow-hidden">
+    <section id="features" className="relative bg-gradient-to-br from-lime-500/20 via-emerald-600/15 to-teal-500/20 overflow-hidden" style={{ paddingTop: '12rem', paddingBottom: '12rem' }}>
       {/* Background Effects */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-lime-500/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2" />
