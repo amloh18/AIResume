@@ -1,12 +1,30 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import Image from 'next/image';
+import React, { useEffect, useState, useRef } from 'react';
+import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
 const Hero = () => {
   const [currentTime, setCurrentTime] = useState(() => new Date());
+  const sectionRef = useRef<HTMLElement>(null);
+  
+  // Parallax scroll effect with spring for smoother animation
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start start", "end start"]
+  });
+  
+  // Use spring for smoother, less jittery animations
+  const smoothProgress = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+  
+  // Image moves slower than scroll (parallax effect)
+  const imageY = useTransform(smoothProgress, [0, 1], ['0%', '20%']);
+  const textY = useTransform(smoothProgress, [0, 1], ['0%', '30%']);
+  const opacity = useTransform(smoothProgress, [0, 0.6], [1, 0]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -20,7 +38,7 @@ const Hero = () => {
 
   return (
     // Layer 1: Main Section
-    <section id="hero" className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-black">
+    <section ref={sectionRef} id="hero" className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-black">
 
       {/* Background Effects (Layer 1 Content) */}
       <div className="absolute inset-0 z-0 pointer-events-none">
@@ -28,62 +46,66 @@ const Hero = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/10 to-blue-400/10 rounded-full blur-3xl opacity-50"></div>
       </div>
 
-      {/* Layer 2: Banner Container */}
+      {/* Layer 2: Banner Container with Parallax */}
       <motion.div
-        className="absolute inset-8 tablet:inset-16 desktop:inset-24 rounded-[3rem] overflow-hidden z-10 border border-white/10 shadow-2xl"
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
+        className="absolute rounded-3xl overflow-hidden z-10 border border-white/10 shadow-2xl will-change-transform"
+        style={{ 
+          top: '15px', 
+          left: '15px', 
+          right: '15px', 
+          bottom: '15px',
+          y: imageY,
+          transform: 'translateZ(0)' // Force GPU acceleration
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
       >
-        {/* Banner Image */}
-        <div className="relative w-full h-full">
-          <Image
-            src="/images/herobanner.png"
-            alt="CV Circle Dashboard"
-            fill
-            className="object-cover object-top"
-            priority
-            quality={90}
-            sizes="100vw"
-          />
-        </div>
+        {/* Banner Image - using loading="eager" for LCP */}
+        <img
+          src="/images/herobanner.png"
+          alt="CV Circle Dashboard"
+          className="w-full h-full object-cover object-top"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
       </motion.div>
 
-      {/* Layer 3: Hero Text Container */}
-      <div className="relative z-20 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col justify-center items-center text-center">
+      {/* Layer 3: Hero Text Container with Parallax */}
+      <motion.div 
+        className="relative z-20 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col justify-center items-center text-center will-change-transform"
+        style={{ y: textY, opacity, transform: 'translateZ(0)' }}
+      >
 
         {/* Main Heading */}
         <motion.h1
-          className="text-2xl tablet:text-4xl desktop:text-6xl text-white mb-6 gpu-accelerated font-bold tracking-tight"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+          className="text-2xl tablet:text-4xl desktop:text-6xl text-white mb-6 font-bold tracking-tight will-change-transform"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
           style={{
             textShadow: '0 0 30px rgba(0,0,0,0.5)',
           }}
         >
-          <motion.span
-            className="inline-block"
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.2 }}
-          >
+          <span className="inline-block">
             Stop wasting{' '}
             <span className="inline-flex items-center -space-x-1 tablet:-space-x-2 font-mono align-bottom">
               <AnimatePresence initial={false} mode="wait">
                 <motion.span
                   key={currentTime.getHours()}
                   className="text-white text-2xl tablet:text-4xl desktop:text-6xl uppercase"
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -12 }}
-                  transition={{ duration: 0.45, ease: 'easeInOut' }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
                 >
                   ti
                 </motion.span>
               </AnimatePresence>
               <motion.span
                 className="text-lime-400 text-2xl tablet:text-4xl desktop:text-6xl mx-0.5"
-                animate={{ opacity: [1, 0.2, 1] }}
+                animate={{ opacity: [1, 0.3, 1] }}
                 transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
               >
                 :
@@ -95,20 +117,20 @@ const Hero = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
                 >
                   me
                 </motion.span>
               </AnimatePresence>
             </span>
-          </motion.span>
+          </span>
         </motion.h1>
 
         <motion.h2
-          className="text-xl tablet:text-3xl desktop:text-4xl text-white/90 mb-8 gpu-accelerated drop-shadow-lg"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut", delay: 0.3 }}
+          className="text-xl tablet:text-3xl desktop:text-4xl text-white/90 mb-8 drop-shadow-lg will-change-transform"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
         >
           <span className="inline-block italic font-light">
             Start getting interviews
@@ -154,7 +176,7 @@ const Hero = () => {
             <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5 transition-transform group-hover:translate-x-1" />
           </motion.a>
         </motion.div>
-      </div>
+      </motion.div>
     </section>
   );
 };
