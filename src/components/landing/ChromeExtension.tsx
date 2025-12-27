@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 
 const ChromeExtension = () => {
   return (
@@ -86,14 +85,15 @@ const ChromeExtension = () => {
                 style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <div className="relative w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0">
-                  <Image
+                <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center">
+                  <img
                     src={site.logoUrl}
                     alt={site.name}
-                    fill
-                    className="object-contain"
-                    quality={75}
-                    sizes="32px"
+                    className="w-5 h-5 tablet:w-6 tablet:h-6 object-contain"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
                 <span className="font-semibold">{site.name}</span>
@@ -124,14 +124,15 @@ const ChromeExtension = () => {
                 style={{ backgroundColor: '#603a86' }}
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <div className="relative w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0">
-                  <Image
+                <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center">
+                  <img
                     src={site.logoUrl}
                     alt={site.name}
-                    fill
-                    className="object-contain"
-                    quality={75}
-                    sizes="32px"
+                    className="w-5 h-5 tablet:w-6 tablet:h-6 object-contain"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
                   />
                 </div>
                 <span className="font-semibold">{site.name}</span>
