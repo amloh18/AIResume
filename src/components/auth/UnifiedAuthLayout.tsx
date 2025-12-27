@@ -32,7 +32,7 @@ export default function UnifiedAuthLayout({
   return (
     <div className="min-h-screen flex bg-[#141810]">
       {/* Left Side - 50% - Bright Color Panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+      <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden">
         {/* Vibrant Gradient Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#80FF00] via-[#6DD400] to-[#5AB300]" />
 
@@ -70,7 +70,7 @@ export default function UnifiedAuthLayout({
               transition={{ duration: 0.8, delay: 0.2 }}
               className="max-w-2xl"
             >
-              <h1 className={`text-8xl font-bold leading-tight mb-6 tracking-tight ${anton.className}`}>
+              <h1 className={`text-9xl font-bold leading-tight mb-6 tracking-tight ${anton.className}`}>
                 <span className="text-black">MASTER</span>
                 <br />
                 <span className="text-black">YOUR</span>
@@ -82,7 +82,7 @@ export default function UnifiedAuthLayout({
                 </span>
               </h1>
               <p className="text-xl text-black/80 font-medium">
-                Create tailored CVs, track applications, and get AI-powered insights
+                Your first step to land your dream job... or at least pay the bills
               </p>
             </motion.div>
           </div>
@@ -90,7 +90,7 @@ export default function UnifiedAuthLayout({
       </div>
 
       {/* Right Side - 50% - Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-4 py-12 relative">
+      <div className="w-full lg:basis-1/2 lg:shrink-0 lg:grow-0 flex items-center justify-center px-4 py-12 relative">
         {/* Back Button */}
         {showBackButton && (
           <div className="absolute top-8 left-8">
