@@ -277,8 +277,8 @@ export default function RoleSelectorModal({
                         setSeniorityAutoFilled(false);
                       }}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${seniorityLevel === level.value
-                          ? 'bg-[#80FF00] text-black shadow-md'
-                          : 'bg-gray-100 dark:bg-[#1a2015] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#222327] border border-gray-200 dark:border-white/10'
+                        ? 'bg-[#80FF00] text-black shadow-md'
+                        : 'bg-gray-100 dark:bg-[#1a2015] text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-[#222327] border border-gray-200 dark:border-white/10'
                         }`}
                     >
                       {level.label}
@@ -324,7 +324,7 @@ export default function RoleSelectorModal({
                       }
                     }}
                     disabled={!targetRole || !seniorityLevel}
-                    className="px-6 py-2.5 bg-[#80FF00] text-black rounded-lg hover:bg-[#70e600] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-lg hover:shadow-xl hover:scale-105"
+                    className="px-6 py-2.5 bg-lime-500 dark:bg-[#80FF00] text-black rounded-lg hover:bg-lime-600 dark:hover:bg-[#70e600] font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 shadow-lg hover:shadow-xl hover:scale-105"
                   >
                     <span>Add JD & Track</span>
                   </button>

@@ -205,7 +205,7 @@ export async function createJourneyDocuments(
       } else {
         // EDGE CASE 5: No Master CV - Fallback to standalone CV or create basic structure
         console.warn('⚠️ Journey Document Service - Master CV not found, checking for standalone CVs...');
-        
+
         // Check for standalone CVs (most recently modified)
         const standaloneCVs = await CV.find({
           userId: new mongoose.Types.ObjectId(userId),
@@ -217,22 +217,22 @@ export async function createJourneyDocuments(
           // EDGE CASE 4: Multiple Standalone CVs - Use most recently modified
           const standaloneCV = standaloneCVs[0];
           console.log('✅ Journey Document Service - Using standalone CV as source:', standaloneCV._id);
-          
+
           // Link standalone CV to journey instead of creating new one
           standaloneCV.cvType = 'journey';
           standaloneCV.journeyId = currentJourney._id.toString();
           await standaloneCV.save();
-          
+
           cvId = standaloneCV._id.toString();
           currentJourney.cvId = cvId;
           await currentJourney.save();
-          
+
           console.log('✅ Journey Document Service - Standalone CV linked to journey:', cvId);
         } else {
           // EDGE CASE 5: No source CV exists - Create basic CV structure
           console.error('❌ Journey Document Service - No master CV or standalone CV found');
           console.error('❌ Journey Document Service - Creating basic CV structure as fallback');
-          
+
           const cvTitle = `${currentJourney.company}_${currentJourney.jobTitle} | CV`;
           const basicCV = new CV({
             title: cvTitle,
@@ -347,12 +347,12 @@ export async function createJourneyDocuments(
 
       // Generate cover letter using new format: header, body, footer
       const { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
-      
+
       // Generate header from CV and job data
       let header = '';
       let footer = '';
       let body = '';
-      
+
       try {
         // Generate header
         header = formatCoverLetterHeader(cvDataWithAnalysis, {
@@ -363,10 +363,10 @@ export async function createJourneyDocuments(
           contactPerson: job.contactPerson || 'Hiring Manager',
           ...job.toObject()
         });
-        
+
         // Generate footer
         footer = formatCoverLetterFooter(cvDataWithAnalysis);
-        
+
         console.log('✅ Journey Document Service - Generated header and footer from CV/job data');
       } catch (headerFooterError) {
         console.error('⚠️ Journey Document Service - Failed to generate header/footer:', headerFooterError);
@@ -378,6 +378,8 @@ export async function createJourneyDocuments(
 
         // Call cover letter generation API with cvData including metadata
         const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        console.log('🔗 Journey Document Service - Calling cover letter API at:', `${baseUrl}/api/ai/cover-letter-generate`);
+
         const generateResponse = await fetch(`${baseUrl}/api/ai/cover-letter-generate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -394,12 +396,27 @@ export async function createJourneyDocuments(
           })
         });
 
+        console.log('📬 Journey Document Service - Cover letter API response status:', generateResponse.status);
+
         if (generateResponse.ok) {
           const generateResult = await generateResponse.json();
+          console.log('📄 Journey Document Service - Cover letter API result:', {
+            success: generateResult.success,
+            hasBody: !!generateResult.body,
+            hasContent: !!generateResult.content,
+            bodyLength: generateResult.body?.length || 0,
+            contentLength: generateResult.content?.length || 0
+          });
+
           if (generateResult.success && (generateResult.body || generateResult.content)) {
             body = generateResult.body || generateResult.content;
-            console.log('✅ Journey Document Service - Cover letter body generated successfully');
+            console.log('✅ Journey Document Service - Cover letter body generated successfully, length:', body.length);
+          } else {
+            console.log('⚠️ Journey Document Service - Cover letter API returned success but no body/content');
           }
+        } else {
+          const errorText = await generateResponse.text();
+          console.error('❌ Journey Document Service - Cover letter API failed:', generateResponse.status, errorText);
         }
       } catch (generateError) {
         console.error('⚠️ Journey Document Service - Failed to generate cover letter body, using template:', generateError);
@@ -429,10 +446,10 @@ I would welcome the opportunity to discuss how my qualifications align with your
         }
       }
 
-      // DO NOT merge content - store header, body, footer separately
-      // Content will be generated on-the-fly in preview only
+      // Merge header, body, footer into content for schema validation
+      // The separate fields are still stored for editing purposes
 
-      const coverLetterTitle = `${currentJourney.company}_${currentJourney.jobTitle} | Cover_Letter`;
+      const coverLetterTitle = `${currentJourney.company}_${currentJourney.jobTitle} | Cover Letter`;
 
       // Double-check one more time before creating (race condition protection)
       const finalCheck = await CoverLetter.findOne({
@@ -444,9 +461,12 @@ I would welcome the opportunity to discuss how my qualifications align with your
         coverLetterId = finalCheck._id.toString();
         console.log('✅ Journey Document Service - Cover letter found in final check (race condition prevented):', coverLetterId);
       } else {
+        // Merge header, body, footer for the content field (required by schema)
+        const mergedContent = mergeCoverLetterContent(header || '', body || '', footer || '');
+
         const duplicatedCoverLetter = new CoverLetter({
           title: coverLetterTitle,
-          content: '', // Leave empty - will be generated in preview only
+          content: mergedContent || body || 'Cover letter content will be generated.', // Fallback for validation
           header: header || undefined,
           body: body || undefined,
           footer: footer || undefined,
@@ -458,7 +478,7 @@ I would welcome the opportunity to discuss how my qualifications align with your
             lastModified: new Date(),
             viewCount: 0,
             downloadCount: 0,
-            generatedWithAI: !!generatedContent && generatedContent !== ''
+            generatedWithAI: !!body && body !== ''
           }
         });
 

@@ -103,8 +103,8 @@ export default function TemplateSelector({
                         key={f}
                         onClick={() => setFilter(f)}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${filter === f
-                                ? 'bg-[var(--accent-primary)] text-black'
-                                : 'bg-[var(--bg-tertiary)] text-[color:var(--text-secondary)] hover:bg-[var(--hover-bg)]'
+                            ? 'bg-[var(--accent-primary)] text-black'
+                            : 'bg-[var(--bg-tertiary)] text-[color:var(--text-secondary)] hover:bg-[var(--hover-bg)]'
                             }`}
                     >
                         {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -124,8 +124,8 @@ export default function TemplateSelector({
                             key={template.id}
                             onClick={() => onTemplateSelect(template)}
                             className={`relative rounded-xl border-2 transition-all text-left overflow-hidden ${isSelected
-                                    ? 'border-[var(--accent-primary)] shadow-lg shadow-[var(--accent-primary)]/20'
-                                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                                ? 'border-[var(--accent-primary)] shadow-lg shadow-[var(--accent-primary)]/20'
+                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                                 }`}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -140,8 +140,8 @@ export default function TemplateSelector({
                             {/* Tier Badge */}
                             <div className="absolute top-2 left-2 z-10">
                                 <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full backdrop-blur-sm ${template.tier === 'premium'
-                                        ? 'bg-yellow-500/80 text-black'
-                                        : 'bg-green-500/80 text-black'
+                                    ? 'bg-yellow-500/80 text-black'
+                                    : 'bg-green-500/80 text-black'
                                     }`}>
                                     {getTierIcon(template.tier)}
                                     {getTierLabel(template.tier)}
@@ -149,7 +149,7 @@ export default function TemplateSelector({
                             </div>
 
                             {/* Template Thumbnail */}
-                            <div className="aspect-[8.5/11] bg-gray-100 dark:bg-[#1a230f] relative">
+                            <div className="aspect-[8.5/11] bg-white dark:bg-[#1a230f] relative border border-gray-200 dark:border-transparent">
                                 {template.thumbnail ? (
                                     <Image
                                         src={template.thumbnail}

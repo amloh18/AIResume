@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
         const modifiedSinceDate = new Date(ifModifiedSince);
         await connectToDatabase();
         const user = await User.findById(userId).select('updatedAt');
-        
+
         if (user && user.updatedAt) {
           // If user hasn't been updated since the provided date, return 304 Not Modified
           if (user.updatedAt <= modifiedSinceDate) {
@@ -63,6 +63,13 @@ export async function GET(request: NextRequest) {
     const user = await User.findById(userId);
     const subscription = user?.subscription;
 
+    // Count actual jobs from database for accurate metrics
+    const { JobApplication } = await import('@/models');
+    const actualJobCount = await JobApplication.countDocuments({
+      userId: userId,
+      status: 'created'  // Only count active created jobs
+    });
+
     // Get credit information (include usage for all plans)
     let creditInfo = null;
     const planKey = user?.currentPlanKey || 'free';
@@ -70,13 +77,13 @@ export async function GET(request: NextRequest) {
     if (creditStatus) {
       let remaining: number | undefined = creditStatus.jobCredits;
       let limit: number | undefined = creditStatus.jobCredits;
-      
+
       if (planKey === 'free' || planKey === 'day_pass') {
         const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
         remaining = creditCheck.creditsRemaining;
         limit = creditCheck.limit;
       }
-      
+
       // Fallbacks
       if (remaining === undefined || remaining === null) {
         remaining = limit === -1 ? -1 : 0;
@@ -85,7 +92,8 @@ export async function GET(request: NextRequest) {
         limit = -1;
       }
 
-      const totalCreatedJobs = user?.credits?.totalCreated?.jobs ?? 0;
+      // Use actual job count from DB instead of historical counter
+      const totalCreatedJobs = actualJobCount;
       const used = limit === -1
         ? totalCreatedJobs
         : Math.max(0, limit - (remaining === -1 ? 0 : remaining));
@@ -124,17 +132,17 @@ export async function GET(request: NextRequest) {
     };
 
     const response = NextResponse.json(responseData);
-    
+
     // Add Last-Modified header for conditional requests
     if (user?.updatedAt) {
       response.headers.set('Last-Modified', new Date(user.updatedAt).toUTCString());
     }
-    
+
     return response;
 
   } catch (error: any) {
     console.error('Error fetching user usage limits:', error);
-    
+
     // Check for database connection errors
     if (error?.name === 'MongoNetworkError' || error?.name === 'MongoServerSelectionError') {
       return createErrorNextResponse(
@@ -145,7 +153,7 @@ export async function GET(request: NextRequest) {
         60 // Retry after 60 seconds
       );
     }
-    
+
     return createErrorNextResponse(
       ErrorCode.INTERNAL_SERVER_ERROR,
       'An internal server error occurred while fetching usage limits.',
@@ -201,7 +209,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error checking usage limit:', error);
-    
+
     // Check for database connection errors
     if (error?.name === 'MongoNetworkError' || error?.name === 'MongoServerSelectionError') {
       return createErrorNextResponse(
@@ -212,7 +220,7 @@ export async function POST(request: NextRequest) {
         60 // Retry after 60 seconds
       );
     }
-    
+
     return createErrorNextResponse(
       ErrorCode.INTERNAL_SERVER_ERROR,
       'An internal server error occurred while checking usage limits.',

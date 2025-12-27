@@ -2,11 +2,11 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  X, 
-  Target, 
+import {
+  X,
+  Target,
   RefreshCw,
-  AlertCircle, 
+  AlertCircle,
   CheckCircle,
   Zap,
   Eye,
@@ -65,13 +65,13 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
   const { state } = useResumeEnhancer();
   const { state: deepDiveState, activateDeepDive, deactivateDeepDive, toggleLayer } = useATSDeepDive();
   const { setATSScore } = useAIStore();
-  const { 
-    atsScore, 
-    atsAnalysis, 
-    isATSLoading, 
-    atsError, 
-    updateATSScore, 
-    refreshATSScore 
+  const {
+    atsScore,
+    atsAnalysis,
+    isATSLoading,
+    atsError,
+    updateATSScore,
+    refreshATSScore
   } = useATS();
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -98,7 +98,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
   // Calculate years of experience from CV data
   const calculateYearsOfExperience = useCallback((): number => {
     if (!state.cvData?.work || !Array.isArray(state.cvData.work)) return 0;
-    
+
     let totalMonths = 0;
     state.cvData.work.forEach((exp: any) => {
       if (exp.startDate) {
@@ -106,14 +106,14 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
         const end = exp.endDate && exp.endDate.toLowerCase() !== 'present'
           ? new Date(exp.endDate)
           : new Date();
-        
+
         if (!isNaN(start.getTime())) {
           const months = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30);
           totalMonths += Math.max(0, months);
         }
       }
     });
-    
+
     return Math.round(totalMonths / 12 * 10) / 10;
   }, [state.cvData]);
 
@@ -130,7 +130,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
     isAnalyzingRef.current = true;
     setIsLoading(true);
     setApiError(null);
-    
+
     try {
       const response = await fetch('/api/ats/calculate-score', {
         method: 'POST',
@@ -150,22 +150,22 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
       }
 
       const apiResult = await response.json();
-      
+
       if (!apiResult.success || !apiResult.data) {
         throw new Error(apiResult.error || 'Failed to calculate ATS score');
       }
 
       const data = apiResult.data;
       const analysis = data.analysis || data;
-      
+
       const yearsExp = analysis.factorBreakdown?.experienceLength?.years || calculateYearsOfExperience();
-      
+
       let profileLevel = {
         title: 'Entry Level',
         yearsExperience: yearsExp,
         description: 'Early career professional'
       };
-      
+
       if (yearsExp >= 7) {
         profileLevel = {
           title: 'Senior Professional',
@@ -179,7 +179,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
           description: 'Experienced professional with solid track record'
         };
       }
-      
+
       const result: ATSResult = {
         score: analysis.score || data.score || 0,
         profileLevel,
@@ -208,7 +208,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
         knockOutFactors: result.knockOutFactors,
         updatedAt: new Date().toISOString(),
       };
-      
+
       await updateATSScore(
         result.score,
         atsAnalysisData,
@@ -252,13 +252,13 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
   useEffect(() => {
     if (atsAnalysis && atsScore !== null && !atsResult) {
       const yearsExp = atsAnalysis.factorBreakdown?.experienceLength?.years || calculateYearsOfExperience();
-      
+
       let profileLevel = {
         title: 'Entry Level',
         yearsExperience: yearsExp,
         description: 'Early career professional'
       };
-      
+
       if (yearsExp >= 7) {
         profileLevel = {
           title: 'Senior Professional',
@@ -272,7 +272,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
           description: 'Experienced professional with solid track record'
         };
       }
-      
+
       setAtsResult({
         score: atsScore,
         profileLevel,
@@ -308,7 +308,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
       const padding = 48; // 24px padding on each side (p-6 = 24px)
 
       const availableWidth = containerWidth - padding;
-      
+
       // If container is wider than A4, no scaling needed
       if (availableWidth >= A4_WIDTH) {
         setScale(1);
@@ -370,11 +370,11 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 12, scale: 0.98 }}
           transition={{ duration: 0.22 }}
-          className="w-full h-full max-w-[1800px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col"
+          className="w-full h-full max-w-[1800px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-white dark:bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/20 dark:shadow-black/60 flex flex-col"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header - HUD Overlay */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 bg-[#1a230f]">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#1a230f]">
             <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 bg-gradient-to-r from-[#80FF00] to-[#60CC00] rounded-full flex items-center justify-center flex-shrink-0">
                 <Target className="w-5 h-5 text-black" />
@@ -400,15 +400,14 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
               )}
 
               {/* Layer Toggle Controls */}
-              <div className="flex items-center gap-2 bg-[#1a230f]/90 backdrop-blur-sm border border-white/10 rounded-lg p-1.5">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-[#1a230f]/90 backdrop-blur-sm border border-gray-200 dark:border-white/10 rounded-lg p-1.5">
                 <InfoTooltip content="Toggle Timeline Gutter Layer">
                   <button
                     onClick={() => toggleLayer('timeline')}
-                    className={`p-1.5 rounded transition-colors ${
-                      deepDiveState.activeLayers.has('timeline')
-                        ? 'bg-[#80FF00]/20 text-[#80FF00]'
-                        : 'bg-white/5 text-white/60 hover:bg-white/10'
-                    }`}
+                    className={`p-1.5 rounded transition-colors ${deepDiveState.activeLayers.has('timeline')
+                      ? 'bg-[#80FF00]/20 text-[#80FF00]'
+                      : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      }`}
                   >
                     <Zap className="w-4 h-4" />
                   </button>
@@ -416,11 +415,10 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                 <InfoTooltip content="Toggle Reading Path Layer">
                   <button
                     onClick={() => toggleLayer('reading-path')}
-                    className={`p-1.5 rounded transition-colors ${
-                      deepDiveState.activeLayers.has('reading-path')
-                        ? 'bg-[#80FF00]/20 text-[#80FF00]'
-                        : 'bg-white/5 text-white/60 hover:bg-white/10'
-                    }`}
+                    className={`p-1.5 rounded transition-colors ${deepDiveState.activeLayers.has('reading-path')
+                      ? 'bg-[#80FF00]/20 text-[#80FF00]'
+                      : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      }`}
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -428,17 +426,16 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                 <InfoTooltip content="Toggle Keyword Heatmap Layer">
                   <button
                     onClick={() => toggleLayer('heatmap')}
-                    className={`p-1.5 rounded transition-colors ${
-                      deepDiveState.activeLayers.has('heatmap')
-                        ? 'bg-[#80FF00]/20 text-[#80FF00]'
-                        : 'bg-white/5 text-white/60 hover:bg-white/10'
-                    }`}
+                    className={`p-1.5 rounded transition-colors ${deepDiveState.activeLayers.has('heatmap')
+                      ? 'bg-[#80FF00]/20 text-[#80FF00]'
+                      : 'bg-white/5 text-white/60 hover:bg-white/10'
+                      }`}
                   >
                     <Target className="w-4 h-4" />
                   </button>
                 </InfoTooltip>
               </div>
-              
+
               <InfoTooltip content="Refresh ATS Analysis">
                 <button
                   onClick={runATSAnalysis}
@@ -461,7 +458,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
           {/* 3-Panel Architecture */}
           <div className="flex-1 min-h-0 overflow-hidden flex">
             {/* Panel A: Controls (Left Rail) - ScorecardPanel */}
-            <div className="w-80 flex-shrink-0 border-r border-white/10 overflow-hidden bg-[#1a230f]">
+            <div className="w-80 flex-shrink-0 border-r border-gray-200 dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
               {(apiError || atsError) && (
                 <div className="p-4 bg-red-900/20 border-b border-red-800/30">
                   <div className="flex items-center space-x-2 mb-2">
@@ -481,9 +478,10 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
             </div>
 
             {/* Panel B: X-Ray Canvas (Center Stage) */}
-            <div className="flex-1 min-h-0 overflow-hidden relative bg-[#1a230f]">
+            <div className="flex-1 min-h-0 overflow-hidden relative bg-gray-50 dark:bg-[#1a230f]">
               {/* Force all CV preview text to be black */}
-              <style dangerouslySetInnerHTML={{ __html: `
+              <style dangerouslySetInnerHTML={{
+                __html: `
                 .ats-deep-dive-cv-preview * {
                   color: #111827 !important;
                 }
@@ -506,8 +504,8 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                 }
               ` }} />
               <div className="absolute inset-0 overflow-y-auto px-6 pb-6 pt-0 flex justify-center">
-                <div 
-                  className="relative ats-deep-dive-cv-preview" 
+                <div
+                  className="relative ats-deep-dive-cv-preview"
                   ref={previewContainerRef}
                 >
                   {/* CV Preview with Overlays */}
@@ -539,7 +537,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                         keywordShowCriticalOnly={deepDiveState.showCriticalOnly}
                         jobData={state.jobData}
                       />
-                      
+
                       {/* SVG Overlay System - X-Ray Canvas */}
                       <XRayCanvas
                         cvData={state.cvData}
@@ -558,7 +556,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
             </div>
 
             {/* Panel C: Strategist (Right Panel) */}
-            <div className="w-96 flex-shrink-0 border-l border-white/10 overflow-hidden bg-[#1a230f]">
+            <div className="w-96 flex-shrink-0 border-l border-gray-200 dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
               <StrategistPanel
                 cvData={state.cvData}
                 jobData={state.jobData}

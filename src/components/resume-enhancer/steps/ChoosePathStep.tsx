@@ -366,7 +366,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                 <button
                   onClick={() => !isEditingMasterCV && setSelectedOption('upload')}
                   disabled={isEditingMasterCV}
-                  className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 ${isEditingMasterCV
+                  className={`w-full bg-lime-500 dark:bg-gradient-to-r dark:from-[#80FF00] dark:to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-lime-500/30 dark:shadow-[#80FF00]/30 ${isEditingMasterCV
                     ? 'opacity-50 cursor-not-allowed'
                     : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
                     }`}
@@ -444,7 +444,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
 
                       <button
                         onClick={onNext}
-                        className="w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40 flex items-center justify-center gap-3"
+                        className="w-full bg-lime-500 dark:bg-gradient-to-r dark:from-[#80FF00] dark:to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-lime-500/30 dark:shadow-[#80FF00]/30 hover:bg-lime-600 dark:hover:from-[#70e600] dark:hover:to-[#60d600] hover:shadow-xl hover:shadow-lime-500/40 dark:hover:shadow-[#80FF00]/40 flex items-center justify-center gap-3"
                       >
                         Continue to Next Step
                         <ArrowRight className="h-5 w-5" />
@@ -496,7 +496,7 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
                   <button
                     onClick={handleManualStart}
                     disabled={isEditingMasterCV}
-                    className={`w-full bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-[#80FF00]/30 flex items-center justify-center gap-3 ${isEditingMasterCV
+                    className={`w-full bg-lime-500 dark:bg-gradient-to-r dark:from-[#80FF00] dark:to-[#70e600] text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 shadow-lg shadow-lime-500/30 dark:shadow-[#80FF00]/30 flex items-center justify-center gap-3 hover:bg-lime-600 dark:hover:from-[#70e600] dark:hover:to-[#60d600] hover:shadow-xl hover:shadow-lime-500/40 dark:hover:shadow-[#80FF00]/40 ${isEditingMasterCV
                       ? 'opacity-50 cursor-not-allowed'
                       : 'hover:from-[#70e600] hover:to-[#60d600] hover:shadow-xl hover:shadow-[#80FF00]/40'
                       }`}

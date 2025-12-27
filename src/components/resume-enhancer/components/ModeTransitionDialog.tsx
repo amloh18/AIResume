@@ -151,104 +151,106 @@ export default function ModeTransitionDialog({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
                     />
 
-                    {/* Dialog */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                        transition={{ duration: 0.2, ease: 'easeOut' }}
-                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-lg"
-                    >
-                        <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl shadow-2xl overflow-hidden">
-                            {/* Header */}
-                            <div className={`p-6 border-b border-gray-800 bg-gradient-to-r ${details.bgColor} ${details.borderColor}`}>
-                                <div className="flex items-start gap-4">
-                                    <div className={`p-3 rounded-xl ${details.bgColor} border ${details.borderColor}`}>
-                                        <Icon size={24} className={details.iconColor} />
+                    {/* Dialog Container - flex centering */}
+                    <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="w-full max-w-lg pointer-events-auto"
+                        >
+                            <div className="bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+                                {/* Header */}
+                                <div className={`p-6 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r ${details.bgColor}`}>
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-3 rounded-xl ${details.bgColor} border ${details.borderColor}`}>
+                                            <Icon size={24} className={details.iconColor} />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-1">
+                                                {details.title}
+                                            </h2>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                {details.description}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={onClose}
+                                            className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                                        >
+                                            <X size={20} />
+                                        </button>
                                     </div>
-                                    <div className="flex-1">
-                                        <h2 className="text-xl font-semibold text-white mb-1">
-                                            {details.title}
-                                        </h2>
-                                        <p className="text-sm text-gray-400">
-                                            {details.description}
-                                        </p>
+                                </div>
+
+                                {/* Mode Transition Visual */}
+                                <div className="px-6 py-4 bg-gray-50 dark:bg-[#252525]">
+                                    <div className="flex items-center justify-center gap-4">
+                                        <div className="px-4 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-600 rounded-lg">
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Current Mode</p>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white">{getAnalysisModeLabel(fromMode)}</p>
+                                        </div>
+                                        <ArrowRight size={20} className="text-gray-400 dark:text-gray-500" />
+                                        <div className={`px-4 py-2 border rounded-lg ${details.bgColor} ${details.borderColor}`}>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">New Mode</p>
+                                            <p className={`text-sm font-medium ${details.iconColor}`}>{getAnalysisModeLabel(toMode)}</p>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={onClose}
-                                        className="p-2 hover:bg-white/5 rounded-lg transition-colors text-gray-400 hover:text-gray-300"
-                                    >
-                                        <X size={20} />
-                                    </button>
+                                </div>
+
+                                {/* Impact List */}
+                                {displayImpacts.length > 0 && (
+                                    <div className="px-6 py-4 bg-white dark:bg-[#1e1e1e]">
+                                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">What will change:</h3>
+                                        <ul className="space-y-2">
+                                            {displayImpacts.map((impact, index) => (
+                                                <li key={index} className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                    <span className={`${details.iconColor} mt-1 flex-shrink-0`}>•</span>
+                                                    <span>{impact}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {/* Footer */}
+                                <div className="px-6 py-4 bg-gray-50 dark:bg-[#252525] border-t border-gray-200 dark:border-gray-700">
+                                    {/* Don't show again checkbox */}
+                                    <label className="flex items-center gap-2 mb-4 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            checked={dontShowAgain}
+                                            onChange={(e) => setDontShowAgain(e.target.checked)}
+                                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-all"
+                                        />
+                                        <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors">
+                                            Don't show this again for this session
+                                        </span>
+                                    </label>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={onClose}
+                                            className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-lg transition-all font-medium"
+                                        >
+                                            {cancelLabel}
+                                        </button>
+                                        <button
+                                            onClick={handleConfirm}
+                                            className={`flex-1 px-4 py-2.5 rounded-lg transition-all font-medium border ${details.borderColor} ${details.bgColor} ${details.iconColor} hover:brightness-110`}
+                                        >
+                                            {confirmLabel}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-
-                            {/* Mode Transition Visual */}
-                            <div className="px-6 py-4 bg-gray-900/50">
-                                <div className="flex items-center justify-center gap-4">
-                                    <div className="px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg">
-                                        <p className="text-xs text-gray-400 mb-1">Current Mode</p>
-                                        <p className="text-sm font-medium text-white">{getAnalysisModeLabel(fromMode)}</p>
-                                    </div>
-                                    <ArrowRight size={20} className="text-gray-600" />
-                                    <div className={`px-4 py-2 border rounded-lg ${details.bgColor} ${details.borderColor}`}>
-                                        <p className="text-xs text-gray-400 mb-1">New Mode</p>
-                                        <p className={`text-sm font-medium ${details.iconColor}`}>{getAnalysisModeLabel(toMode)}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Impact List */}
-                            {displayImpacts.length > 0 && (
-                                <div className="px-6 py-4">
-                                    <h3 className="text-sm font-medium text-gray-300 mb-3">What will change:</h3>
-                                    <ul className="space-y-2">
-                                        {displayImpacts.map((impact, index) => (
-                                            <li key={index} className="flex items-start gap-2 text-sm text-gray-400">
-                                                <span className={`${details.iconColor} mt-1 flex-shrink-0`}>•</span>
-                                                <span>{impact}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {/* Footer */}
-                            <div className="px-6 py-4 bg-gray-900/30 border-t border-gray-800">
-                                {/* Don't show again checkbox */}
-                                <label className="flex items-center gap-2 mb-4 cursor-pointer group">
-                                    <input
-                                        type="checkbox"
-                                        checked={dontShowAgain}
-                                        onChange={(e) => setDontShowAgain(e.target.checked)}
-                                        className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-neon-green focus:ring-2 focus:ring-neon-green/50 transition-all"
-                                    />
-                                    <span className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors">
-                                        Don't show this again for this session
-                                    </span>
-                                </label>
-
-                                {/* Action Buttons */}
-                                <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={onClose}
-                                        className="flex-1 px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-all font-medium"
-                                    >
-                                        {cancelLabel}
-                                    </button>
-                                    <button
-                                        onClick={handleConfirm}
-                                        className={`flex-1 px-4 py-2.5 rounded-lg transition-all font-medium border ${details.borderColor} ${details.bgColor} ${details.iconColor} hover:brightness-110`}
-                                    >
-                                        {confirmLabel}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 </>
             )}
         </AnimatePresence>

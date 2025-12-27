@@ -97,6 +97,22 @@ export interface ResumeEnhancerState {
     jdHash: string;
   } | null;
   modeTransitionWarnings: string[];
+
+  // Score multipliers and breakdowns (for enhance.md formulas)
+  cvScoreMultiplier: number;           // V factor (0.2 or 1.0)
+  cvScoreBreakdown: Record<string, number> | null; // C, I, Q, F, R
+  cvPenaltyReasons: string[];          // Reasons for score penalty
+  atsScoreMultiplier: number;          // P factor (0.1 or 1.0)
+  atsScoreBreakdown: Record<string, number> | null; // K, F, S, R, C
+  atsScoreContext: 'jd-specific' | 'industry-general';
+
+  // Simulated CV toggle and strategic fix data
+  showSimulatedCV: boolean;
+  strategicFixAvailable: boolean;
+  strategicFixData: any | null;        // CV data with strategic projects
+  authenticOptData: any | null;        // Authentic optimization data
+  annotationLog: { path: string; action: string; reason: string }[];
+  nextSteps: string[];
 }
 
 // Action Types
@@ -157,7 +173,13 @@ type ResumeEnhancerAction =
   | { type: 'INVALIDATE_ANALYSIS' }
   | { type: 'SET_MODE_WARNINGS'; payload: string[] }
   | { type: 'CLEAR_MODE_WARNINGS' }
-  | { type: 'UPDATE_LAST_ANALYSIS_CONTEXT'; payload: { mode: AnalysisMode; roleHash: string; jdHash: string } };
+  | { type: 'UPDATE_LAST_ANALYSIS_CONTEXT'; payload: { mode: AnalysisMode; roleHash: string; jdHash: string } }
+  // Score multiplier and simulated CV actions (NEW for enhance.md)
+  | { type: 'SET_SCORE_MULTIPLIERS'; payload: { cvMultiplier: number; atsMultiplier: number } }
+  | { type: 'SET_SCORE_BREAKDOWNS'; payload: { cvBreakdown: Record<string, number> | null; atsBreakdown: Record<string, number> | null; cvPenaltyReasons?: string[] } }
+  | { type: 'SET_ATS_SCORE_CONTEXT'; payload: 'jd-specific' | 'industry-general' }
+  | { type: 'TOGGLE_SIMULATED_CV'; payload: boolean }
+  | { type: 'SET_STRATEGIC_FIX_DATA'; payload: { strategicFix: any; authenticOpt: any; required: boolean; annotationLog: any[]; nextSteps: string[] } };
 
 // Initial State
 const initialState: ResumeEnhancerState = {
@@ -205,7 +227,21 @@ const initialState: ResumeEnhancerState = {
   // Enhanced validation state (NEW)
   analysisModeInfo: null,
   lastAnalysisContext: null,
-  modeTransitionWarnings: []
+  modeTransitionWarnings: [],
+  // Score multipliers and breakdowns (NEW for enhance.md)
+  cvScoreMultiplier: 1.0,
+  cvScoreBreakdown: null,
+  cvPenaltyReasons: [],
+  atsScoreMultiplier: 1.0,
+  atsScoreBreakdown: null,
+  atsScoreContext: 'industry-general',
+  // Simulated CV toggle (NEW)
+  showSimulatedCV: false,
+  strategicFixAvailable: false,
+  strategicFixData: null,
+  authenticOptData: null,
+  annotationLog: [],
+  nextSteps: []
 };
 
 // Reducer
@@ -553,6 +589,44 @@ function resumeEnhancerReducer(
       return {
         ...state,
         lastAnalysisContext: action.payload
+      };
+
+    // Score multiplier and simulated CV actions (NEW for enhance.md)
+    case 'SET_SCORE_MULTIPLIERS':
+      return {
+        ...state,
+        cvScoreMultiplier: action.payload.cvMultiplier,
+        atsScoreMultiplier: action.payload.atsMultiplier
+      };
+
+    case 'SET_SCORE_BREAKDOWNS':
+      return {
+        ...state,
+        cvScoreBreakdown: action.payload.cvBreakdown,
+        atsScoreBreakdown: action.payload.atsBreakdown,
+        cvPenaltyReasons: action.payload.cvPenaltyReasons || []
+      };
+
+    case 'SET_ATS_SCORE_CONTEXT':
+      return {
+        ...state,
+        atsScoreContext: action.payload
+      };
+
+    case 'TOGGLE_SIMULATED_CV':
+      return {
+        ...state,
+        showSimulatedCV: action.payload
+      };
+
+    case 'SET_STRATEGIC_FIX_DATA':
+      return {
+        ...state,
+        strategicFixData: action.payload.strategicFix,
+        authenticOptData: action.payload.authenticOpt,
+        strategicFixAvailable: action.payload.required,
+        annotationLog: action.payload.annotationLog || [],
+        nextSteps: action.payload.nextSteps || []
       };
 
     default:
