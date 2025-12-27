@@ -4,8 +4,7 @@ export interface IPricingPlan extends Document {
   key: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
   name: string;
   description: string;
-  // REMOVED: price_monthly, price_quarterly, price_yearly, price_one_time (now in CountryPricing)
-  // REMOVED: currency (now in CountryPricing)
+
   // KEEP: billingCycle - this is plan structure metadata, not pricing
   billingCycle: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
   // Credit-based system (replaces maxCVs, maxJobs, maxJourneys, maxExports, maxCoverLetters)
@@ -59,7 +58,7 @@ export interface IPricingPlan extends Document {
   // Option 2: Map of country codes to CountryPricing ObjectIds (for country-specific pricing)
   // Format: { 'GB': ObjectId, 'US': ObjectId, 'IN': ObjectId, ... }
   countryPricingMap?: Map<string, mongoose.Types.ObjectId>;
-  // DEPRECATED: Regional pricing array - kept for backward compatibility during migration
+
   regionalPricing?: Array<{
     region: string;
     currency: string;
@@ -91,9 +90,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     trim: true,
     maxlength: [500, 'Plan description cannot exceed 500 characters']
   },
-  // REMOVED: price_monthly, price_quarterly, price_yearly, price_one_time
-  // Prices are now stored in CountryPricing collection and referenced via ObjectIds
-  // REMOVED: currency field - currency comes from CountryPricing collection
+
   billingCycle: {
     type: String,
     required: [true, 'Billing cycle is required'],
@@ -259,8 +256,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     of: Schema.Types.ObjectId,
     default: new Map()
   },
-  // Note: Regional pricing has been moved to CountryPricing collection (normalized structure)
-  // This field is kept for backward compatibility during migration
+
   regionalPricing: [{
     region: {
       type: String,
@@ -297,24 +293,13 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
 });
 
 // Virtual for checking if promotion is active
-pricingPlanSchema.virtual('isPromotionActive').get(function() {
+pricingPlanSchema.virtual('isPromotionActive').get(function () {
   if (!this.promotionValidFrom || !this.promotionValidUntil) return false;
   const now = new Date();
   return now >= this.promotionValidFrom && now <= this.promotionValidUntil;
 });
 
-// DEPRECATED: effectivePrice virtual - prices now come from CountryPricing
-// This virtual is kept for backward compatibility but should not be used
-// Prices should be fetched from CountryPricing collection via defaultCountryPricingId or countryPricingMap
-pricingPlanSchema.virtual('effectivePrice').get(function() {
-  // Return empty object - prices must be fetched from CountryPricing
-  return {
-    monthly: undefined,
-    quarterly: undefined,
-    yearly: undefined,
-    oneTime: undefined
-  };
-});
+
 
 // Index for better query performance
 pricingPlanSchema.index({ key: 1 }, { unique: true });

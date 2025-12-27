@@ -39,7 +39,7 @@ export default function ConvertToJourneyBanner({
                     </div>
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-white text-sm">Track This Application?</h4>
+                            <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Track This Application?</h4>
                             <Sparkles size={14} className="text-lime-400" />
                         </div>
                         <p className="text-sm text-gray-400">

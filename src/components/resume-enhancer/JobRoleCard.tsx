@@ -39,7 +39,7 @@ export default function JobRoleCard({
   const isEditMode = mode === 'edit' || mode === 'edit-master';
 
   return (
-    <div className="bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-white/5 overflow-hidden p-3">
+    <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 overflow-hidden p-3">
       {/* Role Title with Edit Button */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">

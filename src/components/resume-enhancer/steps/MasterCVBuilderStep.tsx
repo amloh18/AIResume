@@ -784,7 +784,7 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
             <div className={`w-10 h-10 bg-gradient-to-r ${getColorClasses(section.color || 'blue')} rounded-lg flex items-center justify-center`}>
               <Icon className="w-5 h-5 text-white" />
             </div>
-            <h3 className="text-xl font-semibold text-white">{section.title}</h3>
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">{section.title}</h3>
           </div>
           <button
             onClick={() => toggleSectionCollapse(section.id)}
@@ -970,7 +970,7 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
             <div className="p-6 border-b border-white/10">
               <div className="text-center mb-4">
                 <div className="text-[#80FF00] font-bold text-lg mb-1">Step 2 of 3</div>
-                <div className="text-xl font-bold text-white mb-2">Details Sections</div>
+                <div className="text-xl font-bold text-gray-900 dark:text-white mb-2">Details Sections</div>
                 <div className="text-white/70 text-sm leading-relaxed">
                   Review and edit your CV sections.<br />
                   Click on a section title to navigate.
@@ -1079,7 +1079,7 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
             className="bg-[#222B22] rounded-2xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">Add New Section</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Add New Section</h2>
               <button
                 onClick={() => setShowAddSectionModal(false)}
                 className="text-white/60 hover:text-white transition-colors"

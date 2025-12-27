@@ -410,7 +410,7 @@ export async function PUT(
 
           // 3. Track job creation (no credit spending - jobs are count-based now)
           // Still track total created for analytics
-          const updateData: any = {
+          const userUpdateData: any = {
             $inc: {
               'credits.totalCreated.jobs': 1
             }
@@ -419,16 +419,16 @@ export async function PUT(
           // Ensure nested structure exists
           if (!user.credits?.totalCreated || user.credits.totalCreated.jobs === undefined) {
             const currentJobs = user.credits?.totalCreated?.jobs ?? 0;
-            updateData.$set = {
+            userUpdateData.$set = {
               'credits.totalCreated.jobs': currentJobs + 1,
               'credits.totalCreated.cvs': user.credits?.totalCreated?.cvs ?? 0,
               'credits.totalCreated.exports': user.credits?.totalCreated?.exports ?? 0,
               'credits.totalCreated.atsChecks': user.credits?.totalCreated?.atsChecks ?? 0
             };
-            if (updateData.$inc && 'credits.totalCreated.jobs' in updateData.$inc) {
-              delete updateData.$inc['credits.totalCreated.jobs'];
-              if (Object.keys(updateData.$inc).length === 0) {
-                delete updateData.$inc;
+            if (userUpdateData.$inc && 'credits.totalCreated.jobs' in userUpdateData.$inc) {
+              delete userUpdateData.$inc['credits.totalCreated.jobs'];
+              if (Object.keys(userUpdateData.$inc).length === 0) {
+                delete userUpdateData.$inc;
               }
             }
           }
@@ -436,7 +436,7 @@ export async function PUT(
           // Update user job count tracking within transaction
           await User.findByIdAndUpdate(
             normalizedUserId,
-            updateData,
+            userUpdateData,
             { session, new: true, runValidators: true }
           );
 

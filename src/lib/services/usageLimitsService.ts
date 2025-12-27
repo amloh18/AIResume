@@ -48,7 +48,7 @@ class UsageLimitsService {
       }
 
       const subscription = user.subscription;
-      
+
       // Allow free tier users to have access (they use credits, not subscription status)
       if (user.currentPlanKey === 'free') {
         return {
@@ -57,7 +57,7 @@ class UsageLimitsService {
           reason: 'Free tier access'
         };
       }
-      
+
       // For paid plans, check subscription status
       // If user has a paid plan key but no active subscription, treat them as free tier
       if (!subscription || subscription.status === 'cancelled' || subscription.status === 'inactive') {
@@ -110,7 +110,7 @@ class UsageLimitsService {
       }
 
       // For quarterly/yearly (one-time payments): check accessExpiresAt
-      if ((user.currentPlanKey === 'pro_quarterly' || user.currentPlanKey === 'pro_yearly') && subscription.accessExpiresAt) {
+      if ((user.currentPlanKey === 'pro_quarterly' || user.currentPlanKey === 'pro_yearly' || user.currentPlanKey === 'pro_lifetime') && subscription.accessExpiresAt) {
         const expiresAt = new Date(subscription.accessExpiresAt);
         const daysRemaining = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -141,6 +141,15 @@ class UsageLimitsService {
           daysRemaining: Math.round(daysRemaining * 10) / 10,
           subscription,
           expiredAt: expiresAt
+        };
+      }
+
+      // For lifetime plan: always has access
+      if (user.currentPlanKey === 'pro_lifetime') {
+        return {
+          hasAccess: true,
+          subscription,
+          reason: 'Lifetime access'
         };
       }
 
@@ -263,7 +272,7 @@ class UsageLimitsService {
 
       // Check job creation credits
       const creditCheck = await creditService.checkCreditAvailability(context.userId, 'job_create');
-      
+
       const allowed = creditCheck.available;
       const currentUsage = creditCheck.limit === -1 ? -1 : creditCheck.limit - creditCheck.creditsRemaining;
       const limit = creditCheck.limit;
@@ -276,8 +285,8 @@ class UsageLimitsService {
         resetTime: user.currentPlanKey === 'day_pass' && user.subscription?.accessExpiresAt
           ? new Date(user.subscription.accessExpiresAt)
           : user.subscription?.currentPeriodEnd
-          ? new Date(user.subscription.currentPeriodEnd)
-          : undefined
+            ? new Date(user.subscription.currentPeriodEnd)
+            : undefined
       };
 
     } catch (error) {
@@ -422,10 +431,10 @@ class UsageLimitsService {
 
       // Check for rapid-fire requests (more than 10 actions in 1 minute)
       const oneMinuteAgo = new Date(Date.now() - 60 * 1000);
-      
+
       // This would require additional logging/tracking in a real implementation
       // For now, we'll implement basic checks
-      
+
       const user = await User.findById(context.userId);
       if (!user) {
         return { suspicious: false };

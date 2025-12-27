@@ -97,11 +97,10 @@ export default function ChooseTemplateStep({ onNext, onBack }: ChooseTemplateSte
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
-                className={`relative bg-white border-2 rounded-xl overflow-hidden cursor-pointer transition-all shadow-md ${
-                  isSelected
+                className={`relative bg-white border-2 rounded-xl overflow-hidden cursor-pointer transition-all shadow-md ${isSelected
                     ? 'border-[#80FF00] ring-2 ring-[#80FF00]/50'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
                 onClick={() => handleTemplateSelect(template)}
               >
                 <div className="relative aspect-[0.707] overflow-hidden bg-white">
@@ -113,7 +112,7 @@ export default function ChooseTemplateStep({ onNext, onBack }: ChooseTemplateSte
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         const currentSrc = target.src;
-                        
+
                         if (!currentSrc.includes('s3.') && !currentSrc.includes('amazonaws.com')) {
                           const filename = template.thumbnail?.split('/').pop() || '';
                           const s3BaseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL;
@@ -160,7 +159,7 @@ export default function ChooseTemplateStep({ onNext, onBack }: ChooseTemplateSte
           <button
             onClick={handleContinue}
             disabled={!state.selectedTemplate}
-            className="px-8 py-3 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg font-bold text-lg disabled:bg-gray-600 disabled:cursor-not-allowed transition-colors flex items-center gap-3"
+            className="px-8 py-3 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-lg font-bold text-lg disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-3"
           >
             Continue to CV Builder
             <ArrowRight size={20} />

@@ -3,8 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { Sparkles, Target, TrendingUp, CheckCircle2, XCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Sparkles, Target, TrendingUp, CheckCircle2, XCircle, ChevronRight, Loader2, AlertTriangle } from 'lucide-react';
 import MagicFixButton from './MagicFixButton';
+import ScoreWidget from './components/ScoreWidget';
+import SimulatedCVToggle from './components/SimulatedCVToggle';
 
 const SECTION_LABELS: Record<string, string> = {
     'basics': 'Personal Info',
@@ -202,43 +204,53 @@ export default function SurgeonOverlay() {
                     )}
                 </div>
 
-                {/* CV Score */}
+                {/* CV & ATS Scores */}
                 <div className="bg-gradient-to-br from-[color:var(--accent-primary)]/10 to-[color:var(--accent-primary)]/5 rounded-lg p-4 mb-4 shadow-sm shadow-black/10 dark:shadow-black/30">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-xs text-[color:var(--text-tertiary)] mb-1">CV Score</p>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-3xl font-bold text-[color:var(--accent-primary)]">{state.cvScore}</span>
-                                <span className="text-lg text-[color:var(--text-tertiary)]">/100</span>
-                            </div>
-                        </div>
-                        <div className="relative w-16 h-16">
-                            <svg className="w-16 h-16 transform -rotate-90">
-                                <circle
-                                    cx="32"
-                                    cy="32"
-                                    r="28"
-                                    stroke="currentColor"
-                                    strokeWidth="6"
-                                    fill="none"
-                                    className="text-black/10 dark:text-white/10"
-                                />
-                                <circle
-                                    cx="32"
-                                    cy="32"
-                                    r="28"
-                                    stroke="currentColor"
-                                    strokeWidth="6"
-                                    fill="none"
-                                    strokeDasharray={`${2 * Math.PI * 28}`}
-                                    strokeDashoffset={`${2 * Math.PI * 28 * (1 - state.cvScore / 100)}`}
-                                    className="text-[color:var(--accent-primary)] transition-all duration-1000"
-                                    strokeLinecap="round"
-                                />
-                            </svg>
-                        </div>
+                    <div className="flex items-center justify-around gap-4">
+                        {/* CV Score Widget */}
+                        <ScoreWidget
+                            label="CV Score"
+                            score={state.cvScore}
+                            multiplier={state.cvScoreMultiplier || 1.0}
+                            breakdown={state.cvScoreBreakdown ?? undefined}
+                            penaltyReasons={state.cvPenaltyReasons}
+                            showMultiplier={true}
+                        />
+
+                        {/* ATS Score Widget - only show if JD is provided */}
+                        {state.atsScore !== undefined && state.atsScore !== null && (
+                            <ScoreWidget
+                                label="ATS Score"
+                                score={state.atsScore}
+                                multiplier={state.atsScoreMultiplier || 1.0}
+                                context={state.atsScoreContext || 'industry-general'}
+                                breakdown={state.atsScoreBreakdown ?? undefined}
+                                showMultiplier={true}
+                            />
+                        )}
                     </div>
+
+                    {/* Multiplier Warning */}
+                    {((state.cvScoreMultiplier || 1.0) < 1.0 || (state.atsScoreMultiplier || 1.0) < 1.0) && (
+                        <div className="mt-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+                            <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                            <span className="text-xs text-red-300">
+                                Score penalized due to low content density. Add more details to improve.
+                            </span>
+                        </div>
+                    )}
                 </div>
+
+                {/* Simulated CV Toggle */}
+                {state.strategicFixAvailable && (
+                    <div className="mb-4 p-3 bg-[var(--bg-tertiary)] rounded-lg">
+                        <SimulatedCVToggle
+                            isSimulated={state.showSimulatedCV || false}
+                            onToggle={(simulated) => dispatch({ type: 'TOGGLE_SIMULATED_CV', payload: simulated })}
+                            strategicFixRequired={state.cvScore < 75}
+                        />
+                    </div>
+                )}
 
                 {/* Magic Fix Button */}
                 <div className="mb-4">

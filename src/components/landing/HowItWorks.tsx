@@ -97,7 +97,7 @@ const HowItWorks = () => {
         </motion.div>
 
         {/* Steps Grid (New Card Layout) */}
-        <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-6 relative">
+        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-8 relative">
           {steps.map((step, index) => (
             <React.Fragment key={step.id}>
               {/* Card */}
@@ -106,36 +106,24 @@ const HowItWorks = () => {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: step.delay, duration: 0.5 }}
-                className="group relative flex flex-col h-full bg-gray-900/50 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden hover:border-lime-400/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-lime-500/10 min-h-[400px]"
+                className="group relative flex flex-col tablet:flex-row bg-gray-900/50 backdrop-blur-md border border-white/10 rounded-3xl overflow-hidden hover:border-lime-400/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-lime-500/10 min-h-[400px]"
               >
-                {/* Background Image */}
-                <div className="absolute inset-0 z-0 bg-gray-900">
-                  <Image
-                    src={step.image}
-                    alt={step.title}
-                    fill
-                    className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
-                  />
-                  {/* Dark Overlay Gradient to ensure text readability */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent opacity-90 transition-opacity" />
-                </div>
-
-                {/* Content Container - Relative z-10 */}
-                <div className="relative z-10 flex flex-col h-full p-6">
+                {/* Content Container - Left Side */}
+                <div className="flex-1 flex flex-col p-8 tablet:p-10 relative z-10">
                   {/* Step Label */}
                   <div className="mb-4">
-                    <span className="text-xs font-bold tracking-widest text-lime-400 uppercase drop-shadow-lg shadow-black">
+                    <span className="text-xs font-bold tracking-widest text-lime-400 uppercase">
                       {step.stepLabel}
                     </span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-xl font-bold text-white mb-3 group-hover:text-lime-300 transition-colors drop-shadow-xl shadow-black">
+                  <h3 className="text-2xl font-bold text-white mb-4 group-hover:text-lime-300 transition-colors">
                     {step.title}
                   </h3>
 
                   {/* Description */}
-                  <p className="text-white text-sm leading-relaxed mb-6 font-medium drop-shadow-xl shadow-black/80">
+                  <p className="text-gray-300 text-base leading-relaxed mb-8 font-medium">
                     {step.description}
                   </p>
 
@@ -144,30 +132,26 @@ const HowItWorks = () => {
                     <Link
                       href={step.href}
                       target={step.href.startsWith('http') ? '_blank' : undefined}
-                      className="inline-block px-6 py-3 bg-white/10 border border-white/20 rounded-full shadow-lg backdrop-blur-md hover:bg-lime-400 hover:text-black hover:border-lime-400 transition-all font-bold text-sm text-white group-hover:scale-105"
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-white/10 border border-white/20 rounded-full shadow-lg backdrop-blur-md hover:bg-lime-400 hover:text-black hover:border-lime-400 transition-all font-bold text-sm text-white group-hover:scale-105"
                     >
                       {step.buttonLabel}
+                      <ArrowRight size={16} />
                     </Link>
                   </div>
                 </div>
 
+                {/* Image Side - Right Side */}
+                <div className="flex-1 relative min-h-[250px] tablet:min-h-full overflow-hidden">
+                  <Image
+                    src={step.image}
+                    alt={step.title}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-all duration-700"
+                  />
+                </div>
+
               </motion.div>
 
-              {/* Arrow Connector (Desktop only, not after last item) */}
-              {index < steps.length - 1 && (
-                <div className="hidden desktop:flex absolute top-1/2 -translate-y-1/2 z-10 text-gray-600"
-                  style={{ left: `calc(${((index + 1) / 4) * 100}% - 12px)` }}
-                >
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: step.delay + 0.2 }}
-                    className="w-6 h-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center shadow-xl z-20 relative"
-                  >
-                    <ArrowRight size={12} className="text-gray-400" />
-                  </motion.div>
-                </div>
-              )}
             </React.Fragment>
           ))}
         </div>

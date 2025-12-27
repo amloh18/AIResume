@@ -598,7 +598,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
               <IconComponent className={`w-4 h-4 ${iconColor}`} />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-white break-words">
+              <div className="text-xs font-semibold text-gray-900 dark:text-white break-words">
                 {fix.issue}
                 {isSemanticMatch && fix.semanticMatch && (
                   <span className="ml-2 text-[10px] text-yellow-400" title={`Matches '${fix.semanticMatch.requiredTerm}' via '${fix.semanticMatch.foundTerm}'`}>
@@ -627,7 +627,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
               e.stopPropagation();
               handleSuppressFix(fix);
             }}
-            className="px-2 py-1 rounded-lg text-xs font-semibold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white transition-colors flex items-center gap-1"
+            className="px-2 py-1 rounded-lg text-xs font-semibold bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-700 dark:text-white/70 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1"
             title="I fixed this in a way the AI missed"
           >
             <CheckCircle className="w-3 h-3" />
@@ -660,7 +660,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
           className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-white/5 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-white">{title}</span>
+            <span className="text-xs font-semibold text-gray-900 dark:text-white">{title}</span>
             <span className={['text-[10px] px-2 py-0.5 rounded-full font-semibold', badgeClassName].join(' ')}>
               {count}
             </span>
@@ -693,7 +693,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
             transition={{ duration: 0.22 }}
-            className="w-full h-full max-w-[1600px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col"
+            className="w-full h-full max-w-[1600px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-white dark:bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/20 dark:shadow-black/60 flex flex-col"
           >
             {/* Top Bar (HUD) */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
@@ -808,7 +808,12 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                           }
                         }
                       } else {
-                        // Save CV in background without redirecting
+                        // Apply all open fixes sequentially
+                        for (const fix of openFixes) {
+                          await handleApplyFix(fix);
+                        }
+
+                        // Save CV in background after applying all fixes
                         if (state.cvId && state.cvData) {
                           try {
                             await fetch(`/api/cvs/${state.cvId}`, {
@@ -820,17 +825,10 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                                 templateId: state.selectedTemplate?.id
                               })
                             });
-                            console.log('✅ CV saved in background after applying fixes');
+                            console.log('✅ CV saved in background after applying all fixes');
                           } catch (error) {
                             console.error('Failed to save CV in background:', error);
                           }
-                        }
-
-                        // Set review mode without closing modal
-                        dispatch({ type: 'SET_REVIEW_MODE', payload: true });
-                        const firstOpen = (state.fixAnnotations || []).find((f) => f.status === 'open');
-                        if (!state.activeFixId && firstOpen) {
-                          dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
                         }
                       }
                     }}
@@ -853,7 +851,7 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             {/* Body: Column-wise layout (Left rail | CV | Right panel stacked vertically) */}
             <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
               {/* Left rail */}
-              <aside className="hidden lg:block w-80 flex-shrink-0 border-r border-white/10 bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
+              <aside className="hidden lg:block w-80 flex-shrink-0 border-r border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3" style={{ maxHeight: '100%' }}>
                   <Bucket
                     title="Critical"
@@ -1048,13 +1046,13 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
               </div>
 
               {/* Right panel: Fix it zone */}
-              <aside className="hidden lg:block w-96 flex-shrink-0 border-l border-white/10 bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
+              <aside className="hidden lg:block w-96 flex-shrink-0 border-l border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] overflow-hidden flex flex-col" style={{ height: '100%' }}>
                 <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 space-y-3" style={{ maxHeight: '100%' }}>
                   <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <div className="text-xs text-white/60 uppercase tracking-wide">Selected</div>
                     {selectedFix ? (
                       <>
-                        <div className="mt-1 text-sm font-semibold text-white break-words">{selectedFix.issue}</div>
+                        <div className="mt-1 text-sm font-semibold text-gray-900 dark:text-white break-words">{selectedFix.issue}</div>
                         <div className="mt-2 flex items-center gap-2 flex-wrap">
                           <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/80">
                             {CATEGORY_LABELS[selectedFix.category] || selectedFix.category}

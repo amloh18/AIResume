@@ -12,27 +12,27 @@ interface RibbonStepIndicatorProps {
 }
 
 const steps = [
-  { 
-    number: 1, 
-    label: 'Personal Info', 
+  {
+    number: 1,
+    label: 'Personal Info',
     description: 'Upload or add your resume details',
     icon: User
   },
-  { 
-    number: 2, 
-    label: 'Template', 
+  {
+    number: 2,
+    label: 'Template',
     description: 'Pick a template for your CV',
     icon: Palette
   },
-  { 
-    number: 3, 
-    label: 'Builder & Surgeon', 
+  {
+    number: 3,
+    label: 'Builder & Surgeon',
     description: 'Edit and optimize with AI',
     icon: Sparkles
   },
-  { 
-    number: 4, 
-    label: 'Review', 
+  {
+    number: 4,
+    label: 'Review',
     description: 'Preview and save to dashboard',
     icon: Eye
   }
@@ -50,19 +50,19 @@ export default function RibbonStepIndicator({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       // Show at the top (within 10px of top)
       if (currentScrollY < 10) {
         setIsVisible(true);
-      } 
+      }
       // Hide when scrolling down, show when scrolling up
       else if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
-      } 
+      }
       else if (currentScrollY < lastScrollY) {
         setIsVisible(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
@@ -72,12 +72,12 @@ export default function RibbonStepIndicator({
 
   return (
     <motion.div
-      animate={{ 
+      animate={{
         y: isVisible ? 0 : -100,
         opacity: isVisible ? 1 : 0
       }}
       transition={{ duration: 0.2, ease: 'easeInOut' }}
-      className={`w-full bg-[#141810] border-t border-white/10 sticky top-[48px] z-[50] ${className}`}
+      className={`w-full bg-white dark:bg-[#141810] border-t border-gray-200 dark:border-white/10 sticky top-[48px] z-[50] ${className}`}
       style={{ pointerEvents: isVisible ? 'auto' : 'none' }}
     >
       <div className="max-w-7xl mx-auto px-4 py-2">
@@ -97,11 +97,11 @@ export default function RibbonStepIndicator({
                   onClick={() => isClickable && onStepClick?.(step.number as 1 | 2 | 3 | 4)}
                   className={`
                     relative flex items-center gap-2 min-w-[160px] px-4 py-2 transition-all duration-300
-                    ${isActive 
-                      ? 'bg-[#1a230f] border-y border-[#80FF00]/30 text-[#80FF00] shadow-lg shadow-[#80FF00]/20' 
+                    ${isActive
+                      ? 'bg-[#1a230f] border-y border-[#80FF00]/30 text-[#80FF00] shadow-lg shadow-[#80FF00]/20'
                       : isCompleted
-                      ? 'bg-[#80FF00]/10 border-y border-[#80FF00]/30 text-[#80FF00] hover:bg-[#80FF00]/15'
-                      : 'bg-[#1a230f] border-y border-white/5 text-[color:var(--text-tertiary)]'
+                        ? 'bg-[#80FF00]/10 border-y border-[#80FF00]/30 text-[#80FF00] hover:bg-[#80FF00]/15'
+                        : 'bg-[#1a230f] border-y border-white/5 text-[color:var(--text-tertiary)]'
                     }
                     ${isClickable ? 'cursor-pointer hover:scale-105' : 'cursor-default'}
                   `}
@@ -114,11 +114,11 @@ export default function RibbonStepIndicator({
                   {/* Icon Circle */}
                   <div className={`
                     w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0
-                    ${isActive 
-                      ? 'bg-[#80FF00] text-black' 
-                      : isCompleted
+                    ${isActive
                       ? 'bg-[#80FF00] text-black'
-                      : 'bg-[#252a1f] text-[color:var(--text-tertiary)]'
+                      : isCompleted
+                        ? 'bg-[#80FF00] text-black'
+                        : 'bg-[#252a1f] text-[color:var(--text-tertiary)]'
                     }
                   `}>
                     {isCompleted || isActive ? (

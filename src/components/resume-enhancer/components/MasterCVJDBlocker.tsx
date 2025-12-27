@@ -36,7 +36,7 @@ export default function MasterCVJDBlocker({
                         </motion.div>
 
                         {/* Title */}
-                        <h3 className="text-lg font-semibold text-white mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
                             Master CVs Are Role-Based Only
                         </h3>
 

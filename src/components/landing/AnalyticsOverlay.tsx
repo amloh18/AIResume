@@ -78,6 +78,7 @@ const AnalyticsOverlay = () => {
                                 fill
                                 className="object-contain"
                                 priority
+                                unoptimized
                             />
                         </div>
 

@@ -256,7 +256,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 }}
                 onClick={handleStartWithJob}
-                className="group relative bg-gradient-to-br from-[#141810] to-[#1a1f14] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--accent-primary)]/20 hover:scale-105 border border-[var(--accent-primary)]/20"
+                className="group relative bg-gradient-to-br from-white to-gray-50 dark:from-[#141810] dark:to-[#1a1f14] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--accent-primary)]/20 hover:scale-105 border border-gray-200 dark:border-[var(--accent-primary)]/20"
               >
                 <div className="flex flex-col items-center text-center space-y-4">
                   {/* RECOMMENDED chip badge - above icon */}
@@ -266,10 +266,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                   <div className="w-16 h-16 bg-[#80FF00]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Briefcase className="w-8 h-8 text-[#80FF00]" />
                   </div>
-                  <h3 className="text-xl font-semibold text-[color:var(--text-primary)]">
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
                     Apply to a Job
                   </h3>
-                  <p className="text-[color:var(--text-secondary)] text-sm">
+                  <p className="text-gray-600 dark:text-gray-300 text-sm">
                     Paste a job description and we'll tailor your CV with ATS optimization
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center pt-2">
@@ -290,16 +290,16 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
               onClick={() => setParseMethod('upload')}
-              className={`group relative bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
+              className={`group relative bg-white dark:bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 border border-gray-200 dark:border-transparent ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
                   <Upload className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
                 </div>
-                <h3 className={`font-semibold text-[color:var(--text-primary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
+                <h3 className={`font-semibold text-gray-900 dark:text-white ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
                   Upload Resume
                 </h3>
-                <p className={`text-[color:var(--text-secondary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
+                <p className={`text-gray-600 dark:text-gray-300 ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
                   Upload your current resume and we'll extract the information
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center pt-2">
@@ -319,16 +319,16 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
               onClick={() => handleManualEntry()}
-              className={`group relative bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
+              className={`group relative bg-white dark:bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 border border-gray-200 dark:border-transparent ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
             >
               <div className="flex flex-col items-center text-center space-y-4">
                 <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
                   <Edit3 className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
                 </div>
-                <h3 className={`font-semibold text-[color:var(--text-primary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
+                <h3 className={`font-semibold text-gray-900 dark:text-white ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
                   Start Fresh
                 </h3>
-                <p className={`text-[color:var(--text-secondary)] ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
+                <p className={`text-gray-600 dark:text-gray-300 ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
                   Build your resume from scratch with our guided forms
                 </p>
                 <div className="flex items-center gap-2 justify-center pt-2">
@@ -365,7 +365,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-[#141810] rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 p-12"
+            className="bg-white dark:bg-[#141810] rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 p-12 border border-gray-200 dark:border-transparent"
           >
             {uploadStatus === 'idle' && (
               <div className="text-center">
@@ -386,7 +386,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <span className="inline-block px-8 py-3 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105">
+                  <span className="inline-block px-8 py-3 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105">
                     Choose File
                   </span>
                 </label>
@@ -487,7 +487,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     setErrorMessage('');
                     setUploadProgress(0);
                   }}
-                  className="px-6 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg font-medium transition-colors"
+                  className="px-6 py-2 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-lg font-medium transition-colors"
                 >
                   Try Again
                 </button>

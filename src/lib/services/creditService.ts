@@ -28,15 +28,15 @@ class CreditService {
   async getPlanCredits(planKey: string): Promise<PlanCreditAllocation> {
     try {
       await connectToDatabase();
-      
+
       // Try to get plan from database first
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findOne({ key: planKey, status: 'active' }).lean();
-      
+
       if (plan && plan.credits && plan.credits.jobCredits !== undefined) {
         return { jobCredits: plan.credits.jobCredits };
       }
-      
+
       // Fallback to hardcoded values if plan not found in database
       switch (planKey) {
         case 'free':
@@ -46,6 +46,7 @@ class CreditService {
         case 'pro_monthly':
         case 'pro_quarterly':
         case 'pro_yearly':
+        case 'pro_lifetime':
           return { jobCredits: -1 }; // Unlimited
         default:
           return { jobCredits: 1 }; // Default to free plan
@@ -101,14 +102,14 @@ class CreditService {
         return { available: false, creditsRemaining: 0, limit: 0 };
       }
 
-      // For paid plans (monthly/quarterly/yearly), check subscription status
-      if (['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(user.currentPlanKey)) {
+      // For paid plans (monthly/quarterly/yearly/lifetime), check subscription status
+      if (['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(user.currentPlanKey)) {
         // Check if user actually has an active subscription
         const subscription = user.subscription;
-        const hasActiveSubscription = subscription && 
-          subscription.status === 'active' && 
+        const hasActiveSubscription = subscription &&
+          subscription.status === 'active' &&
           (subscription.currentPeriodEnd || subscription.accessExpiresAt);
-        
+
         if (!hasActiveSubscription) {
           // User has paid plan key but no active subscription - treat as free tier
           const currentCredits = user.credits?.jobCredits ?? 0;
@@ -119,7 +120,7 @@ class CreditService {
             limit: freeLimit
           };
         }
-        
+
         // Verify subscription hasn't expired by checking time-based access
         const { default: usageLimitsService } = await import('./usageLimitsService');
         const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);
@@ -133,7 +134,7 @@ class CreditService {
             limit: freeLimit
           };
         }
-        
+
         // Unlimited for active paid plans with valid subscription
         return { available: true, creditsRemaining: -1, limit: -1 };
       }
@@ -146,7 +147,7 @@ class CreditService {
         if (!timeCheck.hasAccess) {
           return { available: false, creditsRemaining: 0, limit: 0 };
         }
-        
+
         // Day pass is unlimited - return unlimited regardless of stored credits
         const planCredits = await this.getPlanCredits('day_pass');
         return {
@@ -256,8 +257,8 @@ class CreditService {
 
       // Perform the update
       const updateResult = await User.findByIdAndUpdate(
-        userId, 
-        updateData, 
+        userId,
+        updateData,
         { new: true, runValidators: true, upsert: false }
       );
 
@@ -271,7 +272,7 @@ class CreditService {
       const expectedCredits = isUnlimited ? currentCreditsBefore : currentCreditsBefore - 1;
       const updatedTotalCreated = updateResult.credits?.totalCreated?.jobs ?? 0;
       const expectedTotalCreated = (user.credits?.totalCreated?.jobs ?? 0) + 1;
-      
+
       console.log(`💳 CreditService.spendCredit - Update result:`, {
         jobCreditsBefore: currentCreditsBefore,
         jobCreditsAfter: updatedCredits,
@@ -375,7 +376,7 @@ class CreditService {
    */
   private calculateNextResetDate(lastReset: Date, schedule: CreditResetSchedule): Date {
     const next = new Date(lastReset);
-    
+
     switch (schedule) {
       case 'monthly':
         // Reset on 1st of next month

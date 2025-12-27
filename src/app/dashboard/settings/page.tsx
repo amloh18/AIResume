@@ -242,7 +242,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameStatus, setUsernameStatus] = useState<'idle' | 'available' | 'taken'>('idle');
   const [usernameTimeout, setUsernameTimeout] = useState<NodeJS.Timeout | null>(null);
-  
+
   // Email verification states
   const [isSendingVerification, setIsSendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -261,23 +261,23 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     const fetchMasterCV = async () => {
       try {
         console.log('🔍 Settings - Fetching master CV data for profile population');
-        
+
         // Use the correct API endpoint for master CV
         const response = await fetch('/api/cvs/master');
         if (response.ok) {
           const data = await response.json();
           console.log('🔍 Settings - Master CV API response:', data);
-          
+
           if (data.success && data.data?.masterCV) {
             const masterCV = data.data.masterCV;
             setMasterCVData(masterCV);
-            
+
             console.log('🔍 Settings - Master CV data:', masterCV);
-            
+
             // Only update fields that haven't been manually modified by user
             const updatedFormData = { ...formData };
             const updatedHasUserModified = { ...hasUserModified };
-            
+
             // Extract and populate name fields
             if (!hasUserModified.firstName && masterCV.cvData?.basics?.name) {
               const fullName = masterCV.cvData.basics.name.trim();
@@ -286,13 +286,13 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
               console.log('🔍 Settings - Populated name from master CV:', { firstName: updatedFormData.firstName, lastName: updatedFormData.lastName });
             }
-            
+
             // Populate phone
             if (!hasUserModified.phone && masterCV.cvData?.basics?.phone) {
               updatedFormData.phone = masterCV.cvData.basics.phone.trim();
               console.log('🔍 Settings - Populated phone from master CV:', updatedFormData.phone);
             }
-            
+
             // Populate location (combine city, address, region)
             if (!hasUserModified.location && masterCV.cvData?.basics?.location) {
               const location = masterCV.cvData.basics.location;
@@ -303,18 +303,18 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               updatedFormData.location = locationParts.join(', ');
               console.log('🔍 Settings - Populated location from master CV:', updatedFormData.location);
             }
-            
+
             // Populate website
             if (!hasUserModified.website && masterCV.cvData?.basics?.url) {
               updatedFormData.website = masterCV.cvData.basics.url.trim();
               console.log('🔍 Settings - Populated website from master CV:', updatedFormData.website);
             }
-            
+
             // Populate social profiles
             if (masterCV.cvData?.basics?.profiles && Array.isArray(masterCV.cvData.basics.profiles)) {
               // LinkedIn
               if (!hasUserModified.linkedin) {
-                const linkedinProfile = masterCV.cvData.basics.profiles.find((p: any) => 
+                const linkedinProfile = masterCV.cvData.basics.profiles.find((p: any) =>
                   p.network && p.network.toLowerCase() === 'linkedin'
                 );
                 if (linkedinProfile && linkedinProfile.url) {
@@ -322,10 +322,10 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                   console.log('🔍 Settings - Populated LinkedIn from master CV:', updatedFormData.linkedin);
                 }
               }
-              
+
               // GitHub
               if (!hasUserModified.github) {
-                const githubProfile = masterCV.cvData.basics.profiles.find((p: any) => 
+                const githubProfile = masterCV.cvData.basics.profiles.find((p: any) =>
                   p.network && p.network.toLowerCase() === 'github'
                 );
                 if (githubProfile && githubProfile.url) {
@@ -334,25 +334,25 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 }
               }
             }
-            
+
             // Populate summary
             if (!hasUserModified.summary && masterCV.cvData?.basics?.summary) {
               updatedFormData.summary = masterCV.cvData.basics.summary.trim();
               console.log('🔍 Settings - Populated summary from master CV');
             }
-            
+
             // Populate label as company (if not already set)
             if (!hasUserModified.company && masterCV.cvData?.basics?.label && !updatedFormData.company) {
               updatedFormData.company = masterCV.cvData.basics.label.trim();
               console.log('🔍 Settings - Populated company from master CV label:', updatedFormData.company);
             }
-            
+
             // Populate avatar/profile photo
             if (masterCV.cvData?.basics?.image && !avatar) {
               setAvatar(masterCV.cvData.basics.image.trim());
               console.log('🔍 Settings - Populated avatar from master CV');
             }
-            
+
             setFormData(updatedFormData);
             console.log('✅ Settings - Successfully populated profile from master CV');
           } else {
@@ -372,11 +372,11 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   // Function to refresh data from Master CV
   const refreshFromMasterCV = async () => {
     if (!masterCVData) return;
-    
+
     console.log('🔄 Settings - Refreshing profile data from master CV');
-    
+
     const updatedFormData = { ...formData };
-    
+
     // Only update fields that haven't been manually modified by user
     if (!hasUserModified.firstName && masterCVData.cvData?.basics?.name) {
       const fullName = masterCVData.cvData.basics.name.trim();
@@ -384,11 +384,11 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
       updatedFormData.firstName = nameParts[0] || '';
       updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
     }
-    
+
     if (!hasUserModified.phone && masterCVData.cvData?.basics?.phone) {
       updatedFormData.phone = masterCVData.cvData.basics.phone.trim();
     }
-    
+
     if (!hasUserModified.location && masterCVData.cvData?.basics?.location) {
       const location = masterCVData.cvData.basics.location;
       const locationParts = [];
@@ -397,25 +397,25 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
       if (location.address) locationParts.push(location.address);
       updatedFormData.location = locationParts.join(', ');
     }
-    
+
     if (!hasUserModified.website && masterCVData.cvData?.basics?.url) {
       updatedFormData.website = masterCVData.cvData.basics.url.trim();
     }
-    
+
     if (masterCVData.cvData?.basics?.profiles && Array.isArray(masterCVData.cvData.basics.profiles)) {
       // LinkedIn
       if (!hasUserModified.linkedin) {
-        const linkedinProfile = masterCVData.cvData.basics.profiles.find((p: any) => 
+        const linkedinProfile = masterCVData.cvData.basics.profiles.find((p: any) =>
           p.network && p.network.toLowerCase() === 'linkedin'
         );
         if (linkedinProfile && linkedinProfile.url) {
           updatedFormData.linkedin = linkedinProfile.url.trim();
         }
       }
-      
+
       // GitHub
       if (!hasUserModified.github) {
-        const githubProfile = masterCVData.cvData.basics.profiles.find((p: any) => 
+        const githubProfile = masterCVData.cvData.basics.profiles.find((p: any) =>
           p.network && p.network.toLowerCase() === 'github'
         );
         if (githubProfile && githubProfile.url) {
@@ -423,22 +423,22 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         }
       }
     }
-    
+
     if (!hasUserModified.summary && masterCVData.cvData?.basics?.summary) {
       updatedFormData.summary = masterCVData.cvData.basics.summary.trim();
     }
-    
+
     if (!hasUserModified.company && masterCVData.cvData?.basics?.label && !updatedFormData.company) {
       updatedFormData.company = masterCVData.cvData.basics.label.trim();
     }
-    
+
     setFormData(updatedFormData);
     console.log('✅ Settings - Profile refreshed from master CV');
   };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
+
     // Mark field as user-modified to prevent Master CV from overriding it
     if (field in hasUserModified) {
       setHasUserModified(prev => ({ ...prev, [field]: true }));
@@ -465,7 +465,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         if (result.available) {
           setUsernameStatus('available');
@@ -515,9 +515,9 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
           nationality: formData.nationality,
         }
       };
-      
+
       console.log('Sending data:', requestData);
-      
+
       const response = await fetch('/api/user', {
         method: 'PUT',
         headers: {
@@ -553,43 +553,43 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
 
   const handleSendVerification = async () => {
     if (isSendingVerification) return;
-    
+
     try {
       setIsSendingVerification(true);
       setVerificationMessage(null);
-      
+
       console.log('🔍 Settings - Current user verification status:', user.isEmailVerified);
       console.log('🔍 Settings - Sending verification for email:', user.email);
-      
+
       const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: user.email })
       });
-      
+
       const result = await response.json();
       console.log('🔍 Settings - API response:', result);
-      
+
       if (result.success) {
-        setVerificationMessage({ 
-          type: 'success', 
-          text: 'Verification email sent! Please check your inbox.' 
+        setVerificationMessage({
+          type: 'success',
+          text: 'Verification email sent! Please check your inbox.'
         });
-        
+
         // Dispatch event to refresh user data across the app
-        window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
-          detail: { refreshUserData: true } 
+        window.dispatchEvent(new CustomEvent('userProfileUpdated', {
+          detail: { refreshUserData: true }
         }));
       } else {
-        setVerificationMessage({ 
-          type: 'error', 
-          text: result.message || 'Failed to send verification email' 
+        setVerificationMessage({
+          type: 'error',
+          text: result.message || 'Failed to send verification email'
         });
       }
     } catch (error) {
-      setVerificationMessage({ 
-        type: 'error', 
-        text: 'Failed to send verification email' 
+      setVerificationMessage({
+        type: 'error',
+        text: 'Failed to send verification email'
       });
     } finally {
       setIsSendingVerification(false);
@@ -614,9 +614,9 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             <div className="flex flex-col md:flex-row md:items-center gap-3">
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gray-200 dark:bg-gray-600 rounded-full flex items-center justify-center overflow-hidden mx-auto md:mx-0">
                 {avatar ? (
-                  <img 
-                    src={avatar} 
-                    alt="Profile" 
+                  <img
+                    src={avatar}
+                    alt="Profile"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -632,7 +632,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     if (file) {
                       setIsUploadingAvatar(true);
                       setUploadProgress(0);
-                      
+
                       try {
                         // Upload to S3
                         const result = await uploadToS3({
@@ -674,11 +674,10 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                   id="avatar-upload"
                   disabled={isUploadingAvatar}
                 />
-                <label 
+                <label
                   htmlFor="avatar-upload"
-                  className={`px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center ${
-                    isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer text-center ${isUploadingAvatar ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   {isUploadingAvatar ? (
                     <div className="flex items-center gap-2">
@@ -690,7 +689,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                   )}
                 </label>
                 {avatar && !isUploadingAvatar && (
-                  <button 
+                  <button
                     onClick={() => setAvatar('')}
                     className="px-4 py-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 transition-colors border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium"
                   >
@@ -720,7 +719,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               </button>
             )}
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
@@ -733,7 +732,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
-            
+
             <div>
               <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
                 Last Name
@@ -745,7 +744,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 className="w-full px-3 py-2 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Email
@@ -768,7 +767,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Email cannot be changed. Contact support if you need to update your email address.
                 </p>
-                
+
                 {!user.isEmailVerified && (
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -791,19 +790,18 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     </button>
                   </div>
                 )}
-                
+
                 {verificationMessage && (
-                  <div className={`text-sm px-3 py-2 rounded-md ${
-                    verificationMessage.type === 'success' 
-                      ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300' 
+                  <div className={`text-sm px-3 py-2 rounded-md ${verificationMessage.type === 'success'
+                      ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
                       : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
-                  }`}>
+                    }`}>
                     {verificationMessage.text}
                   </div>
                 )}
               </div>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Username
@@ -817,24 +815,23 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     handleInputChange('username', value);
                     setUsernameError('');
                     setUsernameStatus('idle');
-                    
+
                     // Clear existing timeout
                     if (usernameTimeout) {
                       clearTimeout(usernameTimeout);
                     }
-                    
+
                     // Set new timeout for debounced check
                     const timeoutId = setTimeout(() => {
                       checkUsernameAvailability(value);
                     }, 500);
-                    
+
                     setUsernameTimeout(timeoutId);
                   }}
-                  className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent ${
-                    usernameError ? 'border-red-500 dark:border-red-400' : 
-                    usernameStatus === 'available' ? 'border-green-500 dark:border-green-400' :
-                    'border-gray-300 dark:border-lime-500/20'
-                  }`}
+                  className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent ${usernameError ? 'border-red-500 dark:border-red-400' :
+                      usernameStatus === 'available' ? 'border-green-500 dark:border-green-400' :
+                        'border-gray-300 dark:border-lime-500/20'
+                    }`}
                   placeholder="Choose a unique username"
                 />
                 {isCheckingUsername && (
@@ -859,7 +856,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 <p className="mt-1 text-sm text-green-600 dark:text-green-400">Username is available</p>
               )}
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Phone
@@ -871,7 +868,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 className="w-full px-3 py-2 border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Location
@@ -884,7 +881,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 placeholder="City, Country"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Website
@@ -897,7 +894,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 placeholder="https://yourwebsite.com"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 LinkedIn
@@ -910,7 +907,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 placeholder="https://linkedin.com/in/yourprofile"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 GitHub
@@ -923,7 +920,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 placeholder="https://github.com/yourusername"
               />
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Company
@@ -936,7 +933,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
               />
             </div>
           </div>
-          
+
           {/* Professional Summary */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -955,7 +952,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         {/* Preferences */}
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Preferences</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -972,7 +969,7 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                 <option value="German">German</option>
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Timezone
@@ -999,16 +996,15 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
           <button className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleSave}
             disabled={isSaving}
-            className={`px-6 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${
-              saveStatus === 'success' 
-                ? 'bg-green-500 text-white' 
+            className={`px-6 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${saveStatus === 'success'
+                ? 'bg-green-500 text-white'
                 : saveStatus === 'error'
-                ? 'bg-red-500 text-white'
-                : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
-            } ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
+                  ? 'bg-red-500 text-white'
+                  : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
+              } ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {isSaving ? (
               <>
@@ -1047,7 +1043,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [dailySummaryEmail, setDailySummaryEmail] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Password change form state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -1062,7 +1058,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
     new: false,
     confirm: false
   });
-  
+
   // Load initial settings from user data
   useEffect(() => {
     if (user?.settings?.notifications) {
@@ -1189,7 +1185,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validationError = validatePasswordForm();
     if (validationError) {
       setPasswordErrors(validationError);
@@ -1212,7 +1208,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
       const data = await response.json();
 
       if (data.success) {
-    showToastNotification('success', 'Password changed successfully!');
+        showToastNotification('success', 'Password changed successfully!');
         setPasswordForm({
           currentPassword: '',
           newPassword: '',
@@ -1240,7 +1236,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
         {/* Security Section */}
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Security</h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
@@ -1249,30 +1245,28 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               </div>
               <button
                 onClick={() => showToastNotification('info', 'Two-factor authentication coming soon!')}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  twoFactorEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
+                className={`w-12 h-6 rounded-full transition-colors ${twoFactorEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
               </button>
             </div>
-            
+
             <div className="py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
-              <div>
-                <div className="text-sm font-medium text-gray-900 dark:text-white">Change Password</div>
-                <div className="text-xs text-gray-500 dark:text-gray-300">Update your account password</div>
-              </div>
-              <button 
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">Change Password</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-300">Update your account password</div>
+                </div>
+                <button
                   onClick={() => setShowPasswordForm(!showPasswordForm)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
-              >
+                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                >
                   {showPasswordForm ? 'Cancel' : 'Change Password'}
-              </button>
+                </button>
               </div>
-              
+
               {showPasswordForm && (
                 <form onSubmit={handlePasswordSubmit} className="mt-4 space-y-4 p-4 bg-gray-50 dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10">
                   {/* Current Password */}
@@ -1397,7 +1391,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
         {/* Notifications Section */}
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Notifications</h3>
-          
+
           <div className="space-y-4">
             <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
@@ -1407,13 +1401,11 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <button
                 onClick={() => handleNotificationToggle('email', !emailNotifications)}
                 disabled={saving}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-12 h-6 rounded-full transition-colors ${emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                  } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
               </button>
             </div>
 
@@ -1425,16 +1417,14 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <button
                 onClick={() => handleDailySummaryToggle(!dailySummaryEmail)}
                 disabled={saving || !emailNotifications}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  dailySummaryEmail && emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                } ${saving || !emailNotifications ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-12 h-6 rounded-full transition-colors ${dailySummaryEmail && emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                  } ${saving || !emailNotifications ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  dailySummaryEmail && emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${dailySummaryEmail && emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
               </button>
             </div>
-            
+
             <div className="flex items-center justify-between py-4">
               <div>
                 <div className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</div>
@@ -1443,13 +1433,11 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <button
                 onClick={() => handleNotificationToggle('push', !pushNotifications)}
                 disabled={saving}
-                className={`w-12 h-6 rounded-full transition-colors ${
-                  pushNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
-                } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`w-12 h-6 rounded-full transition-colors ${pushNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                  } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                  pushNotifications ? 'translate-x-6' : 'translate-x-0.5'
-                }`} />
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${pushNotifications ? 'translate-x-6' : 'translate-x-0.5'
+                  }`} />
               </button>
             </div>
           </div>
@@ -1465,16 +1453,16 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
 const MembershipBilling = ({ user }: { user: User }) => {
   // Use consolidated billing data hook (fetches subscription, payment methods, invoices in parallel)
   const { data: billingData, isLoading: billingLoading, error: billingErrors, refetch: refetchBillingData } = useBillingData();
-  
+
   // Get user data to access currentPlanKey
   const { userData } = useUserData();
-  
+
   // Use the shared pricing hook - get full result to pass to modal
   const pricingHookResult = usePricingPlans({ excludeFree: true });
-  
+
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
-  
+
   // Toast notification state
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
     // Notification removed
@@ -1535,11 +1523,11 @@ const MembershipBilling = ({ user }: { user: User }) => {
   return (
     <div className="p-4 sm:p-6 lg:p-8 h-full overflow-y-auto overflow-x-hidden min-w-0 max-w-full">
       <div className="space-y-8 min-w-0 max-w-full">
-        
+
         {/* Plan Cards Section */}
         <div className="space-y-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Subscription Plans</h3>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Current Plan Card */}
             {loading ? (
@@ -1562,59 +1550,59 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </div>
             ) : (
               <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative">
-              <div className="absolute top-4 right-4">
-                <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">
-                  Current Plan
-                </span>
-              </div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-lime-500 rounded-lg flex items-center justify-center">
-                  <CreditCard className="w-6 h-6 text-white" />
+                <div className="absolute top-4 right-4">
+                  <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">
+                    Current Plan
+                  </span>
                 </div>
-                <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    {currentPlanName}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Status: <span className={`font-medium ${subscription?.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                      {subscription?.status || 'Active'}
-                    </span>
-                  </p>
-                </div>
-              </div>
-              {(() => {
-                // Determine end date - prefer currentPeriodEnd, fallback to endDate
-                const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
-                const startDate = subscription?.currentPeriodStart;
-                
-                if (!endDate && !startDate) return null;
-                
-                return (
-                  <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-1">
-                    {startDate && (
-                      <p>Start Date: {formatDate(startDate)}</p>
-                    )}
-                    {endDate && (
-                      <p>End Date: {formatDate(endDate)}</p>
-                    )}
-                    {subscription?.nextBillingDate && (
-                      <p>Next Billing: {formatDate(subscription.nextBillingDate)}</p>
-                    )}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-lime-500 rounded-lg flex items-center justify-center">
+                    <CreditCard className="w-6 h-6 text-white" />
                   </div>
-                );
-              })()}
-              {subscription?.planDetails?.features && (
-                <div className="text-sm text-gray-600 dark:text-gray-300">
-                  <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>
-                  <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      {currentPlanName}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Status: <span className={`font-medium ${subscription?.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                        {subscription?.status || 'Active'}
+                      </span>
+                    </p>
+                  </div>
                 </div>
-              )}
-              {subscription?.amount && subscription?.currency && (
-                <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                  <p className="font-semibold">Price: {formatCurrency(subscription.amount, subscription.currency)}</p>
-                  <p>Billing Cycle: {subscription.billingCycle || 'N/A'}</p>
-                </div>
-              )}
+                {(() => {
+                  // Determine end date - prefer currentPeriodEnd, fallback to endDate
+                  const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
+                  const startDate = subscription?.currentPeriodStart;
+
+                  if (!endDate && !startDate) return null;
+
+                  return (
+                    <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-1">
+                      {startDate && (
+                        <p>Start Date: {formatDate(startDate)}</p>
+                      )}
+                      {endDate && (
+                        <p>End Date: {formatDate(endDate)}</p>
+                      )}
+                      {subscription?.nextBillingDate && (
+                        <p>Next Billing: {formatDate(subscription.nextBillingDate)}</p>
+                      )}
+                    </div>
+                  );
+                })()}
+                {subscription?.planDetails?.features && (
+                  <div className="text-sm text-gray-600 dark:text-gray-300">
+                    <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>
+                    <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
+                  </div>
+                )}
+                {subscription?.amount && subscription?.currency && (
+                  <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
+                    <p className="font-semibold">Price: {formatCurrency(subscription.amount, subscription.currency)}</p>
+                    <p>Billing Cycle: {subscription.billingCycle || 'N/A'}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -1634,31 +1622,31 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 </div>
               </div>
             ) : (
-              <div 
+              <div
                 className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 onClick={() => setIsMembershipModalOpen(true)}
               >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                  <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                    <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
+                  </div>
+                  <div>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">
+                      Change Plan
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Upgrade or downgrade your subscription
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xl font-bold text-gray-900 dark:text-white">
-                    Change Plan
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
-                    Upgrade or downgrade your subscription
-                  </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Click to change plan</span>
+                  <div className="transform transition-transform duration-200">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-500 dark:text-gray-400">Click to change plan</span>
-                <div className="transform transition-transform duration-200">
-                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </div>
               </div>
             )}
           </div>
@@ -1672,7 +1660,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               Payment Methods
             </h3>
             {!loading && (
-              <button 
+              <button
                 className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
                 onClick={() => setIsAddPaymentModalOpen(true)}
               >
@@ -1680,7 +1668,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </button>
             )}
           </div>
-          
+
           {/* Loading State for Payment Methods */}
           {loading && (
             <div className="space-y-4">
@@ -1692,7 +1680,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </div>
             </div>
           )}
-          
+
           {/* Error Display */}
           {paymentMethodsError && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -1702,7 +1690,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   {paymentMethodsError}
                 </p>
               </div>
-              <button 
+              <button
                 className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
                 onClick={() => {
                   refetchBillingData();
@@ -1712,7 +1700,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </button>
             </div>
           )}
-          
+
           {!loading && paymentMethods.length > 0 ? (
             <div className="space-y-4">
               <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Saved Cards</h4>
@@ -1740,22 +1728,22 @@ const MembershipBilling = ({ user }: { user: User }) => {
                         </button>
                       </div>
                     </div>
-                    
-                      <div className="space-y-2">
-                        <div className="text-lg font-mono tracking-wider">
-                          •••• •••• •••• <span className="text-white font-semibold">{method.last4 ? method.last4.padStart(4, '0') : '****'}</span>
-                        </div>
-                        <div className="flex justify-between text-sm text-gray-300">
-                          <span>Expires {method.expiryMonth?.toString().padStart(2, '0')}/{method.expiryYear}</span>
-                          <span className="uppercase">{method.brand || method.provider}</span>
-                        </div>
-                        {method.type && (
-                          <div className="text-xs text-gray-400 mt-1">
-                            {method.type === 'credit_card' ? 'Credit Card' : method.type === 'debit_card' ? 'Debit Card' : method.type}
-                            {method.provider && ` • ${method.provider.toUpperCase()}`}
-                          </div>
-                        )}
+
+                    <div className="space-y-2">
+                      <div className="text-lg font-mono tracking-wider">
+                        •••• •••• •••• <span className="text-white font-semibold">{method.last4 ? method.last4.padStart(4, '0') : '****'}</span>
                       </div>
+                      <div className="flex justify-between text-sm text-gray-300">
+                        <span>Expires {method.expiryMonth?.toString().padStart(2, '0')}/{method.expiryYear}</span>
+                        <span className="uppercase">{method.brand || method.provider}</span>
+                      </div>
+                      {method.type && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {method.type === 'credit_card' ? 'Credit Card' : method.type === 'debit_card' ? 'Debit Card' : method.type}
+                          {method.provider && ` • ${method.provider.toUpperCase()}`}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1778,7 +1766,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Payment History
           </h3>
-          
+
           {/* Loading State for Payment History */}
           {loading && (
             <div className="space-y-3">
@@ -1802,7 +1790,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               ))}
             </div>
           )}
-          
+
           {/* Error Display */}
           {invoicesError && (
             <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
@@ -1812,7 +1800,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
                   {invoicesError}
                 </p>
               </div>
-              <button 
+              <button
                 className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
                 onClick={() => {
                   refetchBillingData();
@@ -1822,7 +1810,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
               </button>
             </div>
           )}
-          
+
           {!loading && invoices.length > 0 ? (
             <div className="space-y-3">
               {invoices.map((invoice) => (
@@ -1975,7 +1963,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   );
 };
 
-// Legacy components removed - ReferralsRewards_OLD and ConnectedAppsIntegrations_OLD
+
 
 // Settings tabs configuration
 const settingsTabs = [
@@ -2048,7 +2036,7 @@ const SettingsContent = () => {
     const handleUserProfileUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail.user;
       const refreshUserData = event.detail.refreshUserData;
-      
+
       if (refreshUserData) {
         console.log('🔄 Settings - Refreshing user data due to profile update');
         fetchUserData();
@@ -2062,7 +2050,7 @@ const SettingsContent = () => {
     };
 
     window.addEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
-    
+
     return () => {
       window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
     };
@@ -2075,16 +2063,16 @@ const SettingsContent = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
-      
+
       if (response.ok) {
         const result = await response.json();
         if (result.success && result.user) {
           console.log('Profile updated successfully');
           setUserData(result.user);
-          
+
           // Dispatch custom event to notify other components of user data update
-          window.dispatchEvent(new CustomEvent('userProfileUpdated', { 
-            detail: { user: result.user } 
+          window.dispatchEvent(new CustomEvent('userProfileUpdated', {
+            detail: { user: result.user }
           }));
         }
       } else {
@@ -2098,7 +2086,7 @@ const SettingsContent = () => {
   const renderTabContent = () => {
     // Don't block rendering with a full-page spinner
     // Show skeleton loaders or cached data instead for better UX
-    
+
     switch (activeTab) {
       case 'account':
         return loading || !userData ? <AccountProfileSkeleton /> : <AccountProfile user={userData} onSave={handleSaveUser} />;

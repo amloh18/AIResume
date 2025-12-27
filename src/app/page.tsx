@@ -13,7 +13,7 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
-import AnalyticsOverlay from '@/components/landing/AnalyticsOverlay';
+
 
 function LandingPageContent() {
   // Handle logout cleanup - client-side only
@@ -90,8 +90,7 @@ function LandingPageContent() {
       "ATS Optimization",
       "Free AI Career Guide",
       "Professional Templates",
-      "Job Application Tracker",
-      "Real-time Analytics"
+      "Job Application Tracker"
     ],
     "provider": {
       "@type": "Organization",
@@ -136,8 +135,7 @@ function LandingPageContent() {
         {/* Premium Templates Section */}
         <PremiumTemplates />
 
-        {/* Analytics Overlay Section */}
-        <AnalyticsOverlay />
+
 
         {/* Testimonials Section */}
         <Testimonials />

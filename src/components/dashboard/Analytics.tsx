@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap,
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart,
-  MessageSquare, User, BarChart3, SearchX, Clock, ChevronRight
+  MessageSquare, User, BarChart3, SearchX, Clock, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
@@ -468,6 +468,30 @@ const CVManagementSection: React.FC<{
 const ApplicationCalendarWidget: React.FC<{
   jobs: any[];
 }> = ({ jobs }) => {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedType, setSelectedType] = useState<'deadlines' | 'applications' | null>(null);
+
+  // Get deadlines for a specific date
+  const getDeadlinesForDate = (date: Date) => {
+    return jobs.filter(job => {
+      if (!job.deadline) return false;
+      const deadlineDate = new Date(job.deadline);
+      return deadlineDate.toDateString() === date.toDateString();
+    }).map(job => ({
+      ...job,
+      deadlineDate: new Date(job.deadline)
+    }));
+  };
+
+  // Get applications for a specific date
+  const getApplicationsForDate = (date: Date) => {
+    return jobs.filter(job => {
+      const jobDate = new Date(job.createdAt);
+      return jobDate.toDateString() === date.toDateString();
+    });
+  };
+
   // Get upcoming deadlines sorted by date (earliest first)
   const upcomingDeadlines = useMemo(() => {
     const today = new Date();
@@ -511,163 +535,290 @@ const ApplicationCalendarWidget: React.FC<{
     }
   };
 
+  // Calculate date range for the header
+  const getDateRange = () => {
+    const today = new Date();
+    const startDate = new Date(today);
+    const dayOfWeek = today.getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    startDate.setDate(today.getDate() + mondayOffset - 7 + (weekOffset * 7));
+
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 20); // 3 weeks - 1 day
+
+    return {
+      start: startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      end: endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    };
+  };
+
+  const dateRange = getDateRange();
+  const selectedDateDeadlines = selectedDate ? getDeadlinesForDate(selectedDate) : [];
+  const selectedDateApplications = selectedDate ? getApplicationsForDate(selectedDate) : [];
+
   return (
     <div
       className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full"
       data-analytics-widget="application-calendar"
     >
-      {/* Header */}
-      <div className="mb-4">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Calendar (3 Weeks)</h2>
+      {/* Header with Navigation */}
+      <div className="flex items-center justify-between mb-4">
+        <motion.button
+          onClick={() => setWeekOffset(prev => prev - 1)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Previous weeks"
+        >
+          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-white/60" />
+        </motion.button>
+
+        <div className="text-center">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Calendar</h2>
+          <p className="text-xs text-gray-500 dark:text-white/50">{dateRange.start} - {dateRange.end}</p>
+        </div>
+
+        <motion.button
+          onClick={() => setWeekOffset(prev => prev + 1)}
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+          aria-label="Next weeks"
+        >
+          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-white/60" />
+        </motion.button>
       </div>
 
-      {/* Calendar */}
+      {/* Reset to Today button when offset */}
+      {weekOffset !== 0 && (
+        <motion.button
+          onClick={() => setWeekOffset(0)}
+          className="mb-2 text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center justify-center gap-1"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Calendar className="w-3 h-3" />
+          Back to Today
+        </motion.button>
+      )}
+
+      {/* Calendar OR Job List View - Mutually Exclusive */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="grid grid-cols-7 gap-1 mb-4">
-          {/* Day headers */}
-          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-            <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
-              {day}
-            </div>
-          ))}
-
-          {/* Calendar days */}
-          {(() => {
-            const today = new Date();
-            const startDate = new Date(today);
-            // Go back to start of previous week (Monday)
-            // Adjust for Monday start: getDay() returns 0 for Sunday, so we need to adjust
-            const dayOfWeek = today.getDay();
-            const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Monday = 1, Sunday = 0
-            startDate.setDate(today.getDate() + mondayOffset - 7);
-
-            const calendarDays = [];
-            for (let i = 0; i < 21; i++) { // 3 weeks * 7 days
-              const currentDate = new Date(startDate);
-              currentDate.setDate(startDate.getDate() + i);
-
-              // Count applications for this date
-              const dayApplications = jobs.filter(job => {
-                const jobDate = new Date(job.createdAt);
-                return jobDate.toDateString() === currentDate.toDateString();
-              }).length;
-
-              // Count deadlines for this date
-              const dayDeadlines = jobs.filter(job => {
-                if (!job.deadline) return false;
-                const deadlineDate = new Date(job.deadline);
-                return deadlineDate.toDateString() === currentDate.toDateString();
-              }).length;
-
-              const isToday = currentDate.toDateString() === today.toDateString();
-              const isPast = currentDate < today;
-              const isFuture = currentDate > today;
-
-              // Determine if this is a deadline day
-              const isDeadlineDay = dayDeadlines > 0;
-
-              calendarDays.push(
-                <div
-                  key={i}
-                  className={`
-                    aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
-                    ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium' :
-                      isPast ? 'text-gray-600 dark:text-white/60' :
-                        'text-gray-400 dark:text-white/40'}
-                    ${dayApplications > 0 ? 'bg-green-400/20 dark:bg-green-400/20 text-green-400' : ''}
-                    ${isDeadlineDay ? 'bg-red-400/20 dark:bg-red-400/20 text-red-400' : ''}
-                    hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer
-                  `}
-                >
-                  <div className="font-medium text-xs">{currentDate.getDate()}</div>
-                  <div className="flex gap-0.5 mt-0.5">
-                    {dayApplications > 0 && (
-                      <div className="w-1 h-1 bg-green-400 rounded-full"></div>
-                    )}
-                    {isDeadlineDay && (
-                      <div className="w-1 h-1 bg-red-400 rounded-full"></div>
-                    )}
-                  </div>
+        {!selectedDate ? (
+          <>
+            {/* Calendar View */}
+            <div className="grid grid-cols-7 gap-1 mb-4">
+              {/* Day headers */}
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                <div key={day} className="text-center text-xs font-medium text-gray-600 dark:text-white/60 py-1">
+                  {day}
                 </div>
-              );
-            }
-            return calendarDays;
-          })()}
-        </div>
+              ))}
 
-        {/* Legend */}
-        <div className="flex items-center justify-center gap-4 mb-4 text-xs text-gray-600 dark:text-white/60">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            <span>Applications</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-red-400 rounded-full"></div>
-            <span>Deadlines</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-            <span>Today</span>
-          </div>
-        </div>
+              {/* Calendar days */}
+              {(() => {
+                const today = new Date();
+                const startDate = new Date(today);
+                // Go back to start of previous week (Monday) with offset
+                const dayOfWeek = today.getDay();
+                const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+                startDate.setDate(today.getDate() + mondayOffset - 7 + (weekOffset * 7));
 
-        {/* Upcoming Deadlines List */}
-        {upcomingDeadlines.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Upcoming Deadlines
-            </h3>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              {upcomingDeadlines.map((job) => {
-                const isUrgent = (() => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const deadline = new Date(job.deadlineDate);
-                  deadline.setHours(0, 0, 0, 0);
-                  const diffTime = deadline.getTime() - today.getTime();
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                  return diffDays <= 3;
-                })();
+                const calendarDays = [];
+                for (let i = 0; i < 21; i++) { // 3 weeks * 7 days
+                  const currentDate = new Date(startDate);
+                  currentDate.setDate(startDate.getDate() + i);
 
-                return (
-                  <div
-                    key={job.id || job._id}
-                    className={`
-                      flex items-center justify-between p-2 rounded-lg transition-colors
-                      ${isUrgent
-                        ? 'bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20'
-                        : 'bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10'
-                      }
-                    `}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {job.jobTitle || job.title}
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                        {job.company}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 ml-3 flex-shrink-0">
-                      <div className={`text-xs font-medium ${isUrgent ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                        {formatDeadlineDate(job.deadlineDate)}
+                  // Count applications for this date
+                  const dayApplications = jobs.filter(job => {
+                    const jobDate = new Date(job.createdAt);
+                    return jobDate.toDateString() === currentDate.toDateString();
+                  }).length;
+
+                  // Count deadlines for this date
+                  const dayDeadlines = jobs.filter(job => {
+                    if (!job.deadline) return false;
+                    const deadlineDate = new Date(job.deadline);
+                    return deadlineDate.toDateString() === currentDate.toDateString();
+                  }).length;
+
+                  const isToday = currentDate.toDateString() === today.toDateString();
+                  const isPast = currentDate < today;
+
+                  // Determine if this is a deadline day
+                  const isDeadlineDay = dayDeadlines > 0;
+                  const isClickable = isDeadlineDay || dayApplications > 0;
+
+                  const handleDateClick = () => {
+                    if (!isClickable) return;
+                    setSelectedDate(new Date(currentDate));
+                    // Default to deadlines if both, otherwise the one that exists
+                    if (isDeadlineDay) {
+                      setSelectedType('deadlines');
+                    } else {
+                      setSelectedType('applications');
+                    }
+                  };
+
+                  calendarDays.push(
+                    <motion.div
+                      key={i}
+                      onClick={handleDateClick}
+                      className={`
+                        aspect-square flex flex-col items-center justify-center text-xs rounded transition-all duration-200
+                        ${isToday ? 'bg-blue-400/20 dark:bg-blue-400/20 text-blue-400 font-medium ring-2 ring-blue-400/50' :
+                          isPast ? 'text-gray-600 dark:text-white/60' :
+                            'text-gray-400 dark:text-white/40'}
+                        ${dayApplications > 0 ? 'bg-green-400/20 dark:bg-green-400/20 text-green-400 cursor-pointer' : ''}
+                        ${isDeadlineDay ? 'bg-red-400/20 dark:bg-red-400/20 text-red-400 cursor-pointer' : ''}
+                        ${isClickable ? 'hover:scale-110' : 'hover:bg-gray-100 dark:hover:bg-white/5'}
+                      `}
+                      whileHover={isClickable ? { scale: 1.1 } : {}}
+                      whileTap={isClickable ? { scale: 0.95 } : {}}
+                    >
+                      <div className="font-medium text-xs">{currentDate.getDate()}</div>
+                      <div className="flex gap-0.5 mt-0.5">
+                        {dayApplications > 0 && (
+                          <div className="w-1 h-1 bg-green-400 rounded-full"></div>
+                        )}
+                        {isDeadlineDay && (
+                          <div className="w-1 h-1 bg-red-400 rounded-full"></div>
+                        )}
                       </div>
-                      <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    </div>
-                  </div>
-                );
-              })}
+                    </motion.div>
+                  );
+                }
+                return calendarDays;
+              })()}
             </div>
-          </div>
-        )}
 
-        {upcomingDeadlines.length === 0 && (
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-white/10 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No upcoming deadlines
-            </p>
-          </div>
+            {/* Legend - Compact */}
+            <div className="flex items-center justify-center gap-3 text-[10px] text-gray-600 dark:text-white/60 mb-2">
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                <span>Apps</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-red-400 rounded-full"></div>
+                <span>Deadlines</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                <span>Today</span>
+              </div>
+            </div>
+
+            {/* Summary */}
+            {(upcomingDeadlines.length > 0 || jobs.length > 0) && (
+              <div className="text-center text-xs text-gray-500 dark:text-white/50">
+                {upcomingDeadlines.length > 0 && (
+                  <><span className="text-red-400 font-medium">{upcomingDeadlines.length}</span> deadline{upcomingDeadlines.length !== 1 ? 's' : ''}</>
+                )}
+                {upcomingDeadlines.length > 0 && jobs.length > 0 && ' • '}
+                {jobs.length > 0 && (
+                  <><span className="text-green-400 font-medium">{jobs.length}</span> app{jobs.length !== 1 ? 's' : ''}</>
+                )}
+                <span className="text-gray-400"> • Click dates to view</span>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Job List View - Replaces Calendar */
+          <motion.div
+            className="flex-1 flex flex-col"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Header with Back Button */}
+            <div className="flex items-center justify-between mb-3">
+              <motion.button
+                onClick={() => { setSelectedDate(null); setSelectedType(null); }}
+                className="flex items-center gap-1 text-xs text-gray-500 dark:text-white/60 hover:text-gray-700 dark:hover:text-white transition-colors"
+                whileHover={{ x: -2 }}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Back
+              </motion.button>
+
+              <h3 className={`text-sm font-semibold flex items-center gap-1 ${selectedType === 'deadlines' ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                {selectedType === 'deadlines' ? <Clock className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                {selectedDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </h3>
+
+              {/* Toggle between apps and deadlines if both exist */}
+              {selectedDateDeadlines.length > 0 && selectedDateApplications.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setSelectedType('applications')}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${selectedType === 'applications' ? 'bg-green-400 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/50'}`}
+                  >
+                    Apps ({selectedDateApplications.length})
+                  </button>
+                  <button
+                    onClick={() => setSelectedType('deadlines')}
+                    className={`px-2 py-1 rounded text-xs transition-colors ${selectedType === 'deadlines' ? 'bg-red-400 text-white' : 'bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-white/50'}`}
+                  >
+                    Due ({selectedDateDeadlines.length})
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Job List */}
+            <div className="flex-1 overflow-y-auto space-y-2">
+              {selectedType === 'deadlines' ? (
+                selectedDateDeadlines.length > 0 ? (
+                  selectedDateDeadlines.map((job) => (
+                    <motion.div
+                      key={job.id || job._id}
+                      className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-500/20 rounded-lg"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate text-sm">{job.jobTitle || job.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <span className="text-xs text-red-500 dark:text-red-400 font-medium">Deadline</span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-white/50 py-8">No deadlines on this date</div>
+                )
+              ) : (
+                selectedDateApplications.length > 0 ? (
+                  selectedDateApplications.map((job) => (
+                    <motion.div
+                      key={job.id || job._id}
+                      className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-500/20 rounded-lg"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate text-sm">{job.jobTitle || job.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{job.company}</p>
+                      </div>
+                      <div className="flex items-center gap-2 ml-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
+                            job.status === 'offer' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
+                              'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                          }`}>
+                          {job.status || 'Applied'}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 dark:text-white/50 py-8">No applications on this date</div>
+                )
+              )}
+            </div>
+          </motion.div>
         )}
       </div>
     </div>
