@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye } from 'lucide-react';
+import { CheckCircle, Building, DollarSign, Calendar, Clock, AlertCircle, Eye, MapPin, TrendingUp, XCircle, Handshake } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface JobApplication {
@@ -11,15 +11,23 @@ interface JobApplication {
   jobTitle: string;
   title?: string;
   company: string;
+  companyLogo?: string;
+  location?: string;
   salary?: {
     min?: number;
     max?: number;
     currency?: string;
     period?: 'hourly' | 'monthly' | 'yearly';
   };
+  offerDetails?: {
+    salary?: number;
+    bonus?: string | number;
+    equity?: string | number;
+  };
   deadline?: Date | string;
   updatedAt: string;
   notes?: string;
+  status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
 }
 
 interface OfferStageViewProps {
@@ -32,31 +40,36 @@ interface OfferStageViewProps {
 const OfferStageView: React.FC<OfferStageViewProps> = ({
   jobs,
   onJobClick,
-  onJobStatusUpdate,
-  isFullScreen = false
+  onJobStatusUpdate
 }) => {
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
   const getDaysUntilDeadline = (deadline?: Date | string): number | null => {
     if (!deadline) return null;
     const date = typeof deadline === 'string' ? new Date(deadline) : deadline;
     const now = new Date();
-    const diff = Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
+    return Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
-  const formatSalary = (salary?: JobApplication['salary']): string => {
-    if (!salary) return 'Not specified';
-    const currency = salary.currency || '$';
-    const period = salary.period === 'yearly' ? 'yr' : salary.period === 'monthly' ? 'mo' : 'hr';
-    
-    if (salary.min && salary.max) {
-      return `${currency}${salary.min.toLocaleString()}-${salary.max.toLocaleString()}/${period}`;
-    } else if (salary.min) {
-      return `${currency}${salary.min.toLocaleString()}+/${period}`;
-    } else if (salary.max) {
-      return `${currency}${salary.max.toLocaleString()}/${period}`;
-    }
-    return 'Not specified';
+  const getOfferValue = (job: JobApplication): number => {
+    // Priority: Offer Details Salary > Salary Max > Salary Min > 0
+    if (job.offerDetails?.salary) return job.offerDetails.salary;
+    if (job.salary?.max) return job.salary.max;
+    if (job.salary?.min) return job.salary.min;
+    return 0;
   };
+
+  const formatCurrency = (amount: number, currency = '$') => {
+    return `${currency}${amount.toLocaleString()}`;
+  };
+
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort((a, b) => {
+      const valA = getOfferValue(a);
+      const valB = getOfferValue(b);
+      return sortOrder === 'desc' ? valB - valA : valA - valB;
+    });
+  }, [jobs, sortOrder]);
 
   const handleOfferAction = async (job: JobApplication, action: 'accept' | 'negotiate' | 'decline', e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,8 +80,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
       } else if (action === 'decline') {
         newStatus = 'rejected';
       }
-      // For negotiate, we might want to add a 'negotiating' status or keep as 'offer'
-      
+
       await onJobStatusUpdate(job.id || job._id, newStatus);
       toast.success(`Offer ${action === 'accept' ? 'accepted' : action === 'decline' ? 'declined' : 'negotiation started'}!`);
     } catch (error) {
@@ -92,226 +104,156 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {jobs.map((job) => {
-        const daysUntilDeadline = getDaysUntilDeadline(job.deadline);
-        const deadlineStatus = daysUntilDeadline === null 
-          ? 'none'
-          : daysUntilDeadline < 0 
-            ? 'overdue' 
-            : daysUntilDeadline <= 3 
-              ? 'approaching' 
-              : 'normal';
+    <div className="bg-white dark:bg-[#141810] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+      {/* Quick Filter Bar */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
+        <button
+          onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <TrendingUp size={14} />
+          <span>Sort by Value ({sortOrder === 'desc' ? 'High to Low' : 'Low to High'})</span>
+        </button>
+      </div>
 
-        // COMPACT FULL SCREEN LAYOUT
-        if (isFullScreen) {
-          return (
-            <motion.div
-              key={job.id || job._id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${
-                deadlineStatus === 'overdue' 
-                  ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' 
-                  : deadlineStatus === 'approaching'
-                    ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
-                    : 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10'
-              }`}
-            >
-              {/* Left: Compact Job Info */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                  <Building className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                    {job.jobTitle || job.title}
-                  </h3>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    <span>{job.company}</span>
-                    <span>•</span>
-                    <span className="font-medium">{formatSalary(job.salary)}</span>
-                    {job.deadline && (
-                      <>
-                        <span>•</span>
-                        <span className={deadlineStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-semibold' : deadlineStatus === 'approaching' ? 'text-yellow-600 dark:text-yellow-400 font-semibold' : ''}>
-                          {deadlineStatus === 'overdue' 
-                            ? `Overdue ${Math.abs(daysUntilDeadline!)}d`
-                            : deadlineStatus === 'approaching'
-                              ? `${daysUntilDeadline}d left`
-                              : `Deadline: ${(typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-[#1c2018]">
+            <tr>
+              {/* Universal Columns */}
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+
+              {/* Stage Specific Columns */}
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offer Value</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Components</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Deadline</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+
+              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+            {sortedJobs.map((job) => {
+              const daysUntilDeadline = getDaysUntilDeadline(job.deadline);
+              const offerValue = getOfferValue(job);
+              const currency = job.offerDetails?.salary ? '$' : (job.salary?.currency || '$');
+
+              return (
+                <motion.tr
+                  key={job.id || job._id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                  onClick={() => onJobClick(job)}
+                >
+                  {/* Company */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                        {job.companyLogo ? (
+                          <img
+                            src={job.companyLogo}
+                            alt={`${job.company} logo`}
+                            className="w-full h-full object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : null}
+                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
+                          {job.company.substring(0, 2).toUpperCase()}
                         </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                    </div>
+                  </td>
 
-              {/* Right: CTA Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <motion.button
-                  onClick={(e) => handleOfferAction(job, 'accept', e)}
-                  className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <CheckCircle className="w-3 h-3" />
-                  Accept
-                </motion.button>
-                <motion.button
-                  onClick={(e) => handleOfferAction(job, 'negotiate', e)}
-                  className="px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-xs font-medium transition-all"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Negotiate
-                </motion.button>
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onJobClick(job);
-                  }}
-                  className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium transition-all"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Eye className="w-3 h-3" />
-                </motion.button>
-              </div>
-            </motion.div>
-          );
-        }
+                  {/* Role */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                  </td>
 
-        // EXISTING VERTICAL LAYOUT
-        return (
-          <motion.div
-            key={job.id || job._id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`bg-white dark:bg-[#1a2015] border rounded-lg p-4 md:p-6 hover:shadow-lg transition-all cursor-pointer ${
-              deadlineStatus === 'overdue' 
-                ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10' 
-                : deadlineStatus === 'approaching'
-                  ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
-                  : 'border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-900/10'
-            }`}
-            onClick={() => onJobClick(job)}
-          >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              {/* Left: Job Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-lg flex items-center justify-center">
-                    <Building className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
-                      {job.jobTitle || job.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {job.company}
-                    </p>
-                  </div>
-                </div>
+                  {/* Location */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <MapPin size={14} />
+                      <span className="truncate max-w-[150px]">{job.location || '-'}</span>
+                    </div>
+                  </td>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
-                  {/* Salary */}
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <DollarSign className="w-4 h-4" />
-                    <span className="font-medium">{formatSalary(job.salary)}</span>
-                  </div>
+                  {/* Offer Value */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {offerValue > 0 ? formatCurrency(offerValue, currency) : 'TBD'}
+                      </span>
+                    </div>
+                  </td>
 
-                  {/* Offer Date */}
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      Offer: {job.updatedAt 
-                        ? (typeof job.updatedAt === 'string' 
-                            ? new Date(job.updatedAt).toLocaleDateString() 
-                            : job.updatedAt.toLocaleDateString())
-                        : 'N/A'}
-                    </span>
-                  </div>
+                  {/* Components */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex flex-col text-xs text-gray-500 dark:text-gray-400">
+                      {job.offerDetails?.bonus && <span>Bonus: {job.offerDetails.bonus}</span>}
+                      {job.offerDetails?.equity && <span>Equity: {job.offerDetails.equity}</span>}
+                      {!job.offerDetails?.bonus && !job.offerDetails?.equity && <span>-</span>}
+                    </div>
+                  </td>
 
                   {/* Deadline */}
-                  {job.deadline && (
-                    <div className={`flex items-center gap-2 ${
-                      deadlineStatus === 'overdue' 
-                        ? 'text-red-600 dark:text-red-400 font-semibold' 
-                        : deadlineStatus === 'approaching'
-                          ? 'text-yellow-600 dark:text-yellow-400 font-semibold'
-                          : 'text-gray-600 dark:text-gray-400'
-                    }`}>
-                      <Clock className="w-4 h-4" />
-                      <span>
-                        {deadlineStatus === 'overdue' 
-                          ? `Overdue by ${Math.abs(daysUntilDeadline!)} days`
-                          : deadlineStatus === 'approaching'
-                            ? `${daysUntilDeadline} days left`
-                            : `Deadline: ${(typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline).toLocaleDateString()}`}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {job.deadline ? (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                        daysUntilDeadline !== null && daysUntilDeadline <= 3 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400' :
+                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                        }`}>
+                        {daysUntilDeadline !== null && daysUntilDeadline < 0 ? 'Expired' : `${daysUntilDeadline}d left`}
                       </span>
-                    </div>
-                  )}
-                </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
 
-                {/* Deadline Warning */}
-                {deadlineStatus !== 'normal' && job.deadline && (
-                  <div className={`p-2 rounded-lg mb-3 ${
-                    deadlineStatus === 'overdue'
-                      ? 'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'
-                      : 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700'
-                  }`}>
-                    <div className={`flex items-center gap-2 text-sm ${
-                      deadlineStatus === 'overdue'
-                        ? 'text-red-700 dark:text-red-400'
-                        : 'text-yellow-700 dark:text-yellow-400'
-                    }`}>
-                      <AlertCircle className="w-4 h-4" />
-                      <span>
-                        {deadlineStatus === 'overdue' 
-                          ? 'Response deadline has passed'
-                          : 'Response deadline approaching'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                  {/* Status */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 capitalize">
+                      {job.status}
+                    </span>
+                  </td>
 
-              {/* Right: Actions */}
-              <div className="flex flex-col gap-2 flex-shrink-0">
-                <motion.button
-                  onClick={(e) => handleOfferAction(job, 'accept', e)}
-                  className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Accept Offer
-                </motion.button>
-                <motion.button
-                  onClick={(e) => handleOfferAction(job, 'negotiate', e)}
-                  className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium transition-all"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Negotiate
-                </motion.button>
-                <motion.button
-                  onClick={(e) => handleOfferAction(job, 'decline', e)}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-all"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Decline
-                </motion.button>
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
+                  {/* Action */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={(e) => handleOfferAction(job, 'accept', e)}
+                        className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+                        title="Accept Offer"
+                      >
+                        <CheckCircle size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => handleOfferAction(job, 'negotiate', e)}
+                        className="p-1.5 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
+                        title="Negotiate"
+                      >
+                        <Handshake size={16} />
+                      </button>
+                      <button
+                        onClick={(e) => handleOfferAction(job, 'decline', e)}
+                        className="p-1.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                        title="Decline Offer"
+                      >
+                        <XCircle size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
 export default OfferStageView;
-

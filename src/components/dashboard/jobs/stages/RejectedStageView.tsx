@@ -11,6 +11,7 @@ interface JobApplication {
   jobTitle: string;
   title?: string;
   company: string;
+  companyLogo?: string;
   applicationDate?: Date | string;
   updatedAt: string;
   matchScore?: number;
@@ -60,12 +61,12 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
 
   const avgDaysToRejection = jobs.length > 0
     ? Math.round(
-        jobs
-          .map(job => getDaysBetween(job.applicationDate, job.updatedAt))
-          .filter((days): days is number => days !== null)
-          .reduce((sum, days) => sum + days, 0) / 
-        jobs.filter(job => getDaysBetween(job.applicationDate, job.updatedAt) !== null).length
-      )
+      jobs
+        .map(job => getDaysBetween(job.applicationDate, job.updatedAt))
+        .filter((days): days is number => days !== null)
+        .reduce((sum, days) => sum + days, 0) /
+      jobs.filter(job => getDaysBetween(job.applicationDate, job.updatedAt) !== null).length
+    )
     : 0;
 
   if (jobs.length === 0) {
@@ -155,11 +156,10 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                       {matchScore > 0 && (
                         <>
                           <span>•</span>
-                          <span className={`font-semibold ${
-                            matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                            matchScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
-                            'text-red-600 dark:text-red-400'
-                          }`}>
+                          <span className={`font-semibold ${matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                              matchScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                                'text-red-600 dark:text-red-400'
+                            }`}>
                             {matchScore}% match
                           </span>
                         </>
@@ -226,10 +226,10 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <Calendar className="w-4 h-4" />
                       <span>
-                        Applied: {job.applicationDate 
-                          ? (typeof job.applicationDate === 'string' 
-                              ? new Date(job.applicationDate).toLocaleDateString() 
-                              : job.applicationDate.toLocaleDateString())
+                        Applied: {job.applicationDate
+                          ? (typeof job.applicationDate === 'string'
+                            ? new Date(job.applicationDate).toLocaleDateString()
+                            : job.applicationDate.toLocaleDateString())
                           : 'N/A'}
                       </span>
                     </div>
@@ -238,10 +238,10 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <XCircle className="w-4 h-4" />
                       <span>
-                        Rejected: {job.updatedAt 
-                          ? (typeof job.updatedAt === 'string' 
-                              ? new Date(job.updatedAt).toLocaleDateString() 
-                              : new Date(job.updatedAt).toLocaleDateString())
+                        Rejected: {job.updatedAt
+                          ? (typeof job.updatedAt === 'string'
+                            ? new Date(job.updatedAt).toLocaleDateString()
+                            : new Date(job.updatedAt).toLocaleDateString())
                           : 'N/A'}
                       </span>
                     </div>
@@ -262,21 +262,19 @@ const RejectedStageView: React.FC<RejectedStageViewProps> = ({
                           <TrendingUp className="w-3 h-3" />
                           Match Score
                         </span>
-                        <span className={`text-sm font-semibold ${
-                          matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                          matchScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
-                          'text-red-600 dark:text-red-400'
-                        }`}>
+                        <span className={`text-sm font-semibold ${matchScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                            matchScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                              'text-red-600 dark:text-red-400'
+                          }`}>
                           {matchScore}%
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
                         <div
-                          className={`h-2 rounded-full ${
-                            matchScore >= 80 ? 'bg-green-500' :
-                            matchScore >= 60 ? 'bg-yellow-500' :
-                            'bg-red-500'
-                          }`}
+                          className={`h-2 rounded-full ${matchScore >= 80 ? 'bg-green-500' :
+                              matchScore >= 60 ? 'bg-yellow-500' :
+                                'bg-red-500'
+                            }`}
                           style={{ width: `${matchScore}%` }}
                         />
                       </div>

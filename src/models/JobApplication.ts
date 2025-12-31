@@ -15,6 +15,13 @@ export interface IJobApplication extends Document {
     currency?: string;
     period?: 'hourly' | 'monthly' | 'yearly';
   };
+  offerDetails?: {
+    salary?: number;
+    bonus?: string;
+    equity?: string;
+    deadline?: Date;
+    status?: string;
+  };
   status: 'draft' | 'created' | 'applied' | 'screening' | 'interview' | 'offer' | 'rejected' | 'accepted' | 'withdrawn';
   priority: 'low' | 'medium' | 'high';
   applicationDate?: Date;
@@ -137,7 +144,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: String,
     trim: true,
     validate: {
-      validator: function(v: string) {
+      validator: function (v: string) {
         if (!v) return true;
         return /^https?:\/\/.+/.test(v);
       },
@@ -169,6 +176,13 @@ const jobApplicationSchema = new Schema<IJobApplication>({
       default: 'yearly'
     }
   },
+  offerDetails: {
+    salary: { type: Number, min: 0 },
+    bonus: { type: String, trim: true },
+    equity: { type: String, trim: true },
+    deadline: { type: Date },
+    status: { type: String, trim: true } // e.g., 'pending', 'accepted', 'declined', 'expired'
+  },
   status: {
     type: String,
     enum: ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'],
@@ -187,7 +201,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
   deadline: {
     type: Date,
     validate: {
-      validator: function(v: Date) {
+      validator: function (v: Date) {
         if (!v) return true;
         // Allow past dates for historical job applications
         return true;
@@ -322,11 +336,11 @@ const jobApplicationSchema = new Schema<IJobApplication>({
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret: any) {
+    transform: function (doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
-      
+
       // Safely handle the daysSinceApplication calculation
       try {
         // Use doc instead of this for better reliability
@@ -341,7 +355,7 @@ const jobApplicationSchema = new Schema<IJobApplication>({
         console.error('Error calculating daysSinceApplication in toJSON:', error);
         ret.daysSinceApplication = null;
       }
-      
+
       return ret;
     }
   }

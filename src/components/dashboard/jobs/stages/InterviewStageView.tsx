@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, Building, GraduationCap } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, Building, GraduationCap, MapPin, Link as LinkIcon, User, TrendingUp } from 'lucide-react';
 import { CVJourney } from '@/types/cv';
 
 interface JobApplication {
@@ -11,12 +11,21 @@ interface JobApplication {
   jobTitle: string;
   title?: string;
   company: string;
+  companyLogo?: string;
+  location?: string;
+  salary?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+  };
   applicationDate?: Date | string;
   updatedAt: string;
   interviews?: Array<{
     type: string;
     date: Date | string;
     outcome?: string;
+    interviewer?: string;
+    meetingLink?: string;
   }>;
 }
 
@@ -26,49 +35,50 @@ interface InterviewStageViewProps {
   getJobJourneys: (jobId: string) => CVJourney[];
   onJobClick: (job: JobApplication) => void;
   onJobStatusUpdate: (jobId: string, newStatus: string) => Promise<void>;
-  isFullScreen?: boolean; // Indicates if this is in full screen/zoomed mode
+  isFullScreen?: boolean;
 }
 
 const InterviewStageView: React.FC<InterviewStageViewProps> = ({
   jobs,
-  journeys,
-  getJobJourneys,
   onJobClick,
-  onJobStatusUpdate,
-  isFullScreen = false
 }) => {
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const getDaysSinceApplication = (applicationDate?: Date | string): number => {
-    if (!applicationDate) return 0;
-    const date = typeof applicationDate === 'string' ? new Date(applicationDate) : applicationDate;
-    const now = new Date();
-    return Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  const getCompRange = (job: JobApplication) => {
+    if (!job.salary?.min && !job.salary?.max) return '-';
+    const currency = job.salary.currency || '$';
+    const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
+    const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
+    return min && max ? `${min} - ${max}` : min || max;
   };
 
-  const getNextInterviewDate = (job: JobApplication): Date | null => {
+  const getNextInterview = (job: JobApplication) => {
     if (!job.interviews || job.interviews.length === 0) return null;
-    
-    const upcomingInterviews = job.interviews
-      .filter(interview => {
-        const interviewDate = typeof interview.date === 'string' ? new Date(interview.date) : interview.date;
-        return interviewDate > new Date() && interview.outcome !== 'completed' && interview.outcome !== 'cancelled';
+
+    // Filter for future or today's interviews
+    const upcoming = job.interviews
+      .filter(i => {
+        const date = new Date(i.date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to start of day
+        return date >= today && i.outcome !== 'completed' && i.outcome !== 'cancelled';
       })
-      .map(interview => typeof interview.date === 'string' ? new Date(interview.date) : interview.date)
-      .sort((a, b) => a.getTime() - b.getTime());
-    
-    return upcomingInterviews.length > 0 ? upcomingInterviews[0] : null;
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    return upcoming.length > 0 ? upcoming[0] : null;
   };
 
-  const getDaysUntilInterview = (interviewDate: Date): number => {
-    const now = new Date();
-    return Math.floor((interviewDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  };
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort((a, b) => {
+      const interviewA = getNextInterview(a);
+      const interviewB = getNextInterview(b);
 
-  const isFollowUpNeeded = (job: JobApplication): boolean => {
-    const daysSince = getDaysSinceApplication(job.applicationDate);
-    const daysSinceUpdate = getDaysSinceApplication(job.updatedAt);
-    return daysSince >= 3 && daysSinceUpdate >= 3;
-  };
+      const dateA = interviewA ? new Date(interviewA.date).getTime() : Infinity; // No interview = end of list
+      const dateB = interviewB ? new Date(interviewB.date).getTime() : Infinity;
+
+      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+  }, [jobs, sortOrder]);
 
   if (jobs.length === 0) {
     return (
@@ -85,196 +95,171 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
   }
 
   return (
-    <>
-      <div className={isFullScreen ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 lg:grid-cols-2 gap-4"}>
-        {jobs.map((job) => {
-          const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
-          const nextInterview = getNextInterviewDate(job);
-          const daysUntilInterview = nextInterview ? getDaysUntilInterview(nextInterview) : null;
-          const needsFollowUp = isFollowUpNeeded(job);
-          const jobJourneys = getJobJourneys(job.id || job._id);
-
-          // COMPACT FULL SCREEN LAYOUT
-          if (isFullScreen) {
-            return (
-              <motion.div
-                key={job.id || job._id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${
-                  daysUntilInterview !== null && daysUntilInterview <= 3
-                    ? 'border-orange-300 dark:border-orange-800 bg-orange-50/50 dark:bg-orange-900/10'
-                    : 'border-gray-200 dark:border-white/10'
-                }`}
-              >
-                {/* Left: Compact Job Info */}
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                    <Building className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                      {job.jobTitle || job.title}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
-                      <span>{job.company}</span>
-                      {nextInterview && (
-                        <>
-                          <span>•</span>
-                          <span className={daysUntilInterview !== null && daysUntilInterview <= 3 ? 'text-orange-600 dark:text-orange-400 font-semibold' : 'text-blue-600 dark:text-blue-400'}>
-                            {daysUntilInterview === 0 
-                              ? 'Today!' 
-                              : daysUntilInterview === 1 
-                                ? 'Tomorrow' 
-                                : `${daysUntilInterview} days away`}
-                          </span>
-                          <span>•</span>
-                          <span>{nextInterview.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
-                        </>
-                      )}
-                      {!nextInterview && (
-                        <>
-                          <span>•</span>
-                          <span>Applied {daysSinceApplication} days ago</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: CTA Buttons */}
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onJobClick(job);
-                    }}
-                    className="px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <GraduationCap className="w-3 h-3" />
-                    Interview Prep
-                  </motion.button>
-                </div>
-              </motion.div>
-            );
-          }
-
-          // EXISTING VERTICAL LAYOUT
-          return (
-            <motion.div
-              key={job.id || job._id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-[#1a2015] border border-gray-200 dark:border-white/10 rounded-lg p-4 md:p-6 hover:shadow-lg transition-all"
-            >
-              <div className="flex flex-col gap-4">
-                {/* Job Header */}
-                <div className="flex items-start gap-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                    <Building className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
-                      {job.jobTitle || job.title}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {job.company}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Interview Date */}
-                {nextInterview && (
-                  <div className={`p-3 rounded-lg ${
-                    daysUntilInterview !== null && daysUntilInterview <= 3
-                      ? 'bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700'
-                      : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
-                  }`}>
-                    <div className="flex items-center gap-2 mb-1">
-                      <Calendar className={`w-4 h-4 ${
-                        daysUntilInterview !== null && daysUntilInterview <= 3
-                          ? 'text-orange-600 dark:text-orange-400'
-                          : 'text-blue-600 dark:text-blue-400'
-                      }`} />
-                      <span className={`text-sm font-medium ${
-                        daysUntilInterview !== null && daysUntilInterview <= 3
-                          ? 'text-orange-700 dark:text-orange-300'
-                          : 'text-blue-700 dark:text-blue-300'
-                      }`}>
-                        Next Interview
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      {nextInterview.toLocaleDateString('en-US', { 
-                        weekday: 'long', 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric' 
-                      })}
-                    </p>
-                    {daysUntilInterview !== null && (
-                      <p className={`text-xs mt-1 ${
-                        daysUntilInterview <= 3
-                          ? 'text-orange-600 dark:text-orange-400 font-semibold'
-                          : 'text-gray-600 dark:text-gray-400'
-                      }`}>
-                        {daysUntilInterview === 0 
-                          ? 'Today!' 
-                          : daysUntilInterview === 1 
-                            ? 'Tomorrow' 
-                            : `${daysUntilInterview} days away`}
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Application Info */}
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    <span>Applied {daysSinceApplication} days ago</span>
-                  </div>
-                  {jobJourneys.length > 0 && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <span className="text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-2 py-1 rounded">
-                        {jobJourneys.length} journey{jobJourneys.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Follow-up Status */}
-                {needsFollowUp && (
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
-                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Follow-up recommended</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex gap-2">
-                  <motion.button
-                    onClick={() => onJobClick(job)}
-                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <GraduationCap className="w-4 h-4" />
-                    Interview Prep
-                  </motion.button>
-                </div>
-              </div>
-            </motion.div>
-          );
-        })}
+    <div className="bg-white dark:bg-[#141810] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+      {/* Quick Filter Bar */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
+        <button
+          onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <TrendingUp size={14} />
+          <span>Sort by Date ({sortOrder === 'asc' ? 'Earliest First' : 'Latest First'})</span>
+        </button>
       </div>
-    </>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-[#1c2018]">
+            <tr>
+              {/* Universal Columns */}
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
+
+              {/* Stage Specific Columns */}
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Schedule</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Round Type</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Interviewer</th>
+              <th className="px-6 py-4 text-center text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Link</th>
+
+              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+            {sortedJobs.map((job) => {
+              const nextInterview = getNextInterview(job);
+              const interviewDate = nextInterview ? new Date(nextInterview.date) : null;
+
+              return (
+                <motion.tr
+                  key={job.id || job._id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                  onClick={() => onJobClick(job)}
+                >
+                  {/* Company */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                        {job.companyLogo ? (
+                          <img
+                            src={job.companyLogo}
+                            alt={`${job.company} logo`}
+                            className="w-full h-full object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : null}
+                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
+                          {job.company.substring(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
+                    </div>
+                  </td>
+
+                  {/* Role */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                  </td>
+
+                  {/* Location */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <MapPin size={14} />
+                      <span className="truncate max-w-[150px]">{job.location || '-'}</span>
+                    </div>
+                  </td>
+
+                  {/* Comp Range */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
+                  </td>
+
+                  {/* Schedule */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {interviewDate ? (
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                          {interviewDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {interviewDate.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">No upcoming</span>
+                    )}
+                  </td>
+
+                  {/* Round Type */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {nextInterview ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 capitalize">
+                        {nextInterview.type.replace('-', ' ')}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+
+                  {/* Interviewer */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {nextInterview?.interviewer ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <div className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] uppercase">
+                          {nextInterview.interviewer.substring(0, 1)}
+                        </div>
+                        <span>{nextInterview.interviewer}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-gray-400 italic">
+                        <User size={14} />
+                        <span>Not assigned</span>
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Meeting Link */}
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    {nextInterview?.meetingLink ? (
+                      <a
+                        href={nextInterview.meetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
+                        title="Join Meeting"
+                      >
+                        <LinkIcon size={16} />
+                      </a>
+                    ) : (
+                      <span className="text-gray-300 dark:text-gray-700">-</span>
+                    )}
+                  </td>
+
+                  {/* Action */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // View details to see notes
+                        onJobClick(job);
+                      }}
+                      className="px-3 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-white/20 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      View Notes
+                    </button>
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 };
 
 export default InterviewStageView;
-

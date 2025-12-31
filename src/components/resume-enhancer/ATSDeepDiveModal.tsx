@@ -17,12 +17,260 @@ import { AnimatedScore } from '@/components/ui/AnimatedScore';
 import { InfoTooltip } from '@/components/ui/tooltip';
 import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 import { ATSDeepDiveProvider, useATSDeepDive } from '@/contexts/ATSDeepDiveContext';
-// TODO: ATS Deep Dive components were deleted - need to reimplement or remove ATS Deep Dive feature
+// TODO: ATS Deep Dive components were deleted - using inline placeholders
 // import XRayCanvas from '@/components/studio/ats-deep-dive/XRayCanvas';
 // import ScorecardPanel from '@/components/studio/ats-deep-dive/ScorecardPanel';
 // import StrategistPanel from '@/components/studio/ats-deep-dive/StrategistPanel';
 import { useAIStore } from '@/lib/stores/aiStore';
 import { useATS } from '@/contexts/ATSContext';
+
+// ScorecardPanel - Shows ATS score breakdown and knockout factors
+const ScorecardPanel = ({ atsResult, isLoading }: { atsResult: any; isLoading: boolean }) => {
+  if (isLoading) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-xs text-gray-400">Analyzing...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!atsResult) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center">
+        <p className="text-sm text-gray-400">No analysis data</p>
+      </div>
+    );
+  }
+
+  const { score, factorBreakdown, knockOutFactors, profileLevel } = atsResult;
+
+  const getScoreColor = (value: number, max: number = 100) => {
+    const percentage = (value / max) * 100;
+    if (percentage >= 80) return 'text-green-400 bg-green-400';
+    if (percentage >= 60) return 'text-yellow-400 bg-yellow-400';
+    return 'text-red-400 bg-red-400';
+  };
+
+  return (
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      {/* Overall Score */}
+      <div className="text-center pb-4 border-b border-white/10">
+        <div className={`text-4xl font-bold ${getScoreColor(score).split(' ')[0]}`}>{score}</div>
+        <div className="text-xs text-gray-400 mt-1">ATS Score</div>
+        {profileLevel && (
+          <div className="mt-2">
+            <span className="px-2 py-1 bg-[#80FF00]/20 text-[#80FF00] rounded text-xs font-medium">
+              {profileLevel.title}
+            </span>
+            <p className="text-[10px] text-gray-500 mt-1">{profileLevel.yearsExperience} years experience</p>
+          </div>
+        )}
+      </div>
+
+      {/* Factor Breakdown */}
+      {factorBreakdown && (
+        <div className="space-y-3">
+          <h3 className="text-xs font-semibold text-gray-300 uppercase">Score Factors</h3>
+
+          {/* Hard Keywords */}
+          {factorBreakdown.hardKeywords && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Hard Keywords</span>
+                <span className={getScoreColor(factorBreakdown.hardKeywords.score, factorBreakdown.hardKeywords.weight).split(' ')[0]}>
+                  {factorBreakdown.hardKeywords.matched}/{factorBreakdown.hardKeywords.total}
+                </span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${getScoreColor(factorBreakdown.hardKeywords.score, factorBreakdown.hardKeywords.weight).split(' ')[1]}`}
+                  style={{ width: `${(factorBreakdown.hardKeywords.score / factorBreakdown.hardKeywords.weight) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Experience Length */}
+          {factorBreakdown.experienceLength && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Experience</span>
+                <span className="text-gray-300">{factorBreakdown.experienceLength.years} years</span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${getScoreColor(factorBreakdown.experienceLength.score, factorBreakdown.experienceLength.weight).split(' ')[1]}`}
+                  style={{ width: `${(factorBreakdown.experienceLength.score / factorBreakdown.experienceLength.weight) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Soft Skills */}
+          {factorBreakdown.softSkills && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Soft Skills</span>
+                <span className={getScoreColor(factorBreakdown.softSkills.score, factorBreakdown.softSkills.weight).split(' ')[0]}>
+                  {factorBreakdown.softSkills.matched}/{factorBreakdown.softSkills.total}
+                </span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${getScoreColor(factorBreakdown.softSkills.score, factorBreakdown.softSkills.weight).split(' ')[1]}`}
+                  style={{ width: `${(factorBreakdown.softSkills.score / factorBreakdown.softSkills.weight) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Formatting */}
+          {factorBreakdown.formatting && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-gray-400">Formatting</span>
+                <span className={getScoreColor(factorBreakdown.formatting.score, factorBreakdown.formatting.weight).split(' ')[0]}>
+                  {factorBreakdown.formatting.score}/{factorBreakdown.formatting.weight}
+                </span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${getScoreColor(factorBreakdown.formatting.score, factorBreakdown.formatting.weight).split(' ')[1]}`}
+                  style={{ width: `${(factorBreakdown.formatting.score / factorBreakdown.formatting.weight) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Knockout Factors */}
+      {knockOutFactors && (
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <h3 className="text-xs font-semibold text-gray-300 uppercase">Knockout Checks</h3>
+
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 text-xs">
+              <CheckCircle className={`w-3.5 h-3.5 ${knockOutFactors.fileFormat?.passed ? 'text-green-400' : 'text-red-400'}`} />
+              <span className="text-gray-400">File Format</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <CheckCircle className={`w-3.5 h-3.5 ${knockOutFactors.sectionHeaders?.passed ? 'text-green-400' : 'text-red-400'}`} />
+              <span className="text-gray-400">Section Headers</span>
+            </div>
+            <div className="flex items-center gap-2 text-xs">
+              <CheckCircle className={`w-3.5 h-3.5 ${knockOutFactors.contactInfo?.passed ? 'text-green-400' : 'text-red-400'}`} />
+              <span className="text-gray-400">Contact Info</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const XRayCanvas = ({ cvData, jobData, previewContainerRef }: any) => null;
+
+// StrategistPanel - Shows missing keywords and suggestions
+const StrategistPanel = ({ atsResult, cvData, jobData, onAddKeyword }: { atsResult: any; cvData: any; jobData: any; onAddKeyword: (keyword: string) => void }) => {
+  if (!atsResult) {
+    return (
+      <div className="p-4 h-full flex items-center justify-center">
+        <p className="text-sm text-gray-400">Run analysis to see suggestions</p>
+      </div>
+    );
+  }
+
+  const { details, suggestions } = atsResult;
+  const missingKeywords = details?.missingKeywords || [];
+  const matchedKeywords = details?.matchedKeywords || [];
+
+  return (
+    <div className="h-full overflow-y-auto p-4 space-y-4">
+      {/* Missing Keywords */}
+      {missingKeywords.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-red-400 uppercase flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Missing Keywords ({missingKeywords.length})
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {missingKeywords.slice(0, 15).map((keyword: string, idx: number) => (
+              <button
+                key={idx}
+                onClick={() => onAddKeyword(keyword)}
+                className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 transition-colors"
+                title={`Add "${keyword}" to CV`}
+              >
+                {keyword}
+              </button>
+            ))}
+            {missingKeywords.length > 15 && (
+              <span className="px-2 py-1 text-gray-500 text-[10px]">+{missingKeywords.length - 15} more</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Matched Keywords */}
+      {matchedKeywords.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-xs font-semibold text-green-400 uppercase flex items-center gap-1.5">
+            <CheckCircle className="w-3.5 h-3.5" />
+            Matched Keywords ({matchedKeywords.length})
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {matchedKeywords.slice(0, 10).map((keyword: string, idx: number) => (
+              <span
+                key={idx}
+                className="px-2 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded text-[10px]"
+              >
+                {keyword}
+              </span>
+            ))}
+            {matchedKeywords.length > 10 && (
+              <span className="px-2 py-1 text-gray-500 text-[10px]">+{matchedKeywords.length - 10} more</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Suggestions */}
+      {suggestions && suggestions.length > 0 && (
+        <div className="space-y-2 pt-2 border-t border-white/10">
+          <h3 className="text-xs font-semibold text-[#80FF00] uppercase flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5" />
+            Suggestions
+          </h3>
+          <div className="space-y-2">
+            {suggestions.slice(0, 5).map((suggestion: string, idx: number) => (
+              <div
+                key={idx}
+                className="p-2 bg-[#80FF00]/10 border border-[#80FF00]/20 rounded-lg text-xs text-gray-300"
+              >
+                {suggestion}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Job Info */}
+      {jobData && (
+        <div className="pt-2 border-t border-white/10">
+          <h3 className="text-xs font-semibold text-gray-300 uppercase mb-2">Target Job</h3>
+          <div className="text-xs text-gray-400">
+            <p className="font-medium text-gray-300">{jobData.jobTitle || jobData.title}</p>
+            <p>{jobData.company}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface ATSDeepDiveModalProps {
   isOpen: boolean;
@@ -474,7 +722,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
                   </button>
                 </div>
               )}
-              <ScorecardPanel />
+              <ScorecardPanel atsResult={atsResult} isLoading={isLoading || isATSLoading} />
             </div>
 
             {/* Panel B: X-Ray Canvas (Center Stage) */}
@@ -558,9 +806,10 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
             {/* Panel C: Strategist (Right Panel) */}
             <div className="w-96 flex-shrink-0 border-l border-gray-200 dark:border-white/10 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
               <StrategistPanel
+                atsResult={atsResult}
                 cvData={state.cvData}
                 jobData={state.jobData}
-                onAddKeyword={(keyword) => {
+                onAddKeyword={(keyword: string) => {
                   // Handle keyword addition - could trigger CV update
                   console.log('Add keyword:', keyword);
                 }}
