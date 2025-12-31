@@ -14,6 +14,8 @@ export interface AICallOptions {
   temperature?: number;
   maxTokens?: number;
   model?: string;
+  responseSchema?: any;
+  responseMimeType?: string;
 }
 
 export interface AIResponse {
@@ -27,10 +29,10 @@ export interface AIResponse {
  */
 function isQuotaError(error: any): boolean {
   if (!error) return false;
-  
+
   const errorMessage = error instanceof Error ? error.message : String(error);
   const errorString = JSON.stringify(error);
-  
+
   // Check for 429 status code or quota-related error messages
   return (
     errorMessage.includes('429') ||
@@ -120,6 +122,8 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
       config: {
         temperature: options.temperature || 0.7,
         maxOutputTokens: options.maxTokens || 2048,
+        responseMimeType: options.responseMimeType,
+        responseSchema: options.responseSchema,
       }
     });
 
@@ -149,14 +153,14 @@ export async function callAIWithFallback(options: AICallOptions): Promise<AIResp
   }
 
   let lastError: Error | null = null;
-  const currentKeyIndex = apiKeys.findIndex(k => k.name === 'gemini_api_key2') >= 0 
+  const currentKeyIndex = apiKeys.findIndex(k => k.name === 'gemini_api_key2') >= 0
     ? apiKeys.findIndex(k => k.name === 'gemini_api_key2')
     : 0;
 
   for (let i = 0; i < apiKeys.length; i++) {
     const { name, key } = apiKeys[i];
     const isLastKey = i === apiKeys.length - 1;
-    
+
     try {
       console.log(`🔑 Attempting Gemini API call with ${name}...`);
 
@@ -171,13 +175,13 @@ export async function callAIWithFallback(options: AICallOptions): Promise<AIResp
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isQuota = isQuotaError(error);
-      
+
       if (isQuota) {
         console.warn(`⚠️ ${name} quota exceeded (429), falling back to next key...`);
       } else {
         console.error(`❌ ${name} failed:`, errorMessage);
       }
-      
+
       lastError = error instanceof Error ? error : new Error(String(error));
 
       // If this is the last key, throw the error

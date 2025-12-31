@@ -1092,16 +1092,64 @@ export default function ResumeEnhancerContainer({
             try {
               console.log('🎯 Resume Enhancer - Loading job data from journey:', journeyId);
               const journeyResponse = await fetch(`/api/application-journey/${journeyId}`);
+
               if (journeyResponse.ok) {
                 const journeyResult = await journeyResponse.json();
                 if (journeyResult.success && journeyResult.data) {
                   const { journey, jobData } = journeyResult.data;
 
+                  // CRITICAL: Check if journey deeply has a CV already
+                  // If so, switch to edit mode and load that CV instead of creating new one
+                  if (journey.cvId) {
+                    console.log('✅ Journey already has CV:', journey.cvId, '- Switching to EDIT mode');
+
+                    // Fetch the CV details
+                    const cvResponse = await fetch(`/api/cvs/${journey.cvId}`);
+                    if (cvResponse.ok) {
+                      const cvResult = await cvResponse.json();
+                      let loadedCV = cvResult.data?.cv || cvResult.cv;
+
+                      if (loadedCV) {
+                        // Switch to EDIT mode
+                        dispatch({ type: 'SET_MODE', payload: 'edit' });
+                        dispatch({ type: 'SET_CV_ID', payload: loadedCV.id || loadedCV._id });
+
+                        // Load CV data
+                        const resolvedCvType = loadedCV.isMaster ? 'master' : (loadedCV.journeyId ? 'journey' : 'standalone');
+
+                        loadCV({
+                          cvId: loadedCV.id || loadedCV._id,
+                          cvType: resolvedCvType,
+                          cvTitle: loadedCV.title,
+                          cvData: loadedCV.cvData,
+                          template: loadedCV.template,
+                          journeyId: journeyId,
+                          jobData: jobData || loadedCV.jobData // Prefer fresh jobData from journey
+                        });
+
+                        // Set refs to prevent re-initialization
+                        initialCVDataRef.current = JSON.parse(JSON.stringify(loadedCV.cvData));
+                        initialCVTitleRef.current = loadedCV.title;
+                        initialTemplateRef.current = loadedCV.template || null;
+
+                        // Mark as initialized with the REAL CV ID
+                        initializedRef.current = { mode: 'edit', cvId: loadedCV.id || loadedCV._id };
+
+                        // Skip directly to Step 3
+                        goToStep(3);
+                        setCompletedSteps([1, 2]);
+
+                        // Exit early - don't proceed with creation flow
+                        return;
+                      }
+                    }
+                  }
+
+                  // If no CV exists, continue with creation flow
                   // Set job data if available
                   if (jobData) {
                     dispatch({ type: 'SET_JOB_DATA', payload: jobData });
                     console.log('✅ Resume Enhancer - Job data loaded from journey:', jobData);
-                    // Journey CVs use job description for analysis - no need to set targetRole/seniorityLevel
                   } else if (journey?.jobId) {
                     // Fallback: fetch job data separately if not included in response
                     try {
@@ -1112,7 +1160,6 @@ export default function ResumeEnhancerContainer({
                           const fetchedJobData = jobResult.data.job;
                           dispatch({ type: 'SET_JOB_DATA', payload: fetchedJobData });
                           console.log('✅ Resume Enhancer - Job data loaded from job API');
-                          // Journey CVs use job description for analysis - no need to set targetRole/seniorityLevel
                         }
                       }
                     } catch (jobError) {
@@ -1142,7 +1189,10 @@ export default function ResumeEnhancerContainer({
           }
         }
 
-        goToStep(1);
+        // Only go to step 1 if we are starting fresh (create mode, no ID)
+        if (mode === 'create' && !cvId && !journeyId) {
+          goToStep(1);
+        }
 
         // Mark as initialized
         initializedRef.current = { mode, cvId };

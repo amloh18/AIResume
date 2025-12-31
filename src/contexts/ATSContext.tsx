@@ -39,12 +39,12 @@ interface ATSContextState {
   atsAnalysis: ATSAnalysis | null;
   isATSLoading: boolean;
   atsError: string | null;
-  
+
   // Surgeon Analysis
   surgeonAnalysis: SurgeonAnalysis | null;
   isSurgeonLoading: boolean;
   surgeonError: string | null;
-  
+
   // Metadata
   lastUpdated: Date | null;
   cvId: string | null;
@@ -56,14 +56,14 @@ interface ATSContextValue extends ATSContextState {
   // ATS Score methods
   updateATSScore: (score: number, analysis: ATSAnalysis, cvId: string, journeyId?: string, jobId?: string) => Promise<void>;
   refreshATSScore: (cvId: string, jobId?: string) => Promise<void>;
-  
+
   // Surgeon Analysis methods
   updateSurgeonAnalysis: (analysis: SurgeonAnalysis, cvId: string) => Promise<void>;
   refreshSurgeonAnalysis: (cvId: string) => Promise<void>;
-  
+
   // Combined refresh
   refreshAll: (cvId: string, journeyId?: string, jobId?: string) => Promise<void>;
-  
+
   // Reset
   reset: () => void;
 }
@@ -95,7 +95,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       setState(prev => ({ ...prev, isATSLoading: true, atsError: null }));
-      
+
       // The API route /api/ats/calculate-score already saves to database
       // This method is called after the API call, so we just update context
       setState(prev => ({
@@ -111,7 +111,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
         journeyId: journeyId || prev.journeyId,
         jobId: jobId || prev.jobId,
       }));
-      
+
       console.log('✅ ATSContext - ATS score updated:', { score, cvId, journeyId, jobId });
     } catch (error) {
       console.error('❌ ATSContext - Error updating ATS score:', error);
@@ -127,7 +127,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
   const refreshATSScore = useCallback(async (cvId: string, jobId?: string, userId?: string) => {
     try {
       setState(prev => ({ ...prev, isATSLoading: true, atsError: null }));
-      
+
       if (!jobId) {
         // Try to get score from CV metadata
         const response = await fetch(`/api/cvs/${cvId}`);
@@ -152,7 +152,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ cvId, jobId, userId }),
         });
-        
+
         if (response.ok) {
           const result = await response.json();
           if (result.success && result.data) {
@@ -166,7 +166,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
               knockOutFactors: result.data.knockOutFactors || result.data.analysis?.knockOutFactors,
               updatedAt: new Date().toISOString(),
             };
-            
+
             setState(prev => ({
               ...prev,
               atsScore: score,
@@ -180,7 +180,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-      
+
       setState(prev => ({ ...prev, isATSLoading: false }));
     } catch (error) {
       console.error('❌ ATSContext - Error refreshing ATS score:', error);
@@ -199,7 +199,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
   ) => {
     try {
       setState(prev => ({ ...prev, isSurgeonLoading: true, surgeonError: null }));
-      
+
       // Save to database via API
       const response = await fetch(`/api/cvs/${cvId}/surgeon-analysis`, {
         method: 'POST',
@@ -214,11 +214,11 @@ export function ATSProvider({ children }: { children: ReactNode }) {
           jobData: null, // Can be passed if needed
         }),
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to save surgeon analysis');
       }
-      
+
       setState(prev => ({
         ...prev,
         surgeonAnalysis: analysis,
@@ -226,7 +226,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
         lastUpdated: new Date(),
         cvId,
       }));
-      
+
       console.log('✅ ATSContext - Surgeon analysis updated:', { score: analysis.score, cvId });
     } catch (error) {
       console.error('❌ ATSContext - Error updating surgeon analysis:', error);
@@ -242,7 +242,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
   const refreshSurgeonAnalysis = useCallback(async (cvId: string) => {
     try {
       setState(prev => ({ ...prev, isSurgeonLoading: true, surgeonError: null }));
-      
+
       const response = await fetch(`/api/cvs/${cvId}/surgeon-analysis`);
       if (response.ok) {
         const result = await response.json();
@@ -257,7 +257,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
             contentHash: result.data.contentHash,
             jobDataHash: result.data.jobDataHash,
           };
-          
+
           setState(prev => ({
             ...prev,
             surgeonAnalysis: analysis,
@@ -268,7 +268,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
           return;
         }
       }
-      
+
       setState(prev => ({ ...prev, isSurgeonLoading: false }));
     } catch (error) {
       console.error('❌ ATSContext - Error refreshing surgeon analysis:', error);
@@ -288,7 +288,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
       journeyId: journeyId || prev.journeyId,
       jobId: jobId || prev.jobId,
     }));
-    
+
     await Promise.all([
       refreshATSScore(cvId, jobId),
       refreshSurgeonAnalysis(cvId),

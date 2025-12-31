@@ -1,108 +1,163 @@
-'use client';
-
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Target, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { Sparkles, Zap, X } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { getScoreColor } from '@/lib/utils/cv-scoring';
+import ScorecardPanel, { type ATSResult } from './panels/ScorecardPanel';
+import type { AnalysisMode } from '@/lib/utils/analysis-mode';
 
-export default function FloatingPulsePill() {
+interface FloatingPulsePillProps {
+    className?: string;
+    atsResult?: ATSResult | null;
+    isLoading?: boolean;
+    analysisMode?: AnalysisMode;
+}
+
+export default function FloatingPulsePill({
+    className = "",
+    atsResult,
+    isLoading = false,
+    analysisMode = 'insufficient-data',
+}: FloatingPulsePillProps) {
     const { state, dispatch } = useResumeEnhancer();
+    const [position, setPosition] = useState({ x: 0, y: 0 });
 
-    const handleClick = () => {
-        // Toggle surgeon overlay visibility
+    useEffect(() => {
+        const savedPos = localStorage.getItem('cvcircle_pill_position');
+        if (savedPos) {
+            try {
+                setPosition(JSON.parse(savedPos));
+            } catch (e) {
+                console.error('Failed to parse saved position', e);
+            }
+        }
+    }, []);
+
+    const handleDragEnd = (event: any, info: any) => {
+        const newPos = { x: position.x + info.offset.x, y: position.y + info.offset.y };
+        setPosition(newPos);
+        localStorage.setItem('cvcircle_pill_position', JSON.stringify(newPos));
+    };
+
+    const handleSurgeonToggle = (e: React.MouseEvent) => {
+        // Prevent toggle if dragging (using a small threshold or checking drag state? simplified for now as click vs drag distinction)
+        // Framer motion usually handles click vs drag well.
+        e.stopPropagation();
         dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay });
     };
 
-    const scoreInfo = getScoreColor(state.cvScore);
+    // Use ATS score if available, otherwise fall back to surgeon score
+    const displayScore = atsResult?.overall_score ?? state.cvScore;
+    const scoreInfo = getScoreColor(displayScore);
+
     const hasSuggestions = state.surgicalFixes.filter(f => f.status === 'pending').length > 0;
+    const pendingCount = state.surgicalFixes.filter(f => f.status === 'pending').length;
+
+    // Determine status label based on score
+    const getStatusLabel = (score: number) => {
+        if (score >= 90) return 'Perfect';
+        if (score >= 80) return 'Excellent';
+        if (score >= 70) return 'Good';
+        if (score >= 50) return 'Needs Work';
+        return 'Critical';
+    };
+
+    const statusLabel = getStatusLabel(displayScore);
 
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ opacity: 0, scale: 0.8, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: -20 }}
-                className={`${state.showSurgeonOverlay ? 'absolute bottom-4 right-4' : 'fixed top-4 right-4'} z-50`}
+                initial={{ opacity: 0, x: position.x, y: position.y }}
+                animate={{ opacity: 1, x: position.x, y: position.y }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                drag
+                dragMomentum={false}
+                onDragEnd={handleDragEnd}
+                className={`flex flex-col gap-3 z-[9999] items-end ${className || (state.showSurgeonOverlay ? 'absolute bottom-4 right-4' : 'fixed top-4 right-4')} `}
             >
-                <button
-                    onClick={handleClick}
-                    className={`relative group ${state.showSurgeonOverlay ? 'scale-95' : ''} transition-transform`}
+                {/* 1. Main Score Pill */}
+                <div
+                    onClick={handleSurgeonToggle}
+                    className="relative flex items-center bg-[#1a1a1a] rounded-full p-1 pr-12 cursor-pointer shadow-2xl border border-white/5 transition-transform hover:scale-[1.02] active:scale-[0.98] group select-none z-20 min-w-[240px]"
+                    style={{
+                        boxShadow: `0 0 30px ${scoreInfo.color}40`,
+                    }}
                 >
-                    {/* Pulse animation ring - Custom subtler animation */}
-                    <motion.div
-                        className="absolute inset-0 rounded-full"
-                        style={{ backgroundColor: scoreInfo.color }}
-                        initial={{ opacity: 0, scale: 1 }}
-                        animate={{ opacity: [0, 0.1, 0], scale: [1, 1.1, 1.2] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                    />
+                    {/* Score Circle - Left */}
+                    <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-[#111] border border-white/10 mr-4">
+                        {/* Glow effect behind text */}
+                        <div
+                            className="absolute inset-0 rounded-full opacity-20 blur-md"
+                            style={{ backgroundColor: scoreInfo.color }}
+                        />
+                        <span
+                            className="text-xl font-bold relative z-10"
+                            style={{ color: scoreInfo.color }}
+                        >
+                            {displayScore}
+                        </span>
+                    </div>
 
-                    {/* Main pill */}
-                    <div
-                        className="relative flex items-center gap-3 px-6 py-3 rounded-full shadow-2xl transition-all"
-                        style={{
-                            backgroundColor: 'var(--bg-secondary)',
-                            boxShadow: `0 0 12px ${scoreInfo.color}40`
-                        }}
-                    >
-                        {/* Score */}
-                        <div className="flex items-center gap-2">
-                            <div
-                                className="text-2xl font-bold"
+                    {/* Text Info */}
+                    <div className="flex flex-col mr-8 flex-grow">
+                        <div className="flex items-baseline gap-1.5">
+                            <span
+                                className="text-2xl font-bold leading-none tracking-tight"
                                 style={{ color: scoreInfo.color }}
                             >
-                                {state.cvScore}
-                            </div>
-                            <div className="text-[color:var(--text-tertiary)] text-sm">/100</div>
+                                {displayScore}
+                            </span>
+                            <span className="text-sm text-white/30 font-medium">/100</span>
                         </div>
-
-                        <div className="h-6 w-px bg-black/10 dark:bg-white/20" />
-
-                        {/* Label */}
-                        <div className="text-left">
-                            <div className="text-xs text-[color:var(--text-tertiary)] uppercase tracking-wide">CV Score</div>
-                            <div className="text-[color:var(--text-primary)] font-medium text-sm">{scoreInfo.label}</div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] uppercase tracking-wider text-white/40 font-semibold whitespace-nowrap">CV SCORE</span>
+                            <div className="w-px h-2 bg-white/20" />
+                            <span className="text-xs font-bold text-white tracking-wide whitespace-nowrap">{statusLabel}</span>
                         </div>
-
-                        {/* Sparkles icon when suggestions available */}
-                        {hasSuggestions && !state.showSurgeonOverlay && (
-                            <motion.div
-                                animate={{ rotate: [0, 10, -10, 0] }}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                                className="ml-2"
-                            >
-                                <Sparkles className="h-5 w-5 text-[color:var(--accent-primary)]" />
-                            </motion.div>
-                        )}
-
-                        {/* Expand indicator */}
-                        <motion.div
-                            animate={{ rotate: state.showSurgeonOverlay ? 180 : 0 }}
-                            className="ml-2"
-                        >
-                            <Zap className="h-4 w-4 text-[color:var(--text-tertiary)]" />
-                        </motion.div>
                     </div>
 
-                    {/* Notification badge for pending fixes */}
-                    {hasSuggestions && (
+                    {/* Action Icon */}
+                    <div className="flex items-center gap-3 ml-auto">
+                        {state.showSurgeonOverlay ? (
+                            <X className="w-5 h-5 text-white/40 group-hover:text-white transition-colors" />
+                        ) : (
+                            <>
+                                <Sparkles className="w-5 h-5 text-[#80FF00]" />
+                                <Zap className="w-5 h-5 text-white/20" />
+                            </>
+                        )}
+                    </div>
+
+                    {/* Badge Notification */}
+                    {pendingCount > 0 && !state.showSurgeonOverlay && (
+                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#80FF00] rounded-full flex items-center justify-center border-2 border-[#1a1a1a] shadow-lg">
+                            <span className="text-[10px] font-bold text-black">{pendingCount}</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* EXPANDED: Scorecard Panel Slide-down */}
+                <AnimatePresence>
+                    {state.showSurgeonOverlay && (
                         <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            className="absolute -top-2 -right-2 px-2 py-1 bg-[var(--accent-primary)] text-black text-xs font-bold rounded-full shadow-lg"
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }} // Bezier for smooth drawer feel
+                            className="w-[320px] bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top-right z-10"
                         >
-                            {state.surgicalFixes.filter(f => f.status === 'pending').length}
+                            <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                                <ScorecardPanel
+                                    atsResult={atsResult || null}
+                                    isLoading={isLoading}
+                                    analysisMode={analysisMode}
+                                    compact={true}
+                                    scoreLabel="Optimization Score"
+                                />
+                            </div>
                         </motion.div>
                     )}
-
-                    {/* Tooltip on hover */}
-                    <div className="absolute top-full right-0 mt-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        <div className="px-3 py-2 bg-[var(--modal-bg)] text-[color:var(--text-primary)] text-xs rounded-lg whitespace-nowrap shadow-xl shadow-black/20 dark:shadow-black/40">
-                            {state.showSurgeonOverlay ? 'Close CV Surgeon' : 'Open CV Surgeon'}
-                        </div>
-                    </div>
-                </button>
+                </AnimatePresence>
             </motion.div>
         </AnimatePresence>
     );

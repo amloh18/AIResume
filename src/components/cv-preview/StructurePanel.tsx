@@ -2,16 +2,30 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Briefcase, 
-  ChevronDown, 
-  Plus, 
+import {
+  Briefcase,
+  ChevronDown,
+  Plus,
   Target,
   AlertCircle,
   CheckCircle
 } from 'lucide-react';
 
-import { DocumentType, StudioSessionContext, JobData } from '@/types/studio';
+// Inline type definitions (moved from deleted @/types/studio)
+type DocumentType = 'cv' | 'cl';
+
+interface JobData {
+  id: string;
+  jobTitle: string;
+  company: string;
+  priority?: 'low' | 'medium' | 'high';
+}
+
+interface StudioSessionContext {
+  mode: 'journey' | 'standalone';
+  documentType: DocumentType;
+  linkedJob?: JobData;
+}
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import { Button } from '@/components/ui/button';
@@ -124,8 +138,8 @@ function JobContextSection({
   forceVisible?: boolean;
 }) {
   const showJobSelector = sessionContext.mode === 'standalone' || forceVisible;
-  const linkedJob = sessionContext.mode === 'journey' ? sessionContext.linkedJob : 
-                   selectedJobId ? availableJobs.find(j => j.id === selectedJobId) : undefined;
+  const linkedJob = sessionContext.mode === 'journey' ? sessionContext.linkedJob :
+    selectedJobId ? availableJobs.find(j => j.id === selectedJobId) : undefined;
 
   return (
     <div className="p-4 bg-[#1A201A] rounded-lg">
@@ -152,7 +166,7 @@ function JobContextSection({
               Automatically linked to journey
             </span>
           </div>
-          
+
           <div className="p-3 bg-[#2D332D] rounded border border-[#2D332D]">
             <h4 className="font-medium text-white">{linkedJob.jobTitle}</h4>
             <p className="text-sm text-[#A0A0A0]">{linkedJob.company}</p>
@@ -250,9 +264,9 @@ function CVStructureSections({
 
   const updateCVField = (field: string, value: any) => {
     // Validate value for array fields - ensure they're always arrays
-    const arrayFields = ['work', 'volunteer', 'education', 'awards', 'certificates', 
-                         'publications', 'skills', 'languages', 'interests', 'references', 'projects'];
-    
+    const arrayFields = ['work', 'volunteer', 'education', 'awards', 'certificates',
+      'publications', 'skills', 'languages', 'interests', 'references', 'projects'];
+
     // If field is just an array field name (e.g., "awards", "certificates"), ensure value is an array
     if (arrayFields.includes(field)) {
       if (!Array.isArray(value)) {
@@ -275,13 +289,13 @@ function CVStructureSections({
     for (let i = 0; i < fieldPath.length - 1; i++) {
       const key = fieldPath[i];
       const nextKey = fieldPath[i + 1];
-      
+
       // Validate that array fields remain arrays
       if (arrayFields.includes(key) && current[key] !== undefined && !Array.isArray(current[key])) {
         console.warn(`⚠️ StructurePanel - Field ${key} should be an array but is ${typeof current[key]}. Resetting to empty array.`);
         current[key] = [];
       }
-      
+
       // If current[key] doesn't exist or is not an object/array, create it
       if (!current[key] || typeof current[key] !== 'object') {
         // Check if next key is a number (array index) or if current key is an array field
@@ -292,7 +306,7 @@ function CVStructureSections({
         // Make a shallow copy to avoid mutating nested objects
         current[key] = Array.isArray(current[key]) ? [...current[key]] : { ...current[key] };
       }
-      
+
       current = current[key];
     }
 
@@ -415,7 +429,7 @@ function CVStructureSections({
 
   // Use centralized selector to get visible sections
   const visibleSections = getVisibleCVSections(cvData, 'cv');
-  
+
   // Map to section format with emoji icons for this component
   const sectionIconMap: Record<string, string> = {
     personal_header: '👤',
@@ -442,8 +456,8 @@ function CVStructureSections({
     <div className="space-y-2">
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-white">CV Sections</h3>
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           size="sm"
           onClick={() => setOpenSections(openSections.size === sections.length ? new Set() : new Set(sections.map(s => s.id)))}
         >
@@ -493,8 +507,8 @@ function CVStructureSections({
  * Render section content based on section ID
  */
 function renderSectionContent(
-  sectionId: string, 
-  cvData: UnifiedCVDataStructure, 
+  sectionId: string,
+  cvData: UnifiedCVDataStructure,
   updateCVField: (field: string, value: any) => void,
   addSection: (sectionType: string) => void,
   removeSection: (sectionType: string, index: number) => void,
@@ -511,7 +525,7 @@ function renderSectionContent(
           userId=""
         />
       );
-    
+
     case 'work_experience':
       return (
         <WorkExperienceSection
@@ -521,7 +535,7 @@ function renderSectionContent(
           userId=""
         />
       );
-    
+
     case 'volunteer':
     case 'volunteer_experience': // Handle potential mismatch in structure
       return (
@@ -532,7 +546,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('volunteer', index)}
         />
       );
-    
+
     case 'education':
       return (
         <EducationSection
@@ -544,7 +558,7 @@ function renderSectionContent(
           userId=""
         />
       );
-    
+
     case 'awards':
       return (
         <AwardsSection
@@ -554,7 +568,7 @@ function renderSectionContent(
           onRemove={(index: number) => removeSection('awards', index)}
         />
       );
-    
+
     case 'certificates':
       return (
         <CertificatesSection
@@ -564,7 +578,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('certificates', index)}
         />
       );
-    
+
     case 'publications':
       return (
         <PublicationsSection
@@ -574,7 +588,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('publications', index)}
         />
       );
-    
+
     case 'skills':
       return (
         <SkillsSection
@@ -584,7 +598,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('skills', index)}
         />
       );
-    
+
     case 'languages':
       return (
         <LanguagesSection
@@ -594,7 +608,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('languages', index)}
         />
       );
-    
+
     case 'interests':
       return (
         <InterestsSection
@@ -604,7 +618,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('interests', index)}
         />
       );
-    
+
     case 'references':
       return (
         <ReferencesSection
@@ -614,7 +628,7 @@ function renderSectionContent(
           onRemove={(index) => removeSection('references', index)}
         />
       );
-    
+
     case 'projects':
       return (
         <ProjectsSection
@@ -624,8 +638,8 @@ function renderSectionContent(
           onRemove={(index) => removeSection('projects', index)}
         />
       );
-    
-    
+
+
     default:
       return (
         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
@@ -665,7 +679,7 @@ I am writing to express my strong interest in the ${jobContext?.jobTitle || '[Po
 In my previous roles, I have demonstrated [relevant experience/skills]. I am particularly excited about this opportunity because [specific reason related to the company/role].
 
 I would welcome the opportunity to discuss how my skills and enthusiasm can contribute to ${jobContext?.company || '[Company]'}'s continued success.`,
-      
+
       creative: `Dear ${jobContext?.company || '[Company]'} Team,
 
 I was thrilled to discover the ${jobContext?.jobTitle || '[Position]'} opening at ${jobContext?.company || '[Company]'}. Your company's [mention something specific about the company] resonates strongly with my professional values and career aspirations.
@@ -673,7 +687,7 @@ I was thrilled to discover the ${jobContext?.jobTitle || '[Position]'} opening a
 [Personal story or connection to the role/company]
 
 I'm excited about the possibility of bringing my [relevant skills] to your team and contributing to [specific company goals/projects].`,
-      
+
       technical: `Dear Hiring Team,
 
 I am applying for the ${jobContext?.jobTitle || '[Position]'} role at ${jobContext?.company || '[Company]'}. My technical background in [relevant technologies] aligns well with your requirements.
@@ -693,7 +707,7 @@ I am excited about the opportunity to contribute to ${jobContext?.company || '[C
     <div className="space-y-4">
       <div>
         <h3 className="font-semibold text-white mb-3">Cover Letter Structure</h3>
-        
+
         {jobContext && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}

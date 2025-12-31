@@ -80,6 +80,8 @@ interface JobsKanbanViewProps {
   onJobStatusUpdate?: (jobId: string, newStatus: string) => Promise<void>;
   onCreateJourney?: (job: JobApplication) => Promise<void>;
   onRefresh?: () => void;
+  onImproveATS?: (job: JobApplication) => void;
+  onDownload?: (job: JobApplication) => void;
 }
 
 const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
@@ -106,7 +108,9 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
   journeys = [],
   onJobStatusUpdate,
   onCreateJourney,
-  onRefresh
+  onRefresh,
+  onImproveATS,
+  onDownload
 }) => {
   // Draft color (used as default for all stages)
   const draftColor = 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white';
@@ -393,10 +397,10 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                 onCreateJourney && onCreateJourney(job);
                               } else if (action === 'inject_data') {
                                 // Logic to show inject data popup
-                                console.log('Inject data for', job.id);
+                                onImproveATS?.(job);
                               } else if (action === 'download') {
                                 // Logic to open download modal
-                                console.log('Download docs for', job.id);
+                                onDownload?.(job);
                               } else if (action === 'move_interview') {
                                 onJobStatusUpdate && onJobStatusUpdate(job.id, 'interview');
                               } else if (action === 'log_activity') {
