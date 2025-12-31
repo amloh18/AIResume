@@ -89,6 +89,7 @@ export async function GET(
       title: job.jobTitle,
       jobTitle: job.jobTitle, // Include both title and jobTitle for compatibility
       company: job.company,
+      companyLogo: job.companyLogo,
       location: job.location,
       jobUrl: job.jobUrl,
       jobDescription: job.jobDescription,
@@ -221,12 +222,26 @@ export async function PUT(
     console.log('🔍 Job Update API - Request body keys:', Object.keys(body));
 
     // Get the current job to check for status changes - also verify it belongs to the user
-    let currentJob = null;
+    // Get the current job - Find by ID first, then verify user ownership manually
+    // This avoids schema type (ObjectId vs String) mismatches with Mixed type userId
+    let currentJob: any = null;
     if (mongoose.Types.ObjectId.isValid(resolvedParams.id)) {
-      currentJob = await JobApplication.findOne({
-        _id: new mongoose.Types.ObjectId(resolvedParams.id),
-        userId: normalizedUserId
-      });
+      const jobId = new mongoose.Types.ObjectId(resolvedParams.id);
+      currentJob = await JobApplication.findOne({ _id: jobId });
+
+      // Ownership check
+      if (currentJob) {
+        // Handle both ObjectId and String formats for userId comparison
+        const jobUserIdStr = currentJob.userId.toString();
+        const requestUserIdStr = userId.toString();
+
+        if (jobUserIdStr !== requestUserIdStr) {
+          console.log(`❌ Job Update API - Ownership mismatch. Job: ${jobUserIdStr}, Request: ${requestUserIdStr}`);
+          currentJob = null; // Treat as not found/unauthorized
+        } else {
+          console.log(`✅ Job Update API - Ownership verified via string comparison`);
+        }
+      }
     } else {
       console.log('❌ Job Update API - Invalid job ID format:', resolvedParams.id);
       return NextResponse.json({ error: 'Invalid job ID format' }, { status: 400 });
@@ -234,7 +249,7 @@ export async function PUT(
 
     console.log('🔍 Job Update API - Current job found:', !!currentJob);
     if (!currentJob) {
-      console.log('❌ Job Update API - Job not found or does not belong to user');
+      console.log('❌ Job Update API - Job not found or does not belong to user (checked ID: ' + resolvedParams.id + ')');
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 

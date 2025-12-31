@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -346,6 +346,14 @@ const OptimizedNavigation: React.FC = () => {
       route: '/resume-enhancer'
     },
     {
+      id: 'studio',
+      name: 'Studio',
+      icon: Wand2,
+      description: 'Advanced CV editing',
+      route: '/studio?step=1',
+      badge: 'NEW'
+    },
+    {
       id: 'cover-letter-generator',
       name: 'Cover Letter Generator',
       icon: PenTool,
@@ -506,14 +514,20 @@ const OptimizedNavigation: React.FC = () => {
                 <Component
                   key={section.id}
                   {...componentProps}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-200 text-center border ${isActive
+                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-200 text-center border relative ${isActive
                     ? 'bg-[rgb(129,255,0)]/10 border-[rgb(129,255,0)] text-black dark:text-white'
                     : 'bg-gray-50 dark:bg-gray-800/50 border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
-                  <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' ? 'text-[var(--accent-primary)]' : ''}`} />
+                  {/* NEW Badge */}
+                  {(section as any).badge && (
+                    <span className="absolute -top-1.5 -right-1.5 px-1.5 py-0.5 text-[8px] font-bold bg-lime-500 dark:bg-[#80FF00] text-black rounded-full">
+                      {(section as any).badge}
+                    </span>
+                  )}
+                  <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' || section.id === 'studio' ? 'text-[var(--accent-primary)]' : ''}`} />
                   <div className="hidden 2xl:block">
                     <div className="text-xs font-medium leading-tight line-clamp-2">
                       {section.name}

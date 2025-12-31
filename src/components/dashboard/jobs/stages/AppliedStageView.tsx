@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, Building, Eye, Globe, MapPin, Bell, TrendingUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface JobApplication {
@@ -11,11 +11,18 @@ interface JobApplication {
   jobTitle: string;
   title?: string;
   company: string;
+  companyLogo?: string;
   location?: string;
   status?: string;
   applicationDate?: Date | string;
   deadline?: Date | string;
   updatedAt: string;
+  salary?: {
+    min?: number;
+    max?: number;
+    currency?: string;
+  };
+  source?: string;
 }
 
 interface AppliedStageViewProps {
@@ -25,49 +32,14 @@ interface AppliedStageViewProps {
   isFullScreen?: boolean;
 }
 
-// Check if location is in UK or USA (eligible for sponsorship badge)
-const isUKorUSLocation = (location?: string): 'UK' | 'US' | null => {
-  if (!location) return null;
-  const loc = location.toLowerCase();
-
-  // UK variations
-  if (loc.includes('uk') ||
-    loc.includes('united kingdom') ||
-    loc.includes('london') ||
-    loc.includes('england') ||
-    loc.includes('scotland') ||
-    loc.includes('wales') ||
-    loc.includes('manchester') ||
-    loc.includes('birmingham') ||
-    loc.includes('northern ireland')) {
-    return 'UK';
-  }
-
-  // US variations  
-  if (loc.includes('usa') ||
-    loc.includes('united states') ||
-    loc.includes('america') ||
-    loc.includes('new york') ||
-    loc.includes('california') ||
-    loc.includes('texas') ||
-    loc.includes('san francisco') ||
-    loc.includes('seattle') ||
-    loc.includes('boston') ||
-    loc.includes('chicago') ||
-    loc.includes('los angeles')) {
-    return 'US';
-  }
-
-  return null;
-};
-
-
 const AppliedStageView: React.FC<AppliedStageViewProps> = ({
   jobs,
   onJobClick,
   onJobStatusUpdate,
   isFullScreen = false
 }) => {
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
   const getDaysSinceApplication = (applicationDate?: Date | string): number => {
     if (!applicationDate) return 0;
     const date = typeof applicationDate === 'string' ? new Date(applicationDate) : applicationDate;
@@ -89,27 +61,25 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
     return daysSince >= 7 && daysSinceUpdate >= 7;
   };
 
+  const getCompRange = (job: JobApplication) => {
+    if (!job.salary?.min && !job.salary?.max) return '-';
+    const currency = job.salary.currency || '$';
+    const min = job.salary.min ? `${currency}${job.salary.min >= 1000 ? (job.salary.min / 1000).toFixed(0) + 'k' : job.salary.min}` : '';
+    const max = job.salary.max ? `${currency}${job.salary.max >= 1000 ? (job.salary.max / 1000).toFixed(0) + 'k' : job.salary.max}` : '';
+    return min && max ? `${min} - ${max}` : min || max;
+  };
+
   const sortedJobs = useMemo(() => {
     return [...jobs].sort((a, b) => {
-      // First sort by deadline (ascending, nulls last)
-      const deadlineA = a.deadline ? (typeof a.deadline === 'string' ? new Date(a.deadline) : a.deadline).getTime() : Infinity;
-      const deadlineB = b.deadline ? (typeof b.deadline === 'string' ? new Date(b.deadline) : b.deadline).getTime() : Infinity;
-
-      if (deadlineA !== deadlineB) {
-        return deadlineA - deadlineB;
-      }
-
-      // Then sort by follow-up needed
-      const followUpA = isFollowUpNeeded(a) ? 0 : 1;
-      const followUpB = isFollowUpNeeded(b) ? 0 : 1;
-      return followUpA - followUpB;
+      const dateA = a.applicationDate ? (typeof a.applicationDate === 'string' ? new Date(a.applicationDate) : a.applicationDate).getTime() : 0;
+      const dateB = b.applicationDate ? (typeof b.applicationDate === 'string' ? new Date(b.applicationDate) : b.applicationDate).getTime() : 0;
+      return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
-  }, [jobs]);
+  }, [jobs, sortOrder]);
 
   const handleMarkFollowUpComplete = async (job: JobApplication, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      // Update job's updatedAt to current time (simulating follow-up completion)
       await onJobStatusUpdate(job.id || job._id, job.status || 'applied');
       toast.success('Follow-up marked as complete');
     } catch (error) {
@@ -133,229 +103,149 @@ const AppliedStageView: React.FC<AppliedStageViewProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {sortedJobs.map((job) => {
-        const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
-        const daysUntilDeadline = getDaysUntilDeadline(job.deadline);
-        const needsFollowUp = isFollowUpNeeded(job);
+    <div className="bg-white dark:bg-[#141810] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+      {/* Quick Filter Bar */}
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-white/10 flex items-center justify-end">
+        <button
+          onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+          className="flex items-center gap-2 text-xs font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+        >
+          <TrendingUp size={14} />
+          <span>Sort by Most Recent ({sortOrder === 'desc' ? 'Newest First' : 'Oldest First'})</span>
+        </button>
+      </div>
 
-        const deadlineStatus = daysUntilDeadline === null
-          ? 'none'
-          : daysUntilDeadline < 0
-            ? 'overdue'
-            : daysUntilDeadline <= 3
-              ? 'approaching'
-              : 'normal';
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-[#1c2018]">
+            <tr>
+              {/* Universal Columns */}
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Company</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Location</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Comp Range</th>
 
-        // Check if job location is in UK or USA for sponsorship badge
-        const sponsorshipRegion = isUKorUSLocation(job.location);
+              {/* Stage Specific Columns */}
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Applied On</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Elapsed Time</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Platform</th>
+              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Next Follow-up</th>
 
-        // COMPACT FULL SCREEN LAYOUT
-        if (isFullScreen) {
-          return (
-            <motion.div
-              key={job.id || job._id}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`flex items-center justify-between gap-4 p-4 bg-white dark:bg-[#1a2015] border rounded-lg hover:shadow-md transition-all ${deadlineStatus === 'overdue'
-                ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
-                : deadlineStatus === 'approaching'
-                  ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
-                  : 'border-gray-200 dark:border-white/10'
-                }`}
-            >
-              {/* Left: Compact Job Info */}
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                  <Building className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                    {job.jobTitle || job.title}
-                  </h3>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    <span>{job.company}</span>
-                    {sponsorshipRegion && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-semibold">
-                        <Globe className="w-2.5 h-2.5" />
-                        {sponsorshipRegion} Sponsor
-                      </span>
-                    )}
-                    <span>•</span>
-                    <span>{daysSinceApplication} days ago</span>
-                    {job.deadline && (
-                      <>
-                        <span>•</span>
-                        <span className={deadlineStatus === 'overdue' ? 'text-red-600 dark:text-red-400 font-semibold' : deadlineStatus === 'approaching' ? 'text-yellow-600 dark:text-yellow-400' : ''}>
-                          {deadlineStatus === 'overdue'
-                            ? `Overdue ${Math.abs(daysUntilDeadline!)}d`
-                            : deadlineStatus === 'approaching'
-                              ? `${daysUntilDeadline}d left`
-                              : `Deadline: ${(typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                        </span>
-                      </>
-                    )}
-                    {needsFollowUp && (
-                      <>
-                        <span>•</span>
-                        <span className="text-orange-600 dark:text-orange-400 font-semibold">Follow-up needed</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <th className="px-6 py-4 text-right text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-white/10">
+            {sortedJobs.map((job) => {
+              const daysSinceApplication = getDaysSinceApplication(job.applicationDate);
+              const needsFollowUp = isFollowUpNeeded(job);
+              const appliedDate = job.applicationDate ? (typeof job.applicationDate === 'string' ? new Date(job.applicationDate) : job.applicationDate) : null;
 
-              {/* Right: CTA Buttons */}
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {needsFollowUp && (
-                  <motion.button
-                    onClick={(e) => handleMarkFollowUpComplete(job, e)}
-                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <CheckCircle className="w-3 h-3" />
-                    Mark Complete
-                  </motion.button>
-                )}
-                <motion.button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onJobClick(job);
-                  }}
-                  className="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition-all flex items-center gap-1.5"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+              // Calculate follow up date (7 days after last update/application)
+              const lastUpdate = job.updatedAt ? new Date(job.updatedAt) : new Date();
+              const followUpDate = new Date(lastUpdate);
+              followUpDate.setDate(followUpDate.getDate() + 7);
+
+              return (
+                <motion.tr
+                  key={job.id || job._id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                  onClick={() => onJobClick(job)}
                 >
-                  <Eye className="w-3 h-3" />
-                  View Details
-                </motion.button>
-              </div>
-            </motion.div>
-          );
-        }
-
-        // EXISTING VERTICAL LAYOUT (when not full screen)
-        return (
-          <motion.div
-            key={job.id || job._id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`bg-white dark:bg-[#1a2015] border rounded-lg p-4 md:p-6 hover:shadow-lg transition-all cursor-pointer ${deadlineStatus === 'overdue'
-              ? 'border-red-300 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10'
-              : deadlineStatus === 'approaching'
-                ? 'border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-900/10'
-                : 'border-gray-200 dark:border-white/10'
-              }`}
-            onClick={() => onJobClick(job)}
-          >
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              {/* Left: Job Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                    <Building className="w-5 h-5 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1 truncate">
-                      {job.jobTitle || job.title}
-                    </h3>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                      <span>{job.company}</span>
-                      {sponsorshipRegion && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded text-[10px] font-semibold">
-                          <Globe className="w-2.5 h-2.5" />
-                          {sponsorshipRegion} Sponsor
+                  {/* Company */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-white/10 flex items-center justify-center text-xs font-bold text-gray-500 dark:text-gray-400 overflow-hidden">
+                        {job.companyLogo ? (
+                          <img
+                            src={job.companyLogo}
+                            alt={`${job.company} logo`}
+                            className="w-full h-full object-contain"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                          />
+                        ) : null}
+                        <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
+                          {job.company.substring(0, 2).toUpperCase()}
                         </span>
-                      )}
+                      </div>
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>
                     </div>
-                  </div>
-                </div>
+                  </td>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                  {/* Application Date */}
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      Applied: {job.applicationDate
-                        ? (typeof job.applicationDate === 'string'
-                          ? new Date(job.applicationDate).toLocaleDateString()
-                          : job.applicationDate.toLocaleDateString())
-                        : 'N/A'}
-                    </span>
-                  </div>
+                  {/* Role */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-900 dark:text-white">{job.jobTitle || job.title}</span>
+                  </td>
 
-                  {/* Days Since Application */}
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Clock className="w-4 h-4" />
-                    <span>{daysSinceApplication} days ago</span>
-                  </div>
+                  {/* Location */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <MapPin size={14} />
+                      <span className="truncate max-w-[150px]">{job.location || '-'}</span>
+                    </div>
+                  </td>
 
-                  {/* Deadline */}
-                  {job.deadline && (
-                    <div className={`flex items-center gap-2 ${deadlineStatus === 'overdue'
-                      ? 'text-red-600 dark:text-red-400 font-semibold'
-                      : deadlineStatus === 'approaching'
-                        ? 'text-yellow-600 dark:text-yellow-400 font-semibold'
-                        : 'text-gray-600 dark:text-gray-400'
+                  {/* Comp Range */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{getCompRange(job)}</span>
+                  </td>
+
+                  {/* Applied On */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <Calendar size={14} />
+                      <span>{appliedDate ? appliedDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}</span>
+                    </div>
+                  </td>
+
+                  {/* Elapsed Time */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${daysSinceApplication > 14 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                      daysSinceApplication > 7 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                        'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                       }`}>
-                      <AlertCircle className="w-4 h-4" />
-                      <span>
-                        {deadlineStatus === 'overdue'
-                          ? `Overdue by ${Math.abs(daysUntilDeadline!)} days`
-                          : deadlineStatus === 'approaching'
-                            ? `${daysUntilDeadline} days left`
-                            : `Deadline: ${(typeof job.deadline === 'string' ? new Date(job.deadline) : job.deadline).toLocaleDateString()}`}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                      {daysSinceApplication} days ago
+                    </span>
+                  </td>
 
-                {/* Follow-up Status */}
-                {needsFollowUp && (
-                  <div className="mt-3 p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg">
-                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      <span>Follow-up recommended - {daysSinceApplication} days since application</span>
+                  {/* Platform */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                      <Globe size={14} />
+                      <span>{job.source || 'Manual'}</span>
                     </div>
-                  </div>
-                )}
-              </div>
+                  </td>
 
-              {/* Right: Actions */}
-              <div className="flex flex-col gap-2 flex-shrink-0">
-                {needsFollowUp && (
-                  <motion.button
-                    onClick={(e) => handleMarkFollowUpComplete(job, e)}
-                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Mark Follow-up Complete
-                  </motion.button>
-                )}
-                {job.deadline && deadlineStatus !== 'normal' && (
-                  <motion.button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onJobClick(job);
-                    }}
-                    className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-medium transition-all"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    View Details
-                  </motion.button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
+                  {/* Next Follow-up */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className={`flex items-center gap-1.5 text-sm ${needsFollowUp ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-500 dark:text-gray-400'}`}>
+                      <Bell size={14} />
+                      <span>{followUpDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                    </div>
+                  </td>
+
+                  {/* Action */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Trigger log activity or simply open sidebar for now as requested for "Log Activity"
+                        onJobClick(job);
+                      }}
+                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors inline-flex items-center gap-1.5"
+                    >
+                      Log Activity
+                    </button>
+                  </td>
+                </motion.tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
 export default AppliedStageView;
-

@@ -96,6 +96,18 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     coverLetterAI: true,
     docxExport: true,
     hasVault: true
+  },
+  pro: {
+    journeyCVs: 50,             // Default to monthly limits for generic pro
+    activeJourneyCVs: 50,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true
   }
 };
 

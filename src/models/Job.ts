@@ -4,6 +4,7 @@ export interface IJob extends Document {
   userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
   jobTitle: string;
   company: string;
+  companyLogo?: string; // Company logo URL
   jobUrl?: string;
   jobDescription?: string;
   location?: string;
@@ -94,6 +95,11 @@ const jobSchema = new Schema<IJob>({
     required: [true, 'Company name is required'],
     trim: true,
     maxlength: [100, 'Company name cannot exceed 100 characters']
+  },
+  companyLogo: {
+    type: String,
+    trim: true,
+    maxlength: [1000, 'Company logo URL cannot exceed 1000 characters']
   },
   jobUrl: {
     type: String,

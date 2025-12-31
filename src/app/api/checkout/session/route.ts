@@ -16,10 +16,10 @@ async function getCountryPricingForPlan(
   countryCode: string,
   planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly',
   billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time'
-): Promise<{ 
-  price: number; 
-  currency: string; 
-  currencySymbol: string; 
+): Promise<{
+  price: number;
+  currency: string;
+  currencySymbol: string;
   planId: string;
   stripePriceIds?: { dayPass?: string; monthly?: string; quarterly?: string; yearly?: string };
   razorpayPlanIds?: { dayPass?: string; monthly?: string; quarterly?: string; yearly?: string };
@@ -40,7 +40,7 @@ async function getCountryPricingForPlan(
     // Get full CountryPricing data (not just the plan-specific pricing)
     const { getCountryPricing } = await import('@/lib/services/countryPricingService');
     let countryPricing = await getCountryPricing(countryCode);
-    
+
     // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
     // This ensures Stripe works for all eligible countries
     if (!countryPricing && countryCode !== 'IN') {
@@ -51,7 +51,7 @@ async function getCountryPricingForPlan(
       });
       countryPricing = await getCountryPricing('GB');
     }
-    
+
     // For India, if pricing not found, return null (should use Razorpay with INR)
     if (!countryPricing) {
       if (countryCode === 'IN') {
@@ -68,7 +68,7 @@ async function getCountryPricingForPlan(
         fallbackTo: 'US'
       });
       countryPricing = await getCountryPricing('US');
-      
+
       if (!countryPricing) {
         console.error('No country pricing found (including GB and US fallbacks):', {
           countryCode,
@@ -93,7 +93,7 @@ async function getCountryPricingForPlan(
     }
 
     const planPrice = countryPricing.planPrices[planPricesKey];
-    
+
     const result = {
       price: planPrice.price,
       currency: countryPricing.currency,
@@ -102,14 +102,14 @@ async function getCountryPricingForPlan(
       stripePriceIds: countryPricing.stripePriceIds,
       razorpayPlanIds: countryPricing.razorpayPlanIds
     };
-    
+
     console.log('Found country pricing:', {
       countryCode,
       planKey: finalPlanKey,
       price: result.price,
       currency: result.currency
     });
-    
+
     return result;
   } catch (error) {
     console.error('Error getting country pricing for plan:', error);
@@ -217,32 +217,32 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     console.log('Checkout session request body:', JSON.stringify(body, null, 2));
-    
-    const { 
-      planKey, 
-      interval, 
-      billingDetails, 
-      discountCode, 
+
+    const {
+      planKey,
+      interval,
+      billingDetails,
+      discountCode,
       couponCode,
       provider,
       returnUrl,
       triggerContext
     } = body;
-    
+
     // Validate required fields
     if (!planKey) {
       return NextResponse.json({ error: 'Plan key is required' }, { status: 400 });
     }
-    
+
     // Handle coupon/discount code - check both Coupon and DiscountCode collections
     let couponDiscount = null;
     if (couponCode || discountCode) {
       const code = (couponCode || discountCode).toUpperCase();
       console.log('Looking up coupon code:', code);
-      
+
       // First, try to find in Coupon collection
       let coupon = await Coupon.findOne({ code });
-      
+
       if (coupon) {
         console.log('Coupon found in Coupon collection:', {
           code: coupon.code,
@@ -250,23 +250,23 @@ export async function POST(request: NextRequest) {
           discountValue: coupon.discountValue,
           isActive: coupon.isActive
         });
-        
+
         const validation = coupon.isValid();
         console.log('Coupon validation result:', validation);
-        
+
         if (validation.valid) {
           // Check if coupon applies to this plan
-          const isApplicable = 
+          const isApplicable =
             (!coupon.applicablePlanKeys || coupon.applicablePlanKeys.length === 0 || coupon.applicablePlanKeys.includes(planKey)) &&
             (!coupon.applicablePlans || coupon.applicablePlans.length === 0 || coupon.applicablePlans.includes(planKey));
-          
+
           console.log('Coupon applicability check:', {
             applicablePlanKeys: coupon.applicablePlanKeys,
             applicablePlans: coupon.applicablePlans,
             planKey,
             isApplicable
           });
-          
+
           if (isApplicable) {
             couponDiscount = {
               code: coupon.code,
@@ -292,11 +292,11 @@ export async function POST(request: NextRequest) {
       } else {
         // If not found in Coupon collection, try DiscountCode collection
         console.log('Coupon not found in Coupon collection, checking DiscountCode collection...');
-        const discountCodeDoc = await DiscountCode.findOne({ 
+        const discountCodeDoc = await DiscountCode.findOne({
           code: code,
-          isActive: true 
+          isActive: true
         }).populate('applicablePlans', 'key _id');
-        
+
         if (discountCodeDoc) {
           console.log('Discount code found in DiscountCode collection:', {
             code: discountCodeDoc.code,
@@ -306,11 +306,11 @@ export async function POST(request: NextRequest) {
             validFrom: discountCodeDoc.validFrom,
             validUntil: discountCodeDoc.validUntil
           });
-          
+
           // Validate discount code using the virtual isValid property
           // Note: DiscountCode model has a virtual 'isValid' getter
           const isValid = discountCodeDoc.isValid;
-          
+
           if (!isValid) {
             // Check why it's invalid
             const now = new Date();
@@ -341,14 +341,14 @@ export async function POST(request: NextRequest) {
             // Check if discount code applies to this plan
             const PricingPlan = await getAdminPricingPlan();
             const plan = await PricingPlan.findOne({ key: planKey });
-            
+
             let isApplicable = true;
-            
+
             // If applicablePlans is empty, code works sitewide (all plans)
             // If applicablePlans has entries, code only works for those specific plans
             if (discountCodeDoc.applicablePlans && discountCodeDoc.applicablePlans.length > 0) {
               isApplicable = false; // Default to false, will be true if plan matches
-              
+
               if (plan) {
                 // Special case: LAUNCH100 should only work for pro_monthly
                 if (discountCodeDoc.code === 'LAUNCH100' && planKey !== 'pro_monthly') {
@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
                 } else {
                   // Populate applicablePlans to check both IDs and keys
                   const populatedDiscount = await DiscountCode.findById(discountCodeDoc._id).populate('applicablePlans', 'key _id');
-                  
+
                   if (populatedDiscount && populatedDiscount.applicablePlans) {
                     // Check if code applies to plan ID or plan key
                     isApplicable = populatedDiscount.applicablePlans.some((planRef: any) => {
@@ -387,7 +387,7 @@ export async function POST(request: NextRequest) {
               }
             }
             // If applicablePlans is empty or undefined, code works sitewide (isApplicable remains true)
-            
+
             console.log('Discount code applicability check:', {
               code: discountCodeDoc.code,
               applicablePlans: discountCodeDoc.applicablePlans,
@@ -395,13 +395,13 @@ export async function POST(request: NextRequest) {
               planId: plan?._id.toString(),
               isApplicable
             });
-            
+
             if (isApplicable) {
               // Map DiscountCode fields to couponDiscount format
               // DiscountCode uses 'discountType' (percentage/fixed), Coupon uses 'type'
-              const discountType = discountCodeDoc.discountType === 'percentage' ? 'percentage' : 
-                                   discountCodeDoc.discountType === 'fixed' ? 'fixed' : 'percentage';
-              
+              const discountType = discountCodeDoc.discountType === 'percentage' ? 'percentage' :
+                discountCodeDoc.discountType === 'fixed' ? 'fixed' : 'percentage';
+
               couponDiscount = {
                 code: discountCodeDoc.code,
                 type: discountType, // Map discountType to type
@@ -433,15 +433,15 @@ export async function POST(request: NextRequest) {
 
     // Get the plan from database
     const PricingPlan = await getAdminPricingPlan();
-    
+
     if (!PricingPlan) {
       console.error('PricingPlan model is not available');
       return NextResponse.json({ error: 'Database model not available' }, { status: 500 });
     }
-    
+
     // First, try to find plan with status 'active' (no populate - we'll fetch CountryPricing manually)
     let plan = await PricingPlan.findOne({ key: planKey, status: 'active' }).lean();
-    
+
     if (!plan) {
       // Try without lean() if lean() returns null (some setups don't support it)
       plan = await PricingPlan.findOne({ key: planKey, status: 'active' });
@@ -449,7 +449,7 @@ export async function POST(request: NextRequest) {
         plan = plan.toObject();
       }
     }
-    
+
     // If still not found, try without status filter (plan might exist but status not set)
     if (!plan) {
       console.log(`Plan with key "${planKey}" and status "active" not found, trying without status filter...`);
@@ -460,26 +460,26 @@ export async function POST(request: NextRequest) {
           plan = plan.toObject();
         }
       }
-      
+
       if (plan) {
         console.log(`Found plan "${planKey}" but with status: "${plan.status || 'undefined'}"`);
         // If plan exists but is inactive, still allow it (or you can return error)
         // For now, we'll allow inactive plans to proceed
       }
     }
-    
+
     if (!plan) {
       // Log all available plans for debugging
       const allPlans = await PricingPlan.find({}).select('key status name').lean();
-      console.error(`Plan "${planKey}" not found. Available plans:`, 
+      console.error(`Plan "${planKey}" not found. Available plans:`,
         allPlans.map((p: any) => ({ key: p.key, status: p.status, name: p.name }))
       );
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Plan not found',
         details: `Plan with key "${planKey}" does not exist in the database. Available plans: ${allPlans.map((p: any) => p.key).join(', ')}`
       }, { status: 404 });
     }
-    
+
     // Debug: Log plan structure with CountryPricing reference
     const defaultCountryPricingId = (plan as any).defaultCountryPricingId;
     console.log('Plan fetched from database:', {
@@ -500,15 +500,15 @@ export async function POST(request: NextRequest) {
     // Detect user region from IP or use provided region (robust with fallbacks)
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || undefined;
     const regionInfo = await detectUserRegion(ip);
-    
+
     // Get country pricing for user's region (primary source for currency and pricing)
     // This ensures currency and pricing are properly initialized from region
     let userCountryPricing = await getCountryPricingForPlan(
-      regionInfo.countryCode, 
-      planKey as any, 
+      regionInfo.countryCode,
+      planKey as any,
       interval as any
     );
-    
+
     // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
     if (!userCountryPricing && regionInfo.countryCode !== 'IN') {
       console.log('No pricing found for non-India country, falling back to GB for Stripe:', {
@@ -519,14 +519,14 @@ export async function POST(request: NextRequest) {
       });
       userCountryPricing = await getCountryPricingForPlan('GB', planKey as any, interval as any);
     }
-    
+
     // Determine currency from region-based CountryPricing
     // Priority: 1. User's country pricing, 2. Region info, 3. Default (GBP)
     // For non-India countries, ensure currency is not INR
-    let detectedCurrency = userCountryPricing?.currency?.toUpperCase() 
-      || regionInfo?.currency?.toUpperCase() 
+    let detectedCurrency = userCountryPricing?.currency?.toUpperCase()
+      || regionInfo?.currency?.toUpperCase()
       || 'GBP';
-    
+
     // Ensure non-India countries don't use INR currency
     if (detectedCurrency === 'INR' && regionInfo.countryCode !== 'IN') {
       console.warn('Non-India country detected with INR currency, using region currency instead:', {
@@ -536,7 +536,7 @@ export async function POST(request: NextRequest) {
       });
       detectedCurrency = regionInfo?.currency?.toUpperCase() || 'GBP';
     }
-    
+
     console.log('Region and currency detection:', {
       countryCode: regionInfo.countryCode,
       countryName: regionInfo.countryName,
@@ -544,11 +544,11 @@ export async function POST(request: NextRequest) {
       hasCountryPricing: !!userCountryPricing,
       regionPaymentPartner: regionInfo.paymentPartner
     });
-    
+
     // ENFORCE: Razorpay = INR only (India), Stripe = all other currencies (all other countries)
     // Determine payment provider based on country code and currency
     let paymentProvider = provider;
-    
+
     if (!paymentProvider) {
       // Auto-select provider based on country code first, then currency
       // India (IN) = Razorpay, all other countries = Stripe
@@ -581,7 +581,7 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
+
     // VALIDATION: Enforce Razorpay = INR only
     if (paymentProvider === 'razorpay') {
       // Razorpay ONLY supports INR - reject any other currency
@@ -592,10 +592,10 @@ export async function POST(request: NextRequest) {
           countryCode: regionInfo.countryCode,
           fallingBackTo: 'stripe'
         });
-        
+
         // Force switch to Stripe for non-INR currencies
         if (!stripe) {
-          return NextResponse.json({ 
+          return NextResponse.json({
             error: 'Razorpay only supports INR currency. Stripe is required for other currencies but is not configured.',
             unsupportedCurrency: true,
             detectedCurrency,
@@ -605,7 +605,7 @@ export async function POST(request: NextRequest) {
         }
         paymentProvider = 'stripe';
       }
-      
+
       // Additional validation: Ensure we have INR pricing
       if (!userCountryPricing || userCountryPricing.currency !== 'INR') {
         // Try to get India pricing explicitly
@@ -613,7 +613,7 @@ export async function POST(request: NextRequest) {
         if (!indiaPricing || indiaPricing.currency !== 'INR') {
           console.warn('No INR pricing found for Razorpay, switching to Stripe');
           if (!stripe) {
-            return NextResponse.json({ 
+            return NextResponse.json({
               error: 'INR pricing not available. Stripe is required but not configured.',
               requiresStripe: true,
               requiresConfiguration: true
@@ -623,17 +623,17 @@ export async function POST(request: NextRequest) {
         }
       }
     }
-    
+
     // VALIDATION: Ensure Stripe is available for non-INR currencies
     if (paymentProvider === 'stripe' && !stripe) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Stripe is not configured. Please add STRIPE_SECRET_KEY to your .env.local file.',
         requiresConfiguration: true,
         provider: 'stripe',
         detectedCurrency
       }, { status: 500 });
     }
-    
+
     console.log('Final provider selection:', {
       provider: paymentProvider,
       currency: detectedCurrency,
@@ -644,8 +644,8 @@ export async function POST(request: NextRequest) {
     // Handle different plan types
     if (planKey === 'free') {
       // Free plan - no payment needed
-      return NextResponse.json({ 
-        success: true, 
+      return NextResponse.json({
+        success: true,
         message: 'Free plan activated',
         planKey: 'free'
       });
@@ -667,7 +667,7 @@ export async function POST(request: NextRequest) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('Error details:', { errorMessage, errorStack });
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Internal server error',
       details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
     }, { status: 500 });
@@ -677,21 +677,21 @@ export async function POST(request: NextRequest) {
 // Handle CORS preflight requests
 export async function OPTIONS(request: NextRequest) {
   const origin = request.headers.get('origin');
-  
+
   // Allow requests from same origin and configured origins
-  const allowedOrigins = process.env.NODE_ENV === 'production' 
+  const allowedOrigins = process.env.NODE_ENV === 'production'
     ? [
-        'https://cvcircle.io',
-        'https://www.cvcircle.io',
-        'https://app.cvcircle.io',
-      ]
+      'https://cvcircle.io',
+      'https://www.cvcircle.io',
+      'https://app.cvcircle.io',
+    ]
     : [
-        'http://localhost:3000',
-        'http://127.0.0.1:3000',
-      ];
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+    ];
 
   const response = new NextResponse(null, { status: 200 });
-  
+
   // Set CORS headers
   if (origin && (allowedOrigins.includes(origin) || origin.startsWith('chrome-extension://'))) {
     response.headers.set('Access-Control-Allow-Origin', origin);
@@ -700,18 +700,18 @@ export async function OPTIONS(request: NextRequest) {
     // In development, allow all origins for easier testing
     response.headers.set('Access-Control-Allow-Origin', origin || '*');
   }
-  
+
   response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
   response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
   response.headers.set('Access-Control-Max-Age', '86400');
-  
+
   return response;
 }
 
 async function handleDayPassPayment(
-  plan: any, 
-  user: any, 
-  billingDetails: any, 
+  plan: any,
+  user: any,
+  billingDetails: any,
   provider: string,
   regionInfo: any,
   couponDiscount?: any
@@ -722,7 +722,7 @@ async function handleDayPassPayment(
   if (provider === 'razorpay') {
     // Razorpay ONLY supports INR - get India pricing explicitly
     countryPricing = await getCountryPricingForPlan('IN', 'day_pass', 'one-time');
-    
+
     // Validate INR currency
     if (!countryPricing || countryPricing.currency !== 'INR') {
       console.error('Razorpay requires INR pricing but not found:', {
@@ -736,11 +736,11 @@ async function handleDayPassPayment(
     // For non-India countries, ensure we get Stripe-compatible pricing
     const countryCode = regionInfo?.countryCode || 'GB';
     countryPricing = await getCountryPricingForPlan(
-      countryCode, 
-      'day_pass', 
+      countryCode,
+      'day_pass',
       'one-time'
     );
-    
+
     // If no pricing found for non-India country, fallback to GB (Stripe-compatible)
     if (!countryPricing && countryCode !== 'IN') {
       console.log('No pricing found for country, falling back to GB for Stripe:', {
@@ -750,11 +750,11 @@ async function handleDayPassPayment(
       countryPricing = await getCountryPricingForPlan('GB', 'day_pass', 'one-time');
     }
   }
-  
+
   // All prices MUST come from CountryPricing - no legacy fallbacks
   let amount: number;
   let currency: string;
-  
+
   if (countryPricing) {
     amount = countryPricing.price * 100; // Convert to cents/paisa
     // ENFORCE: Razorpay = INR only, Stripe = actual currency from CountryPricing
@@ -833,7 +833,7 @@ async function handleDayPassPayment(
       }
     }
   }
-  
+
   // Log for debugging
   console.log('Day pass pricing:', {
     amount,
@@ -841,7 +841,7 @@ async function handleDayPassPayment(
     countryPricingFound: !!countryPricing,
     regionCode: regionInfo?.countryCode
   });
-  
+
   // Apply coupon discount BEFORE creating order
   const originalDayPassAmount = amount;
   if (couponDiscount) {
@@ -852,7 +852,7 @@ async function handleDayPassPayment(
       originalAmount: amount,
       originalAmountInINR: (amount / 100).toFixed(2)
     });
-    
+
     if (couponDiscount.type === 'percentage') {
       amount = Math.round(amount * (1 - couponDiscount.value / 100));
       console.log('Percentage discount applied (Day Pass):', {
@@ -906,32 +906,32 @@ async function handleDayPassPayment(
 
     // Validate Stripe configuration before creating payment
     const secretKey = process.env.STRIPE_SECRET_KEY;
-    
+
     if (!secretKey) {
       console.error('❌ Stripe Payment Creation Failed (Day Pass): STRIPE_SECRET_KEY is missing');
       console.error('   → This is the MOST COMMON issue on Vercel deployments');
       console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
       console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
       console.error('   → Redeploy after adding environment variables');
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Stripe is currently unavailable. Please contact support.',
         details: 'Server configuration error'
       }, { status: 500 });
     }
-    
+
     const stripe = getStripe();
     if (!stripe) {
       console.error('❌ Stripe instance initialization failed (Day Pass)');
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Stripe is currently unavailable. Please contact support.',
         details: 'Server configuration error'
       }, { status: 500 });
     }
-    
+
     try {
       // Use Stripe price ID from plan or country pricing
       const stripePriceId = countryPricing?.stripePriceIds?.dayPass || plan.stripePriceId_one_time;
-      
+
       if (stripePriceId) {
         // Use existing Stripe price
         let session;
@@ -961,7 +961,7 @@ async function handleDayPassPayment(
           });
         } catch (sessionError: any) {
           console.error('❌ Stripe checkout session creation failed (Day Pass):', sessionError);
-          
+
           // Extract detailed error information
           if (sessionError?.type) {
             console.error('Stripe API Error Details:', {
@@ -971,16 +971,16 @@ async function handleDayPassPayment(
               param: sessionError.param,
               decline_code: sessionError.decline_code,
             });
-            
+
             // Check for common errors
-            if (sessionError.message?.toLowerCase().includes('api key') || 
-                sessionError.message?.toLowerCase().includes('authentication')) {
+            if (sessionError.message?.toLowerCase().includes('api key') ||
+              sessionError.message?.toLowerCase().includes('authentication')) {
               console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
               console.error('   → Verify the secret key in Vercel Environment Variables');
               console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
             }
           }
-          
+
           throw sessionError; // Re-throw to be caught by outer catch block
         }
       }
@@ -989,22 +989,22 @@ async function handleDayPassPayment(
       let paymentIntent;
       try {
         paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount),
-        currency: currency.toLowerCase(),
-        metadata: {
-          planKey: plan.key,
-          userId: user._id.toString(),
-          planId: plan._id.toString(),
-          type: 'day_pass',
-          region: regionInfo.countryCode
-        },
-        customer: user.subscription?.providerCustomerId || undefined,
-        description: `Day Pass - ${plan.name}`,
-        receipt_email: billingDetails.email || user.email
+          amount: Math.round(amount),
+          currency: currency.toLowerCase(),
+          metadata: {
+            planKey: plan.key,
+            userId: user._id.toString(),
+            planId: plan._id.toString(),
+            type: 'day_pass',
+            region: regionInfo.countryCode
+          },
+          customer: user.subscription?.providerCustomerId || undefined,
+          description: `Day Pass - ${plan.name}`,
+          receipt_email: billingDetails.email || user.email
         });
       } catch (paymentIntentError: any) {
         console.error('❌ Stripe payment intent creation failed (Day Pass):', paymentIntentError);
-        
+
         // Extract detailed error information
         if (paymentIntentError?.type) {
           console.error('Stripe API Error Details:', {
@@ -1014,16 +1014,16 @@ async function handleDayPassPayment(
             param: paymentIntentError.param,
             decline_code: paymentIntentError.decline_code,
           });
-          
+
           // Check for common errors
-          if (paymentIntentError.message?.toLowerCase().includes('api key') || 
-              paymentIntentError.message?.toLowerCase().includes('authentication')) {
+          if (paymentIntentError.message?.toLowerCase().includes('api key') ||
+            paymentIntentError.message?.toLowerCase().includes('authentication')) {
             console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
             console.error('   → Verify the secret key in Vercel Environment Variables');
             console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
           }
         }
-        
+
         throw paymentIntentError; // Re-throw to be caught by outer catch block
       }
 
@@ -1035,22 +1035,22 @@ async function handleDayPassPayment(
 
     } catch (error: any) {
       console.error('Stripe PaymentIntent error:', error);
-      
+
       // Extract detailed error information from Stripe API
       let errorMessage = 'Payment setup failed';
       let errorCode = null;
       let errorType = null;
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       // Stripe errors have a specific structure
       if (error?.type) {
         errorType = error.type;
         errorCode = error.code;
         errorMessage = error.message || errorMessage;
-        
+
         console.error('Stripe API error:', {
           type: errorType,
           code: errorCode,
@@ -1059,8 +1059,8 @@ async function handleDayPassPayment(
           decline_code: error.decline_code
         });
       }
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         error: errorMessage,
         code: errorCode || errorType,
         details: process.env.NODE_ENV === 'development' ? {
@@ -1080,7 +1080,7 @@ async function handleDayPassPayment(
     try {
       // Use country-specific Razorpay plan ID if available, otherwise create order
       const razorpayPlanId = countryPricing?.razorpayPlanIds?.dayPass;
-      
+
       if (razorpayPlanId) {
         // Create Razorpay subscription for one-time payment (total_count: 1)
         const subscription = await razorpayInstance.subscriptions.create({
@@ -1099,13 +1099,13 @@ async function handleDayPassPayment(
         // Get subscription invoice amount for Day Pass
         let subscriptionAmount = 0;
         let subscriptionCurrency = 'INR';
-        
+
         try {
           const invoices = await razorpayInstance.invoices.all({
             subscription_id: subscription.id,
             count: 1
           });
-          
+
           if (invoices.items && invoices.items.length > 0) {
             const invoice = invoices.items[0];
             subscriptionAmount = invoice.amount || 0;
@@ -1136,7 +1136,7 @@ async function handleDayPassPayment(
       // Razorpay expects uppercase 'INR' (not lowercase 'inr')
       const normalizedCurrency = currency.toUpperCase().trim();
       const finalAmount = Math.round(amount);
-      
+
       // Validate currency is exactly 'INR' (Razorpay ONLY supports INR)
       if (normalizedCurrency !== 'INR') {
         console.error('Razorpay currency validation failed (day pass):', {
@@ -1144,30 +1144,30 @@ async function handleDayPassPayment(
           normalized: normalizedCurrency,
           expected: 'INR'
         });
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: `Razorpay only supports INR currency. Got: ${currency}. Please use Stripe for other currencies.`,
           unsupportedCurrency: true,
           providedCurrency: currency,
           suggestedProvider: 'stripe'
         }, { status: 400 });
       }
-      
+
       // Razorpay minimum amount validation
       if (normalizedCurrency === 'INR' && finalAmount < 100) {
         console.error('Amount too small for Razorpay:', finalAmount);
         return NextResponse.json({ error: 'Amount must be at least ₹1.00' }, { status: 400 });
       }
-      
+
       // Generate receipt (max 40 characters per Razorpay requirement)
       const shortUserId = user._id.toString().substring(0, 10);
       const timestamp = Date.now().toString().slice(-8);
       const receipt = `dp_${shortUserId}_${timestamp}`.substring(0, 40);
-      
+
       // Ensure currency is exactly 'INR' - Razorpay is strict about this
       const finalCurrency = 'INR'; // Always use 'INR' for Razorpay
-      
-      console.log('Creating Razorpay order (day pass):', { 
-        amount: finalAmount, 
+
+      console.log('Creating Razorpay order (day pass):', {
+        amount: finalAmount,
         amountInINR: (finalAmount / 100).toFixed(2),
         originalAmount: originalDayPassAmount,
         originalAmountInINR: (originalDayPassAmount / 100).toFixed(2),
@@ -1182,7 +1182,7 @@ async function handleDayPassPayment(
         currencyType: typeof finalCurrency,
         currencyLength: finalCurrency.length
       });
-      
+
       // Razorpay API requires exactly 'INR' (uppercase, 3 characters)
       const orderParams = {
         amount: finalAmount, // This should be the discounted amount
@@ -1196,7 +1196,7 @@ async function handleDayPassPayment(
           region: regionInfo.countryCode
         }
       };
-      
+
       console.log('Razorpay order params (day pass - FINAL - before creating order):', {
         amount: orderParams.amount,
         amountInINR: (orderParams.amount / 100).toFixed(2),
@@ -1209,46 +1209,46 @@ async function handleDayPassPayment(
         couponCode: couponDiscount?.code || null
       });
       console.log('Full order params JSON (day pass):', JSON.stringify(orderParams, null, 2));
-      
+
       // Validate Razorpay configuration before creating order
       const keyId = process.env.RAZORPAY_KEY_ID;
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
-      
+
       if (!keySecret) {
         console.error('❌ Razorpay Order Creation Failed (Day Pass): RAZORPAY_KEY_SECRET is missing');
         console.error('   → This is the MOST COMMON issue on Vercel deployments');
         console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
         console.error('   → Ensure RAZORPAY_KEY_SECRET is set (without NEXT_PUBLIC_ prefix)');
         console.error('   → Redeploy after adding environment variables');
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Razorpay is currently unavailable. Please contact support.',
           details: 'Server configuration error'
         }, { status: 500 });
       }
-      
+
       if (!keyId) {
         console.error('❌ Razorpay Order Creation Failed (Day Pass): RAZORPAY_KEY_ID is missing');
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Razorpay is currently unavailable. Please contact support.',
           details: 'Server configuration error'
         }, { status: 500 });
       }
-      
+
       const razorpayInstance = getRazorpay();
       if (!razorpayInstance) {
         console.error('❌ Razorpay instance initialization failed (Day Pass)');
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Razorpay is currently unavailable. Please contact support.',
           details: 'Server configuration error'
         }, { status: 500 });
       }
-      
+
       let order;
       try {
         order = await razorpayInstance.orders.create(orderParams);
       } catch (orderError: any) {
         console.error('❌ Razorpay order creation failed (Day Pass):', orderError);
-        
+
         // Extract detailed error information
         if (orderError?.error) {
           const razorpayError = orderError.error;
@@ -1260,19 +1260,19 @@ async function handleDayPassPayment(
             step: razorpayError.step,
             reason: razorpayError.reason,
           });
-          
+
           // Check for common errors
-          if (razorpayError.description?.toLowerCase().includes('key') || 
-              razorpayError.description?.toLowerCase().includes('secret')) {
+          if (razorpayError.description?.toLowerCase().includes('key') ||
+            razorpayError.description?.toLowerCase().includes('secret')) {
             console.error('⚠️  This error suggests RAZORPAY_KEY_SECRET may be incorrect or missing');
             console.error('   → Verify the secret key in Vercel Environment Variables');
             console.error('   → Ensure it matches your Razorpay Dashboard (Test vs Live mode)');
           }
         }
-        
+
         throw orderError; // Re-throw to be caught by outer catch block
       }
-      
+
       // Verify the order was created with the correct amount
       console.log('Razorpay order created (day pass) - verification:', {
         orderId: order.id,
@@ -1299,7 +1299,7 @@ async function handleDayPassPayment(
     } catch (error: any) {
       console.error('Razorpay Order error (day pass):', error);
       console.error('Full error object:', JSON.stringify(error, null, 2));
-      
+
       // Extract detailed error information from Razorpay API
       let errorMessage = 'Payment setup failed';
       let errorCode = null;
@@ -1308,11 +1308,11 @@ async function handleDayPassPayment(
       let errorSource = null;
       let errorStep = null;
       let errorReason = null;
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       // Razorpay SDK errors often have additional properties
       if (error?.error) {
         const razorpayError = error.error;
@@ -1322,7 +1322,7 @@ async function handleDayPassPayment(
         errorSource = razorpayError.source;
         errorStep = razorpayError.step;
         errorReason = razorpayError.reason;
-        
+
         console.error('Razorpay API error (day pass):', {
           code: errorCode,
           description: errorDescription,
@@ -1332,18 +1332,18 @@ async function handleDayPassPayment(
           reason: errorReason,
           fullError: razorpayError
         });
-        
+
         // Use Razorpay's error description if available
         errorMessage = errorDescription || errorMessage;
-        
+
         // Check if it's a currency error
         if (errorField === 'currency' || errorDescription?.toLowerCase().includes('currency')) {
           console.error('Currency error detected. Check Razorpay account configuration for INR support.');
           errorMessage = `Currency error: ${errorDescription || 'INR currency may not be enabled in your Razorpay account. Please check your Razorpay dashboard settings.'}`;
         }
       }
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         error: errorMessage,
         code: errorCode,
         details: process.env.NODE_ENV === 'development' ? {
@@ -1363,10 +1363,10 @@ async function handleDayPassPayment(
 // Note: extractNumericPrice function removed - prices are now numeric from database
 
 async function handleProPlanPayment(
-  plan: any, 
-  user: any, 
-  interval: string, 
-  billingDetails: any, 
+  plan: any,
+  user: any,
+  interval: string,
+  billingDetails: any,
   provider: string,
   returnUrl?: string,
   regionInfo?: any,
@@ -1379,12 +1379,12 @@ async function handleProPlanPayment(
     'yearly': 'pro_yearly'
   };
   const planKey = intervalToPlanKey[interval] || 'pro_monthly';
-  
+
   // Get country pricing from CountryPricing collection
   // For Stripe (non-India), ensure we get pricing or fallback to GB
   const countryCode = regionInfo?.countryCode || 'GB';
   let countryPricing = await getCountryPricingForPlan(countryCode, planKey, interval as any);
-  
+
   // If no pricing found for non-India country, fallback to GB (Stripe-compatible)
   if (!countryPricing && countryCode !== 'IN' && provider === 'stripe') {
     console.log('No pricing found for country, falling back to GB for Stripe:', {
@@ -1395,14 +1395,14 @@ async function handleProPlanPayment(
     });
     countryPricing = await getCountryPricingForPlan('GB', planKey, interval as any);
   }
-  
+
   // Determine the correct price based on interval - use CountryPricing collection
   let priceId: string | undefined;
   // Initialize with defaults - will be set from CountryPricing or plan fallback
   let amount: number = 0;
   let currency: string = 'USD';
   let paymentMode: 'payment' | 'subscription' = 'subscription'; // Default to subscription
-  
+
   // All pro plans (monthly, quarterly, yearly) are recurring subscriptions
   // Day Pass is one-time payment (handled separately)
   // Monthly = recurring monthly subscription
@@ -1497,7 +1497,7 @@ async function handleProPlanPayment(
         }
       }
     }
-    
+
     // Log for debugging
     console.log('Stripe pricing:', {
       interval,
@@ -1506,7 +1506,7 @@ async function handleProPlanPayment(
       countryPricingFound: !!countryPricing,
       regionCode: regionInfo?.countryCode
     });
-    
+
     // Apply coupon discount
     if (couponDiscount) {
       if (couponDiscount.type === 'percentage') {
@@ -1518,28 +1518,28 @@ async function handleProPlanPayment(
 
     // Validate Stripe configuration before creating payment
     const secretKey = process.env.STRIPE_SECRET_KEY;
-    
+
     if (!secretKey) {
       console.error('❌ Stripe Payment Creation Failed (Pro Plan): STRIPE_SECRET_KEY is missing');
       console.error('   → This is the MOST COMMON issue on Vercel deployments');
       console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
       console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
       console.error('   → Redeploy after adding environment variables');
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Stripe is currently unavailable. Please contact support.',
         details: 'Server configuration error'
       }, { status: 500 });
     }
-    
+
     const stripe = getStripe();
     if (!stripe) {
       console.error('❌ Stripe instance initialization failed (Pro Plan)');
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Stripe is currently unavailable. Please contact support.',
         details: 'Server configuration error'
       }, { status: 500 });
     }
-    
+
     try {
       // Create or get Stripe customer
       let customerId = user.subscription?.providerCustomerId;
@@ -1547,15 +1547,15 @@ async function handleProPlanPayment(
         let customer;
         try {
           customer = await stripe.customers.create({
-          email: user.email,
-          name: billingDetails.name || `${user.firstName} ${user.lastName}`,
-          metadata: {
-            userId: user._id.toString()
-          }
+            email: user.email,
+            name: billingDetails.name || `${user.firstName} ${user.lastName}`,
+            metadata: {
+              userId: user._id.toString()
+            }
           });
         } catch (customerError: any) {
           console.error('❌ Stripe customer creation failed (Pro Plan):', customerError);
-          
+
           // Extract detailed error information
           if (customerError?.type) {
             console.error('Stripe API Error Details:', {
@@ -1564,20 +1564,20 @@ async function handleProPlanPayment(
               message: customerError.message,
               param: customerError.param,
             });
-            
+
             // Check for common errors
-            if (customerError.message?.toLowerCase().includes('api key') || 
-                customerError.message?.toLowerCase().includes('authentication')) {
+            if (customerError.message?.toLowerCase().includes('api key') ||
+              customerError.message?.toLowerCase().includes('authentication')) {
               console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
               console.error('   → Verify the secret key in Vercel Environment Variables');
               console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
             }
           }
-          
+
           throw customerError; // Re-throw to be caught by outer catch block
         }
         customerId = customer.id;
-        
+
         // Update user with customer ID
         await User.findByIdAndUpdate(user._id, {
           'subscription.providerCustomerId': customerId
@@ -1603,6 +1603,37 @@ async function handleProPlanPayment(
         }
       };
 
+      // Function to generate dynamic price config
+      const getDynamicPriceItem = () => {
+        const recurringConfig: any = {};
+
+        if (interval === 'monthly') {
+          recurringConfig.interval = 'month';
+        } else if (interval === 'quarterly') {
+          recurringConfig.interval = 'month';
+          recurringConfig.interval_count = 3; // Every 3 months
+        } else if (interval === 'yearly') {
+          recurringConfig.interval = 'year';
+        }
+
+        return {
+          price_data: {
+            currency: currency.toLowerCase(),
+            product_data: {
+              name: `${plan.name} - ${interval === 'monthly' ? 'Monthly' : interval === 'quarterly' ? 'Quarterly' : 'Yearly'}`,
+              description: interval === 'monthly'
+                ? 'Monthly subscription plan - automatically charged every month'
+                : interval === 'quarterly'
+                  ? 'Quarterly subscription plan - automatically charged every 3 months'
+                  : 'Yearly subscription plan - automatically charged every year'
+            },
+            recurring: recurringConfig,
+            unit_amount: Math.round(amount), // Ensure integer
+          },
+          quantity: 1,
+        };
+      };
+
       // Use priceId if available (preferred method for subscriptions and better management)
       // Otherwise fallback to price_data for dynamic price creation
       if (priceId) {
@@ -1615,36 +1646,7 @@ async function handleProPlanPayment(
         ];
       } else {
         // Fallback: Create price dynamically if price ID not available
-        // All pro plans are recurring subscriptions
-        const recurringConfig: any = {};
-        
-        if (interval === 'monthly') {
-          recurringConfig.interval = 'month';
-        } else if (interval === 'quarterly') {
-          recurringConfig.interval = 'month';
-          recurringConfig.interval_count = 3; // Every 3 months
-        } else if (interval === 'yearly') {
-          recurringConfig.interval = 'year';
-        }
-        
-        sessionConfig.line_items = [
-          {
-            price_data: {
-              currency: currency.toLowerCase(),
-              product_data: {
-                name: `${plan.name} - ${interval === 'monthly' ? 'Monthly' : interval === 'quarterly' ? 'Quarterly' : 'Yearly'}`,
-                description: interval === 'monthly' 
-                  ? 'Monthly subscription plan - automatically charged every month'
-                  : interval === 'quarterly'
-                  ? 'Quarterly subscription plan - automatically charged every 3 months'
-                  : 'Yearly subscription plan - automatically charged every year'
-              },
-              recurring: recurringConfig,
-              unit_amount: amount, // Already in cents
-            },
-            quantity: 1,
-          },
-        ];
+        sessionConfig.line_items = [getDynamicPriceItem()];
       }
 
       // For subscriptions (monthly), add subscription_data
@@ -1665,26 +1667,51 @@ async function handleProPlanPayment(
         session = await stripe.checkout.sessions.create(sessionConfig);
       } catch (sessionError: any) {
         console.error('❌ Stripe checkout session creation failed (Pro Plan):', sessionError);
-        
-        // Extract detailed error information
-        if (sessionError?.type) {
-          console.error('Stripe API Error Details:', {
-            type: sessionError.type,
-            code: sessionError.code,
-            message: sessionError.message,
-            param: sessionError.param,
-          });
-          
-          // Check for common errors
-          if (sessionError.message?.toLowerCase().includes('api key') || 
-              sessionError.message?.toLowerCase().includes('authentication')) {
-            console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
-            console.error('   → Verify the secret key in Vercel Environment Variables');
-            console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+
+        // Check if error is due to missing price ID (resource_missing or specific message)
+        const isMissingResource =
+          sessionError?.code === 'resource_missing' ||
+          (sessionError?.message && sessionError.message.includes('No such price'));
+
+        // If we failed with a priceId, retry with dynamic pricing
+        if (isMissingResource && priceId) {
+          console.log('⚠️  Falling back to dynamic pricing due to missing Price ID:', priceId);
+
+          try {
+            // Update config to use dynamic pricing config
+            sessionConfig.line_items = [getDynamicPriceItem()];
+
+            // Retry session creation
+            session = await stripe.checkout.sessions.create(sessionConfig);
+
+            console.log('✅ Fallback to dynamic pricing successful');
+          } catch (retryError: any) {
+            console.error('❌ Fallback to dynamic pricing also failed:', retryError);
+            throw retryError; // Throw the retry error if that also fails
           }
+        } else {
+          // Re-throw original error if it's not a missing resource or we weren't using a priceId
+
+          // Extract detailed error information
+          if (sessionError?.type) {
+            console.error('Stripe API Error Details:', {
+              type: sessionError.type,
+              code: sessionError.code,
+              message: sessionError.message,
+              param: sessionError.param,
+            });
+
+            // Check for common errors
+            if (sessionError.message?.toLowerCase().includes('api key') ||
+              sessionError.message?.toLowerCase().includes('authentication')) {
+              console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+              console.error('   → Verify the secret key in Vercel Environment Variables');
+              console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
+            }
+          }
+
+          throw sessionError;
         }
-        
-        throw sessionError; // Re-throw to be caught by outer catch block
       }
 
       return NextResponse.json({
@@ -1694,22 +1721,22 @@ async function handleProPlanPayment(
 
     } catch (error: any) {
       console.error('Stripe Checkout Session error:', error);
-      
+
       // Extract detailed error information from Stripe API
       let errorMessage = 'Payment setup failed';
       let errorCode = null;
       let errorType = null;
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
       }
-      
+
       // Stripe errors have a specific structure
       if (error?.type) {
         errorType = error.type;
         errorCode = error.code;
         errorMessage = error.message || errorMessage;
-        
+
         console.error('Stripe API error:', {
           type: errorType,
           code: errorCode,
@@ -1718,8 +1745,8 @@ async function handleProPlanPayment(
           decline_code: error.decline_code
         });
       }
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         error: errorMessage,
         code: errorCode || errorType,
         details: process.env.NODE_ENV === 'development' ? {
@@ -1735,7 +1762,7 @@ async function handleProPlanPayment(
     // ENFORCE: Razorpay = INR only
     // Get India (IN) pricing explicitly - Razorpay ONLY supports INR
     let countryPricingRazorpay = await getCountryPricingForPlan('IN', planKey, interval as any);
-    
+
     // Validate INR currency - Razorpay REQUIRES INR
     if (!countryPricingRazorpay || countryPricingRazorpay.currency !== 'INR') {
       console.error('Razorpay requires INR pricing but not found:', {
@@ -1746,7 +1773,7 @@ async function handleProPlanPayment(
       });
       throw new Error('INR pricing not available for Razorpay. Razorpay only supports INR currency.');
     }
-    
+
     // Log coupon discount info for debugging
     console.log('Razorpay payment - Coupon discount check:', {
       hasCouponDiscount: !!couponDiscount,
@@ -1759,20 +1786,20 @@ async function handleProPlanPayment(
       planKey,
       interval
     });
-    
+
     // Initialize amount and currency - ENFORCE INR
     let razorpayAmount: number;
     let razorpayCurrency: string = 'INR'; // ALWAYS INR for Razorpay
-    
+
     // Razorpay MUST use INR pricing from India CountryPricing
     razorpayAmount = countryPricingRazorpay.price * 100; // Convert to paise
     razorpayCurrency = 'INR'; // Force INR (should already be INR from validation above)
-    
+
     // Double-check currency is INR
     if (countryPricingRazorpay.currency !== 'INR') {
       throw new Error(`Razorpay requires INR but got: ${countryPricingRazorpay.currency}`);
     }
-    
+
     // Log for debugging
     console.log('Razorpay pricing:', {
       interval,
@@ -1781,7 +1808,7 @@ async function handleProPlanPayment(
       countryPricingFound: !!countryPricingRazorpay,
       regionCode: regionInfo?.countryCode
     });
-    
+
     // Validate amount
     if (!razorpayAmount || razorpayAmount <= 0) {
       console.error('Invalid amount for Razorpay - activating plan without payment:', razorpayAmount);
@@ -1795,7 +1822,7 @@ async function handleProPlanPayment(
         priceInMinorUnits: razorpayAmount || 0
       });
     }
-    
+
     // Apply coupon discount BEFORE creating order
     const originalAmount = razorpayAmount;
     if (couponDiscount) {
@@ -1806,7 +1833,7 @@ async function handleProPlanPayment(
         originalAmount: razorpayAmount,
         originalAmountInINR: (razorpayAmount / 100).toFixed(2)
       });
-      
+
       if (couponDiscount.type === 'percentage') {
         razorpayAmount = Math.round(razorpayAmount * (1 - couponDiscount.value / 100));
         console.log('Percentage discount applied:', {
@@ -1850,9 +1877,9 @@ async function handleProPlanPayment(
         'quarterly': 'quarterly',
         'yearly': 'yearly'
       };
-      
+
       const razorpayPlanId = countryPricingRazorpay?.razorpayPlanIds?.[intervalMap[interval]];
-      
+
       if (razorpayPlanId) {
         // Create Razorpay subscription using plan ID
         console.log('Creating Razorpay subscription with plan ID:', {
@@ -1860,7 +1887,7 @@ async function handleProPlanPayment(
           interval: interval,
           planKey: plan.key
         });
-        
+
         // For recurring subscriptions, set total_count to maximum allowed (100)
         // Razorpay requires total_count when end_at is not present, max is 100
         const subscription = await razorpayInstance.subscriptions.create({
@@ -1887,17 +1914,17 @@ async function handleProPlanPayment(
         // Get subscription details to get the first invoice amount
         let subscriptionAmount = 0;
         let subscriptionCurrency = 'INR';
-        
+
         try {
           // Fetch the subscription to get invoice details
           const subscriptionDetails = await razorpayInstance.subscriptions.fetch(subscription.id);
-          
+
           // Get the first invoice for this subscription
           const invoices = await razorpayInstance.invoices.all({
             subscription_id: subscription.id,
             count: 1
           });
-          
+
           if (invoices.items && invoices.items.length > 0) {
             const invoice = invoices.items[0];
             subscriptionAmount = invoice.amount || 0; // Amount in paise
@@ -1932,17 +1959,17 @@ async function handleProPlanPayment(
           }
         });
       }
-      
+
       // Fallback: Create Razorpay Order if plan ID not found
       console.log('Razorpay plan ID not found, falling back to order creation:', {
         interval: interval,
         availablePlanIds: countryPricingRazorpay?.razorpayPlanIds
       });
-      
+
       // ENFORCE: Razorpay = INR only - strict validation
       // Razorpay expects uppercase 'INR' (not lowercase 'inr')
       const normalizedCurrency = razorpayCurrency.toUpperCase().trim();
-      
+
       // Validate currency is exactly 'INR' (Razorpay ONLY supports INR)
       if (normalizedCurrency !== 'INR') {
         console.error('Razorpay currency validation failed:', {
@@ -1950,18 +1977,18 @@ async function handleProPlanPayment(
           normalized: normalizedCurrency,
           expected: 'INR'
         });
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: `Razorpay only supports INR currency. Got: ${razorpayCurrency}. Please use Stripe for other currencies.`,
           unsupportedCurrency: true,
           providedCurrency: razorpayCurrency,
           suggestedProvider: 'stripe'
         }, { status: 400 });
       }
-      
+
       // Ensure amount is a positive integer (Razorpay requires amount in smallest currency unit)
       // IMPORTANT: Use the discounted razorpayAmount (discount was applied above)
       const finalAmount = Math.round(razorpayAmount);
-      
+
       // Final validation: Ensure we're using the discounted amount
       if (couponDiscount && finalAmount === originalAmount) {
         console.error('WARNING: Discount was not applied!', {
@@ -1974,7 +2001,7 @@ async function handleProPlanPayment(
           }
         });
       }
-      
+
       if (isNaN(finalAmount) || finalAmount <= 0) {
         console.error('Invalid amount for Razorpay order - activating plan without payment:', finalAmount);
         return activatePlanWithCoupon({
@@ -1987,24 +2014,24 @@ async function handleProPlanPayment(
           priceInMinorUnits: isNaN(finalAmount) ? 0 : finalAmount
         });
       }
-      
+
       // Razorpay minimum amount validation (minimum 1 INR = 100 paise)
       if (normalizedCurrency === 'INR' && finalAmount < 100) {
         console.error('Amount too small for Razorpay:', finalAmount);
         return NextResponse.json({ error: 'Amount must be at least ₹1.00' }, { status: 400 });
       }
-      
+
       // Generate receipt (max 40 characters per Razorpay requirement)
       // Format: order_<shortUserId>_<timestamp>
       const shortUserId = user._id.toString().substring(0, 10); // Use first 10 chars of user ID
       const timestamp = Date.now().toString().slice(-8); // Use last 8 digits of timestamp
       const receipt = `ord_${shortUserId}_${timestamp}`.substring(0, 40); // Ensure max 40 chars
-      
+
       // Ensure currency is exactly 'INR' - Razorpay is strict about this
       const finalCurrency = 'INR'; // Always use 'INR' for Razorpay
-      
-      console.log('Creating Razorpay order:', { 
-        amount: finalAmount, 
+
+      console.log('Creating Razorpay order:', {
+        amount: finalAmount,
         amountInINR: (finalAmount / 100).toFixed(2),
         originalAmount: originalAmount,
         originalAmountInINR: (originalAmount / 100).toFixed(2),
@@ -2021,7 +2048,7 @@ async function handleProPlanPayment(
         currencyType: typeof finalCurrency,
         currencyLength: finalCurrency.length
       });
-      
+
       // Create Razorpay Order for Checkout
       // Razorpay API requires exactly 'INR' (uppercase, 3 characters)
       const orderParams = {
@@ -2038,7 +2065,7 @@ async function handleProPlanPayment(
           couponId: couponDiscount?.id || ''
         }
       };
-      
+
       console.log('Razorpay order params (FINAL - before creating order):', {
         amount: orderParams.amount,
         amountInINR: (orderParams.amount / 100).toFixed(2),
@@ -2051,46 +2078,46 @@ async function handleProPlanPayment(
         couponCode: couponDiscount?.code || null
       });
       console.log('Full order params JSON:', JSON.stringify(orderParams, null, 2));
-      
+
       // Validate Razorpay configuration before creating order
       const keyId = process.env.RAZORPAY_KEY_ID;
       const keySecret = process.env.RAZORPAY_KEY_SECRET;
-      
+
       if (!keySecret) {
         console.error('❌ Razorpay Order Creation Failed (Pro Plan): RAZORPAY_KEY_SECRET is missing');
         console.error('   → This is the MOST COMMON issue on Vercel deployments');
         console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
         console.error('   → Ensure RAZORPAY_KEY_SECRET is set (without NEXT_PUBLIC_ prefix)');
         console.error('   → Redeploy after adding environment variables');
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Razorpay is currently unavailable. Please contact support.',
           details: 'Server configuration error'
         }, { status: 500 });
       }
-      
+
       if (!keyId) {
         console.error('❌ Razorpay Order Creation Failed (Pro Plan): RAZORPAY_KEY_ID is missing');
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Razorpay is currently unavailable. Please contact support.',
           details: 'Server configuration error'
         }, { status: 500 });
       }
-      
+
       // Reuse razorpayInstance already declared above, but validate it exists
       if (!razorpayInstance) {
         console.error('❌ Razorpay instance initialization failed (Pro Plan)');
-        return NextResponse.json({ 
+        return NextResponse.json({
           error: 'Razorpay is currently unavailable. Please contact support.',
           details: 'Server configuration error'
         }, { status: 500 });
       }
-      
+
       let order;
       try {
         order = await razorpayInstance.orders.create(orderParams);
       } catch (orderError: any) {
         console.error('❌ Razorpay order creation failed (Pro Plan):', orderError);
-        
+
         // Extract detailed error information
         if (orderError?.error) {
           const razorpayError = orderError.error;
@@ -2102,19 +2129,19 @@ async function handleProPlanPayment(
             step: razorpayError.step,
             reason: razorpayError.reason,
           });
-          
+
           // Check for common errors
-          if (razorpayError.description?.toLowerCase().includes('key') || 
-              razorpayError.description?.toLowerCase().includes('secret')) {
+          if (razorpayError.description?.toLowerCase().includes('key') ||
+            razorpayError.description?.toLowerCase().includes('secret')) {
             console.error('⚠️  This error suggests RAZORPAY_KEY_SECRET may be incorrect or missing');
             console.error('   → Verify the secret key in Vercel Environment Variables');
             console.error('   → Ensure it matches your Razorpay Dashboard (Test vs Live mode)');
           }
         }
-        
+
         throw orderError; // Re-throw to be caught by outer catch block
       }
-      
+
       // Verify the order was created with the correct amount
       console.log('Razorpay order created - verification:', {
         orderId: order.id,
@@ -2124,7 +2151,7 @@ async function handleProPlanPayment(
         expectedAmountInINR: (finalAmount / 100).toFixed(2),
         amountsMatch: order.amount === finalAmount
       });
-      
+
       console.log('Razorpay order created successfully:', order.id);
 
       return NextResponse.json({
@@ -2148,7 +2175,7 @@ async function handleProPlanPayment(
     } catch (error: any) {
       console.error('Razorpay Order error:', error);
       console.error('Full error object:', JSON.stringify(error, null, 2));
-      
+
       // Extract detailed error information from Razorpay API
       let errorMessage = 'Payment setup failed';
       let errorCode = null;
@@ -2157,13 +2184,13 @@ async function handleProPlanPayment(
       let errorSource = null;
       let errorStep = null;
       let errorReason = null;
-      
+
       if (error instanceof Error) {
         errorMessage = error.message;
         console.error('Error message:', errorMessage);
         console.error('Error stack:', error.stack);
       }
-      
+
       // Razorpay SDK errors often have additional properties
       if (error?.error) {
         errorCode = error.error.code;
@@ -2172,7 +2199,7 @@ async function handleProPlanPayment(
         errorSource = error.error.source;
         errorStep = error.error.step;
         errorReason = error.error.reason;
-        
+
         console.error('Razorpay API error:', {
           code: errorCode,
           description: errorDescription,
@@ -2182,25 +2209,25 @@ async function handleProPlanPayment(
           reason: errorReason,
           fullError: error.error
         });
-        
+
         // Use Razorpay's error description if available, otherwise use code or message
         errorMessage = errorDescription || errorCode || errorMessage;
-        
+
         // Check if it's a currency error
         if (errorField === 'currency' || errorDescription?.toLowerCase().includes('currency')) {
           console.error('Currency error detected. Check Razorpay account configuration for INR support.');
           errorMessage = `Currency error: ${errorDescription || 'INR currency may not be enabled in your Razorpay account. Please check your Razorpay dashboard settings and ensure your account supports INR transactions.'}`;
         }
       }
-      
+
       // Log full error object for debugging
       try {
         console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       } catch (e) {
         console.error('Could not stringify error object:', e);
       }
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         error: errorMessage,
         code: errorCode,
         details: process.env.NODE_ENV === 'development' ? {

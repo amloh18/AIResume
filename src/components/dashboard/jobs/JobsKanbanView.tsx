@@ -14,6 +14,7 @@ import AppliedStageView from './stages/AppliedStageView';
 import InterviewStageView from './stages/InterviewStageView';
 import OfferStageView from './stages/OfferStageView';
 import RejectedStageView from './stages/RejectedStageView';
+import JobKanbanCard from './JobKanbanCard';
 
 interface JobApplication {
   id: string;
@@ -109,41 +110,41 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 }) => {
   // Draft color (used as default for all stages)
   const draftColor = 'bg-gray-100 dark:bg-gray-500/20 border-gray-300 dark:border-gray-500/30 text-gray-600 dark:text-white';
-  
+
   const allStages = [
-    { 
-      status: 'draft', 
-      title: 'Draft', 
+    {
+      status: 'draft',
+      title: 'Draft',
       color: draftColor,
       hoverColor: draftColor
     },
-    { 
-      status: 'created', 
-      title: 'Created', 
+    {
+      status: 'created',
+      title: 'Created',
       color: draftColor,
       hoverColor: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white'
     },
-    { 
-      status: 'applied', 
-      title: 'Applied', 
+    {
+      status: 'applied',
+      title: 'Applied',
       color: draftColor,
       hoverColor: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white'
     },
-    { 
-      status: 'interview', 
-      title: 'Interview', 
+    {
+      status: 'interview',
+      title: 'Interview',
       color: draftColor,
       hoverColor: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white'
     },
-    { 
-      status: 'offer', 
-      title: 'Offer', 
+    {
+      status: 'offer',
+      title: 'Offer',
       color: draftColor,
       hoverColor: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white'
     },
-    { 
-      status: 'rejected', 
-      title: 'Rejected', 
+    {
+      status: 'rejected',
+      title: 'Rejected',
       color: draftColor,
       hoverColor: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white'
     }
@@ -181,7 +182,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
     const recipientEmail = (job as any).contactDetails?.email || '';
     const subject = encodeURIComponent(`Follow-up: ${job.jobTitle} at ${job.company}`);
     const body = encodeURIComponent(`Dear Hiring Manager,\n\nI wanted to follow up on my application for the ${job.jobTitle} position at ${job.company}.\n\n[Your message here]\n\nBest regards,\n[Your name]`);
-    
+
     if (recipientEmail) {
       window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${body}`;
     } else {
@@ -205,11 +206,11 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
             .filter(stage => stage.status === zoomedStage)
             .map((stage) => {
               const stageJobs = jobsByStatus[stage.status as keyof typeof jobsByStatus];
-              
+
               return (
                 <div key={stage.status} className="space-y-4 py-4">
                   {/* Stage Header */}
-                  <div 
+                  <div
                     className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`}
                     onMouseEnter={(e) => {
                       e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center sticky top-0 z-10 backdrop-blur-sm bg-white/80 dark:bg-[#141810]/80 cursor-pointer transition-all duration-200 group`;
@@ -295,16 +296,16 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
               <div key={stage.status} className="space-y-4 w-[320px] flex-shrink-0">
                 {/* Stage Header */}
                 <div
-                    className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
-                    style={{
-                      '--hover-color': stage.hoverColor
-                    } as React.CSSProperties}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
-                    }}
+                  className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+                  style={{
+                    '--hover-color': stage.hoverColor
+                  } as React.CSSProperties}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
+                  }}
                   onClick={(e) => {
                     e.stopPropagation();
                     onStageClick(stage.status);
@@ -369,279 +370,48 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                       // Regular job cards
                       stageJobs.map((job) => {
                         const jobJourneys = getJobJourneys(job.id);
-                        const journeyStatusText = getJourneyStatusText(jobJourneys, job.status);
-                        const avgProgress = jobJourneys.length > 0
-                          ? Math.round(jobJourneys.reduce((sum, journey) => sum + getJourneyProgress(journey), 0) / jobJourneys.length)
-                          : 0;
                         const isSelected = selectedJobs.has(job.id);
                         const isDragging = draggedJob === job.id;
                         const canDrag = isJobDraggable(job);
 
                         return (
-                          <div
+                          <JobKanbanCard
                             key={job.id}
-                            draggable={canDrag}
-                            onDragStart={(e: React.DragEvent) => onDragStart(e, job.id)}
+                            job={job}
+                            stage={stage.status}
+                            jobJourneys={jobJourneys}
+                            isSelected={isSelected}
+                            isDragging={isDragging}
+                            canDrag={canDrag}
+                            onClick={onJobClick}
+                            onDragStart={onDragStart}
                             onDragEnd={onDragEnd}
                             onDragOver={onDragOver}
-                            onClick={() => onJobClick(job)}
-                            className={`group relative overflow-hidden cursor-pointer transition-all duration-300 ${isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
-                              } ${isDragging ? 'opacity-50' : ''} ${!canDrag && stage.status !== 'draft' && stage.status !== 'created' ? 'opacity-60 cursor-not-allowed' : ''
-                              }`}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={`Job application: ${job.jobTitle} at ${job.company}`}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                onJobClick(job);
+                            onAction={(action, job, e) => {
+                              // Handle actions from the card
+                              if (action === 'generate_docs') {
+                                onCreateJourney && onCreateJourney(job);
+                              } else if (action === 'inject_data') {
+                                // Logic to show inject data popup
+                                console.log('Inject data for', job.id);
+                              } else if (action === 'download') {
+                                // Logic to open download modal
+                                console.log('Download docs for', job.id);
+                              } else if (action === 'move_interview') {
+                                onJobStatusUpdate && onJobStatusUpdate(job.id, 'interview');
+                              } else if (action === 'log_activity') {
+                                console.log('Log activity for', job.id);
+                              } else if (action === 'view_notes' || action === 'add_feedback') {
+                                onJobClick(job); // Open sidebar
+                              } else if (action === 'interview_prep') {
+                                console.log('Interview Prep for', job.id);
+                              } else if (action === 'accept_offer') {
+                                onJobStatusUpdate && onJobStatusUpdate(job.id, 'accepted');
+                              } else if (action === 'decline_offer') {
+                                onJobStatusUpdate && onJobStatusUpdate(job.id, 'rejected');
                               }
                             }}
-                          >
-                            {/* Card Background */}
-                            <div className="absolute inset-0 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/20 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
-
-                            {/* Card Content */}
-                            <div className="relative z-10 p-4 w-full">
-                              {/* Collapsed View */}
-                              <div className="space-y-3 w-full">
-                                <div className="flex items-center justify-between w-full">
-                                  <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
-                                    <div className="flex-1 min-w-0 w-full max-w-full">
-                                      <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-full">
-                                        {job.jobTitle || job.title || 'Untitled Job'}
-                                      </h4>
-                                      <p className="text-gray-600 dark:text-gray-400 text-xs truncate max-w-full">{job.company}</p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    {/* Show CV/CL/ATS indicators for Applied, Interview, Offer, Rejected stages */}
-                                    {['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && jobJourneys.length > 0 ? (
-                                      (() => {
-                                        const primaryJourney = jobJourneys[0];
-                                        const hasCV = !!primaryJourney.cvId;
-                                        const hasCoverLetter = !!primaryJourney.coverLetterId;
-                                        const atsScore = primaryJourney.atsScore;
-
-                                        return (
-                                          <div className="flex flex-col items-end gap-1">
-                                            <div className={`flex items-center gap-1 ${hasCV ? 'text-green-500' : 'text-red-500'}`}>
-                                              {hasCV ? <CheckCircle size={14} /> : <X size={14} />}
-                                              <span className="text-xs">CV</span>
-                                            </div>
-                                            <div className={`flex items-center gap-1 ${hasCoverLetter ? 'text-green-500' : 'text-red-500'}`}>
-                                              {hasCoverLetter ? <CheckCircle size={14} /> : <X size={14} />}
-                                              <span className="text-xs">CL</span>
-                                            </div>
-                                            {atsScore !== null && atsScore !== undefined && (
-                                              <div className={`flex items-center gap-1 text-xs font-medium ${atsScore >= 85 ? 'text-green-500' :
-                                                atsScore >= 70 ? 'text-blue-500' :
-                                                  'text-red-500'
-                                                }`}>
-                                                <span>ATS {atsScore}%</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })()
-                                    ) : (
-                                      jobJourneys.length > 0 && (() => {
-                                        const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
-                                        const hasCompleted = completedJourneys.length > 0;
-                                        const allCompleted = completedJourneys.length === jobJourneys.length;
-
-                                        return (
-                                          <div className="flex items-center gap-1">
-                                            {hasCompleted && (
-                                              <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${allCompleted
-                                                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                                                }`}>
-                                                <CheckCircle size={10} />
-                                                <span>{completedJourneys.length}/{jobJourneys.length}</span>
-                                              </div>
-                                            )}
-                                          </div>
-                                        );
-                                      })()
-                                    )}
-
-                                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                      <ChevronDown size={12} className="text-gray-400" />
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Progress Bar */}
-                                {jobJourneys.length > 0 && !['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && (
-                                  <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
-                                    <motion.div
-                                      className={`h-2 rounded-full transition-all duration-500 ${avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                                        avgProgress >= 60 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                                          avgProgress >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                                            'bg-gradient-to-r from-red-500 to-red-600'
-                                        }`}
-                                      initial={{ width: 0 }}
-                                      animate={{ width: `${avgProgress}%` }}
-                                      transition={{ duration: 0.8, ease: "easeOut" }}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* Expanded View - Visible on Hover */}
-                              <div className="max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300 ease-out">
-                                <div className="mt-4 space-y-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-                                  {/* Follow-up notification */}
-                                  {['applied', 'interview', 'offer'].includes(stage.status) && isFollowUpNeeded(job) && (
-                                    <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-full">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                          <AlertCircle size={14} className="text-orange-600" />
-                                          <span className="text-xs text-orange-700 dark:text-orange-400">
-                                            Follow-up recommended - {getDaysSinceLastUpdate(job)} days since {job.status}
-                                          </span>
-                                        </div>
-                                        <button
-                                          className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            onJobClick(job);
-                                          }}
-                                        >
-                                          Take Action
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Key Info */}
-                                  <div className="space-y-2">
-                                    {job.location && (
-                                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                        <MapPin size={12} />
-                                        <span>{job.location}</span>
-                                      </div>
-                                    )}
-                                    {job.salary && (job.salary.min || job.salary.max) && (
-                                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                        <DollarSign size={12} />
-                                        <span>
-                                          {job.salary.min && job.salary.max
-                                            ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}-${job.salary.max.toLocaleString()}`
-                                            : job.salary.min
-                                              ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}+`
-                                              : job.salary.max
-                                                ? `${job.salary.currency || '$'}${job.salary.max.toLocaleString()}`
-                                                : 'Not specified'
-                                          }
-                                        </span>
-                                      </div>
-                                    )}
-                                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
-                                      {job.applicationDate && (
-                                        <div className="flex items-center gap-1.5">
-                                          <Calendar size={12} />
-                                          <span>Applied: {new Date(job.applicationDate).toLocaleDateString()}</span>
-                                        </div>
-                                      )}
-                                      {job.deadline && (
-                                        <div className="flex items-center gap-1.5">
-                                          <Clock size={12} />
-                                          <span>Deadline: {new Date(job.deadline).toLocaleDateString()}</span>
-                                        </div>
-                                      )}
-                                      {!job.applicationDate && !job.deadline && (
-                                        <div className="flex items-center gap-2">
-                                          <Calendar size={12} />
-                                          <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Divider */}
-                                  <div className="border-t border-gray-200 dark:border-white/20 dark:border-gray-600/50"></div>
-
-                                  {/* Journey Status */}
-                                  {!['created', 'applied'].includes(stage.status) && (
-                                    <div className="space-y-2">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                          <Target size={12} />
-                                          <span>{journeyStatusText}</span>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {/* Action Buttons */}
-                                  <div className="flex items-center gap-2 mt-3">
-                                  {/* Follow-up Actions for Applied Stage */}
-                                  {job.status === 'applied' ? (
-                                    <div className="flex flex-col gap-2 w-full">
-                                      {getFollowUpTimeline(job).slice(0, 1).map((timeline, idx) => (
-                                        <div key={idx} className="space-y-2">
-                                          <div className="text-xs text-gray-600 dark:text-gray-400 font-medium">
-                                            {timeline.day}
-                                          </div>
-                                          <div className="flex gap-2">
-                                            <motion.button
-                                              onClick={(e) => handleLinkedInAction(job, e)}
-                                              className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2"
-                                              whileHover={{ scale: 1.02 }}
-                                              whileTap={{ scale: 0.98 }}
-                                            >
-                                              <Linkedin size={12} />
-                                              LinkedIn
-                                            </motion.button>
-                                            <motion.button
-                                              onClick={(e) => handleEmailAction(job, e)}
-                                              className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2"
-                                              whileHover={{ scale: 1.02 }}
-                                              whileTap={{ scale: 0.98 }}
-                                            >
-                                              <Mail size={12} />
-                                              Email
-                                            </motion.button>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  ) : job.status !== 'draft' ? (
-                                    <motion.button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onJobClick(job);
-                                      }}
-                                      className={`flex-1 px-3 py-2 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 ${
-                                        job.status === 'interview'
-                                          ? 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
-                                          : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
-                                      }`}
-                                      whileHover={{ scale: 1.02 }}
-                                      whileTap={{ scale: 0.98 }}
-                                    >
-                                      {job.status === 'interview' ? (
-                                        <>
-                                          <GraduationCap size={12} />
-                                          Interview Prep
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Eye size={12} />
-                                          Manage Applications
-                                          <ArrowRight size={12} />
-                                        </>
-                                      )}
-                                    </motion.button>
-                                  ) : null}
-
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                          />
                         );
                       })
                     )}

@@ -2467,71 +2467,71 @@ export default function ResumeEnhancerContainer({
                     </div>
 
                     {/* Score Breakdown - Same as Step4 Review */}
-                    <div className="rounded-lg p-1.5 space-y-0.5 mt-2">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-[5px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Score Breakdown</span>
-                        <span className={`text-[5px] font-bold ${scoreResult.cvScore.total >= 80 ? 'text-green-400' :
+                    <div className="rounded-lg p-2 space-y-1.5 mt-2 bg-gray-50 dark:bg-[#1a230f]/50">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Score Breakdown</span>
+                        <span className={`text-[10px] font-bold ${scoreResult.cvScore.total >= 80 ? 'text-green-400' :
                           scoreResult.cvScore.total >= 60 ? 'text-yellow-400' : 'text-red-400'
                           }`}>
                           Grade: {scoreResult.overallGrade}
                         </span>
                       </div>
                       {/* Breakdown Bars */}
-                      <div className="space-y-0.5">
+                      <div className="space-y-1.5">
                         {/* Completeness */}
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Compl...</span>
-                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Completeness</span>
+                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.completeness / 25) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.completeness / 25) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.completeness / 25) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.completeness}/25</span>
+                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.completeness}/25</span>
                         </div>
                         {/* Impact Verbs */}
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Impact...</span>
-                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Impact Verbs</span>
+                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.impactVerbs / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.impactVerbs / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.impactVerbs / 20) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.impactVerbs}/20</span>
+                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.impactVerbs}/20</span>
                         </div>
                         {/* Quantification */}
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Quanti...</span>
-                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Quantification</span>
+                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.quantification / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.quantification / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.quantification / 20) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.quantification}/20</span>
+                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.quantification}/20</span>
                         </div>
                         {/* Formatting */}
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Forma...</span>
-                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Formatting</span>
+                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.formatting / 15) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.formatting / 15) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.formatting / 15) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.formatting}/15</span>
+                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.formatting}/15</span>
                         </div>
                         {/* Readability */}
-                        <div className="flex items-center gap-0.5">
-                          <span className="text-[6px] text-gray-600 dark:text-gray-300 w-12 truncate">Reada...</span>
-                          <div className="flex-1 h-0.5 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Readability</span>
+                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all ${(scoreResult.cvScore.readability / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.readability / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
                               style={{ width: `${(scoreResult.cvScore.readability / 20) * 100}%` }}
                             />
                           </div>
-                          <span className="text-[5px] text-gray-700 dark:text-gray-300 w-10 text-right">{scoreResult.cvScore.readability}/20</span>
+                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.readability}/20</span>
                         </div>
                       </div>
                     </div>

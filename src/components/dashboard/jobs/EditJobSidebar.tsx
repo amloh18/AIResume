@@ -779,12 +779,12 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             },
             'pro_monthly'
           );
-          
+
           // Also trigger UpgradeCard
           if (userId) {
             setShowUpgradeCard(true);
           }
-          
+
           if (!isAutoSave) setIsSaving(false);
           return;
         }
@@ -1382,7 +1382,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <label className="block text-gray-700 dark:text-white/80 text-sm font-medium">Job Description</label>
-                      <div className="text-gray-500 dark:text-white/50 text-xs">{jobDescriptionCount}/5000</div>
+                      <div className="text-gray-500 dark:text-white/50 text-xs">{jobDescriptionCount}/10000</div>
                     </div>
                     <textarea
                       rows={10}
@@ -1390,7 +1390,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       onChange={(e) => handleFormChange('jobDescription', e.target.value)}
                       className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 text-sm focus:border-lime-500 dark:focus:border-[#80FF00]/50 focus:outline-none rounded-md resize-none"
                       placeholder="Paste the job description here..."
-                      maxLength={5000}
+                      maxLength={10000}
                     />
                   </div>
                 </div>
@@ -1536,32 +1536,32 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         <DuplicateJobWarningModal
           key="duplicate-warning-modal"
           isOpen={showDuplicateWarning}
-        duplicateCheck={duplicateCheck}
-        newJobData={{
-          jobTitle: formData.jobTitle || '',
-          company: formData.company || '',
-          location: formData.location
-        }}
-        onProceed={() => {
-          setShowDuplicateWarning(false);
-          setProceedDespiteDuplicate(true);
-          // Re-trigger save after user confirms
-          setTimeout(() => handleSaveJob(false), 100);
-        }}
-        onCancel={() => {
-          setShowDuplicateWarning(false);
-          setDuplicateCheck(null);
-          isSavingRef.current = false;
-        }}
-        onViewExisting={(jobId) => {
-          // Close this sidebar and trigger viewing the existing job
-          setShowDuplicateWarning(false);
-          setDuplicateCheck(null);
-          onClose();
-          // TODO: Implement viewing existing job in JobSidebar
-          // This would require passing a callback from JobsTracker
-          console.log('View existing job:', jobId);
-        }}
+          duplicateCheck={duplicateCheck}
+          newJobData={{
+            jobTitle: formData.jobTitle || '',
+            company: formData.company || '',
+            location: formData.location
+          }}
+          onProceed={() => {
+            setShowDuplicateWarning(false);
+            setProceedDespiteDuplicate(true);
+            // Re-trigger save after user confirms
+            setTimeout(() => handleSaveJob(false), 100);
+          }}
+          onCancel={() => {
+            setShowDuplicateWarning(false);
+            setDuplicateCheck(null);
+            isSavingRef.current = false;
+          }}
+          onViewExisting={(jobId) => {
+            // Close this sidebar and trigger viewing the existing job
+            setShowDuplicateWarning(false);
+            setDuplicateCheck(null);
+            onClose();
+            // TODO: Implement viewing existing job in JobSidebar
+            // This would require passing a callback from JobsTracker
+            console.log('View existing job:', jobId);
+          }}
         />
       )}
 
