@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import {
     MapPin, DollarSign, Calendar, Clock, AlertCircle,
     CheckCircle, X, ExternalLink, FileText, Zap,
@@ -79,7 +80,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     onDragOver,
     onAction
 }) => {
+    const router = useRouter();
     const [isHovered, setIsHovered] = useState(false);
+
+    const handlePracticeClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        router.push(`/interview-coach/${job._id}`);
+    };
 
     // Helper to format currency
     const formatSalary = (amount?: number, currency = '$') => {
@@ -212,7 +219,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                                         onClick={(e) => { e.stopPropagation(); onAction?.('inject_data', job, e); }}
                                         className="py-1.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 rounded-lg text-xs font-medium hover:bg-lime-500/20 transition-colors"
                                     >
-                                        Inject Data
+                                        Improve ATS
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onAction?.('download', job, e); }}
@@ -268,6 +275,13 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                                     className="py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                                 >
                                     Log Activity
+                                </button>
+                                <button
+                                    onClick={handlePracticeClick}
+                                    className="col-span-2 mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
+                                >
+                                    <GraduationCap size={12} />
+                                    Practice
                                 </button>
                             </div>
                         </div>
@@ -331,11 +345,11 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                                     </button>
                                 </div>
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); onAction?.('interview_prep', job, e); }}
-                                    className="w-full mt-2 py-1.5 bg-white border border-gray-200 dark:border-white/20 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:bg-gray-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                                    onClick={handlePracticeClick}
+                                    className="w-full mt-2 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-medium hover:text-lime-500 dark:hover:text-[#80FF00] transition-colors flex items-center justify-center gap-2"
                                 >
                                     <GraduationCap size={12} />
-                                    Interview Prep
+                                    Practice
                                 </button>
                             </div>
                         </motion.div>

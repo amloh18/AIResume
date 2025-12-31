@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -276,7 +276,8 @@ const OptimizedNavigation: React.FC = () => {
       'canvas': '/dashboard/canvas',
       'settings': '/dashboard/settings',
       'resume-enhancer': '/resume-enhancer',
-      'cover-letter-generator': '/cover-letter-editor?mode=create'
+      'cover-letter-generator': '/cover-letter-editor?mode=create',
+      'interview-coach': '/interview-coach'
     };
 
     const targetRoute = routes[sectionId as keyof typeof routes];
@@ -345,20 +346,20 @@ const OptimizedNavigation: React.FC = () => {
       description: 'AI-powered CV optimization',
       route: '/resume-enhancer'
     },
-    {
-      id: 'studio',
-      name: 'Studio',
-      icon: Wand2,
-      description: 'Advanced CV editing',
-      route: '/studio?step=1',
-      badge: 'NEW'
-    },
+
     {
       id: 'cover-letter-generator',
       name: 'Cover Letter Generator',
       icon: PenTool,
       description: 'Create custom cover letters',
       route: '/cover-letter-editor?mode=create'
+    },
+    {
+      id: 'interview-coach',
+      name: 'Interview Coach',
+      icon: Mic,
+      description: 'AI interview preparation',
+      route: '/interview-coach'
     },
     {
       id: 'extension',
@@ -527,7 +528,7 @@ const OptimizedNavigation: React.FC = () => {
                       {(section as any).badge}
                     </span>
                   )}
-                  <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' || section.id === 'studio' ? 'text-[var(--accent-primary)]' : ''}`} />
+                  <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' ? 'text-[var(--accent-primary)]' : ''}`} />
                   <div className="hidden 2xl:block">
                     <div className="text-xs font-medium leading-tight line-clamp-2">
                       {section.name}

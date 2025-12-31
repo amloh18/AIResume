@@ -2,15 +2,20 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Loader2, Lightbulb, MessageSquare } from 'lucide-react';
+import { Sparkles, Loader2, Lightbulb, MessageSquare, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 
 interface InterviewQuestion {
   question: string;
   category: 'technical' | 'behavioral' | 'situational' | 'company-specific';
-  suggestedPoints: string[];
+  suggestedPoints?: string[]; // Legacy
+  keyPoints?: string[];      // New
+  suggestedAnswer?: string;
+  painPoints?: string[];
+  improvementTips?: string[];
   whyAsked: string;
+  starExample?: string;
 }
 
 interface InterviewCoachProps {
@@ -107,57 +112,130 @@ const InterviewCoach: React.FC<InterviewCoachProps> = ({
 
       {questions.length > 0 && (
         <div className="space-y-3">
-          {questions.map((q, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="border rounded-lg p-4 bg-white dark:bg-gray-800"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${getCategoryColor(q.category)}`}>
-                      {q.category}
-                    </span>
+          {questions.map((q, index) => {
+            const keyPoints = q.keyPoints || q.suggestedPoints || [];
+            const isExpanded = expandedQuestion === index;
+
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="border rounded-lg p-4 bg-white dark:bg-gray-800"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${getCategoryColor(q.category)}`}>
+                        {q.category}
+                      </span>
+                    </div>
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                      {q.question}
+                    </h4>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="mt-3 space-y-4"
+                      >
+                        {/* Suggested Answer */}
+                        {q.suggestedAnswer && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                              <MessageSquare className="w-3 h-3" />
+                              Suggested Answer:
+                            </p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                              {q.suggestedAnswer}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Key Points */}
+                        {keyPoints.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              Suggested talking points:
+                            </p>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                              {keyPoints.map((point, i) => (
+                                <li key={i}>{point}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Pain Points */}
+                        {q.painPoints && q.painPoints.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              ⚠️ Potential Weaknesses:
+                            </p>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                              {q.painPoints.map((point, i) => (
+                                <li key={i}>{point}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Improvement Tips */}
+                        {q.improvementTips && q.improvementTips.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                              <Lightbulb className="w-3 h-3" />
+                              How to Improve:
+                            </p>
+                            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                              {q.improvementTips.map((tip, i) => (
+                                <li key={i}>{tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Star Example */}
+                        {q.starExample && (
+                          <div>
+                            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3" />
+                              Star Example Answer:
+                            </p>
+                            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                              {q.starExample}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Why Asked */}
+                        <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                          <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
+                          <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                            <strong>Why asked:</strong> {q.whyAsked}
+                          </p>
+                        </div>
+                      </motion.div>
+                    )}
                   </div>
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-2">
-                    {q.question}
-                  </h4>
-                  {expandedQuestion === index && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className="mt-3 space-y-2"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Suggested talking points:
-                        </p>
-                        <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
-                          {q.suggestedPoints.map((point, i) => (
-                            <li key={i}>{point}</li>
-                          ))}
-                        </ul>
-                      </div>
-                      <div className="flex items-start gap-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded">
-                        <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-yellow-800 dark:text-yellow-300">
-                          <strong>Why asked:</strong> {q.whyAsked}
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
+                  <button
+                    onClick={() => setExpandedQuestion(expandedQuestion === index ? null : index)}
+                    className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0 flex items-center gap-1"
+                  >
+                    {isExpanded ? (
+                      <>
+                        Show less <ChevronUp className="w-3 h-3" />
+                      </>
+                    ) : (
+                      <>
+                        Show tips <ChevronDown className="w-3 h-3" />
+                      </>
+                    )}
+                  </button>
                 </div>
-                <button
-                  onClick={() => setExpandedQuestion(expandedQuestion === index ? null : index)}
-                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex-shrink-0"
-                >
-                  {expandedQuestion === index ? 'Show less' : 'Show tips'}
-                </button>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
     </div>
