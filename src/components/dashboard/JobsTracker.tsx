@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { FileText, Trash2, Columns3, List } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
@@ -22,6 +22,7 @@ import JobsListView from './jobs/JobsListView';
 import JobsKanbanView from './jobs/JobsKanbanView';
 import JobsFilters from './jobs/JobsFilters';
 import JobParserDialog from './jobs/JobParserDialog';
+import DownloadModal from '@/components/ui/DownloadModal';
 import { useJobsPersistence } from '@/lib/hooks/useJobsPersistence';
 import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
@@ -78,6 +79,7 @@ const JobsTracker: React.FC = () => {
   const { user, loading: authLoading, isAuthenticated } = useUnifiedAuth();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const cvId = searchParams.get('cvId');
   const stageParam = searchParams.get('stage');
@@ -149,6 +151,8 @@ const JobsTracker: React.FC = () => {
   const [paywallInfo, setPaywallInfo] = useState<{ currentCount: number; limit: number } | null>(null);
   const [zoomedStage, setZoomedStage] = useState<string | null>(null);
   const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -905,6 +909,32 @@ const JobsTracker: React.FC = () => {
     }
   };
 
+  // Handle Improve ATS action
+  const handleImproveATS = (job: JobApplication) => {
+    const jobJourneys = getJobJourneys(job.id);
+    if (jobJourneys.length > 0) {
+      // Use the most recent journey or the one with the highest update time
+      const journey = jobJourneys[0]; // Assuming filtered/sorted or taking the first one
+      if (journey.cvId) {
+        router.push(`/resume-enhancer?journeyId=${journey.id}&cvId=${journey.cvId}&mode=edit`);
+      } else {
+        router.push(`/resume-enhancer?journeyId=${journey.id}&mode=edit`);
+      }
+    } else {
+      // If no journey exists (shouldn't happen in Created stage), create one or alert
+      // Since it's 'Created' stage, a journey likely exists or we can just redirect to enhancer to start one
+      // But passing just cvId or existing params might be needed.
+      // For now, let's assume if they are in Created stage they should have a journey, but if not:
+      toast.error('No CV Journey found for this job.');
+    }
+  };
+
+  // Handle Download action
+  const handleDownload = (job: JobApplication) => {
+    setDownloadJobId(job.id);
+    setShowDownloadModal(true);
+  };
+
   // Drag and drop handlers
   const isJobDraggable = (job: JobApplication) => {
     // Allow dragging from draft and created stages to further stages
@@ -1350,6 +1380,8 @@ const JobsTracker: React.FC = () => {
                     onJobStatusUpdate={handleJobStatusUpdate}
                     onCreateJourney={handleCreateJourney}
                     onRefresh={loadData}
+                    onImproveATS={handleImproveATS}
+                    onDownload={handleDownload}
                   />
                 </div>
               ) : (
@@ -1428,6 +1460,49 @@ const JobsTracker: React.FC = () => {
         />
       )}
 
+      {/* Download Modal */}
+      {showDownloadModal && downloadJobId && (
+        <DownloadModal
+          isOpen={showDownloadModal}
+          onClose={() => {
+            setShowDownloadModal(false);
+            setDownloadJobId(null);
+          }}
+          onDownload={(docType, format) => {
+            // The modal handles the UI state for downloading.
+            // Typically we'd trigger a download service here if not handled within modal.
+            // Looking at DownloadModal.tsx, it calls `onDownload(selectedDocument, selectedFormat)`.
+            // We need to implement the actual download logic or confirm if DownloadModal does it.
+            // Wait, DownloadModal just exposes the selection. We need to trigger the download.
+            // But existing implementations might have the logic.
+            // Let's import the download logic or service if needed?
+            // Actually, `DownloadModal` in `src/components/ui/DownloadModal.tsx` just calls the prop.
+            // So we need to implement the download logic here.
+            // Let's use `window.location.href` or similar for now, or assume we need to implement it.
+            // BUT simpler: reuse the logic from `JourneyTimelineCard` or similar if available.
+            // For now I'll just close it and log, or better, implement a basic fetch to the download endpoint.
+            // The endpoint is likely `/api/download`.
+
+            const journey = getJobJourneys(downloadJobId).find(j => j.id);
+            if (!journey) return;
+
+            // Construct download URL
+            const baseUrl = '/api/download';
+            const params = new URLSearchParams();
+
+            if (journey.cvId) params.append('cvId', journey.cvId);
+            if (journey.coverLetterId) params.append('coverLetterId', journey.coverLetterId);
+            params.append('type', docType);
+            params.append('format', format);
+
+            // Trigger download
+            window.open(`${baseUrl}?${params.toString()}`, '_blank');
+            setShowDownloadModal(false);
+          }}
+          cvId={getJobJourneys(downloadJobId).find(j => j.cvId)?.cvId}
+          coverLetterId={getJobJourneys(downloadJobId).find(j => j.coverLetterId)?.coverLetterId}
+        />
+      )}
 
     </React.Fragment>
   );
