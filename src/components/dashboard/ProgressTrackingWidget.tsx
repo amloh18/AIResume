@@ -15,6 +15,7 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import SegmentedToggle from '@/components/ui/SegmentedToggle';
 
 interface ProgressData {
   date: string;
@@ -49,7 +50,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       setLoading(true);
       console.log('ProgressTrackingWidget: Fetching data for userId:', userId, 'range:', timeRange);
       const response = await fetch(`/api/analytics/progress?userId=${userId}&range=${timeRange}`);
-      
+
       if (response.ok) {
         const result = await response.json();
         console.log('ProgressTrackingWidget: API response:', result);
@@ -70,7 +71,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       } else {
         const errorText = await response.text().catch(() => 'Unknown error');
         console.error('ProgressTrackingWidget: Failed to fetch progress data:', response.status, errorText);
-        
+
         // If unauthorized, don't use mock data - show empty state
         if (response.status === 401) {
           console.warn('ProgressTrackingWidget: Unauthorized - user not authenticated');
@@ -98,11 +99,11 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
   const generateMockData = (): ProgressData[] => {
     const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
     const data: ProgressData[] = [];
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      
+
       data.push({
         date: date.toISOString().split('T')[0],
         jobs: Math.floor(Math.random() * 5) + 1,
@@ -110,7 +111,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         coverLetters: Math.floor(Math.random() * 4) + 1,
       });
     }
-    
+
     return data;
   };
 
@@ -140,13 +141,13 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
 
   const renderChart = () => {
     const filteredData = getFilteredData();
-    
+
     console.log('ProgressTrackingWidget: renderChart called', {
       dataLength: data.length,
       filteredDataLength: filteredData.length,
       sampleData: filteredData.slice(0, 3)
     });
-    
+
     if (filteredData.length === 0) {
       console.warn('ProgressTrackingWidget: No data to render');
       return (
@@ -160,23 +161,23 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
     const today = new Date().toISOString().split('T')[0];
     const dataMin = filteredData[0]?.date || today;
     const dataMax = filteredData[filteredData.length - 1]?.date || today;
-    
+
     // Calculate the range to center today
     const todayDate = new Date(today);
     const minDate = new Date(dataMin);
     const maxDate = new Date(dataMax);
-    
+
     // Find the distance from today to the edges
     const daysBeforeToday = Math.floor((todayDate.getTime() - minDate.getTime()) / (24 * 60 * 60 * 1000));
     const daysAfterToday = Math.floor((maxDate.getTime() - todayDate.getTime()) / (24 * 60 * 60 * 1000));
-    
+
     // Extend domain to center today (use the larger distance on both sides)
     const maxDistance = Math.max(daysBeforeToday, daysAfterToday);
     const domainStart = new Date(todayDate);
     domainStart.setDate(domainStart.getDate() - maxDistance);
     const domainEnd = new Date(todayDate);
     domainEnd.setDate(domainEnd.getDate() + maxDistance);
-    
+
     const domainMin = domainStart.toISOString().split('T')[0];
     const domainMax = domainEnd.toISOString().split('T')[0];
 
@@ -185,21 +186,21 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         <AreaChart data={filteredData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
             <linearGradient id="jobsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1} />
             </linearGradient>
             <linearGradient id="cvsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1} />
             </linearGradient>
             <linearGradient id="coverLettersGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-              <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
-          <XAxis 
-            dataKey="date" 
+          <XAxis
+            dataKey="date"
             stroke="#6B7280"
             fontSize={12}
             interval={timeRange === '90d' ? 4 : timeRange === '30d' ? 1 : 0}
@@ -209,12 +210,12 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             tickFormatter={(value) => formatDate(value)}
             domain={[domainMin, domainMax]}
           />
-          <YAxis 
+          <YAxis
             stroke="#6B7280"
             fontSize={12}
             domain={[0, 'dataMax + 1']}
           />
-          <Tooltip 
+          <Tooltip
             contentStyle={{
               backgroundColor: '#1F2937',
               border: '1px solid #374151',
@@ -296,44 +297,32 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 w-full md:w-auto">
           {/* Filter Buttons */}
           <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
-            {[
-              { key: 'all', label: 'All', color: 'bg-gray-500' },
-              { key: 'jobs', label: 'Jobs', color: 'bg-blue-500' },
-              { key: 'cvs', label: 'CVs', color: 'bg-red-500' },
-              { key: 'coverLetters', label: 'Cover Letters', shortLabel: 'CL', color: 'bg-green-500' },
-            ].map((item) => (
-              <motion.button
-                key={item.key}
-                onClick={() => setFilter(item.key as any)}
-                className={`px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors h-8 flex items-center justify-center whitespace-nowrap flex-shrink-0 ${
-                  filter === item.key
-                    ? `${item.color} text-white shadow-lg`
-                    : 'bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#2a3a1f]'
-                }`}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span className="hidden sm:inline">{item.label}</span>
-                <span className="sm:hidden">{item.shortLabel || item.label}</span>
-              </motion.button>
-            ))}
+            <SegmentedToggle
+              value={filter}
+              onChange={(value) => setFilter(value as any)}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'jobs', label: 'Jobs' },
+                { value: 'cvs', label: 'CVs' },
+                { value: 'coverLetters', label: 'Cover Letters' },
+              ]}
+              theme="blue"
+              size="sm"
+            />
           </div>
 
           {/* Time Range Selector */}
-          <select
+          <SegmentedToggle
             value={timeRange}
-            onChange={(e) => {
-              const value = e?.target?.value;
-              if (value) {
-                setTimeRange(value as '7d' | '30d' | '90d');
-              }
-            }}
-            className="px-2 sm:px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-xs sm:text-sm focus:ring-2 focus:ring-blue-500/50 flex-shrink-0 w-full sm:w-auto"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-          </select>
+            onChange={(value) => setTimeRange(value as '7d' | '30d' | '90d')}
+            options={[
+              { value: '7d', label: '7D' },
+              { value: '30d', label: '30D' },
+              { value: '90d', label: '90D' },
+            ]}
+            theme="blue"
+            size="sm"
+          />
         </div>
       </div>
 

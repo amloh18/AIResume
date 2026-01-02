@@ -112,6 +112,8 @@ ${!hasJD ? `- **Evaluation:** Switch ATS Score "K" (Keywords) to "Global Industr
 
 #### 1. Authentic Optimization (The "Real" Version)
 - **Keyword Mirroring:** Update existing bullet points to use the JD's specific terminology.
+- **Skill Integration:** Explicitly weave JD-specific soft and hard skill keywords into the narrative of relevant work experience summaries.
+- **Recency Weighting:** Allocate bullet points based on recency: 5-7 bullets for the most recent role, 3-4 for intermediate roles, and 2-3 for older roles.
 - **XYZ Impact Formula:** Rewrite bullets to: "Accomplished [X] as measured by [Y], by doing [Z]."
 - **Metric Injection:** Insert \`[X]\` placeholders where data is missing.
 - **Standardization:** MM/YYYY date formats and single-column Markdown layout.
@@ -125,6 +127,7 @@ ${!hasJD ? `- **Evaluation:** Switch ATS Score "K" (Keywords) to "Global Industr
 1. **The Pruning Layer:** ${hasJD ? 'Delete unrelated/old roles.' : 'Skip pruning - focus on broadening impact.'}
 2. **The Bridging Layer:** If Score < 75%, generate 3 [STRATEGIC UPGRADE] project entries.
 3. **The XYZ Metric Injection:** Rewrite bullets using: "[Action Verb] + [Quantifiable Result] + [Keyword]." Use \`[X]\` for missing metrics.
+4. **Format Enforcement:** All fixes for \`work\`, \`projects\`, \`education\`, and \`volunteer\` MUST be formatted as bullet points. Convert paragraph summaries within these sections into bulleted lists. Do NOT use bullet points for \`basics.summary\`.
 
 ### INPUT DATA
 - **Input JSON:** ${JSON.stringify(cvData)}
@@ -177,6 +180,7 @@ NOTE: Return 5-10 most impactful fixes only. Do NOT include full CV copies in th
 - original_text MUST be found inside the string at fieldPath (exact substring).
 - NEVER invent content that isn't present in the CV.
 - KEEP RESPONSE COMPACT - max 5-10 fixes, no full CV copies.
+- **CRITICAL:** Ensure \`fixed_text\` is formatted as a bullet point (starting with "- " or "• ") for all sections EXCEPT \`basics.summary\`. Ensure high bullet volume for recent jobs.
 
 ### [OUTPUT JSON START]
 `;

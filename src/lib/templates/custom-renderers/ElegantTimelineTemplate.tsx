@@ -9,9 +9,9 @@ interface ElegantTimelineTemplateProps {
   className?: string;
 }
 
-export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = ({ 
-  cvData, 
-  className = '' 
+export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = ({
+  cvData,
+  className = ''
 }) => {
   const { basics, work, education, skills, projects, awards } = cvData;
 
@@ -26,7 +26,9 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           background: #ffffff;
           max-width: 100%;
           margin: 0;
-          padding: 0;
+          margin: 0;
+          padding: 32px;
+          box-sizing: border-box;
         }
         
         .header-section {
@@ -372,9 +374,9 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
         </div>
         <div className="profile-photo">
           {basics?.image ? (
-            <img 
-              src={basics.image} 
-              alt={basics.name || 'Profile'} 
+            <img
+              src={basics.image}
+              alt={basics.name || 'Profile'}
               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
             />
           ) : (

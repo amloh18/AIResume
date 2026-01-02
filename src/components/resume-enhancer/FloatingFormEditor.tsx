@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, AlertCircle } from 'lucide-react';
+import { X, AlertCircle, Check } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import PersonalInfoForm from '@/components/forms/PersonalInfoForm';
 import WorkExperienceSection from '@/components/forms/WorkExperienceSection';
@@ -52,38 +52,24 @@ export default function FloatingFormEditor({
     const { state, dispatch } = useResumeEnhancer();
     const modalRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
-    const initialDataRef = useRef(JSON.stringify(state.cvData));
-
-    // Check for unsaved changes
-    const hasUnsavedChanges = useCallback(() => {
-        return JSON.stringify(state.cvData) !== initialDataRef.current;
-    }, [state.cvData]);
 
     // Handle click outside
     const handleBackdropClick = useCallback((e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {
-            if (hasUnsavedChanges()) {
-                const confirm = window.confirm('You have unsaved changes. Are you sure you want to close?');
-                if (!confirm) return;
-            }
             onClose();
         }
-    }, [hasUnsavedChanges, onClose]);
+    }, [onClose]);
 
     // ESC key handler
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                if (hasUnsavedChanges()) {
-                    const confirm = window.confirm('You have unsaved changes. Are you sure you want to close?');
-                    if (!confirm) return;
-                }
                 onClose();
             }
         };
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
-    }, [hasUnsavedChanges, onClose]);
+    }, [onClose]);
 
     // Focus trap - Only if not using custom positioning (modal mode)
     useEffect(() => {
@@ -324,7 +310,7 @@ export default function FloatingFormEditor({
         margin: 0,
         // Height logic: Don't constrain to section height. Use auto with max/min limits.
         height: 'auto',
-        maxHeight: '85vh',
+        maxHeight: `calc(100vh - ${position.top}px - 24px)`, // Prevent bottom clipping
         minHeight: '300px' // Ensure it's not too small
         // transform: 'none' // Override framer-motion centering
     } : undefined;
@@ -356,14 +342,14 @@ export default function FloatingFormEditor({
                     transition={{ duration: 0.2 }}
                     style={containerStyle}
                     className={`
-                        w-full max-w-2xl bg-[#141810] rounded-2xl shadow-2xl shadow-black/40 flex flex-col pointer-events-auto overflow-hidden
+                        w-full max-w-2xl bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl flex flex-col pointer-events-auto overflow-hidden
                         ${!position ? 'max-h-[90vh]' : ''}
                     `}
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
                     <div
-                        className={`flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#1a230f] ${position ? 'cursor-move' : ''}`}
+                        className={`flex items-center justify-between px-5 py-4 border-b border-white/10 ${position ? 'cursor-move' : ''}`}
                         onPointerDown={(e) => {
                             if (position) dragControls.start(e);
                         }}
@@ -372,41 +358,37 @@ export default function FloatingFormEditor({
                             <h2 className="text-lg font-semibold text-white">
                                 {SECTION_TITLES[sectionId] || 'Edit Section'}
                             </h2>
-                            {/* ... existing header content ... */}
                             {sectionAnnotations.length > 0 && (
                                 <span className="px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-300 rounded-full">
                                     {sectionAnnotations.length} suggestion{sectionAnnotations.length !== 1 ? 's' : ''}
                                 </span>
                             )}
                         </div>
-                        <button
-                            onClick={() => {
-                                if (hasUnsavedChanges()) {
-                                    const confirm = window.confirm('You have unsaved changes. Are you sure you want to close?');
-                                    if (!confirm) return;
-                                }
-                                onClose();
-                            }}
-                            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
-                            aria-label="Close editor"
-                        >
-                            <X className="w-5 h-5 text-white/70" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={onClose}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                                aria-label="Cancel"
+                                title="Cancel"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={onClose}
+                                onPointerDown={(e) => e.stopPropagation()}
+                                className="p-2 rounded-lg bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-colors"
+                                aria-label="Accept"
+                                title="Accept"
+                            >
+                                <Check className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
 
                     {/* Form Content */}
                     <div className="flex-1 overflow-y-auto overscroll-contain p-5">
                         {renderSectionForm()}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-white/10 bg-[#1a230f]">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
-                        >
-                            Done
-                        </button>
                     </div>
                 </motion.div>
             </motion.div>

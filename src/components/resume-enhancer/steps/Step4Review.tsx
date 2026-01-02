@@ -11,11 +11,12 @@ import { downloadAsPDF } from '@/lib/utils/download';
 import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
+import ScorecardPanel from '@/components/resume-enhancer/panels/ScorecardPanel';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch } = useResumeEnhancer();
   const router = useRouter();
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoom] = useState(0.65); // Default to fit A4 in panel
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -135,11 +136,11 @@ export default function Step4Review() {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Split View: Info Left, Preview Right */}
-      <div className="flex-1 flex gap-3 overflow-hidden">
-        {/* Left Panel - Info (50%) */}
-        <div className="w-1/2 flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+    <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden">
+      {/* Split View: Preview Left, Info Right */}
+      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden pt-3 px-3">
+        {/* Right Panel - Info (50%) */}
+        <div className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
           <div className="p-4">
             <h2 className="text-lg font-bold text-[color:var(--text-primary)] mb-1">
               Review Your Resume
@@ -150,69 +151,16 @@ export default function Step4Review() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Primary Score Display */}
-            <div className="bg-[var(--bg-tertiary)] rounded-lg p-4 text-center shadow-sm shadow-black/10 dark:shadow-black/30">
-              <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full ${getScoreBgColor(primaryScore)} text-black font-bold text-2xl mb-2 shadow-lg`}>
-                {primaryScore}%
-              </div>
-              <p className="text-sm font-medium text-[color:var(--text-primary)]">{primaryScoreLabel}</p>
-              <p className="text-xs text-[color:var(--text-secondary)] mt-1">
-                Grade: <span className={`font-bold ${getScoreColor(primaryScore)}`}>{scoreResult.overallGrade}</span>
-              </p>
-
-              {/* ATS Score Cap Warning for Journey CVs */}
-              {isJourneyCV && state.atsScoreCap < 100 && (
-                <div className="mt-2 flex items-center justify-center gap-1 text-xs text-yellow-500">
-                  <AlertTriangle className="w-3 h-3" />
-                  <span>Template caps score at {state.atsScoreCap}%</span>
-                </div>
-              )}
-            </div>
-
-            {/* Score Breakdown */}
-            <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-              <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-4 h-4 text-[var(--accent-primary)]" />
-                <p className="text-xs font-medium text-[color:var(--text-primary)]">Score Breakdown</p>
-              </div>
-
-              {isJourneyCV && scoreResult.atsScore ? (
-                // ATS Score Breakdown for Journey CVs
-                <div className="space-y-2">
-                  <ScoreBar label="Keyword Match" value={scoreResult.atsScore.keywordMatch} max={40} />
-                  <ScoreBar label="Experience Fit" value={scoreResult.atsScore.experienceAlign} max={25} />
-                  <ScoreBar label="Skills Coverage" value={scoreResult.atsScore.skillsCoverage} max={20} />
-                  <ScoreBar label="Template ATS" value={scoreResult.atsScore.parseability} max={15} />
-                </div>
-              ) : (
-                // CV Score Breakdown for Master/Standalone
-                <div className="space-y-2">
-                  <ScoreBar label="Completeness" value={scoreResult.cvScore.completeness} max={25} />
-                  <ScoreBar label="Impact Verbs" value={scoreResult.cvScore.impactVerbs} max={20} />
-                  <ScoreBar label="Quantification" value={scoreResult.cvScore.quantification} max={20} />
-                  <ScoreBar label="Formatting" value={scoreResult.cvScore.formatting} max={15} />
-                  <ScoreBar label="Readability" value={scoreResult.cvScore.readability} max={20} />
-                </div>
-              )}
-            </div>
-
-            {/* Recommendations */}
-            {scoreResult.recommendations.length > 0 && (
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="w-4 h-4 text-[var(--accent-primary)]" />
-                  <p className="text-xs font-medium text-[color:var(--text-primary)]">Recommendations</p>
-                </div>
-                <ul className="space-y-1">
-                  {scoreResult.recommendations.slice(0, 3).map((rec, i) => (
-                    <li key={i} className="text-xs text-[color:var(--text-secondary)] flex items-start gap-2">
-                      <span className="text-[var(--accent-primary)]">•</span>
-                      <span>{rec}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* Scorecard Panel - replaces custom score cards */}
+            <ScorecardPanel
+              atsResult={null}
+              scoreResult={scoreResult}
+              cvType={state.cvType}
+              isLoading={false}
+              analysisMode={isJourneyCV ? 'jd-based' : 'role-based'}
+              compact={false}
+              scoreLabel={isJourneyCV ? 'ATS Score' : 'CV Score'}
+            />
 
             {/* Keyword Gaps for Journey CVs */}
             {isJourneyCV && state.keywordGaps && state.keywordGaps.length > 0 && (
@@ -246,115 +194,103 @@ export default function Step4Review() {
               </div>
             )}
 
-            {/* CV Info */}
-            <div className="space-y-3">
+            {/* Cards Grid - 2x2 layout */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* CV Type Card */}
               <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-[color:var(--text-tertiary)] mb-1">CV Type</p>
-                    <p className="font-semibold text-[color:var(--text-primary)] capitalize text-sm flex items-center gap-1">
-                      {state.cvType === 'master' && <Award className="w-3 h-3 text-[var(--accent-primary)]" />}
-                      {state.cvType === 'journey' && <Target className="w-3 h-3 text-blue-500" />}
-                      {state.cvType}
-                    </p>
-                  </div>
-                  {state.cvType === 'journey' && state.jobData && (
-                    <div className="text-right">
-                      <p className="text-xs text-[color:var(--text-tertiary)]">For</p>
-                      <p className="text-xs font-medium text-[color:var(--text-primary)]">
-                        {state.jobData.title || state.jobData.jobTitle || 'Job'}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">CV Type</p>
+                <p className="font-semibold text-[color:var(--text-primary)] capitalize text-sm flex items-center gap-1">
+                  {state.cvType === 'master' && <Award className="w-3 h-3 text-[var(--accent-primary)]" />}
+                  {state.cvType === 'journey' && <Target className="w-3 h-3 text-blue-500" />}
+                  {state.cvType}
+                </p>
+                {state.cvType === 'journey' && state.jobData && (
+                  <p className="text-xs text-[color:var(--text-secondary)] mt-1 truncate">
+                    For: {state.jobData.title || state.jobData.jobTitle || 'Job'}
+                  </p>
+                )}
               </div>
+
+              {/* Template Card */}
               <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Template</p>
-                    <p className="font-semibold text-[color:var(--text-primary)] text-sm">
+                    <p className="font-semibold text-[color:var(--text-primary)] text-sm truncate">
                       {state.selectedTemplate?.name || 'None'}
                     </p>
                   </div>
-                  <button
-                    onClick={() => setShowTemplateModal(true)}
-                    className="px-3 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg text-xs font-medium transition-all flex items-center space-x-1.5 hover:scale-105 shadow-sm shadow-black/10 dark:shadow-black/30"
-                  >
-                    <Palette className="w-3.5 h-3.5" />
-                    <span>Change</span>
-                  </button>
                 </div>
-              </div>
-            </div>
-
-            {/* Cover Letter Section */}
-            <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-[var(--accent-primary)]" />
-                  <p className="text-xs font-medium text-[color:var(--text-primary)]">Cover Letter</p>
-                </div>
-                {state.autoGeneratedCoverLetter && (
-                  <span className="text-xs text-green-500 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Generated
-                  </span>
-                )}
-              </div>
-
-              {/* Cover Letter Preview */}
-              {state.autoGeneratedCoverLetter && (
-                <div className="mb-2 p-2 bg-[var(--bg-primary)] rounded text-xs text-[color:var(--text-secondary)] max-h-20 overflow-hidden relative">
-                  <p className="line-clamp-3">{state.autoGeneratedCoverLetter.substring(0, 200)}...</p>
-                  <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-[var(--bg-primary)] to-transparent" />
-                </div>
-              )}
-
-              <button
-                onClick={handleEditCoverLetter}
-                className="w-full px-4 py-2.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-black rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                <FileText className="w-4 h-4" />
-                <span>
-                  {state.autoGeneratedCoverLetter
-                    ? 'Edit Cover Letter'
-                    : state.cvType === 'journey'
-                      ? 'Generate Cover Letter'
-                      : 'Create Cover Letter'
-                  }
-                </span>
-              </button>
-            </div>
-
-            {/* Download Button */}
-            <div className="mt-3">
-              <button
-                onClick={() => setShowDownloadModal(true)}
-                disabled={!state.selectedTemplate}
-                className="w-full px-4 py-3 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg font-semibold transition-all flex items-center justify-center gap-2 shadow-sm shadow-black/10 dark:shadow-black/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-5 h-5" />
-                <span>Download CV</span>
-              </button>
-            </div>
-
-            {/* Save to Tracker Button for Journey CVs */}
-            {isJourneyCV && (
-              <div className="mt-2">
                 <button
-                  onClick={() => router.push('/dashboard/tracker')}
-                  className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
+                  onClick={() => setShowTemplateModal(true)}
+                  className="mt-2 w-full px-2 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 hover:scale-105 shadow-sm shadow-black/10 dark:shadow-black/30"
                 >
-                  <Target className="w-4 h-4" />
-                  <span>View in Job Tracker</span>
+                  <Palette className="w-3 h-3" />
+                  <span>Change</span>
                 </button>
               </div>
-            )}
+
+              {/* Cover Letter Card */}
+              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1">
+                    <BookOpen className="w-3 h-3 text-[var(--accent-primary)]" />
+                    <p className="text-xs font-medium text-[color:var(--text-primary)]">Cover Letter</p>
+                  </div>
+                  {(state.autoGeneratedCoverLetter || (state.cvType === 'journey' && state.coverLetterId)) && (
+                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                  )}
+                </div>
+                <button
+                  onClick={handleEditCoverLetter}
+                  className="w-full px-2 py-1.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-black rounded-lg font-semibold transition-all flex items-center justify-center gap-1 text-xs"
+                >
+                  <FileText className="w-3 h-3" />
+                  <span>
+                    {state.autoGeneratedCoverLetter || (state.cvType === 'journey' && state.coverLetterId)
+                      ? 'Edit'
+                      : state.cvType === 'journey'
+                        ? 'Generate'
+                        : 'Create'
+                    }
+                  </span>
+                </button>
+              </div>
+
+              {/* Download CV Card */}
+              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30 flex flex-col justify-between">
+                <div>
+                  <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Export</p>
+                  <p className="font-semibold text-[color:var(--text-primary)] text-sm">Download</p>
+                </div>
+                <button
+                  onClick={() => setShowDownloadModal(true)}
+                  disabled={!state.selectedTemplate}
+                  className="mt-2 w-full px-2 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg font-medium transition-all flex items-center justify-center gap-1 text-xs shadow-sm shadow-black/10 dark:shadow-black/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download</span>
+                </button>
+              </div>
+
+              {/* View in Job Tracker - only for Journey CVs */}
+              {isJourneyCV && (
+                <div className="col-span-2 bg-blue-600/10 border border-blue-500/20 rounded-lg p-3 shadow-sm">
+                  <button
+                    onClick={() => router.push('/dashboard/tracker')}
+                    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    <Target className="w-4 h-4" />
+                    <span>View in Job Tracker</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Right Panel - Preview (50%) */}
-        <div className="w-1/2 flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+        {/* Left Panel - Preview (50%) */}
+        <div className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
           {/* Preview Header with Controls */}
           <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between">
             <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
@@ -380,22 +316,33 @@ export default function Step4Review() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4" ref={previewRef}>
+          <div className="flex-1 overflow-y-auto" ref={previewRef}>
             {state.selectedTemplate ? (
-              <CVPreviewContent
-                cvData={state.cvData}
-                templateName={state.selectedTemplate.name}
-                templateStyles={{
-                  primaryColor: state.selectedTemplate.globalStyles?.primaryColor,
-                  secondaryColor: state.selectedTemplate.globalStyles?.secondaryColor,
-                  backgroundColor: state.selectedTemplate.globalStyles?.backgroundColor,
-                  fontFamily: state.selectedTemplate.globalStyles?.fontFamily,
-                  fontSize: state.selectedTemplate.globalStyles?.fontSize,
-                  lineHeight: state.selectedTemplate.globalStyles?.lineHeight,
+              <div
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'top center',
+                  transition: 'transform 0.2s ease-out',
+                  width: 'fit-content',
+                  margin: '0 auto'
                 }}
-                customCSS={state.selectedTemplate.globalStyles?.customCSS}
-                jobData={state.jobData}
-              />
+              >
+                <CVPreviewContent
+                  cvData={state.cvData}
+                  templateName={state.selectedTemplate.name}
+                  templateStyles={{
+                    primaryColor: state.selectedTemplate.globalStyles?.primaryColor,
+                    secondaryColor: state.selectedTemplate.globalStyles?.secondaryColor,
+                    backgroundColor: state.selectedTemplate.globalStyles?.backgroundColor,
+                    fontFamily: state.selectedTemplate.globalStyles?.fontFamily,
+                    fontSize: state.selectedTemplate.globalStyles?.fontSize,
+                    lineHeight: state.selectedTemplate.globalStyles?.lineHeight,
+                  }}
+                  customCSS={state.selectedTemplate.globalStyles?.customCSS}
+                  jobData={state.jobData}
+                  currentZoom={zoom}
+                />
+              </div>
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center py-8">
