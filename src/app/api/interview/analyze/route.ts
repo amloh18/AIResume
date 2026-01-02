@@ -2,8 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import InterviewSession from '@/models/InterviewSession';
-import InterviewQuestion from '@/models/InterviewQuestion';
 import { JobApplication } from '@/models';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
@@ -22,18 +20,41 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { questionId, answer } = await request.json();
+        const { questionId, answer, jobId } = await request.json();
 
-        if (!questionId || !answer) {
+        if (!questionId || !answer || !jobId) {
             return setCorsHeaders(
-                NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 }),
+                NextResponse.json({ success: false, error: 'Missing required fields (questionId, answer, jobId)' }, { status: 400 }),
                 request
             );
         }
 
         await getConnection();
 
-        const question = await InterviewQuestion.findById(questionId);
+        const jobIdQuery = mongoose.Types.ObjectId.isValid(jobId)
+            ? new mongoose.Types.ObjectId(jobId)
+            : jobId;
+
+        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
+            ? new mongoose.Types.ObjectId(auth.userId)
+            : auth.userId;
+
+        // Fetch job with embedded interview data
+        const job = await JobApplication.findOne({
+            _id: jobIdQuery,
+            userId: userIdQuery,
+            'interviewCoach.questions.id': questionId
+        }).select('jobTitle company jobDescription interviewCoach');
+
+        if (!job || !job.interviewCoach) {
+            return setCorsHeaders(
+                NextResponse.json({ success: false, error: 'Question not found' }, { status: 404 }),
+                request
+            );
+        }
+
+        // Find the specific question
+        const question = job.interviewCoach.questions.find((q: any) => q.id === questionId);
         if (!question) {
             return setCorsHeaders(
                 NextResponse.json({ success: false, error: 'Question not found' }, { status: 404 }),
@@ -41,34 +62,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Verify Ownership via Session
-        const session = await InterviewSession.findOne({
-            _id: question.sessionId,
-            userId: auth.userId
-        });
-
-        if (!session) {
-            return setCorsHeaders(
-                NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 }),
-                request
-            );
-        }
-
-        // Get Job context (title, company, description)
-        const job = await JobApplication.findById(session.jobId).select('jobTitle company jobDescription');
-        const jobContext = job ? `${job.jobTitle} at ${job.company}. ${job.jobDescription?.substring(0, 500)}...` : session.targetRole;
+        // Build job context
+        const jobContext = `${job.jobTitle} at ${job.company}. ${job.jobDescription?.substring(0, 500) || ''}`;
 
         // Call AI Service
         let analysis;
         try {
             analysis = await InterviewCoachService.analyzeAnswer(
-                question.content.question,
+                question.question,
                 answer,
                 jobContext
             );
         } catch (aiError) {
-            console.error('AI Analysis failed, falling back:', aiError);
-            // Fallback or error?
+            console.error('AI Analysis failed:', aiError);
             return setCorsHeaders(
                 NextResponse.json({
                     success: false,
@@ -78,48 +84,53 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Update Question
-        question.userAnswer = {
-            text: answer,
-            submittedAt: new Date(),
-            status: 'analyzed'
+        // Build feedback object
+        const feedback = {
+            score: analysis.score || 0,
+            strengths: analysis.strengths || [],
+            improvements: analysis.improvements || [],
+            refinedAnswer: analysis.improvedScript || analysis.refinedAnswer || ''
         };
 
-        question.aiFeedback = {
-            score: analysis.score,
-            strengths: analysis.strengths,
-            improvements: analysis.improvements,
-            improvedScript: analysis.improvedScript,
-            sentiment: analysis.sentiment,
-            analyzedAt: new Date()
-        };
+        // Update question in embedded array using positional operator
+        await JobApplication.updateOne(
+            {
+                _id: jobIdQuery,
+                userId: userIdQuery,
+                'interviewCoach.questions.id': questionId
+            },
+            {
+                $set: {
+                    'interviewCoach.questions.$.userAnswer': answer,
+                    'interviewCoach.questions.$.status': 'completed',
+                    'interviewCoach.questions.$.feedback': feedback
+                }
+            }
+        );
 
-        await question.save();
+        // Recalculate readiness score
+        // Get fresh data to calculate average
+        const updatedJob = await JobApplication.findById(jobId).select('interviewCoach').lean();
+        if (updatedJob?.interviewCoach?.questions) {
+            const analyzedQuestions = updatedJob.interviewCoach.questions.filter(
+                (q: any) => q.status === 'completed' && q.feedback?.score !== undefined
+            );
 
-        // Update Session Progress
-        session.lastPracticedAt = new Date();
+            if (analyzedQuestions.length > 0) {
+                const totalScore = analyzedQuestions.reduce((sum: number, q: any) => sum + (q.feedback.score || 0), 0);
+                const avgScore = Math.round(totalScore / analyzedQuestions.length);
 
-        // Calculate new session readiness score
-        // Simple logic: Average of all analyzed questions' scores
-        // Fetch all questions with feedback
-        const allAnalysedQuestions = await InterviewQuestion.find({
-            sessionId: session._id,
-            'userAnswer.status': 'analyzed'
-        }).select('aiFeedback.score');
-
-        if (allAnalysedQuestions.length > 0) {
-            const totalScore = allAnalysedQuestions.reduce((sum, q) => sum + (q.aiFeedback?.score || 0), 0);
-            session.readinessScore = Math.round(totalScore / allAnalysedQuestions.length);
-        } else {
-            session.readinessScore = analysis.score; // Fallback
+                await JobApplication.updateOne(
+                    { _id: jobId },
+                    { $set: { 'interviewCoach.readinessScore': avgScore } }
+                );
+            }
         }
-
-        await session.save();
 
         return setCorsHeaders(
             NextResponse.json({
                 success: true,
-                feedback: question.aiFeedback
+                feedback
             }),
             request
         );

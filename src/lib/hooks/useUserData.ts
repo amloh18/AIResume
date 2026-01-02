@@ -19,7 +19,10 @@ export interface UserData {
     planKey?: string;
     status: string;
     credits: number;
+    toDate?: string;
     endDate?: string;
+    purchasePrice?: number;
+    purchaseCurrency?: string;
   };
   settings?: any;
   createdAt?: string;
@@ -57,7 +60,7 @@ export function useUserData(): UseUserDataReturn {
 
       // Use the standardized /api/user endpoint
       const response = await fetch('/api/user');
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -108,7 +111,7 @@ export function useUserData(): UseUserDataReturn {
     const handleUserProfileUpdate = (event: CustomEvent) => {
       const updatedUser = event.detail.user;
       const refreshUserData = event.detail.refreshUserData;
-      
+
       if (refreshUserData) {
         console.log('🔄 useUserData - Refreshing user data due to profile update');
         fetchUserData();
@@ -129,7 +132,7 @@ export function useUserData(): UseUserDataReturn {
     };
 
     window.addEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
-    
+
     return () => {
       window.removeEventListener('userProfileUpdated', handleUserProfileUpdate as EventListener);
     };
@@ -148,19 +151,19 @@ export function useUserData(): UseUserDataReturn {
  */
 export function getUserDisplayName(userData: UserData | null): string {
   if (!userData) return 'User';
-  
+
   if (userData.firstName && userData.lastName) {
     return `${userData.firstName} ${userData.lastName}`;
   }
-  
+
   if (userData.firstName) {
     return userData.firstName;
   }
-  
+
   if (userData.username) {
     return userData.username;
   }
-  
+
   return 'User';
 }
 

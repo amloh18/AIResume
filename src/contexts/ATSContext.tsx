@@ -19,6 +19,21 @@ export interface ATSAnalysis {
     sectionHeaders: { passed: boolean; issues: string[] };
     contactInfo: { passed: boolean; issues: string[] };
   };
+  // New: Rich audit report from CV Surgeon
+  audit_report?: {
+    cv_profile_strength?: {
+      score: number;
+      breakdown: { C: number; I?: number; Q?: number; F: number; R: number };
+      multiplier?: number;
+      penalty_reasons?: string[];
+    };
+    ats_match_score?: {
+      score: number;
+      breakdown: { K?: number; F: number; S?: number; R: number; C: number };
+      multiplier?: number;
+      context?: string;
+    };
+  };
   updatedAt?: string;
 }
 

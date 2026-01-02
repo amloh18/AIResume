@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Target } from 'lucide-react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import SegmentedToggle from '@/components/ui/SegmentedToggle';
 
 interface ApplicationStats {
   totalApplications: number;
@@ -181,20 +182,19 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
         </div>
 
         <div className="flex items-center gap-2">
-          <select
-            value={timeRange}
-            onChange={(e) => {
-              const value = e?.target?.value;
-              if (value) {
-                setTimeRange(value as '7d' | '30d' | '90d');
-              }
-            }}
-            className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-300 dark:border-white/20 text-gray-900 dark:text-white rounded-lg text-sm focus:ring-2 focus:ring-purple-500/50"
-          >
-            <option value="7d">Last 7 days</option>
-            <option value="30d">Last 30 days</option>
-            <option value="90d">Last 90 days</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <SegmentedToggle
+              value={timeRange}
+              onChange={(value) => setTimeRange(value as '7d' | '30d' | '90d')}
+              options={[
+                { value: '7d', label: '7D' },
+                { value: '30d', label: '30D' },
+                { value: '90d', label: '90D' },
+              ]}
+              theme="purple"
+              size="sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
                   domain={maxValue === 0 ? [0, 1] : [0, maxValue]}
                   tick={{ fill: '#9ca3af', fontSize: 10 }}
                   tickFormatter={(value) => Math.round(value).toString()}
-                  ticks={maxValue === 0 ? [0] : customTicks}
+                  ticks={maxValue === 0 ? ([0] as any) : (customTicks as any)}
                   className="dark:[&_text]:fill-gray-500"
                 />
                 <Radar

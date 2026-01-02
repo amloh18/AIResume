@@ -9,9 +9,9 @@ interface TheModernCVTemplateProps {
   className?: string;
 }
 
-export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({ 
-  cvData, 
-  className = '' 
+export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
+  cvData,
+  className = ''
 }) => {
   const { basics, work, education, skills, projects, languages } = cvData;
 
@@ -20,11 +20,12 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
       <style jsx>{`
         .data-driven-pro-template {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-          max-width: 8.5in;
+          max-width: 100%;
           min-height: 11in;
           margin: 0 auto;
-          padding: 0.75in;
+          padding: 32px;
           background: white;
+          box-sizing: border-box;
           color: #111827;
           line-height: 1.5;
           box-shadow: 0 4px 12px rgba(0,0,0,0.05);
@@ -304,7 +305,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
 
         {/* Main Content Area */}
         <div className="main-content">
-          
+
           {/* Header Section */}
           <header className="header">
             <div className="header-main">
@@ -333,10 +334,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
 
           {/* Body Columns */}
           <div className="body-container">
-            
+
             {/* Left Column */}
             <div className="left-column">
-              
+
               <section className="summary-section">
                 <h3 className="section-title-left">Summary</h3>
                 <p className="summary-text">
@@ -351,7 +352,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                     <h4 className="job-title">{job.position}</h4>
                     <p className="company-info">{job.name} | {job.startDate} – {job.endDate}</p>
                     {job.summary && (
-                      <div 
+                      <div
                         className="job-description"
                         dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
                       />
@@ -389,11 +390,11 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
               <section className="projects-section">
                 <h3 className="section-title-left">Projects</h3>
                 {projects?.map((proj, index) => (
-                   <div key={index} className="project-item">
-                     <strong className="project-name">{proj.name}:</strong>
-                     <span className="project-desc"> {proj.description} </span>
-                     {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="project-link">[link]</a>}
-                   </div>
+                  <div key={index} className="project-item">
+                    <strong className="project-name">{proj.name}:</strong>
+                    <span className="project-desc"> {proj.description} </span>
+                    {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="project-link">[link]</a>}
+                  </div>
                 ))}
                 {(!projects || projects.length === 0) && (
                   <>
@@ -417,14 +418,14 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
 
             {/* Right Column */}
             <div className="right-column">
-              
-              <img 
-                src={basics?.image || '/images/default-avatar.png'} 
-                alt={basics?.name || 'Profile Picture'} 
+
+              <img
+                src={basics?.image || '/images/default-avatar.png'}
+                alt={basics?.name || 'Profile Picture'}
                 className="profile-picture"
                 onError={(e) => (e.currentTarget.src = '/images/default-avatar.png')}
               />
-              
+
               <section className="education-section right-section">
                 <h3 className="section-title-right">Education</h3>
                 {education?.map((edu, index) => (
@@ -481,20 +482,20 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
               </section>
 
               <section className="languages-section right-section">
-                 <h3 className="section-title-right">Languages</h3>
-                 <ul className="skill-list">
-                   {languages?.map((lang, index) => (
-                      <li key={index} className="language-item">
-                        {lang.language}: {lang.fluency}
-                      </li>
-                   ))}
-                   {(!languages || languages.length === 0) && (
-                      <>
-                        <li className="language-item">English: Fluent</li>
-                        <li className="language-item">Spanish: Intermediate</li>
-                      </>
-                   )}
-                 </ul>
+                <h3 className="section-title-right">Languages</h3>
+                <ul className="skill-list">
+                  {languages?.map((lang, index) => (
+                    <li key={index} className="language-item">
+                      {lang.language}: {lang.fluency}
+                    </li>
+                  ))}
+                  {(!languages || languages.length === 0) && (
+                    <>
+                      <li className="language-item">English: Fluent</li>
+                      <li className="language-item">Spanish: Intermediate</li>
+                    </>
+                  )}
+                </ul>
               </section>
 
             </div>

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Briefcase, Calendar, Plus, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 interface Job {
     _id: string;
@@ -11,16 +12,63 @@ interface Job {
     status: string;
     companyLogo?: string;
     location?: string;
+    interviewCoach?: {
+        status: string;
+        questions?: any[];
+        updatedAt?: string;
+    };
 }
 
 const PotentialSessionCard: React.FC<{ job: Job }> = ({ job }) => {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
 
-    const handleStart = async () => {
+    const isFresh = (dateString?: string) => {
+        if (!dateString) return false;
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - date.getTime());
+        const diffHours = diffTime / (1000 * 60 * 60);
+        return diffHours < 72;
+    };
+
+    const handleStart = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+
+        // 🟢 1. CHECK LOCAL STATUS FIRST
+        // If the job prop passed to this component already has the data, skip the API entirely.
+        if (
+            job.interviewCoach?.status === 'ready' &&
+            (job.interviewCoach?.questions?.length || 0) > 0 &&
+            isFresh(job.interviewCoach?.updatedAt)
+        ) {
+            console.log("⚡ Plan ready locally. Redirecting...");
+            router.push(`/dashboard/interview/${job._id}`);
+            return;
+        }
+
+        // 🟡 2. OTHERWISE, CALL API
         setLoading(true);
-        // Navigate to hub which will trigger init
-        router.push(`/interview-coach/${job._id}`);
+        try {
+            const response = await fetch('/api/interview/initiate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ jobId: job._id })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                router.push(`/dashboard/interview/${job._id}`);
+            } else {
+                toast.error(data.error || 'Failed to start session');
+                setLoading(false);
+            }
+        } catch (err) {
+            console.error('Failed to initiate session:', err);
+            toast.error('Something went wrong');
+            setLoading(false);
+        }
     };
 
     return (

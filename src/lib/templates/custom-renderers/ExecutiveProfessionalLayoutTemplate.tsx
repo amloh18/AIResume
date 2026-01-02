@@ -14,7 +14,7 @@ const formatDateToYearMonth = (dateString: string | undefined | null): string =>
   if (!dateString) return 'Present';
   const dateLower = dateString.toLowerCase().trim();
   if (dateLower === 'present' || dateLower === '') return 'Present';
-  
+
   // Handle various date formats
   // YYYY-MM-DD or YYYY-MM
   const dateMatch = dateString.match(/(\d{4})-(\d{1,2})/);
@@ -23,12 +23,12 @@ const formatDateToYearMonth = (dateString: string | undefined | null): string =>
     const month = dateMatch[2].padStart(2, '0');
     return `${year}/${month}`;
   }
-  
+
   // If already in YYYY/MM format, return as-is
   if (dateString.match(/^\d{4}\/\d{2}$/)) {
     return dateString;
   }
-  
+
   // Fallback: try to parse as Date
   try {
     const date = new Date(dateString);
@@ -40,13 +40,13 @@ const formatDateToYearMonth = (dateString: string | undefined | null): string =>
   } catch (e) {
     // If parsing fails, return original
   }
-  
+
   return dateString;
 };
 
-export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessionalLayoutTemplateProps> = ({ 
-  cvData, 
-  className = '' 
+export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessionalLayoutTemplateProps> = ({
+  cvData,
+  className = ''
 }) => {
   const { basics, work, education, skills, projects, languages } = cvData;
 
@@ -61,7 +61,9 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
           background: #ffffff;
           max-width: 100%;
           margin: 0;
-          padding: 0;
+          margin: 0;
+          padding: 32px;
+          box-sizing: border-box;
         }
 
         .header {

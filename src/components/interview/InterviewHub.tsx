@@ -13,7 +13,13 @@ interface InterviewHubProps {
 
 const InterviewHub: React.FC<InterviewHubProps> = ({ session, questionsByModule }) => {
     const router = useRouter();
-    const { targetRole, jobId, readinessScore } = session;
+
+    // Handle both new embedded data and legacy session structure
+    const targetRole = session?.targetRole || 'Interview Prep';
+    const jobId = session?.jobId?._id || session?.jobId || session?._id || '';
+    const company = session?.jobId?.company || '';
+    const readinessScore = session?.readinessScore || 0;
+    const modules = session?.modules || [];
 
     return (
         <div className="h-full bg-gray-50 dark:bg-[#0a0a0a] min-h-screen">
@@ -22,7 +28,7 @@ const InterviewHub: React.FC<InterviewHubProps> = ({ session, questionsByModule 
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push('/interview')}
+                            onClick={() => router.push('/dashboard/interview')}
                             className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
@@ -31,7 +37,7 @@ const InterviewHub: React.FC<InterviewHubProps> = ({ session, questionsByModule 
                             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                 {targetRole} Prep
                             </h1>
-                            <p className="text-sm text-gray-500">{jobId?.company} • {session.modules?.length || 0} Modules</p>
+                            <p className="text-sm text-gray-500">{company} • {modules.length} Modules</p>
                         </div>
                     </div>
                 </div>
@@ -63,11 +69,11 @@ const InterviewHub: React.FC<InterviewHubProps> = ({ session, questionsByModule 
 
                 {/* Right Column: Modules List */}
                 <div className="lg:col-span-2">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Learning Plan</h2>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">Your Learning Path</h2>
                     <ModuleList
-                        modules={session.modules || []}
+                        modules={modules}
                         questionsByModule={questionsByModule}
-                        jobId={session.jobId._id}
+                        jobId={jobId}
                     />
                 </div>
             </div>

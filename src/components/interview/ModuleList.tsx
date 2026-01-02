@@ -6,21 +6,27 @@ import { ChevronDown, ChevronUp, CheckCircle2, Circle, Lock, PlayCircle, BookOpe
 
 interface Module {
     id: string;
-    title: string;
-    type: string;
-    status: string;
+    name: string;
+    title?: string; // Legacy support
+    description?: string;
+    questionIds?: string[];
 }
 
 interface Question {
-    _id: string;
-    content: {
+    id: string;
+    _id?: string; // Legacy support
+    question: string;
+    category?: string;
+    difficulty?: 'Easy' | 'Medium' | 'Hard' | string;
+    status: 'pending' | 'drafted' | 'completed';
+    // Legacy support
+    content?: {
         question: string;
         difficulty: string;
     };
     userAnswer?: {
         status: string;
     };
-    displayOrder: number;
 }
 
 interface ModuleListProps {
@@ -38,16 +44,32 @@ const ModuleList: React.FC<ModuleListProps> = ({ modules, questionsByModule, job
         setExpandedModule(expandedModule === id ? null : id);
     };
 
+    // Get question text supporting both new and legacy structures
+    const getQuestionText = (q: Question): string => {
+        const text = q.question || q.content?.question || '';
+        // Truncate long questions
+        return text.length > 80 ? text.substring(0, 80) + '...' : text;
+    };
+
+    // Get difficulty supporting both structures
+    const getDifficulty = (q: Question): string => {
+        return q.difficulty || q.content?.difficulty || 'Medium';
+    };
+
+    // Check if question is completed
+    const isCompleted = (q: Question): boolean => {
+        return q.status === 'completed' || q.userAnswer?.status === 'analyzed';
+    };
+
     return (
         <div className="space-y-4">
             {modules.map((module, index) => {
                 const questions = questionsByModule[module.id] || [];
-                const completedCount = questions.filter(q => q.userAnswer?.status === 'analyzed').length;
+                const completedCount = questions.filter(q => isCompleted(q)).length;
                 const totalCount = questions.length;
                 const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
                 const isExpanded = expandedModule === module.id;
-                // Simple logic: Allow access if previous module is at least started or if it's the first one
-                const isLocked = false; // For now open all
+                const isLocked = false; // Open all for now
 
                 return (
                     <div
@@ -73,8 +95,13 @@ const ModuleList: React.FC<ModuleListProps> = ({ modules, questionsByModule, job
                                 </div>
                                 <div>
                                     <h3 className={`font-bold ${isLocked ? 'text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-                                        {module.title}
+                                        {module.name || module.title}
                                     </h3>
+                                    {module.description && (
+                                        <p className="text-xs text-gray-500 mt-0.5 max-w-md truncate">
+                                            {module.description}
+                                        </p>
+                                    )}
                                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
                                         <span>{completedCount}/{totalCount} Questions</span>
                                         <div className="w-20 h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
@@ -105,28 +132,36 @@ const ModuleList: React.FC<ModuleListProps> = ({ modules, questionsByModule, job
                                 >
                                     <div className="p-2 space-y-1">
                                         {questions.map((q, qIndex) => {
-                                            const isDone = q.userAnswer?.status === 'analyzed';
+                                            const questionId = q.id || q._id;
+                                            const isDone = isCompleted(q);
+                                            const difficulty = getDifficulty(q);
+
                                             return (
                                                 <button
-                                                    key={q._id}
-                                                    onClick={() => router.push(`/interview-coach/${jobId}/practice?question=${q._id}`)}
+                                                    key={questionId}
+                                                    onClick={() => router.push(`/dashboard/interview/practice/${questionId}?jobId=${jobId}`)}
                                                     className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group text-left"
                                                 >
                                                     <div className="flex items-start gap-3">
-                                                        <div className={`mt-0.5 ${isDone ? 'text-green-500' : 'text-gray-300'}`}>
+                                                        <div className={`mt-0.5 ${isDone ? 'text-green-500' : q.status === 'drafted' ? 'text-yellow-500' : 'text-gray-300'}`}>
                                                             {isDone ? <CheckCircle2 className="w-5 h-5" /> : <Circle className="w-5 h-5" />}
                                                         </div>
                                                         <div>
                                                             <p className={`text-sm font-medium ${isDone ? 'text-gray-500 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
-                                                                {q.content.question}
+                                                                {getQuestionText(q)}
                                                             </p>
                                                             <div className="flex gap-2 mt-1">
-                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${q.content.difficulty === 'hard' ? 'bg-red-50 text-red-600 border-red-100' :
-                                                                    q.content.difficulty === 'medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-100' :
-                                                                        'bg-green-50 text-green-600 border-green-100'
+                                                                <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase ${difficulty.toLowerCase() === 'hard' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/20 dark:text-red-400 dark:border-red-900/30' :
+                                                                        difficulty.toLowerCase() === 'medium' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400 dark:border-yellow-900/30' :
+                                                                            'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/20 dark:text-green-400 dark:border-green-900/30'
                                                                     }`}>
-                                                                    {q.content.difficulty}
+                                                                    {difficulty}
                                                                 </span>
+                                                                {q.category && (
+                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded border bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-900/30">
+                                                                        {q.category}
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>

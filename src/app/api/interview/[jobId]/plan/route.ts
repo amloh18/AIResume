@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import InterviewSession from '@/models/InterviewSession';
-import InterviewQuestion from '@/models/InterviewQuestion';
+import { JobApplication } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
 
@@ -32,31 +31,95 @@ export async function GET(
 
         await getConnection();
 
-        // Fetch Session
-        const session = await InterviewSession.findOne({
-            userId: auth.userId,
-            jobId: jobId
-        });
+        // Fetch Job with embedded interview data
+        const jobIdQuery = mongoose.Types.ObjectId.isValid(jobId)
+            ? new mongoose.Types.ObjectId(jobId)
+            : jobId;
 
-        if (!session) {
+        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
+            ? new mongoose.Types.ObjectId(auth.userId)
+            : auth.userId;
+
+        const job = await JobApplication.findOne({
+            _id: jobIdQuery,
+            userId: userIdQuery
+        }).select('jobTitle company interviewCoach').lean() as any;
+
+        if (!job) {
             return setCorsHeaders(
-                NextResponse.json({ success: false, error: 'Session not found' }, { status: 404 }),
+                NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 }),
                 request
             );
         }
 
-        // Fetch All Questions for this session to calculate progress
-        // optimized to only select necessary fields
-        const questions = await InterviewQuestion.find({ sessionId: session._id })
-            .select('moduleId userAnswer.status displayOrder isHighRelevance content.difficulty')
-            .lean();
+        // Check if interview plan exists
+        if (!job.interviewCoach || job.interviewCoach.status !== 'ready') {
+            return setCorsHeaders(
+                NextResponse.json({
+                    success: false,
+                    error: 'Interview plan not generated yet',
+                    needsGeneration: true
+                }, { status: 404 }),
+                request
+            );
+        }
+
+        const { modules, questions, readinessScore } = job.interviewCoach;
 
         // Group questions by module for easier frontend consumption
-        const questionsByModule = questions.reduce((acc: any, q: any) => {
-            if (!acc[q.moduleId]) acc[q.moduleId] = [];
-            acc[q.moduleId].push(q);
-            return acc;
-        }, {});
+        // Group questions by module for easier frontend consumption
+        const questionsByModule: Record<string, any[]> = {};
+
+        console.log(`🧩 Grouping ${questions.length} questions into ${modules.length} modules...`);
+
+        questions.forEach((q: any) => {
+            // Robust ID extraction
+            const qId = q.id ? q.id.toString() : (q._id ? q._id.toString() : null);
+
+            if (!qId) {
+                console.warn('⚠️ Question found with no ID:', q);
+                return;
+            }
+
+            // Find which module this question belongs to
+            const module = modules.find((m: any) =>
+                m.questionIds?.some((mid: any) => mid?.toString() === qId)
+            );
+
+            const moduleId = module?.id || 'unassigned';
+
+            if (moduleId === 'unassigned') {
+                console.log(`⚠️ Question ${qId} not assigned to any module (looking for ID in [${modules.map((m: any) => m.questionIds?.length).join(',')}])`);
+            }
+
+            if (!questionsByModule[moduleId]) {
+                questionsByModule[moduleId] = [];
+            }
+            questionsByModule[moduleId].push(q);
+        });
+
+        // Ensure all modules are initialized in the map even if empty
+        modules.forEach((m: any) => {
+            if (!questionsByModule[m.id]) {
+                questionsByModule[m.id] = [];
+            }
+        });
+
+
+        // Build session-like response for frontend compatibility
+        const session = {
+            _id: job._id,
+            jobId: {
+                _id: job._id,
+                jobTitle: job.jobTitle,
+                company: job.company
+            },
+            targetRole: job.jobTitle,
+            modules: modules,
+            readinessScore: readinessScore || 0,
+            status: job.interviewCoach.status,
+            generatedAt: job.interviewCoach.generatedAt
+        };
 
         return setCorsHeaders(
             NextResponse.json({

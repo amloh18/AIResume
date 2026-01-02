@@ -1,9 +1,9 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Loader2, ArrowLeft } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import InterviewHub from '@/components/interview/InterviewHub';
 
 const InterviewHubPage = () => {
@@ -11,20 +11,33 @@ const InterviewHubPage = () => {
     const router = useRouter();
     const jobId = params.jobId as string;
 
-    // We fetch data inside the client component or pass it to a server component wrapper.
-    // Given the previous pattern, I'll do client-side fetch for now or use the Hub component to fetch.
-    // Let's keep data fetching here to manage loading state for the whole page.
-
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Prevent double fetch with ref
+    const fetchedRef = useRef(false);
+
     useEffect(() => {
-        if (!jobId) return;
+        if (!jobId || fetchedRef.current) return;
+        fetchedRef.current = true;
 
         const fetchData = async () => {
             try {
-                // First, initiate/ensure session exists
+                // Step 1: Try to fetch existing plan first (Smart Load)
+                const planRes = await fetch(`/api/interview/${jobId}/plan`);
+                const planData = await planRes.json();
+
+                if (planData.success && planData.session && planData.questionsByModule && Object.keys(planData.questionsByModule).length > 0) {
+                    console.log("⚡ Plan found. Skipping initiation.");
+                    setData(planData);
+                    setLoading(false);
+                    return;
+                }
+
+                console.log("Plan not ready or empty. Initiating...");
+
+                // Step 2: Initiate if no plan found
                 const initRes = await fetch('/api/interview/initiate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -38,16 +51,20 @@ const InterviewHubPage = () => {
                 }
 
                 const initData = await initRes.json();
-                console.log('Session initialized:', initData);
 
-                // Then fetch the full plan
-                const planRes = await fetch(`/api/interview/${jobId}/plan`);
-                const planData = await planRes.json();
+                if (!initData.success || !initData.interviewCoach) {
+                    throw new Error('No interview data returned');
+                }
 
-                if (planData.success) {
-                    setData(planData);
+                // Step 3: Fetch plan again to get questionsByModule grouping (if init didn't return it in that format)
+                // Note: initiate returns raw arrays/objects, 'plan' endpoint returns formatted questionsByModule
+                const finalPlanRes = await fetch(`/api/interview/${jobId}/plan`);
+                const finalPlanData = await finalPlanRes.json();
+
+                if (finalPlanData.success) {
+                    setData(finalPlanData);
                 } else {
-                    setError(planData.error || 'Failed to load plan');
+                    throw new Error(finalPlanData.error || 'Failed to load plan');
                 }
             } catch (err: any) {
                 console.error('Hub load error:', err);
@@ -70,17 +87,35 @@ const InterviewHubPage = () => {
         );
     }
 
-    if (error) {
+    if (error || !data?.session) {
         return (
             <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#141810]">
-                <div className="text-red-500 mb-2 font-semibold">Error: {error}</div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Please check the console for more details</p>
-                <button
-                    onClick={() => router.push('/dashboard/interview')}
-                    className="px-4 py-2 bg-lime-500 text-black font-medium rounded-lg hover:bg-lime-600 transition-colors"
-                >
-                    Back to Interview Coach
-                </button>
+                <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Could not load session</h2>
+                <div className="bg-red-50 dark:bg-red-900/10 p-4 rounded-lg mb-6 max-w-md w-full">
+                    <p className="text-sm font-mono text-red-600 dark:text-red-400 break-words text-center">
+                        Error: {error || 'Unknown error occurred'}
+                    </p>
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        onClick={() => router.push('/dashboard/interview')}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    >
+                        Go Back
+                    </button>
+                    <button
+                        onClick={() => {
+                            fetchedRef.current = false;
+                            setLoading(true);
+                            setError(null);
+                            window.location.reload();
+                        }}
+                        className="px-4 py-2 bg-lime-500 text-black font-medium rounded-lg hover:bg-lime-600 transition-colors"
+                    >
+                        Try Again
+                    </button>
+                </div>
             </div>
         );
     }

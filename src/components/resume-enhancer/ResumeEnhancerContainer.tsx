@@ -2158,7 +2158,7 @@ export default function ResumeEnhancerContainer({
       // CRITICAL FIX: Don't auto-navigate from step 3 - stay on current step
       // This preserves parsed data and surgeon analysis
       if (isFinishing && savedCvId) {
-        router.push(`/dashboard?tab=cvs&highlight=${savedCvId}`);
+        router.push(`/dashboard/canvas?highlight=${savedCvId}`);
       }
       // Removed: isContinuing navigation that was moving to step 4
 
@@ -2295,33 +2295,70 @@ export default function ResumeEnhancerContainer({
 
               {/* Save button - only show on step 3 and 4 */}
               {(state.currentStep === 3 || state.currentStep === 4) && (
-                <button
+                <motion.button
                   onClick={handleSmartSave}
                   disabled={saveStatus === 'saving'}
-                  className="px-3 py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+                  className="px-3 py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-lg text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[85px] justify-center"
+                  whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                 >
-                  {saveStatus === 'saving' ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Saving...</span>
-                    </>
-                  ) : saveStatus === 'success' ? (
-                    <>
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Saved!</span>
-                    </>
-                  ) : saveStatus === 'offline' ? (
-                    <>
-                      <Save className="w-3.5 h-3.5" />
-                      <span>Saved Offline</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-3.5 h-3.5" />
-                      <span>Save</span>
-                    </>
-                  )}
-                </button>
+                  <AnimatePresence mode="wait" initial={false}>
+                    {saveStatus === 'saving' ? (
+                      <motion.div
+                        key="saving"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Saving...</span>
+                      </motion.div>
+                    ) : saveStatus === 'success' ? (
+                      <motion.div
+                        key="success"
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <motion.div
+                          initial={{ scale: 0, rotate: -45 }}
+                          animate={{ scale: 1, rotate: 0 }}
+                          transition={{ delay: 0.1, type: "spring", stiffness: 400 }}
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        </motion.div>
+                        <span>Saved!</span>
+                      </motion.div>
+                    ) : saveStatus === 'offline' ? (
+                      <motion.div
+                        key="offline"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Saved Offline</span>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="idle"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 10 }}
+                        transition={{ duration: 0.2 }}
+                        className="flex items-center space-x-1.5"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        <span>Save</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.button>
               )}
 
               {/* Continue to Review button - only show on Step 3 */}
@@ -2335,10 +2372,7 @@ export default function ResumeEnhancerContainer({
                 </button>
               )}
 
-              {/* Save Status Indicator - Animated */}
-              {(saveStatus === 'saving' || saveStatus === 'success') && (
-                <SaveIndicator status={saveStatus} className="hidden sm:flex" />
-              )}
+
 
               {/* Guest Mode Tag */}
               {isGuestMode && (
@@ -2433,546 +2467,8 @@ export default function ResumeEnhancerContainer({
               )}
 
               {/* ATS Check Card - Redesigned (Step 3) */}
-              {state.currentStep === 3 && (
-                <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 overflow-hidden relative">
-                  {/* Blur overlay for guest users - always show for guest mode */}
-                  {isGuestMode && (
-                    <div className="absolute inset-0 bg-white/90 dark:bg-[#1a230f]/90 backdrop-blur-md z-20 rounded-xl flex items-center justify-center">
-                      <div className="text-center px-4 space-y-3">
-                        <p className="text-sm font-semibold text-[color:var(--accent-primary)] mb-2">
-                          Sign in to view analysis
-                        </p>
-                        <p className="text-xs text-[color:var(--text-secondary)] mb-3">
-                          Create an account to see your CV score and get personalized suggestions
-                        </p>
-                        <button
-                          onClick={() => {
-                            const currentPath = pathname;
-                            const currentSearch = searchParams.toString();
-                            const callbackUrl = currentSearch
-                              ? `${currentPath}?${currentSearch}`
-                              : currentPath;
-                            router.push(`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-                          }}
-                          className="px-4 py-2 bg-[#39FF14] hover:bg-[#32E614] text-black rounded-lg text-xs font-semibold transition-all shadow-lg hover:shadow-[#39FF14]/50 hover:scale-105"
-                        >
-                          Sign Up Free
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Header */}
-                  <div className="flex items-center justify-between px-3 py-2.5 border-b border-white/5">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <Sparkles className="w-4 h-4 text-[color:var(--accent-primary)] flex-shrink-0" />
-                      <div className="flex flex-col min-w-0">
-                        <div className="text-sm font-semibold text-[color:var(--text-primary)]">
-                          {isJDReferenced ? 'ATS Score' : 'CVCircle Score'}
-                        </div>
-                        {state.targetRole && (
-                          <div className="text-[9px] text-[color:var(--text-tertiary)] truncate">
-                            for {state.targetRole}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setIsScoreAnalysisCompact(!isScoreAnalysisCompact)}
-                      className="p-1 rounded hover:bg-white/5 transition-colors flex-shrink-0"
-                      aria-label={isScoreAnalysisCompact ? 'Expand' : 'Collapse'}
-                    >
-                      {isScoreAnalysisCompact ? (
-                        <Maximize2 className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
-                      ) : (
-                        <Minimize2 className="w-3.5 h-3.5 text-[color:var(--text-secondary)]" />
-                      )}
-                    </button>
-                  </div>
-
-                  <div className="p-3 space-y-3">
-
-                    {/* Score Bar - Animated */}
-                    <div className="bg-gray-100 dark:bg-[#80FF00]/10 rounded-full p-1 flex items-center gap-2">
-                      <div className="px-2">
-                        <AnimatedScore
-                          value={analysisScore}
-                          suffix="%"
-                          size="sm"
-                          showChange={true}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <AnimatedProgressBar
-                          value={analysisScore}
-                          height={4}
-                          colorStops={[
-                            { threshold: 0, color: '#ef4444' },
-                            { threshold: 50, color: '#f59e0b' },
-                            { threshold: 70, color: '#80FF00' }
-                          ]}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Score Breakdown - Same as Step4 Review */}
-                    <div className="rounded-lg p-2 space-y-1.5 mt-2 bg-gray-50 dark:bg-[#1a230f]/50">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 uppercase">Score Breakdown</span>
-                        <span className={`text-[10px] font-bold ${scoreResult.cvScore.total >= 80 ? 'text-green-400' :
-                          scoreResult.cvScore.total >= 60 ? 'text-yellow-400' : 'text-red-400'
-                          }`}>
-                          Grade: {scoreResult.overallGrade}
-                        </span>
-                      </div>
-                      {/* Breakdown Bars */}
-                      <div className="space-y-1.5">
-                        {/* Completeness */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Completeness</span>
-                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.completeness / 25) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.completeness / 25) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${(scoreResult.cvScore.completeness / 25) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.completeness}/25</span>
-                        </div>
-                        {/* Impact Verbs */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Impact Verbs</span>
-                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.impactVerbs / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.impactVerbs / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${(scoreResult.cvScore.impactVerbs / 20) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.impactVerbs}/20</span>
-                        </div>
-                        {/* Quantification */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Quantification</span>
-                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.quantification / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.quantification / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${(scoreResult.cvScore.quantification / 20) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.quantification}/20</span>
-                        </div>
-                        {/* Formatting */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Formatting</span>
-                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.formatting / 15) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.formatting / 15) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${(scoreResult.cvScore.formatting / 15) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.formatting}/15</span>
-                        </div>
-                        {/* Readability */}
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[9px] text-gray-600 dark:text-gray-300 w-20">Readability</span>
-                          <div className="flex-1 h-1 bg-gray-300 dark:bg-white/10 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${(scoreResult.cvScore.readability / 20) * 100 >= 80 ? 'bg-green-500' : (scoreResult.cvScore.readability / 20) * 100 >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
-                              style={{ width: `${(scoreResult.cvScore.readability / 20) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[9px] text-gray-700 dark:text-gray-300 w-8 text-right">{scoreResult.cvScore.readability}/20</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {!isScoreAnalysisCompact && (
-                      <>
-                        {/* Keywords Status Section - Only show for non-Master CVs with JD, or show role info for standalone */}
-                        {!isMasterCV && (
-                          <div>
-                            <div className="space-y-2">
-                              {/* Dynamic Header based on state */}
-                              <div className="flex items-center gap-2">
-                                {(() => {
-                                  // Determine header based on state
-                                  if (isLoadingSkillGap) {
-                                    return (
-                                      <>
-                                        <Loader2 className="w-3 h-3 text-[color:var(--accent-primary)] animate-spin" />
-                                        <InfoTooltip content="Analyzing keywords from job description...">
-                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Analyzing Keywords</span>
-                                        </InfoTooltip>
-                                      </>
-                                    );
-                                  }
-
-                                  if (!isJDReferenced) {
-                                    // No keywords section when no JD - Add JD button is in JobRoleCard
-                                    return null;
-                                  }
-
-                                  if (keywordStats.allMatched && keywordStats.hasKeywords) {
-                                    return (
-                                      <>
-                                        <CheckCircle2 className="w-3 h-3 text-[#80FF00]" />
-                                        <InfoTooltip content="All keywords from the job description are present in your CV">
-                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">All Keywords Matched</span>
-                                        </InfoTooltip>
-                                      </>
-                                    );
-                                  }
-
-                                  if (keywordStats.missing > 0) {
-                                    return (
-                                      <>
-                                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
-                                        <InfoTooltip content={`${keywordStats.missing} keywords from the job description are missing from your resume`}>
-                                          <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Missing Keywords</span>
-                                        </InfoTooltip>
-                                      </>
-                                    );
-                                  }
-
-                                  return (
-                                    <>
-                                      <div className="w-2 h-2 rounded-full bg-gray-500"></div>
-                                      <InfoTooltip content="Keyword analysis status">
-                                        <span className="text-[10px] font-semibold text-[color:var(--text-primary)] uppercase cursor-help">Keywords</span>
-                                      </InfoTooltip>
-                                    </>
-                                  );
-                                })()}
-                              </div>
-
-                              {/* Dynamic Status Message */}
-                              {(() => {
-                                if (isLoadingSkillGap) {
-                                  return (
-                                    <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
-                                      Analyzing keywords from job description...
-                                    </div>
-                                  );
-                                }
-
-                                if (!isJDReferenced) {
-                                  // No content when no JD - the Add JD button is in JobRoleCard
-                                  return null;
-                                }
-
-                                if (keywordStats.allMatched && keywordStats.hasKeywords) {
-                                  return (
-                                    <div className="bg-[#80FF00]/10 border border-[#80FF00]/30 rounded-lg p-2 space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <CheckCircle2 className="w-3 h-3 text-[#80FF00] flex-shrink-0" />
-                                        <span className="text-[9px] font-semibold text-[#80FF00]">
-                                          Your CV now contains all keywords from JD
-                                        </span>
-                                      </div>
-                                      <div className="text-[8px] text-[color:var(--text-secondary)] pl-5">
-                                        {keywordStats.matched} of {keywordStats.total} keywords matched ({keywordStats.matchPercentage}%)
-                                      </div>
-                                      {fixesApplied && (
-                                        <div className="text-[8px] text-[color:var(--text-secondary)] pl-5 italic">
-                                          ✓ Fixes have been applied
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                }
-
-                                if (keywordStats.missing > 0 && keywordStats.hasKeywords) {
-                                  return (
-                                    <>
-                                      {/* Keywords Table Header */}
-                                      <div className="grid grid-cols-3 gap-1 text-[9px] font-medium text-[color:var(--text-secondary)] px-1">
-                                        <span>Keyword</span>
-                                        <span className="text-center">In Resume</span>
-                                        <span className="text-center">In Job Ad</span>
-                                      </div>
-
-                                      {/* Missing Keywords List */}
-                                      <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                                        {atsKeywords
-                                          .filter(kw => !kw.inResume)
-                                          .slice(0, 5)
-                                          .map((kw, idx) => (
-                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-gray-100 dark:bg-[#252a1f] text-[9px]">
-                                              <span className="text-[color:var(--text-primary)] truncate" title={kw.keyword}>
-                                                {kw.keyword}
-                                              </span>
-                                              <div className="flex justify-center">
-                                                <XCircle className="w-3 h-3 text-red-400" />
-                                              </div>
-                                              <span className="text-center text-[color:var(--text-secondary)]">{kw.inJobAd}</span>
-                                            </div>
-                                          ))}
-
-                                        {keywordStats.missing > 5 && (
-                                          <div className="text-[8px] text-[color:var(--text-tertiary)] text-center py-1 italic">
-                                            +{keywordStats.missing - 5} more missing keywords
-                                          </div>
-                                        )}
-                                      </div>
-
-                                      {/* Match Statistics */}
-                                      <div className="bg-gray-100 dark:bg-[#252a1f] rounded-lg p-2 space-y-1">
-                                        <div className="text-[9px] text-[color:var(--text-secondary)]">
-                                          <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.matched}</span> of{' '}
-                                          <span className="font-semibold text-[color:var(--text-primary)]">{keywordStats.total}</span> keywords matched
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                          <div className="flex-1 h-1.5 bg-gray-200 dark:bg-[#1a230f] rounded-full overflow-hidden">
-                                            <div
-                                              className="h-full bg-[#80FF00] transition-all duration-500"
-                                              style={{ width: `${keywordStats.matchPercentage}%` }}
-                                            />
-                                          </div>
-                                          <span className="text-[8px] text-[color:var(--text-secondary)]">{keywordStats.matchPercentage}%</span>
-                                        </div>
-                                      </div>
-                                    </>
-                                  );
-                                }
-
-                                // Fallback: No keywords found
-                                if (!keywordStats.hasKeywords && !isLoadingSkillGap) {
-                                  return (
-                                    <div className="text-[9px] text-[color:var(--text-tertiary)] text-center py-2 italic">
-                                      No keywords found in job description
-                                    </div>
-                                  );
-                                }
-
-                                // Fallback: Show fix annotations if available
-                                if ((state.fixAnnotations || []).filter(f => f.category === 'keywords' && f.status === 'open').length > 0) {
-                                  return (
-                                    <>
-                                      <div className="grid grid-cols-3 gap-1 text-[9px] font-medium text-[color:var(--text-secondary)] px-1">
-                                        <span>Keyword</span>
-                                        <span className="text-center">In Resume</span>
-                                        <span className="text-center">In Job Ad</span>
-                                      </div>
-                                      <div className="space-y-1 max-h-[150px] overflow-y-auto">
-                                        {(state.fixAnnotations || [])
-                                          .filter(f => f.category === 'keywords' && f.status === 'open')
-                                          .slice(0, 3)
-                                          .map((fix, idx) => (
-                                            <div key={idx} className="grid grid-cols-3 gap-1 items-center py-1 px-1 rounded bg-gray-100 dark:bg-[#252a1f] text-[9px]">
-                                              <span className="text-[color:var(--text-primary)] truncate">{fix.issue?.split(' ').slice(0, 2).join(' ') || 'Keyword'}</span>
-                                              <div className="flex justify-center">
-                                                <span className="text-red-400">✕</span>
-                                              </div>
-                                              <span className="text-center text-[color:var(--text-secondary)]">1</span>
-                                            </div>
-                                          ))}
-                                      </div>
-                                    </>
-                                  );
-                                }
-
-                                return null;
-                              })()}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Issues Count Badge - Dynamic based on state */}
-                        <div className="flex items-center justify-between pt-1">
-                          {(() => {
-                            if (openIssuesCount === 0 && fixesApplied) {
-                              return (
-                                <div className="flex items-center gap-1.5">
-                                  <CheckCircle2 className="w-3 h-3 text-[#80FF00]" />
-                                  <span className="text-[10px] text-[#80FF00] font-semibold">All fixes applied</span>
-                                </div>
-                              );
-                            }
-
-                            if (openIssuesCount === 0 && keywordStats.allMatched) {
-                              return (
-                                <div className="flex items-center gap-1.5">
-                                  <CheckCircle2 className="w-3 h-3 text-[#80FF00]" />
-                                  <span className="text-[10px] text-[#80FF00] font-semibold">CV optimized</span>
-                                </div>
-                              );
-                            }
-
-                            if (openIssuesCount > 0) {
-                              return (
-                                <span className="text-[10px] text-[color:var(--text-secondary)]">
-                                  {openIssuesCount} {openIssuesCount === 1 ? 'suggestion' : 'suggestions'} available
-                                </span>
-                              );
-                            }
-
-                            if (!isJDReferenced && !isMasterCV) {
-                              // No message when no JD - Add JD button is in JobRoleCard
-                              return null;
-                            }
-
-                            return (
-                              <span className="text-[10px] text-[color:var(--text-secondary)]">
-                                No suggestions at this time
-                              </span>
-                            );
-                          })()}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  {/* View Report Button */}
-                  <div className="px-3 pb-3 space-y-2">
-                    <InfoTooltip content="Review mode highlights suggestions directly on your CV. Turn it on to see inline fixes and improvements.">
-                      <button
-                        onClick={() => dispatch({ type: 'SET_REVIEW_MODE', payload: !state.reviewMode })}
-                        className={`w-full px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${state.reviewMode
-                          ? 'bg-[#80FF00] text-black hover:bg-[#70e600]'
-                          : 'bg-[#2a3520] text-[color:var(--text-secondary)] hover:bg-[#353f28]'
-                          }`}
-                      >
-                        Review mode: {state.reviewMode ? 'ON' : 'OFF'}
-                      </button>
-                    </InfoTooltip>
-
-                    {/* Report Button - Deep Dive Analysis */}
-                    {(journeyId || state.journeyId || state.jobData) && (state.cvId || cvId) && (
-                      <button
-                        onClick={() => {
-                          setShowATSDeepDive(true);
-                          logResumeEnhancerEvent({
-                            action: 'ats_deep_dive_opened',
-                            resourceType: 'cv',
-                            resourceId: state.cvId || cvId,
-                            metadata: { cvType: state.cvType, source: 'sidebar' }
-                          });
-                        }}
-                        className="w-full px-3 py-2 rounded-lg bg-gray-200 dark:bg-[#2a3520] hover:bg-gray-300 dark:hover:bg-[#353f28] text-[color:var(--text-secondary)] text-xs font-semibold transition-colors flex items-center justify-center gap-2"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Report</span>
-                      </button>
-                    )}
-
-                    {/* Fix ATS Button (renamed from View report) */}
-                    <button
-                      onClick={async () => {
-                        if (isSidebarAnalyzing) return;
-
-                        // For guest users, always show auth prompt when clicking Fix CV
-                        if (isGuestMode) {
-                          setShowAuthPrompt(true);
-                          setHasShownAuthPrompt(true);
-                          return; // Stop execution, auth prompt will be shown
-                        }
-
-                        // NOTE: Journey CVs use job description for analysis, don't require targetRole/seniorityLevel
-                        // Only standalone/master CVs need targetRole/seniorityLevel
-                        const isJourneyCV = state.cvType === 'journey' && (state.jobData || state.journeyId);
-
-                        // Define role and seniority for both journey and non-journey CVs
-                        let role: string;
-                        let seniority: string;
-
-                        if (isJourneyCV) {
-                          // For journey CVs, use job title and default seniority
-                          role = state.jobData?.jobTitle || state.jobData?.title || '';
-                          seniority = 'professional';
-                        } else {
-                          // For standalone/master CVs, require targetRole and seniorityLevel
-                          role = state.targetRole || '';
-                          seniority = state.seniorityLevel || '';
-                          if (!role || !seniority) {
-                            const inferred = inferRoleContextFromCVData(state.cvData);
-                            if (inferred.targetRole && inferred.seniorityLevel) {
-                              role = inferred.targetRole;
-                              seniority = inferred.seniorityLevel;
-                              dispatch({
-                                type: 'SET_ROLE_CONTEXT',
-                                payload: { targetRole: inferred.targetRole, seniorityLevel: inferred.seniorityLevel }
-                              });
-                            } else {
-                              alert('Please set your target role and seniority level first.');
-                              return;
-                            }
-                          }
-                        }
-
-                        // Check for JD requirement for standalone CVs (only for authenticated users)
-                        if (state.cvType === 'standalone' && !isJDReferenced) {
-                          // Navigate to Step 3 if not already there, then open job parser
-                          if (state.currentStep !== 3) {
-                            goToStep(3);
-                          }
-                          setShowJobParserDialog(true);
-                          return;
-                        }
-
-                        setIsSidebarAnalyzing(true);
-                        try {
-                          // Ensure we have analysis + annotations before opening report
-                          // Use cache-aware method to avoid regenerating analysis unnecessarily
-                          if (!state.surgeonAnalysis || (state.fixAnnotations || []).length === 0) {
-                            const result = await CVSurgeonService.analyzeCVWithCache(
-                              state.cvData,
-                              role,
-                              seniority,
-                              state.cvId,
-                              userId,
-                              state.jobData
-                            );
-                            dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
-                            dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
-
-                            const firstOpenFromResult = result.annotations.find((f) => f.status === 'open');
-                            if (!state.activeFixId && firstOpenFromResult) {
-                              dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpenFromResult.id });
-                            }
-
-                            if (result.cached) {
-                              console.log('✅ Loaded cached analysis - no AI tokens used');
-                            }
-                          }
-
-                          // If we already had annotations, ensure an active issue is selected.
-                          const firstOpen = (state.fixAnnotations || []).find((f) => f.status === 'open');
-                          if (!state.activeFixId && firstOpen) dispatch({ type: 'SET_ACTIVE_FIX', payload: firstOpen.id });
-
-                          logResumeEnhancerEvent({
-                            action: 'resume_enhancer_report_opened',
-                            resourceType: 'cv',
-                            resourceId: state.cvId,
-                            metadata: { cvType: state.cvType, score: state.surgeonAnalysis?.score ?? null, source: 'sidebar' }
-                          });
-
-                          dispatch({ type: 'SET_REPORT_OPEN', payload: true });
-                        } catch (error) {
-                          console.error('CV Surgeon analysis failed (sidebar View report):', error);
-                          const message = error instanceof Error ? error.message : 'CV Surgeon analysis failed';
-                          alert(message);
-                        } finally {
-                          setIsSidebarAnalyzing(false);
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-lg bg-[#80FF00] hover:bg-[#70e600] text-black text-xs font-semibold transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:text-gray-600 disabled:cursor-not-allowed"
-                      disabled={isSidebarAnalyzing}
-                    >
-                      {isSidebarAnalyzing ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Analyzing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>{isJourneyCV ? 'Fix ATS' : 'Fix CV'}</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
+              {/* ATS Check Card - Removed for Step 3 per user request */}
+              {state.currentStep === 3 && null}
 
               {/* Vertical Step Indicator - Hidden on desktop since we have ribbon, shown on mobile if needed */}
               <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-gray-200 dark:border-white/5 hidden">

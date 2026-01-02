@@ -237,52 +237,52 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                   <div className="mt-4">
                     {stage.status === 'draft' && onCreateJourney && (
                       <DraftStageView
-                        jobs={stageJobs}
-                        onJobClick={onJobClick}
-                        onCreateJourney={onCreateJourney}
+                        jobs={stageJobs as any}
+                        onJobClick={onJobClick as any}
+                        onCreateJourney={onCreateJourney as any}
                       />
                     )}
                     {stage.status === 'created' && (
                       <CreatedStageView
-                        jobs={stageJobs}
+                        jobs={stageJobs as any}
                         journeys={journeys}
                         getJobJourneys={getJobJourneys}
                         getJourneyProgress={getJourneyProgress}
                         getJourneyStatusText={getJourneyStatusText}
-                        onJobClick={onJobClick}
+                        onJobClick={onJobClick as any}
                         onRefresh={onRefresh}
                       />
                     )}
                     {stage.status === 'applied' && onJobStatusUpdate && (
                       <AppliedStageView
-                        jobs={stageJobs}
-                        onJobClick={onJobClick}
-                        onJobStatusUpdate={onJobStatusUpdate}
+                        jobs={stageJobs as any}
+                        onJobClick={onJobClick as any}
+                        onJobStatusUpdate={onJobStatusUpdate as any}
                         isFullScreen={!!zoomedStage}
                       />
                     )}
                     {stage.status === 'interview' && onJobStatusUpdate && (
                       <InterviewStageView
-                        jobs={stageJobs}
+                        jobs={stageJobs as any}
                         journeys={journeys}
                         getJobJourneys={getJobJourneys}
-                        onJobClick={onJobClick}
-                        onJobStatusUpdate={onJobStatusUpdate}
+                        onJobClick={onJobClick as any}
+                        onJobStatusUpdate={onJobStatusUpdate as any}
                         isFullScreen={!!zoomedStage}
                       />
                     )}
                     {stage.status === 'offer' && onJobStatusUpdate && (
                       <OfferStageView
-                        jobs={stageJobs}
-                        onJobClick={onJobClick}
-                        onJobStatusUpdate={onJobStatusUpdate}
+                        jobs={stageJobs as any}
+                        onJobClick={onJobClick as any}
+                        onJobStatusUpdate={onJobStatusUpdate as any}
                         isFullScreen={!!zoomedStage}
                       />
                     )}
                     {stage.status === 'rejected' && (
                       <RejectedStageView
-                        jobs={stageJobs}
-                        onJobClick={onJobClick}
+                        jobs={stageJobs as any}
+                        onJobClick={onJobClick as any}
                         isFullScreen={!!zoomedStage}
                       />
                     )}
@@ -297,10 +297,10 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
           {stages.map((stage) => {
             const stageJobs = jobsByStatus[stage.status as keyof typeof jobsByStatus];
             return (
-              <div key={stage.status} className="space-y-4 w-[320px] flex-shrink-0">
+              <div key={stage.status} className="flex flex-col gap-4 w-[320px] flex-shrink-0 h-full max-h-full">
                 {/* Stage Header */}
                 <div
-                  className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
+                  className={`flex-shrink-0 p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
                   style={{
                     '--hover-color': stage.hoverColor
                   } as React.CSSProperties}
@@ -323,11 +323,11 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                 {/* Drop Zone */}
                 <div
-                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 ${draggedJob
+                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto min-h-0 ${draggedJob
                     ? isDraggableStage(stage.status)
-                      ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20 min-h-[100px]`
-                      : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50 min-h-[100px]'
-                    : 'border-transparent min-h-[100px]'
+                      ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
+                      : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50'
+                    : 'border-transparent'
                     }`}
                   onDragOver={onDragOver}
                   onDrop={(e) => onDrop(e, stage.status)}
@@ -366,7 +366,6 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                               onDelete={() => { }}
                               onRefresh={() => { }}
                               onUpdateJourney={() => { }}
-                              onShowDeleteConfirm={() => { }}
                             />
                           ));
                       }).flat()

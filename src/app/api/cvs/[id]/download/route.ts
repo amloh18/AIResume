@@ -11,7 +11,15 @@ import mongoose from 'mongoose';
 import { redisRateLimiter } from '@/lib/redis-rate-limiter';
 import { configService } from '@/lib/services/configService';
 import { validateDownloadParams, sanitizeFilename, validateFileSize } from '@/lib/utils/downloadValidation';
-import { logger } from '@/lib/structured-logger';
+// Safely import logger to handle potential circular dependencies
+import { logger as originalLogger } from '@/lib/structured-logger';
+
+// Create a safe logger wrapper
+const safeLogger = {
+  info: (msg: string, ...args: any[]) => originalLogger ? originalLogger.info(msg, ...args) : console.log(msg, ...args),
+  warn: (msg: string, ...args: any[]) => originalLogger ? originalLogger.warn(msg, ...args) : console.warn(msg, ...args),
+  error: (msg: string, error?: any, ...args: any[]) => originalLogger ? originalLogger.error(msg, error, ...args) : console.error(msg, error, ...args),
+};
 
 export async function GET(
   request: NextRequest,
@@ -19,7 +27,7 @@ export async function GET(
 ) {
   const startTime = Date.now();
   let userId: string | undefined;
-  
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -39,7 +47,7 @@ export async function GET(
     );
 
     if (!validation.valid) {
-      logger.warn('Invalid download parameters', {
+      safeLogger.warn('Invalid download parameters', {
         userId,
         cvId: id,
         errors: validation.errors
@@ -54,7 +62,7 @@ export async function GET(
     // Rate limiting
     const downloadConfig = configService.getDownloadConfig();
     const rateLimitConfig = downloadConfig.rateLimit;
-    
+
     // Per-user rate limiting
     const userLimitResult = await redisRateLimiter.checkLimit(
       `download:user:${userId}`,
@@ -65,18 +73,18 @@ export async function GET(
     );
 
     if (!userLimitResult.allowed) {
-      logger.warn('Download rate limit exceeded (user)', {
+      safeLogger.warn('Download rate limit exceeded (user)', {
         userId,
         cvId: id,
         remaining: userLimitResult.remaining,
         resetTime: userLimitResult.resetTime
       });
       return NextResponse.json(
-        { 
+        {
           error: 'Rate limit exceeded. Please try again later.',
           resetTime: userLimitResult.resetTime
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': rateLimitConfig.perUser.toString(),
@@ -97,18 +105,18 @@ export async function GET(
     );
 
     if (!ipLimitResult.allowed) {
-      logger.warn('Download rate limit exceeded (IP)', {
+      safeLogger.warn('Download rate limit exceeded (IP)', {
         userId,
         ipAddress,
         cvId: id,
         remaining: ipLimitResult.remaining
       });
       return NextResponse.json(
-        { 
+        {
           error: 'Rate limit exceeded. Please try again later.',
           resetTime: ipLimitResult.resetTime
         },
-        { 
+        {
           status: 429,
           headers: {
             'X-RateLimit-Limit': rateLimitConfig.perIP.toString(),
@@ -121,7 +129,7 @@ export async function GET(
 
     // Get CV with template
     const cvWithTemplate = await getCVWithTemplate(id);
-    
+
     if (!cvWithTemplate) {
       return NextResponse.json({ error: 'CV not found' }, { status: 404 });
     }
@@ -167,9 +175,9 @@ export async function GET(
     const jobTitle = searchParams.get('jobTitle');
     const cvTitle = cvWithTemplate.title;
     const baseName = sanitizeFilename(
-      cvTitle 
+      cvTitle
         ? cvTitle
-        : jobTitle 
+        : jobTitle
           ? jobTitle
           : 'CV'
     );
@@ -188,8 +196,8 @@ export async function GET(
         orientation,
         format
       });
-      mimeType = format === 'doc' 
-        ? 'application/msword' 
+      mimeType = format === 'doc'
+        ? 'application/msword'
         : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
       filename = `${baseName}|CV.${format}`;
     } else {
@@ -199,7 +207,7 @@ export async function GET(
     // Validate file size
     const fileSizeValidation = validateFileSize(fileBlob.size);
     if (!fileSizeValidation.valid) {
-      logger.warn('File size validation failed', {
+      safeLogger.warn('File size validation failed', {
         userId,
         cvId: id,
         fileSize: fileBlob.size,
@@ -222,14 +230,14 @@ export async function GET(
         success: true
       });
     } catch (analyticsError) {
-      logger.error('Failed to log download analytics', analyticsError instanceof Error ? analyticsError : new Error(String(analyticsError)), {
+      safeLogger.error('Failed to log download analytics', analyticsError instanceof Error ? analyticsError : new Error(String(analyticsError)), {
         userId,
         cvId: id
       });
       // Don't fail the request if analytics fails
     }
 
-    logger.info('CV download successful', {
+    safeLogger.info('CV download successful', {
       userId,
       cvId: id,
       format,

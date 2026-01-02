@@ -125,7 +125,7 @@ export class CVSurgeonService {
         jobData?: any,
         suppressedFixHashes?: string[],
         cvType?: SurgeonMode
-    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[]; cached: boolean; suppressedCount: number }> {
+    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[]; audit_report?: any; cached: boolean; suppressedCount: number }> {
         // Load suppressed fixes from API if not provided
         let suppressedHashes = suppressedFixHashes || [];
         if (cvId && userId && !suppressedFixHashes) {
@@ -161,10 +161,10 @@ export class CVSurgeonService {
                         const hash = this.generateFixSignatureHash(fix);
                         return !suppressedHashes.includes(hash);
                     });
-                    
+
                     // Regenerate annotations with filtered fixes
                     const annotations = normalizeSurgicalFixesToAnnotations(cvData, fixes);
-                    
+
                     return {
                         score: cacheResult.analysis.score,
                         fixes,
@@ -180,7 +180,7 @@ export class CVSurgeonService {
         }
 
         // Run fresh analysis - use mode-specific analysis if cvType is provided
-        const analysisResult = cvType 
+        const analysisResult = cvType
             ? await this.analyzeCVByMode(cvData, targetRole, seniorityLevel, cvType, jobData)
             : await this.analyzeCV(cvData, targetRole, seniorityLevel, jobData);
 
@@ -188,7 +188,8 @@ export class CVSurgeonService {
         const result = {
             score: analysisResult.score,
             fixes: analysisResult.fixes,
-            annotations: analysisResult.annotations
+            annotations: analysisResult.annotations,
+            audit_report: (analysisResult as any).audit_report // Pass through audit_report
         };
 
         // Filter suppressed fixes
@@ -196,10 +197,10 @@ export class CVSurgeonService {
             const hash = this.generateFixSignatureHash(fix);
             return !suppressedHashes.includes(hash);
         });
-        
+
         // Regenerate annotations with filtered fixes
         const filteredAnnotations = normalizeSurgicalFixesToAnnotations(cvData, filteredFixes);
-        
+
         const suppressedCount = result.fixes.length - filteredFixes.length;
 
         // Save to cache if we have cvId and userId (save all fixes, filtering happens on read)
@@ -229,6 +230,7 @@ export class CVSurgeonService {
             score: result.score,
             fixes: filteredFixes,
             annotations: filteredAnnotations,
+            audit_report: result.audit_report,
             cached: false,
             suppressedCount
         };
@@ -267,33 +269,33 @@ export class CVSurgeonService {
     ): Promise<SurgeonAnalysisResult> {
         // Use full analysis with grammar and STAR focus
         const result = await this.analyzeCV(cvData, targetRole, seniorityLevel);
-        
+
         // For master CVs, include grammar, formatting, impact, structure, and clarity fixes
         // Don't filter too aggressively - include all relevant categories
         const masterFixes = result.fixes.filter(fix => {
             const category = (fix.category || 'other').toLowerCase();
             return [
-                'grammar', 
-                'formatting', 
+                'grammar',
+                'formatting',
                 'format',
-                'impact', 
-                'structure', 
+                'impact',
+                'structure',
                 'clarity',
                 'keywords', // Include keyword improvements for master CV
                 'style' // Include style improvements
             ].includes(category);
         });
-        
+
         // If no grammar/format fixes found, ensure we still return other relevant fixes
         // This prevents empty results when AI doesn't categorize fixes correctly
-        const finalFixes = masterFixes.length > 0 ? masterFixes : result.fixes.filter(fix => 
+        const finalFixes = masterFixes.length > 0 ? masterFixes : result.fixes.filter(fix =>
             fix.severity === 'high' || ['grammar', 'formatting', 'impact', 'structure'].includes((fix.category || 'other').toLowerCase())
         );
-        
+
         // Calculate completeness score
         const completenessScore = this.calculateCompletenessScore(cvData);
         const impactScore = this.calculateImpactScore(cvData);
-        
+
         return {
             ...result,
             fixes: finalFixes,
@@ -314,12 +316,12 @@ export class CVSurgeonService {
     ): Promise<SurgeonAnalysisResult> {
         // Minimal analysis - only critical grammar/spelling issues
         const result = await this.analyzeCV(cvData, '', '');
-        
+
         // Filter to only high-severity grammar issues
-        const standaloneFixes = result.fixes.filter(fix => 
+        const standaloneFixes = result.fixes.filter(fix =>
             fix.category === 'grammar' && fix.severity === 'high'
         );
-        
+
         return {
             ...result,
             fixes: standaloneFixes,
@@ -342,16 +344,16 @@ export class CVSurgeonService {
     ): Promise<SurgeonAnalysisResult> {
         // Get base analysis
         const result = await this.analyzeCV(cvData, targetRole, seniorityLevel, jobData);
-        
+
         // Run keyword gap analysis
         let keywordGapAnalysis: KeywordGapAnalysisResult | undefined;
         let keywordGaps: KeywordGap[] = [];
         let atsScore = result.score;
-        
+
         if (jobData?.jobDescription || jobData?.description) {
             try {
                 const gapResult = await this.runKeywordGapAnalysis(
-                    cvData, 
+                    cvData,
                     jobData.jobDescription || jobData.description,
                     jobData.title || jobData.jobTitle || targetRole,
                     jobData.company
@@ -363,12 +365,12 @@ export class CVSurgeonService {
                 console.warn('⚠️ CVSurgeonService - Keyword gap analysis failed:', error);
             }
         }
-        
+
         // Filter fixes to keyword-related ones for journey mode
-        const journeyFixes = result.fixes.filter(fix => 
+        const journeyFixes = result.fixes.filter(fix =>
             ['keywords', 'impact', 'clarity'].includes(fix.category || 'other')
         );
-        
+
         return {
             ...result,
             fixes: journeyFixes,
@@ -407,11 +409,11 @@ export class CVSurgeonService {
             }
 
             const result = await response.json();
-            
+
             if (result.success && result.data) {
                 return result.data;
             }
-            
+
             throw new Error(result.error || 'Unknown error in keyword gap analysis');
         } catch (error) {
             console.error('CVSurgeonService.runKeywordGapAnalysis error:', error);
@@ -440,38 +442,38 @@ export class CVSurgeonService {
     static calculateCompletenessScore(cvData: UnifiedCVDataStructure): number {
         let score = 0;
         const maxScore = 100;
-        
+
         // Basic info (25 points)
         if (cvData.basics?.name) score += 5;
         if (cvData.basics?.email) score += 5;
         if (cvData.basics?.phone) score += 3;
         if (cvData.basics?.location) score += 3;
         if (cvData.basics?.summary && cvData.basics.summary.length > 50) score += 9;
-        
+
         // Work experience (25 points)
         if (cvData.work && cvData.work.length > 0) {
             score += 10;
-            const hasDescriptions = cvData.work.some((w: any) => 
+            const hasDescriptions = cvData.work.some((w: any) =>
                 w.highlights?.length > 0 || w.summary
             );
             if (hasDescriptions) score += 15;
         }
-        
+
         // Education (15 points)
         if (cvData.education && cvData.education.length > 0) score += 15;
-        
+
         // Skills (20 points)
         if (cvData.skills && cvData.skills.length > 0) {
             score += 10;
             if (cvData.skills.length >= 5) score += 10;
         }
-        
+
         // Projects (10 points)
         if (cvData.projects && cvData.projects.length > 0) score += 10;
-        
+
         // Certificates (5 points)
         if (cvData.certificates && cvData.certificates.length > 0) score += 5;
-        
+
         return Math.min(score, maxScore);
     }
 
@@ -485,13 +487,13 @@ export class CVSurgeonService {
             'coordinated', 'supervised', 'analyzed', 'resolved', 'delivered',
             'achieved', 'generated', 'streamlined', 'spearheaded', 'orchestrated'
         ];
-        
+
         const quantifiers = /\d+%|\$[\d,]+|\d+[xX]|\d+\s*(million|billion|thousand|users|customers|projects|teams?)/gi;
-        
+
         let verbCount = 0;
         let quantCount = 0;
         let totalBullets = 0;
-        
+
         // Check work experience
         if (cvData.work) {
             cvData.work.forEach((job: any) => {
@@ -510,7 +512,7 @@ export class CVSurgeonService {
                 }
             });
         }
-        
+
         // Check projects
         if (cvData.projects) {
             cvData.projects.forEach((project: any) => {
@@ -521,13 +523,13 @@ export class CVSurgeonService {
                 }
             });
         }
-        
+
         if (totalBullets === 0) return 50; // Default score if no content
-        
+
         // Score: 50% from verbs, 50% from quantification
         const verbScore = Math.min((verbCount / totalBullets) * 100, 50);
         const quantScore = Math.min((quantCount / totalBullets) * 100, 50);
-        
+
         return Math.round(verbScore + quantScore);
     }
 
@@ -540,7 +542,16 @@ export class CVSurgeonService {
         targetRole: string,
         seniorityLevel: string,
         jobData?: any
-    ): Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[] }> {
+    ): Promise<{
+        score: number;
+        atsScore?: number;
+        fixes: SurgicalFix[];
+        annotations: FixAnnotation[];
+        audit_report?: any;
+        authentic_optimization?: any;
+        strategic_fix?: any;
+        next_steps?: string[];
+    }> {
         try {
             const response = await fetch('/api/ai/cv-surgeon', {
                 method: 'POST',
@@ -574,10 +585,17 @@ export class CVSurgeonService {
                     ...fix,
                     // Hash will be generated when needed, but we can pre-compute it
                 }));
-                
+
                 return {
                     score: result.score || 0,
+                    atsScore: result.atsScore,
                     fixes: fixesWithHash,
+                    // Pass through rich analysis data
+                    audit_report: result.audit_report,
+                    authentic_optimization: result.authentic_optimization,
+                    strategic_fix: result.strategic_fix,
+                    next_steps: result.next_steps,
+
                     // Normalize immediately so UI can use report/overlay features even before backend is upgraded
                     annotations: (result.annotations && Array.isArray(result.annotations))
                         ? (result.annotations as FixAnnotation[]).map(ann => ({
@@ -637,7 +655,7 @@ export class CVSurgeonService {
         const updatedCV: any = JSON.parse(JSON.stringify(cvData));
         const tokens = parseFieldPath(fix.fieldPath);
         const current = getAtPath(updatedCV, tokens);
-        
+
         // SPECIAL HANDLING: Skills fixes with JSON replacement text
         const isSkillsFix = fix.fieldPath.includes('skills') || fix.category === 'keywords';
         if (isSkillsFix && fix.replacementText) {
@@ -647,30 +665,30 @@ export class CVSurgeonService {
                 try {
                     // Try to parse the JSON
                     const parsedSkills = JSON.parse(trimmedReplacement);
-                    
+
                     // If it's an array of skill objects with category and skills
                     if (Array.isArray(parsedSkills) && parsedSkills.length > 0 && parsedSkills[0].category && parsedSkills[0].skills) {
                         // Merge into existing skills array structure
                         const existingSkills = updatedCV.skills || [];
                         const mergedSkills = [...existingSkills];
-                        
+
                         parsedSkills.forEach((newCategory: any) => {
                             const existingCategoryIndex = mergedSkills.findIndex(
                                 (s: any) => s.category === newCategory.category || s.name === newCategory.category
                             );
-                            
+
                             if (existingCategoryIndex >= 0) {
                                 // Merge skills into existing category
                                 const existingCategory = mergedSkills[existingCategoryIndex];
-                                const existingSkillList = Array.isArray(existingCategory.skills) 
-                                    ? existingCategory.skills 
+                                const existingSkillList = Array.isArray(existingCategory.skills)
+                                    ? existingCategory.skills
                                     : (Array.isArray(existingCategory.items) ? existingCategory.items : []);
                                 const newSkillList = Array.isArray(newCategory.skills) ? newCategory.skills : [];
-                                
+
                                 // Combine and deduplicate
                                 const combined = [...existingSkillList, ...newSkillList];
                                 const unique = Array.from(new Set(combined.map((s: any) => String(s))));
-                                
+
                                 mergedSkills[existingCategoryIndex] = {
                                     ...existingCategory,
                                     skills: unique,
@@ -684,9 +702,9 @@ export class CVSurgeonService {
                                 });
                             }
                         });
-                        
+
                         updatedCV.skills = mergedSkills;
-                        
+
                         return {
                             updatedCV,
                             undo: {
@@ -704,7 +722,7 @@ export class CVSurgeonService {
                 }
             }
         }
-        
+
         if (typeof current !== 'string') {
             return { updatedCV, undo: null };
         }

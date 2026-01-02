@@ -9,9 +9,9 @@ interface ExecutiveStandardTemplateProps {
   className?: string;
 }
 
-export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps> = ({ 
-  cvData, 
-  className = '' 
+export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps> = ({
+  cvData,
+  className = ''
 }) => {
   const { basics, work, education, skills } = cvData;
 
@@ -20,10 +20,11 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
       <style jsx>{`
         .executive-standard-template {
           font-family: 'Times New Roman', serif;
-          max-width: 8.5in;
+          max-width: 100%;
           margin: 0 auto;
-          padding: 0.75in;
+          padding: 32px;
           background: white;
+          box-sizing: border-box;
           color: #000;
           line-height: 1.4;
         }
@@ -220,7 +221,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             </div>
             <div className="experience-description">
               {job.summary && (
-                <div 
+                <div
                   className="bullet-point"
                   dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
                 />

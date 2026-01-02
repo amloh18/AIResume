@@ -9,9 +9,9 @@ interface DesignerModernTemplateProps {
   className?: string;
 }
 
-export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({ 
-  cvData, 
-  className = '' 
+export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
+  cvData,
+  className = ''
 }) => {
   const { basics, work, education, skills, projects, volunteer, awards, certificates, publications, languages, interests } = cvData;
 
@@ -26,7 +26,9 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
           background: #ffffff;
           max-width: 100%;
           margin: 0;
-          padding: 0;
+          margin: 0;
+          padding: 32px;
+          box-sizing: border-box;
         }
         
         .header {
@@ -300,7 +302,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
           </div>
           <div className="title">{basics?.label || 'UX DESIGNER'}</div>
         </div>
-        
+
         {/* Right Column - Row 1: Contact Info */}
         <div className="right-header">
           <div className="contact-section">
@@ -319,9 +321,9 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         <div className="left-header">
           <div className="profile-photo">
             {basics?.image ? (
-              <img 
-                src={basics.image} 
-                alt={basics.name || 'Profile'} 
+              <img
+                src={basics.image}
+                alt={basics.name || 'Profile'}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50% 50% 0 50%' }}
               />
             ) : (
@@ -329,7 +331,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
             )}
           </div>
         </div>
-        
+
         {/* Right Column - Row 2: Profile Section */}
         <div className="right-header-left-aligned">
           <div className="section-title">Profile</div>

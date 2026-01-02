@@ -2,8 +2,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import InterviewSession from '@/models/InterviewSession';
-import InterviewQuestion from '@/models/InterviewQuestion';
 import { JobApplication } from '@/models';
 import CV from '@/models/CV';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
@@ -12,8 +10,8 @@ import mongoose from 'mongoose';
 
 // Force dynamic to ensure route is always available
 export const dynamic = 'force-dynamic';
-// Increase timeout for AI generation
-export const maxDuration = 60;
+// 🟢 Increase timeout for AI generation (can take 50+ seconds)
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
     try {
@@ -25,7 +23,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { jobId } = await request.json();
+        const { jobId, regenerate } = await request.json();
 
         if (!jobId) {
             return setCorsHeaders(
@@ -36,72 +34,67 @@ export async function POST(request: NextRequest) {
 
         await getConnection();
 
-        // Verify Job Ownership - ensure jobId is properly converted to ObjectId
-        console.log('Looking for job:', jobId, 'for user:', auth.userId);
+        // 🔒 STRICT ObjectId conversion - this is critical for the update to work
+        if (!mongoose.Types.ObjectId.isValid(jobId)) {
+            console.error(`❌ Invalid jobId format: ${jobId}`);
+            return setCorsHeaders(
+                NextResponse.json({ success: false, error: 'Invalid Job ID format' }, { status: 400 }),
+                request
+            );
+        }
 
-        const jobIdQuery = mongoose.Types.ObjectId.isValid(jobId)
-            ? new mongoose.Types.ObjectId(jobId)
-            : jobId;
-
-        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
+        const jobIdObj = new mongoose.Types.ObjectId(jobId);
+        const userIdObj = mongoose.Types.ObjectId.isValid(auth.userId)
             ? new mongoose.Types.ObjectId(auth.userId)
             : auth.userId;
 
-        const job = await JobApplication.findOne({
-            _id: jobIdQuery,
-            userId: userIdQuery
-        }).select('jobTitle company jobDescription');
+        console.log(`🔍 Looking for job: ${jobIdObj.toString()} for user: ${userIdObj}`);
 
-        console.log('Job found:', !!job, job ? job.jobTitle : 'N/A');
+        // Fetch job with ownership check
+        const job = await JobApplication.findOne({
+            _id: jobIdObj,
+            userId: userIdObj
+        }).select('jobTitle company jobDescription missingKeywords interviewCoach');
 
         if (!job) {
+            // Debug: Check if job exists at all
+            const jobExists = await JobApplication.exists({ _id: jobIdObj });
+            console.error(`❌ Job not found. Exists in DB: ${!!jobExists}, JobID: ${jobId}, UserID: ${auth.userId}`);
             return setCorsHeaders(
                 NextResponse.json({ success: false, error: 'Job not found or access denied' }, { status: 404 }),
                 request
             );
         }
 
-        // Check for existing session
-        const existingSession = await InterviewSession.findOne({
-            userId: auth.userId,
-            jobId: jobId
-        });
+        console.log(`✅ Job found: ${job.jobTitle} at ${job.company}`);
 
-        if (existingSession) {
-            // Check if session has questions (zombie check)
-            const questionCount = await InterviewQuestion.countDocuments({ sessionId: existingSession._id });
+        // 🔄 Check for cached plan (72-hour freshness)
+        if (!regenerate && job.interviewCoach?.status === 'ready' && job.interviewCoach?.questions?.length > 0) {
+            const generatedAt = job.interviewCoach.generatedAt;
+            const hoursOld = generatedAt
+                ? (Date.now() - new Date(generatedAt).getTime()) / (1000 * 60 * 60)
+                : Infinity;
 
-            if (questionCount > 0) {
-                // Check if it's a "Fallback" session (generic content)
-                const sampleQuestion = await InterviewQuestion.findOne({ sessionId: existingSession._id });
-                const isFallback = sampleQuestion?.content?.whyAsked === "This question assesses your experience and problem-solving skills.";
-
-                if (isFallback) {
-                    console.warn(`⚠️ Found FALLBACK session ${existingSession._id} (generic content). Deleting and regenerating for better quality...`);
-                    await InterviewSession.deleteOne({ _id: existingSession._id });
-                    await InterviewQuestion.deleteMany({ sessionId: existingSession._id });
-                    // Proceed to generation logic below...
-                } else {
-                    console.log(`✅ Found existing valid session ${existingSession._id} with ${questionCount} questions`);
-                    return setCorsHeaders(
-                        NextResponse.json({
-                            success: true,
-                            session: existingSession,
-                            existing: true
-                        }),
-                        request
-                    );
-                }
-            } else {
-                console.warn(`⚠️ Found empty session ${existingSession._id} (0 questions). Deleting and regenerating...`);
-                await InterviewSession.deleteOne({ _id: existingSession._id });
-                // Proceed to generation logic below...
+            if (hoursOld < 72) {
+                console.log(`♻️ Serving cached interview plan (${hoursOld.toFixed(1)}h old, ${job.interviewCoach.questions.length} questions)`);
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: true,
+                        interviewCoach: job.interviewCoach,
+                        existing: true,
+                        cached: true,
+                        cachedHoursAgo: Math.round(hoursOld)
+                    }),
+                    request
+                );
             }
+            console.log(`⏰ Plan stale (${Math.round(hoursOld)}h old), regenerating...`);
         }
 
         // Fetch Master CV for personalization
-        // Try to find marked Master CV first, otherwise fallback to any CV or empty data
         let cvData: any = {};
+        let linkedCvId: mongoose.Types.ObjectId | undefined;
+
         const masterCV = await CV.findOne({
             userId: auth.userId,
             $or: [
@@ -110,49 +103,98 @@ export async function POST(request: NextRequest) {
             ]
         }).sort({ updatedAt: -1 });
 
-        if (masterCV && masterCV.cvData) {
+        if (masterCV?.cvData) {
             cvData = masterCV.cvData;
+            linkedCvId = masterCV._id;
         } else {
-            // Fallback: Try most recent CV
             const recentCV = await CV.findOne({ userId: auth.userId }).sort({ updatedAt: -1 });
-            if (recentCV && recentCV.cvData) {
+            if (recentCV?.cvData) {
                 cvData = recentCV.cvData;
+                linkedCvId = recentCV._id;
             }
         }
 
-        // Call AI Service to generate plan
-        // This might take 10-20 seconds
+        // 🚀 Generate interview plan via AI
+        console.log('🚀 Cache miss/expired. Generating new AI plan...');
         try {
-            const { modules, questions, skillExtracts } = await InterviewCoachService.generateInterviewPlan(
+            const { modules, questions } = await InterviewCoachService.generateInterviewPlan(
                 job.jobDescription || `${job.jobTitle} at ${job.company}`,
                 cvData,
                 job.jobTitle,
-                job.company
+                job.company,
+                job.missingKeywords || []
             );
 
-            // Create Session
-            const newSession = await InterviewSession.create({
-                userId: auth.userId,
-                jobId: jobId,
-                targetRole: job.jobTitle,
-                createdVia: 'auto_generated',
+
+            console.log(`📦 AI returned: ${modules.length} modules, ${questions.length} questions`);
+
+            // Debug: Log sample data structure
+            if (modules.length > 0) {
+                console.log(`📋 First module:`, JSON.stringify(modules[0], null, 2).substring(0, 200));
+            }
+            if (questions.length > 0) {
+                console.log(`❓ First question:`, JSON.stringify(questions[0], null, 2).substring(0, 300));
+            }
+
+            // 💾 Use direct document update + save() for reliable persistence
+            console.log(`💾 Saving plan for Job ID: ${jobIdObj.toString()}`);
+
+            // Fetch fresh document for update
+            const jobToUpdate = await JobApplication.findById(jobIdObj);
+            if (!jobToUpdate) {
+                console.error(`❌ Job disappeared during AI generation!`);
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: false,
+                        error: 'Job not found after AI generation'
+                    }, { status: 500 }),
+                    request
+                );
+            }
+
+            // Set the interviewCoach data directly
+            jobToUpdate.interviewCoach = {
+                status: 'ready',
+                generatedAt: new Date(),
+                linkedCvId: linkedCvId,
                 readinessScore: 0,
-                modules,
-                skillExtracts
+                modules: modules,
+                questions: questions
+            };
+
+            // Save with validation
+            await jobToUpdate.save();
+
+            // Verify by re-fetching
+            const verifyJob = await JobApplication.findById(jobIdObj).select('interviewCoach').lean() as any;
+
+            console.log('📝 Verification after save:', {
+                hasInterviewCoach: !!verifyJob?.interviewCoach,
+                status: verifyJob?.interviewCoach?.status,
+                moduleCount: verifyJob?.interviewCoach?.modules?.length || 0,
+                questionCount: verifyJob?.interviewCoach?.questions?.length || 0
             });
 
-            // Bulk insert questions
-            const questionDocs = questions.map(q => ({
-                ...q,
-                sessionId: newSession._id
-            }));
+            if (!verifyJob?.interviewCoach || verifyJob.interviewCoach.questions?.length === 0) {
+                console.error('❌ Save appeared successful but interviewCoach is empty after verification!');
+                console.error('Raw interviewCoach from DB:', JSON.stringify(verifyJob?.interviewCoach, null, 2)?.substring(0, 500));
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: false,
+                        error: 'Failed to save interview plan - data not persisted'
+                    }, { status: 500 }),
+                    request
+                );
+            }
 
-            await InterviewQuestion.insertMany(questionDocs);
+            console.log(`✅ Successfully saved plan to Job ${jobIdObj.toString()}`);
+            console.log(`📦 Modules: ${modules.map((m: any) => m.name).join(', ')}`);
+            console.log(`❓ Questions: ${questions.length} total`);
 
             return setCorsHeaders(
                 NextResponse.json({
                     success: true,
-                    session: newSession,
+                    interviewCoach: verifyJob.interviewCoach,
                     existing: false
                 }),
                 request
@@ -160,8 +202,6 @@ export async function POST(request: NextRequest) {
 
         } catch (aiError) {
             console.error('❌ AI Generation failed:', aiError);
-            // Fallback: Create session with error state or empty modules?
-            // For now, let's fail the request so the UI shows an error and allows retry
             return setCorsHeaders(
                 NextResponse.json({
                     success: false,
@@ -170,6 +210,7 @@ export async function POST(request: NextRequest) {
                 request
             );
         }
+
 
     } catch (error) {
         console.error('❌ Interview Initiate API Error:', error);
