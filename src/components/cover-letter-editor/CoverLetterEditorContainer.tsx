@@ -420,8 +420,8 @@ export default function CoverLetterEditorContainer({
                   onClick={handleStepComplete}
                   disabled={!canGoToNextStep()}
                   className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${!canGoToNextStep()
-                      ? 'opacity-50 cursor-not-allowed'
-                      : 'bg-lime-500 dark:bg-[#99FF00] hover:bg-lime-600 dark:hover:bg-[#88e600] text-black'
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'bg-lime-500 dark:bg-[#99FF00] hover:bg-lime-600 dark:hover:bg-[#88e600] text-black'
                     }`}
                 >
                   Review

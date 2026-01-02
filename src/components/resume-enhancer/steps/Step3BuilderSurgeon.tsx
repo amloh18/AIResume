@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import {
   Sparkles,
-  Component, Eye, Target, ZoomIn, ZoomOut, PanelRightOpen, PanelRightClose
+  Component, Eye, Target, ZoomIn, ZoomOut
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -65,12 +65,50 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [editorPosition, setEditorPosition] = useState<{ top: number; left: number; height: number; alignment: 'left' | 'right' } | null>(null);
 
     // Layout Controls State
-    const [showRightPanel, setShowRightPanel] = useState(true);
+    // const [showRightPanel, setShowRightPanel] = useState(true); // Removed right panel logic
     const [zoomLevel, setZoomLevel] = useState(1);
-    const [viewMode, setViewMode] = useState<ViewMode>('engineer'); // New View Mode State
+    const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
 
     const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2));
     const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+
+    const handleViewModeChange = (mode: ViewMode) => {
+      setViewMode(mode);
+      const descriptions = {
+        edit: 'Edit Mode: Interactive builder active',
+        recruiter: 'Recruiter Mode: Clean, human-readable view',
+        ats: 'ATS Mode: Machine vision simulation'
+      };
+      toast(descriptions[mode] || `Switched to ${mode} mode`, { icon: mode === 'ats' ? '🤖' : mode === 'edit' ? '✏️' : '👁️' });
+    };
+
+    const handleAddKeyword = (keyword: string) => {
+      // Add keyword to skills section
+      const currentSkills = state.cvData?.skills || [];
+      // Check for existing "Keywords" or "General" category
+      const generalSkillsIndex = currentSkills.findIndex(
+        (cat: any) => cat.category?.toLowerCase() === 'general' || cat.category?.toLowerCase() === 'keywords'
+      );
+
+      let updatedSkills = [...currentSkills];
+      if (generalSkillsIndex >= 0) {
+        const targetCat = updatedSkills[generalSkillsIndex];
+        const existingSkillsList = Array.isArray(targetCat.skills) ? targetCat.skills : [];
+
+        if (!existingSkillsList.includes(keyword)) {
+          updatedSkills[generalSkillsIndex] = {
+            ...targetCat,
+            skills: [...existingSkillsList, keyword],
+          };
+        }
+      } else {
+        updatedSkills.push({ category: 'Keywords', skills: [keyword] });
+      }
+
+      const updatedCV = { ...state.cvData, skills: updatedSkills };
+      dispatch({ type: 'SET_CV_DATA', payload: updatedCV });
+      toast.success(`Added "${keyword}" to skills`);
+    };
 
     const handleSectionClick = (sectionId: string, e: React.MouseEvent) => {
       e.stopPropagation();
@@ -80,7 +118,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       const viewportWidth = window.innerWidth;
       const editorWidth = 480; // Approximate width of editor
       const gap = 24;
-      const sidebarWidth = showRightPanel ? 400 : 0; // Update with new sidebar width
+      const sidebarWidth = 0; // Sidebar removed
 
       // Default to right side
       let left = rect.right + gap;
@@ -97,8 +135,14 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         // Or specific mobile logic. 
       }
 
+      // Ensure it doesn't clip top/bottom - adding max-height constraint logic if needed by component, 
+      // but primarily we pass top/left. The component should handle scrolling if max-h is set.
+      // We will adjust 'top' if it's too low? No, usually side-by-side relies on aligning tops.
+      // Let's passed a restricted height if implicit.
+
+      // For now, standard side-by-side logic:
       setEditorPosition({
-        top: rect.top,
+        top: Math.max(88, rect.top), // Ensure not above header
         left: left,
         height: rect.height,
         alignment
@@ -107,7 +151,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     };
 
     // ATS Context for scores
-    const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
+    const { atsScore, atsAnalysis, isATSLoading, refreshATSScore, updateATSScore } = useATS();
 
     // Journey CVs use job description for analysis - don't require targetRole/seniorityLevel
     // Only standalone/master CVs need targetRole/seniorityLevel
@@ -272,6 +316,23 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
         dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
         dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
+
+        // Update ATS context with surgeon's audit_report for ScorecardPanel to display
+        if (result.audit_report && state.cvId) {
+          updateATSScore(
+            result.score,
+            {
+              score: result.score,
+              missingKeywords: [],
+              strengths: [],
+              suggestions: [],
+              audit_report: result.audit_report,
+            },
+            state.cvId,
+            state.journeyId || undefined,
+            state.jobData?.id
+          );
+        }
 
         logResumeEnhancerEvent({
           action: 'resume_enhancer_analysis_completed',
@@ -499,85 +560,60 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           atsResult={atsAnalysis}
           isLoading={isAnalyzing}
           analysisMode={analysisModeInfo.mode}
-          className={`fixed top-4 transition-all duration-300 ease-in-out ${showRightPanel ? 'right-[440px]' : 'right-4'
-            }`}
+          className="absolute top-0 right-3 z-50 transition-all duration-300 ease-in-out"
+          isSidebarOpen={false} // Sidebar removed
+          onToggleSidebar={() => dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay })} // Toggle overlay instead
+          onFixATS={() => handleRunAnalysis()}
+          onOpenReport={() => {
+            // Placeholder: Open full report or modal if implemented
+            console.log("Open Report Clicked");
+          }}
+          viewMode={viewMode}
+          onViewModeChange={handleViewModeChange}
+          onAddKeyword={handleAddKeyword}
+          onApplyFix={applyAnnotation}
         />
 
         {/* Main Container - Always Optimisation/Report View */}
-        <div className="flex-1 h-full flex overflow-hidden relative">
+        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 -mt-1">
           {/* LEFT PANEL: CV Preview */}
-          <div className="flex-1 min-h-0 bg-gray-200 dark:bg-black/20 relative flex flex-col">
-
-            {/* CV Preview Controls - Moved Outside Scroller */}
-            <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-40">
-              <div className="flex items-center gap-6 bg-black/80 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-lg border border-white/10 select-none pointer-events-auto transition-all hover:bg-black/90">
-                <span className="text-sm font-medium whitespace-nowrap">CV Preview • A4 Format • {totalPages} Page{totalPages > 1 ? 's' : ''}</span>
-
-                <div className="w-px h-5 bg-white/20" />
-
-                {/* View Mode Toggles */}
-                <div className="flex bg-white/10 rounded-lg p-1 gap-1">
-                  <button
-                    onClick={() => setViewMode('engineer')}
-                    className={`p-2 rounded-md transition-all ${viewMode === 'engineer' ? 'bg-black/50 text-[#80FF00] shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                    title="Engineer View (Edit Mode)"
-                  >
-                    <Component className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('recruiter')}
-                    className={`p-2 rounded-md transition-all ${viewMode === 'recruiter' ? 'bg-black/50 text-[#80FF00] shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                    title="Recruiter View (Clean Preview)"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => setViewMode('ats')}
-                    className={`p-2 rounded-md transition-all ${viewMode === 'ats' ? 'bg-black/50 text-[#80FF00] shadow-sm' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                    title="ATS View (Analysis)"
-                  >
-                    <Target className="w-4 h-4" />
-                  </button>
+          <div className="flex-1 min-h-0 relative flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+            {/* Preview Header with Controls - matching Step 4 */}
+            <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between border-b border-gray-200 dark:border-white/10">
+              {/* Left side: Page info and zoom controls */}
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>A4 • {totalPages} {totalPages > 1 ? 'Pages' : 'Page'}</span>
                 </div>
-
-                {/* Zoom Controls */}
-                <div className="flex items-center gap-2">
+                <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
+                <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
+                  <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
+                </div>
+                <div className="flex space-x-1">
                   <button
                     onClick={handleZoomOut}
-                    className="p-2 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors"
+                    className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs shadow-sm shadow-black/10 dark:shadow-black/30"
                   >
-                    <ZoomOut className="w-4 h-4" />
+                    <ZoomOut className="w-3 h-3" />
                   </button>
-                  <span className="text-xs font-medium text-white/40 min-w-[3ch] text-center">
-                    {Math.round(zoomLevel * 100)}%
-                  </span>
                   <button
                     onClick={handleZoomIn}
-                    className="p-2 hover:bg-white/10 rounded-lg text-white/50 hover:text-white transition-colors"
+                    className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs shadow-sm shadow-black/10 dark:shadow-black/30"
                   >
-                    <ZoomIn className="w-4 h-4" />
+                    <ZoomIn className="w-3 h-3" />
                   </button>
                 </div>
-
-                {/* Sidebar Toggle */}
-                <>
-                  <div className="w-px h-5 bg-white/20" />
-                  <button
-                    onClick={() => setShowRightPanel(!showRightPanel)}
-                    className={`p-2 rounded-lg transition-colors border border-transparent ${showRightPanel ? 'bg-[#80FF00]/10 text-[#80FF00] border-[#80FF00]/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
-                    title={showRightPanel ? "Maximize Preview" : "Show Analysis Panel"}
-                  >
-                    {showRightPanel ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
-                  </button>
-                </>
-
               </div>
+              {/* Right side: Preview title */}
+              <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
             </div>
 
-            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-8 pt-24">
+            {/* CV Preview Content Area */}
+            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4">
               <div
-                className="flex flex-col items-center gap-8 transition-transform duration-200 ease-in-out"
-                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top center' }}
+                className={`flex flex-col items-start gap-8 transition-all duration-300 ease-in-out ${viewMode === 'ats' ? 'blur-[1.5px] grayscale opacity-90' : ''}`}
+                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
               >
                 <CVPreviewContent
                   cvData={state.cvData}
@@ -590,9 +626,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   onDismissFix={dismissAnnotation}
                   ignoreStructureVisibility={true}
                   renderMode="pages"
-                  onSectionClick={viewMode === 'engineer' ? handleSectionClick : undefined} // Disable click editing if not engineer mode
-                  // Prop mapping for view modes - using overlaysEnabled as proxy or allow adding new prop
-                  overlaysEnabled={viewMode === 'engineer' || viewMode === 'ats'}
+                  onSectionClick={viewMode === 'edit' ? handleSectionClick : undefined}
+                  overlaysEnabled={viewMode === 'edit' || viewMode === 'ats'}
                   // In Recruiter mode, we want a clean preview
 
                   // NEW CONTROLS passed to header pill
@@ -601,8 +636,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   currentZoom={zoomLevel}
                   onZoomIn={handleZoomIn}
                   onZoomOut={handleZoomOut}
-                  isSidebarOpen={showRightPanel}
-                  onToggleSidebar={() => setShowRightPanel(!showRightPanel)}
+                  isSidebarOpen={false} // Sidebar removed
+                  onToggleSidebar={() => { /* No-op for old sidebar toggle */ }}
                   onTotalPagesChange={setTotalPages}
                 />
               </div>
@@ -611,148 +646,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           </div>
 
           {/* RIGHT PANEL: Scorecard + Keywords + Fix Queue */}
-          {showRightPanel && (
-            <aside className="w-[400px] flex-shrink-0 border-l border-gray-200 dark:border-white/10 bg-white dark:bg-[#141810] overflow-hidden flex flex-col z-10 transition-all duration-300">
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar">
 
-                {/* --- SECTIONS REMOVED (Scorecard moved to Pulse Pill) --- */}
-
-                {/* Keywords & Fixes Tabs or Content */}
-                <div className="p-4 space-y-6">
-                  <div className="border-b border-gray-200 dark:border-white/10">
-                    <KeywordMatchPanel
-                      analysisMode={analysisModeInfo.mode}
-                      atsResult={{
-                        score: atsScore ?? state.surgeonAnalysis?.score ?? 0,
-                        details: {
-                          matchedKeywords: atsAnalysis?.strengths || [],
-                          missingKeywords: atsAnalysis?.missingKeywords || [],
-                          experienceYears: 0,
-                          educationLevel: '',
-                          formatIssues: [],
-                        },
-                        suggestions: atsAnalysis?.suggestions || [],
-                      } as ATSResult}
-                      cvData={state.cvData}
-                      jobData={state.jobData}
-                      onAddKeyword={(keyword) => {
-                        // Add keyword to skills section
-                        const currentSkills = state.cvData?.skills || [];
-                        // Check for existing "Keywords" or "General" category
-                        const generalSkillsIndex = currentSkills.findIndex(
-                          (cat: any) => cat.category?.toLowerCase() === 'general' || cat.category?.toLowerCase() === 'keywords'
-                        );
-
-                        let updatedSkills = [...currentSkills];
-                        if (generalSkillsIndex >= 0) {
-                          const targetCat = updatedSkills[generalSkillsIndex];
-                          const existingSkillsList = Array.isArray(targetCat.skills) ? targetCat.skills : [];
-
-                          if (!existingSkillsList.includes(keyword)) {
-                            updatedSkills[generalSkillsIndex] = {
-                              ...targetCat,
-                              skills: [...existingSkillsList, keyword],
-                            };
-                          }
-                        } else {
-                          updatedSkills.push({ category: 'Keywords', skills: [keyword] });
-                        }
-
-                        const updatedCV = { ...state.cvData, skills: updatedSkills };
-                        dispatch({ type: 'SET_CV_DATA', payload: updatedCV });
-                        toast.success(`Added "${keyword}" to skills`);
-                      }}
-                      onAddJobDescription={() => setShowJobParserDialog(true)}
-                      compact={true}
-                    />
-                  </div>
-
-                  {/* Fix Queue Section */}
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="w-4 h-4 text-[#80FF00]" />
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Fix Queue</span>
-                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-[#80FF00]/20 text-[#80FF00]">
-                        {(state.fixAnnotations || []).filter(f => f.status === 'open').length}
-                      </span>
-                    </div>
-
-                    {/* Critical Fixes */}
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-semibold text-gray-900 dark:text-white">Critical</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-500/20 text-red-300">
-                          {(state.fixAnnotations || []).filter(f => f.status === 'open' && f.severity === 'high').length}
-                        </span>
-                      </div>
-                      <div className="space-y-2">
-                        {(state.fixAnnotations || []).filter(f => f.status === 'open' && f.severity === 'high').length === 0 ? (
-                          <div className="text-xs text-white/50 italic">No critical fixes.</div>
-                        ) : (
-                          (state.fixAnnotations || []).filter(f => f.status === 'open' && f.severity === 'high').map((fix, idx) => (
-                            <button
-                              key={fix.id || `critical-${idx}`}
-                              onClick={() => dispatch({ type: 'SET_ACTIVE_FIX', payload: fix.id })}
-                              className={`w-full text-left p-2 rounded-lg transition-colors ${state.activeFixId === fix.id ? 'bg-[#80FF00]/20 border border-[#80FF00]/40' : 'bg-white/5 hover:bg-white/10'
-                                }`}
-                            >
-                              <div className="text-xs font-medium text-gray-900 dark:text-white line-clamp-2">{fix.issue}</div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] text-white/50">{fix.category}</span>
-                                <span className="text-[10px] text-[#80FF00]">+{fix.impactScoreDelta || 0}</span>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Improvements */}
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-semibold text-gray-900 dark:text-white">Improvements</span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-amber-500/20 text-amber-200">
-                          {(state.fixAnnotations || []).filter(f => f.status === 'open' && f.severity !== 'high').length}
-                        </span>
-                      </div>
-                      <div className="space-y-2 max-h-60 overflow-y-auto">
-                        {(state.fixAnnotations || []).filter(f => f.status === 'open' && f.severity !== 'high').map((fix, idx) => (
-                          <button
-                            key={fix.id || `improvement-${idx}`}
-                            onClick={() => dispatch({ type: 'SET_ACTIVE_FIX', payload: fix.id })}
-                            className={`w-full text-left p-2 rounded-lg transition-colors ${state.activeFixId === fix.id ? 'bg-[#80FF00]/20 border border-[#80FF00]/40' : 'bg-white/5 hover:bg-white/10'
-                              }`}
-                          >
-                            <div className="text-xs font-medium text-gray-900 dark:text-white line-clamp-2">{fix.issue}</div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] text-white/50">{fix.category}</span>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              {/* Footer Actions */}
-              <div className="p-4 border-t border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5">
-                <button
-                  onClick={handleRunAnalysis}
-                  disabled={isAnalyzing}
-                  className={`w-full px-4 py-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${isRoleReady ? 'bg-[#80FF00] hover:bg-[#70e600] text-black' : 'bg-white/10 text-white/60 cursor-not-allowed'
-                    }`}
-                >
-                  {isAnalyzing ? (
-                    <><div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" /><span>Analyzing...</span></>
-                  ) : (
-                    <><Sparkles className="w-4 h-4" /><span>{isRoleReady ? 'Run Analysis' : 'Set Role'}</span></>
-                  )}
-                </button>
-              </div>
-            </aside>
-          )
-          }
 
 
         </div >
@@ -763,13 +657,13 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         {
           activeEditorSectionId && editorPosition && (
             <FloatingFormEditor
-              sectionId={activeEditorSectionId}
+              sectionId={activeEditorSectionId!}
               onClose={() => {
                 setActiveEditorSectionId(null);
                 setEditorPosition(null);
               }}
-              position={editorPosition}
-              alignment={editorPosition.alignment}
+              position={editorPosition!}
+              alignment={editorPosition!.alignment}
               annotations={state.fixAnnotations}
               onApplyAnnotation={applyAnnotation}
               onDismissAnnotation={dismissAnnotation}

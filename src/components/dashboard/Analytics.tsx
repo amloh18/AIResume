@@ -22,11 +22,10 @@ import MasterCVBadge from './MasterCVBadge';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';
 import { usePerformanceMonitor } from '@/lib/utils/performanceMonitor';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
-// TODO: ComprehensiveATSAnalyzer was deleted - need to reimplement or remove this feature
-// import ComprehensiveATSAnalyzer from '@/components/studio/ComprehensiveATSAnalyzer';
 import PaymentPastDueBanner from './PaymentPastDueBanner';
 import SubscriptionExpiryBanner from './SubscriptionExpiryBanner';
 import { useUsageLimits } from '@/lib/hooks/useUsageLimits';
+import SegmentedToggle from '@/components/ui/SegmentedToggle';
 
 // Helper functions for CV scoring
 const calculatePersonalInfoScore = (basics: any): number => {
@@ -804,8 +803,8 @@ const ApplicationCalendarWidget: React.FC<{
                       </div>
                       <div className="flex items-center gap-2 ml-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full ${job.status === 'interview' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' :
-                            job.status === 'offer' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
-                              'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
+                          job.status === 'offer' ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400' :
+                            'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-400'
                           }`}>
                           {job.status || 'Applied'}
                         </span>
@@ -1075,14 +1074,17 @@ const PerformanceInsights: React.FC<{
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Performance Insights</h2>
         <div className="flex items-center gap-2">
-          <span className="text-gray-600 dark:text-white/60 text-sm">Period:</span>
-          {['Day', 'Week', 'Month'].map((period) => (
-            <motion.button key={period} onClick={() => onPeriodChange(period.toLowerCase())}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-300 ${selectedPeriod === period.toLowerCase() ? 'bg-lime-400/20 text-lime-400 border border-lime-400/30' : 'glass-card-premium text-gray-600 dark:text-white/60'
-                }`} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              {period}
-            </motion.button>
-          ))}
+          <SegmentedToggle
+            value={selectedPeriod}
+            onChange={(value) => onPeriodChange(value)}
+            options={[
+              { value: 'day', label: 'Day' },
+              { value: 'week', label: 'Week' },
+              { value: 'month', label: 'Month' },
+            ]}
+            theme="lime"
+            size="sm"
+          />
         </div>
       </div>
 

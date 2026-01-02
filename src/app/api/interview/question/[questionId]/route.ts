@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import InterviewSession from '@/models/InterviewSession';
-import InterviewQuestion from '@/models/InterviewQuestion';
+import { JobApplication } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
 
-// GET: Fetch Question Details
+// GET: Fetch Question Details from embedded array
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ questionId: string }> }
@@ -21,9 +20,42 @@ export async function GET(
         }
 
         const { questionId } = await params;
+        const { searchParams } = new URL(request.url);
+        const jobId = searchParams.get('jobId');
+
+        if (!jobId) {
+            return setCorsHeaders(
+                NextResponse.json({ success: false, error: 'Job ID is required as query parameter' }, { status: 400 }),
+                request
+            );
+        }
+
         await getConnection();
 
-        const question = await InterviewQuestion.findById(questionId);
+        // Find job and extract question from embedded array
+        const jobIdQuery = mongoose.Types.ObjectId.isValid(jobId)
+            ? new mongoose.Types.ObjectId(jobId)
+            : jobId;
+
+        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
+            ? new mongoose.Types.ObjectId(auth.userId)
+            : auth.userId;
+
+        const job = await JobApplication.findOne({
+            _id: jobIdQuery,
+            userId: userIdQuery,
+            'interviewCoach.questions.id': questionId
+        }).select('jobTitle company interviewCoach').lean();
+
+        if (!job || !job.interviewCoach) {
+            return setCorsHeaders(
+                NextResponse.json({ success: false, error: 'Question not found' }, { status: 404 }),
+                request
+            );
+        }
+
+        // Find the specific question
+        const question = job.interviewCoach.questions.find((q: any) => q.id === questionId);
         if (!question) {
             return setCorsHeaders(
                 NextResponse.json({ success: false, error: 'Question not found' }, { status: 404 }),
@@ -31,21 +63,29 @@ export async function GET(
             );
         }
 
-        // Security Check: Ensure the parent session belongs to the user
-        const session = await InterviewSession.findOne({
-            _id: question.sessionId,
-            userId: auth.userId
-        });
-
-        if (!session) {
-            return setCorsHeaders(
-                NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 }),
-                request
-            );
-        }
+        // Add job context for frontend
+        const questionWithContext = {
+            ...question,
+            _id: questionId, // For compatibility
+            jobId: job._id,
+            jobTitle: job.jobTitle,
+            company: job.company,
+            // Map aiContext to old field names for frontend compatibility
+            content: {
+                question: question.question,
+                whyAsked: question.aiContext?.rationale,
+                difficulty: question.difficulty,
+                tags: [question.category]
+            },
+            edgeTip: {
+                content: question.aiContext?.edge,
+                gap: question.aiContext?.gap,
+                sampleAnswer: question.aiContext?.sampleAnswer
+            }
+        };
 
         return setCorsHeaders(
-            NextResponse.json({ success: true, question }),
+            NextResponse.json({ success: true, question: questionWithContext }),
             request
         );
 
@@ -58,7 +98,7 @@ export async function GET(
     }
 }
 
-// PUT: Save Draft Answer (User typing auto-save)
+// PUT: Save Draft Answer using positional operator
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ questionId: string }> }
@@ -73,27 +113,46 @@ export async function PUT(
         }
 
         const { questionId } = await params;
-        const { draft } = await request.json();
+        const { draft, jobId } = await request.json();
+
+        if (!jobId) {
+            return setCorsHeaders(
+                NextResponse.json({ success: false, error: 'Job ID is required' }, { status: 400 }),
+                request
+            );
+        }
 
         await getConnection();
 
-        // Find and Verify Ownership via Population (optimized)
-        const question = await InterviewQuestion.findById(questionId);
-        if (!question) return setCorsHeaders(NextResponse.json({ error: 'Not found' }, { status: 404 }), request);
+        const jobIdQuery = mongoose.Types.ObjectId.isValid(jobId)
+            ? new mongoose.Types.ObjectId(jobId)
+            : jobId;
 
-        // Check ownership
-        const sessionExists = await InterviewSession.exists({ _id: question.sessionId, userId: auth.userId });
-        if (!sessionExists) return setCorsHeaders(NextResponse.json({ error: 'Access denied' }, { status: 403 }), request);
+        const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
+            ? new mongoose.Types.ObjectId(auth.userId)
+            : auth.userId;
 
-        // Update Draft
-        question.userAnswer = {
-            ...question.userAnswer,
-            text: draft,
-            draftLastSavedAt: new Date(),
-            status: question.userAnswer?.status === 'analyzed' ? 'analyzed' : 'draft' // Don't revert analyzed status
-        };
+        // Use positional operator ($) to update specific question in array
+        const result = await JobApplication.updateOne(
+            {
+                _id: jobIdQuery,
+                userId: userIdQuery,
+                'interviewCoach.questions.id': questionId
+            },
+            {
+                $set: {
+                    'interviewCoach.questions.$.userAnswer': draft,
+                    'interviewCoach.questions.$.status': 'drafted'
+                }
+            }
+        );
 
-        await question.save();
+        if (result.matchedCount === 0) {
+            return setCorsHeaders(
+                NextResponse.json({ success: false, error: 'Question not found or access denied' }, { status: 404 }),
+                request
+            );
+        }
 
         return setCorsHeaders(
             NextResponse.json({ success: true, lastSaved: new Date() }),

@@ -20,7 +20,7 @@ const InterviewCoachHeader: React.FC<InterviewCoachHeaderProps> = ({
     const { userData } = useUserData();
 
     const handleExit = () => {
-        router.push('/dashboard');
+        router.push('/dashboard/tracker');
     };
 
     return (

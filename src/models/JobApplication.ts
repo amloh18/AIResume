@@ -118,6 +118,42 @@ export interface IJobApplication extends Document {
   }; // For THIS specific job
   jobDescriptionRaw?: string; // Original job description text for future analysis
   advocateId?: string; // Reference to Advocate (referral contact)
+
+  // Interview Coach - Embedded interview preparation data
+  interviewCoach?: {
+    status: 'not_started' | 'ready';
+    generatedAt?: Date;
+    linkedCvId?: mongoose.Types.ObjectId;
+    readinessScore: number;
+    modules: Array<{
+      id: string;
+      name: string;
+      description: string;
+      questionIds: string[];
+    }>;
+    questions: Array<{
+      id: string;
+      category: string;
+      question: string;
+      difficulty: 'Easy' | 'Medium' | 'Hard';
+      aiContext: {
+        rationale: string;    // Why this is asked
+        edge: string;         // Your strength
+        gap: string;          // The weakness/risk
+        sampleAnswer: string; // STAR method sample script
+      };
+      isSavedToCheatSheet: boolean;
+      status: 'pending' | 'drafted' | 'completed';
+      userAnswer: string;
+      feedback?: {
+        score: number;
+        strengths: string[];
+        improvements: string[];
+        refinedAnswer: string;
+      };
+    }>;
+  };
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -329,6 +365,52 @@ const jobApplicationSchema = new Schema<IJobApplication>({
     type: String,
     trim: true
   },
+  // Interview Coach - Embedded interview preparation data
+  interviewCoach: {
+    status: {
+      type: String,
+      enum: ['not_started', 'ready'],
+      default: 'not_started'
+    },
+    generatedAt: { type: Date },
+    linkedCvId: { type: Schema.Types.ObjectId, ref: 'CV' },
+    readinessScore: { type: Number, default: 0, min: 0, max: 100 },
+    modules: [{
+      id: { type: String, required: true },
+      name: { type: String, required: true },
+      description: { type: String },
+      questionIds: [{ type: String }]
+    }],
+    questions: [{
+      id: { type: String, required: true },
+      category: { type: String, required: true },
+      question: { type: String, required: true },
+      difficulty: {
+        type: String,
+        enum: ['Easy', 'Medium', 'Hard'],
+        default: 'Medium'
+      },
+      aiContext: {
+        rationale: { type: String },    // Why this is asked
+        edge: { type: String },         // Your strength
+        gap: { type: String },          // The weakness/risk
+        sampleAnswer: { type: String }  // STAR method sample script
+      },
+      isSavedToCheatSheet: { type: Boolean, default: false },
+      status: {
+        type: String,
+        enum: ['pending', 'drafted', 'completed'],
+        default: 'pending'
+      },
+      userAnswer: { type: String, default: '' },
+      feedback: {
+        score: { type: Number, min: 0, max: 100 },
+        strengths: [{ type: String }],
+        improvements: [{ type: String }],
+        refinedAnswer: { type: String }
+      }
+    }]
+  },
   isArchived: {
     type: Boolean,
     default: false
@@ -373,4 +455,4 @@ jobApplicationSchema.index({ 'contacts.email': 1 });
 
 
 
-export default mongoose.models.JobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema); 
+export default mongoose.models.JobApplication || mongoose.model<IJobApplication>('JobApplication', jobApplicationSchema, 'jobapplications'); 

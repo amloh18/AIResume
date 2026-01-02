@@ -76,22 +76,26 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                     let qs = questionsData.questions || [];
                     console.log(`Debug: Questions fetched: ${qs.length} for session ${sessionData.session._id}`);
 
+                    // Log available moduleIds for debugging
+                    const availableModules = Array.from(new Set(qs.map((q: Question) => q.moduleId)));
+                    console.log(`Debug: Available moduleIds:`, availableModules);
+
                     // Filter by module if specified (normalize IDs)
                     if (moduleId) {
                         const targetId = moduleId.trim();
-                        // Debug log 
-                        if (qs.length > 0) {
-                            console.log(`Debug: Filtering for module '${targetId}'. Sample question module: '${qs[0].moduleId}'`);
-                        }
+                        console.log(`Debug: Filtering for module '${targetId}'`);
 
                         const filtered = qs.filter((q: Question) =>
                             q.moduleId === targetId ||
                             q.moduleId?.trim() === targetId
                         );
 
+                        console.log(`Debug: Filtered result: ${filtered.length} questions for '${targetId}'`);
+
                         // Fallback: If filtering returns nothing, but we have questions
                         if (filtered.length === 0 && qs.length > 0) {
                             console.warn(`⚠️ Filtering by moduleId '${moduleId}' returned 0 results. Showing all questions instead.`);
+                            console.warn(`Available modules: ${availableModules.join(', ')}`);
                             toast('Module questions not found. Showing all questions.', { icon: 'ℹ️' });
                             // Keep qs as is (all questions)
                         } else {

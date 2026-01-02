@@ -8,7 +8,8 @@ interface FeedbackPanelProps {
         score: number;
         strengths: string[];
         improvements: string[];
-        improvedScript?: string;
+        improvedScript?: string;  // Legacy
+        refinedAnswer?: string;   // New
         sentiment?: string;
     };
 }
@@ -22,8 +23,8 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedback }) => {
         >
             <div className="flex items-center gap-4 bg-white dark:bg-[#1a2015] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
                 <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold border-4 ${feedback.score >= 80 ? 'border-green-500 text-green-500' :
-                        feedback.score >= 60 ? 'border-yellow-500 text-yellow-500' :
-                            'border-red-500 text-red-500'
+                    feedback.score >= 60 ? 'border-yellow-500 text-yellow-500' :
+                        'border-red-500 text-red-500'
                     }`}>
                     {feedback.score}
                 </div>
@@ -72,7 +73,7 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedback }) => {
             </div>
 
             {/* Improved Script */}
-            {feedback.improvedScript && (
+            {(feedback.improvedScript || feedback.refinedAnswer) && (
                 <div className="bg-gray-900 text-gray-200 p-6 rounded-2xl relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
                         <Sparkles className="w-24 h-24" />
@@ -82,7 +83,7 @@ const FeedbackPanel: React.FC<FeedbackPanelProps> = ({ feedback }) => {
                         AI Enhanced Version
                     </h4>
                     <div className="prose prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap">
-                        {feedback.improvedScript}
+                        {feedback.improvedScript || feedback.refinedAnswer}
                     </div>
                 </div>
             )}

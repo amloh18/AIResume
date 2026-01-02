@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Eye, Component, Target, ZoomIn, ZoomOut, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { CUSTOM_TEMPLATES } from '@/lib/templates/custom-renderers/index';
+import { CustomTemplates } from '@/lib/templates/hardcoded-templates';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { DesignSettings, SectionConfig } from '@/types/design-settings';
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import AnnotatedText from '@/components/resume-enhancer/annotations/AnnotatedText';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 
-export type ViewMode = 'engineer' | 'recruiter' | 'ats';
+export type ViewMode = 'edit' | 'recruiter' | 'ats';
 
 interface CVPreviewContentProps {
   cvData: UnifiedCVDataStructure | null;
@@ -257,6 +259,51 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
           <p className="text-lg font-medium">No CV data available</p>
           <p className="text-sm mt-2">Please add your CV information to see the preview</p>
         </div>
+      </div>
+    );
+  }
+
+  // Check for custom renderer
+  // This must be done AFTER all hooks are called
+  const getCustomRenderer = () => {
+    if (!templateName) return null;
+
+    // Normalize template name to find match in registry
+    // Dictionary check first (ID mapping)
+    const normalizedId = templateName.toLowerCase().replace(/\s+/g, '-');
+    if (CUSTOM_TEMPLATES[normalizedId as keyof typeof CUSTOM_TEMPLATES]) {
+      const rendererName = CUSTOM_TEMPLATES[normalizedId as keyof typeof CUSTOM_TEMPLATES];
+      return CustomTemplates[rendererName as keyof typeof CustomTemplates];
+    }
+
+    // Name check (direct name match)
+    const directMatch = Object.entries(CUSTOM_TEMPLATES).find(([key, val]) =>
+      key === normalizedId || val === templateName.replace(/\s+/g, '') + 'Template'
+    );
+
+    if (directMatch) {
+      const rendererName = directMatch[1];
+      return CustomTemplates[rendererName as keyof typeof CustomTemplates];
+    }
+
+    return null;
+  };
+
+  const CustomRenderer = getCustomRenderer();
+
+  // If we have a custom renderer, use it
+  if (CustomRenderer) {
+    // We wrap it in the same scaling container style as the generic preview for consistency with zoom controls
+    // But we let the custom renderer handle its own dimensions/pagination
+    return (
+      <div
+        className={`cv-preview-container printing-container relative bg-white shadow-2xl mx-auto transition-transform duration-200 ease-out origin-top`}
+        style={{
+          width: '210mm', // A4 width
+          minHeight: '297mm', // A4 height (min)
+        }}
+      >
+        <CustomRenderer cvData={cvData} />
       </div>
     );
   }

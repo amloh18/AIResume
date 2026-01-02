@@ -10,8 +10,8 @@ interface DataDrivenProTemplateProps {
   enabledSections?: string[];
 }
 
-export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({ 
-  cvData, 
+export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
+  cvData,
   className = ''
 }) => {
   const { basics, work, education, skills, projects, volunteer, certificates, awards, publications, languages, interests, references } = cvData;
@@ -23,10 +23,30 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 100%;
           margin: 0;
-          padding: 0;
+          padding: 32px;
           background: white;
-          color: #000;
+          color: #000 !important;
           line-height: 1.4;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+          box-sizing: border-box;
+        }
+
+        /* Force black text for all headings to prevent dark mode bleed */
+        .data-driven-pro-template h1, 
+        .data-driven-pro-template h2, 
+        .data-driven-pro-template h3, 
+        .data-driven-pro-template h4, 
+        .data-driven-pro-template p, 
+        .data-driven-pro-template span, 
+        .data-driven-pro-template div {
+          color: #000 !important;
+        }
+
+        .data-driven-pro-template .text-gray-500,
+        .data-driven-pro-template .text-gray-600, 
+        .data-driven-pro-template .text-gray-700 {
+           color: #4b5563 !important;
         }
 
         .header {
@@ -139,10 +159,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         }
 
         .contact-item span {
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
+          white-space: normal;
+          overflow: visible;
           flex: 1;
+          word-break: break-word;
         }
 
         .contact-icon {
@@ -348,9 +368,9 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           </div>
           <div className="header-right">
             {basics.image && (
-              <img 
-                src={basics.image} 
-                alt="Profile" 
+              <img
+                src={basics.image}
+                alt="Profile"
                 className="profile-picture"
               />
             )}
@@ -383,10 +403,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             </div>
             <div className="contact-item">
               <span>
-                {basics?.profiles?.[0]?.username || 
-                 (basics?.profiles?.[0]?.url 
-                   ? basics.profiles[0].url.replace(/^https?:\/\/(www\.)?(linkedin\.com\/in\/|github\.com\/|twitter\.com\/)/, '')
-                   : 'username')
+                {basics?.profiles?.[0]?.username ||
+                  (basics?.profiles?.[0]?.url
+                    ? basics.profiles[0].url.replace(/^https?:\/\/(www\.)?(linkedin\.com\/in\/|github\.com\/|twitter\.com\/)/, '')
+                    : 'username')
                 }
               </span>
             </div>
@@ -445,7 +465,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             if (certificates && certificates.length > 0) rightColumnSections.push('Certificates');
             if (awards && awards.length > 0) rightColumnSections.push('Awards');
             if (publications && publications.length > 0) rightColumnSections.push('Publications');
-            
+
             // Count entries for each section
             const entryCounts = [];
             if (work && work.length > 0) entryCounts.push(...work.map((_, i) => ({ section: 'Work Experience', index: i })));
@@ -454,19 +474,19 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             if (certificates && certificates.length > 0) entryCounts.push(...certificates.map((_, i) => ({ section: 'Certificates', index: i })));
             if (awards && awards.length > 0) entryCounts.push(...awards.map((_, i) => ({ section: 'Awards', index: i })));
             if (publications && publications.length > 0) entryCounts.push(...publications.map((_, i) => ({ section: 'Publications', index: i })));
-            
+
             const totalDots = rightColumnSections.length + entryCounts.length;
             const dotPositions = [];
-            
+
             // Calculate positions for dots (evenly distributed)
             for (let i = 0; i < totalDots; i++) {
               const position = (i + 1) / (totalDots + 1) * 100;
               dotPositions.push(position);
             }
-            
+
             return dotPositions.map((pos, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="separator-dot"
                 style={{ top: `${pos}%` }}
               ></div>
@@ -504,7 +524,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                   </div>
                   <div className="experience-description">
                     {job.summary && (
-                      <div 
+                      <div
                         style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}
                       >
                         {stripHtmlTags(job.summary)}
