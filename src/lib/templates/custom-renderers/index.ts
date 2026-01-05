@@ -15,6 +15,7 @@ export const CUSTOM_TEMPLATES = {
   'designer-modern': 'DesignerModernTemplate',
   'tech-pro-blue': 'TechProBlueTemplate',
   'executive-professional-layout': 'ExecutiveProfessionalLayoutTemplate',
+  'executive-professional': 'ExecutiveProfessionalLayoutTemplate', // Alias for template name matching
   'executive-standard': 'ExecutiveStandardTemplate',
   'elegant-timeline': 'ElegantTimelineTemplate',
   'the-modern-cv': 'TheModernCVTemplate'

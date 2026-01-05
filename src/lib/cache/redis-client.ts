@@ -15,7 +15,7 @@ class RedisClientManager {
   private connectionPromise: Promise<RedisClientType | null> | null = null;
   private static hasWarnedAboutRedis: boolean = false; // Track if we've already warned
 
-  private constructor() {}
+  private constructor() { }
 
   static getInstance(): RedisClientManager {
     if (!RedisClientManager.instance) {
@@ -47,6 +47,22 @@ class RedisClientManager {
   }
 
   /**
+   * Get Redis client only if already connected (non-blocking)
+   * Returns null immediately if Redis is not ready - does not wait for connection
+   * Use this in hot paths like auth where we don't want to block on Redis
+   */
+  getClientIfReady(): RedisClientType | null {
+    if (this.client && this.client.isReady) {
+      return this.client;
+    }
+    // Start connection in background if not already connecting
+    if (!this.connectionPromise && !this.isConnecting) {
+      this.connectionPromise = this.connect();
+    }
+    return null;
+  }
+
+  /**
    * Initialize Redis connection
    */
   private async connect(): Promise<RedisClientType | null> {
@@ -72,6 +88,17 @@ class RedisClientManager {
 
       const client = createClient({
         url: redisUrl,
+        socket: {
+          connectTimeout: 5000, // 5 second connection timeout to prevent blocking auth
+          reconnectStrategy: (retries) => {
+            // Only attempt 2 retries with 1 second delay, then give up
+            if (retries > 2) {
+              console.warn('⚠️ Redis connection failed after 2 retries, using in-memory fallback');
+              return false; // Stop retrying
+            }
+            return 1000; // Retry after 1 second
+          },
+        },
       }) as RedisClientType;
 
       client.on('error', (err) => {
@@ -93,7 +120,13 @@ class RedisClientManager {
         }
       });
 
-      await client.connect();
+      // Add timeout to the connection attempt
+      const connectPromise = client.connect();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Redis connection timeout (5s)')), 5000);
+      });
+
+      await Promise.race([connectPromise, timeoutPromise]);
       this.client = client;
       this.isConnecting = false;
 
@@ -132,6 +165,7 @@ export const redisClientManager = RedisClientManager.getInstance();
 
 // Export convenience method
 export const getRedisClient = () => redisClientManager.getClient();
+export const getRedisClientIfReady = () => redisClientManager.getClientIfReady();
 export const isRedisAvailable = () => redisClientManager.isAvailable();
 export const disconnectRedis = () => redisClientManager.disconnect();
 

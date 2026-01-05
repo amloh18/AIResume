@@ -28,6 +28,7 @@ export {
 export {
   redisClientManager,
   getRedisClient,
+  getRedisClientIfReady,
   isRedisAvailable,
   disconnectRedis,
 } from './redis-client';

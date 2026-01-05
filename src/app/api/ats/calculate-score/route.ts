@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV, JobApplication, ApplicationJourney } from '@/models';
-import { AIAssistantService } from '@/lib/services/aiAssistantService';
+import { CVScoringService } from '@/lib/services/cv-scoring-service';
+import { KeywordGapAnalysisService } from '@/lib/services/keyword-gap-analysis-service';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ApplicationJourneyRelationshipService } from '@/lib/services/cvJourneyRelationshipService';
 import { CVRepository } from '@/lib/repositories/cv-repository';
@@ -19,25 +20,25 @@ const calculationLocks = new Map<string, Promise<any>>();
 async function getUserIdFromRequest(request: NextRequest, bodyUserId?: string): Promise<{ userId: string; source: 'session' | 'extension' | 'body' } | null> {
   // Check if this is an extension request (with JWT token)
   const authHeader = request.headers.get('authorization');
-  
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
     // Extension request with JWT token
     const token = authHeader.substring(7);
-    
+
     try {
       const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-      
+
       if (decoded.type !== 'extension') {
         console.log('❌ Invalid token type');
         return null;
       }
-      
+
       const userId = decoded.userId || decoded.id || '';
       if (!userId) {
         console.log('❌ No userId in extension token');
         return null;
       }
-      
+
       console.log('✅ Extension token verified for user:', userId);
       return { userId, source: 'extension' };
     } catch (error) {
@@ -52,12 +53,12 @@ async function getUserIdFromRequest(request: NextRequest, bodyUserId?: string): 
     try {
       const { getAuthenticatedUser } = await import('@/lib/auth-helpers');
       const authResult = await getAuthenticatedUser();
-      
+
       if (!authResult) {
         console.log('❌ No valid authentication found for web request');
         return null;
       }
-      
+
       console.log('✅ Web session verified for user:', authResult.userId);
       return { userId: authResult.userId, source: 'session' };
     } catch (error) {
@@ -79,7 +80,7 @@ function generateContentHash(cvData: UnifiedCVDataStructure): string {
     skills: cvData.skills,
     projects: cvData.projects
   });
-  
+
   // Generate SHA-256 hash
   return crypto.createHash('sha256').update(cvString).digest('hex');
 }
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { cvId, jobId, userId: bodyUserId, idempotencyKey } = body;
-    
+
     // Race condition prevention: Check if calculation is already in progress
     if (idempotencyKey && calculationLocks.has(idempotencyKey)) {
       console.log('⏳ ATS Calculate Score API - Calculation already in progress, waiting...');
@@ -118,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     // Get userId from either session, extension token, or request body
     const authInfo = await getUserIdFromRequest(request, bodyUserId);
-    
+
     if (!authInfo) {
       console.log('❌ ATS Calculate Score API - No valid authentication found');
       return NextResponse.json(
@@ -141,16 +142,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Block ATS check for Master CV
-    const isMasterCV = cv.isMaster === true || 
-                       cv.metadata?.isMaster === true || 
-                       cv.metadata?.isMaster === 'true';
+    const isMasterCV = cv.isMaster === true ||
+      cv.metadata?.isMaster === true ||
+      cv.metadata?.isMaster === 'true';
 
     if (isMasterCV) {
       console.log('❌ ATS Calculate Score API - ATS check blocked for Master CV');
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'ATS check is not available for Master CV. Please use a job-specific CV.' 
+        {
+          success: false,
+          error: 'ATS check is not available for Master CV. Please use a job-specific CV.'
         },
         { status: 403 }
       );
@@ -182,7 +183,7 @@ export async function POST(request: NextRequest) {
 
     // Get CV data structure
     const cvData: UnifiedCVDataStructure = cv.cvData || cv as any;
-    
+
     if (!cvData) {
       console.error('❌ ATS Calculate Score API - CV data is missing');
       return NextResponse.json(
@@ -207,11 +208,11 @@ export async function POST(request: NextRequest) {
 
     // Generate content hash for versioning (Critical Action Item #5)
     const contentHash = generateContentHash(cvData);
-    
+
     // Check if score is stale (content hash mismatch)
     const cvRepository = new CVRepository();
     const isStale = await cvRepository.isATSScoreStale(cvId, contentHash);
-    
+
     if (!isStale && cv.metadata?.atsScore !== undefined) {
       console.log('📊 ATS Calculate Score API - Using cached score (content unchanged)');
       // Return existing score if content hasn't changed
@@ -229,29 +230,51 @@ export async function POST(request: NextRequest) {
 
     // Create calculation promise for race condition prevention
     const calculationPromise = (async () => {
-      // Calculate ATS score using AIAssistantService
-      const analysis = await AIAssistantService.calculateATSScore(cvData, jobData);
+      // Step 1: Run keyword gap analysis using AI (same as FloatingPulsePill)
+      console.log('📊 ATS Calculate Score API - Running keyword gap analysis...');
+      const keywordAnalysis = await KeywordGapAnalysisService.analyze(cvData, {
+        title: job.jobTitle || '',
+        description: job.jobDescription || '',
+        company: job.company || ''
+      });
 
-      console.log('✅ ATS Calculate Score API - Score calculated:', {
-        score: analysis.score,
-        missingKeywords: analysis.missingKeywords.length,
-        strengths: analysis.strengths.length
+      console.log('📊 ATS Calculate Score API - Keyword analysis complete:', {
+        matchScore: keywordAnalysis.matchScore,
+        gapsFound: keywordAnalysis.gaps.length,
+        matchedKeywords: keywordAnalysis.matchedKeywords.length
+      });
+
+      // Step 2: Calculate ATS score using CVScoringService (same formula as FloatingPulsePill)
+      const scoreResult = CVScoringService.getFullScoreResult(
+        cvData,
+        keywordAnalysis,
+        100 // atsScoreCap
+      );
+
+      // Use ATS score if available (journey CV), otherwise fall back to CV score
+      const finalScore = scoreResult.atsScore?.total ?? scoreResult.cvScore.total;
+
+      console.log('✅ ATS Calculate Score API - Score calculated using CVScoringService:', {
+        score: finalScore,
+        hasAtsScore: !!scoreResult.atsScore,
+        cvScoreTotal: scoreResult.cvScore.total,
+        atsScoreTotal: scoreResult.atsScore?.total
       });
 
       // Save ATS score to database (atomic operation)
       try {
         // Find journey by jobId and userId (or cvId and jobId)
-        let journey = await ApplicationJourney.findOne({ 
-          jobId, 
-          userId: new (await import('mongoose')).Types.ObjectId(userId) 
+        let journey = await ApplicationJourney.findOne({
+          jobId,
+          userId: new (await import('mongoose')).Types.ObjectId(userId)
         });
 
         // If not found by jobId, try finding by cvId and jobId
         if (!journey) {
-          journey = await ApplicationJourney.findOne({ 
-            cvId, 
+          journey = await ApplicationJourney.findOne({
+            cvId,
             jobId,
-            userId: new (await import('mongoose')).Types.ObjectId(userId) 
+            userId: new (await import('mongoose')).Types.ObjectId(userId)
           });
         }
 
@@ -264,9 +287,9 @@ export async function POST(request: NextRequest) {
           savePromises.push(
             ApplicationJourneyRelationshipService.updateJourneyATSScore(
               journeyId,
-              analysis.score,
+              finalScore,
               jobId,
-              analysis.factorBreakdown,
+              scoreResult.atsScore || scoreResult.cvScore,
               contentHash
             )
           );
@@ -278,10 +301,10 @@ export async function POST(request: NextRequest) {
         // Save to CV metadata with content hash
         savePromises.push(
           cvRepository.updateATSScore(
-            cvId, 
-            analysis.score, 
+            cvId,
+            finalScore,
             contentHash,
-            analysis.factorBreakdown
+            scoreResult.atsScore || scoreResult.cvScore
           )
         );
 
@@ -297,15 +320,15 @@ export async function POST(request: NextRequest) {
       return {
         success: true,
         data: {
-          score: analysis.score,
-          atsScore: analysis.score,
-          missingKeywords: analysis.missingKeywords,
-          strengths: analysis.strengths,
-          suggestions: analysis.suggestions,
-          factorBreakdown: analysis.factorBreakdown,
-          knockOutFactors: analysis.knockOutFactors,
-          contentHash, // Include hash in response
-          analysis
+          score: finalScore,
+          atsScore: finalScore,
+          missingKeywords: keywordAnalysis.gaps.map(g => g.keyword),
+          strengths: keywordAnalysis.matchedKeywords,
+          suggestions: scoreResult.recommendations,
+          factorBreakdown: scoreResult.atsScore || scoreResult.cvScore,
+          keywordAnalysis: keywordAnalysis,
+          contentHash,
+          scoreResult // Include full score result for debugging
         }
       };
     })();
@@ -323,9 +346,9 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ ATS Calculate Score API - Error:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Internal server error' 
+      {
+        success: false,
+        error: error instanceof Error ? error.message : 'Internal server error'
       },
       { status: 500 }
     );

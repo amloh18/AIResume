@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
         // Recalculate readiness score
         // Get fresh data to calculate average
-        const updatedJob = await JobApplication.findById(jobId).select('interviewCoach').lean();
+        const updatedJob = await JobApplication.findById(jobId).select('interviewCoach').lean() as any;
         if (updatedJob?.interviewCoach?.questions) {
             const analyzedQuestions = updatedJob.interviewCoach.questions.filter(
                 (q: any) => q.status === 'completed' && q.feedback?.score !== undefined
@@ -124,13 +124,23 @@ export async function POST(request: NextRequest) {
                     { _id: jobId },
                     { $set: { 'interviewCoach.readinessScore': avgScore } }
                 );
+
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: true,
+                        feedback,
+                        newReadinessScore: avgScore
+                    }),
+                    request
+                );
             }
         }
 
         return setCorsHeaders(
             NextResponse.json({
                 success: true,
-                feedback
+                feedback,
+                // If no score update happened, return null or current if we had it (but we don't query it if not updating)
             }),
             request
         );

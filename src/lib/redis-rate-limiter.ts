@@ -32,23 +32,38 @@ class RedisRateLimiter {
     try {
       // Try to import Redis (optional dependency)
       const Redis = require('redis');
-      
+
       if (process.env.REDIS_URL) {
         this.redis = Redis.createClient({
-          url: process.env.REDIS_URL
+          url: process.env.REDIS_URL,
+          socket: {
+            connectTimeout: 5000, // 5 second connection timeout
+            reconnectStrategy: (retries: number) => {
+              if (retries > 2) {
+                return false; // Stop retrying after 2 attempts
+              }
+              return 1000; // Retry after 1 second
+            },
+          },
         });
-        
+
         this.redis.on('error', (err: Error) => {
           console.warn('Redis connection error:', err.message);
           this.isRedisAvailable = false;
         });
-        
+
         this.redis.on('connect', () => {
           console.log('✅ Redis connected successfully');
           this.isRedisAvailable = true;
         });
-        
-        await this.redis.connect();
+
+        // Add timeout to the connection attempt
+        const connectPromise = this.redis.connect();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Redis connection timeout (5s)')), 5000);
+        });
+
+        await Promise.race([connectPromise, timeoutPromise]);
       } else {
         // Only warn once to avoid console spam
         if (!RedisRateLimiter.hasWarnedAboutRedis) {
@@ -85,7 +100,7 @@ class RedisRateLimiter {
     if (!this.isRedisAvailable || !this.redis) {
       return 0;
     }
-    
+
     try {
       const value = await this.redis.get(key);
       return value ? parseInt(value, 10) : 0;
@@ -99,7 +114,7 @@ class RedisRateLimiter {
     if (!this.isRedisAvailable || !this.redis) {
       return;
     }
-    
+
     try {
       await this.redis.setEx(key, Math.ceil(ttlMs / 1000), value.toString());
     } catch (error) {
@@ -111,13 +126,13 @@ class RedisRateLimiter {
     if (!this.isRedisAvailable || !this.redis) {
       return 0;
     }
-    
+
     try {
       const result = await this.redis.multi()
         .incr(key)
         .expire(key, Math.ceil(ttlMs / 1000))
         .exec();
-      
+
       return result[0][1] || 0;
     } catch (error) {
       console.warn('Redis increment error:', error);
@@ -128,7 +143,7 @@ class RedisRateLimiter {
   private getFallbackValue(key: string): { count: number; resetTime: number } {
     const now = Date.now();
     const stored = this.fallbackStore.get(key);
-    
+
     if (!stored || stored.resetTime < now) {
       // Reset or create new entry
       const resetTime = now + 60000; // 1 minute window
@@ -136,7 +151,7 @@ class RedisRateLimiter {
       this.fallbackStore.set(key, newEntry);
       return newEntry;
     }
-    
+
     return stored;
   }
 
@@ -187,7 +202,7 @@ class RedisRateLimiter {
 
   async resetLimit(identifier: string, config: RateLimitConfig): Promise<void> {
     const key = this.generateKey(identifier, config);
-    
+
     if (this.isRedisAvailable) {
       try {
         await this.redis.del(key);
@@ -231,17 +246,17 @@ class RedisRateLimiter {
     API_GENERAL: { windowMs: 15 * 60 * 1000, maxRequests: 1000 }, // 1000 requests per 15 minutes
     API_STRICT: { windowMs: 5 * 60 * 1000, maxRequests: 100 }, // 100 requests per 5 minutes
     API_AI: { windowMs: 60 * 1000, maxRequests: 10 }, // 10 AI requests per minute
-    
+
     // Authentication limits
     AUTH_LOGIN: { windowMs: 15 * 60 * 1000, maxRequests: 5 }, // 5 login attempts per 15 minutes
     AUTH_PASSWORD_RESET: { windowMs: 60 * 60 * 1000, maxRequests: 3 }, // 3 password resets per hour
-    
+
     // File upload limits
     UPLOAD: { windowMs: 60 * 1000, maxRequests: 5 }, // 5 uploads per minute
-    
+
     // Email limits
     EMAIL: { windowMs: 60 * 1000, maxRequests: 3 }, // 3 emails per minute
-    
+
     // Admin limits
     ADMIN: { windowMs: 60 * 1000, maxRequests: 50 }, // 50 admin requests per minute
   };

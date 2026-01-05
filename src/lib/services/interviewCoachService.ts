@@ -138,7 +138,7 @@ INSTRUCTIONS:
    - edge: Find a SPECIFIC project, metric, or achievement from the CV that proves competence. Use actual company names and numbers from the CV. Do NOT hallucinate.
    - gap: What is missing? What risk does the interviewer see? Be honest about weaknesses.
    - strategy: How should the candidate pivot from their existing experience to address the gap?
-   - sample_answer: Write a STAR method answer (Situation, Task, Action, Result) that bridges the Gap using the Edge. Use first person ("I") and be specific.
+   - sample_answer: Write a FULL, first-person script as if the candidate is speaking. Use the STAR method but DO NOT label the sections. Must use specific details from the CV (Edge). DO NOT write generic advice like 'Use the STAR method'. Write the actual words they should say.
 
 4. OUTPUT FORMAT:
    Return ONLY valid JSON matching the schema. No markdown, no explanations.`;

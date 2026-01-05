@@ -95,9 +95,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email }),
       });
-      
+
       const checkUserResult = await checkUserResponse.json();
-      
+
       // If user exists but is not verified, route to verification
       if (checkUserResult.exists && !checkUserResult.isEmailVerified) {
         setEmail(formData.email);
@@ -107,7 +107,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         setSuccess('Account not verified. Please enter the verification code sent to your email.');
         return;
       }
-      
+
       // Verify credentials and check for 2FA
       const verifyResponse = await fetch('/api/auth/verify-credentials', {
         method: 'POST',
@@ -144,8 +144,8 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         redirect: false,
       });
 
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Sign in request timed out')), 10000)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Sign in request timed out')), 30000)
       );
 
       const result = await Promise.race([signInPromise, timeoutPromise]) as any;
@@ -157,7 +157,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         }, 1000);
       } else {
         let errorMessage = 'Invalid email or password.';
-        
+
         if (result?.error === 'CredentialsSignin') {
           errorMessage = 'Invalid email or password. Please check your credentials.';
         } else if (result?.error === 'Configuration') {
@@ -167,7 +167,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         } else if (result?.error) {
           errorMessage = result.error;
         }
-        
+
         setError(errorMessage);
       }
     } catch (error: any) {
@@ -193,7 +193,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     });
 
     const result = await response.json();
-    
+
     if (result.success) {
       // Account created successfully and verification code already sent
       // Switch to verification screen
@@ -231,7 +231,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         setEmail(email);
         setVerificationType(type);
@@ -321,18 +321,18 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
           try {
             // For passwordless login, verify code and sign in directly with NextAuth
             // The passwordless provider will handle verification and user creation
-            
+
             const signInResult = await Promise.race([
               signIn('passwordless', {
-              email,
-              verificationCode: code,
-              redirect: false
+                email,
+                verificationCode: code,
+                redirect: false
               } as any),
-              new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Sign-in request timed out after 10 seconds')), 10000)
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Sign-in request timed out after 30 seconds')), 30000)
               )
             ]) as any;
-            
+
 
             if ((signInResult as any)?.ok) {
               setSuccess('Authentication successful, redirecting...');
@@ -364,7 +364,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 } else {
                   // Code is valid but NextAuth sign-in failed - the code was already consumed
                   setError('Code was verified but sign-in failed. The code may have been used. Please request a new code and try again.');
-            }
+                }
               } catch (fetchError: any) {
                 console.error('Failed to fetch verification status:', fetchError);
                 // If the fetch fails, check if it's a network error
@@ -377,14 +377,14 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             }
           } catch (err: any) {
             console.error('Passwordless NextAuth sign-in failed:', err);
-            
+
             // Check if it's a network error
             if (err instanceof TypeError && err.message.includes('Failed to fetch')) {
               setError('Network error: Unable to connect to the server. Please check your internet connection and try again.');
             } else if (err.message) {
               setError(err.message);
             } else {
-            setError('Failed to sign you in with the code. Please try again.');
+              setError('Failed to sign you in with the code. Please try again.');
             }
           } finally {
             setIsLoading(false);
@@ -422,7 +422,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
           // Handle other verification types (email-verification)
           // For email-verification, use atomic signup endpoint directly (no double verification)
           if (verificationType === 'email-verification') {
-            
+
             try {
               // Data is already stored in database via session ID, no need to preserve localStorage
               // The draft will automatically link to the user when they authenticate
@@ -453,7 +453,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
               // Step 2: Create session server-side (more reliable than client-side signIn)
               setSuccess('Email verified! Creating session...');
-              
+
               const sessionResponse = await fetch('/api/auth/create-session', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -464,7 +464,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               if (!sessionResponse.ok) {
                 const errorData = await sessionResponse.json();
                 // Fallback: Try client-side NextAuth signIn as backup
-                
+
                 const signInResult = await Promise.race([
                   signIn('passwordless', {
                     email,
@@ -472,8 +472,8 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                     preVerified: 'true',
                     redirect: false
                   } as any),
-                  new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Sign-in timed out')), 10000)
+                  new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Sign-in timed out')), 30000)
                   )
                 ]) as any;
 
@@ -497,7 +497,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
               if (sessionResult.success) {
                 setSuccess('Signed in! Redirecting...');
-                
+
                 // Force a page reload to pick up the new session cookie
                 // This ensures NextAuth recognizes the session
                 setTimeout(() => {
@@ -509,7 +509,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
             } catch (signupError: any) {
               console.error('❌ Atomic verify-and-signin error:', signupError);
-              
+
               // Check if it's a network error
               if (signupError instanceof TypeError && signupError.message.includes('Failed to fetch')) {
                 setError('Network error: Unable to connect to server. Please check your internet connection and try again.');
@@ -624,7 +624,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
       const result = await response.json();
       setEmailExists(result.exists);
-      
+
       // Don't update show/hide logic here - let handleInputChange handle it
     } catch (error) {
       console.error('Error checking email:', error);
@@ -656,7 +656,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
   const handleResendVerification = async () => {
     if (!email) return;
-    
+
     setIsLoading(true);
     setError('');
 
@@ -668,7 +668,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         setSuccess('verification-resent');
       } else {
@@ -743,11 +743,11 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             validation: (value: string) => {
               const emailError = emailValidation(value);
               if (emailError) return emailError;
-              
+
               if (emailExists === true) {
                 return 'An account with this email already exists. Please sign in instead.';
               }
-              
+
               return null;
             },
             onBlur: (value: string) => {
@@ -1061,11 +1061,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             <motion.button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`relative px-8 py-3 text-base font-medium rounded-full transition-all duration-300 z-10 ${
-                mode === 'signin'
-                  ? 'text-black'
-                  : 'text-white/70 hover:text-white'
-              }`}
+              className={`relative px-8 py-3 text-base font-medium rounded-full transition-all duration-300 z-10 ${mode === 'signin'
+                ? 'text-black'
+                : 'text-white/70 hover:text-white'
+                }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1074,11 +1073,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             <motion.button
               type="button"
               onClick={() => switchMode('signup')}
-              className={`relative px-8 py-3 text-base font-medium rounded-full transition-all duration-300 z-10 ${
-                mode === 'signup'
-                  ? 'text-black'
-                  : 'text-white/70 hover:text-white'
-              }`}
+              className={`relative px-8 py-3 text-base font-medium rounded-full transition-all duration-300 z-10 ${mode === 'signup'
+                ? 'text-black'
+                : 'text-white/70 hover:text-white'
+                }`}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -1104,12 +1102,12 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
       {/* Icon */}
       {getIcon()}
-      
+
       {/* Title */}
       <h2 className="text-2xl font-bold text-white mb-2">
         {getTitle()}
       </h2>
-      
+
       {/* Subtitle */}
       <p className="text-white/70 text-base mb-6">
         {getSubtitle()}
@@ -1136,7 +1134,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             autoFocus={true}
             onInputChange={handleInputChange}
           />
-          
+
           {/* Send Code Button for Sign In */}
           {mode === 'signin' && showSendCodeButton && (
             <motion.div
@@ -1165,26 +1163,26 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
           {/* Footer Links */}
           <div className="mt-8">
             {getFooter()}
-            
+
             {/* Privacy Policy and Terms */}
             <div className="mt-6 pt-4 border-t border-gray-600/30">
               <div className="flex justify-center space-x-4 text-xs text-gray-400">
-                <a 
-                  href="/legal#privacy" 
+                <a
+                  href="/legal#privacy"
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Privacy Policy
                 </a>
                 <span className="text-gray-500">•</span>
-                <a 
-                  href="/legal#terms" 
+                <a
+                  href="/legal#terms"
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Terms of Service
                 </a>
                 <span className="text-gray-500">•</span>
-                <a 
-                  href="/legal#support" 
+                <a
+                  href="/legal#support"
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Support

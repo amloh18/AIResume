@@ -17,7 +17,8 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
 
   return (
     <div className={`elegant-timeline-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .elegant-timeline-template {
           font-family: 'Helvetica Neue', 'Arial', sans-serif;
           font-size: 14px;
@@ -364,10 +365,10 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
             break-inside: auto;
           }
         }
-      `}</style>
+      `}} />
 
       {/* Header Section */}
-      <div className="header-section">
+      <div className="header-section" data-section-id="personal">
         <div className="name-box">
           <div className="name">{basics?.name || 'CHLOE WINEHOUSE'}</div>
           <div className="title">{basics?.label || 'PROFESSIONAL TITLE'}</div>
@@ -391,7 +392,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
         <div className="left-column">
           {/* Profile Section */}
           {basics?.summary && (
-            <div className="section">
+            <div className="section" data-section-id="summary">
               <div className="section-title">Profile</div>
               <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
             </div>
@@ -399,10 +400,10 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
 
           {/* Education Section */}
           {education && education.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="education">
               <div className="section-title">Education</div>
               {education.map((edu, index) => (
-                <div key={index} className="education-item">
+                <div key={index} className="education-item" data-item-id={index}>
                   <div className="education-header">
                     <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                     <div className="university">{edu.institution}</div>
@@ -416,10 +417,10 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
 
           {/* Projects Section */}
           {projects && projects.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="projects">
               <div className="section-title">Projects</div>
               {projects.map((project, index) => (
-                <div key={index} className="project-item">
+                <div key={index} className="project-item" data-item-id={index}>
                   <div className="project-title">{project.name}</div>
                   {project.description && (
                     <div className="project-description">{stripHtmlTags(project.description)}</div>
@@ -436,10 +437,10 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
 
           {/* Awards Section */}
           {awards && awards.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="awards">
               <div className="section-title">Awards</div>
               {awards.map((award, index) => (
-                <div key={index} className="award-item">
+                <div key={index} className="award-item" data-item-id={index}>
                   <div className="award-title">{award.title}</div>
                   <div className="award-issuer">{award.awarder}</div>
                   <div className="award-year">{award.date}</div>
@@ -496,7 +497,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
 
           {/* Skills Section */}
           {skills && skills.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="skills">
               <div className="section-title">Skills</div>
               <div className="skills-list">
                 {skills.map((skill, index) => (
@@ -513,10 +514,10 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
 
           {/* Work Experience Section */}
           {work && work.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="work">
               <div className="section-title">Work Experience</div>
               {work.map((job, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div className="job-title">{job.position}</div>
                     <div className="company-info">

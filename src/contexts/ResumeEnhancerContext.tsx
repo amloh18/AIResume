@@ -152,7 +152,7 @@ type ResumeEnhancerAction =
   | { type: 'SET_SAVING'; payload: boolean }
   | { type: 'SET_SAVE_ERROR'; payload: string | null }
   | { type: 'RESET_STATE' }
-  | { type: 'LOAD_CV'; payload: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any } }
+  | { type: 'LOAD_CV'; payload: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any; coverLetterId?: string } }
   // Career Ecosystem Actions
   | { type: 'SET_IS_USER_MASTER'; payload: boolean }
   | { type: 'SET_FRESHER_MODE'; payload: boolean }
@@ -461,6 +461,7 @@ function resumeEnhancerReducer(
         selectedTemplate: action.payload.template || state.selectedTemplate,
         journeyId: action.payload.journeyId,
         jobData: action.payload.jobData,
+        coverLetterId: action.payload.coverLetterId, // Load cover letter ID for journey CVs
         cvScore: 0,
         surgicalFixes: [],
         showPreviewOverlay: false,
@@ -648,7 +649,7 @@ interface ResumeEnhancerContextType {
   setTemplate: (template: ITemplate) => void;
   setRoleContext: (role: string, seniority: string) => void;
   convertToJourney: (journeyId: string, jobData: any, coverLetterId?: string, coverLetterDraft?: string) => void;
-  loadCV: (cvData: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any }) => void;
+  loadCV: (cvData: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any; coverLetterId?: string }) => void;
   resetState: () => void;
 
   // Career Ecosystem helper functions
@@ -724,7 +725,7 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'CONVERT_TO_JOURNEY', payload: { journeyId, jobData, coverLetterId, coverLetterDraft } });
   };
 
-  const loadCV = (cvData: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any }) => {
+  const loadCV = (cvData: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any; coverLetterId?: string }) => {
     dispatch({ type: 'LOAD_CV', payload: cvData });
   };
 

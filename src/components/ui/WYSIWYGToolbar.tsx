@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Bold, Italic, Underline, List, Undo2, Redo2, Sparkles } from 'lucide-react';
+import { Bold, Italic, Underline, List, Undo2, Redo2, Sparkles, WandSparkles } from 'lucide-react';
+import { fixFormattingToBullets } from '@/lib/utils/format-utils';
 
 interface WYSIWYGToolbarProps {
   formatState?: { bold: boolean; italic: boolean; underline: boolean };
@@ -37,7 +38,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
   isGenerating = false
 }) => {
   const [currentFormatState, setCurrentFormatState] = React.useState(formatState);
-  
+
   // Update format state from document when selection changes
   React.useEffect(() => {
     const updateState = () => {
@@ -50,18 +51,18 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
             underline: document.queryCommandState('underline')
           });
         }
-      } catch (e) {}
+      } catch (e) { }
     };
-    
+
     document.addEventListener('selectionchange', updateState);
     const interval = setInterval(updateState, 100); // Poll for changes
-    
+
     return () => {
       document.removeEventListener('selectionchange', updateState);
       clearInterval(interval);
     };
   }, []);
-  
+
   // If handlers not provided, use document.execCommand on focused element
   const handleBoldClick = onBold || (() => {
     // Try to find the focused editor, or any editor if none is focused
@@ -78,7 +79,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         return false;
       }) as HTMLElement || (allEditors[0] as HTMLElement);
     }
-    
+
     if (editor) {
       // Preserve selection before focusing
       const selection = window.getSelection();
@@ -89,9 +90,9 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           savedRange = range.cloneRange();
         }
       }
-      
+
       editor.focus();
-      
+
       // Restore selection
       if (savedRange && selection) {
         selection.removeAllRanges();
@@ -104,7 +105,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         selection.removeAllRanges();
         selection.addRange(range);
       }
-      
+
       // Apply formatting
       requestAnimationFrame(() => {
         document.execCommand('bold', false, null);
@@ -125,7 +126,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         return false;
       }) as HTMLElement || (allEditors[0] as HTMLElement);
     }
-    
+
     if (editor) {
       const selection = window.getSelection();
       let savedRange: Range | null = null;
@@ -135,9 +136,9 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           savedRange = range.cloneRange();
         }
       }
-      
+
       editor.focus();
-      
+
       if (savedRange && selection) {
         selection.removeAllRanges();
         selection.addRange(savedRange);
@@ -148,7 +149,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         selection.removeAllRanges();
         selection.addRange(range);
       }
-      
+
       requestAnimationFrame(() => {
         document.execCommand('italic', false, null);
       });
@@ -168,7 +169,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         return false;
       }) as HTMLElement || (allEditors[0] as HTMLElement);
     }
-    
+
     if (editor) {
       const selection = window.getSelection();
       let savedRange: Range | null = null;
@@ -178,9 +179,9 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           savedRange = range.cloneRange();
         }
       }
-      
+
       editor.focus();
-      
+
       if (savedRange && selection) {
         selection.removeAllRanges();
         selection.addRange(savedRange);
@@ -191,7 +192,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         selection.removeAllRanges();
         selection.addRange(range);
       }
-      
+
       requestAnimationFrame(() => {
         document.execCommand('underline', false, null);
       });
@@ -211,7 +212,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         return false;
       }) as HTMLElement || (allEditors[0] as HTMLElement);
     }
-    
+
     if (editor) {
       // Preserve selection before focusing
       const selection = window.getSelection();
@@ -222,9 +223,9 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           savedRange = range.cloneRange();
         }
       }
-      
+
       editor.focus();
-      
+
       // Restore selection
       if (savedRange && selection) {
         selection.removeAllRanges();
@@ -237,7 +238,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         selection.removeAllRanges();
         selection.addRange(range);
       }
-      
+
       // Apply bullet list formatting
       requestAnimationFrame(() => {
         // Check if we're in a list already
@@ -245,10 +246,10 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         if (currentSelection && currentSelection.rangeCount > 0) {
           const range = currentSelection.getRangeAt(0);
           const container = range.commonAncestorContainer;
-          const listItem = container.nodeType === Node.TEXT_NODE 
+          const listItem = container.nodeType === Node.TEXT_NODE
             ? container.parentElement?.closest('li')
             : (container as Element).closest('li');
-          
+
           if (listItem && listItem.parentElement?.tagName === 'UL') {
             // Remove bullet list
             document.execCommand('insertUnorderedList', false, null);
@@ -302,14 +303,13 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           e.stopPropagation();
           handleBoldClick();
         }}
-        className={`p-1 hover:opacity-70 transition-opacity ${
-          currentFormatState.bold ? 'opacity-100' : 'opacity-60'
-        }`}
+        className={`p-1 hover:opacity-70 transition-opacity ${currentFormatState.bold ? 'opacity-100' : 'opacity-60'
+          }`}
         title="Bold"
       >
         <Bold size={16} className="text-[color:var(--text-secondary)]" />
       </button>
-      
+
       <button
         type="button"
         onClick={(e) => {
@@ -317,14 +317,13 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           e.stopPropagation();
           handleItalicClick();
         }}
-        className={`p-1 hover:opacity-70 transition-opacity ${
-          currentFormatState.italic ? 'opacity-100' : 'opacity-60'
-        }`}
+        className={`p-1 hover:opacity-70 transition-opacity ${currentFormatState.italic ? 'opacity-100' : 'opacity-60'
+          }`}
         title="Italic"
       >
         <Italic size={16} className="text-[color:var(--text-secondary)]" />
       </button>
-      
+
       <button
         type="button"
         onClick={(e) => {
@@ -332,16 +331,15 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           e.stopPropagation();
           handleUnderlineClick();
         }}
-        className={`p-1 hover:opacity-70 transition-opacity ${
-          currentFormatState.underline ? 'opacity-100' : 'opacity-60'
-        }`}
+        className={`p-1 hover:opacity-70 transition-opacity ${currentFormatState.underline ? 'opacity-100' : 'opacity-60'
+          }`}
         title="Underline"
       >
         <Underline size={16} className="text-[color:var(--text-secondary)]" />
       </button>
-      
+
       <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
-      
+
       <button
         type="button"
         onClick={(e) => {
@@ -358,9 +356,9 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
       >
         <List size={16} className="text-[color:var(--text-secondary)]" />
       </button>
-      
+
       <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
-      
+
       <button
         type="button"
         onClick={onUndo || (() => {
@@ -376,7 +374,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
       >
         <Undo2 size={16} className="text-[color:var(--text-secondary)]" />
       </button>
-      
+
       <button
         type="button"
         onClick={onRedo || (() => {
@@ -393,6 +391,43 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         <Redo2 size={16} className="text-[color:var(--text-secondary)]" />
       </button>
 
+      <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
+
+      {/* Fix Formatting Button */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          // Find the focused editor or any editor with selection
+          let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+          if (!editor) {
+            const allEditors = document.querySelectorAll('[contenteditable="true"]');
+            editor = Array.from(allEditors).find(el => {
+              const selection = window.getSelection();
+              if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                return el.contains(range.commonAncestorContainer);
+              }
+              return false;
+            }) as HTMLElement || (allEditors[0] as HTMLElement);
+          }
+          if (editor) {
+            // Get current content and fix formatting
+            const currentContent = editor.innerHTML;
+            const fixedContent = fixFormattingToBullets(currentContent);
+            editor.innerHTML = fixedContent;
+            // Trigger input event to update the value in React state
+            editor.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }}
+        onMouseDown={(e) => e.preventDefault()}
+        className="p-1 hover:opacity-70 transition-opacity opacity-60"
+        title="Fix Formatting - Clean up text into bullet points"
+      >
+        <WandSparkles size={16} className="text-[color:var(--text-secondary)]" />
+      </button>
+
       {showAIButton && (
         <>
           <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
@@ -400,14 +435,13 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
             type="button"
             onClick={onAISuggestions || onAIGenerate}
             disabled={isGenerating}
-            className={`p-1 hover:opacity-70 transition-opacity opacity-60 ${
-              isGenerating ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
+            className={`p-1 hover:opacity-70 transition-opacity opacity-60 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             title="AI: Generate 4 writing method suggestions"
           >
-            <Sparkles 
-              size={16} 
-              className={`text-[color:var(--text-secondary)] ${isGenerating ? 'animate-pulse' : ''}`} 
+            <Sparkles
+              size={16}
+              className={`text-[color:var(--text-secondary)] ${isGenerating ? 'animate-pulse' : ''}`}
             />
           </button>
         </>
