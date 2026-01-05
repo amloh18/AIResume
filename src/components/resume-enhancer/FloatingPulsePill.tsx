@@ -228,6 +228,8 @@ export default function FloatingPulsePill({
                                     if (pendingCount > 0) {
                                         handleFixAll();
                                     } else {
+                                        // Auto-open scorecard when Scan ATS is clicked
+                                        setShowScorecard(true);
                                         onFixATS?.();
                                     }
                                 }}
@@ -353,7 +355,7 @@ export default function FloatingPulsePill({
                             animate={{ opacity: 1, height: 'auto', scale: 1 }}
                             exit={{ opacity: 0, height: 0, scale: 0.95 }}
                             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                            className="w-full self-end mt-2 z-10 origin-top-right"
+                            className="self-end mt-2 z-10 origin-top-right"
                         >
                             <SuggestionCard
                                 fixAnnotations={state.fixAnnotations || []}

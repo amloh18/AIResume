@@ -1,5 +1,5 @@
 import 'server-only';
-import { getRedisClient, isRedisAvailable } from './redis-client';
+import { getRedisClient, getRedisClientIfReady, isRedisAvailable } from './redis-client';
 
 /**
  * Unified Cache Manager
@@ -80,19 +80,18 @@ class CacheManager {
 
   /**
    * Get value from cache
+   * Uses non-blocking Redis access to prevent auth delays
    */
   async get<T>(key: string): Promise<T | null> {
     try {
-      // Try Redis first if available
-      if (this.useRedis) {
-        const redisClient = await getRedisClient();
-        if (redisClient) {
-          const value = await redisClient.get(key);
-          if (value) {
-            return JSON.parse(value) as T;
-          }
-          return null;
+      // Use non-blocking getter - returns null immediately if Redis not ready
+      const redisClient = getRedisClientIfReady();
+      if (redisClient) {
+        const value = await redisClient.get(key);
+        if (value) {
+          return JSON.parse(value) as T;
         }
+        return null;
       }
 
       // Fallback to in-memory cache
@@ -106,16 +105,15 @@ class CacheManager {
 
   /**
    * Set value in cache with TTL
+   * Uses non-blocking Redis access to prevent auth delays
    */
   async set<T>(key: string, value: T, ttl: number = 300): Promise<void> {
     try {
-      // Try Redis first if available
-      if (this.useRedis) {
-        const redisClient = await getRedisClient();
-        if (redisClient) {
-          await redisClient.setEx(key, ttl, JSON.stringify(value));
-          return;
-        }
+      // Use non-blocking getter - returns null immediately if Redis not ready
+      const redisClient = getRedisClientIfReady();
+      if (redisClient) {
+        await redisClient.setEx(key, ttl, JSON.stringify(value));
+        return;
       }
 
       // Fallback to in-memory cache
@@ -157,11 +155,11 @@ class CacheManager {
         if (redisClient) {
           // Convert pattern to Redis SCAN pattern
           const redisPattern = pattern.replace(/\*/g, '*').replace(/\?/g, '?');
-          
+
           // Use SCAN to find matching keys
           const keys: string[] = [];
           let cursor: string = '0';
-          
+
           do {
             const result = await redisClient.scan(cursor, {
               MATCH: redisPattern,

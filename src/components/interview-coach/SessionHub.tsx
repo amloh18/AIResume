@@ -77,14 +77,53 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
             const data = await response.json();
 
             if (data.success) {
-                setSession(data.session);
-                if (data.session?._id) {
-                    fetchQuestions(data.session._id);
+                // Handle new embedded data format
+                if (data.interviewCoach) {
+                    const ic = data.interviewCoach;
+
+                    // Map backend data to frontend Session interface
+                    setSession({
+                        _id: ic.linkedCvId || jobId, // Use jobID as fallback if no linked ID
+                        targetRole: job?.jobTitle || 'Candidate', // Fallback title
+                        readinessScore: ic.readinessScore || 0,
+                        modules: ic.modules.map((m: any, idx: number) => ({
+                            id: m.id,
+                            title: m.name,
+                            type: m.name.toLowerCase().includes('behavioral') ? 'behavioral' :
+                                m.name.toLowerCase().includes('technical') ? 'technical' : 'general',
+                            status: 'pending',
+                            displayOrder: idx
+                        })),
+                        createdAt: ic.generatedAt,
+                        lastPracticedAt: ic.generatedAt
+                    });
+
+                    // Directly set questions from the monolithic response
+                    // Map backend question format to frontend Question interface
+                    const mappedQuestions = (ic.questions || []).map((q: any) => ({
+                        _id: q.id,
+                        moduleId: ic.modules.find((m: any) => m.questionIds?.includes(q.id))?.id || 'unknown',
+                        content: {
+                            question: q.question,
+                            whyAsked: q.aiContext?.rationale || '',
+                            difficulty: q.difficulty || 'Medium',
+                            tags: [q.category]
+                        },
+                        userAnswer: q.status === 'completed' ? { status: 'analyzed' } : undefined,
+                        aiFeedback: q.feedback
+                    }));
+
+                    setQuestions(mappedQuestions);
+                } else if (data.session) {
+                    // Fallback for legacy format if any
+                    setSession(data.session);
+                    if (data.session?._id) {
+                        // convert legacy fetch to internal if needed, but likely we can skip
+                    }
                 }
             } else {
                 console.error('Session init failed:', data.error);
                 toast.error(data.error || 'Failed to create session');
-                // Ensure loading state is turned off so we don't get stuck
                 setLoading(false);
             }
         } catch (error) {
@@ -95,19 +134,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
             setPreparing(false);
             setLoading(false);
         }
-    }, [jobId, router]);
-
-    const fetchQuestions = async (sessionId: string) => {
-        try {
-            const response = await fetch(`/api/interview/questions?sessionId=${sessionId}`);
-            const data = await response.json();
-            if (data.success) {
-                setQuestions(data.questions || []);
-            }
-        } catch (error) {
-            console.error('Failed to fetch questions:', error);
-        }
-    };
+    }, [jobId, job?.jobTitle]); // Added job.jobTitle dependency for session mapping
 
     const fetchJobDetails = async () => {
         try {

@@ -638,7 +638,7 @@ const Canvas: React.FC = () => {
               cv.metadata?.isMaster === 'true' ||
               cv.isMaster === true ||
               cv.metadata?.createdVia === 'ai-career-report',
-            atsScore: cv.metadata?.atsScore || cv.atsScore || cv.cvData?.analysis?.score, // Include ATS score from metadata first
+            atsScore: cv.metadata?.atsScore, // Single source of truth from CVScoringService
             metadata: cv.metadata // Include full metadata
           } as CV;
         });

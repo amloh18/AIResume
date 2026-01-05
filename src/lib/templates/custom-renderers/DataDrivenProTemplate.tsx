@@ -18,7 +18,8 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
   return (
     <div className={`data-driven-pro-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .data-driven-pro-template {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 100%;
@@ -357,11 +358,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             break-inside: avoid;
           }
         }
-      `}</style>
+      `}} />
 
       {/* Header */}
       {basics?.name && (
-        <div className="header">
+        <div className="header" data-section-id="personal">
           <div className="header-left">
             <h1 className="name">{basics.name}</h1>
             {basics.label && <p className="title">{basics.label}</p>}
@@ -413,10 +414,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           </div>
 
           {/* Education */}
-          <div style={{ marginTop: '1.5rem' }}>
+          <div style={{ marginTop: '1.5rem' }} data-section-id="education">
             <h3 className="section-title">Education</h3>
             {education?.map((edu, index) => (
-              <div key={index} className="education-item">
+              <div key={index} className="education-item" data-item-id={index}>
                 <div className="degree-title">{edu.studyType || 'ENTER YOUR MAJOR'}</div>
                 <div className="institution-info">{edu.institution || 'Name of University'}</div>
                 <div className="education-dates">{formatDateRange(edu.startDate || '2005', edu.endDate || '2007')}</div>
@@ -433,10 +434,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
           {/* Skills */}
           {skills && skills.length > 0 && (
-            <div style={{ marginTop: '1.5rem' }}>
+            <div style={{ marginTop: '1.5rem' }} data-section-id="skills">
               <h3 className="section-title">Skills</h3>
               {skills.map((skill, index) => (
-                <div key={index} className="skills-category">
+                <div key={index} className="skills-category" data-item-id={index}>
                   <div className="skills-category-title">{skill.category || 'Professional'}</div>
                   <div className="skills-list">
                     {Array.isArray(skill.skills) && skill.skills.length > 0 ? (
@@ -498,7 +499,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         <div className="right-column">
           {/* Profile */}
           {basics?.summary && (
-            <div>
+            <div data-section-id="summary">
               <h2 className="main-section-title">Profile</h2>
               <p className="summary-text">
                 {stripHtmlTags(basics.summary)}
@@ -508,10 +509,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
           {/* Work Experience */}
           {work && work.length > 0 && (
-            <div>
+            <div data-section-id="work">
               <h2 className="main-section-title">Work Experience</h2>
               {work.map((job, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div>
                       <div className="job-title">{job.position || ''}</div>
@@ -538,10 +539,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
           {/* Projects */}
           {projects && projects.length > 0 && (
-            <div>
+            <div data-section-id="projects">
               <h2 className="main-section-title">Projects</h2>
               {projects.map((project, index) => (
-                <div key={index} className="project-item">
+                <div key={index} className="project-item" data-item-id={index}>
                   <div className="project-header">
                     <div>
                       <div className="project-title">{project.name}</div>
@@ -566,10 +567,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
           {/* Volunteer */}
           {volunteer && volunteer.length > 0 && (
-            <div>
+            <div data-section-id="volunteer">
               <h2 className="main-section-title">Volunteer Experience</h2>
               {volunteer.map((vol, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div>
                       <div className="job-title">{vol.position || ''}</div>

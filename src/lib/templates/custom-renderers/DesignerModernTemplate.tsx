@@ -17,7 +17,8 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
   return (
     <div className={`designer-modern-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .designer-modern-template {
           font-family: 'Helvetica Neue', 'Arial', sans-serif;
           font-size: 14px;
@@ -290,10 +291,10 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
             background: #ffffff;
           }
         }
-      `}</style>
+      `}} />
 
       {/* Header Section */}
-      <div className="header">
+      <div className="header" data-section-id="personal">
         {/* Left Column - Row 1: Name and Title */}
         <div className="left-header">
           <div className="name">
@@ -333,7 +334,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         </div>
 
         {/* Right Column - Row 2: Profile Section */}
-        <div className="right-header-left-aligned">
+        <div className="right-header-left-aligned" data-section-id="summary">
           <div className="section-title">Profile</div>
           {basics?.summary && (
             <div className="profile-section">
@@ -349,10 +350,10 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         <div className="left-column">
           {/* Education Section */}
           {education && education.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="education">
               <div className="section-title">Education</div>
               {education.map((edu, index) => (
-                <div key={index} className="education-item">
+                <div key={index} className="education-item" data-item-id={index}>
                   <div className="education-header">
                     <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                     <div className="university">{edu.institution}</div>
@@ -365,7 +366,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Skills Section */}
           {skills && skills.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="skills">
               <div className="section-title">Skills</div>
               <div className="skills-list">
                 {skills.map((skill, index) => (
@@ -379,7 +380,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Languages Section */}
           {languages && languages.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="languages">
               <div className="section-title">Languages</div>
               <div className="skills-list">
                 {languages.map((lang, index) => (
@@ -393,7 +394,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Awards Section */}
           {awards && awards.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="awards">
               <div className="section-title">Awards</div>
               {awards.map((award, index) => (
                 <div key={index} className="education-item">
@@ -412,7 +413,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Certificates Section */}
           {certificates && certificates.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="certificates">
               <div className="section-title">Certificates</div>
               {certificates.map((cert, index) => (
                 <div key={index} className="education-item">
@@ -467,10 +468,10 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         <div className="right-column">
           {/* Experience Section */}
           {work && work.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="work">
               <div className="section-title">Experience</div>
               {work.map((job, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div className="job-title">{job.position}</div>
                     <div className="company-info">
@@ -489,10 +490,10 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Projects Section */}
           {projects && projects.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="projects">
               <div className="section-title">Projects</div>
               {projects.map((project, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div className="job-title">{project.name}</div>
                     {project.startDate && (
@@ -518,10 +519,10 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Volunteer Experience Section */}
           {volunteer && volunteer.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="volunteer">
               <div className="section-title">Volunteer Experience</div>
               {volunteer.map((vol, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div className="job-title">{vol.position}</div>
                     <div className="company-info">
