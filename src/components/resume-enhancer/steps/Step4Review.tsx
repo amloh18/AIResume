@@ -23,6 +23,31 @@ export default function Step4Review() {
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
+  // Fetch cover letter status for journey CVs if not already loaded
+  useEffect(() => {
+    const fetchCoverLetterStatus = async () => {
+      // Only fetch if it's a journey CV without a coverLetterId already loaded
+      if (state.cvType === 'journey' && state.journeyId && !state.coverLetterId) {
+        try {
+          // Fetch the journey to get the cover letter ID
+          const response = await fetch(`/api/application-journey/${state.journeyId}`);
+          if (response.ok) {
+            const result = await response.json();
+            // Check if the journey has a cover letter - API returns { data: { journey: { coverLetterId } } }
+            const coverLetterId = result.data?.journey?.coverLetterId;
+            if (coverLetterId) {
+              dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: '', coverLetterId } });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch cover letter status:', error);
+        }
+      }
+    };
+
+    fetchCoverLetterStatus();
+  }, [state.cvType, state.journeyId, state.coverLetterId, dispatch]);
+
   // Calculate scores using the scoring service
   const scoreResult = useMemo(() => {
     return CVScoringService.getFullScoreResult(

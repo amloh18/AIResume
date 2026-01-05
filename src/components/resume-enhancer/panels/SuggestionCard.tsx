@@ -13,7 +13,7 @@ export default function SuggestionCard({ fixAnnotations = [], activeFixId, onSel
     const improvements = openFixes.filter(f => f.severity !== 'high');
 
     return (
-        <div className="w-full max-w-[90vw] bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-160px)]">
+        <div className="w-[360px] min-w-[360px] max-w-[360px] bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[calc(100vh-160px)]">
             <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar">
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-2">

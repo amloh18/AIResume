@@ -214,6 +214,7 @@ export default function FloatingFormEditor({
     const renderSectionForm = () => {
         switch (sectionId) {
             case 'personal':
+            case 'summary': // Summary is part of basics/personal info
                 return (
                     <PersonalInfoForm
                         data={getBasics()}

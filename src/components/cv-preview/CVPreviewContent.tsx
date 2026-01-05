@@ -9,6 +9,7 @@ import { DesignSettings, SectionConfig } from '@/types/design-settings';
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import AnnotatedText from '@/components/resume-enhancer/annotations/AnnotatedText';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
+import { renderRichText } from '@/lib/utils/format-utils';
 
 export type ViewMode = 'edit' | 'recruiter' | 'ats';
 
@@ -185,6 +186,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   const [totalPages, setTotalPages] = useState(1);
   const [contentHeight, setContentHeight] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
+  const customTemplateRef = useRef<HTMLDivElement>(null);
   const internalOverlayRef = useRef<HTMLDivElement>(null);
 
   // Use provided ref or internal ref for overlay container
@@ -205,13 +207,21 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       setTotalPages(1);
       return;
     }
-    if (!cvData || !contentRef.current) {
+    if (!cvData) {
       setContentHeight(0);
       setTotalPages(1);
       return;
     }
 
-    const height = contentRef.current.scrollHeight;
+    // Check for custom template content first, then generic content
+    const measureRef = customTemplateRef.current || contentRef.current;
+    if (!measureRef) {
+      setContentHeight(0);
+      setTotalPages(1);
+      return;
+    }
+
+    const height = measureRef.scrollHeight;
     setContentHeight(height);
 
     if (height > 0) {
@@ -291,19 +301,198 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
 
   const CustomRenderer = getCustomRenderer();
 
-  // If we have a custom renderer, use it
+  // If we have a custom renderer, use it with pagination like generic preview
   if (CustomRenderer) {
-    // We wrap it in the same scaling container style as the generic preview for consistency with zoom controls
-    // But we let the custom renderer handle its own dimensions/pagination
+    // Use the same pagination logic as generic preview
+    // A4 page height: 297mm = 1123px (at 96 DPI)
+    const a4PageHeight = 1123;
+    const usablePageHeight = a4PageHeight - pagePadding.top - pagePadding.bottom;
+
     return (
-      <div
-        className={`cv-preview-container printing-container relative bg-white shadow-2xl mx-auto transition-transform duration-200 ease-out origin-top`}
-        style={{
-          width: '210mm', // A4 width
-          minHeight: '297mm', // A4 height (min)
-        }}
-      >
-        <CustomRenderer cvData={cvData} />
+      <div className="space-y-8 relative">
+        {/* Hidden measurement container for calculating total content height */}
+        <div
+          ref={customTemplateRef}
+          style={{
+            position: 'absolute',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            width: '210mm',
+            left: '-9999px',
+            top: 0,
+            padding: `${pagePadding.top}px 32px ${pagePadding.bottom}px 32px`
+          }}
+        >
+          <CustomRenderer cvData={cvData} />
+        </div>
+        {/* Page Break CSS for custom templates */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          /* Force black text on white background - prevent dark mode inheritance */
+          .cv-page-custom,
+          .cv-page-custom * {
+            color: #000000 !important;
+          }
+          .cv-page-custom h1,
+          .cv-page-custom h2,
+          .cv-page-custom h3,
+          .cv-page-custom h4,
+          .cv-page-custom h5,
+          .cv-page-custom h6,
+          .cv-page-custom p,
+          .cv-page-custom span,
+          .cv-page-custom div,
+          .cv-page-custom li,
+          .cv-page-custom strong,
+          .cv-page-custom b,
+          .cv-page-custom em,
+          .cv-page-custom i {
+            color: #000000 !important;
+          }
+          /* Allow gray for secondary text */
+          .cv-page-custom .text-gray-500,
+          .cv-page-custom .text-gray-600,
+          .cv-page-custom .text-gray-700 {
+            color: #4b5563 !important;
+          }
+          
+          /* ===== MODE-SPECIFIC STYLES ===== */
+          
+          /* EDIT MODE - Show clickable section indicators */
+          .mode-edit [data-section-id] {
+            cursor: pointer;
+            transition: outline 0.2s ease, background-color 0.2s ease;
+          }
+          .mode-edit [data-section-id]:hover {
+            outline: 2px dashed #3b82f6;
+            background-color: rgba(59, 130, 246, 0.05);
+            outline-offset: 4px;
+          }
+          
+          /* RECRUITER MODE - Spotlight effect (dim secondary sections) */
+          .mode-recruiter.dim-secondary [data-section-id="volunteer"],
+          .mode-recruiter.dim-secondary [data-section-id="certificates"],
+          .mode-recruiter.dim-secondary [data-section-id="awards"] {
+            opacity: 0.4;
+            filter: blur(0.5px);
+            transition: opacity 0.3s ease, filter 0.3s ease;
+          }
+          /* For seniors (2+ work experiences), also dim education */
+          .mode-recruiter.dim-education [data-section-id="education"] {
+            opacity: 0.4;
+            filter: blur(0.5px);
+          }
+          
+          /* ATS MODE - X-ray view styling */
+          .mode-ats {
+            filter: grayscale(100%) contrast(1.1);
+          }
+          .mode-ats [data-section-id] {
+            position: relative;
+          }
+          
+          /* PREVENT TEXT SPLITTING - Avoid orphaned text across pages */
+          .cv-page-custom p,
+          .cv-page-custom li,
+          .cv-page-custom h1,
+          .cv-page-custom h2,
+          .cv-page-custom h3,
+          .cv-page-custom h4,
+          .cv-page-custom h5,
+          .cv-page-custom h6,
+          .cv-page-custom [data-section-id],
+          .cv-page-custom [data-item-id] {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          
+          /* Keep section headers with their content */
+          .cv-page-custom .section-title,
+          .cv-page-custom [class*="section-title"] {
+            break-after: avoid;
+            page-break-after: avoid;
+          }
+          
+          @media print {
+            .cv-page-custom {
+              page-break-after: always;
+              page-break-inside: avoid;
+            }
+            .cv-page-custom:last-child {
+              page-break-after: auto;
+            }
+          }
+          .cv-page-custom {
+            break-after: page;
+            break-inside: avoid;
+          }
+          .cv-page-custom:last-child {
+            break-after: auto;
+          }
+        ` }} />
+
+        {/* Render multiple pages (or single page for shorter content) */}
+        {Array.from({ length: renderMode === 'pages' ? totalPages : 1 }, (_, pageIndex) => {
+          // Determine mode classes for styling
+          const isJunior = (cvData.work?.length || 0) < 2;
+          const modeClass = viewMode === 'edit' ? 'mode-edit' :
+            viewMode === 'recruiter' ? `mode-recruiter dim-secondary ${!isJunior ? 'dim-education' : ''}` :
+              viewMode === 'ats' ? 'mode-ats' : '';
+
+          // Event delegation handler for section clicks
+          const handleTemplateClick = (e: React.MouseEvent) => {
+            if (viewMode !== 'edit' || !onSectionClick) return;
+            const target = (e.target as HTMLElement).closest('[data-section-id]');
+            if (target) {
+              const sectionId = target.getAttribute('data-section-id');
+              if (sectionId) {
+                onSectionClick(sectionId, e);
+              }
+            }
+          };
+
+          return (
+            <div
+              key={pageIndex}
+              className={`cv-page-custom bg-white shadow-2xl mb-8 ${modeClass}`}
+              onClick={handleTemplateClick}
+              style={{
+                width: '210mm', // A4 width
+                height: renderMode === 'pages' ? '297mm' : 'auto', // Fixed A4 height for pages mode
+                minHeight: '297mm',
+                overflow: 'hidden',
+                pageBreakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'always' : 'auto',
+                breakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'page' : 'auto',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                borderRadius: '2px',
+                boxSizing: 'border-box'
+              }}
+            >
+              {/* Padding Wrapper - creates visual margins like generic preview */}
+              <div style={{
+                paddingTop: `${pagePadding.top}px`,
+                paddingBottom: `${pagePadding.bottom}px`,
+                paddingLeft: '32px',
+                paddingRight: '32px',
+                height: '100%',
+                boxSizing: 'border-box'
+              }}>
+                {/* Content Viewport - clips content to printable area */}
+                <div style={{ height: '100%', overflow: 'hidden', position: 'relative' }}>
+                  {/* Content Container - uses translateY to show correct portion */}
+                  <div style={{
+                    transform: renderMode === 'pages' && pageIndex > 0
+                      ? `translateY(calc(-${pageIndex} * (297mm - ${pagePadding.top + pagePadding.bottom}px)))`
+                      : 'none'
+                  }}>
+                    <CustomRenderer cvData={cvData} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
       </div>
     );
   }
@@ -333,19 +522,54 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
     // Convert common rich-text HTML (from WYSIWYG) into readable plain text.
     // We intentionally keep this lightweight and deterministic for preview/report overlays.
     if (!value) return '';
+
+    // Check if it has tags before processing to save perf on plain text
     const hasTags = /<[^>]+>/.test(value);
     if (!hasTags) return value;
+
     return value
+      // Handle list items - convert to ASCII bullets
+      .replace(/<li[^>]*>/gi, '• ')   // Start of list item -> bullet + space
+      .replace(/<\/li>/gi, '\n')      // End of list item -> new line
+      .replace(/<ul[^>]*>/gi, '')     // Remove list start/end tags
+      .replace(/<\/ul>/gi, '\n')      // Add extra spacing after list
+      .replace(/<ol[^>]*>/gi, '')
+      .replace(/<\/ol>/gi, '\n')
+
+      // Handle breaks and paragraphs
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/p>/gi, '\n')
       .replace(/<p[^>]*>/gi, '')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<div[^>]*>/gi, '')
+
+      // Strip remaining tags
       .replace(/<[^>]+>/g, '')
+
+      // Decode entities
       .replace(/&nbsp;/gi, ' ')
       .replace(/&amp;/gi, '&')
       .replace(/&quot;/gi, '"')
       .replace(/&#39;/gi, "'")
-      .replace(/\n{3,}/g, '\n\n')
+      .replace(/&lt;/gi, '<')
+      .replace(/&gt;/gi, '>')
+
+      // Cleanup whitespace
+      .replace(/\n{3,}/g, '\n\n')     // Max 2 consecutive newlines
       .trim();
+  };
+
+  // RichTextContent component for rendering HTML with safe rich formatting
+  const RichTextContent = ({ html, className = '' }: { html: string; className?: string }) => {
+    if (!html || !html.trim()) return null;
+    const sanitizedHtml = renderRichText(html);
+    return (
+      <div
+        className={className}
+        style={{ color: '#111827' }}
+        dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+      />
+    );
   };
 
   // Flexible accessors (cvData may vary depending on parser/importer/version)
@@ -423,15 +647,17 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   const templateStyle = applyDesignSettings();
 
   const themeClasses = {
-    page: isDark ? 'bg-[#1a230f]' : 'bg-white',
+    // CV page content always uses light theme (like printed paper)
+    // Only the outer container can use dark mode
+    page: 'bg-white', // Always white paper
     text: {
-      primary: isDark ? 'text-white' : 'text-gray-900',
-      secondary: isDark ? 'text-gray-300' : 'text-gray-600',
-      muted: isDark ? 'text-gray-400' : 'text-gray-500',
-      accent: isDark ? 'text-blue-400' : 'text-blue-600'
+      primary: 'text-gray-900', // Always black text on paper
+      secondary: 'text-gray-600',
+      muted: 'text-gray-500',
+      accent: 'text-blue-600'
     },
-    border: isDark ? 'border-white/10' : 'border-gray-200',
-    accent: isDark ? 'border-lime-400' : 'border-blue-600'
+    border: 'border-gray-200',
+    accent: 'border-blue-600'
   };
 
   return (
@@ -561,12 +787,12 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                           <h4
                             className="text-3xl font-bold mb-2 !text-gray-900"
                           >
-                            {cvData.basics?.name || cvData.basics?.fullName || 'Your Name'}
+                            {(cvData.basics as any).name || (cvData.basics as any).fullName || 'Your Name'}
                           </h4>
                           <p
                             className="text-xl mb-3 !text-gray-900"
                           >
-                            {cvData.basics.label || 'Professional Title'}
+                            {(cvData.basics as any).label || 'Professional Title'}
                           </p>
                           <div className="flex items-center justify-center gap-6 mt-3 text-sm !text-gray-900" style={{
                             fontSize: '14px',
@@ -589,14 +815,21 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                                 {cvData.basics.phone}
                               </span>
                             )}
-                            {cvData.basics.location.city && (
-                              <span className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                                </svg>
-                                {cvData.basics.location.city}
-                              </span>
-                            )}
+                            {(() => {
+                              const loc = cvData.basics.location;
+                              if (!loc) return null;
+                              const locParts = [loc.city, loc.region, loc.countryCode].filter(Boolean);
+                              if (locParts.length === 0) return null;
+
+                              return (
+                                <span className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                  </svg>
+                                  {locParts.join(', ')}
+                                </span>
+                              );
+                            })()}
                             {cvData.basics.url && (
                               <span className="flex items-center gap-1 hover:opacity-80 transition-opacity">
                                 <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -614,7 +847,12 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                         <div className="space-y-4">
                           {cvData.basics.email && <p className="text-sm !text-gray-900">{cvData.basics.email}</p>}
                           {cvData.basics.phone && <p className="text-sm !text-gray-900">{cvData.basics.phone}</p>}
-                          {cvData.basics.location.city && <p className="text-sm !text-gray-900">{cvData.basics.location.city}</p>}
+                          {(() => {
+                            const loc = cvData.basics.location;
+                            if (!loc) return null;
+                            const locString = [loc.city, loc.region, loc.countryCode].filter(Boolean).join(', ');
+                            return locString ? <p className="text-sm !text-gray-900">{locString}</p> : null;
+                          })()}
                           {cvData.basics.url && <p className="text-sm !text-gray-900">{cvData.basics.url}</p>}
                         </div>
                       </SectionWrapper>
@@ -773,19 +1011,23 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                               {cvData.projects.map((project, index) => (
                                 <div key={index} className="space-y-1">
                                   <h6 className="font-medium !text-gray-900">{getProjectTitle(project) || 'Project'}</h6>
-                                  <AnnotatedText
-                                    as="p"
-                                    className="text-sm"
-                                    enabled={overlaysEnabled}
-                                    fieldPath={`projects[${index}].description`}
-                                    text={stripRichText(project.description || '')}
-                                    annotations={annotations}
-                                    activeFixId={activeFixId}
-                                    onSelectFix={onSelectFix}
-                                    onApplyFix={onApplyFix}
-                                    onDismissFix={onDismissFix}
-                                    inlineCard={overlayInlineCard}
-                                  />
+                                  {overlaysEnabled ? (
+                                    <AnnotatedText
+                                      as="p"
+                                      className="text-sm"
+                                      enabled={overlaysEnabled}
+                                      fieldPath={`projects[${index}].description`}
+                                      text={stripRichText(project.description || '')}
+                                      annotations={annotations}
+                                      activeFixId={activeFixId}
+                                      onSelectFix={onSelectFix}
+                                      onApplyFix={onApplyFix}
+                                      onDismissFix={onDismissFix}
+                                      inlineCard={overlayInlineCard}
+                                    />
+                                  ) : (
+                                    <RichTextContent html={project.description || ''} className="text-sm" />
+                                  )}
                                   {project.highlights && project.highlights.length > 0 && (
                                     <ul className="list-disc list-inside text-sm mt-2 space-y-1">
                                       {project.highlights.map((highlight: string, i: number) => (
@@ -821,7 +1063,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                             <div className="space-y-2">
                               {cvData.certificates.map((cert, index) => (
                                 <div key={index} className="space-y-0.5">
-                                  <div className="font-medium text-sm !text-gray-900">{cert.name || cert.certificationName || 'Certification'}</div>
+                                  <div className="font-medium text-sm !text-gray-900">{cert.name || (cert as any).certificationName || 'Certification'}</div>
                                   <div className="text-xs text-gray-600">
                                     {cert.issuer ? cert.issuer : ''}{cert.date ? (cert.issuer ? ` • ${cert.date}` : cert.date) : ''}
                                   </div>
@@ -877,12 +1119,12 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                         <h4
                           className="text-3xl font-bold mb-2 !text-gray-900"
                         >
-                          {cvData.basics?.name || cvData.basics?.fullName || 'Your Name'}
+                          {(cvData.basics as any).name || (cvData.basics as any).fullName || 'Your Name'}
                         </h4>
                         <p
                           className="text-xl mb-3 !text-gray-900"
                         >
-                          {cvData.basics.label || 'Professional Title'}
+                          {(cvData.basics as any).label || 'Professional Title'}
                         </p>
                         <div className="flex items-center justify-center gap-6 mt-3 text-sm !text-gray-900" style={{
                           fontSize: '14px',
@@ -905,14 +1147,21 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                               {cvData.basics.phone}
                             </span>
                           )}
-                          {cvData.basics.location.city && (
-                            <span className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-                              </svg>
-                              {cvData.basics.location.city}
-                            </span>
-                          )}
+                          {(() => {
+                            const loc = cvData.basics.location;
+                            if (!loc) return null;
+                            const locParts = [loc.city, loc.region, loc.countryCode].filter(Boolean);
+                            if (locParts.length === 0) return null;
+
+                            return (
+                              <span className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                                </svg>
+                                {locParts.join(', ')}
+                              </span>
+                            );
+                          })()}
                           {cvData.basics.url && (
                             <span className="flex items-center gap-1 hover:opacity-80 transition-opacity">
                               <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -936,18 +1185,22 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                             Professional Summary
                           </h5>
                           <div className="text-sm leading-relaxed !text-gray-900">
-                            <AnnotatedText
-                              as="p"
-                              enabled={overlaysEnabled}
-                              fieldPath="basics.summary"
-                              text={stripRichText(cvData.basics.summary)}
-                              annotations={annotations}
-                              activeFixId={activeFixId}
-                              onSelectFix={onSelectFix}
-                              onApplyFix={onApplyFix}
-                              onDismissFix={onDismissFix}
-                              inlineCard={overlayInlineCard}
-                            />
+                            {overlaysEnabled ? (
+                              <AnnotatedText
+                                as="p"
+                                enabled={overlaysEnabled}
+                                fieldPath="basics.summary"
+                                text={stripRichText(cvData.basics.summary)}
+                                annotations={annotations}
+                                activeFixId={activeFixId}
+                                onSelectFix={onSelectFix}
+                                onApplyFix={onApplyFix}
+                                onDismissFix={onDismissFix}
+                                inlineCard={overlayInlineCard}
+                              />
+                            ) : (
+                              <RichTextContent html={cvData.basics.summary} className="text-sm leading-relaxed" />
+                            )}
                           </div>
                         </div>
                       </SectionWrapper>
@@ -1003,18 +1256,22 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                                   </div>
                                   {work.summary && work.summary.trim() && (
                                     <div className="text-sm leading-relaxed !text-gray-900">
-                                      <AnnotatedText
-                                        as="p"
-                                        enabled={overlaysEnabled}
-                                        fieldPath={`work[${index}].summary`}
-                                        text={stripRichText(work.summary)}
-                                        annotations={annotations}
-                                        activeFixId={activeFixId}
-                                        onSelectFix={onSelectFix}
-                                        onApplyFix={onApplyFix}
-                                        onDismissFix={onDismissFix}
-                                        inlineCard={overlayInlineCard}
-                                      />
+                                      {overlaysEnabled ? (
+                                        <AnnotatedText
+                                          as="p"
+                                          enabled={overlaysEnabled}
+                                          fieldPath={`work[${index}].summary`}
+                                          text={stripRichText(work.summary)}
+                                          annotations={annotations}
+                                          activeFixId={activeFixId}
+                                          onSelectFix={onSelectFix}
+                                          onApplyFix={onApplyFix}
+                                          onDismissFix={onDismissFix}
+                                          inlineCard={overlayInlineCard}
+                                        />
+                                      ) : (
+                                        <RichTextContent html={work.summary} className="text-sm leading-relaxed" />
+                                      )}
                                     </div>
                                   )}
                                   {work.highlights && work.highlights.length > 0 && (
@@ -1171,20 +1428,24 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                                       {getProjectTitle(project) || 'Project'}
                                     </h6>
                                     {project.description && (
-                                      <p className="text-sm !text-gray-900">
-                                        <AnnotatedText
-                                          as="span"
-                                          enabled={overlaysEnabled}
-                                          fieldPath={`projects[${index}].description`}
-                                          text={stripRichText(project.description)}
-                                          annotations={annotations}
-                                          activeFixId={activeFixId}
-                                          onSelectFix={onSelectFix}
-                                          onApplyFix={onApplyFix}
-                                          onDismissFix={onDismissFix}
-                                          inlineCard={overlayInlineCard}
-                                        />
-                                      </p>
+                                      overlaysEnabled ? (
+                                        <p className="text-sm !text-gray-900">
+                                          <AnnotatedText
+                                            as="span"
+                                            enabled={overlaysEnabled}
+                                            fieldPath={`projects[${index}].description`}
+                                            text={stripRichText(project.description)}
+                                            annotations={annotations}
+                                            activeFixId={activeFixId}
+                                            onSelectFix={onSelectFix}
+                                            onApplyFix={onApplyFix}
+                                            onDismissFix={onDismissFix}
+                                            inlineCard={overlayInlineCard}
+                                          />
+                                        </p>
+                                      ) : (
+                                        <RichTextContent html={project.description} className="text-sm !text-gray-900" />
+                                      )
                                     )}
                                   </div>
                                   <span className="text-sm !text-gray-900">

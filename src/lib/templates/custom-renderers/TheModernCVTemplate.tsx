@@ -17,7 +17,8 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
 
   return (
     <div className={`data-driven-pro-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .data-driven-pro-template {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 100%;
@@ -297,7 +298,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
             height: calc(11in - 1in);
           }
         }
-      `}</style>
+      `}} />
 
       <div className="flex-container">
         {/* Sidebar */}
@@ -307,7 +308,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         <div className="main-content">
 
           {/* Header Section */}
-          <header className="header">
+          <header className="header" data-section-id="personal">
             <div className="header-main">
               <h1 className="name">{basics?.name || 'Alexander William Smith'}</h1>
               <h2 className="title">{basics?.label || 'Software Engineer'}</h2>
@@ -338,17 +339,17 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
             {/* Left Column */}
             <div className="left-column">
 
-              <section className="summary-section">
+              <section className="summary-section" data-section-id="summary">
                 <h3 className="section-title-left">Summary</h3>
                 <p className="summary-text">
                   {basics?.summary || 'Dynamic Software Engineer with over 5 years of experience specializing in backend architecture and system design. Adept at leading teams and integrating new innovative solutions to increase efficiency and scalability. Successfully led projects resulting in a 40% increase in performance metrics. Proficient in agile methodologies and ready to bring technical acumen to a progressive team.'}
                 </p>
               </section>
 
-              <section className="work-section">
+              <section className="work-section" data-section-id="work">
                 <h3 className="section-title-left">Work Experience</h3>
                 {work?.map((job, index) => (
-                  <div key={index} className="work-item">
+                  <div key={index} className="work-item" data-item-id={index}>
                     <h4 className="job-title">{job.position}</h4>
                     <p className="company-info">{job.name} | {job.startDate} – {job.endDate}</p>
                     {job.summary && (
@@ -387,10 +388,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                 )}
               </section>
 
-              <section className="projects-section">
+              <section className="projects-section" data-section-id="projects">
                 <h3 className="section-title-left">Projects</h3>
                 {projects?.map((proj, index) => (
-                  <div key={index} className="project-item">
+                  <div key={index} className="project-item" data-item-id={index}>
                     <strong className="project-name">{proj.name}:</strong>
                     <span className="project-desc"> {proj.description} </span>
                     {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="project-link">[link]</a>}
@@ -426,10 +427,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                 onError={(e) => (e.currentTarget.src = '/images/default-avatar.png')}
               />
 
-              <section className="education-section right-section">
+              <section className="education-section right-section" data-section-id="education">
                 <h3 className="section-title-right">Education</h3>
                 {education?.map((edu, index) => (
-                  <div key={index} className="education-item">
+                  <div key={index} className="education-item" data-item-id={index}>
                     <h4 className="degree">{edu.studyType} {edu.area ? `in ${edu.area}` : ''}</h4>
                     <p className="institution">{edu.institution}</p>
                     <p className="education-dates">{edu.startDate} – {edu.endDate}</p>
@@ -444,10 +445,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                 )}
               </section>
 
-              <section className="skills-section right-section">
+              <section className="skills-section right-section" data-section-id="skills">
                 <h3 className="section-title-right">Skills</h3>
                 {skills?.map((skillCat, index) => (
-                  <div key={index} className="skill-category">
+                  <div key={index} className="skill-category" data-item-id={index}>
                     <h4 className="skill-category-title">{skillCat.category}</h4>
                     <ul className="skill-list">
                       {skillCat.skills?.map((skill, idx) => <li key={idx}>{skill}</li>)}
@@ -481,7 +482,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                 )}
               </section>
 
-              <section className="languages-section right-section">
+              <section className="languages-section right-section" data-section-id="languages">
                 <h3 className="section-title-right">Languages</h3>
                 <ul className="skill-list">
                   {languages?.map((lang, index) => (

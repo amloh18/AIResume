@@ -68,6 +68,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     // const [showRightPanel, setShowRightPanel] = useState(true); // Removed right panel logic
     const [zoomLevel, setZoomLevel] = useState(1);
     const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
+    const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4'); // A4 or US Letter
 
     const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2));
     const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
@@ -584,7 +585,29 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               <div className="flex items-center space-x-3">
                 <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
                   <Eye className="w-3.5 h-3.5" />
-                  <span>A4 • {totalPages} {totalPages > 1 ? 'Pages' : 'Page'}</span>
+                  {/* A4 / US Letter Toggle */}
+                  <div className="flex items-center bg-[var(--bg-tertiary)] rounded-full p-0.5">
+                    <button
+                      onClick={() => setPageFormat('a4')}
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'a4'
+                          ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
+                          : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                        }`}
+                    >
+                      A4
+                    </button>
+                    <button
+                      onClick={() => setPageFormat('letter')}
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'letter'
+                          ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
+                          : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                        }`}
+                    >
+                      Letter
+                    </button>
+                  </div>
+                  <span className="text-[color:var(--text-muted)]">•</span>
+                  <span>{totalPages} {totalPages > 1 ? 'Pages' : 'Page'}</span>
                 </div>
                 <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
                 <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
@@ -617,6 +640,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               >
                 <CVPreviewContent
                   cvData={state.cvData}
+                  templateName={state.selectedTemplate?.name}
                   theme="light"
                   showBadge={true}
                   annotations={state.fixAnnotations}

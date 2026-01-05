@@ -17,7 +17,8 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
 
   return (
     <div className={`executive-standard-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .executive-standard-template {
           font-family: 'Times New Roman', serif;
           max-width: 100%;
@@ -180,10 +181,10 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             color-adjust: exact;
           }
         }
-      `}</style>
+      `}} />
 
       {/* Header */}
-      <div className="header">
+      <div className="header" data-section-id="personal">
         <h1 className="name">{basics?.name || 'Your Name'}</h1>
         <p className="title">{basics?.label || 'Your Title'}</p>
         <div className="contact-info">
@@ -200,7 +201,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
       <div className="divider"></div>
 
       {/* Summary */}
-      <div className="section">
+      <div className="section" data-section-id="summary">
         <h2 className="section-title">Summary</h2>
         <p className="summary-text">
           {basics?.summary || 'Results-oriented Project Manager with extensive experience leading cross-functional teams and delivering complex projects on time and within budget. Proven expertise in Agile methodologies, stakeholder management, and process improvement initiatives.'}
@@ -208,10 +209,10 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
       </div>
 
       {/* Experience */}
-      <div className="section">
+      <div className="section" data-section-id="work">
         <h2 className="section-title">Experience</h2>
         {work?.map((job, index) => (
-          <div key={index} className="experience-item">
+          <div key={index} className="experience-item" data-item-id={index}>
             <div className="experience-header">
               <div>
                 <div className="job-title">{job.position}</div>
@@ -232,10 +233,10 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
       </div>
 
       {/* Education */}
-      <div className="section">
+      <div className="section" data-section-id="education">
         <h2 className="section-title">Education</h2>
         {education?.map((edu, index) => (
-          <div key={index} className="education-item">
+          <div key={index} className="education-item" data-item-id={index}>
             <div className="education-header">
               <div>
                 <div className="degree-title">{edu.studyType} {edu.area}</div>
@@ -249,7 +250,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
       </div>
 
       {/* Skills */}
-      <div className="section">
+      <div className="section" data-section-id="skills">
         <h2 className="section-title">Skills</h2>
         <div className="skills-grid">
           {skills && skills.length > 0 ? (

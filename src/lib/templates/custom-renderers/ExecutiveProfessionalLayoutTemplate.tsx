@@ -52,7 +52,8 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
   return (
     <div className={`executive-professional-layout-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .executive-professional-layout-template {
           font-family: 'Montserrat', 'Arial', sans-serif;
           font-size: 14px;
@@ -232,10 +233,10 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
             max-width: none;
           }
         }
-      `}</style>
+      `}} />
 
       {/* Header */}
-      <div className="header">
+      <div className="header" data-section-id="personal">
         <h1 className="name">{basics?.name || 'DAVID LEE'}</h1>
         <span className="title"> - {basics?.label || 'MARKETING MANAGER'}</span>
         <div className="contact-info">
@@ -268,7 +269,7 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Summary Section */}
       {basics?.summary && (
-        <div className="section">
+        <div className="section" data-section-id="summary">
           <h2 className="section-title">SUMMARY</h2>
           <div className="summary-text">{stripHtmlTags(basics.summary)}</div>
         </div>
@@ -276,10 +277,10 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Experience Section */}
       {work && work.length > 0 && (
-        <div className="section">
+        <div className="section" data-section-id="work">
           <h2 className="section-title">EXPERIENCE</h2>
           {work.map((job, index) => (
-            <div key={index} className="experience-item">
+            <div key={index} className="experience-item" data-item-id={index}>
               <div className="experience-header">
                 <div>
                   <span className="job-title">{job.position}</span>
@@ -299,10 +300,10 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Education Section */}
       {education && education.length > 0 && (
-        <div className="section">
+        <div className="section" data-section-id="education">
           <h2 className="section-title">EDUCATION</h2>
           {education.map((edu, index) => (
-            <div key={index} className="education-item">
+            <div key={index} className="education-item" data-item-id={index}>
               <div className="education-header">
                 <div>
                   <span className="degree-title">{edu.studyType} {edu.area && `in ${edu.area}`}</span>
@@ -322,7 +323,7 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Skills Section */}
       {skills && skills.length > 0 && (
-        <div className="section">
+        <div className="section" data-section-id="skills">
           <h2 className="section-title">SKILLS</h2>
           <div className="skills-container">
             {skills
@@ -339,10 +340,10 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Projects Section */}
       {projects && projects.length > 0 && (
-        <div className="section">
+        <div className="section" data-section-id="projects">
           <h2 className="section-title">PROJECTS</h2>
           {projects.map((project, index) => (
-            <div key={index} className="project-item">
+            <div key={index} className="project-item" data-item-id={index}>
               <div className="project-header">
                 <div>
                   <div className="project-title">{project.name}</div>
@@ -359,7 +360,7 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Languages Section */}
       {languages && languages.length > 0 && (
-        <div className="section">
+        <div className="section" data-section-id="languages">
           <h2 className="section-title">LANGUAGES</h2>
           <div className="languages-list">
             <ul>

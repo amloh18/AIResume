@@ -9,9 +9,9 @@ interface ProfessionalExtendedTemplateProps {
   className?: string;
 }
 
-export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplateProps> = ({ 
-  cvData, 
-  className = '' 
+export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplateProps> = ({
+  cvData,
+  className = ''
 }) => {
   const { basics, work, education, skills, projects } = cvData;
 
@@ -281,7 +281,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
       `}</style>
 
       {/* Header Section */}
-      <div className="header">
+      <div className="header" data-section-id="personal">
         <div className="name">{basics?.name || 'HARRY JOHNSON'}</div>
         <div className="title">{basics?.label || 'WEB & GRAPHIC DESIGNER'}</div>
         <div className="header-line"></div>
@@ -289,7 +289,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
 
       {/* Profile Section */}
       {basics?.summary && (
-        <div className="profile-section">
+        <div className="profile-section" data-section-id="summary">
           <div className="profile-title">Profile</div>
           <div className="profile-text">{basics.summary}</div>
         </div>
@@ -341,10 +341,10 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
 
           {/* Education Section */}
           {education && education.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="education">
               <div className="section-title">Education</div>
               {education.map((edu, index) => (
-                <div key={index} className="education-item">
+                <div key={index} className="education-item" data-item-id={index}>
                   <div className="education-header">
                     <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                     <div className="university">{edu.institution}</div>
@@ -357,15 +357,15 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
 
           {/* Skills Section */}
           {skills && skills.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="skills">
               <div className="section-title">Skills</div>
               <div className="skills-list">
                 {skills.map((skill, index) => (
                   <div key={index} className="skill-item">
                     <div className="skill-name">{skill.category}</div>
                     <div className="skill-bar">
-                      <div 
-                        className="skill-fill" 
+                      <div
+                        className="skill-fill"
                         style={{ width: `${Math.min(100, (skill.skills.length || 1) * 15)}%` }}
                       ></div>
                     </div>
@@ -380,14 +380,14 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
         <div className="right-column">
           {/* Timeline Line */}
           <div className="timeline-line"></div>
-          
+
           {/* Experience Section */}
           {work && work.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="work">
               <div className="timeline-dot" style={{ top: '0px' }}></div>
               <div className="section-title">Experience</div>
               {work.map((job, index) => (
-                <div key={index} className="experience-item">
+                <div key={index} className="experience-item" data-item-id={index}>
                   <div className="timeline-dot" style={{ top: `${index * 80}px` }}></div>
                   <div className="experience-header">
                     <div className="job-title">{job.position}</div>
@@ -396,7 +396,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                     </div>
                   </div>
                   {job.summary && (
-                    <div 
+                    <div
                       className="job-description"
                       dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
                     />

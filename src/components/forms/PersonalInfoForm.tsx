@@ -420,18 +420,48 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <label className="block text-white/80 text-sm font-medium mb-2">Location</label>
         <input
           type="text"
-          readOnly={false}
-          disabled={false}
           value={(() => {
-            const city = safePersonalInfo.location.city || '';
-            const region = safePersonalInfo.location.region || '';
+            // Helper to get safe location object even if data is legacy string
+            const getSafeLocation = (loc: any) => {
+              if (typeof loc === 'string') {
+                const parts = loc.split(',').map(p => p.trim());
+                return {
+                  city: parts[0] || '',
+                  region: parts.slice(1).join(', ') || ''
+                };
+              }
+              return loc || {};
+            };
+
+            const loc = getSafeLocation(safePersonalInfo.location || data?.location || cvData?.basics?.location);
+            const city = loc.city || '';
+            const region = loc.region || '';
             return city && region ? `${city}, ${region}` : city || region || '';
           })()}
           onChange={(e) => {
             const inputValue = e.target.value;
-            const parts = inputValue.split(', ').map(p => p.trim());
-            handleLocationChange('city', parts[0] || '');
-            handleLocationChange('region', parts[1] || '');
+            const parts = inputValue.split(',').map(p => p.trim());
+
+            // Allow user to clear the input
+            if (inputValue === '') {
+              onUpdate('location', { city: '', region: '', countryCode: '', postalCode: '', address: '' });
+              return;
+            }
+
+            // Update the entire location object at once to avoid race conditions
+            // Access raw source to preserve other fields like countryCode if they exist
+            const rawLoc = safePersonalInfo.location || data?.location || cvData?.basics?.location;
+            const currentLoc = typeof rawLoc === 'string' ? {} : (rawLoc || {});
+
+            const updatedLocation = {
+              address: '', // default
+              postalCode: '', // default
+              countryCode: '', // default
+              ...currentLoc, // spread existing properties
+              city: parts[0] || '',
+              region: parts.length > 1 ? parts.slice(1).join(', ') : ''
+            };
+            onUpdate('location', updatedLocation);
           }}
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
           placeholder="San Francisco, CA"
