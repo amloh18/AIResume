@@ -441,11 +441,9 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                   <div className="skills-category-title">{skill.category || 'Professional'}</div>
                   <div className="skills-list">
                     {Array.isArray(skill.skills) && skill.skills.length > 0 ? (
-                      skill.skills.map((s, i) => (
-                        <div key={i}>{stripHtmlTags(s)}</div>
-                      ))
+                      skill.skills.map(s => stripHtmlTags(s)).join(', ')
                     ) : (
-                      <div>{stripHtmlTags(skill.category || '')}</div>
+                      stripHtmlTags(skill.category || '')
                     )}
                   </div>
                 </div>
@@ -456,7 +454,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
         {/* Vertical Separator */}
         <div className="vertical-separator">
-          {/* Dots for right column section headings */}
+          {/* Dots for right column section headings only */}
           {(() => {
             const rightColumnSections = [];
             if (basics?.summary) rightColumnSections.push('Profile');
@@ -466,20 +464,14 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             if (certificates && certificates.length > 0) rightColumnSections.push('Certificates');
             if (awards && awards.length > 0) rightColumnSections.push('Awards');
             if (publications && publications.length > 0) rightColumnSections.push('Publications');
+            if (languages && languages.length > 0) rightColumnSections.push('Languages');
+            if (interests && interests.length > 0) rightColumnSections.push('Interests');
+            if (references && references.length > 0) rightColumnSections.push('References');
 
-            // Count entries for each section
-            const entryCounts = [];
-            if (work && work.length > 0) entryCounts.push(...work.map((_, i) => ({ section: 'Work Experience', index: i })));
-            if (projects && projects.length > 0) entryCounts.push(...projects.map((_, i) => ({ section: 'Projects', index: i })));
-            if (volunteer && volunteer.length > 0) entryCounts.push(...volunteer.map((_, i) => ({ section: 'Volunteer', index: i })));
-            if (certificates && certificates.length > 0) entryCounts.push(...certificates.map((_, i) => ({ section: 'Certificates', index: i })));
-            if (awards && awards.length > 0) entryCounts.push(...awards.map((_, i) => ({ section: 'Awards', index: i })));
-            if (publications && publications.length > 0) entryCounts.push(...publications.map((_, i) => ({ section: 'Publications', index: i })));
-
-            const totalDots = rightColumnSections.length + entryCounts.length;
+            const totalDots = rightColumnSections.length;
             const dotPositions = [];
 
-            // Calculate positions for dots (evenly distributed)
+            // Calculate positions for dots - only at section headings
             for (let i = 0; i < totalDots; i++) {
               const position = (i + 1) / (totalDots + 1) * 100;
               dotPositions.push(position);
