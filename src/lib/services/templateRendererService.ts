@@ -46,10 +46,10 @@ export class ReactTemplateRenderer implements IRenderer {
   ): Promise<string> {
     return PerformanceMonitor.timeOperation('templateRenderer.renderToHTML', async () => {
       const config = configService.getTemplateConfig();
-      
+
       // Generate cache key
       const cacheKey = this.generateCacheKey(cvData, template, options);
-      
+
       // Check cache first
       const cached = await cacheManager.get<string>(cacheKey);
       if (cached) {
@@ -77,12 +77,12 @@ export class ReactTemplateRenderer implements IRenderer {
 
         // Dynamically import renderToString to avoid Next.js App Router build issues
         const { renderToString } = await import('react-dom/server');
-        
+
         // Verify renderToString is available
         if (!renderToString || typeof renderToString !== 'function') {
           throw new Error('renderToString is not available from react-dom/server');
         }
-        
+
         // Render the component to HTML string using server-safe wrapper
         // This ensures React is properly initialized before hooks are called
         const htmlString = renderToString(
@@ -96,26 +96,34 @@ export class ReactTemplateRenderer implements IRenderer {
           })
         );
 
-      // ATS-friendly font validation - ensure standard fonts (Arial, Calibri, Helvetica, Roboto)
-      const templateFont = template?.globalStyles?.fontFamily || 'Calibri, Arial, Helvetica, Roboto, sans-serif';
-      
-      // Validate font is ATS-friendly (standard fonts only)
-      const standardFonts = ['Arial', 'Calibri', 'Helvetica', 'Roboto', 'Times New Roman', 'Georgia'];
-      const hasStandardFont = standardFonts.some(font => 
-        templateFont.toLowerCase().includes(font.toLowerCase())
-      );
-      
-      if (!hasStandardFont) {
-        logger.warn('Template uses non-standard font, falling back to Arial for ATS compatibility');
-      }
-      
-      // Use standard font with fallbacks for ATS compatibility
-      const atsFontFamily = hasStandardFont 
-        ? templateFont 
-        : `Arial, Calibri, Helvetica, Roboto, ${templateFont}`;
+        // ATS-friendly font validation - ensure standard fonts (Arial, Calibri, Helvetica, Roboto)
+        const templateFont = template?.globalStyles?.fontFamily || 'Calibri, Arial, Helvetica, Roboto, sans-serif';
 
-      // Wrap in full HTML document with ATS-friendly styles and metadata
-      const fullHTML = `
+        // Validate font is ATS-friendly (standard fonts only)
+        const standardFonts = ['Arial', 'Calibri', 'Helvetica', 'Roboto', 'Times New Roman', 'Georgia'];
+        const hasStandardFont = standardFonts.some(font =>
+          templateFont.toLowerCase().includes(font.toLowerCase())
+        );
+
+        if (!hasStandardFont) {
+          logger.warn('Template uses non-standard font, falling back to Arial for ATS compatibility');
+        }
+
+        // Use standard font with fallbacks for ATS compatibility
+        const atsFontFamily = hasStandardFont
+          ? templateFont
+          : `Arial, Calibri, Helvetica, Roboto, ${templateFont}`;
+
+        // Wrap in full HTML document with ATS-friendly styles and metadata
+        // Determine page dimensions based on paper size
+        const pageWidth = options.paperSize === 'Letter' ? '8.5in' : '210mm';
+        const pageHeight = options.paperSize === 'Letter' ? '11in' : '297mm';
+
+        // Check for full bleed templates (like Tech Pro Blue)
+        const isFullBleed = template?.name?.toLowerCase().includes('tech pro blue');
+        const containerPadding = isFullBleed ? '0' : '15mm 20mm';
+
+        const fullHTML = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -125,62 +133,91 @@ export class ReactTemplateRenderer implements IRenderer {
   <!-- ATS-friendly metadata -->
   <meta name="format-detection" content="telephone=yes">
   <style>
+    /* Critical: Define page size for PDF generation */
+    @page {
+      size: ${pageWidth} ${pageHeight};
+      margin: 0;
+    }
+    
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
+    
+    html, body {
+      width: ${pageWidth};
+      min-height: ${pageHeight};
+    }
+    
     body {
       font-family: ${atsFontFamily}, sans-serif;
       font-size: ${template?.globalStyles?.fontSize || '11pt'};
       line-height: ${template?.globalStyles?.lineHeight || '1.2'};
       background-color: ${template?.globalStyles?.backgroundColor || '#ffffff'};
       color: ${template?.globalStyles?.primaryColor || '#000000'};
-      padding: 20px;
       /* Ensure text is selectable for ATS parsing */
       -webkit-user-select: text;
       -moz-user-select: text;
       -ms-user-select: text;
       user-select: text;
     }
+    
     .cv-container {
-      width: 100%;
-      max-width: ${options.paperSize === 'Letter' ? '8.5in' : '210mm'};
+      width: ${pageWidth};
+      min-height: ${pageHeight};
+      padding: ${containerPadding};
       margin: 0 auto;
       background: white;
       /* Single-column layout for ATS compatibility */
       display: block;
     }
+    
     /* Ensure standard section headers are identifiable */
     h1, h2, h3, h4, h5, h6 {
       font-family: ${atsFontFamily}, sans-serif;
       font-weight: bold;
     }
+    
     /* Prevent text in images (ATS can't read image text) */
     img {
       alt: attr(alt);
     }
-    /* Page break prevention - prevent text splitting (Edge Case #29) */
-    p, li, div {
+    
+    /* Page break control for multi-page CVs */
+    .section-content {
       page-break-inside: avoid;
-      break-inside: avoid;
+      break-inside: avoid-page;
     }
+    
     /* Ensure minimum font size for ATS compatibility (Edge Case #41) */
     body, p, li, span {
       font-size: ${Math.max(10, parseInt(template?.globalStyles?.fontSize || '11pt'))}pt;
     }
+    
     @media print {
+      html, body {
+        width: ${pageWidth};
+        height: auto;
+      }
+      
       body {
         padding: 0;
+        margin: 0;
       }
+      
       .cv-container {
-        max-width: 100%;
+        width: 100%;
+        max-width: ${pageWidth};
+        padding: ${containerPadding};
       }
+      
       /* Ensure text remains selectable in print */
       * {
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
+      
       /* Prevent orphans and widows */
       p, li {
         orphans: 3;

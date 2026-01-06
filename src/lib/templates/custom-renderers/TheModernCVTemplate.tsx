@@ -22,26 +22,17 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         .data-driven-pro-template {
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 100%;
-          min-height: 11in;
           margin: 0 auto;
           padding: 32px;
           background: white;
           box-sizing: border-box;
           color: #111827;
           line-height: 1.5;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
 
         .flex-container {
           display: flex;
           gap: 2rem;
-        }
-
-        .sidebar {
-          width: 1.25rem; /* 20px */
-          background: #111827;
-          flex-shrink: 0;
-          height: calc(11in - 1.5in); /* Full page height minus padding */
         }
 
         .main-content {
@@ -108,24 +99,25 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         /* Body */
         .body-container {
           display: grid;
-          grid-template-columns: minmax(0, 2fr) 1px minmax(0, 1fr); /* ~66% / 33% split */
+          grid-template-columns: 2fr 1fr;
           gap: 1.5rem;
+          width: 100%;
         }
 
         .left-column {
           word-wrap: break-word;
           overflow-wrap: break-word;
-        }
-
-        .vertical-divider {
-          background-color: #D1D5DB;
-          width: 1px;
-          height: 100%;
+          min-width: 0;
+          overflow: hidden;
         }
 
         .right-column {
           word-wrap: break-word;
           overflow-wrap: break-word;
+          overflow: hidden;
+          min-width: 0;
+          border-left: 1px solid #D1D5DB;
+          padding-left: 1rem;
         }
 
         /* Left Column Sections */
@@ -135,7 +127,9 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
           text-transform: uppercase;
           letter-spacing: 1.5px;
           color: #111827;
-          margin: 0 0 1.5rem 0;
+          margin: 0 0 1rem 0;
+          border-bottom: 2px solid #111827;
+          padding-bottom: 0.25rem;
         }
 
         .summary-section {
@@ -143,9 +137,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         }
 
         .summary-text {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           color: #4B5563;
           line-height: 1.6;
+          text-align: justify;
         }
 
         .work-section {
@@ -157,17 +152,44 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         }
 
         .job-title {
-          font-size: 1rem; /* 16px */
+          font-size: 0.9375rem; /* 15px */
           font-weight: 700;
           color: #111827;
           margin: 0;
         }
 
         .company-info {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           font-weight: 600;
           color: #374151;
-          margin-bottom: 0.75rem;
+          margin-bottom: 0.5rem;
+        }
+        
+        .job-description {
+          font-size: 0.875rem; /* 14px */
+          color: #4B5563;
+          line-height: 1.6;
+          text-align: justify;
+        }
+        
+        .job-description ul {
+          list-style: none;
+          padding-left: 1.25rem;
+          margin: 0;
+        }
+        
+        .job-description li {
+          position: relative;
+          margin-bottom: 0.25rem;
+          text-align: justify;
+        }
+        
+        .job-description li::before {
+          content: '•';
+          position: absolute;
+          left: -1.25rem;
+          top: 0;
+          color: #111827;
         }
 
         .bullet-list {
@@ -177,11 +199,12 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         }
 
         .bullet-list li {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           color: #4B5563;
           line-height: 1.6;
           position: relative;
           margin-bottom: 0.25rem;
+          text-align: justify;
         }
 
         .bullet-list li::before {
@@ -190,20 +213,36 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
           left: -1.25rem; /* -20px */
           top: 0;
           color: #111827;
-          font-size: 1.1rem;
+          font-size: 1rem;
           line-height: 1.5;
         }
         
         .project-item {
-          font-size: 0.9rem;
+          font-size: 0.875rem; /* 14px */
           color: #4B5563;
           line-height: 1.6;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.75rem;
+          text-align: justify;
         }
         
         .project-name {
           font-weight: 700;
           color: #111827;
+          display: block;
+          margin-bottom: 0.25rem;
+        }
+        
+        .project-desc {
+          display: block;
+        }
+        
+        .project-desc ul {
+          margin: 0.25rem 0 0 0;
+          padding-left: 1.25rem;
+        }
+        
+        .project-desc li {
+          margin-bottom: 0.25rem;
         }
         
         .project-link {
@@ -215,8 +254,11 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         /* Right Column Sections */
         .profile-picture {
           width: 100%;
+          max-width: 100%;
+          height: auto;
           object-fit: cover;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
+          display: block;
         }
 
         .section-title-right {
@@ -239,20 +281,20 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         }
 
         .degree {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           font-weight: 700;
           color: #111827;
           margin: 0;
         }
 
         .institution {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           color: #4B5563;
           margin: 0;
         }
 
         .education-dates {
-          font-size: 0.8rem; /* 12.8px */
+          font-size: 0.8125rem; /* 13px */
           color: #6B7280;
           margin: 0;
         }
@@ -262,7 +304,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         }
 
         .skill-category-title {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           font-weight: 700;
           color: #111827;
           margin-bottom: 0.25rem;
@@ -275,14 +317,14 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
         }
 
         .skill-list li {
-          font-size: 0.9rem; /* 14.4px */
+          font-size: 0.875rem; /* 14px */
           color: #4B5563;
           margin-bottom: 2px;
           line-height: 1.5;
         }
         
         .language-item {
-          font-size: 0.9rem;
+          font-size: 0.875rem; /* 14px */
           color: #4B5563;
           margin-bottom: 2px;
           line-height: 1.5;
@@ -294,16 +336,10 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
             margin: 0;
             padding: 0.5in;
           }
-          .sidebar {
-            height: calc(11in - 1in);
-          }
         }
       `}} />
 
       <div className="flex-container">
-        {/* Sidebar */}
-        <div className="sidebar"></div>
-
         {/* Main Content Area */}
         <div className="main-content">
 
@@ -392,8 +428,13 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                 <h3 className="section-title-left">Projects</h3>
                 {projects?.map((proj, index) => (
                   <div key={index} className="project-item" data-item-id={index}>
-                    <strong className="project-name">{proj.name}:</strong>
-                    <span className="project-desc"> {proj.description} </span>
+                    <strong className="project-name">{proj.name}</strong>
+                    {proj.description && (
+                      <span
+                        className="project-desc"
+                        dangerouslySetInnerHTML={{ __html: renderFormattedText(proj.description) }}
+                      />
+                    )}
                     {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="project-link">[link]</a>}
                   </div>
                 ))}
@@ -414,18 +455,16 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
               </section>
             </div>
 
-            {/* Vertical Divider */}
-            <div className="vertical-divider"></div>
-
             {/* Right Column */}
             <div className="right-column">
 
-              <img
-                src={basics?.image || '/images/default-avatar.png'}
-                alt={basics?.name || 'Profile Picture'}
-                className="profile-picture"
-                onError={(e) => (e.currentTarget.src = '/images/default-avatar.png')}
-              />
+              {basics?.image && (
+                <img
+                  src={basics.image}
+                  alt={basics.name || 'Profile Picture'}
+                  className="profile-picture"
+                />
+              )}
 
               <section className="education-section right-section" data-section-id="education">
                 <h3 className="section-title-right">Education</h3>

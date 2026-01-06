@@ -8,6 +8,12 @@ export { ExecutiveProfessionalLayoutTemplate } from './ExecutiveProfessionalLayo
 export { ExecutiveStandardTemplate } from './ExecutiveStandardTemplate';
 export { ElegantTimelineTemplate } from './ElegantTimelineTemplate';
 export { TheModernCVTemplate } from './TheModernCVTemplate';
+export { HeaderProfessionalTemplate } from './HeaderProfessionalTemplate';
+export { OnePagerProfessionalTemplate } from './OnePagerProfessionalTemplate';
+export { MinimalProfessionalTemplate } from './MinimalProfessionalTemplate';
+export { ProfessionalMinimalTemplate } from './ProfessionalMinimalTemplate';
+export { ExecutiveMinimalTemplate } from './ExecutiveMinimalTemplate'; // Added export for ExecutiveMinimalTemplate
+export { ProfessionalExtendedTemplate } from './ProfessionalExtendedTemplate'; // Added export for ProfessionalExtendedTemplate
 
 // Template mapping for easy reference
 export const CUSTOM_TEMPLATES = {
@@ -18,7 +24,13 @@ export const CUSTOM_TEMPLATES = {
   'executive-professional': 'ExecutiveProfessionalLayoutTemplate', // Alias for template name matching
   'executive-standard': 'ExecutiveStandardTemplate',
   'elegant-timeline': 'ElegantTimelineTemplate',
-  'the-modern-cv': 'TheModernCVTemplate'
+  'the-modern-cv': 'TheModernCVTemplate',
+  'header-professional': 'HeaderProfessionalTemplate',
+  'one-pager-professional': 'OnePagerProfessionalTemplate',
+  'minimal-professional': 'MinimalProfessionalTemplate',
+  'professional-minimal': 'ProfessionalMinimalTemplate',
+  'executive-minimal': 'ExecutiveMinimalTemplate', // Added to CUSTOM_TEMPLATES
+  'professional-extended': 'ProfessionalExtendedTemplate' // Added to CUSTOM_TEMPLATES
 } as const;
 
 export type CustomTemplateKey = keyof typeof CUSTOM_TEMPLATES;

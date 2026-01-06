@@ -92,6 +92,7 @@ interface CVPreviewContentProps {
   onZoomOut?: () => void;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  pageFormat?: 'a4' | 'letter';
 }
 
 const SectionWrapper = ({
@@ -165,6 +166,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   onZoomOut,
   isSidebarOpen,
   onToggleSidebar,
+  pageFormat = 'a4',
 }) => {
   // CRITICAL FIX: All hooks must be called BEFORE any conditional returns (Rules of Hooks)
   const isDark = theme === 'dark';
@@ -181,6 +183,24 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
     () => new Set(visibleSectionsList.map(s => s.type)),
     [visibleSectionsList]
   );
+
+  // Calculate page dimensions based on format (A4 vs US Letter)
+  const pageDimensions = useMemo(() => {
+    if (pageFormat === 'letter') {
+      // US Letter: 8.5in x 11in
+      return {
+        width: '8.5in',
+        height: '11in',
+        heightPx: 1056, // 11 * 96 DPI
+      };
+    }
+    // A4: 210mm x 297mm
+    return {
+      width: '210mm',
+      height: '297mm',
+      heightPx: 1123, // 297mm at 96 DPI
+    };
+  }, [pageFormat]);
 
   // State hooks must be called unconditionally
   const [totalPages, setTotalPages] = useState(1);
@@ -226,19 +246,14 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
 
     if (height > 0) {
       // Check if this is a single-page template
-      const isSinglePageTemplate = templateName?.toLowerCase().includes('tech pro blue') ||
-        templateName?.toLowerCase().includes('executive professional');
+      // Check if this is a single-page template
+      const isSinglePageTemplate = templateName?.toLowerCase().includes('executive professional');
 
       if (isSinglePageTemplate) {
         setTotalPages(1);
-      } else if (templateName?.toLowerCase().includes('letter')) {
-        // Letter page height: 11" = 1056px (at 96 DPI)
-        const pageHeight = 1056 - pagePadding.top - pagePadding.bottom;
-        const pages = Math.ceil(height / pageHeight);
-        setTotalPages(Math.max(1, pages));
       } else {
-        // A4 page height: 297mm = 1123px (at 96 DPI)
-        const pageHeight = 1123 - pagePadding.top - pagePadding.bottom;
+        // Use calculated page height from dimensions
+        const pageHeight = pageDimensions.heightPx - pagePadding.top - pagePadding.bottom;
         const pages = Math.ceil(height / pageHeight);
         setTotalPages(Math.max(1, pages));
       }
@@ -304,9 +319,10 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   // If we have a custom renderer, use it with pagination like generic preview
   if (CustomRenderer) {
     // Use the same pagination logic as generic preview
-    // A4 page height: 297mm = 1123px (at 96 DPI)
-    const a4PageHeight = 1123;
-    const usablePageHeight = a4PageHeight - pagePadding.top - pagePadding.bottom;
+    const isFullBleed = templateName?.toLowerCase().includes('tech pro blue');
+    const pageHeight = pageDimensions.heightPx;
+    const verticalPadding = isFullBleed ? 0 : (pagePadding.top + pagePadding.bottom);
+    const usablePageHeight = pageHeight - verticalPadding;
 
     return (
       <div className="space-y-8 relative">
@@ -317,10 +333,10 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             position: 'absolute',
             visibility: 'hidden',
             pointerEvents: 'none',
-            width: '210mm',
+            width: pageDimensions.width,
             left: '-9999px',
             top: 0,
-            padding: `${pagePadding.top}px 32px ${pagePadding.bottom}px 32px`
+            padding: isFullBleed ? '0px' : `${pagePadding.top}px 32px ${pagePadding.bottom}px 32px`
           }}
         >
           <CustomRenderer cvData={cvData} />
@@ -457,9 +473,9 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
               className={`cv-page-custom bg-white shadow-2xl mb-8 ${modeClass}`}
               onClick={handleTemplateClick}
               style={{
-                width: '210mm', // A4 width
-                height: renderMode === 'pages' ? '297mm' : 'auto', // Fixed A4 height for pages mode
-                minHeight: '297mm',
+                width: pageDimensions.width,
+                height: renderMode === 'pages' ? pageDimensions.height : 'auto',
+                minHeight: pageDimensions.height,
                 overflow: 'hidden',
                 pageBreakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'always' : 'auto',
                 breakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'page' : 'auto',
@@ -471,10 +487,10 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             >
               {/* Padding Wrapper - creates visual margins like generic preview */}
               <div style={{
-                paddingTop: `${pagePadding.top}px`,
-                paddingBottom: `${pagePadding.bottom}px`,
-                paddingLeft: '32px',
-                paddingRight: '32px',
+                paddingTop: isFullBleed ? '0px' : `${pagePadding.top}px`,
+                paddingBottom: isFullBleed ? '0px' : `${pagePadding.bottom}px`,
+                paddingLeft: isFullBleed ? '0px' : '32px',
+                paddingRight: isFullBleed ? '0px' : '32px',
                 height: '100%',
                 boxSizing: 'border-box'
               }}>
@@ -483,7 +499,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                   {/* Content Container - uses translateY to show correct portion */}
                   <div style={{
                     transform: renderMode === 'pages' && pageIndex > 0
-                      ? `translateY(calc(-${pageIndex} * (297mm - ${pagePadding.top + pagePadding.bottom}px)))`
+                      ? `translateY(calc(-${pageIndex} * (${pageDimensions.height} - ${isFullBleed ? '0px' : (pagePadding.top + pagePadding.bottom) + 'px'})))`
                       : 'none'
                   }}>
                     <CustomRenderer cvData={cvData} />
@@ -714,8 +730,8 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
       {/* Hidden measurement container - renders content once to measure true height for pagination */}
       <div
         ref={contentRef}
-        className="absolute -left-[9999px] top-0 w-[210mm]"
-        style={{ visibility: 'hidden', position: 'absolute' }}
+        className="absolute -left-[9999px] top-0"
+        style={{ visibility: 'hidden', position: 'absolute', width: pageDimensions.width }}
         aria-hidden="true"
       >
         <div style={{ paddingTop: `${pagePadding.top}px`, paddingBottom: `${pagePadding.bottom}px`, paddingLeft: '32px', paddingRight: '32px' }}>
@@ -743,9 +759,9 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
           key={pageIndex}
           className={`${themeClasses.page} cv-page mb-8`}
           style={{
-            width: '210mm',
-            height: renderMode === 'pages' ? '297mm' : 'auto',
-            minHeight: '297mm',
+            width: pageDimensions.width,
+            height: renderMode === 'pages' ? pageDimensions.height : 'auto',
+            minHeight: pageDimensions.height,
             overflow: 'hidden',
             pageBreakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'always' : 'auto',
             breakAfter: renderMode === 'pages' && pageIndex < totalPages - 1 ? 'page' : 'auto',
@@ -771,7 +787,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
               <div style={{
                 color: '#111827',
                 transform: renderMode === 'pages' && pageIndex > 0
-                  ? `translateY(calc(-${pageIndex} * (297mm - ${pagePadding.top + pagePadding.bottom}px)))`
+                  ? `translateY(calc(-${pageIndex} * (${pageDimensions.height} - ${pagePadding.top + pagePadding.bottom}px)))`
                   : 'none'
               }}>
                 {/* Render appropriate layout based on template type */}
