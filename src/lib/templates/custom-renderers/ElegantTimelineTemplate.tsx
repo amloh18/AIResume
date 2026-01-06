@@ -373,17 +373,15 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           <div className="name">{basics?.name || 'CHLOE WINEHOUSE'}</div>
           <div className="title">{basics?.label || 'PROFESSIONAL TITLE'}</div>
         </div>
-        <div className="profile-photo">
-          {basics?.image ? (
+        {basics?.image && (
+          <div className="profile-photo">
             <img
               src={basics.image}
               alt={basics.name || 'Profile'}
               style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
             />
-          ) : (
-            'Photo'
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}

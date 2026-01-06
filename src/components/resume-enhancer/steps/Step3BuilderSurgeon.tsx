@@ -590,8 +590,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     <button
                       onClick={() => setPageFormat('a4')}
                       className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'a4'
-                          ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
-                          : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                        ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
+                        : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
                         }`}
                     >
                       A4
@@ -599,8 +599,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     <button
                       onClick={() => setPageFormat('letter')}
                       className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'letter'
-                          ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
-                          : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                        ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
+                        : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
                         }`}
                     >
                       Letter
@@ -663,6 +663,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   isSidebarOpen={false} // Sidebar removed
                   onToggleSidebar={() => { /* No-op for old sidebar toggle */ }}
                   onTotalPagesChange={setTotalPages}
+                  pageFormat={pageFormat}
                 />
               </div>
             </div>

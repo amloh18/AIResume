@@ -7,8 +7,13 @@ import { DesignerModernTemplate } from './custom-renderers/DesignerModernTemplat
 import { ElegantTimelineTemplate } from './custom-renderers/ElegantTimelineTemplate';
 import { ExecutiveProfessionalLayoutTemplate } from './custom-renderers/ExecutiveProfessionalLayoutTemplate';
 import { ExecutiveStandardTemplate } from './custom-renderers/ExecutiveStandardTemplate';
+import { ExecutiveMinimalTemplate } from './custom-renderers/ExecutiveMinimalTemplate';
 import { TechProBlueTemplate } from './custom-renderers/TechProBlueTemplate';
 import { TheModernCVTemplate } from './custom-renderers/TheModernCVTemplate';
+import { HeaderProfessionalTemplate } from './custom-renderers/HeaderProfessionalTemplate';
+import { OnePagerProfessionalTemplate } from './custom-renderers/OnePagerProfessionalTemplate';
+import { MinimalProfessionalTemplate } from './custom-renderers/MinimalProfessionalTemplate';
+import { ProfessionalMinimalTemplate } from './custom-renderers/ProfessionalMinimalTemplate';
 
 // Hardcoded template registry
 export const CustomTemplates = {
@@ -17,8 +22,13 @@ export const CustomTemplates = {
   ElegantTimelineTemplate,
   ExecutiveProfessionalLayoutTemplate,
   ExecutiveStandardTemplate,
+  ExecutiveMinimalTemplate,
   TechProBlueTemplate,
-  TheModernCVTemplate
+  TheModernCVTemplate,
+  HeaderProfessionalTemplate,
+  OnePagerProfessionalTemplate,
+  MinimalProfessionalTemplate,
+  ProfessionalMinimalTemplate
 };
 
 /**
@@ -29,15 +39,15 @@ export const CustomTemplates = {
 export function getTemplateThumbnailS3Url(filename: string): string | null {
   // Extract filename from path if full path is provided
   const cleanFilename = filename.includes('/') ? filename.split('/').pop() || filename : filename;
-  
+
   // Get S3 base URL - works in both client and server contexts
   // Next.js injects NEXT_PUBLIC_ vars at build time, so they're available at runtime
   const s3BaseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL;
-  
+
   if (s3BaseUrl) {
     return `${s3BaseUrl}/${encodeURIComponent(cleanFilename)}`;
   }
-  
+
   return null;
 }
 
@@ -50,7 +60,7 @@ export function getTemplateThumbnailS3Url(filename: string): string | null {
 export function getTemplateThumbnailUrl(filename: string): string {
   // Extract filename from path if full path is provided
   const cleanFilename = filename.includes('/') ? filename.split('/').pop() || filename : filename;
-  
+
   // Always return local path first - use error handlers in components to fallback to S3
   return `/templates/${cleanFilename}`;
 }
@@ -66,17 +76,17 @@ export function resolveTemplateThumbnail<T extends { thumbnail?: string }>(templ
     if (!template.thumbnail) {
       return template;
     }
-    
+
     // If thumbnail is already a full URL (starts with http), return as-is
     if (template.thumbnail.startsWith('http://') || template.thumbnail.startsWith('https://')) {
       return template;
     }
-    
+
     // If thumbnail is already a local path starting with /, return as-is
     if (template.thumbnail.startsWith('/')) {
       return template;
     }
-    
+
     // If thumbnail is a local path, extract filename and resolve
     const filename = template.thumbnail.split('/').pop() || template.thumbnail;
     return {
@@ -366,6 +376,7 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     thumbnail: 'Executive minimal.png',
     category: 'cv',
     categories: ['Executive', 'Minimal'],
+    customRenderer: 'ExecutiveMinimalTemplate',
     tier: 'free',
     layoutType: 'one-column',
     globalStyles: {
@@ -429,7 +440,8 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isDefault: false,
     isPublished: true,
     globalAccess: true,
-    version: 1
+    version: 1,
+    customRenderer: 'HeaderProfessionalTemplate'
   },
   {
     id: 'minimal-professional-template',
@@ -465,7 +477,8 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isDefault: false,
     isPublished: true,
     globalAccess: true,
-    version: 1
+    version: 1,
+    customRenderer: 'MinimalProfessionalTemplate'
   },
   {
     id: 'one-pager-professional-template',
@@ -501,7 +514,8 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isDefault: false,
     isPublished: true,
     globalAccess: true,
-    version: 1
+    version: 1,
+    customRenderer: 'OnePagerProfessionalTemplate'
   },
   {
     id: 'professional-minimal-template',
@@ -537,7 +551,8 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     isDefault: false,
     isPublished: true,
     globalAccess: true,
-    version: 1
+    version: 1,
+    customRenderer: 'ProfessionalMinimalTemplate'
   }
 ];
 

@@ -46,6 +46,11 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
           margin-bottom: 15px;
         }
         
+        .header-second-row-full-width {
+          display: block;
+          margin-bottom: 15px;
+        }
+        
         .left-header {
           display: flex;
           flex-direction: column;
@@ -317,32 +322,38 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
       </div>
 
       {/* Second Row */}
-      <div className="header-second-row">
-        {/* Left Column - Row 2: Photo */}
-        <div className="left-header">
-          <div className="profile-photo">
-            {basics?.image ? (
+      {basics?.image ? (
+        <div className="header-second-row">
+          {/* Left Column - Row 2: Photo */}
+          <div className="left-header">
+            <div className="profile-photo">
               <img
                 src={basics.image}
                 alt={basics.name || 'Profile'}
                 style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50% 50% 0 50%' }}
               />
-            ) : (
-              'Photo'
+            </div>
+          </div>
+
+          {/* Right Column - Row 2: Profile Section */}
+          <div className="right-header-left-aligned" data-section-id="summary">
+            <div className="section-title">Profile</div>
+            {basics?.summary && (
+              <div className="profile-section">
+                <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
+              </div>
             )}
           </div>
         </div>
-
-        {/* Right Column - Row 2: Profile Section */}
-        <div className="right-header-left-aligned" data-section-id="summary">
-          <div className="section-title">Profile</div>
-          {basics?.summary && (
-            <div className="profile-section">
-              <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
-            </div>
-          )}
-        </div>
-      </div>
+      ) : (
+        /* No image - Full width profile section */
+        basics?.summary && (
+          <div className="header-second-row-full-width" data-section-id="summary">
+            <div className="section-title">Profile</div>
+            <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
+          </div>
+        )
+      )}
 
       {/* Main Content */}
       <div className="main-content">

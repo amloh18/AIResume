@@ -34,21 +34,37 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           box-sizing: border-box;
           min-height: 100vh;
           position: relative;
+          overflow: visible !important;
         }
 
-        .sidebar {
+        .tech-pro-blue-template::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          bottom: -10000px;
+          left: 0;
+          width: 33.3333%;
           background: #2C3E50;
-          color: white;
+          z-index: 0;
+        }
+
+        .tech-pro-blue-template .sidebar {
+          background: #2C3E50;
+          color: white !important;
           padding: 1.5rem;
           border-radius: 0;
           overflow-y: visible;
           box-sizing: border-box;
+          position: relative;
+          z-index: 1;
         }
 
         .main-content {
           padding: 1.5rem;
-          overflow-y: visible;
           box-sizing: border-box;
+          background: white;
+          position: relative;
+          z-index: 1;
         }
 
         .header {
@@ -56,20 +72,20 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           margin-bottom: 2rem;
         }
 
-        .name {
+        .tech-pro-blue-template .name {
           font-size: 1.8rem;
           font-weight: 700;
           text-transform: uppercase;
           margin: 0 0 0.5rem 0;
-          color: white;
+          color: white !important;
           text-align: center;
         }
 
-        .title {
+        .tech-pro-blue-template .title {
           font-size: 0.9rem;
           font-weight: 600;
           text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.9);
+          color: rgba(255, 255, 255, 0.9) !important;
           margin: 0 0 1.5rem 0;
           text-align: center;
         }
@@ -84,54 +100,56 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           width: 120px;
           height: 120px;
           border-radius: 50%;
-          background: #E5E7EB;
+          border: 3px solid rgba(255, 255, 255, 0.2);
           margin: 0 auto 1.5rem auto;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #6B7280;
-          font-size: 0.8rem;
+          display: block;
+          object-fit: cover;
+          background-color: #E5E7EB;
         }
 
-        .section-title {
+        .tech-pro-blue-template .section-title {
           font-size: 0.9rem;
           font-weight: 700;
           text-transform: uppercase;
-          color: white;
+          color: white !important;
           margin: 0 0 0.75rem 0;
           padding-bottom: 0.25rem;
           border-bottom: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .contact-item {
+        .tech-pro-blue-template .contact-item, 
+        .tech-pro-blue-template .contact-info,
+        .tech-pro-blue-template .contact-icon + span {
           display: flex;
           align-items: center;
           gap: 0.5rem;
           margin-bottom: 0.5rem;
           font-size: 0.85rem;
-          color: white;
+          color: white !important;
         }
 
         .contact-icon {
           width: 14px;
           height: 14px;
-          opacity: 0.8;
+          opacity: 1;
+          fill: white !important;
+          color: white !important;
         }
 
         .skills-category {
           margin-bottom: 1rem;
         }
 
-        .skills-category-title {
+        .tech-pro-blue-template .skills-category-title {
           font-weight: 600;
           font-size: 0.85rem;
-          color: white;
+          color: white !important;
           margin-bottom: 0.25rem;
         }
 
-        .skills-list {
+        .tech-pro-blue-template .skills-list {
           font-size: 0.8rem;
-          color: rgba(255, 255, 255, 0.9);
+          color: rgba(255, 255, 255, 0.9) !important;
           line-height: 1.3;
         }
 
@@ -247,9 +265,13 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
         <div className="divider"></div>
 
         {/* Profile Picture */}
-        <div className="profile-picture">
-          Profile Photo
-        </div>
+        {basics?.image && (
+          <img
+            src={basics.image}
+            alt={basics.name || 'Profile'}
+            className="profile-picture"
+          />
+        )}
 
         {/* Contact */}
         <div>
@@ -374,9 +396,10 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
                 </div>
                 <div className="project-description">
                   {project.description && (
-                    <p style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#374151' }}>
-                      {project.description}
-                    </p>
+                    <div
+                      style={{ marginBottom: '0.5rem', fontSize: '0.85rem', color: '#374151' }}
+                      dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }}
+                    />
                   )}
                   {project.keywords && (
                     <div className="technologies">
