@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface TheModernCVTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects, languages } = cvData;
 
@@ -378,7 +380,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
               <section className="summary-section" data-section-id="summary">
                 <h3 className="section-title-left">Summary</h3>
                 <p className="summary-text">
-                  {basics?.summary || 'Dynamic Software Engineer with over 5 years of experience specializing in backend architecture and system design. Adept at leading teams and integrating new innovative solutions to increase efficiency and scalability. Successfully led projects resulting in a 40% increase in performance metrics. Proficient in agile methodologies and ready to bring technical acumen to a progressive team.'}
+                  {stripHtmlTags(basics?.summary || 'Dynamic Software Engineer with over 5 years of experience specializing in backend architecture and system design. Adept at leading teams and integrating new innovative solutions to increase efficiency and scalability. Successfully led projects resulting in a 40% increase in performance metrics. Proficient in agile methodologies and ready to bring technical acumen to a progressive team.')}
                 </p>
               </section>
 
@@ -387,7 +389,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                 {work?.map((job, index) => (
                   <div key={index} className="work-item" data-item-id={index}>
                     <h4 className="job-title">{job.position}</h4>
-                    <p className="company-info">{job.name} | {job.startDate} – {job.endDate}</p>
+                    <p className="company-info">{job.name} | {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</p>
                     {job.summary && (
                       <div
                         className="job-description"
@@ -472,7 +474,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                   <div key={index} className="education-item" data-item-id={index}>
                     <h4 className="degree">{edu.studyType} {edu.area ? `in ${edu.area}` : ''}</h4>
                     <p className="institution">{edu.institution}</p>
-                    <p className="education-dates">{edu.startDate} – {edu.endDate}</p>
+                    <p className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</p>
                   </div>
                 ))}
                 {(!education || education.length === 0) && (

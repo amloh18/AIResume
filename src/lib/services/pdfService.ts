@@ -8,6 +8,7 @@ import { BaseService } from './baseService';
 import { puppeteerPoolService } from './puppeteerPoolService';
 import { configService } from './configService';
 import { metricsService } from './metricsService';
+import { logger } from '@/lib/structured-logger';
 
 export interface PDFGenerationOptions {
   paperSize?: 'A4' | 'Letter';
@@ -61,7 +62,7 @@ export class PDFService extends BaseService {
         options.paperSize || 'A4',
         options.format || 'pdf'
       );
-      
+
       const cached = await pdfCacheService.get(cacheKey);
       if (cached) {
         await metricsService.trackOperation(
@@ -96,7 +97,7 @@ export class PDFService extends BaseService {
           // Generate PDF from HTML using Puppeteer pool
           let pdfBuffer: Buffer;
           try {
-            pdfBuffer = await this.generatePDFFromHTML(html, options);
+            pdfBuffer = await this.generatePDFFromHTML(cvData, html, options);
           } catch (puppeteerError) {
             logger.error(`${this.serviceName}: Puppeteer PDF generation failed`, puppeteerError instanceof Error ? puppeteerError : new Error(String(puppeteerError)));
             // Fallback to alternative method
@@ -125,19 +126,20 @@ export class PDFService extends BaseService {
    * Generate PDF from HTML using Puppeteer pool
    */
   private async generatePDFFromHTML(
+    cvData: UnifiedCVDataStructure,
     html: string,
     options: PDFGenerationOptions
   ): Promise<Buffer> {
     const config = configService.getPDFConfig().puppeteer;
     const browser = await puppeteerPoolService.getBrowser();
-    
+
     try {
       const page = await browser.newPage();
-      
+
       try {
         // Set timeout
         page.setDefaultTimeout(config.timeout);
-        
+
         // Set content
         await page.setContent(html, {
           waitUntil: 'networkidle0'
@@ -146,7 +148,7 @@ export class PDFService extends BaseService {
         // Extract name for PDF metadata
         const name = (cvData.basics?.name || 'Resume').trim();
         const title = `${name} - Resume`;
-        
+
         // Generate text-based PDF (not image-based) for ATS compatibility
         const pdfBuffer = await page.pdf({
           format: options.paperSize || 'A4',
@@ -191,22 +193,22 @@ export class PDFService extends BaseService {
     options: PDFGenerationOptions
   ): Promise<Blob> {
     console.log('Using fallback PDF generation');
-    
+
     const { jsPDF } = await import('jspdf');
     const doc = new jsPDF({
       orientation: options.orientation === 'landscape' ? 'landscape' : 'portrait',
       unit: 'mm',
       format: options.paperSize === 'Letter' ? 'letter' : 'a4'
     });
-    
+
     // Set font
     doc.setFont('helvetica');
-    
+
     // Header
     doc.setFontSize(24);
     doc.setTextColor(37, 99, 235);
     doc.text(cvData.basics.name || '', 20, 30);
-    
+
     // Contact info
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
@@ -223,7 +225,7 @@ export class PDFService extends BaseService {
       doc.text(cvData.basics.location.city, 20, yPos);
       yPos += 7;
     }
-    
+
     // Summary
     if (cvData.basics.summary) {
       yPos += 10;
@@ -237,98 +239,98 @@ export class PDFService extends BaseService {
       doc.text(summaryLines, 20, yPos);
       yPos += summaryLines.length * 7 + 10;
     }
-    
+
     // Experience
     if (cvData.work && cvData.work.length > 0) {
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
       doc.text('Work Experience', 20, yPos);
       yPos += 10;
-      
+
       cvData.work.forEach((exp) => {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-        
+
         doc.setFontSize(14);
         doc.setTextColor(50, 50, 50);
         doc.text(exp.position, 20, yPos);
         yPos += 7;
-        
+
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
         doc.text(`${exp.name} | ${exp.startDate} - ${exp.endDate || 'Present'}`, 20, yPos);
         yPos += 7;
-        
+
         if (exp.summary) {
           const descLines = doc.splitTextToSize(exp.summary, 170);
           doc.text(descLines, 20, yPos);
           yPos += descLines.length * 7;
         }
-        
+
         yPos += 5;
       });
     }
-    
+
     // Education
     if (cvData.education && cvData.education.length > 0) {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
       }
-      
+
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
       doc.text('Education', 20, yPos);
       yPos += 10;
-      
+
       cvData.education.forEach((edu) => {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-        
+
         doc.setFontSize(14);
         doc.setTextColor(50, 50, 50);
         doc.text(`${edu.studyType} ${edu.area && `in ${edu.area}`}`, 20, yPos);
         yPos += 7;
-        
+
         doc.setFontSize(12);
         doc.setTextColor(100, 100, 100);
         doc.text(`${edu.institution} | ${edu.startDate} - ${edu.endDate || 'Present'}`, 20, yPos);
         yPos += 10;
       });
     }
-    
+
     // Skills
     if (cvData.skills && cvData.skills.length > 0) {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
       }
-      
+
       doc.setFontSize(16);
       doc.setTextColor(37, 99, 235);
       doc.text('Skills', 20, yPos);
       yPos += 10;
-      
+
       cvData.skills.forEach((skill) => {
         if (yPos > 250) {
           doc.addPage();
           yPos = 20;
         }
-        
+
         doc.setFontSize(12);
         doc.setTextColor(50, 50, 50);
         doc.text(`${skill.category}: ${skill.skills.join(', ')}`, 20, yPos);
         yPos += 7;
       });
     }
-    
+
     return doc.output('blob');
   }
-  
+
   static downloadPDF(blob: Blob, filename: string = 'cv.pdf') {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

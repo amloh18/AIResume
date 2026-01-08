@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface ExecutiveStandardTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills } = cvData;
 
@@ -185,28 +187,49 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
 
       {/* Header */}
       <div className="header" data-section-id="personal">
-        <h1 className="name">{basics?.name || 'Your Name'}</h1>
-        <p className="title">{basics?.label || 'Your Title'}</p>
+        {basics?.name && <h1 className="name">{basics.name}</h1>}
+        {basics?.label && <p className="title">{basics.label}</p>}
         <div className="contact-info">
-          {basics?.location?.address || 'Your Address'}
-          <span className="contact-separator">|</span>
-          {basics?.phone || 'Your Phone'}
-          <span className="contact-separator">|</span>
-          {basics?.email || 'your.email@example.com'}
-          <span className="contact-separator">|</span>
-          {basics?.profiles?.[0]?.url || 'linkedin.com/in/yourprofile'}
+          {(() => {
+            const items: string[] = [];
+            // Location (city, region, country)
+            const locationParts = [
+              basics?.location?.city,
+              basics?.location?.region,
+              basics?.location?.countryCode
+            ].filter(Boolean);
+            if (locationParts.length > 0) items.push(locationParts.join(', '));
+            // Phone
+            if (basics?.phone) items.push(basics.phone);
+            // Email
+            if (basics?.email) items.push(basics.email);
+            // LinkedIn or Portfolio URL
+            if (basics?.url) {
+              items.push(basics.url);
+            } else if (basics?.profiles?.[0]?.url) {
+              items.push(basics.profiles[0].url);
+            }
+            return items.map((item, i) => (
+              <span key={i}>
+                {i > 0 && <span className="contact-separator">|</span>}
+                {item}
+              </span>
+            ));
+          })()}
         </div>
       </div>
 
       <div className="divider"></div>
 
       {/* Summary */}
-      <div className="section" data-section-id="summary">
-        <h2 className="section-title">Summary</h2>
-        <p className="summary-text">
-          {basics?.summary || 'Results-oriented Project Manager with extensive experience leading cross-functional teams and delivering complex projects on time and within budget. Proven expertise in Agile methodologies, stakeholder management, and process improvement initiatives.'}
-        </p>
-      </div>
+      {basics?.summary && (
+        <div className="section" data-section-id="summary">
+          <h2 className="section-title">Summary</h2>
+          <p className="summary-text">
+            {stripHtmlTags(basics.summary)}
+          </p>
+        </div>
+      )}
 
       {/* Experience */}
       <div className="section" data-section-id="work">
@@ -218,7 +241,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
                 <div className="job-title">{job.position}</div>
                 <div className="company-name">{job.name}</div>
               </div>
-              <div className="dates">{job.startDate} – {job.endDate || 'Present'}</div>
+              <div className="dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
             </div>
             <div className="experience-description">
               {job.summary && (
@@ -243,7 +266,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
                 <div className="institution-name">{edu.institution}</div>
                 {edu.score && <div style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '0.25rem' }}>Score: {edu.score}</div>}
               </div>
-              <div className="dates">{edu.startDate} – {edu.endDate}</div>
+              <div className="dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
             </div>
           </div>
         ))}

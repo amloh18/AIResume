@@ -187,7 +187,21 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
             };
 
             recognition.onerror = (event: any) => {
-                console.error('Speech recognition error', event.error);
+                // Log only the error message string to avoid circular reference issues in console logger
+                const errorMessage = event.error;
+                console.error('Speech recognition error:', errorMessage);
+
+                if (errorMessage === 'not-allowed') {
+                    toast.error('Microphone access denied. Please allow microphone access in your browser settings.');
+                } else if (errorMessage === 'no-speech') {
+                    // This is common, just ignore or show mild warning
+                    // toast('No speech detected', { icon: '🤔' });
+                } else if (errorMessage === 'service-not-allowed') {
+                    toast.error('Voice recognition service not allowed on this device.');
+                } else {
+                    toast.error(`Voice input error: ${errorMessage}`);
+                }
+
                 setIsRecording(false);
             };
 
@@ -461,8 +475,8 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                                         onClick={handleNext}
                                         disabled={currentIndex === questions.length - 1 && !nextModuleId}
                                         className={`px-4 py-2 font-medium rounded-lg disabled:opacity-30 transition-colors ${currentIndex === questions.length - 1 && nextModuleId
-                                                ? 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
-                                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
+                                            ? 'text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'
                                             }`}
                                     >
                                         {currentIndex === questions.length - 1 && nextModuleId ? 'Next Module →' : 'Skip'}

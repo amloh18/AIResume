@@ -2,17 +2,19 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText, stripHtmlTags, formatDateRange } from '@/lib/utils/textFormatting';
+import { renderFormattedText, stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface DataDrivenProTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
   enabledSections?: string[];
+  dateFormat?: DateFormatStyle;
 }
 
 export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects, volunteer, certificates, awards, publications, languages, interests, references } = cvData;
 
@@ -24,13 +26,14 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 100%;
           margin: 0;
-          padding: 32px;
+          padding: 32px 32px 32px 32px;
           background: white;
           color: #000 !important;
           line-height: 1.4;
           overflow-wrap: anywhere;
           word-break: break-word;
           box-sizing: border-box;
+          overflow: hidden;
         }
 
         /* Force black text for all headings to prevent dark mode bleed */
@@ -117,9 +120,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
         .right-column {
           padding-left: 0.75rem;
+          padding-right: 0;
           word-wrap: break-word;
           overflow-wrap: break-word;
           hyphens: auto;
+          overflow: hidden;
         }
 
         .vertical-separator {
@@ -389,28 +394,30 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           {/* Contact */}
           <div>
             <h3 className="section-title">Contact</h3>
-            <div className="contact-item">
-              <span>{basics?.phone || '+919662345079'}</span>
-            </div>
-            <div className="contact-item">
-              <span>{basics?.email || 'amarjotsinghl@outlook.com'}</span>
-            </div>
-            <div className="contact-item">
-              <span>
-                {[basics?.location?.countryCode, basics?.location?.city, basics?.location?.postalCode]
-                  .filter(Boolean)
-                  .join(', ') || 'Country, City, Zip'}
-              </span>
-            </div>
-            <div className="contact-item">
-              <span>
-                {basics?.profiles?.[0]?.username ||
-                  (basics?.profiles?.[0]?.url
-                    ? basics.profiles[0].url.replace(/^https?:\/\/(www\.)?(linkedin\.com\/in\/|github\.com\/|twitter\.com\/)/, '')
-                    : 'username')
-                }
-              </span>
-            </div>
+            {basics?.phone && (
+              <div className="contact-item">
+                <span>{basics.phone}</span>
+              </div>
+            )}
+            {basics?.email && (
+              <div className="contact-item">
+                <span>{basics.email}</span>
+              </div>
+            )}
+            {(basics?.location?.city || basics?.location?.countryCode) && (
+              <div className="contact-item">
+                <span>
+                  {[basics.location.city, basics.location.region, basics.location.countryCode]
+                    .filter(Boolean)
+                    .join(', ')}
+                </span>
+              </div>
+            )}
+            {(basics?.url || basics?.profiles?.[0]?.url) && (
+              <div className="contact-item">
+                <span>{basics.url || basics.profiles?.[0]?.url}</span>
+              </div>
+            )}
           </div>
 
           {/* Education */}
@@ -420,7 +427,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
               <div key={index} className="education-item" data-item-id={index}>
                 <div className="degree-title">{edu.studyType || 'ENTER YOUR MAJOR'}</div>
                 <div className="institution-info">{edu.institution || 'Name of University'}</div>
-                <div className="education-dates">{formatDateRange(edu.startDate || '2005', edu.endDate || '2007')}</div>
+                <div className="education-dates">{formatDateRangeWithStyle(edu.startDate || '2005', edu.endDate || '2007', dateFormat)}</div>
               </div>
             ))}
             {(!education || education.length === 0) && (
@@ -511,7 +518,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                       <div className="company-info">
                         {job.name || ''}
                         {(job.name && (job.startDate || job.endDate)) && ' | '}
-                        {formatDateRange(job.startDate || '', job.endDate || '')}
+                        {formatDateRangeWithStyle(job.startDate || '', job.endDate || '', dateFormat)}
                       </div>
                     </div>
                   </div>
@@ -569,7 +576,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                       <div className="company-info">
                         {vol.organization || ''}
                         {(vol.organization && (vol.startDate || vol.endDate)) && ' | '}
-                        {formatDateRange(vol.startDate || '', vol.endDate || '')}
+                        {formatDateRangeWithStyle(vol.startDate || '', vol.endDate || '', dateFormat)}
                       </div>
                     </div>
                   </div>

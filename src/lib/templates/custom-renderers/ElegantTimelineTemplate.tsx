@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { stripHtmlTags } from '@/lib/utils/textFormatting';
+import { stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface ElegantTimelineTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects, awards } = cvData;
 
@@ -405,7 +407,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
                   <div className="education-header">
                     <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                     <div className="university">{edu.institution}</div>
-                    <div className="education-dates">{edu.startDate} - {edu.endDate || 'Present'}</div>
+                    <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                   </div>
                 </div>
               ))}
@@ -519,7 +521,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
                   <div className="experience-header">
                     <div className="job-title">{job.position}</div>
                     <div className="company-info">
-                      <span className="company-name">{job.name}</span> | <span className="job-dates">{job.startDate} - {job.endDate || 'Present'}</span>
+                      <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
                     </div>
                   </div>
                   {job.summary && (
