@@ -29,6 +29,10 @@ import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import { ScorecardPanel, KeywordMatchPanel, type ATSResult } from '@/components/resume-enhancer/panels';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import FloatingPulsePill from '@/components/resume-enhancer/FloatingPulsePill';
+import RecruiterModeOverlay from '@/components/resume-enhancer/overlays/RecruiterModeOverlay';
+import ATSModeOverlay from '@/components/resume-enhancer/overlays/ATSModeOverlay';
+import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
+import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
 
 interface Step3BuilderSurgeonProps {
   onComplete: () => void;
@@ -69,6 +73,19 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [zoomLevel, setZoomLevel] = useState(1);
     const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
     const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4'); // A4 or US Letter
+
+    // Mode-specific feature states
+    const [recruiterFeatures, setRecruiterFeatures] = useState<RecruiterFeatures>({
+      heatmap: true,
+      impactHighlighting: true,
+      redFlags: true,
+      speedRead: false,
+    });
+    const [atsFeatures, setATSFeatures] = useState<ATSFeatures>({
+      plainText: true,
+      keywordHeatmap: true,
+      parsingConfidence: true,
+    });
 
     const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2));
     const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
@@ -652,19 +669,36 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   renderMode="pages"
                   onSectionClick={viewMode === 'edit' ? handleSectionClick : undefined}
                   overlaysEnabled={viewMode === 'edit' || viewMode === 'ats'}
-                  // In Recruiter mode, we want a clean preview
-
-                  // NEW CONTROLS passed to header pill
                   viewMode={viewMode}
                   onViewModeChange={setViewMode}
                   currentZoom={zoomLevel}
                   onZoomIn={handleZoomIn}
                   onZoomOut={handleZoomOut}
-                  isSidebarOpen={false} // Sidebar removed
+                  isSidebarOpen={false}
                   onToggleSidebar={() => { /* No-op for old sidebar toggle */ }}
                   onTotalPagesChange={setTotalPages}
                   pageFormat={pageFormat}
                 />
+
+                {/* Recruiter Mode Overlay */}
+                {viewMode === 'recruiter' && (
+                  <RecruiterModeOverlay
+                    cvData={state.cvData}
+                    features={recruiterFeatures}
+                    containerRef={cvPreviewRef}
+                  />
+                )}
+
+                {/* ATS Mode Overlay */}
+                {viewMode === 'ats' && (
+                  <ATSModeOverlay
+                    cvData={state.cvData}
+                    jobData={state.jobData}
+                    templateName={state.selectedTemplate?.name}
+                    features={atsFeatures}
+                    containerRef={cvPreviewRef}
+                  />
+                )}
               </div>
             </div>
 

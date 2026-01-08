@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface ProfessionalExtendedTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects } = cvData;
 
@@ -291,7 +293,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
       {basics?.summary && (
         <div className="profile-section" data-section-id="summary">
           <div className="profile-title">Profile</div>
-          <div className="profile-text">{basics.summary}</div>
+          <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
         </div>
       )}
 
@@ -348,7 +350,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                   <div className="education-header">
                     <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                     <div className="university">{edu.institution}</div>
-                    <div className="education-dates">{edu.startDate} - {edu.endDate || 'Present'}</div>
+                    <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                   </div>
                 </div>
               ))}
@@ -392,7 +394,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                   <div className="experience-header">
                     <div className="job-title">{job.position}</div>
                     <div className="company-info">
-                      <span className="company-name">{job.name}</span> | <span className="job-dates">{job.startDate} - {job.endDate || 'Present'}</span>
+                      <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
                     </div>
                   </div>
                   {job.summary && (

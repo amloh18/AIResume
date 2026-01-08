@@ -1,7 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Copy } from 'lucide-react';
+import { Plus, Trash2, Copy, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 import InlineSuggestion from '@/components/resume-enhancer/annotations/InlineSuggestion';
@@ -18,6 +35,179 @@ interface WorkExperienceSectionProps {
   reviewMode?: boolean;
 }
 
+// Sortable work item component
+function SortableWorkItem({
+  work,
+  index,
+  onUpdate,
+  onRemove,
+  onDuplicate,
+  onGenerateSuggestions,
+  showSuggestions,
+  suggestions,
+  loadingSuggestions,
+  onSelectSuggestion,
+  onCloseSuggestions,
+  annotations,
+  onApplyAnnotation,
+  onDismissAnnotation,
+  reviewMode,
+}: {
+  work: any;
+  index: number;
+  onUpdate: (index: number, field: string, value: any) => void;
+  onRemove: (index: number) => void;
+  onDuplicate: (index: number) => void;
+  onGenerateSuggestions: (index: number, workItem: any) => void;
+  showSuggestions: boolean;
+  suggestions: Array<{ method: string; content: string }>;
+  loadingSuggestions: boolean;
+  onSelectSuggestion: (index: number, content: string) => void;
+  onCloseSuggestions: (index: number) => void;
+  annotations: FixAnnotation[];
+  onApplyAnnotation?: (fix: FixAnnotation) => void;
+  onDismissAnnotation?: (fixId: string) => void;
+  reviewMode: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `work-${index}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white/5 rounded-xl p-6 pl-10 border border-white/10 mb-6 relative ${isDragging ? 'shadow-2xl' : ''}`}
+    >
+      {/* Drag handle */}
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="absolute top-4 left-2 p-1 cursor-grab active:cursor-grabbing text-white/40 hover:text-white/70 transition-colors touch-none"
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-lg font-semibold text-white">{work.position || 'Job Title'} at {work.name || 'Company'}</h4>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onDuplicate(index)}
+            className="text-blue-400 hover:text-blue-300 transition-colors"
+            title="Duplicate this work experience"
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            onClick={() => onRemove(index)}
+            className="text-red-400 hover:text-red-300 transition-colors"
+            title="Delete this work experience"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Job Title</label>
+          <input
+            type="text"
+            value={work.position || ''}
+            onChange={(e) => onUpdate(index, 'position', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Senior Product Manager"
+          />
+        </div>
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Company Name</label>
+          <input
+            type="text"
+            value={work.name || ''}
+            onChange={(e) => onUpdate(index, 'name', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Tech Corp"
+          />
+        </div>
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
+          <input
+            type="text"
+            value={work.startDate || ''}
+            onChange={(e) => onUpdate(index, 'startDate', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Jan 2020"
+          />
+        </div>
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
+          <input
+            type="text"
+            value={work.endDate || ''}
+            onChange={(e) => onUpdate(index, 'endDate', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Present"
+          />
+        </div>
+      </div>
+
+      {/* Work Summary */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-white/80 text-sm font-medium">Work Summary</label>
+          <WYSIWYGToolbar
+            showAIButton={true}
+            fieldType="experience"
+            onAISuggestions={() => onGenerateSuggestions(index, work)}
+            isGenerating={loadingSuggestions}
+          />
+        </div>
+        <AISuggestionsPanel
+          isVisible={showSuggestions}
+          suggestions={suggestions}
+          isLoading={loadingSuggestions}
+          onSelect={(content) => onSelectSuggestion(index, content)}
+          onClose={() => onCloseSuggestions(index)}
+        />
+        <WYSIWYGEditor
+          key={`work-summary-${index}`}
+          value={work?.summary || ''}
+          onChange={(value) => onUpdate(index, 'summary', value)}
+          rows={4}
+          placeholder="Describe your key responsibilities and achievements..."
+          hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')}
+        />
+        {/* Inline suggestions */}
+        {reviewMode && annotations
+          .filter((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')
+          .map((fix) => (
+            <InlineSuggestion
+              key={fix.id}
+              fix={fix}
+              onApply={onApplyAnnotation || (() => { })}
+              onDismiss={onDismissAnnotation || (() => { })}
+            />
+          ))}
+      </div>
+    </div>
+  );
+}
+
 const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   data,
   onUpdate,
@@ -32,7 +222,15 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
   const [suggestions, setSuggestions] = useState<{ [key: number]: Array<{ method: string; content: string }> }>({});
   const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
-  
+
+  // DnD Kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Debug logging to understand data structure
   console.log('🔍 WorkExperienceSection - received data:', data);
   console.log('🔍 WorkExperienceSection - data type:', typeof data);
@@ -46,7 +244,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
       console.log(`🔍 WorkExperienceSection - work[${idx}].summary length:`, work?.summary?.length);
     });
   }
-  
+
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
   console.log('🔍 WorkExperienceSection - safeData length:', safeData.length);
@@ -86,7 +284,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
 
   const generateAIDescription = async (index: number, workItem: any) => {
     if (!userId) return;
-    
+
     setGeneratingIndex(index);
     try {
       const response = await fetch('/api/ai/generate-description', {
@@ -120,11 +318,11 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
       console.error('❌ WorkExperienceSection - No userId provided for AI suggestions');
       return;
     }
-    
+
     // Show panel immediately and set loading state using functional updates
     setShowSuggestions(prev => ({ ...prev, [index]: true }));
     setLoadingSuggestions(prev => ({ ...prev, [index]: true }));
-    
+
     try {
       const response = await fetch('/api/ai/generate-suggestions', {
         method: 'POST',
@@ -148,7 +346,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
 
       const result = await response.json();
       console.log('✅ WorkExperienceSection - AI suggestions received:', result);
-      
+
       // Ensure we have suggestions array
       if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
         setSuggestions(prev => ({ ...prev, [index]: result.suggestions }));
@@ -170,114 +368,53 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
   };
 
 
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = safeData.findIndex((_, i) => `work-${i}` === active.id);
+      const newIndex = safeData.findIndex((_, i) => `work-${i}` === over.id);
+
+      const newData = arrayMove(safeData, oldIndex, newIndex);
+      onUpdate(newData);
+    }
+  };
+
   return (
     <>
-      {safeData.map((work, index) => (
-        <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-white">{work.position || 'Job Title'} at {work.name || 'Company'}</h4>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => duplicateWorkItem(index)}
-                className="text-blue-400 hover:text-blue-300 transition-colors"
-                title="Duplicate this work experience"
-              >
-                <Copy size={16} />
-              </button>
-              <button
-                onClick={() => removeWorkItem(index)}
-                className="text-red-400 hover:text-red-300 transition-colors"
-                title="Delete this work experience"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Job Title</label>
-              <input
-                type="text"
-                value={work.position || ''}
-                onChange={(e) => updateWorkItem(index, 'position', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Senior Product Manager"
-              />
-            </div>
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Company Name</label>
-              <input
-                type="text"
-                value={work.name || ''}
-                onChange={(e) => updateWorkItem(index, 'name', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Tech Corp"
-              />
-            </div>
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-              <input
-                type="text"
-                value={work.startDate || ''}
-                onChange={(e) => updateWorkItem(index, 'startDate', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Jan 2020"
-              />
-            </div>
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-              <input
-                type="text"
-                value={work.endDate || ''}
-                onChange={(e) => updateWorkItem(index, 'endDate', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Present"
-              />
-            </div>
-          </div>
-
-          {/* Work Summary - Same pattern as PersonalInfoForm summary */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-white/80 text-sm font-medium">Work Summary</label>
-              <WYSIWYGToolbar
-                showAIButton={true}
-                fieldType="experience"
-                onAISuggestions={() => generateAISuggestions(index, work)}
-                isGenerating={loadingSuggestions[index] || false}
-              />
-            </div>
-            <AISuggestionsPanel
-              isVisible={showSuggestions[index] || false}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={safeData.map((_, index) => `work-${index}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {safeData.map((work, index) => (
+            <SortableWorkItem
+              key={`work-${index}`}
+              work={work}
+              index={index}
+              onUpdate={updateWorkItem}
+              onRemove={removeWorkItem}
+              onDuplicate={duplicateWorkItem}
+              onGenerateSuggestions={generateAISuggestions}
+              showSuggestions={showSuggestions[index] || false}
               suggestions={suggestions[index] || []}
-              isLoading={loadingSuggestions[index] || false}
-              onSelect={(content) => handleSelectSuggestion(index, content)}
-              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+              loadingSuggestions={loadingSuggestions[index] || false}
+              onSelectSuggestion={handleSelectSuggestion}
+              onCloseSuggestions={(idx) => setShowSuggestions({ ...showSuggestions, [idx]: false })}
+              annotations={annotations}
+              onApplyAnnotation={onApplyAnnotation}
+              onDismissAnnotation={onDismissAnnotation}
+              reviewMode={reviewMode}
             />
-            <WYSIWYGEditor
-              key={`work-summary-${index}`}
-              value={work?.summary || ''}
-              onChange={(value) => updateWorkItem(index, 'summary', value)}
-              rows={4}
-              placeholder="Describe your key responsibilities and achievements..."
-              hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')}
-            />
-            {/* Display inline suggestions for this specific field below the editor - only when review mode is ON */}
-            {reviewMode && annotations
-              .filter((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')
-              .map((fix) => (
-                <InlineSuggestion
-                  key={fix.id}
-                  fix={fix}
-                  onApply={onApplyAnnotation || (() => {})}
-                  onDismiss={onDismissAnnotation || (() => {})}
-                />
-              ))}
-          </div>
-        </div>
-      ))}
-      
+          ))}
+        </SortableContext>
+      </DndContext>
+
       <button
         onClick={addWorkItem}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-all flex items-center justify-center gap-2"

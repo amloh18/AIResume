@@ -45,6 +45,7 @@ interface JobApplication {
     sponsorship?: 'yes' | 'no' | 'unknown';
     jobUrl?: string;
     atsScore?: number;
+    jobDescription?: string;
     trustScore?: number;
     trustSnapshot?: {
         ghostRiskLevel?: 'low' | 'medium' | 'high';
@@ -82,6 +83,43 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 }) => {
     const router = useRouter();
     const [isHovered, setIsHovered] = useState(false);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    // Prevent infinite loops by tracking attempts locally
+    const hasAnalyzedRef = React.useRef(false);
+
+    // Auto-trigger analysis if score is missing
+    React.useEffect(() => {
+        const checkAndAnalyze = async () => {
+            // Only trigger if:
+            // 1. matchScore is undefined
+            // 2. job has description (needed for analysis)
+            // 3. Not already analyzing
+            if (job.matchScore === undefined && job.jobDescription && !isAnalyzing && !hasAnalyzedRef.current) {
+                try {
+                    setIsAnalyzing(true);
+                    hasAnalyzedRef.current = true; // Mark as attempted immediately
+
+                    // Dynamically import to avoid circular dependencies if any
+                    const { triggerJobAnalysis } = await import('@/lib/services/jobAnalysisService');
+                    const result = await triggerJobAnalysis(job);
+
+                    if (result) {
+                        // Dispatch event to refresh jobs
+                        window.dispatchEvent(new CustomEvent('jobUpdated', {
+                            detail: { jobId: job.id, ...result }
+                        }));
+                    }
+                } catch (error) {
+                    console.error('Failed to auto-analyze job:', error);
+                } finally {
+                    setIsAnalyzing(false);
+                }
+            }
+        };
+
+        const timeoutId = setTimeout(checkAndAnalyze, 1000); // Small delay to prevent immediate flood on mount
+        return () => clearTimeout(timeoutId);
+    }, [job.matchScore, job.jobDescription, job.id, isAnalyzing]); // Dependencies
 
     const handlePracticeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -117,8 +155,8 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
         <>
             {/* Compact View */}
             <div className="flex justify-between items-center mt-2">
-                <div className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded-full">
-                    {job.matchScore ?? 98}% Match
+                <div className={`px-2 py-1 text-xs font-bold rounded-full ${job.matchScore !== undefined ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400'}`}>
+                    {job.matchScore !== undefined ? `${job.matchScore}% Match` : (isAnalyzing ? 'Calculating...' : 'Score Pending')}
                 </div>
                 {job.sponsorship === 'yes' && (
                     <div className="text-gray-500" title="Sponsorship Available">

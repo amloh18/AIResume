@@ -166,7 +166,25 @@ const JobsTracker: React.FC = () => {
     if (!userId) return;
 
     const handleJobUpdate = (event: CustomEvent) => {
-      console.log('🔄 JobsTracker - Job update event received, refreshing jobs list');
+      console.log('🔄 JobsTracker - Job update event received', event.detail);
+
+      // If we have specific updates in the event detail, update state directly
+      // This prevents full reload/spinner for simple score updates
+      if (event.detail && event.detail.jobId) {
+        setJobs(prevJobs => prevJobs.map(job => {
+          if (job.id === event.detail.jobId || job._id === event.detail.jobId) {
+            // Merge existing job with updates
+            // Filter out 'jobId' from updates as it's not a job property
+            const { jobId, ...updates } = event.detail;
+            return { ...job, ...updates } as JobApplication;
+          }
+          return job;
+        }));
+        return; // Skip full reload
+      }
+
+      // Fallback to full reload if no specific details
+      console.log('🔄 JobsTracker - Refreshing full list');
       loadData();
     };
 

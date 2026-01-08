@@ -205,7 +205,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
     <div className="h-full w-full">
       {zoomedStage ? (
         // Zoomed stage - show stage-specific view
-        <div className="w-full h-full overflow-y-auto px-4">
+        <div className="w-full h-full overflow-y-auto px-4 scrollbar-hide">
           {stages
             .filter(stage => stage.status === zoomedStage)
             .map((stage) => {
@@ -293,7 +293,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
         </div>
       ) : (
         // All stages - horizontal scrollable with proper width
-        <div className="flex flex-row gap-4 h-full min-w-max pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4">
+        <div className="flex flex-row gap-4 h-full min-w-max pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4 overflow-x-auto scrollbar-hide">
           {stages.map((stage) => {
             const stageJobs = jobsByStatus[stage.status as keyof typeof jobsByStatus];
             return (
@@ -323,7 +323,7 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
 
                 {/* Drop Zone */}
                 <div
-                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto min-h-0 ${draggedJob
+                  className={`w-full rounded-xl border-2 border-dashed transition-all duration-300 flex-1 overflow-y-auto scrollbar-hide min-h-0 ${draggedJob
                     ? isDraggableStage(stage.status)
                       ? `border-blue-300 dark:border-[rgb(60,75,60)] bg-blue-50 dark:bg-[rgb(60,75,60)]/20`
                       : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/30 opacity-50'

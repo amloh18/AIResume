@@ -180,7 +180,7 @@ NOTE: Return 5-10 most impactful fixes only. Do NOT include full CV copies in th
 - original_text MUST be found inside the string at fieldPath (exact substring).
 - NEVER invent content that isn't present in the CV.
 - KEEP RESPONSE COMPACT - max 5-10 fixes, no full CV copies.
-- **CRITICAL:** Ensure \`fixed_text\` is formatted as a bullet point (starting with "- " or "• ") for all sections EXCEPT \`basics.summary\`. Ensure high bullet volume for recent jobs.
+- **CRITICAL:** Ensure \`fixed_text\` is formatted as a bullet point (starting with "• ") for all sections EXCEPT \`basics.summary\`. NEVER use hyphens (-) or asterisks (*) for bullets, ALWAYS use the bullet dot symbol (•). Ensure high bullet volume for recent jobs.
 
 ### [OUTPUT JSON START]
 `;

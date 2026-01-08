@@ -7,6 +7,8 @@ import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix
 import { CVSurgeonService, type SurgicalFix } from '@/lib/services/cv-surgeon-service';
 import type { KeywordGap, KeywordGapAnalysisResult } from '@/types/keyword-gap';
 import { getAnalysisMode, getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode, type AnalysisModeResult, type AnalysisModeInfo } from '@/lib/utils/analysis-mode';
+import { type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { type PaperSize } from '@/lib/services/paperSizeService';
 
 // State Interface
 export interface ResumeEnhancerState {
@@ -113,6 +115,10 @@ export interface ResumeEnhancerState {
   authenticOptData: any | null;        // Authentic optimization data
   annotationLog: { path: string; action: string; reason: string }[];
   nextSteps: string[];
+
+  // Document Formatting Preferences
+  dateFormat: DateFormatStyle;  // User-selected date format for CV
+  paperSize: PaperSize;         // Detected or user-selected paper size
 }
 
 // Action Types
@@ -179,7 +185,10 @@ type ResumeEnhancerAction =
   | { type: 'SET_SCORE_BREAKDOWNS'; payload: { cvBreakdown: Record<string, number> | null; atsBreakdown: Record<string, number> | null; cvPenaltyReasons?: string[] } }
   | { type: 'SET_ATS_SCORE_CONTEXT'; payload: 'jd-specific' | 'industry-general' }
   | { type: 'TOGGLE_SIMULATED_CV'; payload: boolean }
-  | { type: 'SET_STRATEGIC_FIX_DATA'; payload: { strategicFix: any; authenticOpt: any; required: boolean; annotationLog: any[]; nextSteps: string[] } };
+  | { type: 'SET_STRATEGIC_FIX_DATA'; payload: { strategicFix: any; authenticOpt: any; required: boolean; annotationLog: any[]; nextSteps: string[] } }
+  // Document Formatting Actions
+  | { type: 'SET_DATE_FORMAT'; payload: DateFormatStyle }
+  | { type: 'SET_PAPER_SIZE'; payload: PaperSize };
 
 // Initial State
 const initialState: ResumeEnhancerState = {
@@ -241,7 +250,10 @@ const initialState: ResumeEnhancerState = {
   strategicFixData: null,
   authenticOptData: null,
   annotationLog: [],
-  nextSteps: []
+  nextSteps: [],
+  // Document Formatting Preferences
+  dateFormat: 'MMM_YYYY',
+  paperSize: 'A4'
 };
 
 // Reducer
@@ -628,6 +640,19 @@ function resumeEnhancerReducer(
         strategicFixAvailable: action.payload.required,
         annotationLog: action.payload.annotationLog || [],
         nextSteps: action.payload.nextSteps || []
+      };
+
+    // Document Formatting Actions
+    case 'SET_DATE_FORMAT':
+      return {
+        ...state,
+        dateFormat: action.payload
+      };
+
+    case 'SET_PAPER_SIZE':
+      return {
+        ...state,
+        paperSize: action.payload
       };
 
     default:

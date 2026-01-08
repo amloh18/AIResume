@@ -10,6 +10,7 @@ import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import AnnotatedText from '@/components/resume-enhancer/annotations/AnnotatedText';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { renderRichText } from '@/lib/utils/format-utils';
+import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 
 export type ViewMode = 'edit' | 'recruiter' | 'ats';
 
@@ -93,6 +94,7 @@ interface CVPreviewContentProps {
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
   pageFormat?: 'a4' | 'letter';
+  dateFormat?: DateFormatStyle;
 }
 
 const SectionWrapper = ({
@@ -167,6 +169,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   isSidebarOpen,
   onToggleSidebar,
   pageFormat = 'a4',
+  dateFormat = 'MMM_YYYY',
 }) => {
   // CRITICAL FIX: All hooks must be called BEFORE any conditional returns (Rules of Hooks)
   const isDark = theme === 'dark';
@@ -339,7 +342,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             padding: isFullBleed ? '0px' : `${pagePadding.top}px 32px ${pagePadding.bottom}px 32px`
           }}
         >
-          <CustomRenderer cvData={cvData} />
+          <CustomRenderer cvData={cvData} dateFormat={dateFormat} />
         </div>
         {/* Page Break CSS for custom templates */}
         <style dangerouslySetInnerHTML={{
@@ -502,7 +505,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                       ? `translateY(calc(-${pageIndex} * (${pageDimensions.height} - ${isFullBleed ? '0px' : (pagePadding.top + pagePadding.bottom) + 'px'})))`
                       : 'none'
                   }}>
-                    <CustomRenderer cvData={cvData} />
+                    <CustomRenderer cvData={cvData} dateFormat={dateFormat} />
                   </div>
                 </div>
               </div>

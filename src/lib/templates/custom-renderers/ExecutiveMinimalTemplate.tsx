@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText, stripHtmlTags, formatDateRange } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface ExecutiveMinimalTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, certificates, languages, interests } = cvData;
 
@@ -188,8 +190,8 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
 
       {/* Header */}
       <div className="header" data-section-id="personal">
-        <h1 className="name">{basics?.name || 'Your Name'}</h1>
-        <div className="title">{basics?.label || 'Professional Title'}</div>
+        {basics?.name && <h1 className="name">{basics.name}</h1>}
+        {basics?.label && <div className="title">{basics.label}</div>}
 
         <div className="contact-info">
           {basics?.email && <span className="contact-item">{basics.email}</span>}
@@ -217,7 +219,7 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
                 <div className="company-name">{job.name}</div>
                 <div className="job-title">{job.position}</div>
                 <div className="date-range">
-                  {formatDateRange(job.startDate || '', job.endDate || '')}
+                  {formatDateRangeWithStyle(job.startDate || '', job.endDate || '', dateFormat)}
                 </div>
               </div>
               <div className="split-right description">
@@ -244,7 +246,7 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <div className="company-name">{edu.institution}</div>
                 <div className="date-range">
-                  {formatDateRange(edu.startDate || '', edu.endDate || '')}
+                  {formatDateRangeWithStyle(edu.startDate || '', edu.endDate || '', dateFormat)}
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
