@@ -12,17 +12,38 @@ import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from 
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import ScorecardPanel from '@/components/resume-enhancer/panels/ScorecardPanel';
+import DateFormatSelector from '@/components/resume-enhancer/DateFormatSelector';
+import { getDefaultPaperSize } from '@/lib/services/paperSizeService';
+import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch } = useResumeEnhancer();
   const router = useRouter();
-  const [zoom, setZoom] = useState(0.65); // Default to fit A4 in panel
+  const [zoom, setZoom] = useState(0.5); // Will be recalculated on mount
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Auto-fit zoom to container width
+  useEffect(() => {
+    const calculateFitZoom = () => {
+      if (!containerRef.current) return;
+      const containerWidth = containerRef.current.clientWidth;
+      // A4 width is 210mm ≈ 794px at 96dpi, add some padding
+      const a4Width = 794;
+      const padding = 40; // 20px on each side
+      const availableWidth = containerWidth - padding;
+      const calculatedZoom = Math.min(0.9, Math.max(0.4, availableWidth / a4Width));
+      setZoom(calculatedZoom);
+    };
+
+    calculateFitZoom();
+    window.addEventListener('resize', calculateFitZoom);
+    return () => window.removeEventListener('resize', calculateFitZoom);
+  }, []);
   // Fetch cover letter status for journey CVs if not already loaded
   useEffect(() => {
     const fetchCoverLetterStatus = async () => {
@@ -47,6 +68,30 @@ export default function Step4Review() {
 
     fetchCoverLetterStatus();
   }, [state.cvType, state.journeyId, state.coverLetterId, dispatch]);
+
+  // Auto-detect paper size based on user's location
+  useEffect(() => {
+    const detectPaperSize = async () => {
+      // Skip if already set to non-default or if we've already detected
+      if (state.paperSize && state.paperSize !== 'A4') return;
+
+      try {
+        const response = await fetch('/api/region');
+        if (response.ok) {
+          const { countryCode } = await response.json();
+          const detectedSize = getDefaultPaperSize(countryCode);
+          if (detectedSize !== state.paperSize) {
+            dispatch({ type: 'SET_PAPER_SIZE', payload: detectedSize });
+          }
+        }
+      } catch (error) {
+        // Silently fail - keep default A4
+        console.debug('Paper size detection failed, using default A4');
+      }
+    };
+
+    detectPaperSize();
+  }, [dispatch, state.paperSize]);
 
   // Calculate scores using the scoring service
   const scoreResult = useMemo(() => {
@@ -124,7 +169,7 @@ export default function Step4Review() {
         filename,
         state.cvId || undefined,
         {
-          paperSize: 'A4',
+          paperSize: state.paperSize || 'A4',
           orientation: 'portrait',
           jobTitle: state.jobData?.title || state.targetRole
         }
@@ -255,6 +300,15 @@ export default function Step4Review() {
                 </button>
               </div>
 
+              {/* Date Format Card */}
+              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
+                <p className="text-xs text-[color:var(--text-tertiary)] mb-2">Date Format</p>
+                <DateFormatSelector
+                  value={state.dateFormat}
+                  onChange={(format) => dispatch({ type: 'SET_DATE_FORMAT', payload: format })}
+                />
+              </div>
+
               {/* Cover Letter Card */}
               <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
                 <div className="flex items-center justify-between mb-2">
@@ -315,7 +369,7 @@ export default function Step4Review() {
         </div>
 
         {/* Left Panel - Preview (50%) */}
-        <div className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+        <div ref={containerRef} className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
           {/* Preview Header with Controls */}
           <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between">
             <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
@@ -366,6 +420,8 @@ export default function Step4Review() {
                   customCSS={state.selectedTemplate.globalStyles?.customCSS}
                   jobData={state.jobData}
                   currentZoom={zoom}
+                  dateFormat={state.dateFormat}
+                  pageFormat={state.paperSize === 'Letter' ? 'letter' : 'a4'}
                 />
               </div>
             ) : (

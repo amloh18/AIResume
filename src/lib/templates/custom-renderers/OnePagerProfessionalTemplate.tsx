@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface OnePagerProfessionalTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects, certificates } = cvData;
 
@@ -384,7 +386,7 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
       {basics?.summary && (
         <div className="opp-profile-section" data-section-id="summary">
           <h2 className="opp-section-title">Profile</h2>
-          <p className="opp-profile-text">{basics.summary}</p>
+          <p className="opp-profile-text">{stripHtmlTags(basics.summary)}</p>
         </div>
       )}
 
@@ -443,7 +445,7 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                     </p>
                     <p className="opp-edu-institution">{edu.institution}</p>
                     <p className="opp-edu-dates">
-                      {edu.startDate} – {edu.endDate || 'Present'}
+                      {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
                     </p>
                   </div>
                 ))}
@@ -503,7 +505,7 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                     <div className="opp-timeline-header">
                       <h4 className="opp-timeline-role">{job.position}</h4>
                       <span className="opp-timeline-dates">
-                        {job.startDate} – {job.endDate || 'Present'}
+                        {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
                       </span>
                     </div>
                     <p className="opp-timeline-org">{job.name}</p>
@@ -530,7 +532,7 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                       <h4 className="opp-project-name">{project.name}</h4>
                       {project.startDate && (
                         <span className="opp-timeline-dates">
-                          {project.startDate} – {project.endDate || 'Present'}
+                          {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
                         </span>
                       )}
                     </div>

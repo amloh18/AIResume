@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { stripHtmlTags } from '@/lib/utils/textFormatting';
+import { stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface DesignerModernTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects, volunteer, awards, certificates, publications, languages, interests } = cvData;
 
@@ -368,7 +370,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                   <div className="education-header">
                     <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
                     <div className="university">{edu.institution}</div>
-                    <div className="education-dates">{edu.startDate} - {edu.endDate || 'Present'}</div>
+                    <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                   </div>
                 </div>
               ))}
@@ -486,7 +488,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                   <div className="experience-header">
                     <div className="job-title">{job.position}</div>
                     <div className="company-info">
-                      <span className="company-name">{job.name}</span> | <span className="job-dates">{job.startDate} - {job.endDate || 'Present'}</span>
+                      <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
                     </div>
                   </div>
                   {job.summary && (
@@ -509,7 +511,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                     <div className="job-title">{project.name}</div>
                     {project.startDate && (
                       <div className="company-info">
-                        <span className="job-dates">{project.startDate} - {project.endDate || 'Present'}</span>
+                        <span className="job-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</span>
                       </div>
                     )}
                   </div>
@@ -537,7 +539,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                   <div className="experience-header">
                     <div className="job-title">{vol.position}</div>
                     <div className="company-info">
-                      <span className="company-name">{vol.organization}</span> | <span className="job-dates">{vol.startDate} - {vol.endDate || 'Present'}</span>
+                      <span className="company-name">{vol.organization}</span> | <span className="job-dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</span>
                     </div>
                   </div>
                   {vol.summary && (

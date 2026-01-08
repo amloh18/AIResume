@@ -2,32 +2,34 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface HeaderProfessionalTemplateProps {
-    cvData: UnifiedCVDataStructure;
-    className?: string;
+  cvData: UnifiedCVDataStructure;
+  className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProps> = ({
-    cvData,
-    className = ''
+  cvData,
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
-    const { basics, work, education, skills, projects, certificates, languages } = cvData;
+  const { basics, work, education, skills, projects, certificates, languages } = cvData;
 
-    // Format location
-    const formatLocation = () => {
-        const parts = [];
-        if (basics?.location?.city) parts.push(basics.location.city);
-        if (basics?.location?.region) parts.push(basics.location.region);
-        if (basics?.location?.countryCode) parts.push(basics.location.countryCode);
-        return parts.join(', ') || '';
-    };
+  // Format location
+  const formatLocation = () => {
+    const parts = [];
+    if (basics?.location?.city) parts.push(basics.location.city);
+    if (basics?.location?.region) parts.push(basics.location.region);
+    if (basics?.location?.countryCode) parts.push(basics.location.countryCode);
+    return parts.join(', ') || '';
+  };
 
-    return (
-        <div className={`header-professional-template ${className}`}>
-            <style dangerouslySetInnerHTML={{
-                __html: `
+  return (
+    <div className={`header-professional-template ${className}`}>
+      <style dangerouslySetInnerHTML={{
+        __html: `
         .header-professional-template {
           font-family: 'Calibri', 'Arial', sans-serif;
           max-width: 100%;
@@ -264,187 +266,187 @@ export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProp
         }
       `}} />
 
-            {/* Header - Grey Background Edge-to-Edge with optional Photo */}
-            <div className={`hp-header ${basics?.image ? 'has-photo' : 'no-photo'}`} data-section-id="personal">
-                {basics?.image && (
-                    <img
-                        src={basics.image}
-                        alt={basics.name || 'Profile'}
-                        className="hp-photo"
-                    />
-                )}
-                <div className="hp-header-content">
-                    <h1 className="hp-name">{basics?.name || 'YOUR NAME'}</h1>
-                    <p className="hp-title">{basics?.label || 'Professional Title'}</p>
-                    <div className="hp-contact-row">
-                        {basics?.email && (
-                            <span className="hp-contact-item">{basics.email}</span>
-                        )}
-                        {basics?.phone && (
-                            <span className="hp-contact-item">{basics.phone}</span>
-                        )}
-                        {formatLocation() && (
-                            <span className="hp-contact-item">{formatLocation()}</span>
-                        )}
-                        {basics?.profiles?.[0]?.url && (
-                            <span className="hp-contact-item">{basics.profiles[0].url}</span>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Professional Summary */}
-            {basics?.summary && (
-                <div className="hp-section" data-section-id="summary">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Professional Summary</h2>
-                    </div>
-                    <p className="hp-summary-text">{basics.summary}</p>
-                </div>
+      {/* Header - Grey Background Edge-to-Edge with optional Photo */}
+      <div className={`hp-header ${basics?.image ? 'has-photo' : 'no-photo'}`} data-section-id="personal">
+        {basics?.image && (
+          <img
+            src={basics.image}
+            alt={basics.name || 'Profile'}
+            className="hp-photo"
+          />
+        )}
+        <div className="hp-header-content">
+          <h1 className="hp-name">{basics?.name || 'YOUR NAME'}</h1>
+          <p className="hp-title">{basics?.label || 'Professional Title'}</p>
+          <div className="hp-contact-row">
+            {basics?.email && (
+              <span className="hp-contact-item">{basics.email}</span>
             )}
-
-            {/* Work Experience */}
-            {work && work.length > 0 && (
-                <div className="hp-section" data-section-id="work">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Work Experience</h2>
-                    </div>
-                    <div className="hp-content">
-                        {work.map((job, index) => (
-                            <div key={index} className="hp-item" data-item-id={index}>
-                                <div className="hp-item-left">
-                                    <div className="hp-item-role">{job.position}</div>
-                                    <div className="hp-item-org">{job.name}</div>
-                                    <div className="hp-item-dates">{job.startDate} – {job.endDate || 'Present'}</div>
-                                </div>
-                                <div className="hp-item-right">
-                                    {job.summary && (
-                                        <div dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }} />
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {basics?.phone && (
+              <span className="hp-contact-item">{basics.phone}</span>
             )}
-
-            {/* Education */}
-            {education && education.length > 0 && (
-                <div className="hp-section" data-section-id="education">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Education</h2>
-                    </div>
-                    <div className="hp-content">
-                        {education.map((edu, index) => (
-                            <div key={index} className="hp-item" data-item-id={index}>
-                                <div className="hp-item-left">
-                                    <div className="hp-item-role">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
-                                    <div className="hp-item-org">{edu.institution}</div>
-                                    <div className="hp-item-dates">{edu.startDate} – {edu.endDate || 'Present'}</div>
-                                </div>
-                                <div className="hp-item-right">
-                                    {edu.score && <div>Score: {edu.score}</div>}
-                                    {edu.courses && edu.courses.length > 0 && (
-                                        <div>Courses: {edu.courses.join(', ')}</div>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {formatLocation() && (
+              <span className="hp-contact-item">{formatLocation()}</span>
             )}
-
-            {/* Skills */}
-            {skills && skills.length > 0 && (
-                <div className="hp-section" data-section-id="skills">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Skills</h2>
-                    </div>
-                    <div className="hp-skills-grid">
-                        {skills.map((skill, index) => (
-                            <div key={index} className="hp-skill-category">
-                                <div className="hp-skill-category-name">{skill.category}</div>
-                                <div className="hp-skill-list">{skill.skills.join(', ')}</div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            {basics?.profiles?.[0]?.url && (
+              <span className="hp-contact-item">{basics.profiles[0].url}</span>
             )}
-
-            {/* Projects */}
-            {projects && projects.length > 0 && (
-                <div className="hp-section" data-section-id="projects">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Projects</h2>
-                    </div>
-                    <div className="hp-content">
-                        {projects.map((project, index) => (
-                            <div key={index} className="hp-item" data-item-id={index}>
-                                <div className="hp-item-left">
-                                    <div className="hp-item-role">{project.name}</div>
-                                    {project.startDate && (
-                                        <div className="hp-item-dates">{project.startDate} – {project.endDate || 'Present'}</div>
-                                    )}
-                                    {project.url && (
-                                        <div className="hp-item-location" style={{ wordBreak: 'break-all' }}>{project.url}</div>
-                                    )}
-                                </div>
-                                <div className="hp-item-right">
-                                    {project.description && (
-                                        <div dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }} />
-                                    )}
-                                    {project.highlights && project.highlights.length > 0 && (
-                                        <ul>
-                                            {project.highlights.map((h, i) => <li key={i}>{h}</li>)}
-                                        </ul>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Certificates */}
-            {certificates && certificates.length > 0 && (
-                <div className="hp-section" data-section-id="certificates">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Certifications</h2>
-                    </div>
-                    <div className="hp-content">
-                        {certificates.map((cert, index) => (
-                            <div key={index} className="hp-item" data-item-id={index}>
-                                <div className="hp-item-left">
-                                    <div className="hp-item-role">{cert.name}</div>
-                                    <div className="hp-item-org">{cert.issuer}</div>
-                                    {cert.date && <div className="hp-item-dates">{cert.date}</div>}
-                                </div>
-                                <div className="hp-item-right">
-                                    {cert.url && <div style={{ wordBreak: 'break-all' }}>{cert.url}</div>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Languages */}
-            {languages && languages.length > 0 && (
-                <div className="hp-section" data-section-id="languages">
-                    <div className="hp-section-header">
-                        <h2 className="hp-section-title">Languages</h2>
-                    </div>
-                    <div className="hp-languages">
-                        {languages.map((lang, index) => (
-                            <div key={index} className="hp-language-item">
-                                <span className="hp-language-name">{lang.language}</span>
-                                {lang.fluency && <span className="hp-language-level"> – {lang.fluency}</span>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
+          </div>
         </div>
-    );
+      </div>
+
+      {/* Professional Summary */}
+      {basics?.summary && (
+        <div className="hp-section" data-section-id="summary">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Professional Summary</h2>
+          </div>
+          <p className="hp-summary-text">{stripHtmlTags(basics.summary)}</p>
+        </div>
+      )}
+
+      {/* Work Experience */}
+      {work && work.length > 0 && (
+        <div className="hp-section" data-section-id="work">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Work Experience</h2>
+          </div>
+          <div className="hp-content">
+            {work.map((job, index) => (
+              <div key={index} className="hp-item" data-item-id={index}>
+                <div className="hp-item-left">
+                  <div className="hp-item-role">{job.position}</div>
+                  <div className="hp-item-org">{job.name}</div>
+                  <div className="hp-item-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
+                </div>
+                <div className="hp-item-right">
+                  {job.summary && (
+                    <div dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }} />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Education */}
+      {education && education.length > 0 && (
+        <div className="hp-section" data-section-id="education">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Education</h2>
+          </div>
+          <div className="hp-content">
+            {education.map((edu, index) => (
+              <div key={index} className="hp-item" data-item-id={index}>
+                <div className="hp-item-left">
+                  <div className="hp-item-role">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
+                  <div className="hp-item-org">{edu.institution}</div>
+                  <div className="hp-item-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
+                </div>
+                <div className="hp-item-right">
+                  {edu.score && <div>Score: {edu.score}</div>}
+                  {edu.courses && edu.courses.length > 0 && (
+                    <div>Courses: {edu.courses.join(', ')}</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Skills */}
+      {skills && skills.length > 0 && (
+        <div className="hp-section" data-section-id="skills">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Skills</h2>
+          </div>
+          <div className="hp-skills-grid">
+            {skills.map((skill, index) => (
+              <div key={index} className="hp-skill-category">
+                <div className="hp-skill-category-name">{skill.category}</div>
+                <div className="hp-skill-list">{skill.skills.join(', ')}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Projects */}
+      {projects && projects.length > 0 && (
+        <div className="hp-section" data-section-id="projects">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Projects</h2>
+          </div>
+          <div className="hp-content">
+            {projects.map((project, index) => (
+              <div key={index} className="hp-item" data-item-id={index}>
+                <div className="hp-item-left">
+                  <div className="hp-item-role">{project.name}</div>
+                  {project.startDate && (
+                    <div className="hp-item-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>
+                  )}
+                  {project.url && (
+                    <div className="hp-item-location" style={{ wordBreak: 'break-all' }}>{project.url}</div>
+                  )}
+                </div>
+                <div className="hp-item-right">
+                  {project.description && (
+                    <div dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }} />
+                  )}
+                  {project.highlights && project.highlights.length > 0 && (
+                    <ul>
+                      {project.highlights.map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Certificates */}
+      {certificates && certificates.length > 0 && (
+        <div className="hp-section" data-section-id="certificates">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Certifications</h2>
+          </div>
+          <div className="hp-content">
+            {certificates.map((cert, index) => (
+              <div key={index} className="hp-item" data-item-id={index}>
+                <div className="hp-item-left">
+                  <div className="hp-item-role">{cert.name}</div>
+                  <div className="hp-item-org">{cert.issuer}</div>
+                  {cert.date && <div className="hp-item-dates">{cert.date}</div>}
+                </div>
+                <div className="hp-item-right">
+                  {cert.url && <div style={{ wordBreak: 'break-all' }}>{cert.url}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Languages */}
+      {languages && languages.length > 0 && (
+        <div className="hp-section" data-section-id="languages">
+          <div className="hp-section-header">
+            <h2 className="hp-section-title">Languages</h2>
+          </div>
+          <div className="hp-languages">
+            {languages.map((lang, index) => (
+              <div key={index} className="hp-language-item">
+                <span className="hp-language-name">{lang.language}</span>
+                {lang.fluency && <span className="hp-language-level"> – {lang.fluency}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
 };

@@ -7,18 +7,17 @@
 /* CSS Variables */
 :root {
   --navbar-height: 80px;
-  
+
   /* Light theme colors */
   --bg-primary: #ffffff;
   --bg-secondary: #f9fafb;
   --bg-tertiary: #f3f4f6;
-  --bg-gradient: linear-gradient(135deg, 
-    rgba(185, 235, 185, 0.8) 0%, 
-    rgba(175, 199, 182, 0.6) 25%, 
-    rgba(200, 220, 200, 0.4) 50%, 
-    rgba(220, 240, 220, 0.3) 75%, 
-    rgba(240, 250, 240, 0.2) 100%
-  );
+  --bg-gradient: linear-gradient(135deg,
+      rgba(185, 235, 185, 0.8) 0%,
+      rgba(175, 199, 182, 0.6) 25%,
+      rgba(200, 220, 200, 0.4) 50%,
+      rgba(220, 240, 220, 0.3) 75%,
+      rgba(240, 250, 240, 0.2) 100%);
   --text-primary: #111827;
   --text-secondary: #6b7280;
   --text-tertiary: #9ca3af;
@@ -27,7 +26,7 @@
   --accent-primary: #84cc16;
   --accent-hover: #65a30d;
   --shadow-color: rgba(0, 0, 0, 0.1);
-  
+
   /* Light theme frosted glass elements */
   --card-bg: rgba(255, 255, 255, 0.25);
   --card-border: rgba(255, 255, 255, 0.3);
@@ -37,7 +36,7 @@
   --input-bg: rgba(255, 255, 255, 0.9);
   --input-border: rgba(229, 231, 235, 0.8);
   --hover-bg: rgba(249, 250, 251, 0.8);
-  
+
   /* Enhanced glass morphism shadows */
   --glass-shadow-light: 0 8px 32px rgba(0, 0, 0, 0.1);
   --glass-shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -58,7 +57,7 @@
   --accent-primary: #99FF00;
   --accent-hover: #88e600;
   --shadow-color: rgba(0, 0, 0, 0.5);
-  
+
   /* Additional dark theme colors for better contrast */
   --card-bg: #141810;
   --card-border: rgba(255, 255, 255, 0.08);
@@ -68,7 +67,7 @@
   --input-bg: #313a28;
   --input-border: #2a2b2f;
   --hover-bg: #313a28;
-  
+
   /* Enhanced glass morphism shadows for dark theme */
   --glass-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.4);
   --glass-shadow-inset-dark: inset 0 1px 0 rgba(255, 255, 255, 0.05);
@@ -117,13 +116,7 @@ body {
 
 /* Light theme gradient background */
 body:not(.dark) {
-  background: linear-gradient(135deg, 
-    rgba(185, 235, 185, 0.8) 0%, 
-    rgba(175, 199, 182, 0.6) 25%, 
-    rgba(200, 220, 200, 0.4) 50%, 
-    rgba(220, 240, 220, 0.3) 75%, 
-    rgba(240, 250, 240, 0.2) 100%
-  );
+  background: #f3f2ee;
   background-attachment: fixed;
   background-size: 100% 100%;
 }
@@ -136,12 +129,14 @@ body.dark {
 
 /* Main dashboard background - theme aware */
 .dashboard-page {
-  background: #f9fafb; /* Matches bg-gray-50 from layout */
+  background: #f3f2ee;
+  /* Matches bg-[#f3f2ee] */
   min-height: 100vh;
 }
 
 .dark .dashboard-page {
-  background: #1a230f; /* Matches dark:bg-[#1a230f] from layout */
+  background: #1a230f;
+  /* Matches dark:bg-[#1a230f] from layout */
 }
 
 /*
@@ -150,12 +145,15 @@ body.dark {
   We do this by overriding surface variables ONLY when html is NOT dark.
 */
 html:not(.dark) .resume-enhancer-page {
-  background: #f9fafb;
+  background: #f3f2ee;
 
   /* App shell surfaces (light) */
-  --bg-primary: #f9fafb;  /* page background (matches dashboard bg-gray-50) */
-  --bg-secondary: #ffffff; /* primary panels/cards */
-  --bg-tertiary: #f3f4f6;  /* nested surfaces */
+  --bg-primary: #f3f2ee;
+  /* page background (matches dashboard bg-[#f3f2ee]) */
+  --bg-secondary: #ffffff;
+  /* primary panels/cards */
+  --bg-tertiary: #f3f4f6;
+  /* nested surfaces */
 
   /* Glass elements should read as standard dashboard surfaces in light mode */
   --header-bg: rgba(255, 255, 255, 0.9);
@@ -169,12 +167,15 @@ html:not(.dark) .resume-enhancer-page {
   Uses the same theme as dashboard/tracker pages.
 */
 html:not(.dark) .cover-letter-editor-page {
-  background: #f9fafb;
+  background: #f3f2ee;
 
   /* App shell surfaces (light) */
-  --bg-primary: #f9fafb;  /* page background (matches dashboard bg-gray-50) */
-  --bg-secondary: #ffffff; /* primary panels/cards */
-  --bg-tertiary: #f3f4f6;  /* nested surfaces */
+  --bg-primary: #f3f2ee;
+  /* page background (matches dashboard bg-[#f3f2ee]) */
+  --bg-secondary: #ffffff;
+  /* primary panels/cards */
+  --bg-tertiary: #f3f4f6;
+  /* nested surfaces */
 
   /* Glass elements should read as standard dashboard surfaces in light mode */
   --header-bg: rgba(255, 255, 255, 0.9);
@@ -233,6 +234,7 @@ html:not(.dark) .cover-letter-editor-page {
 
 /* Reduce motion for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -272,6 +274,7 @@ html:not(.dark) .cover-letter-editor-page {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -450,9 +453,12 @@ html:not(.dark) .cover-letter-editor-page {
 }
 
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }
@@ -469,6 +475,7 @@ html:not(.dark) .cover-letter-editor-page {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -528,6 +535,7 @@ img {
 
 /* Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -536,7 +544,7 @@ img {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  
+
   .animate-optimized,
   .cv-circle-loading,
   .progress-optimized {
@@ -856,6 +864,7 @@ nav {
     transform: translateX(100%);
     opacity: 0;
   }
+
   to {
     transform: translateX(0);
     opacity: 1;
@@ -867,22 +876,23 @@ nav {
   .modal-content-optimized {
     @apply m-4 max-w-[calc(100vw-2rem)] max-h-[calc(100vh-2rem)] md:m-0 md:max-w-none md:max-h-none;
   }
-  
+
   .sidebar-optimized {
     @apply -translate-x-full transition-transform duration-300 ease-in-out md:translate-x-0;
   }
-  
+
   .sidebar-optimized.open {
     @apply translate-x-0;
   }
-  
+
   .main-content-optimized {
     @apply ml-0 md:ml-64;
   }
 }
 
 /* Optimize for high DPI displays */
-@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+@media (-webkit-min-device-pixel-ratio: 2),
+(min-resolution: 192dpi) {
   .img-optimized {
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
@@ -891,6 +901,7 @@ nav {
 
 /* Optimize for reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
+
   .gpu-accelerated,
   .transition-smooth,
   .btn-hover,
@@ -998,6 +1009,7 @@ img[src*="/images/"] {
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -1254,7 +1266,8 @@ img[src*="/images/"] {
 
 /* Dashboard widget cards - matching image design */
 .glass-card-premium {
-  background: #f9fafb; /* Matches bg-gray-50 */
+  background: #f9fafb;
+  /* Matches bg-gray-50 */
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1262,7 +1275,8 @@ img[src*="/images/"] {
 }
 
 .glass-widget-premium {
-  background: #f9fafb; /* Matches bg-gray-50 */
+  background: #f9fafb;
+  /* Matches bg-gray-50 */
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -1338,9 +1352,12 @@ img[src*="/images/"] {
 
 /* Floating animation for premium glass cards */
 @keyframes glass-float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px);
   }
+
   50% {
     transform: translateY(-4px);
   }
@@ -1362,6 +1379,7 @@ img[src*="/images/"] {
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
+
   .frosted-glass-card,
   .frosted-glass-widget,
   .glass-card-premium,
@@ -1376,7 +1394,7 @@ img[src*="/images/"] {
   .glass-float {
     animation: none;
   }
-  
+
   .frosted-glass-card:hover,
   .frosted-glass-widget:hover,
   .glass-card-premium:hover,
@@ -1422,7 +1440,7 @@ img[src*="/images/"] {
   .studio-panel {
     @apply w-full fixed inset-0 z-50 -translate-x-full md:w-80 md:translate-x-0 lg:w-80;
   }
-  
+
   .studio-panel.open {
     @apply translate-x-0;
   }
@@ -1433,6 +1451,7 @@ img[src*="/images/"] {
   0% {
     background-position: -200px 0;
   }
+
   100% {
     background-position: calc(200px + 100%) 0;
   }
@@ -1483,51 +1502,52 @@ img[src*="/images/"] {
 
 /* Cabinet Grotesk Typography Utilities */
 @layer utilities {
+
   /* Font family utilities */
   .font-cabinet {
     font-family: 'Cabinet Grotesk', system-ui, sans-serif;
   }
-  
+
   /* Optical sizing utilities for Cabinet Grotesk */
   .opsz-display {
     font-optical-sizing: 140;
   }
-  
+
   .opsz-heading {
     font-optical-sizing: 100;
   }
-  
+
   .opsz-body {
     font-optical-sizing: 60;
   }
-  
+
   .opsz-label {
     font-optical-sizing: 45;
   }
-  
+
   .opsz-caption {
     font-optical-sizing: 35;
   }
-  
+
   .opsz-button {
     font-optical-sizing: 35;
   }
-  
+
   .opsz-kpi {
     font-optical-sizing: 60;
   }
-  
+
   .opsz-badge {
     font-optical-sizing: 20;
   }
-  
+
   /* Text rendering optimization for Cabinet Grotesk */
   .text-optimize {
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  
+
   /* Font feature settings for better Cabinet Grotesk rendering */
   .font-features {
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
@@ -1599,7 +1619,8 @@ img[src*="/images/"] {
   grid-template-columns: repeat(4, 1fr);
   /* This makes rows equal to column width, creating a square base unit */
   grid-auto-rows: 1fr;
-  gap: 1.5rem; /* 24px */
+  gap: 1.5rem;
+  /* 24px */
   margin: 0 auto;
   justify-items: center;
 }
@@ -1608,7 +1629,8 @@ img[src*="/images/"] {
 .bento-box {
   background: #222327;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 1.5rem; /* 24px */
+  border-radius: 1.5rem;
+  /* 24px */
   padding: 1.5rem;
   position: relative;
   display: flex;
@@ -1634,7 +1656,8 @@ img[src*="/images/"] {
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  padding: 2px; /* Controls the thickness of the border */
+  padding: 2px;
+  /* Controls the thickness of the border */
   background: linear-gradient(145deg, rgba(153, 255, 0, 0.6), rgba(59, 130, 246, 0.3), rgba(153, 255, 0, 0) 60%);
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
@@ -1654,6 +1677,7 @@ img[src*="/images/"] {
 .span-2-col {
   grid-column: span 2;
 }
+
 .span-2-row {
   grid-row: span 2;
 }
@@ -1668,28 +1692,33 @@ img[src*="/images/"] {
   align-self: flex-start;
   justify-self: flex-start;
 }
+
 .bottom-left {
-  margin-top: auto; /* Pushes content to the bottom */
+  margin-top: auto;
+  /* Pushes content to the bottom */
   align-self: flex-start;
   justify-self: flex-end;
 }
 
 .category {
-  font-size: 0.875rem; /* 14px */
+  font-size: 0.875rem;
+  /* 14px */
   color: rgba(255, 255, 255, 0.7);
   margin: 0;
   font-weight: 500;
 }
 
 h3 {
-  font-size: 1.5rem; /* 24px */
+  font-size: 1.5rem;
+  /* 24px */
   font-weight: 600;
   color: #ffffff;
   margin: 0.25rem 0;
 }
 
 .description {
-  font-size: 0.875rem; /* 14px */
+  font-size: 0.875rem;
+  /* 14px */
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
   line-height: 1.5;
@@ -1706,23 +1735,23 @@ h3 {
   .bento-grid .span-2-col {
     @apply col-span-1 md:col-span-2 lg:col-span-2;
   }
-  
+
   .bento-grid .span-2-row {
     @apply row-span-1 md:row-span-1 lg:row-span-2;
   }
-  
+
   .bento-box {
     @apply p-2 w-full md:p-4;
   }
-  
+
   .bento-box h3 {
     @apply text-[13px] leading-tight mb-1 md:text-base;
   }
-  
+
   .bento-box p {
     @apply text-[11px] leading-[1.3] mb-1 md:text-sm;
   }
-  
+
   .bento-box .category {
     @apply text-[10px] mb-1 md:text-xs;
   }
@@ -1733,6 +1762,7 @@ h3 {
   0% {
     transform: translateX(0);
   }
+
   100% {
     transform: translateX(-50%);
   }
@@ -1748,9 +1778,26 @@ h3 {
 
 /* Hide scrollbar utility */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  /* Firefox */
 }
-.scrollbar-hide::-webkit-scrollbar { 
-  display: none;  /* Safari and Chrome */
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Safari and Chrome */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none !important;
+  /* IE and Edge */
+  scrollbar-width: none !important;
+  /* Firefox */
 }

@@ -2,16 +2,18 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText } from '@/lib/utils/textFormatting';
+import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface MinimalProfessionalTemplateProps {
     cvData: UnifiedCVDataStructure;
     className?: string;
+    dateFormat?: DateFormatStyle;
 }
 
 export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplateProps> = ({
     cvData,
-    className = ''
+    className = '',
+    dateFormat = 'MMM_YYYY'
 }) => {
     const { basics, work, education, skills, projects, certificates, languages, awards } = cvData;
 
@@ -313,7 +315,7 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                     <div className="mp-section-header">
                         <h2 className="mp-section-title">Profile</h2>
                     </div>
-                    <p className="mp-summary-text">{basics.summary}</p>
+                    <p className="mp-summary-text">{stripHtmlTags(basics.summary)}</p>
                 </div>
             )}
 
@@ -328,7 +330,7 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                             <div className="mp-item-header">
                                 <h3 className="mp-item-title">{job.position}</h3>
                                 <span className="mp-item-dates">
-                                    {job.startDate} – {job.endDate || 'Present'}
+                                    {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
                                 </span>
                             </div>
                             <p className="mp-item-subtitle">{job.name}</p>
@@ -356,7 +358,7 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                                     {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
                                 </h3>
                                 <span className="mp-item-dates">
-                                    {edu.startDate} – {edu.endDate || 'Present'}
+                                    {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
                                 </span>
                             </div>
                             <p className="mp-item-subtitle">{edu.institution}</p>
@@ -397,7 +399,7 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                                 <h3 className="mp-item-title">{project.name}</h3>
                                 {project.startDate && (
                                     <span className="mp-item-dates">
-                                        {project.startDate} – {project.endDate || 'Present'}
+                                        {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
                                     </span>
                                 )}
                             </div>

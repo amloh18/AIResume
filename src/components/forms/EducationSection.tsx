@@ -1,7 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Plus, Trash2, Copy } from 'lucide-react';
+import { Plus, Trash2, Copy, GripVertical } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 
@@ -12,6 +29,171 @@ interface EducationSectionProps {
   onRemove: (index: number) => void;
   jobData?: any;
   userId?: string;
+}
+
+// Sortable education item component
+function SortableEducationItem({
+  education,
+  index,
+  onUpdate,
+  onRemove,
+  onDuplicate,
+  onGenerateSuggestions,
+  showSuggestions,
+  suggestions,
+  loadingSuggestions,
+  onSelectSuggestion,
+  onCloseSuggestions,
+}: {
+  education: any;
+  index: number;
+  onUpdate: (index: number, field: string, value: any) => void;
+  onRemove: (index: number) => void;
+  onDuplicate: (index: number) => void;
+  onGenerateSuggestions: (index: number, item: any) => void;
+  showSuggestions: boolean;
+  suggestions: Array<{ method: string; content: string }>;
+  loadingSuggestions: boolean;
+  onSelectSuggestion: (index: number, content: string) => void;
+  onCloseSuggestions: (index: number) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `education-${index}` });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : 'auto',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white/5 rounded-xl p-6 pl-10 border border-white/10 mb-6 relative ${isDragging ? 'shadow-2xl' : ''}`}
+    >
+      {/* Drag handle */}
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        className="absolute top-4 left-2 p-1 cursor-grab active:cursor-grabbing text-white/40 hover:text-white/70 transition-colors touch-none"
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </button>
+
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-lg font-semibold text-white">{education.studyType || 'Degree'} in {education.area || 'Field'} at {education.institution || 'University'}</h4>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onDuplicate(index)}
+            className="text-blue-400 hover:text-blue-300 transition-colors"
+            title="Duplicate this education"
+          >
+            <Copy size={16} />
+          </button>
+          <button
+            onClick={() => onRemove(index)}
+            className="text-red-400 hover:text-red-300 transition-colors"
+            title="Delete this education"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
+          <input
+            type="text"
+            value={education.institution || ''}
+            onChange={(e) => onUpdate(index, 'institution', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="University of California"
+          />
+        </div>
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Field of Study</label>
+          <input
+            type="text"
+            value={education.area || ''}
+            onChange={(e) => onUpdate(index, 'area', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Computer Science"
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4 mt-4">
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Degree Type</label>
+          <input
+            type="text"
+            value={education.studyType || ''}
+            onChange={(e) => onUpdate(index, 'studyType', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Bachelor's Degree"
+          />
+        </div>
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
+          <input
+            type="text"
+            value={education.startDate || ''}
+            onChange={(e) => onUpdate(index, 'startDate', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="Sep 2016"
+          />
+        </div>
+        <div>
+          <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
+          <input
+            type="text"
+            value={education.endDate || ''}
+            onChange={(e) => onUpdate(index, 'endDate', e.target.value)}
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="May 2020"
+          />
+        </div>
+      </div>
+
+      {/* Description Field */}
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-white/80 text-sm font-medium">Description</label>
+          <WYSIWYGToolbar
+            showAIButton={true}
+            fieldType="other"
+            onAISuggestions={() => onGenerateSuggestions(index, education)}
+            isGenerating={loadingSuggestions}
+          />
+        </div>
+        <AISuggestionsPanel
+          isVisible={showSuggestions}
+          suggestions={suggestions}
+          isLoading={loadingSuggestions}
+          onSelect={(content) => onSelectSuggestion(index, content)}
+          onClose={() => onCloseSuggestions(index)}
+        />
+        <WYSIWYGEditor
+          value={education.description || ''}
+          onChange={(value) => onUpdate(index, 'description', value)}
+          rows={3}
+          placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
+        />
+      </div>
+    </div>
+  );
 }
 
 const EducationSection: React.FC<EducationSectionProps> = ({
@@ -26,10 +208,18 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
   const [suggestions, setSuggestions] = useState<{ [key: number]: Array<{ method: string; content: string }> }>({});
   const [loadingSuggestions, setLoadingSuggestions] = useState<{ [key: number]: boolean }>({});
-  
+
+  // DnD Kit sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Debug logging to understand data structure
   console.log('🔍 EducationSection - data:', data);
-  
+
   // Ensure we have proper data structure
   const safeData = Array.isArray(data) ? data : [];
 
@@ -51,7 +241,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
 
   const generateAIDescription = async (index: number, educationItem: any) => {
     if (!userId) return;
-    
+
     setGeneratingIndex(index);
     try {
       const response = await fetch('/api/ai/generate-description', {
@@ -85,11 +275,11 @@ const EducationSection: React.FC<EducationSectionProps> = ({
       console.error('❌ EducationSection - No userId provided for AI suggestions');
       return;
     }
-    
+
     // Show panel immediately and set loading state using functional updates
     setShowSuggestions(prev => ({ ...prev, [index]: true }));
     setLoadingSuggestions(prev => ({ ...prev, [index]: true }));
-    
+
     try {
       const response = await fetch('/api/ai/generate-suggestions', {
         method: 'POST',
@@ -113,7 +303,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
 
       const result = await response.json();
       console.log('✅ EducationSection - AI suggestions received:', result);
-      
+
       // Ensure we have suggestions array
       if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
         setSuggestions(prev => ({ ...prev, [index]: result.suggestions }));
@@ -134,117 +324,54 @@ const EducationSection: React.FC<EducationSectionProps> = ({
     setShowSuggestions(prev => ({ ...prev, [index]: false }));
   };
 
+  const removeEducation = (index: number) => {
+    const updatedData = safeData.filter((_, i) => i !== index);
+    onUpdate(updatedData);
+  };
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = safeData.findIndex((_, i) => `education-${i}` === active.id);
+      const newIndex = safeData.findIndex((_, i) => `education-${i}` === over.id);
+
+      const newData = arrayMove(safeData, oldIndex, newIndex);
+      onUpdate(newData);
+    }
+  };
+
   return (
     <>
-      {safeData.map((education, index) => (
-        <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-semibold text-white">{education.studyType || 'Degree'} in {education.area || 'Field'} at {education.institution || 'University'}</h4>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => duplicateEducation(index)}
-                className="text-blue-400 hover:text-blue-300 transition-colors"
-                title="Duplicate this education"
-              >
-                <Copy size={16} />
-              </button>
-              <button
-                onClick={() => {
-                  const updatedData = safeData.filter((_, i) => i !== index);
-                  onUpdate(updatedData);
-                }}
-                className="text-red-400 hover:text-red-300 transition-colors"
-                title="Delete this education"
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
-              <input
-                type="text"
-                value={education.institution || ''}
-                onChange={(e) => updateEducationItem(index, 'institution', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="University of California"
-              />
-            </div>
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Field of Study</label>
-              <input
-                type="text"
-                value={education.area || ''}
-                onChange={(e) => updateEducationItem(index, 'area', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Computer Science"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4 mt-4">
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Degree Type</label>
-              <input
-                type="text"
-                value={education.studyType || ''}
-                onChange={(e) => updateEducationItem(index, 'studyType', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Bachelor's Degree"
-              />
-            </div>
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
-              <input
-                type="text"
-                value={education.startDate || ''}
-                onChange={(e) => updateEducationItem(index, 'startDate', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="Sep 2016"
-              />
-            </div>
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
-              <input
-                type="text"
-                value={education.endDate || ''}
-                onChange={(e) => updateEducationItem(index, 'endDate', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="May 2020"
-              />
-            </div>
-          </div>
-
-          {/* Description Field */}
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-white/80 text-sm font-medium">Description</label>
-              <WYSIWYGToolbar
-                showAIButton={true}
-                fieldType="other"
-                onAISuggestions={() => generateAISuggestions(index, education)}
-                isGenerating={loadingSuggestions[index] || false}
-              />
-            </div>
-            <AISuggestionsPanel
-              isVisible={showSuggestions[index] || false}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={safeData.map((_, index) => `education-${index}`)}
+          strategy={verticalListSortingStrategy}
+        >
+          {safeData.map((education, index) => (
+            <SortableEducationItem
+              key={`education-${index}`}
+              education={education}
+              index={index}
+              onUpdate={updateEducationItem}
+              onRemove={removeEducation}
+              onDuplicate={duplicateEducation}
+              onGenerateSuggestions={generateAISuggestions}
+              showSuggestions={showSuggestions[index] || false}
               suggestions={suggestions[index] || []}
-              isLoading={loadingSuggestions[index] || false}
-              onSelect={(content) => handleSelectSuggestion(index, content)}
-              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+              loadingSuggestions={loadingSuggestions[index] || false}
+              onSelectSuggestion={handleSelectSuggestion}
+              onCloseSuggestions={(idx) => setShowSuggestions({ ...showSuggestions, [idx]: false })}
             />
-            <WYSIWYGEditor
-              value={education.description || ''}
-              onChange={(value) => updateEducationItem(index, 'description', value)}
-              rows={3}
-              placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
-            />
-          </div>
-        </div>
-      ))}
-      
+          ))}
+        </SortableContext>
+      </DndContext>
+
       <button
         onClick={() => {
           const newEducation = {
@@ -255,7 +382,6 @@ const EducationSection: React.FC<EducationSectionProps> = ({
             endDate: '',
             score: '',
             description: ''
-            // courses is optional - only include if user adds courses
           };
           onUpdate([...safeData, newEducation]);
         }}

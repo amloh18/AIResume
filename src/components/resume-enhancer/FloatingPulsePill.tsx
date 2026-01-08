@@ -7,6 +7,8 @@ import { CVScoringService, type ScoreResult } from '@/lib/services/cv-scoring-se
 import ScorecardPanel, { type ATSResult } from './panels/ScorecardPanel';
 import SuggestionCard from './panels/SuggestionCard';
 import FixCardPanel from './panels/FixCardPanel';
+import RecruiterModePanel, { type RecruiterFeatures } from './panels/RecruiterModePanel';
+import ATSModePanel, { type ATSFeatures } from './panels/ATSModePanel';
 import type { FixAnnotation } from './annotations/fix-annotation';
 import type { AnalysisMode } from '@/lib/utils/analysis-mode';
 
@@ -44,6 +46,19 @@ export default function FloatingPulsePill({
     const { state, dispatch } = useResumeEnhancer();
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [showScorecard, setShowScorecard] = useState(false);
+
+    // Mode-specific feature states
+    const [recruiterFeatures, setRecruiterFeatures] = useState<RecruiterFeatures>({
+        heatmap: true,
+        impactHighlighting: true,
+        redFlags: true,
+        speedRead: false,
+    });
+    const [atsFeatures, setATSFeatures] = useState<ATSFeatures>({
+        plainText: true,
+        keywordHeatmap: true,
+        parsingConfidence: true,
+    });
 
     // Fix All State
     const [isFixingAll, setIsFixingAll] = useState(false);
@@ -347,9 +362,49 @@ export default function FloatingPulsePill({
                     )}
                 </AnimatePresence>
 
-                {/* Dropdown 2: Suggestion Card (Right alignment) */}
+                {/* Dropdown: Recruiter Mode Panel */}
                 <AnimatePresence>
-                    {state.showSurgeonOverlay && (
+                    {viewMode === 'recruiter' && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                            className="self-end mt-2 z-10 origin-top-right"
+                        >
+                            <RecruiterModePanel
+                                cvData={state.cvData}
+                                features={recruiterFeatures}
+                                onFeaturesChange={setRecruiterFeatures}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Dropdown: ATS Mode Panel */}
+                <AnimatePresence>
+                    {viewMode === 'ats' && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                            className="self-end mt-2 z-10 origin-top-right"
+                        >
+                            <ATSModePanel
+                                cvData={state.cvData}
+                                jobData={state.jobData}
+                                templateName={state.selectedTemplate?.name}
+                                features={atsFeatures}
+                                onFeaturesChange={setATSFeatures}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Dropdown: Suggestion Card (Right alignment) */}
+                <AnimatePresence>
+                    {state.showSurgeonOverlay && viewMode === 'edit' && (
                         <motion.div
                             initial={{ opacity: 0, height: 0, scale: 0.95 }}
                             animate={{ opacity: 1, height: 'auto', scale: 1 }}

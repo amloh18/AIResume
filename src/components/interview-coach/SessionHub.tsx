@@ -66,7 +66,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     const [preparing, setPreparing] = useState(false);
 
     const initSession = useCallback(async () => {
-        setPreparing(true);
+        // setPreparing(true); // Optimization: Skip animation, just load
         try {
             const response = await fetch('/api/interview/initiate', {
                 method: 'POST',
@@ -131,7 +131,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
             toast.error('Failed to initialize session');
             setLoading(false);
         } finally {
-            setPreparing(false);
+            // setPreparing(false);
             setLoading(false);
         }
     }, [jobId, job?.jobTitle]); // Added job.jobTitle dependency for session mapping

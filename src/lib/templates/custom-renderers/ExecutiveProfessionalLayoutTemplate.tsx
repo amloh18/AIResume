@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { stripHtmlTags } from '@/lib/utils/textFormatting';
+import { stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface ExecutiveProfessionalLayoutTemplateProps {
   cvData: UnifiedCVDataStructure;
   className?: string;
+  dateFormat?: DateFormatStyle;
 }
 
 // Format date to "YYYY/MM" format
@@ -46,7 +47,8 @@ const formatDateToYearMonth = (dateString: string | undefined | null): string =>
 
 export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessionalLayoutTemplateProps> = ({
   cvData,
-  className = ''
+  className = '',
+  dateFormat = 'MMM_YYYY'
 }) => {
   const { basics, work, education, skills, projects, languages } = cvData;
 
@@ -286,7 +288,7 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
                   <span className="job-title">{job.position}</span>
                   <span className="company-name">- {job.name}</span>
                 </div>
-                <div className="job-dates">{formatDateToYearMonth(job.startDate)} – {formatDateToYearMonth(job.endDate)}</div>
+                <div className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
               </div>
               {job.summary && (
                 <div className="job-description">
@@ -309,7 +311,7 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
                   <span className="degree-title">{edu.studyType} {edu.area && `in ${edu.area}`}</span>
                   <span className="institution-name">- {edu.institution}</span>
                 </div>
-                <div className="education-dates">{formatDateToYearMonth(edu.startDate)} – {formatDateToYearMonth(edu.endDate)}</div>
+                <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
               </div>
               {edu.description && (
                 <div className="education-description">
@@ -348,7 +350,7 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
                 <div>
                   <div className="project-title">{project.name}</div>
                 </div>
-                <div className="project-dates">{formatDateToYearMonth(project.startDate)} – {formatDateToYearMonth(project.endDate)}</div>
+                <div className="project-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>
               </div>
               {project.description && (
                 <div className="project-description">{stripHtmlTags(project.description)}</div>

@@ -81,7 +81,7 @@ export default function PreviewOverlay() {
                         <div className="bg-white rounded-lg shadow-2xl border border-black/10 dark:border-white/10">
                             <CVPreviewContent
                                 cvData={state.cvData}
-                                selectedTemplate={state.selectedTemplate}
+                                templateName={state.selectedTemplate?.name}
                                 jobData={state.jobData}
                             />
                         </div>
