@@ -11,6 +11,7 @@ import AnnotatedText from '@/components/resume-enhancer/annotations/AnnotatedTex
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { renderRichText } from '@/lib/utils/format-utils';
 import type { DateFormatStyle } from '@/lib/utils/textFormatting';
+import { getPlainTextCV } from '@/lib/utils/cv-analysis-utils';
 
 export type ViewMode = 'edit' | 'recruiter' | 'ats';
 
@@ -348,26 +349,34 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
         <style dangerouslySetInnerHTML={{
           __html: `
           /* Force black text on white background - prevent dark mode inheritance */
-          .cv-page-custom,
-          .cv-page-custom * {
+          /* EXCLUDE ATS MODE (which needs green text on black bg) */
+          .cv-page-custom:not(.mode-ats),
+          .cv-page-custom:not(.mode-ats) * {
             color: #000000 !important;
           }
-          .cv-page-custom h1,
-          .cv-page-custom h2,
-          .cv-page-custom h3,
-          .cv-page-custom h4,
-          .cv-page-custom h5,
-          .cv-page-custom h6,
-          .cv-page-custom p,
-          .cv-page-custom span,
-          .cv-page-custom div,
-          .cv-page-custom li,
-          .cv-page-custom strong,
-          .cv-page-custom b,
-          .cv-page-custom em,
-          .cv-page-custom i {
+          .cv-page-custom:not(.mode-ats) h1,
+          .cv-page-custom:not(.mode-ats) h2,
+          .cv-page-custom:not(.mode-ats) h3,
+          .cv-page-custom:not(.mode-ats) h4,
+          .cv-page-custom:not(.mode-ats) h5,
+          .cv-page-custom:not(.mode-ats) h6,
+          .cv-page-custom:not(.mode-ats) p,
+          .cv-page-custom:not(.mode-ats) span,
+          .cv-page-custom:not(.mode-ats) div,
+          .cv-page-custom:not(.mode-ats) li,
+          .cv-page-custom:not(.mode-ats) strong,
+          .cv-page-custom:not(.mode-ats) b,
+          .cv-page-custom:not(.mode-ats) em,
+          .cv-page-custom:not(.mode-ats) i {
             color: #000000 !important;
           }
+          
+          /* ATS MODE - Force green text */
+          .mode-ats,
+          .mode-ats * {
+            color: #00ff00 !important;
+          }
+
           /* Allow gray for secondary text */
           .cv-page-custom .text-gray-500,
           .cv-page-custom .text-gray-600,
@@ -450,8 +459,11 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
           }
         ` }} />
 
+
+        {/* Helper: parse plain text outside loop if needed, or inside */}
+
         {/* Render multiple pages (or single page for shorter content) */}
-        {Array.from({ length: renderMode === 'pages' ? totalPages : 1 }, (_, pageIndex) => {
+        {Array.from({ length: renderMode === 'pages' ? (viewMode === 'ats' ? 1 : totalPages) : 1 }, (_, pageIndex) => {
           // Determine mode classes for styling
           const isJunior = (cvData.work?.length || 0) < 2;
           const modeClass = viewMode === 'edit' ? 'mode-edit' :
@@ -469,6 +481,47 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
               }
             }
           };
+
+          // ATS Mode: Render Terminal Block instead of Resume
+          if (viewMode === 'ats') {
+            const plainText = getPlainTextCV(cvData);
+            return (
+              <div
+                key={pageIndex}
+                className={`cv-page-custom mb-8 mode-ats`}
+                style={{
+                  width: pageDimensions.width,
+                  minHeight: pageDimensions.height, // Allow it to grow if text is long? Or clip? "Page" usually clips.
+                  height: 'auto', // ATS output might be long, let it flow? Users prefer scrolling.
+                  // If we want it to look like A4 pages, we should stick to dimensions.
+                  // But terminal scroll is better. Let's start with auto height for better UX in "preview page container".
+                  backgroundColor: '#000000', // Pure Black
+                  color: '#00ff00',          // Terminal Green
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 255, 0, 0.2)',
+                  borderRadius: '2px',
+                  boxSizing: 'border-box',
+                  fontFamily: '"Courier New", Courier, monospace',
+                  fontSize: '13px',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{
+                  padding: '32px',
+                  height: '100%',
+                  boxSizing: 'border-box'
+                }}>
+                  <div className="flex items-center gap-2 mb-4 opacity-70 border-b border-green-500/30 pb-2">
+                    <div className="w-2 h-2 rounded-full bg-[#00ff00] animate-pulse" />
+                    <span className="font-bold tracking-wider">ATS_PARSE_PREVIEW</span>
+                    <span className="ml-auto text-[10px] opacity-50">CHARS: {plainText.length}</span>
+                  </div>
+                  <pre className="whitespace-pre-wrap leading-relaxed font-mono">
+                    {plainText || 'No parseable content found.'}
+                  </pre>
+                </div>
+              </div>
+            );
+          }
 
           return (
             <div
@@ -745,7 +798,6 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
             <div key={i} className="mb-4">
               <div className="font-medium">{job.position || job.name}</div>
               <div className="text-sm mt-1">{job.summary}</div>
-              {job.highlights?.map((h, j) => <div key={j} className="text-sm ml-4">• {h}</div>)}
             </div>
           ))}
           {cvData.education?.map((edu, i) => <div key={i} className="mb-3">{edu.institution} - {edu.studyType} {edu.area}</div>)}

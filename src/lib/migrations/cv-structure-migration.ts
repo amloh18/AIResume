@@ -13,7 +13,7 @@
 
 import { UnifiedCVDataStructure, CVStructure, CVSectionStructure } from '@/types/unified-cv-schema';
 import { ITemplate, ISectionBlueprint } from '@/models/Template';
-import { SECTION_REGISTRY, DEFAULT_SECTION_ORDER } from '@/lib/constants/cv-sections';
+import { SECTION_REGISTRY, DEFAULT_SECTION_ORDER, CORE_SECTIONS_LIST } from '@/lib/constants/cv-sections';
 import { hasSectionData } from '@/lib/utils/cv-data-validation';
 
 
@@ -67,14 +67,17 @@ export function migrateLegacyCV(
     const hasData = hasSectionData(cvData, sectionId);
 
     // Step 5: Determine visibility
-    // - personal_header is always visible (users need to fill it)
+    // - Core sections (personal_header, work_experience, education, skills) are ALWAYS visible
+    // - These form the essential skeleton of any CV
     // - Other sections are visible ONLY if they have actual data
-    // - DO NOT mark sections as visible just because arrays exist (empty arrays should be hidden)
-    // - Empty sections should appear in "Add Section" modal, not in the sidebar
+    // - Empty non-core sections should appear in "Add Section" modal, not in the sidebar
     let visible = false;
-    
-    if (sectionId === 'personal_header') {
-      // Personal header is always visible (users need to fill it)
+
+    // Check if this is a core section that should always be visible
+    const isCoreSection = (CORE_SECTIONS_LIST as readonly string[]).includes(sectionId);
+
+    if (isCoreSection) {
+      // Core sections are always visible (users need to fill them)
       visible = true;
     } else {
       // For other sections, ONLY mark as visible if they have actual data

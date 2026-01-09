@@ -15,7 +15,7 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
   className = '',
   dateFormat = 'MMM_YYYY'
 }) => {
-  const { basics, work, education, skills } = cvData;
+  const { basics, work, education, skills, projects, languages, certificates, awards, volunteer, publications, interests, references } = cvData;
 
   return (
     <div className={`executive-standard-template ${className}`}>
@@ -293,6 +293,140 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
           )}
         </div>
       </div>
+
+      {/* Projects */}
+      {projects && projects.length > 0 && (
+        <div className="section" data-section-id="projects">
+          <h2 className="section-title">Projects</h2>
+          {projects.map((project, index) => (
+            <div key={index} className="experience-item">
+              <div className="experience-header">
+                <div>
+                  <div className="job-title">{project.name}</div>
+                </div>
+                {project.startDate && <div className="dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>}
+              </div>
+              {project.description && <div className="bullet-point">{stripHtmlTags(project.description)}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Languages */}
+      {languages && languages.length > 0 && (
+        <div className="section" data-section-id="languages">
+          <h2 className="section-title">Languages</h2>
+          <div className="skills-grid">
+            {languages.map((lang, index) => (
+              <div key={index} className="skills-category">
+                <div className="skills-category-title">{lang.language}</div>
+                <div className="skills-list">{lang.fluency}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Certificates */}
+      {certificates && certificates.length > 0 && (
+        <div className="section" data-section-id="certificates">
+          <h2 className="section-title">Certifications</h2>
+          {certificates.map((cert, index) => (
+            <div key={index} className="certification-item">
+              <div className="certification-header">
+                <div>
+                  <div className="certification-title">{cert.name}</div>
+                  <div className="certification-issuer">{cert.issuer}</div>
+                </div>
+                <div className="certification-year">{cert.date}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Awards */}
+      {awards && awards.length > 0 && (
+        <div className="section" data-section-id="awards">
+          <h2 className="section-title">Awards</h2>
+          {awards.map((award, index) => (
+            <div key={index} className="experience-item">
+              <div className="experience-header">
+                <div>
+                  <div className="job-title">{award.title}</div>
+                  <div className="company-name">{award.awarder}</div>
+                </div>
+                <div className="dates">{award.date}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Volunteer */}
+      {volunteer && volunteer.length > 0 && (
+        <div className="section" data-section-id="volunteer">
+          <h2 className="section-title">Volunteer Experience</h2>
+          {volunteer.map((vol, index) => (
+            <div key={index} className="experience-item">
+              <div className="experience-header">
+                <div>
+                  <div className="job-title">{vol.position}</div>
+                  <div className="company-name">{vol.organization}</div>
+                </div>
+                <div className="dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</div>
+              </div>
+              {vol.summary && <div className="bullet-point">{stripHtmlTags(vol.summary)}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Publications */}
+      {publications && publications.length > 0 && (
+        <div className="section" data-section-id="publications">
+          <h2 className="section-title">Publications</h2>
+          {publications.map((pub, index) => (
+            <div key={index} className="experience-item">
+              <div className="experience-header">
+                <div>
+                  <div className="job-title">{pub.name}</div>
+                  <div className="company-name">{pub.publisher}</div>
+                </div>
+                <div className="dates">{pub.releaseDate}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Interests */}
+      {interests && interests.length > 0 && (
+        <div className="section" data-section-id="interests">
+          <h2 className="section-title">Interests</h2>
+          <div className="skills-grid">
+            {interests.map((interest, index) => (
+              <div key={index} className="skills-category">
+                <div className="skills-category-title">{interest.name}</div>
+                <div className="skills-list">{interest.keywords?.join(', ')}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* References */}
+      {references && references.length > 0 && (
+        <div className="section" data-section-id="references">
+          <h2 className="section-title">References</h2>
+          {references.map((ref, index) => (
+            <div key={index} className="experience-item">
+              <div className="job-title">{ref.name}</div>
+              {ref.reference && <div className="summary-text" style={{ fontStyle: 'italic' }}>"{ref.reference}"</div>}
+            </div>
+          ))}
+        </div>
+      )}
 
     </div>
   );

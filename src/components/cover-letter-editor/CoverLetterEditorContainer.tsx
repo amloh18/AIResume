@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, FileText, Save, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { useCoverLetterEditor } from '@/contexts/CoverLetterEditorContext';
 import Step1Edit from './steps/Step1Edit';
 import Step2Review from './steps/Step2Review';
@@ -11,6 +11,7 @@ import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { extractHeaderFromContent, extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
 import CoverLetterTemplateContent from '@/components/cover-letter-editor/CoverLetterTemplateContent';
+import TemplateSidebar from '@/components/cover-letter-editor/TemplateSidebar';
 
 
 interface CoverLetterEditorContainerProps {
@@ -36,6 +37,72 @@ export default function CoverLetterEditorContainer({
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const initializedRef = useRef(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const coverLetterData = {
+        title: state.coverLetterTitle,
+        content: '', // DO NOT send merged content - store header/body/footer separately
+        header: state.coverLetterData.header,
+        body: state.coverLetterData.body,
+        footer: state.coverLetterData.footer,
+        status: state.coverLetterData.status || 'draft',
+        cvId: state.coverLetterData.cvId,
+        jobId: state.coverLetterData.jobId,
+        journeyId: state.coverLetterData.journeyId || state.journeyId,
+        templateId: state.selectedTemplate?.id
+      };
+
+      let response;
+      if (state.coverLetterId) {
+        // Update existing cover letter
+        response = await fetch(`/api/cover-letters/${state.coverLetterId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            ...coverLetterData
+          })
+        });
+      } else {
+        // Create new cover letter
+        response = await fetch('/api/cover-letters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId,
+            ...coverLetterData
+          })
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to save cover letter');
+      }
+
+      const result = await response.json();
+      const savedId = result.data?.id || result.data?.coverLetter?.id || result.id;
+
+      if (savedId && !state.coverLetterId) {
+        // Optionally update context step or ID here if needed
+      }
+
+      setSaveStatus('success');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+
+    } catch (error) {
+      console.error('Error saving:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Initialize based on mode
   useEffect(() => {
@@ -126,10 +193,10 @@ export default function CoverLetterEditorContainer({
                 }
 
                 // Find template if templateId exists
-                let template: CoverLetterTemplate | null = null;
+                let template: CoverLetterTemplate | undefined;
                 if (coverLetter.templateId || coverLetter.metadata?.templateId) {
                   const templateId = coverLetter.templateId || coverLetter.metadata?.templateId;
-                  template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || null;
+                  template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId);
                 }
 
                 // Load CV data if cvId exists in cover letter (or from journey if not set)
@@ -215,10 +282,10 @@ export default function CoverLetterEditorContainer({
                   body = body || extractBodyFromContent(existingCL.content || '');
                 }
 
-                let template: CoverLetterTemplate | null = null;
+                let template: CoverLetterTemplate | undefined | null = null;
                 if (existingCL.templateId || existingCL.metadata?.templateId) {
                   const templateId = existingCL.templateId || existingCL.metadata?.templateId;
-                  template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || null;
+                  template = COVER_LETTER_TEMPLATES.find(t => t.id === templateId) || undefined;
                 }
 
                 // Load CV data if cvId exists (prefer journey's CV if available)
@@ -273,7 +340,7 @@ export default function CoverLetterEditorContainer({
                     journeyId: existingCL.journeyId,
                     templateId: existingCL.templateId || existingCL.metadata?.templateId
                   },
-                  template,
+                  template: template || undefined,
                   cvData: loadedCVDataForJourney || state.cvData || undefined,
                   jobData: loadedJobDataForJourney || state.jobData || undefined,
                   journeyId: journeyId
@@ -390,9 +457,50 @@ export default function CoverLetterEditorContainer({
             </div>
           </div>
 
-          {/* Template Button and Navigation */}
+          {/* Center Actions: Save & Review */}
+          <div className="flex items-center gap-3 mx-4">
+            {/* Save Button */}
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${saveStatus === 'success'
+                ? 'bg-green-500 text-white'
+                : saveStatus === 'error'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-lime-500 dark:bg-[#99FF00] hover:bg-lime-600 dark:hover:bg-[#88e600] text-black'
+                }`}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : saveStatus === 'success' ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : saveStatus === 'error' ? (
+                <XCircle className="w-4 h-4" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? 'Saving...' : saveStatus === 'success' ? 'Saved' : saveStatus === 'error' ? 'Error' : 'Save'}
+            </button>
+
+            {/* Review Button (Moved from Right) */}
+            {state.currentStep === 1 && (
+              <button
+                onClick={handleStepComplete}
+                disabled={!canGoToNextStep()}
+                className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${!canGoToNextStep()
+                  ? 'opacity-50 cursor-not-allowed bg-gray-200 dark:bg-gray-800 text-gray-500'
+                  : 'bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 dark:bg-[#1a1a1a] dark:border-gray-700 dark:text-white dark:hover:bg-[#252525]'
+                  }`}
+              >
+                Review
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Right Actions: Template & Nav */}
           <div className="flex items-center gap-4">
-            {/* Template Button - Only show on step 1 */}
+            {/* Template Button */}
             {state.currentStep === 1 && (
               <button
                 onClick={() => setShowTemplateModal(true)}
@@ -403,32 +511,16 @@ export default function CoverLetterEditorContainer({
               </button>
             )}
 
-            {/* Navigation Buttons */}
-            <div className="flex items-center gap-2">
-              {state.currentStep === 2 && (
-                <button
-                  onClick={prevStep}
-                  className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-gray-100 dark:bg-[#313a28] hover:bg-gray-200 dark:hover:bg-[#3a4530] text-gray-900 dark:text-white"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </button>
-              )}
-
-              {state.currentStep === 1 && (
-                <button
-                  onClick={handleStepComplete}
-                  disabled={!canGoToNextStep()}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 ${!canGoToNextStep()
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'bg-lime-500 dark:bg-[#99FF00] hover:bg-lime-600 dark:hover:bg-[#88e600] text-black'
-                    }`}
-                >
-                  Review
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+            {/* Previous Button (Only for Step 2) */}
+            {state.currentStep === 2 && (
+              <button
+                onClick={prevStep}
+                className="px-4 py-2 rounded-lg font-medium transition-all flex items-center gap-2 bg-gray-100 dark:bg-[#313a28] hover:bg-gray-200 dark:hover:bg-[#3a4530] text-gray-900 dark:text-white"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Previous
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -441,28 +533,13 @@ export default function CoverLetterEditorContainer({
         </div>
       </div>
 
-      {/* Template Selection Modal */}
-      {showTemplateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70" onClick={() => setShowTemplateModal(false)}>
-          <div className="bg-white dark:bg-[#141810] rounded-xl shadow-xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Choose a Template</h2>
-              <button
-                onClick={() => setShowTemplateModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-[#313a28] rounded-lg transition-colors text-gray-600 dark:text-gray-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-6">
-              <CoverLetterTemplateContent
-                selectedTemplate={state.selectedTemplate}
-                onTemplateSelect={handleTemplateSelect}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Template Sidebar */}
+      <TemplateSidebar
+        isOpen={showTemplateModal}
+        onClose={() => setShowTemplateModal(false)}
+        selectedTemplate={state.selectedTemplate}
+        onTemplateSelect={handleTemplateSelect}
+      />
 
     </div>
   );

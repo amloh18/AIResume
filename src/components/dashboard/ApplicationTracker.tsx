@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Briefcase, Plus, Search, Filter, MoreVertical,
@@ -21,6 +21,7 @@ import EditJobSidebar from './jobs/EditJobSidebar';
 import JourneyTimelineCard from './JourneyTimelineCard';
 import FocusModeToggle from './jobs/FocusModeToggle';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import { useDashboardData } from '@/contexts/DashboardDataContext';
 import toast from 'react-hot-toast';
 import { useOptimizedDataFetching } from '@/lib/hooks/useOptimizedDataFetching';
 import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
@@ -147,9 +148,58 @@ const ApplicationTracker: React.FC = () => {
   // Get user ID for data fetching using unified authentication
   const userId = getUserIdForAPI(user);
 
+  // Use centralized dashboard data context for jobs (prevents refetching on navigation)
+  const {
+    jobs: contextJobs,
+    secondaryLoading,
+    refreshJobs
+  } = useDashboardData();
+
+  // Transform context jobs to local JobApplication format
+  const transformedJobs = useMemo(() => {
+    if (!contextJobs || contextJobs.length === 0) return [];
+    return contextJobs.map((job: any) => ({
+      id: job.id || job._id,
+      _id: job.id || job._id,
+      userId: job.userId,
+      jobTitle: job.jobTitle || job.title,
+      title: job.jobTitle || job.title,
+      company: job.company || job.companyName,
+      status: job.status || 'created',
+      jobDescription: job.jobDescription || job.description,
+      description: job.jobDescription || job.description,
+      location: job.location,
+      jobUrl: job.jobUrl,
+      salary: job.salary,
+      jobType: job.type || job.jobType,
+      type: job.type || job.jobType,
+      source: job.source,
+      sourceUrl: job.sourceUrl,
+      postedDate: job.postedDate,
+      applicationDate: job.applicationDate,
+      deadline: job.deadline,
+      priority: job.priority || 'medium',
+      notes: job.notes,
+      sponsorship: job.sponsorship,
+      tags: job.tags || [],
+      contactDetails: job.contactDetails || { name: '', email: '', phone: '', role: '' },
+      interviews: job.interviews || [],
+      followUps: job.followUps || [],
+      attachments: job.attachments || [],
+      atsScore: job.atsScore || job.matchScore,
+      isArchived: job.isArchived || false,
+      createdAt: job.createdAt,
+      updatedAt: job.updatedAt
+    })) as JobApplication[];
+  }, [contextJobs]);
+
+  // Local state for jobs (initialized from context, updated optimistically)
   const [jobs, setJobs] = useState<JobApplication[]>([]);
   const [journeys, setJourneys] = useState<CVJourney[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Track if initial data has loaded to prevent overwriting optimistic updates
+  const hasInitializedRef = useRef(false);
   const [selectedJob, setSelectedJob] = useState<JobApplication | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -276,58 +326,28 @@ const ApplicationTracker: React.FC = () => {
     }
   };
 
-  const loadData = async () => {
+  // Sync jobs from context to local state (for optimistic updates)
+  useEffect(() => {
+    // Skip if we're in the middle of an optimistic update
+    if (isUpdatingJobStatus.size > 0) return;
+
+    // Initialize or update local jobs from context
+    if (transformedJobs.length > 0 || hasInitializedRef.current) {
+      setJobs(transformedJobs);
+      hasInitializedRef.current = true;
+    }
+  }, [transformedJobs, isUpdatingJobStatus.size]);
+
+  // Update loading state based on context
+  useEffect(() => {
+    // Set loading false once context has loaded jobs
+    if (!secondaryLoading.jobs && hasInitializedRef.current) {
+      setLoading(false);
+    }
+  }, [secondaryLoading.jobs]);
+
+  const loadJourneys = useCallback(async () => {
     try {
-      setLoading(true);
-
-      // Load jobs
-      const jobsResponse = await authenticatedFetchWithUserId('/api/jobs?limit=all', userId || undefined);
-      const jobsResult = await jobsResponse.json();
-      if (jobsResult.success) {
-        // Transform jobs to match our interface - include ALL fields
-        const transformedJobs = jobsResult.data.jobs.map((job: any) => {
-          // Preserve optimistic updates for jobs that are currently being updated
-          const existingJob = jobs.find(j => j.id === job.id);
-          const isBeingUpdated = isUpdatingJobStatus.has(job.id);
-
-          return {
-            id: job.id,
-            _id: job.id,
-            userId: job.userId,
-            jobTitle: job.jobTitle,
-            title: job.jobTitle, // For compatibility
-            company: job.company,
-            // Preserve optimistic status if job is being updated
-            status: (isBeingUpdated && existingJob) ? existingJob.status : job.status,
-            jobDescription: job.jobDescription,
-            description: job.jobDescription, // For compatibility
-            location: job.location,
-            jobUrl: job.jobUrl,
-            salary: job.salary,
-            jobType: job.type,
-            type: job.type, // For compatibility
-            source: job.source,
-            sourceUrl: job.sourceUrl,
-            postedDate: job.postedDate,
-            applicationDate: job.applicationDate,
-            deadline: job.deadline,
-            priority: job.priority || 'medium',
-            notes: job.notes,
-            sponsorship: job.sponsorship,
-            tags: job.tags || [],
-            contactDetails: job.contactDetails || { name: '', email: '', phone: '', role: '' },
-            interviews: job.interviews || [],
-            followUps: job.followUps || [],
-            attachments: job.attachments || [],
-            atsScore: job.atsScore,
-            isArchived: job.isArchived || false,
-            createdAt: job.createdAt,
-            updatedAt: job.updatedAt
-          };
-        });
-        setJobs(transformedJobs);
-      }
-
       // Load CV journeys using cv-journey API with cleanup
       const journeysResponse = await authenticatedFetchWithUserId('/api/application-journey', userId || undefined, {
         method: 'GET',
@@ -338,6 +358,24 @@ const ApplicationTracker: React.FC = () => {
         const loadedJourneys = journeysResult.data.journeys || [];
         setJourneys(loadedJourneys);
       }
+    } catch (error) {
+      console.error('Error loading journeys:', error);
+    }
+  }, [userId]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      hasInitializedRef.current = true;
+
+      // Jobs now come from DashboardDataContext - no need to fetch here
+      // Just sync from context (handled by useEffect above)
+      if (transformedJobs.length > 0) {
+        setJobs(transformedJobs);
+      }
+
+      // Load CV journeys (not in global context)
+      await loadJourneys();
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
@@ -822,11 +860,12 @@ ${userName}`
     }
   };
 
-  const handleJobSaved = (job: any) => {
+  const handleJobSaved = async (job: any) => {
     setShowAddJobModal(false);
     setEditingJob(null);
-    // Refresh the jobs list
-    loadData();
+    // Refresh jobs in global context and load journeys locally
+    await refreshJobs();
+    await loadJourneys();
     toast.success(editingJob ? 'Job updated successfully!' : 'Job added successfully!');
   };
 

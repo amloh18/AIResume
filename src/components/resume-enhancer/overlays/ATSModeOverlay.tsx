@@ -210,7 +210,8 @@ export default function ATSModeOverlay({
         [cvData, jdKeywords, features.keywordHeatmap]
     );
 
-    // Add X-ray class to container
+    // Parse Plain Text for full display
+    const plainText = useMemo(() => getPlainTextCV(cvData), [cvData]);
     React.useEffect(() => {
         if (containerRef?.current) {
             containerRef.current.classList.add('ats-xray-active');
@@ -222,9 +223,29 @@ export default function ATSModeOverlay({
 
     return (
         <AnimatePresence>
-            <div className="absolute inset-0 pointer-events-none">
-                {/* X-Ray Visual Effect */}
-                <XRayEffect />
+            <div className="absolute inset-0 z-10 bg-[#0d1117] flex flex-col font-mono text-sm overflow-hidden">
+                {/* Header / HUD */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#30363d] bg-[#161b22]">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2 h-2 rounded-full bg-[#3fb950] animate-pulse" />
+                        <span className="text-[#3fb950] font-bold tracking-wider">TERMINAL_VIEW :: ATS_PARSE_PREVIEW</span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-[#8b949e]">
+                        <span>CHARS: {plainText.length}</span>
+                        <span>LINES: {plainText.split('\n').length}</span>
+                    </div>
+                </div>
+
+                {/* Main Content Area */}
+                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                    <div className="max-w-4xl mx-auto">
+                        <pre className="whitespace-pre-wrap text-[#c9d1d9] leading-relaxed font-mono">
+                            {plainText || 'No parseable content found.'}
+                        </pre>
+                    </div>
+                </div>
+
+                {/* Sidebars (kept floating on top of this view) */}
 
                 {/* Parsing Confidence Banner */}
                 {features.parsingConfidence && (

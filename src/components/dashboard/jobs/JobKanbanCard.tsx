@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -68,6 +70,11 @@ interface JobKanbanCardProps {
     onAction?: (action: string, job: JobApplication, e: React.MouseEvent) => void;
 }
 
+// Global set to track analyzed jobs across component remounts
+// This prevents the infinite loop where:
+// 1. Analysis triggers update -> 2. Update triggers refresh -> 3. Refresh unmounts cards -> 4. Remount forgets local ref -> 5. Analysis triggers again
+const analyzedJobIds = new Set<string>();
+
 const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
     job,
     stage,
@@ -94,10 +101,14 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
             // 1. matchScore is undefined
             // 2. job has description (needed for analysis)
             // 3. Not already analyzing
-            if (job.matchScore === undefined && job.jobDescription && !isAnalyzing && !hasAnalyzedRef.current) {
+            // 3. Not already analyzing
+            // 4. Not analyzed in this session (global check)
+            if (job.matchScore === undefined && job.jobDescription && !isAnalyzing &&
+                !hasAnalyzedRef.current && !analyzedJobIds.has(job.id)) {
                 try {
                     setIsAnalyzing(true);
-                    hasAnalyzedRef.current = true; // Mark as attempted immediately
+                    hasAnalyzedRef.current = true; // Mark as attempted locally
+                    analyzedJobIds.add(job.id); // Mark as attempted globally
 
                     // Dynamically import to avoid circular dependencies if any
                     const { triggerJobAnalysis } = await import('@/lib/services/jobAnalysisService');
@@ -227,10 +238,10 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
                         </div>
                     </div>
                     <div className="flex gap-1.5">
-                        <div className={`p-1 rounded-full ${hasCV ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                        <div className={`p-1 rounded-full ${hasCV ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
                             <FileText size={12} />
                         </div>
-                        <div className={`p-1 rounded-full ${hasCL ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                        <div className={`p-1 rounded-full ${hasCL ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-500'}`}>
                             <FileText size={12} />
                         </div>
                     </div>

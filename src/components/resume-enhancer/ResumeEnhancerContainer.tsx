@@ -19,7 +19,8 @@ import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useU
 import { useSession } from 'next-auth/react';
 import SidebarMembershipCard from '@/components/resume-enhancer/SidebarMembershipCard';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
-import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
+
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
 import ATSFactorsList from '@/components/resume-enhancer/ATSFactorsList';
@@ -145,9 +146,9 @@ export default function ResumeEnhancerContainer({
     return Math.max(0, Math.min(100, state.surgeonAnalysis?.score ?? 0));
   }, [atsScore, jdText, state.surgeonAnalysis?.score]);
 
-  // Calculate score breakdown using CVScoringService - same as Step4Review
+  // Calculate score breakdown using CentralScoreManager - same as Step4Review
   const scoreResult = useMemo(() => {
-    return CVScoringService.getFullScoreResult(
+    return CentralScoreManager.getInstance().getScoreSync(
       state.cvData,
       state.keywordGapAnalysis || undefined,
       state.atsScoreCap
@@ -2398,7 +2399,7 @@ export default function ResumeEnhancerContainer({
       </header>
 
       {/* Content Area (Left Sticky Steps + Main Content) */}
-      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)]">
+      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)] mt-2">
         {/* Floating / Sticky vertical steps panel (desktop) */}
         <aside className="hidden lg:flex lg:flex-col w-72 flex-shrink-0 m-2 rounded-xl bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 h-auto max-h-[calc(100vh-80px)] overflow-hidden">
           <div className="flex flex-col h-full p-3 overflow-hidden">
@@ -2635,8 +2636,8 @@ export default function ResumeEnhancerContainer({
                 setActiveSection(sectionId);
                 step3Ref.current?.scrollToSection(sectionId);
               }}
-              onAddSection={() => {
-                step3Ref.current?.handleAddSection();
+              onAddSection={(sectionId) => {
+                step3Ref.current?.addNewSection(sectionId);
               }}
               onDeleteSection={(sectionId) => {
                 step3Ref.current?.handleDeleteSectionFromSidebar(sectionId);
@@ -2651,23 +2652,7 @@ export default function ResumeEnhancerContainer({
         {/* Main Content */}
         <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
           <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
-            {/* Mode Validation Banner */}
-            {state.analysisModeInfo && state.currentStep === 3 && (
-              <div className="px-4 pt-4">
-                <ModeValidationBanner
-                  modeInfo={state.analysisModeInfo}
-                  onDismiss={() => dispatch({ type: 'CLEAR_MODE_WARNINGS' })}
-                  onActionClick={(action) => {
-                    if (action.toLowerCase().includes('role')) {
-                      setShowRoleModal(true);
-                    } else if (action.toLowerCase().includes('jd') || action.toLowerCase().includes('job')) {
-                      setShowJobParserDialog(true);
-                    }
-                  }}
-                  className="mb-2"
-                />
-              </div>
-            )}
+
             <AnimatePresence mode="wait">
               <motion.div
                 key={state.currentStep}

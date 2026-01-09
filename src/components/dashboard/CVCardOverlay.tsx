@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Edit, 
-  Download, 
+import {
+  Edit,
+  Download,
   Star,
   Pencil,
   Check,
@@ -66,7 +66,7 @@ interface CVCardOverlayProps {
   onViewReport?: (cv: CV) => void | Promise<void>; // View career report
 }
 
-const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
+const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
   cv,
   onEdit,
   onDownload,
@@ -111,13 +111,13 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
       '#FFFBEB', // Light amber
       '#F1F5F9', // Light slate
     ];
-    
+
     // Use CV ID to generate consistent color
     const hash = id.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     return colors[Math.abs(hash) % colors.length];
   };
 
@@ -127,10 +127,10 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     if (linkedJourneyProp !== undefined) {
       return;
     }
-    
+
     const checkForLinkedJourney = async () => {
       if (!session?.user?.id || !cv.id) return;
-      
+
       try {
         setCheckingJourney(true);
         const journey = await CVJourneyLookupService.findJourneyByCVId(cv.id, session.user.id);
@@ -273,11 +273,11 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     >
       {/* CV Preview Container - Outer colored background */}
       <div className="w-full aspect-[3/4] rounded-xl border border-gray-200 dark:border-gray-700 group-hover:shadow-lg dark:group-hover:shadow-lime-500/20 transition-shadow p-6"
-           style={{
-             backgroundColor: getRandomColor(cv.id)
-           }}>
+        style={{
+          backgroundColor: getRandomColor(cv.id)
+        }}>
         {/* CV Preview - Inner smaller preview */}
-        <div 
+        <div
           className="w-full h-full rounded-xl relative shadow-lg cursor-pointer overflow-hidden"
           onClick={(e) => {
             e.stopPropagation();
@@ -339,7 +339,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             />
           ) : thumbnailLoading ? (
             /* Loading state */
-            <div 
+            <div
               className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
@@ -357,7 +357,7 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
             </div>
           ) : (
             /* Fallback when no preview available */
-            <div 
+            <div
               className="w-full h-full flex items-center justify-center rounded-xl cursor-pointer"
               onClick={(e) => {
                 e.stopPropagation();
@@ -378,18 +378,18 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
           {/* CV Type Badge - Top right corner */}
           {/* Determine CV type from cvType field or legacy fields */}
           {(() => {
-            const cvType = cv.cvType || 
-                         (cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.createdVia === 'ai-career-report' ? 'master' : 
-                          cv.journeyId ? 'journey' : 'standalone');
-            
+            const cvType = cv.cvType ||
+              (cv.isMaster === true || cv.metadata?.isMaster === true || cv.metadata?.createdVia === 'ai-career-report' ? 'master' :
+                cv.journeyId ? 'journey' : 'standalone');
+
             const badgeConfig = {
               master: { label: 'Master', bgColor: 'bg-amber-400', textColor: 'text-black', borderColor: 'border-amber-500' },
               journey: { label: 'Journey', bgColor: 'bg-blue-400', textColor: 'text-white', borderColor: 'border-blue-500' },
               standalone: { label: 'Standalone', bgColor: 'bg-gray-400', textColor: 'text-white', borderColor: 'border-gray-500' }
             };
-            
+
             const config = badgeConfig[cvType] || badgeConfig.standalone;
-            
+
             return (
               <div className="absolute top-3 right-3">
                 <span className={`px-2 py-1 rounded text-xs font-medium ${config.bgColor} ${config.textColor} border ${config.borderColor}`}>
@@ -458,18 +458,36 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
 
         {/* Action Icons Row */}
         <div className="flex gap-2 mt-2 text-gray-500 dark:text-[#aebb9b]">
-          <motion.button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(cv);
-            }}
-            className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            title="Edit CV"
-          >
-            <Pencil size={16} />
-          </motion.button>
+          {/* Edit button: Show for Master/Standalone CVs, hide for journey CVs in final stages */}
+          {(() => {
+            // Hide for published CVs
+            if (cv.status === 'published') return null;
+
+            // For journey CVs, check the stage
+            const cvType = cv.cvType || (cv.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
+            if (cvType === 'journey') {
+              const stage = (cv.metadata?.stage || '').toLowerCase();
+              // Hide edit for journey CVs in final stages
+              if (['applied', 'interview', 'accepted', 'rejected', 'offer', 'hired'].some(s => stage.includes(s))) {
+                return null;
+              }
+            }
+
+            return (
+              <motion.button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(cv);
+                }}
+                className="hover:text-lime-500 dark:hover:text-lime-400 transition-all duration-200"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Edit CV"
+              >
+                <Pencil size={16} />
+              </motion.button>
+            );
+          })()}
 
           {onViewReport && (
             <motion.button
@@ -562,5 +580,21 @@ const CVCardOverlay: React.FC<CVCardOverlayProps> = ({
     </motion.div>
   );
 };
+
+// Memoized component to prevent unnecessary re-renders when parent updates
+const CVCardOverlay = React.memo(CVCardOverlayComponent, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.cv.id === nextProps.cv.id &&
+    prevProps.cv.title === nextProps.cv.title &&
+    prevProps.cv.status === nextProps.cv.status &&
+    prevProps.cv.lastModified === nextProps.cv.lastModified &&
+    prevProps.cv.isStarred === nextProps.cv.isStarred &&
+    prevProps.cv.atsScore === nextProps.cv.atsScore &&
+    prevProps.editingCVId === nextProps.editingCVId &&
+    prevProps.editingTitle === nextProps.editingTitle &&
+    prevProps.linkedJourney === nextProps.linkedJourney
+  );
+});
 
 export default CVCardOverlay;

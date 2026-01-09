@@ -338,6 +338,16 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           min-height: auto;
         }
 
+        /* Placeholder styles for empty sections */
+        .placeholder-text {
+          color: #9CA3AF !important;
+          font-style: italic;
+        }
+
+        .placeholder-item {
+          opacity: 0.7;
+        }
+
         @media print {
           .data-driven-pro-template {
             -webkit-print-color-adjust: exact;
@@ -392,7 +402,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         {/* Left Column (25%) */}
         <div className="left-column">
           {/* Contact */}
-          <div>
+          <div data-section-id="personal">
             <h3 className="section-title">Contact</h3>
             {basics?.phone && (
               <div className="contact-item">
@@ -439,11 +449,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             )}
           </div>
 
-          {/* Skills */}
-          {skills && skills.length > 0 && (
-            <div style={{ marginTop: '1.5rem' }} data-section-id="skills">
-              <h3 className="section-title">Skills</h3>
-              {skills.map((skill, index) => (
+          {/* Skills - Always render with placeholder if empty */}
+          <div style={{ marginTop: '1.5rem' }} data-section-id="skills">
+            <h3 className="section-title">Skills</h3>
+            {skills && skills.length > 0 ? (
+              skills.map((skill, index) => (
                 <div key={index} className="skills-category" data-item-id={index}>
                   <div className="skills-category-title">{skill.category || 'Professional'}</div>
                   <div className="skills-list">
@@ -454,9 +464,14 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            ) : (
+              <div className="skills-category placeholder-item">
+                <div className="skills-category-title placeholder-text">Skill Category</div>
+                <div className="skills-list placeholder-text">Click to add your skills</div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Vertical Separator */}
@@ -506,11 +521,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             </div>
           )}
 
-          {/* Work Experience */}
-          {work && work.length > 0 && (
-            <div data-section-id="work">
-              <h2 className="main-section-title">Work Experience</h2>
-              {work.map((job, index) => (
+          {/* Work Experience - Always render with placeholder if empty */}
+          <div data-section-id="work">
+            <h2 className="main-section-title">Work Experience</h2>
+            {work && work.length > 0 ? (
+              work.map((job, index) => (
                 <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div>
@@ -532,9 +547,23 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            ) : (
+              <div className="experience-item placeholder-item">
+                <div className="experience-header">
+                  <div>
+                    <div className="job-title placeholder-text">Job Title</div>
+                    <div className="company-info placeholder-text">Company Name | Start Date - End Date</div>
+                  </div>
+                </div>
+                <div className="experience-description">
+                  <div className="placeholder-text" style={{ fontSize: '0.75rem' }}>
+                    Click to add your work experience
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Projects */}
           {projects && projects.length > 0 && (

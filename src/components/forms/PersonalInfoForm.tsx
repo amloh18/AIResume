@@ -42,6 +42,8 @@ interface PersonalInfoFormProps {
   onApplyAnnotation?: (fix: FixAnnotation) => void;
   onDismissAnnotation?: (fixId: string) => void;
   reviewMode?: boolean;
+  hidePhoto?: boolean;
+  hideSummary?: boolean;
 }
 
 const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
@@ -53,7 +55,9 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   annotations = [],
   onApplyAnnotation,
   onDismissAnnotation,
-  reviewMode = false
+  reviewMode = false,
+  hidePhoto = false,
+  hideSummary = false
 }) => {
   // Get session for authentication - use this as primary source, with userId as fallback
   const { data: session, status: sessionStatus } = useSession();
@@ -289,74 +293,76 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   return (
     <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
       {/* Photo Upload Section - Full Width */}
-      <div className="tablet:col-span-2">
-        <label className="block text-white/80 text-sm font-medium mb-2">Profile Photo</label>
-        <div className="flex items-start gap-4">
-          {/* Image Preview */}
-          {safePersonalInfo.image ? (
-            <div className="relative flex-shrink-0">
-              <img
-                src={safePersonalInfo.image}
-                alt="Profile"
-                className="w-24 h-24 rounded-lg object-cover border-2 border-[var(--border-primary)]"
-                onError={(e) => {
-                  // Handle broken image URLs
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-              <button
-                type="button"
-                onClick={handleRemoveImage}
-                className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-colors"
-                title="Remove photo"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ) : (
-            <div className="w-24 h-24 rounded-lg border-2 border-dashed border-[var(--border-primary)] flex items-center justify-center bg-[var(--bg-tertiary)] flex-shrink-0">
-              <ImageIcon className="w-8 h-8 text-[color:var(--text-tertiary)]" />
-            </div>
-          )}
-
-          {/* Upload Controls */}
-          <div className="flex-1">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              id="photo-upload"
-              disabled={isUploadingImage}
-            />
-            <label
-              htmlFor="photo-upload"
-              className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-            >
-              {isUploadingImage ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Uploading...</span>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-4 h-4" />
-                  <span>{safePersonalInfo.image ? 'Change Photo' : 'Upload Photo'}</span>
-                </>
-              )}
-            </label>
-            {uploadError && (
-              <p className="mt-2 text-sm text-red-400">{uploadError}</p>
+      {!hidePhoto && (
+        <div className="tablet:col-span-2">
+          <label className="block text-white/80 text-sm font-medium mb-2">Profile Photo</label>
+          <div className="flex items-start gap-4">
+            {/* Image Preview */}
+            {safePersonalInfo.image ? (
+              <div className="relative flex-shrink-0">
+                <img
+                  src={safePersonalInfo.image}
+                  alt="Profile"
+                  className="w-24 h-24 rounded-lg object-cover border-2 border-[var(--border-primary)]"
+                  onError={(e) => {
+                    // Handle broken image URLs
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={handleRemoveImage}
+                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-colors"
+                  title="Remove photo"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <div className="w-24 h-24 rounded-lg border-2 border-dashed border-[var(--border-primary)] flex items-center justify-center bg-[var(--bg-tertiary)] flex-shrink-0">
+                <ImageIcon className="w-8 h-8 text-[color:var(--text-tertiary)]" />
+              </div>
             )}
-            <p className="mt-2 text-xs text-[color:var(--text-tertiary)]">
-              Recommended: Square image, max 5MB. Formats: JPG, PNG, WEBP
-            </p>
+
+            {/* Upload Controls */}
+            <div className="flex-1">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileSelect}
+                className="hidden"
+                id="photo-upload"
+                disabled={isUploadingImage}
+              />
+              <label
+                htmlFor="photo-upload"
+                className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+              >
+                {isUploadingImage ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    <span>{safePersonalInfo.image ? 'Change Photo' : 'Upload Photo'}</span>
+                  </>
+                )}
+              </label>
+              {uploadError && (
+                <p className="mt-2 text-sm text-red-400">{uploadError}</p>
+              )}
+              <p className="mt-2 text-xs text-[color:var(--text-tertiary)]">
+                Recommended: Square image, max 5MB. Formats: JPG, PNG, WEBP
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Name and Title */}
       <div>
@@ -469,42 +475,44 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       </div>
 
       {/* Professional Summary */}
-      <div className="tablet:col-span-2">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
-          <WYSIWYGToolbar
-            showAIButton={true}
-            fieldType="summary"
-            onAISuggestions={generateAISuggestions}
-            isGenerating={loadingSuggestions}
-          />
-        </div>
-        <AISuggestionsPanel
-          isVisible={showSuggestions}
-          suggestions={suggestions}
-          isLoading={loadingSuggestions}
-          onSelect={handleSelectSuggestion}
-          onClose={() => setShowSuggestions(false)}
-        />
-        <WYSIWYGEditor
-          value={safePersonalInfo.summary}
-          onChange={(value) => handleFieldChange('summary', value)}
-          rows={4}
-          placeholder="Write a brief summary of your professional background and key achievements..."
-          hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')}
-        />
-        {/* Display inline suggestions for basics.summary below the editor - only when review mode is ON */}
-        {reviewMode && annotations
-          .filter((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')
-          .map((fix) => (
-            <InlineSuggestion
-              key={fix.id}
-              fix={fix}
-              onApply={onApplyAnnotation || (() => { })}
-              onDismiss={onDismissAnnotation || (() => { })}
+      {!hideSummary && (
+        <div className="tablet:col-span-2">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
+            <WYSIWYGToolbar
+              showAIButton={true}
+              fieldType="summary"
+              onAISuggestions={generateAISuggestions}
+              isGenerating={loadingSuggestions}
             />
-          ))}
-      </div>
+          </div>
+          <AISuggestionsPanel
+            isVisible={showSuggestions}
+            suggestions={suggestions}
+            isLoading={loadingSuggestions}
+            onSelect={handleSelectSuggestion}
+            onClose={() => setShowSuggestions(false)}
+          />
+          <WYSIWYGEditor
+            value={safePersonalInfo.summary}
+            onChange={(value) => handleFieldChange('summary', value)}
+            rows={4}
+            placeholder="Write a brief summary of your professional background and key achievements..."
+            hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')}
+          />
+          {/* Display inline suggestions for basics.summary below the editor - only when review mode is ON */}
+          {reviewMode && annotations
+            .filter((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')
+            .map((fix) => (
+              <InlineSuggestion
+                key={fix.id}
+                fix={fix}
+                onApply={onApplyAnnotation || (() => { })}
+                onDismiss={onDismissAnnotation || (() => { })}
+              />
+            ))}
+        </div>
+      )}
 
     </div>
   );

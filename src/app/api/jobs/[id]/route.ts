@@ -280,6 +280,14 @@ export async function PUT(
     }
 
     console.log('🔍 Job Update API - Updating job with data:', Object.keys(updateData));
+    if (updateData.matchScore !== undefined) {
+      console.log('🔍 Job Update API - Updating matchScore:', updateData.matchScore);
+    }
+
+    // Check if we are updating a draft job
+    if (currentJob.status === 'draft') {
+      console.log('🔍 Job Update API - Updating DRAFT job. ID:', resolvedParams.id);
+    }
 
     // VALIDATION: Prevent invalid status transitions
     const validStatuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];

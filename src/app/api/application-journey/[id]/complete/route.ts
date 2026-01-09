@@ -29,7 +29,7 @@ export async function PATCH(
 
     // Check if journey is already completed
     if (journey.status === 'completed') {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Journey is already completed',
         journey: {
           id: journey._id,
@@ -58,6 +58,22 @@ export async function PATCH(
       },
       { new: true }
     );
+
+    // Update associated CV status to 'published'
+    if (journey.cvId) {
+      try {
+        // Dynamic import to avoid circular dependency issues if any, though explicit import is better
+        const { default: CV } = await import('@/models/CV');
+        await CV.findByIdAndUpdate(journey.cvId, {
+          status: 'published',
+          updatedAt: endTime
+        });
+        console.log(`Marked CV ${journey.cvId} as published`);
+      } catch (error) {
+        console.error(`Failed to mark CV ${journey.cvId} as published:`, error);
+        // Continue, don't fail the whole request
+      }
+    }
 
     // Update associated job status to 'applied'
     const updatedJob = await JobApplication.findOneAndUpdate(

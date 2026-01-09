@@ -302,7 +302,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
         {/* Left Column */}
         <div className="left-column">
           {/* Contact Section */}
-          <div className="section">
+          <div className="section" data-section-id="personal">
             <div className="section-title">Contact</div>
             <div className="contact-info">
               {basics?.phone && (

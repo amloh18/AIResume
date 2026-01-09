@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { CV, JobApplication, ApplicationJourney } from '@/models';
-import { CVScoringService } from '@/lib/services/cv-scoring-service';
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 import { KeywordGapAnalysisService } from '@/lib/services/keyword-gap-analysis-service';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ApplicationJourneyRelationshipService } from '@/lib/services/cvJourneyRelationshipService';
@@ -244,8 +244,8 @@ export async function POST(request: NextRequest) {
         matchedKeywords: keywordAnalysis.matchedKeywords.length
       });
 
-      // Step 2: Calculate ATS score using CVScoringService (same formula as FloatingPulsePill)
-      const scoreResult = CVScoringService.getFullScoreResult(
+      // Step 2: Calculate ATS score using CentralScoreManager (same formula as FloatingPulsePill)
+      const scoreResult = CentralScoreManager.getInstance().getScoreSync(
         cvData,
         keywordAnalysis,
         100 // atsScoreCap

@@ -18,6 +18,8 @@ export interface CoverLetterData {
   jobId?: string;
   journeyId?: string;
   templateId?: string;
+  structuredBody?: any; // JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }
+  metadata?: any;
 }
 
 // State Interface
@@ -25,27 +27,27 @@ export interface CoverLetterEditorState {
   // Mode and navigation
   mode: 'create' | 'edit' | 'journey';
   currentStep: 1 | 2;
-  
+
   // Cover letter identification
   coverLetterId?: string;
   coverLetterTitle: string;
-  
+
   // Cover letter data
   coverLetterData: CoverLetterData;
-  
+
   // Template
   selectedTemplate: CoverLetterTemplate | null;
-  
+
   // Context data
   cvData: UnifiedCVDataStructure | null;
   jobData: any;
   journeyId?: string;
-  
+
   // Save state
   isSaving: boolean;
   saveError: string | null;
   saveStatus: 'idle' | 'saving' | 'success' | 'error';
-  
+
   // Session tracking
   sessionStartTime: number;
   stepStartTimes: Record<number, number>;
@@ -129,15 +131,16 @@ function coverLetterEditorReducer(
 
     case 'UPDATE_COVER_LETTER_DATA': {
       const updatedData = { ...state.coverLetterData, ...action.payload };
-      
+
       // DO NOT merge content here - it will be merged in preview only
       // Remove content from payload if it exists (we don't store merged content)
-      if (action.payload.content !== undefined && 
-          (action.payload.header !== undefined || action.payload.body !== undefined || action.payload.footer !== undefined)) {
+      if (action.payload.content !== undefined &&
+        (action.payload.header !== undefined || action.payload.body !== undefined || action.payload.footer !== undefined)) {
         // If header/body/footer are being updated, don't use provided content
+        // @ts-ignore
         delete updatedData.content;
       }
-      
+
       return {
         ...state,
         coverLetterData: updatedData
@@ -230,13 +233,13 @@ function coverLetterEditorReducer(
       let extractedHeader = loadedData.header || extractHeaderFromContent(loadedData.content);
       let extractedBody = loadedData.body || extractBodyFromContent(loadedData.content);
       let extractedFooter = loadedData.footer || extractFooterFromContent(loadedData.content);
-      
+
       // If header doesn't have date/recipient info and CV/job data is available, auto-populate
       if (extractedHeader && action.payload.cvData) {
         const headerLines = extractedHeader.split('\n').filter(line => line.trim());
         const hasDate = headerLines.some(line => /^\d{1,2}\/\d{1,2}\/\d{4}/.test(line.trim()));
         const hasRecipient = headerLines.some(line => /^(Hiring Manager|Recruitment Team|Human Resources)/i.test(line.trim()));
-        
+
         // If missing date or recipient info, regenerate header with full info
         if (!hasDate || !hasRecipient) {
           extractedHeader = formatCoverLetterHeader(action.payload.cvData, action.payload.jobData);
@@ -245,21 +248,21 @@ function coverLetterEditorReducer(
         // If no header at all, generate it
         extractedHeader = formatCoverLetterHeader(action.payload.cvData, action.payload.jobData);
       }
-      
+
       // If footer is still empty and CV data is available, generate it
       if (!extractedFooter && action.payload.cvData) {
         extractedFooter = formatCoverLetterFooter(action.payload.cvData);
       }
-      
+
       // Clean header to remove body content but keep header structure
       let finalHeader = extractedHeader;
       if (finalHeader) {
         finalHeader = cleanHeaderContent(finalHeader);
       }
-      
+
       // DO NOT merge content here - it will be merged in preview only
       // Store header, body, and footer separately
-      
+
       return {
         ...state,
         mode: 'edit',
@@ -270,7 +273,8 @@ function coverLetterEditorReducer(
           ...loadedData,
           header: finalHeader,
           body: extractedBody,
-          footer: extractedFooter
+          footer: extractedFooter,
+          structuredBody: loadedData.structuredBody || loadedData.metadata?.structuredBody,
           // content will be generated on-the-fly in preview
         },
         selectedTemplate: action.payload.template || state.selectedTemplate,
@@ -296,7 +300,7 @@ function coverLetterEditorReducer(
 interface CoverLetterEditorContextType {
   state: CoverLetterEditorState;
   dispatch: React.Dispatch<CoverLetterEditorAction>;
-  
+
   // Helper functions
   goToStep: (step: 1 | 2) => void;
   nextStep: () => void;
@@ -320,7 +324,7 @@ export function CoverLetterEditorProvider({ children }: { children: ReactNode })
   const [state, dispatch] = useReducer(coverLetterEditorReducer, initialState);
 
   // Helper functions
-  const goToStep = (step: 1 | 2 | 3) => {
+  const goToStep = (step: 1 | 2) => {
     dispatch({ type: 'SET_STEP', payload: step });
   };
 

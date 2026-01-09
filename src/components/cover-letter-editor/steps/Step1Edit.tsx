@@ -7,20 +7,36 @@ import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import { formatCoverLetterHeader, formatCoverLetterFooter, cleanHeaderContent } from '@/lib/utils/coverLetterUtils';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import BridgeCard from '../BridgeCard';
+import { Sparkles, RefreshCw, Wand2, ZoomIn, ZoomOut, Maximize, FileText } from 'lucide-react';
+import PersonalInfoForm from '@/components/forms/PersonalInfoForm';
 
 export default function Step1Edit() {
-  const { state, updateHeader, updateBody, updateFooter, autoPopulateHeader, setCVData } = useCoverLetterEditor();
+  const { state, updateHeader, updateBody, updateFooter, updateCoverLetter, setCVData } = useCoverLetterEditor();
   const [headerContent, setHeaderContent] = useState(state.coverLetterData.header || '');
   const [bodyContent, setBodyContent] = useState(state.coverLetterData.body || '');
   const [footerContent, setFooterContent] = useState(state.coverLetterData.footer || '');
-  
-  // AI suggestions state for body
+
+  // Modular State
+  const [structuredBody, setStructuredBody] = useState<any>(state.coverLetterData.structuredBody || null);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+
+  // AI suggestions state for body (Legacy)
   const [showBodySuggestions, setShowBodySuggestions] = useState(false);
   const [bodySuggestions, setBodySuggestions] = useState<Array<{ method: string; content: string; size?: string }>>([]);
   const [loadingBodySuggestions, setLoadingBodySuggestions] = useState(false);
 
+  // Preview Controls
+  const [zoom, setZoom] = useState(1);
+  const [pageSize, setPageSize] = useState<'A4' | 'Letter'>('A4');
+  const previewContainerRef = React.useRef<HTMLDivElement>(null);
+
   // Auto-populate header and footer on mount if CV data is available
   useEffect(() => {
+    if (state.cvData) {
+      // Ensure basics are populated if empty (for PersonalInfoForm)
+      // This might be where the issue is - initial load
+    }
     if (state.cvData) {
       if (!state.coverLetterData.header?.trim()) {
         const autoHeader = formatCoverLetterHeader(state.cvData, state.jobData);
@@ -46,7 +62,10 @@ export default function Step1Edit() {
     if (state.coverLetterData.footer !== undefined) {
       setFooterContent(state.coverLetterData.footer);
     }
-  }, [state.coverLetterData.header, state.coverLetterData.body, state.coverLetterData.footer]);
+    if (state.coverLetterData.structuredBody) {
+      setStructuredBody(state.coverLetterData.structuredBody);
+    }
+  }, [state.coverLetterData.header, state.coverLetterData.body, state.coverLetterData.footer, state.coverLetterData.structuredBody]);
 
   const handleHeaderChange = (value: string) => {
     // Clean header to only contain contact information
@@ -55,14 +74,114 @@ export default function Step1Edit() {
     updateHeader(cleanedHeader);
   };
 
-  const handleBodyChange = (value: string) => {
-    setBodyContent(value);
-    updateBody(value);
-  };
-
   const handleFooterChange = (value: string) => {
     setFooterContent(value);
     updateFooter(value);
+  };
+
+  const handleBasicsUpdate = (field: string, value: any) => {
+    // Update CV Data
+    const keys = field.split('.');
+    let newData: any = { ...state.cvData?.basics };
+
+    // Handle nested updates/top-level basics updates
+    if (keys.length > 1) {
+      // Deep update or flattened? PersonalInfoForm expects full replacement for object fields usually
+      // For simple fields like 'phone', it's direct.
+      newData = { ...state.cvData?.basics, [field]: value };
+    } else {
+      newData = { ...state.cvData?.basics, [field]: value };
+    }
+
+    const newCVData = { ...state.cvData, basics: newData };
+
+    // Update context
+    setCVData(newCVData as UnifiedCVDataStructure);
+
+    // Update Header
+    const updatedHeader = formatCoverLetterHeader(newCVData as UnifiedCVDataStructure, state.jobData);
+    setHeaderContent(updatedHeader);
+    updateHeader(updatedHeader);
+  };
+
+  // --- Modular Editor Logic ---
+
+  const updateStructuredSection = (sectionKey: string, newText: string) => {
+    if (!structuredBody || !structuredBody.sections) return;
+
+    const newStructuredBody = {
+      ...structuredBody,
+      sections: {
+        ...structuredBody.sections,
+        [sectionKey]: {
+          ...structuredBody.sections[sectionKey],
+          text: newText
+        }
+      }
+    };
+
+    setStructuredBody(newStructuredBody);
+    updateCoverLetter({ structuredBody: newStructuredBody });
+
+    // Regenerate the flat body for preview
+    const newBodyContent = formatLegacyBody(newStructuredBody);
+    setBodyContent(newBodyContent);
+    updateBody(newBodyContent);
+  };
+
+  const formatLegacyBody = (structuredData: any): string => {
+    if (!structuredData?.sections) return '';
+    const sections = structuredData.sections;
+    const parts = [];
+
+    if (sections.introduction?.text) parts.push(sections.introduction.text);
+    if (sections.experience_bridge_1?.text) parts.push(sections.experience_bridge_1.text);
+    if (sections.experience_bridge_2?.text) parts.push(sections.experience_bridge_2.text);
+    if (sections.motivation?.text) parts.push(sections.motivation.text);
+    if (sections.closing?.text) parts.push(sections.closing.text);
+
+    return parts.join('\n\n');
+  };
+
+  const handleRegenerateModular = async () => {
+    if (!state.cvData || !state.jobData) return;
+
+    setIsRegenerating(true);
+    try {
+      const response = await fetch('/api/ai/cover-letter-generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cvData: state.cvData,
+          jobData: state.jobData,
+          recipientName: 'Hiring Manager',
+          companyName: state.jobData.company
+        })
+      });
+
+      if (!response.ok) throw new Error('Generation failed');
+
+      const data = await response.json();
+      if (data.structuredContent) {
+        setStructuredBody(data.structuredContent);
+        updateCoverLetter({ structuredBody: data.structuredContent });
+
+        const newBody = formatLegacyBody(data.structuredContent);
+        setBodyContent(newBody);
+        updateBody(newBody);
+      }
+    } catch (error) {
+      console.error('Modular generation failed:', error);
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  // --- Legacy AI Logic ---
+
+  const handleBodyChange = (value: string) => {
+    setBodyContent(value);
+    updateBody(value);
   };
 
   const generateAISuggestions = async () => {
@@ -70,11 +189,11 @@ export default function Step1Edit() {
       console.error('❌ Step1Edit - Missing required data for AI suggestions');
       return;
     }
-    
+
     // Show panel immediately and set loading state
     setShowBodySuggestions(true);
     setLoadingBodySuggestions(true);
-    
+
     try {
       const response = await fetch('/api/ai/generate-suggestions', {
         method: 'POST',
@@ -100,13 +219,11 @@ export default function Step1Edit() {
       }
 
       const result = await response.json();
-      console.log('✅ Step1Edit - AI suggestions received:', result);
-      
+
       // Ensure we have suggestions array
       if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
         setBodySuggestions(result.suggestions);
       } else {
-        console.error('❌ Step1Edit - Invalid suggestions format:', result);
         setShowBodySuggestions(false);
       }
     } catch (error) {
@@ -126,14 +243,96 @@ export default function Step1Edit() {
   const { mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
   const previewContent = mergeCoverLetterContent(headerContent, bodyContent, footerContent);
 
+  // Auto-generate modular cover letter if empty and data exists
+  const [hasAutoGenerated, setHasAutoGenerated] = useState(false);
+
+  useEffect(() => {
+    if (
+      state.cvData &&
+      state.jobData &&
+      !structuredBody &&
+      !state.coverLetterData.body?.trim() &&
+      !hasAutoGenerated &&
+      !isRegenerating
+    ) {
+      console.log('🔄 Auto-triggering modular cover letter generation...');
+      setHasAutoGenerated(true);
+      handleRegenerateModular();
+    }
+  }, [state.cvData, state.jobData, structuredBody, state.coverLetterData.body, hasAutoGenerated, isRegenerating]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Split View: Preview Left, Editors Right */}
       <div className="flex-1 flex gap-4 overflow-hidden min-h-0">
-        {/* Left Pane (50%) - Live Preview */}
-        <div className="w-1/2 flex flex-col bg-white dark:bg-[#141810] rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 min-h-0">
-          <div className="flex-1 overflow-y-auto p-4 flex items-start justify-center bg-gray-50 dark:bg-[#1a230f] min-h-0">
-            <div className="w-full max-w-full" style={{ maxWidth: '100%' }}>
+        {/* Left Pane (55%) - Live Preview */}
+        <div className="w-[55%] flex flex-col bg-gray-50 dark:bg-[#141810] rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 min-h-0">
+
+          {/* Toolbar */}
+          <div className="flex items-center justify-between p-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a230f] z-10">
+            <div className="flex items-center gap-2">
+              <div className="flex bg-white dark:bg-[#1a1a1a] rounded-lg border border-gray-200 dark:border-gray-700 p-1">
+                <button
+                  onClick={() => setPageSize('A4')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${pageSize === 'A4'
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                    }`}
+                >
+                  A4
+                </button>
+                <div className="w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+                <button
+                  onClick={() => setPageSize('Letter')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${pageSize === 'Letter'
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                    }`}
+                >
+                  US Letter
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setZoom(z => Math.max(0.2, z - 0.1))}
+                className="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-4 h-4" />
+              </button>
+              <span className="text-xs font-medium w-12 text-center text-gray-600 dark:text-gray-300">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={() => setZoom(z => Math.min(2.0, z + 0.1))}
+                className="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
+              <div className="w-px h-4 bg-gray-300 dark:bg-gray-700 mx-1" />
+              <button
+                onClick={() => setZoom(1)}
+                className="p-1.5 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors"
+                title="Reset Zoom"
+              >
+                <Maximize className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto p-4 flex items-start justify-center bg-gray-100 dark:bg-[#0f110a] min-h-0 relative">
+            <div
+              style={{
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top center',
+                transition: 'transform 0.2s ease-out',
+                marginTop: '0px',
+                marginBottom: '0px'
+              }}
+            >
               <CoverLetterPreview
                 content={previewContent}
                 cvData={state.cvData || {}}
@@ -143,329 +342,200 @@ export default function Step1Edit() {
                 header={headerContent}
                 body={bodyContent}
                 footer={footerContent}
+                pageSize={pageSize}
               />
             </div>
           </div>
         </div>
 
-        {/* Right Pane (50%) - Editors */}
-        <div className="w-1/2 flex flex-col gap-4 overflow-y-auto pl-2 min-h-0">
-          {/* Personal Information Section */}
-          <div className="bg-white dark:bg-[#141810] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
-                {(state.coverLetterData.cvId || state.journeyId) && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        let targetCvId = state.coverLetterData.cvId;
-                        
-                        // If no cvId in cover letter but journeyId exists, fetch from journey
-                        if (!targetCvId && state.journeyId) {
-                          const journeyResponse = await fetch(`/api/application-journey/${state.journeyId}`);
-                          if (journeyResponse.ok) {
-                            const journeyResult = await journeyResponse.json();
-                            const journey = journeyResult.data?.journey || journeyResult.journey;
-                            if (journey?.cvId) {
-                              targetCvId = journey.cvId.toString();
-                            }
+        {/* Right Pane (45%) - Editors */}
+        <div className="w-[45%] flex flex-col gap-6 overflow-y-auto pl-2 min-h-0 pb-20 pr-2">
+          {/* Section: Personal Info (Collapsible or Standard) */}
+          <div className="bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-semibold text-white">Personal Information</h3>
+              {/* Simplified Auto-fill button */}
+              {(state.coverLetterData.cvId || state.journeyId) && (
+                <button
+                  onClick={async () => {
+                    try {
+                      let targetCvId = state.coverLetterData.cvId;
+                      if (!targetCvId && state.journeyId) {
+                        const journeyResponse = await fetch(`/api/application-journey/${state.journeyId}`);
+                        if (journeyResponse.ok) {
+                          const journeyResult = await journeyResponse.json();
+                          const journey = journeyResult.data?.journey || journeyResult.journey;
+                          if (journey?.cvId) targetCvId = journey.cvId.toString();
+                        }
+                      }
+                      if (targetCvId) {
+                        const cvResponse = await fetch(`/api/cvs/${targetCvId}`);
+                        if (cvResponse.ok) {
+                          const cvResult = await cvResponse.json();
+                          const cv = cvResult.data?.cv || cvResult.cv;
+                          if (cv?.cvData) {
+                            const loadedCVData = cv.cvData as UnifiedCVDataStructure;
+                            setCVData(loadedCVData);
+                            const updatedHeader = formatCoverLetterHeader(loadedCVData, state.jobData);
+                            setHeaderContent(updatedHeader);
+                            updateHeader(updatedHeader);
+                            const updatedFooter = formatCoverLetterFooter(loadedCVData);
+                            setFooterContent(updatedFooter);
+                            updateFooter(updatedFooter);
                           }
                         }
-                        
-                        // Fetch CV data from linked CV
-                        if (targetCvId) {
-                          const cvResponse = await fetch(`/api/cvs/${targetCvId}`);
-                          if (cvResponse.ok) {
-                            const cvResult = await cvResponse.json();
-                            const cv = cvResult.data?.cv || cvResult.cv;
-                            if (cv?.cvData) {
-                              const loadedCVData = cv.cvData as UnifiedCVDataStructure;
-                              setCVData(loadedCVData);
-                              // Update header and footer with new CV data
-                              const updatedHeader = formatCoverLetterHeader(loadedCVData, state.jobData);
-                              setHeaderContent(updatedHeader);
-                              updateHeader(updatedHeader);
-                              const updatedFooter = formatCoverLetterFooter(loadedCVData);
-                              setFooterContent(updatedFooter);
-                              updateFooter(updatedFooter);
-                            }
-                          }
-                        }
-                      } catch (error) {
-                        console.error('Failed to fetch CV data:', error);
                       }
-                    }}
-                    className="text-xs px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
-                    title="Auto-populate personal information from linked CV"
-                  >
-                    Auto-fill from CV
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {/* Full Name - Required */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={state.cvData?.basics?.name || ''}
-                  onChange={(e) => {
-                    const newCVData = {
-                      ...(state.cvData || {}),
-                      basics: {
-                        ...(state.cvData?.basics || {}),
-                        name: e.target.value
-                      }
-                    };
-                    setCVData(newCVData);
-                    // Update header when name changes
-                    const updatedHeader = formatCoverLetterHeader(newCVData, state.jobData);
-                    setHeaderContent(updatedHeader);
-                    updateHeader(updatedHeader);
-                    // Update footer when name changes
-                    const updatedFooter = formatCoverLetterFooter(newCVData);
-                    setFooterContent(updatedFooter);
-                    updateFooter(updatedFooter);
-                  }}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-
-              {/* Email - Required */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Email <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="email"
-                  value={state.cvData?.basics?.email || ''}
-                  onChange={(e) => {
-                    const newCVData = {
-                      ...(state.cvData || {}),
-                      basics: {
-                        ...(state.cvData?.basics || {}),
-                        email: e.target.value
-                      }
-                    };
-                    setCVData(newCVData);
-                    // Update header when email changes
-                    const updatedHeader = formatCoverLetterHeader(newCVData, state.jobData);
-                    setHeaderContent(updatedHeader);
-                    updateHeader(updatedHeader);
-                  }}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                  placeholder="john.doe@example.com"
-                  required
-                />
-              </div>
-
-              {/* Phone - Required */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Phone <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={state.cvData?.basics?.phone || ''}
-                  onChange={(e) => {
-                    const newCVData = {
-                      ...(state.cvData || {}),
-                      basics: {
-                        ...(state.cvData?.basics || {}),
-                        phone: e.target.value
-                      }
-                    };
-                    setCVData(newCVData);
-                    // Update header when phone changes
-                    const updatedHeader = formatCoverLetterHeader(newCVData, state.jobData);
-                    setHeaderContent(updatedHeader);
-                    updateHeader(updatedHeader);
-                  }}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                  placeholder="+1 (555) 123-4567"
-                  required
-                />
-              </div>
-
-              {/* Location - Required */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Location <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={(() => {
-                    const location = state.cvData?.basics?.location;
-                    if (typeof location === 'string') return location;
-                    if (location?.city && location?.region) {
-                      return `${location.city}, ${location.region}`;
+                    } catch (error) {
+                      console.error('Failed to fetch CV data:', error);
                     }
-                    return location?.city || location?.region || location?.countryCode || '';
-                  })()}
-                  onChange={(e) => {
-                    const inputValue = e.target.value;
-                    const parts = inputValue.split(',').map(p => p.trim());
-                    const newCVData = {
-                      ...(state.cvData || {}),
-                      basics: {
-                        ...(state.cvData?.basics || {}),
-                        location: {
-                          ...(typeof state.cvData?.basics?.location === 'object' ? state.cvData.basics.location : {}),
-                          city: parts[0] || '',
-                          region: parts[1] || '',
-                          countryCode: parts[2] || ''
-                        }
-                      }
-                    };
-                    setCVData(newCVData);
-                    // Update header when location changes
-                    const updatedHeader = formatCoverLetterHeader(newCVData, state.jobData);
-                    setHeaderContent(updatedHeader);
-                    updateHeader(updatedHeader);
                   }}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-colors"
-                  placeholder="San Francisco, CA"
-                  required
-                />
-              </div>
+                  className="text-xs px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                >
+                  Auto-fill form Linked CV
+                </button>
+              )}
             </div>
-            <p className="mt-4 text-xs text-gray-600 dark:text-gray-400">
-              This information will be used in your cover letter header. Date, hiring manager, and company name are automatically added from the linked job.
-            </p>
+
+            <PersonalInfoForm
+              data={state.cvData?.basics || {
+                name: '', label: '', image: '', email: '', phone: '', url: '', summary: '',
+                location: { address: '', postalCode: '', city: '', countryCode: '', region: '' }, profiles: []
+              }}
+              cvData={state.cvData}
+              jobData={state.jobData}
+              onUpdate={handleBasicsUpdate}
+              reviewMode={false}
+              hidePhoto={true}
+              hideSummary={true}
+            />
           </div>
 
-          {/* Job Card Section - Show if job data is available from journey */}
-          {state.jobData && (
-            <div className="bg-white dark:bg-[#141810] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Linked Job</h3>
-                <span className="text-xs px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300">
-                  From Journey
-                </span>
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white text-base">
-                    {state.jobData.jobTitle || state.jobData.title || 'Untitled Job'}
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {state.jobData.company || 'Unknown Company'}
-                  </p>
+          {/* Body Section: Conditional Rendering */}
+          {structuredBody ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-purple-500" />
+                  Modular Cover Letter
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRegenerateModular}
+                    disabled={isRegenerating}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-lime-600 hover:bg-lime-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {isRegenerating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+                  </button>
                 </div>
-                
-                {state.jobData.location && (
-                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    <span>{state.jobData.location}</span>
-                  </div>
-                )}
-                
-                {state.jobData.jobDescription && (
-                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
-                    {state.jobData.jobDescription}
-                  </p>
-                )}
               </div>
+
+              {/* Introduction */}
+              <BridgeCard
+                title={structuredBody.sections.introduction.title || "Introduction"}
+                content={structuredBody.sections.introduction.text}
+                onChange={(val) => updateStructuredSection('introduction', val)}
+                className="border-l-4 border-l-purple-500"
+              />
+
+              {/* Bridge 1 */}
+              <BridgeCard
+                title={structuredBody.sections.experience_bridge_1.title || "Experience Bridge 1"}
+                jdRequirement={structuredBody.sections.experience_bridge_1.jd_context}
+                cvEvidence={structuredBody.sections.experience_bridge_1.cv_evidence}
+                content={structuredBody.sections.experience_bridge_1.text}
+                onChange={(val) => updateStructuredSection('experience_bridge_1', val)}
+                className="border-l-4 border-l-blue-500"
+              />
+
+              {/* Bridge 2 */}
+              <BridgeCard
+                title={structuredBody.sections.experience_bridge_2.title || "Experience Bridge 2"}
+                jdRequirement={structuredBody.sections.experience_bridge_2.jd_context}
+                content={structuredBody.sections.experience_bridge_2.text}
+                onChange={(val) => updateStructuredSection('experience_bridge_2', val)}
+                className="border-l-4 border-l-blue-500"
+              />
+
+              {/* Motivation */}
+              <BridgeCard
+                title={structuredBody.sections.motivation.title || "Motivation"}
+                content={structuredBody.sections.motivation.text}
+                onChange={(val) => updateStructuredSection('motivation', val)}
+                className="border-l-4 border-l-orange-500"
+              />
+
+              {/* Closing */}
+              <BridgeCard
+                title={structuredBody.sections.closing.title || "Closing"}
+                content={structuredBody.sections.closing.text}
+                onChange={(val) => updateStructuredSection('closing', val)}
+                className="border-l-4 border-l-green-500"
+              />
+
+              <div className="flex justify-center pt-4">
+                <button
+                  onClick={() => setStructuredBody(null)}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline"
+                >
+                  Switch to Classic Editor (Lose Modular Structure)
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* Legacy WYSIWYG Editor */
+            <div className="bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-white">Body</h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleRegenerateModular}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                    title="Generate a new Modular Cover Letter"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Generate Modular
+                  </button>
+                  <WYSIWYGToolbar
+                    showAIButton={true}
+                    fieldType="other"
+                    onAISuggestions={generateAISuggestions}
+                    isGenerating={loadingBodySuggestions}
+                  />
+                </div>
+              </div>
+
+              <AISuggestionsPanel
+                isVisible={showBodySuggestions}
+                suggestions={bodySuggestions}
+                isLoading={loadingBodySuggestions}
+                onSelect={handleSelectSuggestion}
+                onClose={() => setShowBodySuggestions(false)}
+              />
+
+              <WYSIWYGEditor
+                value={bodyContent}
+                onChange={handleBodyChange}
+                rows={12}
+                placeholder="Dear Hiring Manager..."
+              />
             </div>
           )}
 
-          {/* Body Section */}
-          <div className="bg-white dark:bg-[#141810] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Body</h3>
-              <WYSIWYGToolbar
-                showAIButton={true}
-                fieldType="other"
-                onAISuggestions={generateAISuggestions}
-                isGenerating={loadingBodySuggestions}
-              />
-            </div>
-            
-            {/* AI Suggestions Panel */}
-            <AISuggestionsPanel
-              isVisible={showBodySuggestions}
-              suggestions={bodySuggestions}
-              isLoading={loadingBodySuggestions}
-              onSelect={handleSelectSuggestion}
-              onClose={() => setShowBodySuggestions(false)}
-            />
-            
-            <WYSIWYGEditor
-              value={bodyContent}
-              onChange={handleBodyChange}
-              rows={12}
-              placeholder="Dear Hiring Manager,&#10;&#10;I am writing to express my interest in the [Position] role at [Company]...&#10;&#10;[Your compelling content here]"
-            />
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-xs text-gray-600 dark:text-gray-200">
-                Use formatting tools above to style your text
-              </p>
-              <span className="text-xs text-gray-600 dark:text-gray-200">
-                {(headerContent + bodyContent + footerContent).length} characters
-              </span>
-            </div>
-          </div>
-
           {/* Footer Section */}
-          <div className="bg-white dark:bg-[#141810] rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700">
+          <div className="bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Footer</h3>
-                {state.cvData && (
-                  <button
-                    onClick={() => {
-                      const autoFooter = formatCoverLetterFooter(state.cvData!);
-                      setFooterContent(autoFooter);
-                      updateFooter(autoFooter);
-                    }}
-                    className="text-xs px-2 py-1 rounded-md bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
-                    title="Auto-populate footer from CV data"
-                  >
-                    Auto-fill from CV
-                  </button>
-                )}
-              </div>
-              <WYSIWYGToolbar showAIButton={false} />
+              <h3 className="text-lg font-semibold text-white">Footer</h3>
             </div>
-            
             <WYSIWYGEditor
               value={footerContent}
               onChange={handleFooterChange}
               rows={3}
-              placeholder="Sincerely,&#10;Your Name"
+              placeholder="Sincerely,..."
             />
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-xs text-gray-600 dark:text-gray-200">
-                Footer: "Sincerely," and your name (auto-populated from CV data)
-              </p>
-              {!footerContent && state.cvData && (
-                <button
-                  onClick={() => {
-                    const autoFooter = formatCoverLetterFooter(state.cvData!);
-                    setFooterContent(autoFooter);
-                    updateFooter(autoFooter);
-                  }}
-                  className="text-xs px-2 py-1 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
-                >
-                  Generate Footer
-                </button>
-              )}
-            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-

@@ -153,7 +153,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   const updateProject = (index: number, field: string, value: any) => {
     const updatedData = [...safeData];
     if (!updatedData[index]) {
-      updatedData[index] = { name: '', startDate: '', endDate: '', description: '', highlights: [], keywords: [], url: '' };
+      updatedData[index] = { name: '', startDate: '', endDate: '', description: '', keywords: [], url: '' };
     }
     updatedData[index] = { ...updatedData[index], [field]: value };
     onUpdate(updatedData);

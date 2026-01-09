@@ -12,6 +12,16 @@ export interface ICV extends Document {
   cvType: 'master' | 'journey' | 'standalone'; // NEW: Type of CV for Resume Enhancer
   status: 'draft' | 'published' | 'archived';
 
+  // Central Score Manager Fields
+  cv_score_master?: number; // Structural + Industry (Local)
+  cv_score_ats?: number; // Master + Semantic + Keyword Match (Journey)
+  score_breakdown?: {
+    structural: number;
+    industry: number;
+    semantic: number;
+  };
+  active_issues_json?: any[]; // Cached issues for instant load
+
   // Document state for limit enforcement (Vault View)
   documentState: 'editable' | 'frozen' | 'read-only';
   frozenAt?: Date; // Timestamp when document was frozen
@@ -93,6 +103,28 @@ const cvSchema = new Schema<ICV>({
     type: String,
     enum: ['draft', 'published', 'archived'],
     default: 'draft'
+  },
+  // Central Score Manager Fields
+  cv_score_master: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0
+  },
+  cv_score_ats: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0
+  },
+  score_breakdown: {
+    structural: { type: Number, default: 0 },
+    industry: { type: Number, default: 0 },
+    semantic: { type: Number, default: 0 }
+  },
+  active_issues_json: {
+    type: Schema.Types.Mixed, // Storing Issue[] as JSON
+    default: []
   },
   // Document state for limit enforcement (Vault View)
   documentState: {

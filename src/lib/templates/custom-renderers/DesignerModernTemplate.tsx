@@ -15,7 +15,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
   className = '',
   dateFormat = 'MMM_YYYY'
 }) => {
-  const { basics, work, education, skills, projects, volunteer, awards, certificates, publications, languages, interests } = cvData;
+  const { basics, work, education, skills, projects, volunteer, awards, certificates, publications, languages, interests, references } = cvData;
 
   return (
     <div className={`designer-modern-template ${className}`}>
@@ -445,7 +445,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Publications Section */}
           {publications && publications.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="publications">
               <div className="section-title">Publications</div>
               {publications.map((pub, index) => (
                 <div key={index} className="education-item">
@@ -464,7 +464,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 
           {/* Interests Section */}
           {interests && interests.length > 0 && (
-            <div className="section">
+            <div className="section" data-section-id="interests">
               <div className="section-title">Interests</div>
               <div className="skills-list">
                 {interests.map((interest, index) => (
@@ -473,6 +473,23 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* References Section */}
+          {references && references.length > 0 && (
+            <div className="section" data-section-id="references">
+              <div className="section-title">References</div>
+              {references.map((ref, index) => (
+                <div key={index} className="education-item">
+                  <div className="education-header">
+                    <div className="degree">{ref.name}</div>
+                    {ref.reference && (
+                      <div className="university" style={{ marginTop: '4px', fontSize: '12px', fontStyle: 'italic' }}>"{ref.reference}"</div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

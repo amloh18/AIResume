@@ -53,7 +53,9 @@ export class KeywordGapAnalysisService {
 
         try {
             // Call AI for analysis
-            const aiResponse = await callGeminiWithAllKeysFallback(prompt);
+            const aiResponse = await callGeminiWithAllKeysFallback(prompt, {
+                maxTokens: 8192
+            });
 
             if (!aiResponse) {
                 console.error('❌ KeywordGapAnalysisService - AI call failed');
@@ -163,15 +165,7 @@ ${cvContent}
 ## OUTPUT FORMAT
 Return a valid JSON object with this exact structure:
 {
-  "extractedKeywords": [
-    {
-      "keyword": "Python",
-      "category": "skill",
-      "frequency": 3,
-      "importance": "critical",
-      "foundInCV": true
-    }
-  ],
+  "totalKeywordsFound": 15,    // Total number of important keywords found in JD
   "gaps": [
     {
       "keyword": "Kubernetes",
@@ -241,8 +235,7 @@ Return ONLY the JSON object, no markdown formatting.`;
             }));
 
             // Calculate stats
-            const extractedKeywords = parsed.extractedKeywords || [];
-            const totalJDKeywords = extractedKeywords.length;
+            const totalJDKeywords = parsed.totalKeywordsFound || (parsed.matchedKeywords || []).length + gaps.length;
             const matchedCount = (parsed.matchedKeywords || []).length;
             const gapCount = gaps.length;
             const criticalGaps = gaps.filter(g => g.importance === 'critical').length;

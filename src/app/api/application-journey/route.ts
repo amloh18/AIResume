@@ -32,7 +32,7 @@ async function updateJobDataInJourneys(jobId: string) {
   try {
     const { JobApplication } = await import('@/models');
     const job = await JobApplication.findById(jobId);
-    
+
     if (!job) {
       console.warn(`Job ${jobId} not found for journey update`);
       return;
@@ -41,8 +41,8 @@ async function updateJobDataInJourneys(jobId: string) {
     // Update all journeys for this job
     const result = await ApplicationJourney.updateMany(
       { jobId },
-      { 
-        $set: { 
+      {
+        $set: {
           jobTitle: job.jobTitle,
           company: job.company,
           'metadata.updatedAt': new Date()
@@ -60,21 +60,21 @@ async function updateJobDataInJourneys(jobId: string) {
 async function cleanupOrphanedJourneyReferences(userId: string) {
   try {
     await getConnection();
-    
+
     console.log('🔍 Cleaning up orphaned journey references for user:', userId);
-    
+
     // Get all journeys for the user
     const journeys = await ApplicationJourney.find({ userId: new mongoose.Types.ObjectId(userId) }).lean();
-    
+
     console.log('🔍 Found journeys:', journeys.length);
-    
+
     const { CV, CoverLetter } = await import('@/models');
     let cleanedCount = 0;
-    
+
     for (const journey of journeys) {
       let needsUpdate = false;
       const updates: any = {};
-      
+
       // Check if CV exists
       if (journey.cvId) {
         const cv = await CV.findById(journey.cvId);
@@ -84,7 +84,7 @@ async function cleanupOrphanedJourneyReferences(userId: string) {
           needsUpdate = true;
         }
       }
-      
+
       // Check if Cover Letter exists
       if (journey.coverLetterId) {
         const coverLetter = await CoverLetter.findById(journey.coverLetterId);
@@ -94,7 +94,7 @@ async function cleanupOrphanedJourneyReferences(userId: string) {
           needsUpdate = true;
         }
       }
-      
+
       // Update journey if needed
       if (needsUpdate) {
         await ApplicationJourney.updateOne(
@@ -105,7 +105,7 @@ async function cleanupOrphanedJourneyReferences(userId: string) {
         console.log('✅ Cleaned up journey:', journey._id);
       }
     }
-    
+
     console.log('✅ Cleanup completed. Updated journeys:', cleanedCount);
     return { success: true, cleanedCount };
   } catch (error) {
@@ -118,25 +118,25 @@ async function cleanupOrphanedJourneyReferences(userId: string) {
 async function getUserIdFromRequest(request: NextRequest): Promise<{ userId: string; source: 'session' | 'extension' } | null> {
   // Check if this is an extension request (with JWT token)
   const authHeader = request.headers.get('authorization');
-  
+
   if (authHeader && authHeader.startsWith('Bearer ')) {
     // Extension request with JWT token
     const token = authHeader.substring(7);
-    
+
     try {
       const decoded = jwt.verify(token, process.env.NEXTAUTH_SECRET!) as MyJwtPayload;
-      
+
       if (decoded.type !== 'extension') {
         console.log('❌ Invalid token type');
         return null;
       }
-      
+
       const userId = decoded.userId || decoded.id || '';
       if (!userId) {
         console.log('❌ No userId in extension token');
         return null;
       }
-      
+
       console.log('✅ Extension token verified for user:', userId);
       return { userId, source: 'extension' };
     } catch (error) {
@@ -146,12 +146,12 @@ async function getUserIdFromRequest(request: NextRequest): Promise<{ userId: str
   } else {
     // Web interface request with session
     const authResult = await getAuthenticatedUser();
-    
+
     if (!authResult) {
       console.log('❌ No valid authentication found for web request');
       return null;
     }
-    
+
     console.log('✅ Web session verified for user:', authResult.userId);
     return { userId: authResult.userId, source: 'session' };
   }
@@ -161,10 +161,10 @@ async function getUserIdFromRequest(request: NextRequest): Promise<{ userId: str
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
-    
+
     // Get userId from either session or extension token
     const authInfo = await getUserIdFromRequest(request);
-    
+
     if (!authInfo) {
       console.log('❌ CV Journey API - No valid authentication found');
       return NextResponse.json(
@@ -172,10 +172,10 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = authInfo.userId;
     console.log('🔍 CV Journey API - Using authenticated user:', userId, `(${authInfo.source})`);
-    
+
     const { searchParams } = new URL(request.url);
     const jobId = searchParams.get('jobId');
     const cvId = searchParams.get('cvId');
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
     if (jobId) {
       baseQuery.jobId = jobId;
     }
-    
+
     // Support batch CV ID queries (performance optimization)
     if (cvIds) {
       const cvIdArray = cvIds.split(',').filter(id => id.trim());
@@ -213,7 +213,7 @@ export async function GET(request: NextRequest) {
     } else if (cvId) {
       baseQuery.cvId = cvId;
     }
-    
+
     if (status) {
       baseQuery.status = status;
     }
@@ -235,6 +235,29 @@ export async function GET(request: NextRequest) {
     const journeys = await query.lean();
     console.log('🔍 CV Journey API - Query executed, found journeys:', journeys.length);
 
+    // Fetch job details to get the actual application stage (status)
+    const jobIds = journeys.map(j => j.jobId).filter(Boolean);
+    const jobStatusMap = new Map<string, string>();
+
+    if (jobIds.length > 0) {
+      try {
+        const { JobApplication } = await import('@/models');
+        const jobs = await JobApplication.find({
+          _id: { $in: jobIds },
+          userId: new mongoose.Types.ObjectId(userId)
+        }).lean();
+
+        jobs.forEach((job: any) => {
+          if (job._id && job.status) {
+            jobStatusMap.set(job._id.toString(), job.status);
+          }
+        });
+        console.log(`🔍 CV Journey API - Fetched ${jobs.length} job statuses for enrichment`);
+      } catch (error) {
+        console.error('❌ CV Journey API - Error fetching job statuses:', error);
+      }
+    }
+
     // Transform data for response
     const transformedJourneys = journeys.map(journey => ({
       id: journey._id,
@@ -244,6 +267,7 @@ export async function GET(request: NextRequest) {
       cvId: journey.cvId,
       coverLetterId: journey.coverLetterId,
       status: journey.status,
+      jobStatus: jobStatusMap.get(journey.jobId?.toString()) || 'Applied', // Enrich with actual job status, default to Applied
       currentStep: journey.currentStep,
       totalSteps: journey.totalSteps,
       atsScore: journey.atsScore,
@@ -262,17 +286,17 @@ export async function GET(request: NextRequest) {
       const hasNoCV = !journey.cvId;
       const hasNoCoverLetter = !journey.coverLetterId;
       const isProcessingOrInProgress = journey.status === 'processing_documents' || journey.status === 'in-progress';
-      
+
       return (hasNoCV || hasNoCoverLetter) && isProcessingOrInProgress;
     });
 
     // Trigger document creation for journeys missing documents (run in background)
     if (journeysNeedingDocuments.length > 0) {
       console.log(`🚀 Application Journey API - Found ${journeysNeedingDocuments.length} journeys needing documents, triggering creation...`);
-      
+
       journeysNeedingDocuments.forEach(journey => {
         const journeyId = journey._id.toString();
-        
+
         // Update status to processing_documents if not already
         if (journey.status !== 'processing_documents') {
           ApplicationJourney.findByIdAndUpdate(journeyId, {
@@ -282,13 +306,13 @@ export async function GET(request: NextRequest) {
             console.error(`❌ Application Journey API - Failed to update journey status for ${journeyId}:`, err);
           });
         }
-        
+
         // Trigger document creation in background
         setImmediate(async () => {
           try {
             console.log(`🚀 Application Journey API - Auto-triggering document creation for journey: ${journeyId}`);
             const result = await createJourneyDocuments(journeyId, userId);
-            
+
             if (result.success) {
               console.log(`✅ Application Journey API - Auto-created documents for journey ${journeyId}:`, {
                 cvId: result.cvId,
@@ -319,7 +343,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get CV journeys error:', error);
     const errorResponse = createErrorResponse(error);
-    
+
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }
@@ -331,10 +355,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await getConnection();
-    
+
     // Get userId from either session or extension token
     const authInfo = await getUserIdFromRequest(request);
-    
+
     if (!authInfo) {
       console.log('❌ CV Journey POST API - No valid authentication found');
       return NextResponse.json(
@@ -342,7 +366,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = authInfo.userId;
     console.log('🔍 CV Journey POST API - Using authenticated user:', userId, `(${authInfo.source})`);
 
@@ -383,52 +407,52 @@ export async function POST(request: NextRequest) {
     // Prevent journey creation for draft jobs
     if (job.status === 'draft') {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Cannot create journey for draft jobs. Please move the job to "created" status first.' 
+        {
+          success: false,
+          error: 'Cannot create journey for draft jobs. Please move the job to "created" status first.'
         },
         { status: 400 }
       );
     }
 
     // Check if journey already exists for this job
-    const existingJourneyQuery: Record<string, any> = { 
+    const existingJourneyQuery: Record<string, any> = {
       jobId,
       userId: new mongoose.Types.ObjectId(userId)
     };
 
     const existingJourney = await ApplicationJourney.findOne(existingJourneyQuery);
-    
+
     if (existingJourney) {
       // Update existing journey with new CV/coverLetter data
       console.log('🔄 CV Journey POST API - Updating existing journey:', existingJourney._id);
-      
+
       let updated = false;
-      
+
       if (cvId && existingJourney.cvId !== cvId) {
         existingJourney.cvId = cvId;
         existingJourney.currentStep = Math.max(existingJourney.currentStep, 2);
         updated = true;
       }
-      
+
       if (coverLetterId && existingJourney.coverLetterId !== coverLetterId) {
         existingJourney.coverLetterId = coverLetterId;
         existingJourney.currentStep = Math.max(existingJourney.currentStep, 3);
         updated = true;
       }
-      
+
       if (steps && steps.length > 0) {
         existingJourney.steps = steps;
         updated = true;
       }
-      
+
       if (updated) {
         existingJourney.metadata.updatedAt = new Date();
         existingJourney.metadata.lastAccessedAt = new Date();
         await existingJourney.save();
-        
+
         console.log('✅ CV Journey POST API - Existing journey updated successfully');
-        
+
         return NextResponse.json({
           success: true,
           message: 'Journey updated successfully',
@@ -568,7 +592,7 @@ export async function POST(request: NextRequest) {
         try {
           console.log('🚀 CV Journey POST API - Starting document creation for journey:', newJourney._id);
           const result = await createJourneyDocuments(newJourney._id.toString(), userId);
-          
+
           if (result.success) {
             console.log('✅ CV Journey POST API - Document creation completed successfully:', {
               journeyId: newJourney._id,
@@ -583,7 +607,7 @@ export async function POST(request: NextRequest) {
           // Journey status will be updated by the service on error
         }
       });
-      
+
       console.log('🚀 CV Journey POST API - Triggered async document creation for journey:', newJourney._id);
     }
 
@@ -607,14 +631,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('❌ CV Journey POST API - Error creating journey:', error);
-    
+
     if (error.code === 11000) {
       return NextResponse.json(
         { success: false, error: 'A journey with this ID already exists' },
         { status: 409 }
       );
     }
-    
+
     // Return a proper error message
     const errorMessage = error.message || 'Failed to create CV journey';
     return NextResponse.json(
@@ -630,10 +654,10 @@ export async function DELETE(request: NextRequest) {
     console.log('🔍 CV Journey DELETE API - Request URL:', request.url);
     console.log('🔍 CV Journey DELETE API - Request method:', request.method);
     await getConnection();
-    
+
     // Get userId from either session or extension token
     const authInfo = await getUserIdFromRequest(request);
-    
+
     if (!authInfo) {
       console.log('❌ CV Journey DELETE API - No valid authentication found');
       return NextResponse.json(
@@ -641,7 +665,7 @@ export async function DELETE(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = authInfo.userId;
 
     const body = await request.json();
@@ -659,13 +683,13 @@ export async function DELETE(request: NextRequest) {
     console.log('🔍 CV Journey DELETE API - Deleting journey:', journeyId);
 
     // Find the journey first to get linked documents
-    const journeyQuery: Record<string, any> = { 
+    const journeyQuery: Record<string, any> = {
       _id: journeyId,
       userId: new mongoose.Types.ObjectId(userId)
     };
 
     const journey = await ApplicationJourney.findOne(journeyQuery);
-    
+
     if (!journey) {
       return NextResponse.json(
         { success: false, error: 'Journey not found' },
@@ -704,7 +728,7 @@ export async function DELETE(request: NextRequest) {
       try {
         console.log('🔍 CV Journey DELETE API - Checking CV for deletion:', journey.cvId);
         const cv = await CV.findById(journey.cvId);
-        
+
         if (cv) {
           // Verify CV belongs to the user before deletion (check CV object reference only)
           const cvUserId = cv.userId.toString();
@@ -729,7 +753,7 @@ export async function DELETE(request: NextRequest) {
     // Step 3: Delete the journey itself (but NOT the job)
     console.log('🔍 CV Journey DELETE API - Deleting journey record');
     const journeyResult = await ApplicationJourney.findByIdAndDelete(journey._id);
-    
+
     if (!journeyResult) {
       return NextResponse.json(
         { success: false, error: 'Failed to delete journey' },
@@ -744,17 +768,17 @@ export async function DELETE(request: NextRequest) {
       try {
         console.log('🔍 CV Journey DELETE API - Moving job to draft stage:', journey.jobId);
         const { JobApplication } = await import('@/models');
-        
+
         const jobUpdateResult = await JobApplication.updateOne(
-          { 
+          {
             _id: journey.jobId,
             userId: new mongoose.Types.ObjectId(userId)
           },
-          { 
-            $set: { 
+          {
+            $set: {
               status: 'draft',
               updatedAt: new Date()
-            } 
+            }
           }
         );
 
@@ -777,7 +801,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ CV Journey DELETE API - Error:', error);
     const errorResponse = createErrorResponse(error);
-    
+
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }

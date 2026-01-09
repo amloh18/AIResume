@@ -28,6 +28,7 @@ export interface ICoverLetter extends Document {
     version?: number;
     atsScore?: number;
     atsScoreDate?: Date;
+    structuredBody?: any; // JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }
   };
 }
 
@@ -147,12 +148,16 @@ const coverLetterSchema = new Schema<ICoverLetter>({
     },
     atsScoreDate: {
       type: Date
+    },
+    structuredBody: {
+      type: Schema.Types.Mixed, // Stores the JSON object: { header, sections: { introduction, experience_bridge_1, ... }, metadata }
+      default: null
     }
   }
 }, {
   timestamps: true,
   toJSON: {
-    transform: function(doc, ret: any) {
+    transform: function (doc, ret: any) {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
@@ -170,14 +175,14 @@ coverLetterSchema.index({ 'metadata.tags': 1 }); // Tag-based searches
 coverLetterSchema.index({ 'metadata.isPublic': 1, 'metadata.lastModified': -1 }); // Public cover letters
 
 // Pre-save middleware to update metadata (DO NOT merge content - merging happens in preview only)
-coverLetterSchema.pre('save', function(next) {
+coverLetterSchema.pre('save', function (next) {
   // Update lastModified
   this.metadata.lastModified = new Date();
-  
+
   // DO NOT merge header+body+footer into content here
   // Content will be generated on-the-fly in preview only
   // Store header, body, and footer separately in database
-  
+
   // Calculate word and character count from merged content for metadata purposes only
   if (this.header || this.body || this.footer) {
     const { mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
@@ -186,19 +191,19 @@ coverLetterSchema.pre('save', function(next) {
       this.body || '',
       this.footer || ''
     );
-    
+
     if (mergedContent) {
       this.metadata.characterCount = mergedContent.length;
-      this.metadata.wordCount = mergedContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+      this.metadata.wordCount = mergedContent.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
       this.metadata.estimatedReadingTime = Math.ceil(this.metadata.wordCount / 200);
     }
   } else if (this.content) {
     // Fallback: if only content exists (old format), use it for metadata
     this.metadata.characterCount = this.content.length;
-    this.metadata.wordCount = this.content.trim().split(/\s+/).filter(word => word.length > 0).length;
+    this.metadata.wordCount = this.content.trim().split(/\s+/).filter((word: string) => word.length > 0).length;
     this.metadata.estimatedReadingTime = Math.ceil(this.metadata.wordCount / 200);
   }
-  
+
   next();
 });
 

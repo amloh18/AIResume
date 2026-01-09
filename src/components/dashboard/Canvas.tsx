@@ -5,6 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import { useDashboardData } from '@/contexts/DashboardDataContext';
 import { safeJsonParse } from '@/lib/utils/safeJsonParse';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import {
@@ -95,6 +96,7 @@ interface CV {
   completionPercentage?: number;
   // Additional fields that CVCardOverlay might need
   atsScore?: number;
+  stage?: string; // App stage/status from Journey
 }
 
 interface Job {
@@ -374,14 +376,25 @@ const Canvas: React.FC = () => {
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
+
+  // Use centralized dashboard data context for CVs and cover letters (prevents refetching on navigation)
+  const {
+    cvs: contextCVs,
+    coverLetters: contextCoverLetters,
+    secondaryLoading,
+    refreshCVs,
+    refreshCoverLetters
+  } = useDashboardData();
+
   const [cvs, setCvs] = useState<CV[]>([]);
   const [masterCVs, setMasterCVs] = useState<CV[]>([]);
   const [journeys, setJourneys] = useState<any[]>([]);
   const [loading, setLoading] = useState(true); // CRITICAL: Define loading state early, before functions that use it
 
-  // Track if CVs have been loaded to prevent re-fetching on tab switch
+  // Track if CVs have been loaded to prevent re-fetching on tab switch  
   const hasLoadedCVsRef = useRef(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const hasInitializedFromContextRef = useRef(false);
 
   // JobSidebar state (for viewing job details and journeys)
   const [showJourneyModal, setShowJourneyModal] = useState(false);
@@ -398,10 +411,53 @@ const Canvas: React.FC = () => {
   const [showCareerReportSidebar, setShowCareerReportSidebar] = useState(false);
   const [selectedCVForReport, setSelectedCVForReport] = useState<CV | null>(null);
 
-  // CVs state monitoring
+  // Sync CVs from context to local state (prevents refetching on navigation)
   useEffect(() => {
-    // CVs loaded successfully
-  }, [cvs]);
+    // Only initialize from context if not already loaded and context has data
+    if (!hasInitializedFromContextRef.current && contextCVs && contextCVs.length > 0) {
+      hasInitializedFromContextRef.current = true;
+
+      // Process context CVs with completion percentage and type classification
+      const enrichedCVs = contextCVs.map((cv: any) => ({
+        id: cv.id || cv._id,
+        title: cv.title || 'Untitled CV',
+        lastModified: cv.metadata?.lastModified || cv.updatedAt || cv.createdAt,
+        updatedAt: cv.updatedAt || cv.metadata?.lastModified || cv.createdAt || new Date().toISOString(),
+        status: cv.status || 'draft',
+        views: cv.metadata?.viewCount || 0,
+        isStarred: cv.metadata?.starred || false,
+        thumbnail: cv.metadata?.thumbnailUrl || '',
+        description: cv.description || '',
+        cvData: cv.cvData || null,
+        template: cv.template || cv.templateData || null,
+        templateId: cv.templateId,
+        templateName: cv.templateName,
+        templateData: cv.templateData,
+        journeyId: cv.journeyId,
+        cvType: cv.cvType || cv.metadata?.cvType || (cv.journeyId ? 'journey' : cv.metadata?.isMaster ? 'master' : 'standalone'),
+        completionPercentage: cv.completionPercentage || calculateCompletionPercentage(cv),
+        isMaster: cv.metadata?.isMaster === true || cv.isMaster === true,
+        atsScore: cv.metadata?.atsScore || cv.atsScore,
+        metadata: cv.metadata
+      })) as CV[];
+
+      // Split into master and regular CVs
+      const masters = filterMasterCVs(enrichedCVs);
+      const regulars = filterRegularCVs(enrichedCVs);
+
+      setCvs(regulars);
+      setMasterCVs(masters);
+      setLoading(false);
+      hasLoadedCVsRef.current = true;
+    }
+  }, [contextCVs]);
+
+  // Update loading state based on context
+  useEffect(() => {
+    if (!secondaryLoading.cvs && hasInitializedFromContextRef.current) {
+      setLoading(false);
+    }
+  }, [secondaryLoading.cvs]);
 
   // Close sort dropdown when clicking outside
   useEffect(() => {
@@ -2054,6 +2110,82 @@ const Canvas: React.FC = () => {
   };
 
   // Filter and sort CVs
+  // Separate standalone CVs and journey CVs from regular cvs
+  const standaloneCVs = React.useMemo(() => {
+    return cvs.filter(cv => cv.cvType !== 'journey');
+  }, [cvs]);
+
+  const journeyCVs = React.useMemo(() => {
+    return cvs.filter(cv => cv.cvType === 'journey');
+  }, [cvs]);
+
+  // "My CVs" = Master CVs + Standalone CVs (combined)
+  const myCVs = React.useMemo(() => {
+    return [...masterCVs, ...standaloneCVs];
+  }, [masterCVs, standaloneCVs]);
+
+  // Filter and sort "My CVs" section
+  const filteredAndSortedMyCVs = React.useMemo(() => {
+    let filtered = myCVs.filter(cv => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return cv.title.toLowerCase().includes(query) ||
+          (cv.description && cv.description.toLowerCase().includes(query));
+      }
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      // Always show master CVs first
+      if (a.isMaster && !b.isMaster) return -1;
+      if (!a.isMaster && b.isMaster) return 1;
+
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'status':
+          return a.status.localeCompare(b.status);
+        case 'lastModified':
+        default:
+          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      }
+    });
+  }, [myCVs, searchQuery, sortBy]);
+
+  // Filter and sort "Tracked Applications" section (journey CVs)
+  const filteredAndSortedJourneyCVs = React.useMemo(() => {
+    let filtered = journeyCVs.filter(cv => {
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return cv.title.toLowerCase().includes(query) ||
+          (cv.description && cv.description.toLowerCase().includes(query));
+      }
+      return true;
+    });
+
+    // Enrich with stage info from journeys
+    const enriched = filtered.map(cv => {
+      const journey = journeys.find(j => j.cvId === cv.id);
+      return {
+        ...cv,
+        stage: journey?.jobStatus || 'Applied' // Use actual job status (e.g., Applied, Interview), default to Applied
+      };
+    });
+
+    return enriched.sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'status':
+          return a.status.localeCompare(b.status);
+        case 'lastModified':
+        default:
+          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+      }
+    });
+  }, [journeyCVs, searchQuery, sortBy]);
+
+  // Keep filteredAndSortedCVs for backward compatibility (all non-master CVs)
   const filteredAndSortedCVs = React.useMemo(() => {
     console.log('🔍 Canvas - filteredAndSortedCVs calculation:', {
       cvsLength: cvs.length,
@@ -2309,43 +2441,22 @@ const Canvas: React.FC = () => {
 
           {viewMode === 'list' ? (
             <div className="space-y-6">
-              {/* Master CVs Section if any */}
-              {masterCVs.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Master CV</h3>
-                  <CVListView
-                    cvs={masterCVs}
-                    onEdit={(cv) => {
+              {/* My CVs Section (Master CVs + Standalone CVs) */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">My CVs</h3>
+                <CVListView
+                  cvs={filteredAndSortedMyCVs}
+                  onEdit={(cv) => {
+                    if (cv.isMaster) {
                       // Handle Master CV edit redirect
                       router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
-                    }}
-                    onDuplicate={handleDuplicateMasterCV}
-                    onDownload={(cv) => handleDownloadCV(cv as any)}
-                    onDelete={() => { /* Master CV usually not deleted here or logic specific */ }}
-                    onToggleStar={toggleStar}
-                    onViewReport={(cv) => handleViewCareerReport(cv as any)}
-                    onRename={(cvId, newTitle) => {
-                      setEditingTitle(newTitle);
-                      return saveTitle(cvId);
-                    }}
-                    editingCVId={editingCVId}
-                    editingTitle={editingTitle}
-                    onStartEditing={(cv) => startEditing(cv as any)}
-                    onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
-                    onCancelEditing={cancelEditing}
-                  />
-                </div>
-              )}
-
-              {/* Regular CVs */}
-              <div className="space-y-3">
-                {masterCVs.length > 0 && <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">My CVs</h3>}
-                <CVListView
-                  cvs={filteredAndSortedCVs}
-                  onEdit={(cv) => handleCVClick(cv as any)}
-                  onDuplicate={(cv) => handleDuplicateCV(cv as any)}
+                    } else {
+                      handleCVClick(cv as any);
+                    }
+                  }}
+                  onDuplicate={(cv) => cv.isMaster ? handleDuplicateMasterCV(cv) : handleDuplicateCV(cv as any)}
                   onDownload={(cv) => handleDownloadCV(cv as any)}
-                  onDelete={(cv) => handleDeleteCV(cv as any)}
+                  onDelete={(cv) => cv.isMaster ? undefined : handleDeleteCV(cv as any)}
                   onToggleStar={toggleStar}
                   onViewReport={(cv) => handleViewCareerReport(cv as any)}
                   onRename={(cvId, newTitle) => {
@@ -2357,8 +2468,40 @@ const Canvas: React.FC = () => {
                   onStartEditing={(cv) => startEditing(cv as any)}
                   onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
                   onCancelEditing={cancelEditing}
+                  scoreLabel="CV Score"
+                  hideType={true}
+                  hideStatus={true}
                 />
               </div>
+
+              {/* Tracked Applications Section (Journey CVs) */}
+              {filteredAndSortedJourneyCVs.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">Tracked Applications</h3>
+                  <CVListView
+                    cvs={filteredAndSortedJourneyCVs}
+                    onEdit={(cv) => handleCVClick(cv as any)}
+                    onDuplicate={(cv) => handleDuplicateCV(cv as any)}
+                    onDownload={(cv) => handleDownloadCV(cv as any)}
+                    onDelete={(cv) => handleDeleteCV(cv as any)}
+                    onToggleStar={toggleStar}
+                    onViewReport={(cv) => handleViewCareerReport(cv as any)}
+                    onRename={(cvId, newTitle) => {
+                      setEditingTitle(newTitle);
+                      return saveTitle(cvId);
+                    }}
+                    editingCVId={editingCVId}
+                    editingTitle={editingTitle}
+                    onStartEditing={(cv) => startEditing(cv as any)}
+                    onTitleEdit={(cvId, newTitle) => setEditingTitle(newTitle)}
+                    onCancelEditing={cancelEditing}
+                    scoreLabel="ATS Score"
+                    hideType={true}
+                    hideStatus={true}
+                    showStage={true}
+                  />
+                </div>
+              )}
             </div>
           ) : (
             /* CV Grid */

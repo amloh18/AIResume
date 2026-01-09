@@ -6,7 +6,7 @@ import { Check, Crown, Star } from 'lucide-react';
 import { CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 
 interface CoverLetterTemplateContentProps {
-    selectedTemplate: CoverLetterTemplate | null;
+    selectedTemplate: CoverLetterTemplate | null | undefined;
     onTemplateSelect: (template: CoverLetterTemplate) => void;
 }
 
@@ -15,8 +15,8 @@ export default function CoverLetterTemplateContent({
     onTemplateSelect
 }: CoverLetterTemplateContentProps) {
     const getTierIcon = (tier: string) => {
-        if (tier === 'premium') return <Crown className="w-3 h-3 text-yellow-500" />;
-        return <Star className="w-3 h-3 text-green-500" />;
+        if (tier === 'premium') return <Crown size={14} className="text-amber-500" />;
+        return <Star size={14} className="text-green-500" />;
     };
 
     const getTierLabel = (tier: string) => {
@@ -24,95 +24,76 @@ export default function CoverLetterTemplateContent({
     };
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {COVER_LETTER_TEMPLATES.map((template) => {
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-6">
+            {COVER_LETTER_TEMPLATES.map((template, index) => {
                 const isSelected = selectedTemplate?.id === template.id;
 
                 return (
-                    <motion.button
+                    <motion.div
                         key={template.id}
-                        onClick={() => onTemplateSelect(template)}
-                        className={`relative p-4 rounded-xl border-2 transition-all text-left ${isSelected
-                                ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/10 shadow-lg'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-[#1a230f]'
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: index * 0.05 }}
+                        className={`relative bg-white border-2 rounded-xl overflow-hidden cursor-pointer transition-all shadow-md hover:shadow-lg ${isSelected
+                            ? 'border-[var(--accent-primary)] ring-2 ring-[var(--accent-primary)]/50'
+                            : 'border-gray-200 hover:border-gray-300'
                             }`}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+                        onClick={() => onTemplateSelect(template)}
                     >
-                        {/* Selection Indicator */}
-                        {isSelected && (
-                            <div className="absolute top-2 right-2 w-6 h-6 bg-[var(--accent-primary)] rounded-full flex items-center justify-center">
-                                <Check className="w-4 h-4 text-black" />
+                        <div className="relative aspect-[0.707] overflow-hidden bg-white group">
+                            {template.thumbnail ? (
+                                <img
+                                    src={template.thumbnail}
+                                    alt={`${template.name} preview`}
+                                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                    onError={(e) => {
+                                        // Try S3 fallback if local image fails
+                                        const target = e.target as HTMLImageElement;
+                                        const currentSrc = target.src;
+                                        const filename = template.thumbnail?.split('/').pop() || '';
+
+                                        // If we haven't tried S3 yet and we have a filename
+                                        if (!currentSrc.includes('s3.') && !currentSrc.includes('amazonaws.com') && filename) {
+                                            const s3BaseUrl = process.env.NEXT_PUBLIC_S3_BASE_URL;
+                                            if (s3BaseUrl) {
+                                                // Try S3 bucket
+                                                target.src = `${s3BaseUrl}/${encodeURIComponent(filename)}`;
+                                                return;
+                                            }
+                                        }
+
+                                        // If S3 failed or not available, hide image and show fallback
+                                        target.style.display = 'none';
+                                        target.parentElement!.setAttribute('data-error', 'true');
+                                    }}
+                                />
+                            ) : null}
+
+                            {/* Fallback for missing images */}
+                            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 -z-10">
+                                <span className="text-gray-400 font-medium">{template.name}</span>
                             </div>
-                        )}
 
-                        {/* Template Preview Thumbnail */}
-                        <div className="aspect-[8.5/11] bg-gray-100 dark:bg-[#313a28] rounded-lg mb-3 overflow-hidden relative">
-                            {/* Simple template preview mockup */}
-                            <div
-                                className="absolute inset-2 flex flex-col gap-1"
-                                style={{
-                                    fontFamily: template.layout.typography.fontFamily,
-                                }}
-                            >
-                                {/* Header section */}
-                                <div
-                                    className={`h-8 flex items-center ${template.layout.headerAlignment === 'center' ? 'justify-center' :
-                                            template.layout.headerAlignment === 'right' ? 'justify-end' : 'justify-start'
-                                        }`}
-                                >
-                                    <div
-                                        className="h-2 w-16 rounded"
-                                        style={{ backgroundColor: template.layout.styling.primaryColor }}
-                                    />
-                                </div>
+                            {/* Template Name Overlay */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white/95 via-white/90 to-transparent p-3 backdrop-blur-sm">
+                                <h4 className="text-black font-semibold text-sm">{template.name}</h4>
+                                <p className="text-black/70 text-xs mt-0.5">{getTierLabel(template.tier)}</p>
+                            </div>
 
-                                {/* Date line */}
-                                <div className={`flex ${template.layout.datePosition === 'right' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className="h-1 w-10 bg-gray-300 dark:bg-gray-600 rounded" />
+                            {/* Selected Indicator */}
+                            {isSelected && (
+                                <div className="absolute top-2 right-2 bg-[var(--accent-primary)] text-black rounded-full p-1.5 shadow-lg z-10">
+                                    <Check size={16} />
                                 </div>
+                            )}
 
-                                {/* Body lines */}
-                                <div className="flex-1 flex flex-col gap-1 mt-2">
-                                    {[...Array(6)].map((_, i) => (
-                                        <div
-                                            key={i}
-                                            className="h-1 bg-gray-200 dark:bg-gray-600 rounded"
-                                            style={{ width: `${85 - (i % 3) * 15}%` }}
-                                        />
-                                    ))}
-                                </div>
-
-                                {/* Signature area */}
-                                <div className="mt-auto">
-                                    <div className="h-1 w-12 bg-gray-300 dark:bg-gray-600 rounded mb-1" />
-                                    <div
-                                        className="h-1.5 w-16 rounded"
-                                        style={{ backgroundColor: template.layout.styling.primaryColor }}
-                                    />
-                                </div>
+                            {/* Tier Badge */}
+                            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/80 backdrop-blur-sm px-2 py-1 rounded-full z-10">
+                                {getTierIcon(template.tier)}
+                                <span className="text-white text-xs font-medium">{getTierLabel(template.tier)}</span>
                             </div>
                         </div>
-
-                        {/* Template Info */}
-                        <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-sm text-gray-900 dark:text-white">
-                                    {template.name}
-                                </h3>
-                                <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${template.tier === 'premium'
-                                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
-                                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                    }`}>
-                                    {getTierIcon(template.tier)}
-                                    {getTierLabel(template.tier)}
-                                </span>
-                            </div>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                                {template.description}
-                            </p>
-                        </div>
-                    </motion.button>
+                    </motion.div>
                 );
             })}
         </div>

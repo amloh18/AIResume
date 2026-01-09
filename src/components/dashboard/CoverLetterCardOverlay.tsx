@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Download, 
-  Trash2, 
+import {
+  Download,
+  Trash2,
   Star,
   Pencil,
   Check,
@@ -51,7 +51,7 @@ interface CoverLetterCardOverlayProps {
   onCancelEditing?: () => void;
 }
 
-const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
+const CoverLetterCardOverlayComponent: React.FC<CoverLetterCardOverlayProps> = ({
   coverLetter,
   onEdit,
   onDownload,
@@ -85,13 +85,13 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
       '#FFFBEB', // Light amber
       '#F1F5F9', // Light slate
     ];
-    
+
     // Use Cover Letter ID to generate consistent color
     const hash = id.split('').reduce((a, b) => {
       a = ((a << 5) - a) + b.charCodeAt(0);
       return a & a;
     }, 0);
-    
+
     return colors[Math.abs(hash) % colors.length];
   };
 
@@ -99,7 +99,7 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
   useEffect(() => {
     const checkForLinkedJourney = async () => {
       if (!session?.user?.id || !coverLetter.id) return;
-      
+
       try {
         setCheckingJourney(true);
         // Note: This would need a similar service for cover letters
@@ -119,7 +119,7 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) {
       return 'Just now';
     } else if (diffInHours < 24) {
@@ -152,14 +152,14 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
 
     // Check title
     if (cl.title && cl.title.trim()) score++;
-    
+
     // Check content length (meaningful content)
     if (cl.content && cl.content.trim().length > 100) score++;
-    
+
     // Check word count (good cover letters are 200-400 words)
     const wordCount = cl.metadata?.wordCount || cl.content?.split(/\s+/).length || 0;
     if (wordCount >= 200) score++;
-    
+
     // Check if it has target company/position info
     if (cl.metadata?.targetCompany || cl.metadata?.targetPosition) score++;
 
@@ -207,14 +207,14 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
     >
       {/* Cover Letter Preview Container - Outer colored background */}
       <div className="w-full aspect-[3/4] rounded-xl border border-gray-200 dark:border-gray-700 group-hover:shadow-lg dark:group-hover:shadow-lime-500/20 transition-shadow p-6"
-           style={{
-             backgroundColor: getRandomColor(coverLetter.id)
-           }}>
+        style={{
+          backgroundColor: getRandomColor(coverLetter.id)
+        }}>
         {/* Cover Letter Preview - Inner smaller preview */}
         <div className="w-full h-full bg-center bg-no-repeat bg-cover rounded-lg relative shadow-lg">
           {/* Cover Letter Preview */}
           {coverLetter.content ? (
-            <CoverLetterPreviewThumbnail 
+            <CoverLetterPreviewThumbnail
               content={coverLetter.content}
               className="rounded-lg"
             />
@@ -228,18 +228,18 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
                     <div className="h-2 bg-purple-300 dark:bg-purple-400/30 rounded w-1/3 mb-2"></div>
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
                   </div>
-                  
+
                   {/* Date */}
                   <div className="mb-3">
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
                   </div>
-                  
+
                   {/* Greeting */}
                   <div className="mb-3">
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/3 mb-1"></div>
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
                   </div>
-                  
+
                   {/* Body paragraphs */}
                   <div className="space-y-2 flex-1">
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
@@ -248,7 +248,7 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-full"></div>
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
                   </div>
-                  
+
                   {/* Closing */}
                   <div className="mt-3">
                     <div className="h-1 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
@@ -417,5 +417,19 @@ const CoverLetterCardOverlay: React.FC<CoverLetterCardOverlayProps> = ({
     </motion.div>
   );
 };
+
+// Memoized component to prevent unnecessary re-renders
+const CoverLetterCardOverlay = React.memo(CoverLetterCardOverlayComponent, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.coverLetter.id === nextProps.coverLetter.id &&
+    prevProps.coverLetter.title === nextProps.coverLetter.title &&
+    prevProps.coverLetter.status === nextProps.coverLetter.status &&
+    prevProps.coverLetter.lastModified === nextProps.coverLetter.lastModified &&
+    prevProps.coverLetter.isStarred === nextProps.coverLetter.isStarred &&
+    prevProps.editingCoverLetterId === nextProps.editingCoverLetterId &&
+    prevProps.editingTitle === nextProps.editingTitle
+  );
+});
 
 export default CoverLetterCardOverlay;
