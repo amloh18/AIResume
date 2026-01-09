@@ -30,9 +30,10 @@ import { ScorecardPanel, KeywordMatchPanel, type ATSResult } from '@/components/
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import FloatingPulsePill from '@/components/resume-enhancer/FloatingPulsePill';
 import RecruiterModeOverlay from '@/components/resume-enhancer/overlays/RecruiterModeOverlay';
-import ATSModeOverlay from '@/components/resume-enhancer/overlays/ATSModeOverlay';
 import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
 import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
+
+
 
 interface Step3BuilderSurgeonProps {
   onComplete: () => void;
@@ -316,8 +317,21 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
       try {
         // For journey CVs, use job title and default seniority; for others use targetRole/seniorityLevel
+        // For journey CVs, use job title and default seniority; for others use targetRole/seniorityLevel
         const roleForAnalysis = isJourneyCV ? (state.jobData?.jobTitle || state.jobData?.title || '') : state.targetRole;
         const seniorityForAnalysis = isJourneyCV ? 'professional' : state.seniorityLevel;
+
+        // Validation - prevent 400 errors
+        if (!roleForAnalysis) {
+          if (isJourneyCV) {
+            toast.error("Please add a job title to proceed with analysis");
+            setShowJobParserDialog(true);
+            setIsAnalyzing(false);
+            dispatch({ type: 'SET_ANALYZING', payload: false });
+            return;
+          }
+          // Fallback to role inferencer for non-journey is handled above by !isRoleReady check
+        }
 
         // Use cache-aware analysis to avoid unnecessary AI token usage
         // Pass cvType to ensure master CVs get grammar/format fixes
@@ -557,13 +571,270 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
 
 
-    // Expose functions to parent via ref - Stubbed for removed builder functionality
+    // Add new section function - initializes section data and updates structure
+    const addNewSection = (sectionType: string) => {
+      console.log('Adding new section:', sectionType);
+
+      // Initialize CV data for the new section
+      let newSectionData: any = null;
+      let fieldName: string = sectionType;
+
+      switch (sectionType) {
+        case 'volunteer':
+          newSectionData = [...(state.cvData.volunteer || []), {
+            organization: 'Organization Name',
+            position: 'Volunteer Role',
+            url: '',
+            startDate: 'Jan 2020',
+            endDate: 'Present',
+            summary: '',
+            highlights: []
+          }];
+          fieldName = 'volunteer';
+          break;
+        case 'publications':
+          newSectionData = [...(state.cvData.publications || []), {
+            name: 'Publication Title',
+            publisher: 'Publisher Name',
+            releaseDate: '2024',
+            url: '',
+            summary: ''
+          }];
+          fieldName = 'publications';
+          break;
+        case 'languages':
+          newSectionData = [...(state.cvData.languages || []), {
+            language: 'Language',
+            fluency: 'Native'
+          }];
+          fieldName = 'languages';
+          break;
+        case 'interests':
+          newSectionData = [...(state.cvData.interests || []), {
+            name: 'Interest Category',
+            keywords: ['Hobby 1', 'Hobby 2']
+          }];
+          fieldName = 'interests';
+          break;
+        case 'references':
+          newSectionData = [...(state.cvData.references || []), {
+            name: 'Reference Name',
+            reference: 'Available upon request'
+          }];
+          fieldName = 'references';
+          break;
+        case 'awards':
+          newSectionData = [...(state.cvData.awards || []), {
+            title: 'Award Title',
+            date: '2024',
+            awarder: 'Awarding Organization',
+            summary: ''
+          }];
+          fieldName = 'awards';
+          break;
+        case 'certificates':
+          newSectionData = [...(state.cvData.certificates || []), {
+            name: 'Certificate Name',
+            issuer: 'Issuing Organization',
+            date: '2024',
+            url: '',
+            description: ''
+          }];
+          fieldName = 'certificates';
+          break;
+        case 'projects':
+          newSectionData = [...(state.cvData.projects || []), {
+            name: 'Project Name',
+            startDate: 'Jan 2024',
+            endDate: 'Present',
+            description: 'Project description',
+            highlights: [],
+            keywords: [],
+            url: ''
+          }];
+          fieldName = 'projects';
+          break;
+        case 'skills':
+          newSectionData = [...(state.cvData.skills || []), {
+            category: 'Skill Category',
+            skills: ['Skill 1', 'Skill 2']
+          }];
+          fieldName = 'skills';
+          break;
+        case 'education':
+          newSectionData = [...(state.cvData.education || []), {
+            institution: 'Name of University',
+            url: '',
+            area: 'ENTER YOUR MAJOR',
+            studyType: '',
+            startDate: 'Jan 2005',
+            endDate: 'Jan 2007',
+            score: '',
+            description: ''
+          }];
+          fieldName = 'education';
+          break;
+        case 'work_experience':
+          newSectionData = [...(state.cvData.work || []), {
+            name: 'Company Name',
+            position: 'Job Title',
+            url: '',
+            startDate: 'Jan 2020',
+            endDate: 'Present',
+            summary: 'Enter your job responsibilities and achievements',
+            highlights: []
+          }];
+          fieldName = 'work';
+          break;
+      }
+
+      // Update both CV data and structure
+      if (newSectionData !== null && fieldName) {
+        // Prepare structure update
+        let updatedStructure = state.cvData.structure || { sections: [] };
+
+        // Ensure structure has sections array
+        if (!updatedStructure.sections) {
+          updatedStructure = { ...updatedStructure, sections: [] };
+        }
+
+        // Clone sections array to avoid mutations
+        const sections = [...updatedStructure.sections];
+        const sectionIndex = sections.findIndex(s => s.type === sectionType);
+
+        if (sectionIndex >= 0) {
+          // Section exists in structure - mark as visible
+          sections[sectionIndex] = {
+            ...sections[sectionIndex],
+            visible: true
+          };
+        } else {
+          // Section doesn't exist in structure - add it
+          const sectionId = `section-${sectionType}-${Date.now()}`;
+          sections.push({
+            id: sectionId,
+            type: sectionType,
+            visible: true
+          });
+        }
+
+        // Dispatch update to CV data - this updates the structure and data together
+        dispatch({
+          type: 'SET_CV_DATA',
+          payload: {
+            ...state.cvData,
+            [fieldName]: newSectionData,
+            structure: { ...updatedStructure, sections }
+          }
+        });
+
+        // Show success toast
+        toast.success(`Added ${sectionType.replace(/_/g, ' ')} section`);
+      }
+    };
+
+    // Delete section function - clears section data and marks as hidden in structure
+    const handleDeleteSectionFromSidebar = (sectionId: string) => {
+      console.log('Deleting section:', sectionId);
+
+      // Map section IDs to their data field names
+      const sectionToFieldMap: Record<string, string> = {
+        volunteer: 'volunteer',
+        publications: 'publications',
+        languages: 'languages',
+        interests: 'interests',
+        references: 'references',
+        awards: 'awards',
+        certificates: 'certificates',
+        projects: 'projects',
+      };
+
+      // Get the field name for this section
+      const fieldName = sectionToFieldMap[sectionId];
+
+      // Build update payload - clear the data array for this section
+      const updatePayload: any = { ...state.cvData };
+
+      if (fieldName && updatePayload[fieldName]) {
+        // Clear the data array so template stops rendering
+        updatePayload[fieldName] = [];
+      }
+
+      // Also update the structure if it exists
+      if (state.cvData.structure?.sections) {
+        const sections = [...state.cvData.structure.sections];
+        const sectionIndex = sections.findIndex(s => s.id === sectionId || s.type === sectionId);
+
+        if (sectionIndex >= 0) {
+          sections[sectionIndex] = {
+            ...sections[sectionIndex],
+            visible: false
+          };
+          updatePayload.structure = { ...state.cvData.structure, sections };
+        }
+      }
+
+      // Dispatch update
+      dispatch({
+        type: 'SET_CV_DATA',
+        payload: updatePayload
+      });
+
+      toast.success(`Removed ${sectionId.replace(/_/g, ' ')} section`);
+    };
+
+    // Reorder sections function - reorders sections in structure
+    const handleSectionReorder = (sectionIds: string[]) => {
+      console.log('Reordering sections:', sectionIds);
+
+      if (!state.cvData.structure?.sections) {
+        console.warn('No structure found in CV data');
+        return;
+      }
+
+      // Create a map of current sections for quick lookup
+      const sectionMap = new Map(
+        state.cvData.structure.sections.map(s => [s.id, s])
+      );
+
+      // Also map by type as fallback
+      state.cvData.structure.sections.forEach(s => {
+        if (!sectionMap.has(s.type)) {
+          sectionMap.set(s.type, s);
+        }
+      });
+
+      // Reorder sections based on new order
+      const reorderedSections = sectionIds
+        .map(id => sectionMap.get(id))
+        .filter((s): s is NonNullable<typeof s> => s !== undefined);
+
+      // Add any sections that weren't in the reorder list (might be hidden)
+      const remainingSections = state.cvData.structure.sections.filter(
+        s => !sectionIds.includes(s.id) && !sectionIds.includes(s.type)
+      );
+
+      const newSections = [...reorderedSections, ...remainingSections];
+
+      // Update structure
+      dispatch({
+        type: 'SET_CV_DATA',
+        payload: {
+          ...state.cvData,
+          structure: { ...state.cvData.structure, sections: newSections }
+        }
+      });
+
+      toast.success('Sections reordered');
+    };
+
+    // Expose functions to parent via ref
     useImperativeHandle(ref, () => ({
       scrollToSection: (sectionId: string) => { console.log('scrollToSection not implemented in optimisation view', sectionId); },
-      handleAddSection: () => { console.log('handleAddSection not implemented in optimisation view'); },
-      addNewSection: (sectionId: string) => { console.log('addNewSection not implemented in optimisation view', sectionId); },
-      handleDeleteSectionFromSidebar: (sectionId: string) => { console.log('handleDeleteSectionFromSidebar not implemented in optimisation view', sectionId); },
-      handleSectionReorder: (sectionIds: string[]) => { console.log('handleSectionReorder not implemented in optimisation view', sectionIds); },
+      handleAddSection: () => { console.log('handleAddSection deprecated - use addNewSection instead'); },
+      addNewSection,
+      handleDeleteSectionFromSidebar,
+      handleSectionReorder,
       activeSection: 'personal'
     }));
 
@@ -575,7 +846,17 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
         {/* Floating Control Pill */}
         <FloatingPulsePill
-          atsResult={atsAnalysis}
+          atsResult={atsAnalysis ? {
+            ...atsAnalysis,
+            // Ensure ScorecardPanel receives the keywords in the expected 'details' structure
+            details: {
+              matchedKeywords: atsAnalysis.matchedKeywords || [],
+              missingKeywords: atsAnalysis.missingKeywords || [],
+              experienceYears: 0,
+              educationLevel: '',
+              formatIssues: []
+            }
+          } : undefined}
           isLoading={isAnalyzing}
           analysisMode={analysisModeInfo.mode}
           className="absolute top-0 right-3 z-50 transition-all duration-300 ease-in-out"
@@ -652,7 +933,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             {/* CV Preview Content Area */}
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4">
               <div
-                className={`flex flex-col items-start gap-8 transition-all duration-300 ease-in-out ${viewMode === 'ats' ? 'blur-[1.5px] grayscale opacity-90' : ''}`}
+                className={`flex flex-col items-start gap-8 transition-all duration-300 ease-in-out`}
                 style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
               >
                 <CVPreviewContent
@@ -667,7 +948,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   onDismissFix={dismissAnnotation}
                   ignoreStructureVisibility={true}
                   renderMode="pages"
-                  onSectionClick={viewMode === 'edit' ? handleSectionClick : undefined}
+                  onSectionClick={(viewMode === 'edit' && !(state.cvType === 'journey' && ['applied', 'interviewing', 'offer', 'hired', 'rejected'].includes(state.jobData?.status?.toLowerCase()))) ? handleSectionClick : undefined}
                   overlaysEnabled={viewMode === 'edit' || viewMode === 'ats'}
                   viewMode={viewMode}
                   onViewModeChange={setViewMode}
@@ -689,16 +970,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   />
                 )}
 
-                {/* ATS Mode Overlay */}
-                {viewMode === 'ats' && (
-                  <ATSModeOverlay
-                    cvData={state.cvData}
-                    jobData={state.jobData}
-                    templateName={state.selectedTemplate?.name}
-                    features={atsFeatures}
-                    containerRef={cvPreviewRef}
-                  />
-                )}
+                {/* ATS Mode Overlay removed - handled by CVPreviewContent internally as page replacement */}
               </div>
             </div>
 

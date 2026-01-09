@@ -8,7 +8,7 @@ import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { downloadAsPDF } from '@/lib/utils/download';
-import { CVScoringService, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
+import { CentralScoreManager, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/pill-engine/CentralScoreManager';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import ScorecardPanel from '@/components/resume-enhancer/panels/ScorecardPanel';
@@ -54,20 +54,67 @@ export default function Step4Review() {
           const response = await fetch(`/api/application-journey/${state.journeyId}`);
           if (response.ok) {
             const result = await response.json();
-            // Check if the journey has a cover letter - API returns { data: { journey: { coverLetterId } } }
-            const coverLetterId = result.data?.journey?.coverLetterId;
+            const journey = result.data?.journey || result.journey;
+            // Check if the journey has a cover letter
+            const coverLetterId = journey?.coverLetterId;
+
             if (coverLetterId) {
               dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: '', coverLetterId } });
+            } else {
+              // --- AUTO-GENERATE IF MISSING ---
+              // User requested backend auto-creation without clicking 'Generate'.
+              // We trigger it here if it doesn't exist.
+              console.log('🔄 Step4Review - Auto-generating missing cover letter...');
+
+              // We need userId for the request - assuming it's available in context or params, 
+              // but Step4Review doesn't usually have userId prop explicitly passed in all usages or it uses session.
+              // However, the `auto-generate` endpoint expects userId in body.
+              // We'll try to get it from state.cvData.userId if available or skipped?
+              // `Step4Review` might not have userId readily available in `state`.
+              // We can rely on server session, but `route.ts` expects explicit userId in body.
+              // Let's check props. Step4Review doesn't receive Props in the export default function Step4Review() line 19.
+              // Ah, ResumeEnhancerContext might have it? `state` has `cvData`.
+              // `state.cvData.userId` might be there? UnifiedSchema doesn't always have root userId.
+              // Wait, the new `Step4Review` file content I viewed has `userId`? No, line 19 is `export default function Step4Review()`.
+              // But line 440 of `CoverLetterEditorContainer` passes `userId`. That's different file.
+              // `NotificationCenter` metadata says `Step4Review.tsx` active? No.
+
+              // Let's assume we can get userId from the API session implicitly if we update API to use session. 
+              // BUT my new API expects `userId` in body.
+              // If I cannot get userId here easily, this is a blocker for "backend auto" from Client.
+              // Wait, `journey.userId` likely exists in the response I just got!
+              const journeyUserId = journey?.userId;
+
+              if (journeyUserId) {
+                const genResponse = await fetch('/api/cover-letters/auto-generate', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    userId: journeyUserId,
+                    journeyId: state.journeyId,
+                    cvId: state.cvId, // or journey.cvId
+                    jobId: state.jobData?.id || state.jobData?._id // or journey.jobId
+                  })
+                });
+
+                if (genResponse.ok) {
+                  const genResult = await genResponse.json();
+                  if (genResult.success && genResult.coverLetterId) {
+                    console.log('✅ Step4Review - Auto-generated cover letter:', genResult.coverLetterId);
+                    dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: '', coverLetterId: genResult.coverLetterId } });
+                  }
+                }
+              }
             }
           }
         } catch (error) {
-          console.error('Failed to fetch cover letter status:', error);
+          console.error('Failed to fetch/generate cover letter status:', error);
         }
       }
     };
 
     fetchCoverLetterStatus();
-  }, [state.cvType, state.journeyId, state.coverLetterId, dispatch]);
+  }, [state.cvType, state.journeyId, state.coverLetterId, state.cvId, state.jobData, dispatch]);
 
   // Auto-detect paper size based on user's location
   useEffect(() => {
@@ -93,9 +140,10 @@ export default function Step4Review() {
     detectPaperSize();
   }, [dispatch, state.paperSize]);
 
-  // Calculate scores using the scoring service
+
+  // Calculate scores using the central manager
   const scoreResult = useMemo(() => {
-    return CVScoringService.getFullScoreResult(
+    return CentralScoreManager.getInstance().getScoreSync(
       state.cvData,
       state.keywordGapAnalysis || undefined,
       state.atsScoreCap

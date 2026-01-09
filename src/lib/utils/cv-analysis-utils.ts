@@ -334,21 +334,10 @@ export function extractImpactMetrics(cvData: UnifiedCVDataStructure | null): Imp
         cvData.work.forEach((job, idx) => {
             const sectionName = `work-${idx}`;
 
-            if (job.summary) {
-                const stats = extractFromText(job.summary, sectionName);
-                combined.numbers.push(...stats.numbers);
-                combined.percentages.push(...stats.percentages);
-                combined.currencies.push(...stats.currencies);
-            }
-
-            if (job.highlights) {
-                job.highlights.forEach(highlight => {
-                    const stats = extractFromText(highlight, sectionName);
-                    combined.numbers.push(...stats.numbers);
-                    combined.percentages.push(...stats.percentages);
-                    combined.currencies.push(...stats.currencies);
-                });
-            }
+            const stats = extractFromText(job.summary, sectionName);
+            combined.numbers.push(...stats.numbers);
+            combined.percentages.push(...stats.percentages);
+            combined.currencies.push(...stats.currencies);
         });
     }
 
@@ -362,15 +351,6 @@ export function extractImpactMetrics(cvData: UnifiedCVDataStructure | null): Imp
                 combined.numbers.push(...stats.numbers);
                 combined.percentages.push(...stats.percentages);
                 combined.currencies.push(...stats.currencies);
-            }
-
-            if (project.highlights) {
-                project.highlights.forEach(highlight => {
-                    const stats = extractFromText(highlight, sectionName);
-                    combined.numbers.push(...stats.numbers);
-                    combined.percentages.push(...stats.percentages);
-                    combined.currencies.push(...stats.currencies);
-                });
             }
         });
     }
@@ -408,9 +388,7 @@ export function getSpeedReadData(cvData: UnifiedCVDataStructure | null): SpeedRe
     let recentAchievement = '';
     if (cvData.work && cvData.work.length > 0) {
         const recentJob = cvData.work[0];
-        if (recentJob.highlights && recentJob.highlights.length > 0) {
-            recentAchievement = recentJob.highlights[0];
-        } else if (recentJob.summary) {
+        if (recentJob.summary) {
             // Fallback to first sentence of summary
             recentAchievement = recentJob.summary.split(/[.!?]/)[0] + '.';
         }
@@ -465,9 +443,6 @@ export function getPlainTextCV(cvData: UnifiedCVDataStructure | null): string {
 
             lines.push(`${title} | ${company} | ${dates}`);
             if (job.summary) lines.push(stripHtml(job.summary));
-            if (job.highlights) {
-                job.highlights.forEach(h => lines.push(`* ${stripHtml(h)}`));
-            }
             lines.push('');
         });
     }

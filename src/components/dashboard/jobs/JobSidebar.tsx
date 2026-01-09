@@ -198,7 +198,8 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
       if (firstJourneyWithCV?.cvId) {
         loadCVData(firstJourneyWithCV.cvId);
       } else {
-        loadCVData(); // Will fetch master CV
+        // Do not fallback to master CV - if no journey CV, we have no CV data
+        setLoadingCV(false);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

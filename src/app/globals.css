@@ -797,7 +797,429 @@ nav {
 /* Optimize audio players */
 .audio-optimized {
   width: 100%;
+  height: auto;
   will-change: auto;
+}
+
+/* =========================================
+   COVER LETTER TEMPLATES (HARDCODED)
+   ========================================= */
+
+/* Common Container Styles */
+.cl-container {
+  box-sizing: border-box;
+  width: 100%;
+  background-color: white;
+  min-height: 100%;
+}
+
+@media print {
+  .cl-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+/* 1. The "Zurich Minimalist" */
+.template-zurich {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #222;
+  line-height: 1.6;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.template-zurich .candidate-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 5px;
+}
+
+.template-zurich .candidate-contact,
+.template-zurich .recipient-info p {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 2px 0;
+}
+
+.template-zurich .header-divider {
+  margin: 30px 0;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+.template-zurich .recipient-name {
+  font-weight: 600;
+  color: #000;
+}
+
+.template-zurich .cl-body {
+  margin-top: 40px;
+}
+
+.template-zurich .cl-module {
+  margin-bottom: 20px;
+}
+
+/* 2. The "Oxford Traditional" */
+.template-oxford {
+  font-family: 'Merriweather', Georgia, serif;
+  color: #333;
+  line-height: 1.7;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.template-oxford .candidate-name {
+  font-family: sans-serif;
+  /* Contrast font for name */
+  color: #003366;
+  /* Classic Navy */
+  font-size: 2rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.template-oxford .header-divider {
+  border-top: 2px solid #003366;
+  width: 50px;
+  /* Subtle short line */
+  margin: 25px 0;
+}
+
+.template-oxford .recipient-name {
+  font-weight: 700;
+  color: #003366;
+}
+
+.template-oxford .cl-body {
+  font-size: 1.05rem;
+}
+
+/* 3. The "Kyoto Sidebar" */
+.template-kyoto {
+  font-family: sans-serif;
+  display: flex;
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.05);
+  /* Subtle depth */
+}
+
+.template-kyoto .cl-header {
+  flex-basis: 28%;
+  background-color: #f8f9fa;
+  /* Pale grey sidebar */
+  padding: 40px 25px;
+  border-right: 1px solid #eee;
+  font-size: 0.9rem;
+}
+
+.template-kyoto .candidate-name {
+  font-size: 1.4rem;
+  margin-bottom: 20px;
+  color: #444;
+}
+
+.template-kyoto .header-divider {
+  display: none;
+}
+
+.template-kyoto .recipient-info {
+  margin-top: 40px;
+}
+
+.template-kyoto .to-label {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  color: #888;
+}
+
+.template-kyoto .cl-body {
+  flex-basis: 72%;
+  padding: 40px 50px;
+  background-color: #fff;
+  line-height: 1.7;
+  color: #333;
+}
+
+/* 4. The "Stockholm Accent" */
+.template-stockholm {
+  font-family: sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  /* The Accent Bar */
+  border-top: 7px solid #5F9EA0;
+  /* Muted Teal */
+  padding: 50px;
+}
+
+.template-stockholm .candidate-name {
+  font-weight: 300;
+  /* Light weight font */
+  font-size: 2.2rem;
+  color: #000;
+}
+
+.template-stockholm .candidate-contact {
+  color: #5F9EA0;
+  /* Matching the accent border */
+  font-weight: 500;
+}
+
+.template-stockholm .header-divider {
+  margin: 40px 0 20px 0;
+  border-top: 1px dotted #ccc;
+}
+
+.template-stockholm .cl-module {
+  /* Slight increase in spacing for airy feel */
+  margin-bottom: 24px;
+}
+
+/* 5. The "New York Bold" */
+.template-newyork {
+  font-family: 'Roboto', sans-serif;
+  color: #1a1a1a;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.template-newyork .candidate-name {
+  font-weight: 900;
+  /* Extra bold */
+  font-size: 2.5rem;
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+
+.template-newyork .recipient-name,
+.template-newyork .company-name {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.template-newyork .header-divider {
+  border-top: 3px solid #1a1a1a;
+  /* Thick divider */
+  margin: 30px 0;
+}
+
+.template-newyork .cl-body {
+  font-weight: 400;
+  font-size: 1.05rem;
+}
+
+/* 6. The "Austin Warmth" */
+.template-austin {
+  font-family: Georgia, serif;
+  background-color: #FAF9F6;
+  /* Off-white "Cream" background */
+  color: #3E3B36;
+  /* Soft Charcoal/Brown instead of black */
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 50px;
+  line-height: 1.8;
+  /* Relaxed spacing */
+}
+
+.template-austin .candidate-name {
+  font-family: sans-serif;
+  color: #A0522D;
+  /* Sienna / Warm Brown accent */
+  font-size: 1.8rem;
+}
+
+.template-austin .header-divider {
+  border-top: 1px solid #e0ded8;
+}
+
+.template-austin .recipient-name {
+  font-weight: 600;
+  color: #A0522D;
+}
+
+/* 7. The "Berlin Structure" */
+.template-berlin {
+  font-family: 'Open Sans', sans-serif;
+  color: #333;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px;
+}
+
+.template-berlin .candidate-info {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.template-berlin .candidate-name {
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.4rem;
+}
+
+/* The structural lines */
+.template-berlin .header-divider,
+.template-berlin .cl-signoff:before {
+  content: "";
+  display: block;
+  border-top: 2px solid #ddd;
+  margin: 30px 0;
+}
+
+.template-berlin .recipient-info {
+  /* Indent recipient info slightly */
+  padding-left: 20px;
+  border-left: 2px solid #eee;
+}
+
+.template-berlin .cl-body {
+  margin-top: 40px;
+}
+
+/* 8. The "Vancouver Offset" */
+.template-vancouver {
+  font-family: sans-serif;
+  color: #444;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 50px;
+}
+
+.template-vancouver .cl-header {
+  margin-bottom: 50px;
+  /* Header stays full width */
+}
+
+.template-vancouver .candidate-name {
+  color: #0056b3;
+  /* A distinct tech blue */
+  font-size: 1.6rem;
+}
+
+.template-vancouver .cl-body {
+  /* The Offset Effect */
+  margin-left: 100px;
+  /* Significant indent */
+  position: relative;
+}
+
+/* A subtle vertical line guiding the eye down the offset body */
+.template-vancouver .cl-body:before {
+  content: "";
+  position: absolute;
+  left: -30px;
+  top: 0;
+  height: 100%;
+  width: 2px;
+  background-color: #f0f0f0;
+}
+
+.template-vancouver .cl-module {
+  margin-bottom: 25px;
+}
+
+/* 9. The "Milan Elegant" */
+.template-milan {
+  font-family: sans-serif;
+  color: #333;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 60px;
+  /* Subtle stationery effect */
+  background: linear-gradient(to bottom right, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #eee;
+}
+
+.template-milan .candidate-info {
+  text-align: center;
+}
+
+.template-milan .candidate-name {
+  font-weight: 300;
+  font-size: 2rem;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.template-milan .candidate-contact {
+  font-size: 0.85rem;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.template-milan .header-divider {
+  width: 60px;
+  margin: 30px auto;
+  /* Centered small divider */
+  border-top: 1px solid #ccc;
+}
+
+.template-milan .recipient-info {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.template-milan .cl-body {
+  /* Justify text for elegant block look */
+  text-align: justify;
+}
+
+/* 10. The "Seattle Geometric" */
+.template-seattle {
+  font-family: sans-serif;
+  color: #2a2a2a;
+  max-width: 800px;
+  margin: 0 auto;
+  overflow: hidden;
+  /* Contain the background graphic */
+  position: relative;
+  background-color: #fff;
+}
+
+/* The subtle background graphic element */
+.template-seattle:before {
+  content: "";
+  position: absolute;
+  top: -100px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  background-color: #f4f7f6;
+  /* Very pale mint/grey */
+  border-radius: 50%;
+  z-index: 0;
+  /* Behind content */
+}
+
+.template-seattle .cl-header,
+.template-seattle .cl-body {
+  position: relative;
+  z-index: 1;
+  /* In front of graphic */
+  padding: 50px;
+}
+
+.template-seattle .candidate-name {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.template-seattle .recipient-name {
+  color: #4a90e2;
+  /* Subtle blue highlight on recipient */
+  font-weight: 600;
 }
 
 /* Optimize file uploads */

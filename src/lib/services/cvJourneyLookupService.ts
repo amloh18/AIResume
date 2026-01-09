@@ -12,6 +12,7 @@ export interface CVJourneyInfo {
   jobId: string;
   userId: string;
   status: string;
+  jobStatus?: string; // New field for actual job application stage
   currentStep: number;
   jobTitle?: string;
   company?: string;
@@ -24,16 +25,16 @@ export class CVJourneyLookupService {
   static async findJourneyByCVId(cvId: string, userId: string): Promise<CVJourneyInfo | null> {
     try {
       console.log('🔍 CVJourneyLookupService - Finding journey by CV ID:', cvId);
-      
+
       const response = await fetch(`/api/application-journey?userId=${userId}&cvId=${cvId}`);
-      
+
       if (!response.ok) {
         console.log('❌ No journey found for CV ID:', cvId);
         return null;
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data.journeys && data.data.journeys.length > 0) {
         const journey = data.data.journeys[0];
         console.log('✅ Found journey for CV:', journey);
@@ -44,12 +45,13 @@ export class CVJourneyLookupService {
           jobId: journey.jobId,
           userId: journey.userId,
           status: journey.status,
+          jobStatus: journey.jobStatus,
           currentStep: journey.currentStep,
           jobTitle: journey.jobTitle,
           company: journey.company
         };
       }
-      
+
       return null;
     } catch (error) {
       console.error('❌ Error finding journey by CV ID:', error);
@@ -63,16 +65,16 @@ export class CVJourneyLookupService {
   static async findJourneyByCoverLetterId(coverLetterId: string, userId: string): Promise<CVJourneyInfo | null> {
     try {
       console.log('🔍 CVJourneyLookupService - Finding journey by cover letter ID:', coverLetterId);
-      
+
       const response = await fetch(`/api/application-journey?userId=${userId}&coverLetterId=${coverLetterId}`);
-      
+
       if (!response.ok) {
         console.log('❌ No journey found for cover letter ID:', coverLetterId);
         return null;
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data.journeys && data.data.journeys.length > 0) {
         const journey = data.data.journeys[0];
         console.log('✅ Found journey for cover letter:', journey);
@@ -83,12 +85,13 @@ export class CVJourneyLookupService {
           jobId: journey.jobId,
           userId: journey.userId,
           status: journey.status,
+          jobStatus: journey.jobStatus,
           currentStep: journey.currentStep,
           jobTitle: journey.jobTitle,
           company: journey.company
         };
       }
-      
+
       return null;
     } catch (error) {
       console.error('❌ Error finding journey by cover letter ID:', error);
@@ -102,16 +105,16 @@ export class CVJourneyLookupService {
   static async findJourneyByJobId(jobId: string, userId: string): Promise<CVJourneyInfo | null> {
     try {
       console.log('🔍 CVJourneyLookupService - Finding journey by job ID:', jobId);
-      
+
       const response = await fetch(`/api/application-journey?userId=${userId}&jobId=${jobId}`);
-      
+
       if (!response.ok) {
         console.log('❌ No journey found for job ID:', jobId);
         return null;
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data.journeys && data.data.journeys.length > 0) {
         const journey = data.data.journeys[0];
         console.log('✅ Found journey for job:', journey);
@@ -122,12 +125,13 @@ export class CVJourneyLookupService {
           jobId: journey.jobId,
           userId: journey.userId,
           status: journey.status,
+          jobStatus: journey.jobStatus,
           currentStep: journey.currentStep,
           jobTitle: journey.jobTitle,
           company: journey.company
         };
       }
-      
+
       return null;
     } catch (error) {
       console.error('❌ Error finding journey by job ID:', error);
@@ -146,21 +150,21 @@ export class CVJourneyLookupService {
       }
 
       console.log('🔍 CVJourneyLookupService - Batch finding journeys for CV IDs:', cvIds.length);
-      
+
       // Use batch endpoint with comma-separated CV IDs
       const cvIdsParam = cvIds.join(',');
       const response = await fetch(`/api/application-journey?userId=${userId}&cvIds=${cvIdsParam}`);
-      
+
       if (!response.ok) {
         console.log('❌ Batch journey fetch failed:', response.status);
         return new Map();
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data?.journeys) {
         const journeysMap = new Map<string, CVJourneyInfo>();
-        
+
         data.data.journeys.forEach((journey: any) => {
           if (journey.cvId) {
             journeysMap.set(journey.cvId, {
@@ -170,17 +174,18 @@ export class CVJourneyLookupService {
               jobId: journey.jobId,
               userId: journey.userId,
               status: journey.status,
+              jobStatus: journey.jobStatus,
               currentStep: journey.currentStep,
               jobTitle: journey.jobTitle,
               company: journey.company
             });
           }
         });
-        
+
         console.log(`✅ Batch found ${journeysMap.size} journeys for ${cvIds.length} CVs`);
         return journeysMap;
       }
-      
+
       return new Map();
     } catch (error) {
       console.error('❌ Error batch finding journeys by CV IDs:', error);
