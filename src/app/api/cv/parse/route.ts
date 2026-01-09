@@ -244,13 +244,13 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
   else if (mimeType === 'application/pdf') {
     let pdfParseSucceeded = false;
     const extractionErrors: string[] = [];
-    
+
     // Attempt 1: Fast Text Parse (Method 1: pdf-parse)
     // Load pdf-parse dynamically to avoid bundling test files
     try {
       console.log('Attempting Method 1: pdf-parse (loading dynamically)...');
       const pdfParse = (await import('pdf-parse')).default;
-      
+
       try {
         const data = await pdfParse(fileBuffer);
         const extractedText = data?.text?.trim() || '';
@@ -279,12 +279,12 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
       console.log(`⚠️ ${errorMsg}`);
       extractionErrors.push(errorMsg);
     }
-    
+
     // Attempt 2: pdfjs-dist fallback (Method 2) - only if pdf-parse didn't work
     if (!pdfParseSucceeded && rawText.length < 50) {
       try {
         console.log('Attempting Method 2: pdfjs-dist (loading dynamically)...');
-        
+
         // Try different import paths for pdfjs-dist compatibility
         let pdfjs: any;
         try {
@@ -298,18 +298,18 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
             throw new Error(`Failed to import pdfjs-dist: ${e1 instanceof Error ? e1.message : String(e1)}`);
           }
         }
-        
+
         // Disable worker for server-side usage if GlobalWorkerOptions exists
         if (pdfjs.GlobalWorkerOptions) {
           pdfjs.GlobalWorkerOptions.workerSrc = '';
         }
-        
+
         // Set up document loading - handle both old and new API
         const getDocument = pdfjs.getDocument || pdfjs.default?.getDocument;
         if (!getDocument) {
           throw new Error('pdfjs-dist getDocument method not found');
         }
-        
+
         const loadingTask = getDocument({
           data: fileBuffer,
           useWorkerFetch: false,
@@ -317,15 +317,15 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
           useSystemFonts: true,
           verbosity: 0, // Suppress warnings
         });
-        
+
         const pdfDocument = await loadingTask.promise;
         const numPages = pdfDocument.numPages;
         console.log(`📄 PDF has ${numPages} pages`);
-        
+
         let extractedText = '';
         // Process up to 5 pages (most CVs are 1-2 pages)
         const maxPages = Math.min(numPages, 5);
-        
+
         for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
           try {
             const page = await pdfDocument.getPage(pageNum);
@@ -335,7 +335,7 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
               .filter((str: string) => str.trim().length > 0)
               .join(' ')
               .trim();
-            
+
             if (pageText.length > 0) {
               extractedText += pageText + '\n';
               console.log(`✅ Page ${pageNum}: extracted ${pageText.length} characters`);
@@ -344,7 +344,7 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
             console.warn(`⚠️ Failed to extract text from page ${pageNum}:`, pageError instanceof Error ? pageError.message : String(pageError));
           }
         }
-        
+
         if (extractedText.trim().length >= 50) {
           rawText = extractedText.trim();
           pdfParseSucceeded = true;
@@ -360,37 +360,37 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
         extractionErrors.push(errorMsg);
       }
     }
-    
+
     // Attempt 3: OCR Fallback (Method 3: tesseract + pdf2pic) - only if previous methods didn't work
     if (!pdfParseSucceeded && rawText.length < 50) {
       try {
         console.log('Attempting Method 3: OCR (tesseract + pdf2pic)...');
-        
+
         if (!createWorker) {
           throw new Error('tesseract.js not available');
         }
-        
+
         // Load pdf2pic dynamically to avoid bundling test files
         console.log('Loading pdf2pic dynamically...');
         const pdf2pic = await import('pdf2pic');
         const pdf2picFromPath = pdf2pic.fromPath;
-        
+
         if (!pdf2picFromPath) {
           throw new Error('pdf2pic library not available for PDF to image conversion (requires ImageMagick/Ghostscript)');
         }
-        
+
         // pdf2pic requires a file path, so we need to write the buffer to a temp file first
         const fs = require('fs');
         const path = require('path');
         const os = require('os');
-        
+
         let tempFilePath: string | null = null;
-        
+
         try {
           // CRITICAL: Use /tmp explicitly for serverless environments (Vercel, AWS Lambda, etc.)
           // This is the ONLY writable directory on serverless platforms
           const tempDir = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? '/tmp' : os.tmpdir();
-          
+
           // Ensure /tmp directory exists (it should, but we'll check anyway)
           if (!fs.existsSync(tempDir)) {
             try {
@@ -404,27 +404,27 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
               }
             }
           }
-          
+
           tempFilePath = path.join(tempDir, `cv-parse-ocr-${Date.now()}-${Math.random().toString(36).substring(7)}.pdf`);
-          
+
           fs.writeFileSync(tempFilePath, fileBuffer, { flag: 'w' });
           console.log(`📝 Wrote PDF buffer to temp file for OCR: ${tempFilePath}`);
-          
+
           // Verify file was written
           if (!fs.existsSync(tempFilePath)) {
             throw new Error('Failed to write temporary PDF file');
           }
-          
+
           const fileStats = fs.statSync(tempFilePath);
           if (fileStats.size === 0) {
             throw new Error('Temporary PDF file is empty');
           }
-          
+
           // Ensure tempFilePath is not null before using it
           if (!tempFilePath) {
             throw new Error('Temporary file path is null');
           }
-          
+
           // Use pdf2pic with explicit /tmp directory for serverless compatibility
           // This ensures pdf2pic writes to the only writable directory on Vercel/serverless
           const convert = pdf2picFromPath(tempFilePath, {
@@ -435,23 +435,23 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
             width: 2000,
             height: 3000
           });
-          
+
           console.log('🔄 Converting PDF pages to images...');
-          
+
           // Convert pages (limit to first 3 pages for CVs)
           const results = await convert.bulk(3, { responseType: 'base64' });
           console.log(`✅ Converted ${results?.length || 0} pages to images`);
-          
+
           // Track generated image file paths for cleanup
           const generatedImagePaths: string[] = [];
-          
+
           if (results && results.length > 0 && results[0] && results[0].base64) {
             const worker = await createWorker('eng');
             // tesseract.js worker methods (TypeScript types may be incomplete)
             const workerAny = worker as any;
             if (workerAny.loadLanguage) await workerAny.loadLanguage('eng');
             if (workerAny.initialize) await workerAny.initialize('eng');
-            
+
             // Process each page
             for (let pageIdx = 0; pageIdx < results.length; pageIdx++) {
               try {
@@ -460,12 +460,12 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
                   console.warn(`⚠️ Page ${pageIdx + 1} has no image data, skipping`);
                   continue;
                 }
-                
+
                 // Store image path for cleanup if available
                 if (result.path) {
                   generatedImagePaths.push(result.path as string);
                 }
-                
+
                 console.log(`🔄 Processing page ${pageIdx + 1} via OCR...`);
                 const { data: { text } } = await worker.recognize(`data:image/png;base64,${result.base64}`);
                 if (text && text.trim().length > 0) {
@@ -478,13 +478,13 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
                 console.warn(`⚠️ OCR failed for page ${pageIdx + 1}:`, pageOcrError instanceof Error ? pageOcrError.message : String(pageOcrError));
               }
             }
-            
+
             await worker.terminate();
             console.log('📊 PDF OCR parsing - total text length:', rawText.length);
           } else {
             throw new Error('pdf2pic conversion returned no valid results');
           }
-          
+
           // Clean up generated image files from /tmp
           for (const imagePath of generatedImagePaths) {
             try {
@@ -521,10 +521,10 @@ async function extractTextFromFile(fileBuffer: Buffer, mimeType: string): Promis
         // Don't throw here - let it fall through to final validation
       }
     }
-    
+
     // If all methods failed, throw error with details
     if (!rawText || rawText.trim().length < 50) {
-      const errorDetails = extractionErrors.length > 0 
+      const errorDetails = extractionErrors.length > 0
         ? `\nFailed methods:\n${extractionErrors.map((e, i) => `  ${i + 1}. ${e}`).join('\n')}`
         : '';
       throw new Error(
@@ -580,7 +580,7 @@ async function structureTextWithAI(rawText: string): Promise<any> {
   }
 
   console.log(`🔑 Using AI API helper with gemini_api_key and gemini_api_key2 fallback`);
-  
+
   // Create a simplified schema for the AI prompt to save tokens
   // Note: courses in education and highlights in projects are optional
   // IMPORTANT: All fields must match the validation schema exactly
@@ -753,7 +753,7 @@ from the resume text and return **only** a valid JSON object.
 
   try {
     console.log('📡 Calling AI API for text structuring...');
-    
+
     // Use AI API helper with fallback
     // Increased maxTokens to ensure full work summaries with achievements are captured
     const aiResponse = await callAIWithFallback({
@@ -766,7 +766,7 @@ from the resume text and return **only** a valid JSON object.
     console.log(`✅ AI API call successful with ${aiResponse.provider}!`);
     console.log(`📥 Response received (length): ${aiResponse.content.length} characters`);
     console.log(`📥 Response preview (first 200 chars):`, aiResponse.content.substring(0, 200));
-    
+
     // Cleanup logic to remove markdown wrappers
     let responseText = aiResponse.content;
     const jsonMatch = responseText.match(/```json([\s\S]*?)```|```([\s\S]*?)```|([\s\S]*)/);
@@ -776,7 +776,7 @@ from the resume text and return **only** a valid JSON object.
       // Fallback: just trim the response
       responseText = responseText.trim();
     }
-    
+
     // Additional cleanup: remove leading/trailing whitespace and any remaining markdown artifacts
     responseText = responseText
       .replace(/^```json\s*/i, '')
@@ -786,7 +786,7 @@ from the resume text and return **only** a valid JSON object.
       .replace(/\}[\s]*$/m, '}')
       .replace(/,\s*([}\]])/g, '$1')
       .trim();
-    
+
     // Parse the cleaned JSON
     let parsedJson: any;
     try {
@@ -800,12 +800,12 @@ from the resume text and return **only** a valid JSON object.
       }
       throw new Error(`Failed to parse AI response: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
     }
-    
+
     console.log(`\n═══════════════════════════════════════════════════════`);
     console.log(`✅ AI structuring successful with ${aiResponse.provider}!`);
     console.log(`═══════════════════════════════════════════════════════\n`);
     return parsedJson;
-    
+
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`❌ AI API call failed:`, errorMessage);
@@ -814,7 +814,7 @@ from the resume text and return **only** a valid JSON object.
       message: error.message,
       stack: error.stack?.substring(0, 300)
     } : error);
-    
+
     // Sanitize error message before throwing
     const sanitizedMessage = sanitizeErrorMessage(errorMessage, 'AI processing failed. Please try again.');
     throw new Error(sanitizedMessage);
@@ -852,7 +852,7 @@ async function robustDocumentParser(
     console.log('═══════════════════════════════════════════════════════');
     console.log('🚀 STAGE 3: Validation');
     console.log('═══════════════════════════════════════════════════════');
-    
+
     // Pre-process: Convert all undefined values to null and sanitize URLs
     // Also ensure optional fields (courses, highlights in projects) are handled correctly
     const normalizeUndefinedToNull = (obj: any, parentKey?: string): any => {
@@ -867,7 +867,7 @@ async function robustDocumentParser(
         for (const key in obj) {
           if (obj.hasOwnProperty(key)) {
             let value = obj[key];
-            
+
             // Convert undefined to null
             if (value === undefined) {
               value = null;
@@ -921,7 +921,7 @@ async function robustDocumentParser(
             else {
               value = normalizeUndefinedToNull(value, `${parentKey ? parentKey + '.' : ''}${key}`);
             }
-            
+
             normalized[key] = value;
           }
         }
@@ -929,11 +929,11 @@ async function robustDocumentParser(
       }
       return obj;
     };
-    
+
     const normalizedJson = normalizeUndefinedToNull(aiJsonOutput);
     console.log('📝 Normalized undefined values to null and sanitized URLs');
     console.log('📝 Normalized JSON structure:', JSON.stringify(normalizedJson, null, 2).substring(0, 1000));
-    
+
     // Pre-validate: Ensure all required fields exist before Zod validation
     const ensureRequiredFields = (data: any): any => {
       // Ensure arrays exist
@@ -948,7 +948,7 @@ async function robustDocumentParser(
       if (!data.languages) data.languages = [];
       if (!data.interests) data.interests = [];
       if (!data.references) data.references = [];
-      
+
       // Ensure education items have all required fields
       if (Array.isArray(data.education)) {
         data.education = data.education.map((edu: any) => ({
@@ -963,7 +963,7 @@ async function robustDocumentParser(
           description: edu.description ?? null
         }));
       }
-      
+
       // Ensure project items have all required fields
       if (Array.isArray(data.projects)) {
         data.projects = data.projects.map((proj: any) => ({
@@ -976,7 +976,7 @@ async function robustDocumentParser(
           url: proj.url ?? null
         }));
       }
-      
+
       // Ensure work items have all required fields
       if (Array.isArray(data.work)) {
         data.work = data.work.map((w: any) => ({
@@ -989,7 +989,7 @@ async function robustDocumentParser(
           highlights: w.highlights ?? []
         }));
       }
-      
+
       // Ensure volunteer items have all required fields
       if (Array.isArray(data.volunteer)) {
         data.volunteer = data.volunteer.map((v: any) => ({
@@ -1002,7 +1002,7 @@ async function robustDocumentParser(
           highlights: v.highlights ?? []
         }));
       }
-      
+
       // Ensure skills items have all required fields
       if (Array.isArray(data.skills)) {
         data.skills = data.skills.map((s: any) => ({
@@ -1010,7 +1010,7 @@ async function robustDocumentParser(
           skills: Array.isArray(s.skills) ? s.skills : []
         }));
       }
-      
+
       // Ensure awards items have all required fields
       if (Array.isArray(data.awards)) {
         data.awards = data.awards.map((a: any) => ({
@@ -1020,7 +1020,7 @@ async function robustDocumentParser(
           summary: a.summary ?? null
         }));
       }
-      
+
       // Ensure certificates items have all required fields
       if (Array.isArray(data.certificates)) {
         data.certificates = data.certificates.map((c: any) => ({
@@ -1031,7 +1031,7 @@ async function robustDocumentParser(
           description: c.description ?? null
         }));
       }
-      
+
       // Ensure publications items have all required fields
       if (Array.isArray(data.publications)) {
         data.publications = data.publications.map((p: any) => ({
@@ -1042,7 +1042,7 @@ async function robustDocumentParser(
           summary: p.summary ?? null
         }));
       }
-      
+
       // Ensure languages items have all required fields
       if (Array.isArray(data.languages)) {
         data.languages = data.languages.map((l: any) => ({
@@ -1050,7 +1050,7 @@ async function robustDocumentParser(
           fluency: l.fluency ?? null
         }));
       }
-      
+
       // Ensure interests items have all required fields
       if (Array.isArray(data.interests)) {
         data.interests = data.interests.map((i: any) => ({
@@ -1058,7 +1058,7 @@ async function robustDocumentParser(
           keywords: Array.isArray(i.keywords) ? i.keywords : []
         }));
       }
-      
+
       // Ensure references items have all required fields
       if (Array.isArray(data.references)) {
         data.references = data.references.map((r: any) => ({
@@ -1066,13 +1066,13 @@ async function robustDocumentParser(
           reference: r.reference ?? null
         }));
       }
-      
+
       return data;
     };
-    
+
     const preValidatedJson = ensureRequiredFields(normalizedJson);
     console.log('📝 Pre-validated JSON structure');
-    
+
     let validatedData;
     try {
       validatedData = cvDataSchema.parse(preValidatedJson);
@@ -1086,10 +1086,10 @@ async function robustDocumentParser(
       }
       throw validationError;
     }
-    
+
     // Helper function to convert null to empty string
     const nullToEmpty = (value: string | null | undefined): string => value ?? '';
-    
+
     // Convert nullable fields to empty strings to match UnifiedCVDataStructure
     const sanitizedBasics = validatedData.basics ? {
       name: nullToEmpty(validatedData.basics.name),
@@ -1112,7 +1112,7 @@ async function robustDocumentParser(
         url: nullToEmpty(p.url),
       })),
     } : DEFAULT_UNIFIED_CV_DATA.basics;
-    
+
     // Merge with default structure to ensure all fields are present
     const finalData: UnifiedCVDataStructure = {
       ...DEFAULT_UNIFIED_CV_DATA,
@@ -1192,13 +1192,13 @@ async function robustDocumentParser(
         reference: nullToEmpty(r.reference),
       })),
     };
-    
+
     console.log('✅ Parsing successful!');
     console.log('📊 Parsed - Personal info:', !!finalData.basics.name || !!finalData.basics.email);
     console.log('📊 Parsed - Work entries:', finalData.work.length);
     console.log('📊 Parsed - Education entries:', finalData.education.length);
     console.log('📊 Parsed - Projects entries:', finalData.projects.length);
-    
+
     return { cvData: finalData };
 
   } catch (error) {
@@ -1206,13 +1206,13 @@ async function robustDocumentParser(
     if (error instanceof z.ZodError) {
       // The AI's JSON was malformed
       console.error('Zod validation errors:', error.issues);
-      return { 
-        error: 'AI parser returned invalid data.', 
-        details: error.issues 
+      return {
+        error: 'AI parser returned invalid data.',
+        details: error.issues
       };
     }
     // This catches errors from Stage 1 (extraction) or Stage 2 (AI API)
-    return { 
+    return {
       error: error instanceof Error ? error.message : String(error)
     };
   }
@@ -1225,12 +1225,12 @@ async function robustDocumentParser(
 // Add GET method for testing
 export async function GET() {
   console.log('CV Parse API test endpoint called');
-  
+
   const testData = { ...DEFAULT_UNIFIED_CV_DATA };
   testData.basics.name = 'Test User';
   testData.basics.email = 'test@example.com';
   testData.basics.summary = 'This is a test CV structure to verify the API is working.';
-  
+
   return NextResponse.json({
     ...testData,
     _test: true,
@@ -1242,10 +1242,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     console.log('CV Parse API called');
-    
+
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
-    
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const saveDocument = formData.get('saveDocument') === 'true'; // Optional flag to save document to S3
@@ -1289,10 +1289,10 @@ export async function POST(request: NextRequest) {
 
     console.log('Starting document parsing...');
     const startTime = Date.now();
-    
+
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
-    
+
     // Optionally save document to S3 if user is authenticated and saveDocument flag is true
     let documentUrl: string | undefined;
     if (userId && saveDocument) {
@@ -1325,17 +1325,17 @@ export async function POST(request: NextRequest) {
         // Continue with parsing even if S3 upload fails
       }
     }
-    
+
     // Run the robust parser
     const parseResult = await robustDocumentParser(buffer, file.type);
-    
+
     const parseTime = Date.now() - startTime;
-    
+
     // Handle parsing errors
     if (parseResult.error) {
       console.error('Parsing failed:', parseResult.error);
       return NextResponse.json(
-        { 
+        {
           error: parseResult.error,
           details: parseResult.details,
           _parseTime: parseTime
@@ -1343,19 +1343,19 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-    
+
     // Validate parsing results
     const hasPersonalInfo = !!(parseResult.cvData?.basics?.name || parseResult.cvData?.basics?.email);
     const hasWorkExperience = (parseResult.cvData?.work?.length || 0) > 0;
     const hasEducation = (parseResult.cvData?.education?.length || 0) > 0;
     const hasSkills = (parseResult.cvData?.skills?.length || 0) > 0;
-    
+
     console.log('=== PARSING VALIDATION ===');
     console.log('Has personal info:', hasPersonalInfo);
     console.log('Has work experience:', hasWorkExperience);
     console.log('Has education:', hasEducation);
     console.log('Has skills:', hasSkills);
-    
+
     // Ensure we always return a valid structure
     const responseData = {
       ...parseResult.cvData!,
@@ -1375,7 +1375,7 @@ export async function POST(request: NextRequest) {
       },
       ...(documentUrl && { _documentUrl: documentUrl }) // Include document URL if saved
     };
-    
+
     console.log('Returning parsed data to client');
     return NextResponse.json(responseData);
   } catch (error) {
@@ -1385,13 +1385,13 @@ export async function POST(request: NextRequest) {
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     console.error('Error message:', error instanceof Error ? error.message : String(error));
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    
+
     // Return proper error response - sanitize for user display
     const rawErrorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     const errorMessage = sanitizeErrorMessage(rawErrorMessage, 'Failed to parse CV. Please try again.');
-    
+
     return NextResponse.json(
-      { 
+      {
         error: errorMessage,
         _errorType: error instanceof Error ? error.constructor.name : typeof error,
         _errorStack: error instanceof Error ? error.stack : undefined

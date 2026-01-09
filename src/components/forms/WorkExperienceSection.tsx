@@ -262,7 +262,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
       startDate: '',
       endDate: '',
       summary: '',
-      highlights: []
+      highlights: [] // Deprecated, kept empty for schema compatibility
     };
     onUpdate([...safeData, newWorkItem]);
   };

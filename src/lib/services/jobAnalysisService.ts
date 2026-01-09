@@ -6,7 +6,8 @@ import { authenticatedFetch } from '@/lib/utils/apiUtils';
  * @returns The analysis result or null if failed
  */
 export const triggerJobAnalysis = async (job: any) => {
-    if (!job.jobDescription || !job.id) return null;
+    const jobId = job.id || job._id;
+    if (!job.jobDescription || !jobId) return null;
 
     try {
         const response = await authenticatedFetch('/api/jobs/analyze-cv-match', {
@@ -25,7 +26,7 @@ export const triggerJobAnalysis = async (job: any) => {
             const result = await response.json();
 
             // Update the job with the new score
-            await authenticatedFetch(`/api/jobs/${job.id}`, {
+            const updateResponse = await authenticatedFetch(`/api/jobs/${jobId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -35,6 +36,12 @@ export const triggerJobAnalysis = async (job: any) => {
                     atsScore: result.atsScore // If API returns it
                 }),
             });
+
+            if (updateResponse.ok) {
+                console.log('✅ Job Analysis - Job updated with match score:', job.id);
+            } else {
+                console.error('❌ Job Analysis - Failed to update job score:', await updateResponse.text());
+            }
 
             return result;
         }

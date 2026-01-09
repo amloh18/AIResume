@@ -135,8 +135,8 @@ const ConfidenceGauge = ({ score }: { score: number }) => {
 const KeywordBadge = ({ match }: { match: KeywordMatch }) => (
     <div
         className={`px-2 py-1 rounded text-[10px] font-medium flex items-center gap-1 ${match.found
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-                : 'bg-red-500/20 text-red-400 border border-red-500/30'
+            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+            : 'bg-red-500/20 text-red-400 border border-red-500/30'
             }`}
     >
         {match.found ? <CheckCircle2 size={10} /> : <XCircle size={10} />}
@@ -233,8 +233,8 @@ export default function ATSModePanel({
                                         <div
                                             key={idx}
                                             className={`p-2 rounded text-[10px] ${issue.severity === 'error'
-                                                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                                    : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+                                                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                                : 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
                                                 }`}
                                         >
                                             <div className="font-medium">{issue.type.toUpperCase()}</div>
@@ -275,9 +275,9 @@ export default function ATSModePanel({
 
             {/* Plain Text Preview */}
             <div className="px-4 py-3 border-b border-white/10">
-                <button
+                <div
                     onClick={() => setShowPlainText(!showPlainText)}
-                    className="w-full flex items-center justify-between"
+                    className="w-full flex items-center justify-between cursor-pointer"
                 >
                     <div className="flex items-center gap-2">
                         <FileText size={14} className="text-[#80FF00]" />
@@ -293,7 +293,7 @@ export default function ATSModePanel({
                         </button>
                         {showPlainText ? <ChevronUp size={14} className="text-white/40" /> : <ChevronDown size={14} className="text-white/40" />}
                     </div>
-                </button>
+                </div>
 
                 <AnimatePresence>
                     {showPlainText && (

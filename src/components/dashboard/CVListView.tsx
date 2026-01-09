@@ -44,6 +44,7 @@ interface CV {
     journeyId?: string;
     cvType?: 'master' | 'journey' | 'standalone';
     atsScore?: number;
+    stage?: string; // App stage/status
     metadata?: any;
     [key: string]: any; // Allow loose typing to accept CVDocument extranous props
 }
@@ -62,6 +63,10 @@ interface CVListViewProps {
     onStartEditing?: (cv: CV) => void;
     onTitleEdit?: (cvId: string, newTitle: string) => void;
     onCancelEditing?: () => void;
+    scoreLabel?: 'CV Score' | 'ATS Score'; // Explicitly set score column label
+    hideType?: boolean; // Hide the Type column
+    hideStatus?: boolean; // Hide the Status column
+    showStage?: boolean; // Show Stage column
 }
 
 const CVListView: React.FC<CVListViewProps> = ({
@@ -77,7 +82,11 @@ const CVListView: React.FC<CVListViewProps> = ({
     editingTitle,
     onStartEditing,
     onTitleEdit,
-    onCancelEditing
+    onCancelEditing,
+    scoreLabel,
+    hideType = false,
+    hideStatus = false,
+    showStage = false
 }) => {
     const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
 
@@ -151,6 +160,16 @@ const CVListView: React.FC<CVListViewProps> = ({
         }
     };
 
+    const getStageColor = (stage: string) => {
+        const s = stage?.toLowerCase() || '';
+        if (s.includes('offer') || s.includes('hired') || s.includes('accepted')) return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+        if (s.includes('reject') || s.includes('declined')) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
+        if (s.includes('interview') || s.includes('screening') || s.includes('assessment')) return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+        if (s.includes('appli') || s.includes('submitted')) return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+        if (s.includes('created') || s.includes('draft') || s.includes('active')) return 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-400';
+        return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+    };
+
     const getRandomColor = (id: string) => {
         const colors = [
             '#F0FDF4', '#FEF3C7', '#FEE2E2', '#E0E7FF', '#F3E8FF',
@@ -170,10 +189,11 @@ const CVListView: React.FC<CVListViewProps> = ({
                     <thead>
                         <tr className="bg-gray-50 dark:bg-[#141810] border-b border-gray-200 dark:border-white/10">
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Document Name</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Type</th>
-                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>
+                            {!hideType && <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Type</th>}
+                            {!hideStatus && <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Status</th>}
+                            {showStage && <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Stage</th>}
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
-                                {showATSScore ? 'ATS Score' : 'CV Score'}
+                                {scoreLabel || (showATSScore ? 'ATS Score' : 'CV Score')}
                             </th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">Last Modified</th>
                             <th className="px-6 py-3 text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider text-right">Actions</th>
@@ -247,18 +267,31 @@ const CVListView: React.FC<CVListViewProps> = ({
                                 </td>
 
                                 {/* Type */}
-                                <td className="px-6 py-3">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getCVTypeColor(getCVType(cv))}`}>
-                                        {getCVType(cv)}
-                                    </span>
-                                </td>
+                                {!hideType && (
+                                    <td className="px-6 py-3">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getCVTypeColor(getCVType(cv))}`}>
+                                            {getCVType(cv)}
+                                        </span>
+                                    </td>
+                                )}
 
                                 {/* Status */}
-                                <td className="px-6 py-3">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getStatusColor(cv.status)}`}>
-                                        {cv.status}
-                                    </span>
-                                </td>
+                                {!hideStatus && (
+                                    <td className="px-6 py-3">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getStatusColor(cv.status)}`}>
+                                            {cv.status}
+                                        </span>
+                                    </td>
+                                )}
+
+                                {/* Stage */}
+                                {showStage && (
+                                    <td className="px-6 py-3">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium capitalize ${getStageColor(cv.stage || 'Created')}`}>
+                                            {cv.stage || 'Created'}
+                                        </span>
+                                    </td>
+                                )}
 
                                 {/* CV Score */}
                                 <td className="px-6 py-3">
@@ -300,13 +333,36 @@ const CVListView: React.FC<CVListViewProps> = ({
                                 {/* Actions */}
                                 <td className="px-6 py-3 text-right">
                                     <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                        <button
-                                            onClick={() => onEdit(cv)}
-                                            className="p-1.5 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-                                            title="Edit"
-                                        >
-                                            <Edit size={14} />
-                                        </button>
+                                        {/* Edit button: 
+                                            - Hide for ALL CVs with 'published' status
+                                            - Hide for Journey CVs when stage is applied/interview/accepted/rejected
+                                            - Always show for Master and Standalone CVs (unless published)
+                                        */}
+                                        {(() => {
+                                            // Check if CV is published
+                                            if (cv.status === 'published') return null;
+
+                                            // For journey CVs, also check the stage
+                                            const cvType = getCVType(cv);
+                                            if (cvType === 'journey') {
+                                                const stage = (cv.stage || '').toLowerCase();
+                                                // Hide edit for journey CVs in final stages
+                                                if (['applied', 'interview', 'accepted', 'rejected', 'offer', 'hired'].some(s => stage.includes(s))) {
+                                                    return null;
+                                                }
+                                            }
+
+                                            // Show edit button for master, standalone, and draft journey CVs
+                                            return (
+                                                <button
+                                                    onClick={() => onEdit(cv)}
+                                                    className="p-1.5 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
+                                            );
+                                        })()}
                                         <button
                                             onClick={() => onDuplicate(cv)}
                                             className="p-1.5 text-gray-400 hover:text-lime-600 dark:hover:text-lime-400 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"

@@ -474,6 +474,23 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                 updateJourneyStatus('cv-created');
                 setCvNotFound(false);
 
+                // Update local userCVs to prevent "not found" loop
+                setUserCVs((prev) => {
+                  if (prev.some((cv) => cv.id === duplicatedCVId)) return prev;
+                  return [...prev, {
+                    id: duplicatedCVId,
+                    title: smartCVName,
+                    status: 'draft',
+                    createdAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    journeyId: journey.id,
+                    isMaster: false,
+                    views: 0,
+                    isStarred: false
+                  } as CV];
+                });
+
                 // Update parent component
                 if (onUpdateJourney) {
                   onUpdateJourney(journey.id, {
@@ -544,6 +561,23 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             // Update local state if CV ID is returned
             if (result.data?.cvId) {
               updateCVId(result.data.cvId);
+
+              // Update local userCVs to prevent "not found" loop
+              setUserCVs((prev) => {
+                if (prev.some((cv) => cv.id === result.data.cvId)) return prev;
+                return [...prev, {
+                  id: result.data.cvId,
+                  title: result.data.cvTitle || 'Journey CV',
+                  status: 'draft',
+                  createdAt: new Date().toISOString(),
+                  lastModified: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  journeyId: journey.id,
+                  isMaster: false,
+                  views: 0,
+                  isStarred: false
+                } as CV];
+              });
               if (onUpdateJourney) {
                 onUpdateJourney(journey.id, {
                   cvId: result.data.cvId,
@@ -614,6 +648,20 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               // Update local state if cover letter ID is returned
               if (result.data?.coverLetterId) {
                 updateCoverLetterId(result.data.coverLetterId);
+
+                // Update local userCoverLetters to prevent "not found" loop
+                setUserCoverLetters((prev) => {
+                  if (prev.some((cl) => cl.id === result.data.coverLetterId)) return prev;
+                  return [...prev, {
+                    id: result.data.coverLetterId,
+                    title: result.data.coverLetterTitle || 'Journey Cover Letter',
+                    status: 'draft',
+                    createdAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
+                    journeyId: journey.id,
+                    jobId: journey.jobId,
+                  } as CoverLetter];
+                });
                 if (onUpdateJourney) {
                   onUpdateJourney(journey.id, {
                     coverLetterId: result.data.coverLetterId,
@@ -2436,7 +2484,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             {linkedCV ? 'Ready for editing' : 'Document linked'}
                           </p>
                           {/* Only show Edit button - but hide for post-application stages */}
-                          {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && (
+                          {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && journey.status !== 'completed' && (
                             <div className="flex items-center gap-2 mt-1">
                               <motion.button
                                 onClick={() => {

@@ -12,6 +12,10 @@ import ProjectsSection from '@/components/forms/ProjectsSection';
 import CertificatesSection from '@/components/forms/CertificatesSection';
 import LanguagesSection from '@/components/forms/LanguagesSection';
 import VolunteerSection from '@/components/forms/VolunteerSection';
+import AwardsSection from '@/components/forms/AwardsSection';
+import PublicationsSection from '@/components/forms/PublicationsSection';
+import InterestsSection from '@/components/forms/InterestsSection';
+import ReferencesSection from '@/components/forms/ReferencesSection';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
@@ -33,6 +37,10 @@ const SECTION_TITLES: Record<string, string> = {
     certificates: 'Certificates',
     languages: 'Languages',
     volunteer: 'Volunteer Experience',
+    awards: 'Awards & Recognition',
+    publications: 'Publications',
+    interests: 'Interests',
+    references: 'References',
 };
 
 type ExtendedFloatingFormEditorProps = FloatingFormEditorProps & {
@@ -179,6 +187,54 @@ export default function FloatingFormEditor({
         updateCVData({ languages: updated });
     };
 
+    // Awards handlers
+    const addAward = () => {
+        const newAward = { title: '', date: '', awarder: '', summary: '' };
+        updateCVData({ awards: [...(state.cvData.awards || []), newAward] });
+    };
+
+    const removeAward = (index: number) => {
+        const updated = [...(state.cvData.awards || [])];
+        updated.splice(index, 1);
+        updateCVData({ awards: updated });
+    };
+
+    // Publications handlers
+    const addPublication = () => {
+        const newPub = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
+        updateCVData({ publications: [...(state.cvData.publications || []), newPub] });
+    };
+
+    const removePublication = (index: number) => {
+        const updated = [...(state.cvData.publications || [])];
+        updated.splice(index, 1);
+        updateCVData({ publications: updated });
+    };
+
+    // Interests handlers
+    const addInterest = () => {
+        const newInterest = { name: '', keywords: [] };
+        updateCVData({ interests: [...(state.cvData.interests || []), newInterest] });
+    };
+
+    const removeInterest = (index: number) => {
+        const updated = [...(state.cvData.interests || [])];
+        updated.splice(index, 1);
+        updateCVData({ interests: updated });
+    };
+
+    // References handlers
+    const addReference = () => {
+        const newRef = { name: '', reference: '' };
+        updateCVData({ references: [...(state.cvData.references || []), newRef] });
+    };
+
+    const removeReference = (index: number) => {
+        const updated = [...(state.cvData.references || [])];
+        updated.splice(index, 1);
+        updateCVData({ references: updated });
+    };
+
     // Apply annotation handler
     const handleApplyAnnotation = useCallback((fix: FixAnnotation) => {
         const { updatedCV } = CVSurgeonService.applyFixAnnotation(state.cvData, fix);
@@ -291,6 +347,42 @@ export default function FloatingFormEditor({
                     <VolunteerSection
                         data={state.cvData.volunteer || []}
                         onUpdate={(updated) => updateCVData({ volunteer: updated })}
+                    />
+                );
+            case 'awards':
+                return (
+                    <AwardsSection
+                        data={state.cvData.awards || []}
+                        onUpdate={(updated) => updateCVData({ awards: updated })}
+                        onAdd={addAward}
+                        onRemove={removeAward}
+                    />
+                );
+            case 'publications':
+                return (
+                    <PublicationsSection
+                        data={state.cvData.publications || []}
+                        onUpdate={(updated) => updateCVData({ publications: updated })}
+                        onAdd={addPublication}
+                        onRemove={removePublication}
+                    />
+                );
+            case 'interests':
+                return (
+                    <InterestsSection
+                        data={state.cvData.interests || []}
+                        onUpdate={(updated) => updateCVData({ interests: updated })}
+                        onAdd={addInterest}
+                        onRemove={removeInterest}
+                    />
+                );
+            case 'references':
+                return (
+                    <ReferencesSection
+                        data={state.cvData.references || []}
+                        onUpdate={(updated) => updateCVData({ references: updated })}
+                        onAdd={addReference}
+                        onRemove={removeReference}
                     />
                 );
             default:

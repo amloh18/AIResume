@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import {
   DndContext,
   closestCenter,
@@ -34,8 +34,12 @@ import {
   BookOpen,
   Users,
   Plus,
-  X
+  X,
+  Trophy,
+  FileText
 } from 'lucide-react';
+import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { getAddableCVSections } from '@/lib/selectors/cv-section-selectors';
 
 interface CVSection {
   id: string;
@@ -49,16 +53,21 @@ interface ResumeEnhancerSidebarProps {
   cvSections: CVSection[];
   activeSection?: string;
   onSectionClick?: (sectionId: string) => void;
-  onAddSection?: () => void;
+  onAddSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
   onSectionReorder?: (sectionIds: string[]) => void;
 }
+
+// Core sections that cannot be deleted - these are essential CV sections
+// Include all aliases for section IDs used across the app
+const CORE_SECTIONS = ['personal', 'personal_header', 'summary', 'work', 'work_experience', 'education', 'skills'];
 
 // Sortable section item component
 function SortableSectionItem({
   section,
   isActive,
   isPersonalHeader,
+  isCoreSection,
   onSectionClick,
   onDeleteSection,
   getSectionIcon,
@@ -70,6 +79,7 @@ function SortableSectionItem({
   section: CVSection;
   isActive: boolean;
   isPersonalHeader: boolean;
+  isCoreSection: boolean;
   onSectionClick: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
   getSectionIcon: (sectionId: string) => React.ComponentType<any>;
@@ -118,21 +128,20 @@ function SortableSectionItem({
       <motion.button
         {...(!isPersonalHeader ? { ...attributes, ...listeners } : {})}
         onClick={() => onSectionClick(section.id)}
-        className={`flex-1 flex items-center rounded-lg transition-all duration-200 text-sm ${
-          isActive
-            ? isHovered
+        className={`flex-1 flex items-center rounded-lg transition-all duration-200 text-sm ${isActive
+          ? isHovered
             ? 'bg-[#80FF00]/20 text-[#80FF00]'
-              : 'bg-[#80FF00]/30 text-[#80FF00]'
-            : isPersonalHeader
+            : 'bg-[#80FF00]/30 text-[#80FF00]'
+          : isPersonalHeader
             ? 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
             : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 cursor-move'
-        } ${isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-3 py-2' : 'justify-center px-0 py-2'}`}
+          } ${isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-3 py-2' : 'justify-center px-0 py-2'}`}
         whileHover={!isPersonalHeader ? { scale: 1.02 } : {}}
         whileTap={{ scale: 0.98 }}
         title={getSectionTitle(section.id)}
       >
         {React.createElement(IconComponent, { size: 16 })}
-        <motion.span 
+        <motion.span
           className="font-medium text-xs whitespace-nowrap"
           initial={false}
           animate={{
@@ -146,17 +155,16 @@ function SortableSectionItem({
           {isConfirming ? 'Confirm' : getSectionTitle(section.id)}
         </motion.span>
       </motion.button>
-      
-      {/* Delete button - only visible when expanded and not personal_header */}
-      {isHovered && !isPersonalHeader && onDeleteSection && (
+
+      {/* Delete button - only visible when expanded and not a core section */}
+      {isHovered && !isCoreSection && onDeleteSection && (
         <div className="relative overflow-hidden">
           <button
             onClick={handleDeleteClick}
-            className={`relative p-1.5 rounded transition-all duration-300 overflow-hidden ${
-              isConfirming
-                ? 'bg-red-500/30 text-red-400'
-                : 'hover:bg-red-500/20 text-gray-400 dark:text-white/40 hover:text-red-400'
-            }`}
+            className={`relative p-1.5 rounded transition-all duration-300 overflow-hidden ${isConfirming
+              ? 'bg-red-500/30 text-red-400'
+              : 'hover:bg-red-500/20 text-gray-400 dark:text-white/40 hover:text-red-400'
+              }`}
             title={isConfirming ? 'Click again to confirm deletion' : 'Delete section'}
           >
             {/* Red hover animation from left to right */}
@@ -189,11 +197,48 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
   onDeleteSection,
   onSectionReorder,
 }) => {
+  const { state } = useResumeEnhancer();
   const [isHovered, setIsHovered] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [showAddSectionModal, setShowAddSectionModal] = useState(false);
   const confirmationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  
+  const addSectionDragControls = useDragControls();
+
+  // Get addable sections from selector
+  const addableSections = useMemo(() => {
+    return getAddableCVSections(state.cvData);
+  }, [state.cvData]);
+
+  // Map icon names to components
+  const getIconComponent = (iconName: string) => {
+    const iconMap: Record<string, React.ComponentType<any>> = {
+      User,
+      Briefcase,
+      GraduationCap,
+      Code,
+      FolderOpen,
+      Award,
+      Globe,
+      Heart,
+      Star,
+      BookOpen,
+      Users,
+      Trophy,
+      FileText
+    };
+    return iconMap[iconName] || User;
+  };
+
+  // Handle adding a section - modal stays open until user closes it
+  const handleAddSectionClick = (sectionId: string) => {
+    // Don't close modal - let user add multiple sections
+    // Modal only closes when user clicks the X button
+    if (onAddSection) {
+      onAddSection(sectionId);
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -206,13 +251,13 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
     if (confirmationTimeoutRef.current) {
       clearTimeout(confirmationTimeoutRef.current);
     }
-    
+
     if (confirmingDelete) {
       confirmationTimeoutRef.current = setTimeout(() => {
         setConfirmingDelete(null);
       }, 3000);
     }
-    
+
     return () => {
       if (confirmationTimeoutRef.current) {
         clearTimeout(confirmationTimeoutRef.current);
@@ -272,7 +317,7 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="flex-shrink-0 overflow-hidden h-full"
       initial={false}
       animate={{
@@ -301,7 +346,7 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
                 if (over && active.id !== over.id && onSectionReorder) {
                   const oldIndex = cvSections.findIndex((s) => s.id === active.id);
                   const newIndex = cvSections.findIndex((s) => s.id === over.id);
-                  
+
                   const newSections = arrayMove(cvSections, oldIndex, newIndex);
                   const newSectionIds = newSections.map((s) => s.id);
                   onSectionReorder(newSectionIds);
@@ -316,6 +361,7 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
                   {cvSections.map((section) => {
                     const isActive = activeSection === section.id;
                     const isPersonalHeader = section.id === 'personal' || section.id === 'personal_header';
+                    const isCoreSection = CORE_SECTIONS.includes(section.id);
 
                     return (
                       <SortableSectionItem
@@ -323,6 +369,7 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
                         section={section}
                         isActive={isActive}
                         isPersonalHeader={isPersonalHeader}
+                        isCoreSection={isCoreSection}
                         onSectionClick={handleSectionClick}
                         onDeleteSection={onDeleteSection}
                         getSectionIcon={getSectionIcon}
@@ -354,16 +401,15 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
         {/* Add Section Button */}
         {onAddSection && (
           <div className="p-1.5 tablet:p-3 border-t border-gray-200 dark:border-white/10">
-            <button 
-              onClick={onAddSection}
-              className={`w-full flex items-center text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 ${
-                isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3' : 'justify-center px-0 py-3'
-              }`}
+            <button
+              onClick={() => setShowAddSectionModal(true)}
+              className={`w-full flex items-center text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 ${isHovered ? 'justify-start gap-2 tablet:gap-3 px-2 tablet:px-4 py-3' : 'justify-center px-0 py-3'
+                }`}
               title="Add New Section"
             >
               <Plus size={18} />
               {isHovered && (
-                <motion.span 
+                <motion.span
                   className="font-medium text-xs tablet:text-sm whitespace-nowrap"
                   initial={{ opacity: 0, width: 0, marginLeft: -8 }}
                   animate={{ opacity: 1, width: 'auto', marginLeft: 0 }}
@@ -377,6 +423,100 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
             </button>
           </div>
         )}
+
+        {/* Floating Add Section Panel - Draggable like FloatingFormEditor */}
+        <AnimatePresence>
+          {showAddSectionModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 pointer-events-none"
+            >
+              {/* Transparent backdrop - no close on click, only X button closes */}
+              <div
+                className="absolute inset-0 pointer-events-auto"
+                onClick={(e) => e.stopPropagation()}
+              />
+
+              {/* Floating Panel */}
+              <motion.div
+                drag
+                dragListener={false}
+                dragMomentum={false}
+                dragControls={addSectionDragControls}
+                initial={{ opacity: 0, scale: 0.95, x: 20 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.95, x: 20 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                style={{
+                  position: 'fixed',
+                  top: 120,
+                  right: 80,
+                  maxHeight: 'calc(100vh - 150px)',
+                  minHeight: '300px'
+                }}
+                className="w-full max-w-md bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl flex flex-col pointer-events-auto overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Draggable Header */}
+                <div
+                  className="flex items-center justify-between px-5 py-4 border-b border-white/10 cursor-move"
+                  onPointerDown={(e) => addSectionDragControls.start(e)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#80FF00]/20 to-[#80FF00]/5 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-[#80FF00]" />
+                    </div>
+                    <h2 className="text-lg font-semibold text-white">Add New Section</h2>
+                  </div>
+                  <button
+                    onClick={() => setShowAddSectionModal(false)}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Section Grid */}
+                <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+                  {addableSections.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {addableSections.map((section) => {
+                        const IconComponent = getIconComponent(section.iconName);
+                        return (
+                          <motion.button
+                            key={section.id}
+                            onClick={() => handleAddSectionClick(section.id)}
+                            className="flex flex-col items-center justify-center gap-3 p-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-[#80FF00]/50 transition-all duration-200 group"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                          >
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#80FF00]/20 to-[#80FF00]/5 flex items-center justify-center group-hover:from-[#80FF00]/30 group-hover:to-[#80FF00]/10 transition-colors">
+                              <IconComponent className="w-6 h-6 text-[#80FF00]" />
+                            </div>
+                            <span className="text-sm font-medium text-white/80 text-center group-hover:text-white transition-colors">
+                              {section.label}
+                            </span>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+                        <Award className="w-8 h-8 text-white/40" />
+                      </div>
+                      <p className="text-white/60">All sections have been added to your CV!</p>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

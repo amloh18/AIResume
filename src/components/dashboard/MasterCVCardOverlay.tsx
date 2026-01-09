@@ -48,7 +48,7 @@ interface MasterCVCardOverlayProps {
   onViewReport?: (masterCV: MasterCV) => void; // View career report
 }
 
-const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
+const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
   onEditMasterCV,
   onDuplicateMasterCV,
   userId,
@@ -445,5 +445,21 @@ const MasterCVCardOverlay: React.FC<MasterCVCardOverlayProps> = ({
     </motion.div>
   );
 };
+
+// Memoized component to prevent unnecessary re-renders
+const MasterCVCardOverlay = React.memo(MasterCVCardOverlayComponent, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  const prevCV = prevProps.masterCVData;
+  const nextCV = nextProps.masterCVData;
+
+  return (
+    prevProps.userId === nextProps.userId &&
+    prevCV?.id === nextCV?.id &&
+    prevCV?.title === nextCV?.title &&
+    prevCV?.lastModified === nextCV?.lastModified &&
+    prevCV?.status === nextCV?.status &&
+    prevCV?.isStarred === nextCV?.isStarred
+  );
+});
 
 export default MasterCVCardOverlay;

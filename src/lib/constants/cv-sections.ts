@@ -156,6 +156,18 @@ export const DEFAULT_SECTION_ORDER = [
 ] as const;
 
 /**
+ * CORE SECTIONS LIST
+ * Sections that are always present and cannot be deleted
+ * These form the essential structure of every CV
+ */
+export const CORE_SECTIONS_LIST = [
+  'personal_header',
+  'work_experience',
+  'education',
+  'skills'
+] as const;
+
+/**
  * Get section registry entry
  */
 export function getSectionRegistryEntry(sectionId: string): SectionRegistryEntry | undefined {

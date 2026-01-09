@@ -397,7 +397,7 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
         <div className="opp-sidebar">
 
           {/* Contact Information */}
-          <div className="opp-sidebar-section">
+          <div className="opp-sidebar-section" data-section-id="personal">
             <h3 className="opp-sidebar-title">Contact</h3>
             <div className="opp-sidebar-content">
               {basics?.email && (

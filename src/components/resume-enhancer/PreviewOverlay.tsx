@@ -7,10 +7,57 @@ import { X, Download, Loader2, FileText } from 'lucide-react';
 // TODO: CVPreview was deleted - need to replace with CVPreviewContent or create new preview component
 // import CVPreview from '@/components/studio/CVPreview';
 import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
+import { usePillEngine } from '@/hooks/usePillEngine';
+import { SuggestionHoverCard } from './overlays/SuggestionHoverCard';
+import { Issue } from '@/lib/pill-engine/types';
 
 export default function PreviewOverlay() {
     const { state, dispatch } = useResumeEnhancer();
     const [isExporting, setIsExporting] = useState(false);
+
+    // Command Center Engine
+    const { issues } = usePillEngine(state.cvData, state.targetRole, state.seniorityLevel);
+
+    // Hover State
+    const [hoveredIssue, setHoveredIssue] = useState<Issue | null>(null);
+    const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+
+    // Handle mouse move to find targeted elements
+    const handleMouseMove = (e: React.MouseEvent) => {
+        // Optimization: Only run every few frames or check target directly
+        const target = e.target as HTMLElement;
+        const sectionId = target.getAttribute('data-section-id') || target.closest('[data-section-id]')?.getAttribute('data-section-id');
+
+        if (sectionId) {
+            // Find issue related to this section
+            // We match broadly on sectionId (e.g. "work-123" vs issue.sectionId "123")
+            const relevantIssue = issues.find(i =>
+                i.sectionId && (sectionId === i.sectionId || sectionId.includes(i.sectionId))
+            );
+
+            if (relevantIssue) {
+                setHoveredIssue(relevantIssue);
+                // Position card near cursor but slightly offset
+                setHoverPos({ x: e.clientX + 20, y: e.clientY + 20 });
+                return;
+            }
+        }
+
+        // Use timeout to prevent flickering when moving between child elements
+        // For simple V1, just clear if not found immediately
+        setHoveredIssue(null);
+    };
+
+    const handleIssueFix = () => {
+        if (hoveredIssue) {
+            // Dispatch a focus action or just close preview to let user edit?
+            // Since this is "Preview Overlay", maybe we just close it and scroll.
+            handleClose();
+            // Then trigger scroll (requires logic in parent or Context)
+            // For now, simple console log or TODO
+            console.log('Fixing', hoveredIssue);
+        }
+    };
 
     const handleClose = () => {
         dispatch({ type: 'SET_SHOW_PREVIEW_OVERLAY', payload: false });
@@ -94,6 +141,22 @@ export default function PreviewOverlay() {
                     )}
                 </div>
             </div>
+
+            {/* Hover Overlay Card */}
+            {hoveredIssue && (
+                <SuggestionHoverCard
+                    issue={hoveredIssue}
+                    onFix={handleIssueFix}
+                    style={{ top: hoverPos.y, left: hoverPos.x }}
+                />
+            )}
+
+            {/* Capture mouse moves over the preview area */}
+            <div
+                className="absolute inset-0 z-0 pointer-events-none"
+                {...{ onMouseMoveCapture: handleMouseMove } as any}
+                style={{ pointerEvents: 'auto' }} // Allow mouse events
+            />
 
             {/* Footer Info */}
             <div className="p-4 bg-[var(--bg-tertiary)] shadow-[0_-1px_0_rgba(0,0,0,0.08)] dark:shadow-[0_-1px_0_rgba(255,255,255,0.06)]">

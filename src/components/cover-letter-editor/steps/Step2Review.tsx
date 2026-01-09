@@ -130,6 +130,7 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
                 header={state.coverLetterData.header}
                 body={state.coverLetterData.body}
                 footer={state.coverLetterData.footer}
+                pageSize={pageSize}
               />
             </div>
           </div>
@@ -176,8 +177,8 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
                   <button
                     onClick={() => setPageSize('A4')}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pageSize === 'A4'
-                        ? 'bg-lime-500 dark:bg-[#99FF00] text-black'
-                        : 'bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1f2a15]'
+                      ? 'bg-lime-500 dark:bg-[#99FF00] text-black'
+                      : 'bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1f2a15]'
                       }`}
                   >
                     A4
@@ -185,8 +186,8 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
                   <button
                     onClick={() => setPageSize('Letter')}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pageSize === 'Letter'
-                        ? 'bg-lime-500 dark:bg-[#99FF00] text-black'
-                        : 'bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1f2a15]'
+                      ? 'bg-lime-500 dark:bg-[#99FF00] text-black'
+                      : 'bg-white dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#1f2a15]'
                       }`}
                   >
                     US Letter
@@ -233,10 +234,10 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
               onClick={handleSave}
               disabled={isSaving || saveStatus === 'success'}
               className={`w-full px-4 py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${saveStatus === 'success'
-                  ? 'bg-green-500 text-white'
-                  : saveStatus === 'error'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-lime-500 dark:bg-[#99FF00] text-black hover:bg-lime-600 dark:hover:bg-[#88e600]'
+                ? 'bg-green-500 text-white'
+                : saveStatus === 'error'
+                  ? 'bg-red-500 text-white'
+                  : 'bg-lime-500 dark:bg-[#99FF00] text-black hover:bg-lime-600 dark:hover:bg-[#88e600]'
                 } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSaving ? (

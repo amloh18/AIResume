@@ -1,6 +1,50 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export type NotificationType =
+  | 'cv_auto_save'
+  | 'cv_ats_score_jump'
+  | 'cv_narrative_mismatch'
+  | 'cv_keyword_gap'
+  | 'cv_draft_expiration'
+  | 'cv_formatting_conflict'
+  | 'cv_viewed'
+  | 'cv_downloaded'
+  | 'cv_shared'
+  | 'cl_personalization_ready'
+  | 'cl_tone_mismatch'
+  | 'cl_length_warning'
+  | 'job_quick_log'
+  | 'job_status_flip'
+  | 'job_ghosting_detection'
+  | 'job_interview_reminder_24h'
+  | 'job_interview_reminder_1h'
+  | 'job_salary_benchmarking'
+  | 'job_market_digest'
+  | 'job_application_sent'
+  | 'job_offer_received'
+  | 'job_rejection_received'
+  | 'interview_scheduled'
+  | 'interview_rescheduled'
+  | 'interview_cancelled'
+  | 'interview_feedback_pending'
+  | 'interview_thank_you_reminder'
+  | 'account_milestone'
+  | 'platform_update'
+  | 'security_login_alert'
+  | 'subscription_payment_success'
+  | 'subscription_payment_failed'
+  | 'subscription_renewed'
+  | 'quota_limit_reached'
+  | 'profile_viewed'
+  | 'connection_request'
+  | 'message_received'
+  | 'referral_bonus'
+  | 'profile_completeness_nudge'
+  | 'linkedin_import_success'
+  | 'linkedin_import_failed'
+  | 'resume_review_completed'
+  | 'career_coach_message'
+  | 'webinar_starting_soon'
   | 'job_status_check'
   | 'follow_up'
   | 'deadline_approaching'
@@ -82,6 +126,50 @@ const notificationSchema = new Schema<INotification>(
     type: {
       type: String,
       enum: [
+        'cv_auto_save',
+        'cv_ats_score_jump',
+        'cv_narrative_mismatch',
+        'cv_keyword_gap',
+        'cv_draft_expiration',
+        'cv_formatting_conflict',
+        'cv_viewed',
+        'cv_downloaded',
+        'cv_shared',
+        'cl_personalization_ready',
+        'cl_tone_mismatch',
+        'cl_length_warning',
+        'job_quick_log',
+        'job_status_flip',
+        'job_ghosting_detection',
+        'job_interview_reminder_24h',
+        'job_interview_reminder_1h',
+        'job_salary_benchmarking',
+        'job_market_digest',
+        'job_application_sent',
+        'job_offer_received',
+        'job_rejection_received',
+        'interview_scheduled',
+        'interview_rescheduled',
+        'interview_cancelled',
+        'interview_feedback_pending',
+        'interview_thank_you_reminder',
+        'account_milestone',
+        'platform_update',
+        'security_login_alert',
+        'subscription_payment_success',
+        'subscription_payment_failed',
+        'subscription_renewed',
+        'quota_limit_reached',
+        'profile_viewed',
+        'connection_request',
+        'message_received',
+        'referral_bonus',
+        'profile_completeness_nudge',
+        'linkedin_import_success',
+        'linkedin_import_failed',
+        'resume_review_completed',
+        'career_coach_message',
+        'webinar_starting_soon',
         'job_status_check',
         'follow_up',
         'deadline_approaching',

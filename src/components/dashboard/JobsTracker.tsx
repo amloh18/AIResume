@@ -556,8 +556,22 @@ const JobsTracker: React.FC = () => {
       };
 
       // Map parsed data to EditJobSidebar format
-      // Always use 'draft' status - credit check will happen when moving to 'created' stage
-      const mappedStatus = 'draft';
+      // Respect parsed status if valid, otherwise default to 'draft'
+      const validStatuses = ['draft', 'created', 'applied', 'screening', 'interview', 'offer', 'rejected', 'accepted', 'withdrawn'];
+      let mappedStatus = 'draft';
+
+      if (parsedData.status) {
+        const normalizedStatus = parsedData.status.toLowerCase();
+        if (validStatuses.includes(normalizedStatus)) {
+          mappedStatus = normalizedStatus;
+        } else if (normalizedStatus === 'interviewing') {
+          mappedStatus = 'interview';
+        } else if (normalizedStatus === 'hired') {
+          mappedStatus = 'offer';
+        } else if (normalizedStatus === 'archived') {
+          mappedStatus = 'withdrawn';
+        }
+      }
 
       // Convert deadline Date to string if present, otherwise default to 15 days from now
       let deadlineString: string = getDateString(15); // Default to 15 days from now

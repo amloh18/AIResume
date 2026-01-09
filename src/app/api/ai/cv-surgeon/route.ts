@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
-import { CVScoringService } from '@/lib/services/cv-scoring-service';
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -67,8 +67,9 @@ export async function POST(request: NextRequest) {
         // For Master CV mode (no JD), detect role and get industry keywords
         let industryKeywordsInfo = '';
         if (!hasJD) {
-            const { role, detectedTitle } = CVScoringService.detectRoleFromCV(cvData);
-            const industryMatch = CVScoringService.calculateIndustryKeywordMatch(cvData);
+            const manager = CentralScoreManager.getInstance();
+            const { role, detectedTitle } = manager.detectRoleFromCV(cvData);
+            const industryMatch = manager.calculateIndustryKeywordMatch(cvData);
             industryKeywordsInfo = `
 ### INDUSTRY STANDARD CONTEXT (Master CV Mode)
 - **Detected Role:** ${detectedTitle || targetRole} → Mapped to: ${role.replace(/_/g, ' ').toUpperCase()}

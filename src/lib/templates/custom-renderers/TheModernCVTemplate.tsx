@@ -15,7 +15,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
   className = '',
   dateFormat = 'MMM_YYYY'
 }) => {
-  const { basics, work, education, skills, projects, languages } = cvData;
+  const { basics, work, education, skills, projects, languages, volunteer, awards, certificates, publications, interests, references } = cvData;
 
   return (
     <div className={`data-driven-pro-template ${className}`}>
@@ -539,6 +539,89 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                   )}
                 </ul>
               </section>
+
+              {/* Certificates Section */}
+              {certificates && certificates.length > 0 && (
+                <section className="right-section" data-section-id="certificates">
+                  <h3 className="section-title-right">Certificates</h3>
+                  <ul className="skill-list">
+                    {certificates.map((cert, index) => (
+                      <li key={index} className="language-item">
+                        <strong>{cert.name}</strong> - {cert.issuer}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {/* Awards Section */}
+              {awards && awards.length > 0 && (
+                <section className="right-section" data-section-id="awards">
+                  <h3 className="section-title-right">Awards</h3>
+                  {awards.map((award, index) => (
+                    <div key={index} className="education-item">
+                      <h4 className="degree">{award.title}</h4>
+                      <p className="institution">{award.awarder}</p>
+                      <p className="education-dates">{award.date}</p>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* Volunteer Section */}
+              {volunteer && volunteer.length > 0 && (
+                <section className="right-section" data-section-id="volunteer">
+                  <h3 className="section-title-right">Volunteer</h3>
+                  {volunteer.map((vol, index) => (
+                    <div key={index} className="education-item">
+                      <h4 className="degree">{vol.position}</h4>
+                      <p className="institution">{vol.organization}</p>
+                      <p className="education-dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</p>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* Publications Section */}
+              {publications && publications.length > 0 && (
+                <section className="right-section" data-section-id="publications">
+                  <h3 className="section-title-right">Publications</h3>
+                  {publications.map((pub, index) => (
+                    <div key={index} className="education-item">
+                      <h4 className="degree">{pub.name}</h4>
+                      <p className="institution">{pub.publisher}</p>
+                      <p className="education-dates">{pub.releaseDate}</p>
+                    </div>
+                  ))}
+                </section>
+              )}
+
+              {/* Interests Section */}
+              {interests && interests.length > 0 && (
+                <section className="right-section" data-section-id="interests">
+                  <h3 className="section-title-right">Interests</h3>
+                  <ul className="skill-list">
+                    {interests.map((interest, index) => (
+                      <li key={index} className="language-item">
+                        <strong>{interest.name}:</strong> {interest.keywords?.join(', ')}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {/* References Section */}
+              {references && references.length > 0 && (
+                <section className="right-section" data-section-id="references">
+                  <h3 className="section-title-right">References</h3>
+                  {references.map((ref, index) => (
+                    <div key={index} className="education-item">
+                      <h4 className="degree">{ref.name}</h4>
+                      {ref.reference && <p className="institution" style={{ fontStyle: 'italic' }}>"{ref.reference}"</p>}
+                    </div>
+                  ))}
+                </section>
+              )}
 
             </div>
           </div>
