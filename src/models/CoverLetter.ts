@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICoverLetter extends Document {
-  userId: mongoose.Types.ObjectId; // ObjectId, references the User schema
+  userId: mongoose.Types.ObjectId; // ObjectId, references the User schema - touched to force recompile
   title: string;
   content: string; // Full content (kept for backward compatibility, auto-generated from header+body+footer)
   header?: string; // Header section: name, contact info, date, recipient info
@@ -46,7 +46,7 @@ const coverLetterSchema = new Schema<ICoverLetter>({
   },
   content: {
     type: String,
-    required: [true, 'Cover letter content is required'],
+    required: false,
     trim: true,
     maxlength: [10000, 'Content cannot exceed 10000 characters']
   },
@@ -206,5 +206,12 @@ coverLetterSchema.pre('save', function (next) {
 
   next();
 });
+
+// Prevent "OverwriteModelError" but also allow schema updates in dev
+if (process.env.NODE_ENV === 'development' && mongoose.models.CoverLetter) {
+  // Check if schema has changed - simplistic check or just force delete to be safe during valid dev cycles
+  // forcing delete to ensure schema updates apply
+  delete mongoose.models.CoverLetter;
+}
 
 export default mongoose.models.CoverLetter || mongoose.model<ICoverLetter>('CoverLetter', coverLetterSchema);

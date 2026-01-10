@@ -112,7 +112,7 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
  */
 export async function getPricingForPlan(
   countryCode: string,
-  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly'
+  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'
 ): Promise<{ price: number; currency: string; currencySymbol: string; planId: string } | null> {
   try {
     let countryPricing = await getCountryPricing(countryCode);
@@ -138,7 +138,7 @@ export async function getPricingForPlan(
       'day_pass': 'dayPass',
       'pro_monthly': 'monthly',
       'pro_quarterly': 'quarterly',
-      'pro_yearly': 'yearly'
+      'pro_lifetime': 'yearly'
     };
 
     const planPricesKey = planKeyMap[planKey];

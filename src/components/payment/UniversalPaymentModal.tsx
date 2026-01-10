@@ -195,7 +195,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             planPrice = dbPlan.price_monthly || 0;
           } else if (plan.key === 'pro_quarterly') {
             planPrice = dbPlan.price_quarterly || 0;
-          } else if (plan.key === 'pro_yearly') {
+          } else if (plan.key === 'pro_lifetime') {
             planPrice = dbPlan.price_yearly || 0;
           } else if (plan.key === 'day_pass') {
             planPrice = dbPlan.price_one_time || 0;
@@ -235,7 +235,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       // Default to first paid plan (prefer professional plans)
       // Try to find a professional plan first
       const professionalPlan = pricingPlans.find((p: PricingPlan) =>
-        p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_yearly'
+        p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_lifetime'
       );
 
       // If no professional plan, try day pass
@@ -253,7 +253,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           planPrice = dbPlan.price_monthly || 0;
         } else if (paidPlan.key === 'pro_quarterly') {
           planPrice = dbPlan.price_quarterly || 0;
-        } else if (paidPlan.key === 'pro_yearly') {
+        } else if (paidPlan.key === 'pro_lifetime') {
           planPrice = dbPlan.price_yearly || 0;
         } else if (paidPlan.key === 'day_pass') {
           planPrice = dbPlan.price_one_time || 0;
@@ -708,7 +708,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         if (plan.key === 'pro_quarterly' && promotional.pricing.quarterly) {
           return promotional.pricing.quarterly;
         }
-        if (plan.key === 'pro_yearly' && promotional.pricing.yearly) {
+        if (plan.key === 'pro_lifetime' && promotional.pricing.yearly) {
           return promotional.pricing.yearly;
         }
         if (plan.key === 'pro_monthly' && promotional.pricing.monthly) {
@@ -729,7 +729,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     } else if (plan.key === 'pro_quarterly') {
       // Use full quarterly price (one-time charge)
       planPrice = dbPlan.price_quarterly || 0;
-    } else if (plan.key === 'pro_yearly') {
+    } else if (plan.key === 'pro_lifetime') {
       // Use full yearly price (one-time charge)
       planPrice = dbPlan.price_yearly || 0;
     } else if (plan.key === 'day_pass') {
@@ -763,7 +763,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (plan.key === 'free') return 'free';
     // Determine interval from plan key first, then fallback to billingCycle
     if (plan.key === 'pro_quarterly') return 'quarterly';
-    if (plan.key === 'pro_yearly') return 'yearly';
+    if (plan.key === 'pro_lifetime') return 'yearly';
     if (plan.key === 'pro_monthly') return 'monthly';
     return plan.billingCycle || 'monthly';
   };
@@ -1050,7 +1050,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (plan.key === 'free') return false;
     if (currentUserPlan === 'free') return true;
 
-    const planOrder = { free: 0, day_pass: 1, pro_monthly: 2, pro_quarterly: 3, pro_yearly: 4 };
+    const planOrder = { free: 0, day_pass: 1, pro_monthly: 2, pro_quarterly: 3, pro_lifetime: 4 };
     return planOrder[plan.key as keyof typeof planOrder] > planOrder[currentUserPlan as keyof typeof planOrder];
   };
 
@@ -1061,7 +1061,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       case 'day_pass': return Star;
       case 'pro_monthly': return Crown;
       case 'pro_quarterly': return Users;
-      case 'pro_yearly': return Globe;
+      case 'pro_lifetime': return Globe;
       default: return Brain;
     }
   };
@@ -1072,7 +1072,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       case 'day_pass': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       case 'pro_monthly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       case 'pro_quarterly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
-      case 'pro_yearly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
+      case 'pro_lifetime': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       default: return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
     }
   };
@@ -1194,9 +1194,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 stiffness: 200,
                 mass: 0.8
               }}
-              className="w-full tablet:w-1/2 bg-white dark:bg-[#141810] overflow-y-auto hidden tablet:block"
+              className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto hidden tablet:block"
             >
-              <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col">
+              <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
                 {/* Logo */}
                 <div className="mb-8 flex items-center gap-3">
                   <img
@@ -1225,105 +1225,56 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                 {/* Premium Toolkit Section */}
                 <div className="mb-8 flex-1">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">What's Included</h2>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Pro Features Include</h2>
                   <ul className="space-y-3">
                     <li className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Smart Extension:</strong> Save and autofill job data instantly from any board. Never copy-paste again.
+                        <strong className="text-gray-900 dark:text-white">Unlimited CVs & Templates:</strong> Create unlimited CVs with access to all premium templates.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">ATS-Optimized Documents:</strong> Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high scores.
+                        <strong className="text-gray-900 dark:text-white">Automated Cover Letter:</strong> AI-powered cover letter generator tailored to each job application.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Skills Gap Analysis:</strong> Identify missing skills and get actionable recommendations to bridge the gap for your dream role.
+                        <strong className="text-gray-900 dark:text-white">Job Application Tracker:</strong> Manage all your job applications in one organized dashboard.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Global Opportunities:</strong> Access sponsored jobs with visa sponsorship tags for the UK and USA.
+                        <strong className="text-gray-900 dark:text-white">Deep ATS Optimization:</strong> Full AI analysis to maximize your ATS score and pass screening systems.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">Deep Career Insights:</strong> Get detailed reports highlighting career gaps, strengths, and improvement areas.
+                        <strong className="text-gray-900 dark:text-white">Chrome Extension:</strong> Save job listings with one click and auto-populate applications.
                       </div>
                     </li>
                     <li className="flex items-start gap-3">
                       <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
                       <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        <strong className="text-gray-900 dark:text-white">One-Click Export:</strong> Download your complete application kit instantly.
+                        <strong className="text-gray-900 dark:text-white">Interview Coach:</strong> AI-powered interview preparation with role-specific questions and feedback.
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-blue-600 dark:text-[#80FF00] mt-0.5 flex-shrink-0" />
+                      <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <strong className="text-gray-900 dark:text-white">Advanced Analytics:</strong> Deep insights into your career profile and improvement areas.
                       </div>
                     </li>
                   </ul>
                 </div>
 
                 {/* Trust Elements - Bottom */}
-                <div className="mt-auto pt-8 border-t border-gray-200">
-                  <div className="grid grid-cols-1 gap-4">
-                    {/* 100% Satisfaction Guarantee */}
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">100% Satisfaction Guarantee</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          If you are not completely satisfied with your purchase, you can receive a full refund with no questions asked.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* No Obligation */}
-                    <div className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                        <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white mb-0.5">No Obligation</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
-                          If you find another provider with better pricing or any reasons, you are free to move from CV Circle anytime.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Terms and Conditions Link */}
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-xs text-gray-500 text-center">
-                      By proceeding, you agree to our{' '}
-                      <a
-                        href="/terms"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 underline"
-                      >
-                        Terms of Service
-                      </a>
-                      {' '}and{' '}
-                      <a
-                        href="/privacy-policy"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-700 underline"
-                      >
-                        Privacy Policy
-                      </a>
-                    </p>
-                  </div>
-                </div>
+                {/* Trust Elements moved to right panel */}
+                <div className="mt-auto border-t border-gray-200" />
               </div>
             </motion.div>
 
@@ -1339,114 +1290,78 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 mass: 0.8,
                 delay: 0.1
               }}
-              className="w-full tablet:w-1/2 bg-white dark:bg-[#141810] overflow-y-auto relative"
+              className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto relative"
             >
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0 z-10"
+                className="absolute top-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0 z-10"
               >
                 <X className="w-5 h-5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" />
               </button>
 
-              <div className="p-4 tablet:p-6 max-w-5xl mx-auto">
+              <div className="p-4 tablet:p-6 max-w-5xl mx-auto bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
 
                 {/* Header */}
-                <div className="mb-8">
-                  <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                    {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : step === 1 ? 'Choose Your Plan' : 'Complete Your Order'}
-                  </h2>
-                  {adminMode && (
-                    <span className="inline-block bg-lime-100 text-lime-800 text-xs font-medium px-2 py-1 rounded-full mb-2">
-                      Admin Mode
-                    </span>
-                  )}
-                  {previewMode && (
-                    <span className="inline-block bg-lime-100 text-lime-800 text-xs font-medium px-2 py-1 rounded-full mb-2">
-                      Preview
-                    </span>
-                  )}
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                    {adminMode
-                      ? 'Grant a plan to the selected user'
-                      : previewMode
-                        ? 'Preview available plans and pricing'
-                        : 'Review your plan selection and complete payment'
-                    }
-                  </p>
-                </div>
+                {/* Header moved inside plans container */}
 
                 {/* Content */}
                 <div className="space-y-6">
                   {step === 1 && (
                     <>
                       {/* Current Plan Info - Displayed outside cards */}
-                      {(() => {
-                        // Find current plan from pricing plans
-                        const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
-
-                        // Hide current plan section if it's the free plan (user is upgrading)
-                        // Only show current plan if it's a paid plan
-                        if (currentPlan && !adminMode && currentPlan.key !== 'free') {
-                          const dbPlan = currentPlan as unknown as DatabasePricingPlan;
-                          const regionalPrice = getRegionalPrice(dbPlan);
-                          const currencySymbol = getCurrencySymbol();
-                          const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
-                          const Icon = getPlanIcon(currentPlan.key);
-
-                          return (
-                            <div className="mb-6 p-4 tablet:p-5">
-                              <div className="flex items-start gap-4">
-                                <div className="flex-shrink-0">
-                                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
-                                    <Icon size={24} className="text-white" />
-                                  </div>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-4 flex-wrap">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="text-lg tablet:text-xl font-bold text-gray-900">
-                                          {currentPlan.name}
-                                        </h3>
-                                        <span className="bg-lime-100 text-lime-800 text-xs font-medium px-2 py-0.5 rounded-full">
-                                          Current Plan
-                                        </span>
-                                      </div>
-                                      <p className="text-sm text-gray-600">
-                                        {currentPlan.description}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
+                      {/* Current Plan moved inside plans container */}
 
                       {/* Selected Plan Display (if preselected and different from current) - REMOVED DUPLICATE BLOCK */}
 
 
-                      {/* Plans Logic */}
+                      {/* Unified Plans Container with Header & Current Plan */}
                       {(() => {
-                        // Filter out free plan and current plan
                         const availablePlans = Array.isArray(pricingPlans) && pricingPlans.length > 0
                           ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
                           : [];
 
-                        // Split into subscriptions and day pass
+                        const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
+
                         const subscriptionPlans = availablePlans.filter(plan => plan.key !== 'day_pass');
                         const dayPassPlans = availablePlans.filter(plan => plan.key === 'day_pass');
 
-                        // Sort subscription plans to put Yearly first (usually best value) or consistent order
-                        // Order: Monthly, Quarterly, Yearly (or whatever is preferred, usually Yearly top if "Individual Plan" style)
-                        // User image shows Annual then Monthly. Let's try to sort logic if needed, or rely on API order.
-                        // For now assuming API order is sensible or handled elsewhere.
+                        // Sort logic (optional, keeping consistent with before)
 
                         return (
                           <div className="flex flex-col gap-6 bg-gray-50 dark:bg-[#1A201A] rounded-2xl p-6 border border-gray-100 dark:border-gray-800 max-w-[34rem] mx-auto w-full">
+
+                            {/* --- HEADER MOVED INSIDE --- */}
+                            <div className="mb-2">
+                              <h2 className="text-2xl tablet:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                                {adminMode ? 'Grant Plan' : previewMode ? 'Preview Plans' : step === 1 ? 'Choose Your Plan' : 'Complete Your Order'}
+                              </h2>
+                              {adminMode && <span className="inline-block bg-lime-100 text-lime-800 text-xs font-medium px-2 py-1 rounded-full mb-2 mr-2">Admin Mode</span>}
+                              {previewMode && <span className="inline-block bg-lime-100 text-lime-800 text-xs font-medium px-2 py-1 rounded-full mb-2">Preview</span>}
+                              <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                                {adminMode ? 'Grant a plan to the selected user' : previewMode ? 'Preview available plans and pricing' : 'Review your plan selection and complete payment'}
+                              </p>
+                            </div>
+
+                            {/* --- CURRENT PLAN MOVED INSIDE --- */}
+                            {currentPlan && !adminMode && currentPlan.key !== 'free' && (
+                              <div className="p-4 bg-white dark:bg-[#232f1c] rounded-xl border border-lime-200 dark:border-lime-500/20 shadow-sm">
+                                <div className="flex items-start gap-4">
+                                  <div className="flex-shrink-0">
+                                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br from-lime-400 to-lime-500 shadow-lg">
+                                      {(() => { const Icon = getPlanIcon(currentPlan.key); return <Icon size={24} className="text-white" />; })()}
+                                    </div>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">{currentPlan.name}</h3>
+                                      <span className="bg-lime-100 text-lime-800 text-xs font-medium px-2 py-0.5 rounded-full">Current Plan</span>
+                                    </div>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">{currentPlan.description}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                             {/* Subscription Plans - Vertical Radio Group */}
                             {subscriptionPlans.length > 0 && (
                               <div className="flex flex-col gap-3">
@@ -1477,7 +1392,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                         let planPrice = 0;
                                         if (plan.key === 'pro_monthly') planPrice = dbPlan.price_monthly || 0;
                                         else if (plan.key === 'pro_quarterly') planPrice = dbPlan.price_quarterly || 0;
-                                        else if (plan.key === 'pro_yearly') planPrice = dbPlan.price_yearly || 0;
+                                        else if (plan.key === 'pro_lifetime') planPrice = dbPlan.price_yearly || 0;
                                         else planPrice = effectivePrice || 0;
 
                                         // Regional override logic
@@ -1492,7 +1407,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                           if (plan.key === 'pro_quarterly' && regionalPricing.quarterly) {
                                             const extracted = extractNumericPrice(regionalPricing.quarterly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          } else if (plan.key === 'pro_yearly' && regionalPricing.yearly) {
+                                          } else if (plan.key === 'pro_lifetime' && regionalPricing.yearly) {
                                             const extracted = extractNumericPrice(regionalPricing.yearly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
                                           } else if (plan.key === 'pro_monthly' && regionalPricing.monthly) {
@@ -1557,7 +1472,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                       </div>
 
                                       {/* Badges */}
-                                      {plan.key === 'pro_yearly' && (
+                                      {plan.key === 'pro_lifetime' && (
                                         <div className="mr-auto ml-2 px-2 py-0.5 bg-[rgb(129,255,0)] text-black text-xs font-bold rounded">
                                           Save ~25%
                                         </div>
@@ -1685,21 +1600,44 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               </div>
                             )}
 
+                            {/* Continue Button (Moved Inside) */}
+                            <div className="pt-4 mt-2 border-t border-gray-100 dark:border-gray-800 flex justify-center w-full">
+                              <button
+                                onClick={() => setStep(2)}
+                                disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
+                                className="w-full tablet:w-auto px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg font-bold disabled:bg-gray-200 dark:disabled:bg-gray-800 disabled:text-gray-400 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg disabled:shadow-none"
+                              >
+                                {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
+                              </button>
+                            </div>
+
                           </div>
                         );
                       })()}
 
+                      {/* Trust Elements Footer (Simplified) */}
+                      <div className="mt-6 px-2 max-w-[34rem] mx-auto">
+                        <div className="grid grid-cols-2 gap-4 text-xs mb-4">
+                          <div className="flex flex-col items-center text-center gap-1">
+                            <Shield className="w-4 h-4 text-green-600 dark:text-green-400 mb-1" />
+                            <span className="font-bold text-gray-900 dark:text-white">100% Satisfaction</span>
+                            <span className="text-gray-500 dark:text-gray-400 leading-tight">Full refund if not satisfied. No questions asked.</span>
+                          </div>
+                          <div className="flex flex-col items-center text-center gap-1">
+                            <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400 mb-1" />
+                            <span className="font-bold text-gray-900 dark:text-white">No Obligation</span>
+                            <span className="text-gray-500 dark:text-gray-400 leading-tight">Switch anytime if you find a better price.</span>
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 text-center">
+                          By proceeding, you agree to our <a href="/terms" target="_blank" className="underline hover:text-gray-600 dark:hover:text-gray-300">Terms of Service</a> & <a href="/privacy-policy" target="_blank" className="underline hover:text-gray-600 dark:hover:text-gray-300">Privacy Policy</a>
+                        </p>
+                      </div>
+
 
                       {/* Continue Button */}
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => setStep(2)}
-                          disabled={!selectedPlan || isCurrentPlan(selectedPlan)}
-                          className="px-8 py-3 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-medium disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                        >
-                          {adminMode ? 'Grant Plan' : previewMode ? 'Preview' : 'Continue to Payment'}
-                        </button>
-                      </div>
+                      {/* Continue Button moved inside container */}
                     </>
                   )}
 
@@ -1730,7 +1668,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 <h3 className="text-lg tablet:text-xl font-bold text-gray-900 dark:text-white mb-1">
                                   {(() => {
                                     if (!selectedPlan) return 'No Plan Selected';
-                                    if (selectedPlan.key === 'pro_yearly') return 'Pro Annual Plan';
+                                    if (selectedPlan.key === 'pro_lifetime') return 'Pro Annual Plan';
                                     if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
                                     if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
                                     if (selectedPlan.key === 'day_pass') return 'Day Pass';

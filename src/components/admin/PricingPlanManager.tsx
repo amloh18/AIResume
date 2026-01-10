@@ -365,7 +365,7 @@ const PricingPlanManager: React.FC = () => {
     if (plan.key === 'day_pass') return plan.price_one_time || 0;
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
-    if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
+    if (plan.key === 'pro_lifetime') return plan.price_yearly || 0;
     return 0;
   };
 

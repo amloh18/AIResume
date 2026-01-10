@@ -92,7 +92,7 @@ export function useCredits(): UseCreditsReturn {
           });
         } else {
           // For pro plans, credits are unlimited
-          if (['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey)) {
+          if (['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(planKey)) {
             setCredits({
               jobCredits: -1,
               limit: -1,

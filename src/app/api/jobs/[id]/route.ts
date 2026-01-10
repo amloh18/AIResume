@@ -473,7 +473,7 @@ export async function PUT(
 
           if (updatedJobForLog && userForLog) {
             const { ActivityLogService } = await import('@/lib/services/activityLogService');
-            const isUnlimited = ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(userForLog.currentPlanKey || 'free');
+            const isUnlimited = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(userForLog.currentPlanKey || 'free');
 
             // Log asynchronously - don't wait for it
             Promise.all([

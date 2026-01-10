@@ -317,7 +317,7 @@ async function handlePaymentCaptured(payment: any) {
       });
 
       console.log(`✅ Day Pass activated for user ${user.email}`);
-    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey)) {
+    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(planKey)) {
       // Handle pro plan activation (quarterly/yearly are one-time payments)
       const interval = planKey === 'pro_monthly' ? 'monthly' : 
                        planKey === 'pro_quarterly' ? 'quarterly' : 'yearly';
@@ -798,7 +798,7 @@ async function handleOrderPaid(order: any) {
       });
 
       console.log(`✅ Day Pass activated for user ${user.email} via order payment`);
-    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_yearly'].includes(planKey)) {
+    } else if (planKey && ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(planKey)) {
       // Handle pro plan activation (quarterly/yearly are one-time payments)
       const interval = planKey === 'pro_monthly' ? 'monthly' : 
                        planKey === 'pro_quarterly' ? 'quarterly' : 'yearly';

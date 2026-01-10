@@ -15,25 +15,35 @@ export interface PlanLimits {
   downloads: number;
   premiumTemplates: boolean;
   maxCVs: number;
-  maxJobs: number;              // NEW: Job tracker limit
-  aiSurgeonMode: 'spelling_only' | 'full';  // NEW: AI mode restriction
-  coverLetterAI: boolean;       // NEW: No AI cover letter
-  docxExport: boolean;          // NEW: No DOCX export
-  hasVault?: boolean;           // NEW: Career Vault feature (Yearly only)
+  maxJobs: number;              // Job tracker limit
+  standaloneCVs: boolean;       // Can create standalone CVs
+  aiSurgeonMode: 'spelling_only' | 'full';  // AI mode restriction
+  coverLetterAI: boolean;       // Automated AI cover letter
+  docxExport: boolean;          // DOCX export
+  interviewCoach: boolean;      // Interview Coach access
+  jobTracker: boolean;          // Job Application Tracker access
+  prioritySupport: boolean;     // Priority support
+  advancedAnalytics: boolean;   // Advanced analytics
+  hasVault?: boolean;           // Career Vault feature (Lifetime only)
 }
 
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
-    journeyCVs: 1,              // 1 Active Journey CV
-    activeJourneyCVs: 1,        // Explicit active count
+    journeyCVs: 0,              // No Journey CVs for free
+    activeJourneyCVs: 0,        // No active journeys
     surgeonRuns: 10,
     downloads: 5,
     premiumTemplates: false,
-    maxCVs: 1,
-    maxJobs: 3,                 // 3 Jobs total (including archived)
-    aiSurgeonMode: 'spelling_only',  // NEW: AI mode restriction
-    coverLetterAI: false,       // NEW: No AI cover letter
-    docxExport: false           // NEW: No DOCX export
+    maxCVs: 1,                  // Only 1 Master CV
+    maxJobs: 3,                 // 3 Jobs total
+    standaloneCVs: false,       // Cannot create standalone CVs
+    aiSurgeonMode: 'spelling_only',
+    coverLetterAI: false,       // No cover letter generator
+    docxExport: false,          // PDF only
+    interviewCoach: false,      // No Interview Coach
+    jobTracker: false,          // No Job Tracker (limited to 3 jobs display only)
+    prioritySupport: false,
+    advancedAnalytics: false
   },
   day_pass: {
     journeyCVs: -1,             // Unlimited during 24h
@@ -42,60 +52,85 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     downloads: -1,
     premiumTemplates: true,
     maxCVs: -1,
-    maxJobs: 100,
+    maxJobs: 0,                 // No Job Tracker
+    standaloneCVs: true,
     aiSurgeonMode: 'full',      // Full AI rewrite
-    coverLetterAI: false,
-    docxExport: true
+    coverLetterAI: false,       // Manual cover letter only
+    docxExport: true,
+    interviewCoach: false,      // No Interview Coach
+    jobTracker: false,          // No Job Tracker
+    prioritySupport: false,     // Regular support
+    advancedAnalytics: false    // No advanced analytics
   },
   pro_monthly: {
-    journeyCVs: 50,             // 50 Active per month
-    activeJourneyCVs: 50,
+    journeyCVs: -1,             // Unlimited
+    activeJourneyCVs: -1,
     surgeonRuns: -1,
     downloads: -1,
     premiumTemplates: true,
     maxCVs: -1,
     maxJobs: -1,
+    standaloneCVs: true,
     aiSurgeonMode: 'full',
-    coverLetterAI: true,
-    docxExport: true
+    coverLetterAI: true,        // Automated cover letter
+    docxExport: true,
+    interviewCoach: true,       // Full Interview Coach
+    jobTracker: true,           // Full Job Tracker
+    prioritySupport: false,     // Regular support
+    advancedAnalytics: true
   },
   pro_quarterly: {
-    journeyCVs: -1,            // Unlimited
+    journeyCVs: -1,             // Unlimited
     activeJourneyCVs: -1,
     surgeonRuns: -1,
     downloads: -1,
     premiumTemplates: true,
     maxCVs: -1,
     maxJobs: -1,
-    aiSurgeonMode: 'full',
-    coverLetterAI: true,
-    docxExport: true
-  },
-  pro_lifetime: {
-    journeyCVs: -1,            // Unlimited
-    activeJourneyCVs: -1,
-    surgeonRuns: -1,
-    downloads: -1,
-    premiumTemplates: true,
-    maxCVs: -1,
-    maxJobs: -1,
+    standaloneCVs: true,
     aiSurgeonMode: 'full',
     coverLetterAI: true,
     docxExport: true,
-    hasVault: true              // NEW: Career Vault feature
+    interviewCoach: true,
+    jobTracker: true,
+    prioritySupport: true,      // Priority Support
+    advancedAnalytics: true
   },
-
-  pro: {
-    journeyCVs: 50,             // Default to monthly limits for generic pro
-    activeJourneyCVs: 50,
+  pro_lifetime: {
+    journeyCVs: -1,             // Unlimited
+    activeJourneyCVs: -1,
     surgeonRuns: -1,
     downloads: -1,
     premiumTemplates: true,
     maxCVs: -1,
     maxJobs: -1,
+    standaloneCVs: true,
     aiSurgeonMode: 'full',
     coverLetterAI: true,
-    docxExport: true
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    hasVault: true              // Career Vault feature
+  },
+
+  pro: {
+    journeyCVs: -1,             // Default to monthly limits for generic pro
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    prioritySupport: false,
+    advancedAnalytics: true
   }
 };
 

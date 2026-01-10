@@ -907,7 +907,7 @@ const OptimizedNavigation: React.FC = () => {
             }
 
             // Yearly plan card (no upsell, best value badge)
-            if (currentPlan === 'pro_yearly') {
+            if (currentPlan === 'pro_lifetime') {
               return (
                 <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-2 border-amber-300/50 relative overflow-hidden">
                   {/* Best Value Badge */}

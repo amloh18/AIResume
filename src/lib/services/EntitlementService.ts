@@ -69,7 +69,7 @@ const METER_LIMITS: Record<string, Record<string, number>> = {
         CV_CREATION: -1,
         COVER_LETTER_AI: -1
     },
-    pro_yearly: {
+    pro_lifetime: {
         JOB_ACTIVATION: -1,
         PDF_DOWNLOAD: -1,
         AI_FIX: -1,
@@ -93,21 +93,21 @@ const QUOTA_LIMITS: Record<string, Record<string, number>> = {
         JOURNEY_CVS: 1          // 1 active journey CV
     },
     day_pass: {
-        ACTIVE_JOBS: 100,
+        ACTIVE_JOBS: 0,         // No Job Tracker for Day Pass
         DRAFTS: -1,
         JOURNEY_CVS: -1
     },
     pro_monthly: {
         ACTIVE_JOBS: -1,
         DRAFTS: -1,
-        JOURNEY_CVS: 50
+        JOURNEY_CVS: -1         // Unlimited for all pro plans
     },
     pro_quarterly: {
         ACTIVE_JOBS: -1,
         DRAFTS: -1,
         JOURNEY_CVS: -1
     },
-    pro_yearly: {
+    pro_lifetime: {
         ACTIVE_JOBS: -1,
         DRAFTS: -1,
         JOURNEY_CVS: -1
@@ -293,7 +293,7 @@ class EntitlementService {
      * 
      * Checks if a feature is unlocked for the user's plan.
      */
-    async checkGate(userId: string, feature: 'DOCX_DOWNLOAD' | 'DEEP_DIVE' | 'PREMIUM_TEMPLATES' | 'COVER_LETTER_AI'): Promise<GateResult> {
+    async checkGate(userId: string, feature: 'DOCX_DOWNLOAD' | 'DEEP_DIVE' | 'PREMIUM_TEMPLATES' | 'COVER_LETTER_AI' | 'INTERVIEW_COACH' | 'JOB_TRACKER'): Promise<GateResult> {
         try {
             const { planKey, limits, isActive } = await this.getUserPlan(userId);
 
@@ -302,6 +302,8 @@ class EntitlementService {
                 'DOCX_DOWNLOAD': 'docxExport',
                 'PREMIUM_TEMPLATES': 'premiumTemplates',
                 'COVER_LETTER_AI': 'coverLetterAI',
+                'INTERVIEW_COACH': 'interviewCoach',
+                'JOB_TRACKER': 'jobTracker',
                 'DEEP_DIVE': planKey !== 'free' && isActive // Deep dive requires any paid plan
             };
 
@@ -537,7 +539,9 @@ class EntitlementService {
             gates: {
                 DOCX_DOWNLOAD: limits.docxExport,
                 PREMIUM_TEMPLATES: limits.premiumTemplates,
-                COVER_LETTER_AI: limits.coverLetterAI
+                COVER_LETTER_AI: limits.coverLetterAI,
+                INTERVIEW_COACH: limits.interviewCoach,
+                JOB_TRACKER: limits.jobTracker
             }
         };
     }

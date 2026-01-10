@@ -36,7 +36,7 @@ export interface PriceCalculationResult {
  */
 export async function calculateFinalPrice(
   userCountry: string,
-  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly',
+  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
   couponCode?: string,
   regionCode?: string
 ): Promise<PriceCalculationResult | null> {
@@ -102,7 +102,7 @@ export async function calculateFinalPrice(
               'day_pass': 'day_pass',
               'pro_monthly': 'pro_monthly',
               'pro_quarterly': 'pro_quarterly',
-              'pro_yearly': 'pro_yearly'
+              'pro_lifetime': 'pro_lifetime'
             };
             
             const applicablePlanKey = planKeyMap[planKey];

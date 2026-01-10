@@ -45,7 +45,7 @@ class CreditService {
           return { jobCredits: -1 }; // Unlimited for 24 hours
         case 'pro_monthly':
         case 'pro_quarterly':
-        case 'pro_yearly':
+        case 'pro_lifetime':
         case 'pro_lifetime':
           return { jobCredits: -1 }; // Unlimited
         default:
@@ -103,7 +103,7 @@ class CreditService {
       }
 
       // For paid plans (monthly/quarterly/yearly/lifetime), check subscription status
-      if (['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(user.currentPlanKey)) {
+      if (['pro_monthly', 'pro_quarterly', 'pro_lifetime', 'pro_lifetime'].includes(user.currentPlanKey)) {
         // Check if user actually has an active subscription
         const subscription = user.subscription;
         const hasActiveSubscription = subscription &&
@@ -363,7 +363,7 @@ class CreditService {
         return 'never'; // No reset, expires with pass
       case 'pro_monthly':
       case 'pro_quarterly':
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return 'never'; // Unlimited, no reset needed
       default:
         return 'monthly';

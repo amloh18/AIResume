@@ -191,7 +191,7 @@ async function handleCheckoutSessionCompleted(session: any) {
           'subscription.providerCustomerId': session.customer
         });
       }
-    } else if (planKey && (planKey === 'pro_monthly' || planKey === 'pro_quarterly' || planKey === 'pro_yearly')) {
+    } else if (planKey && (planKey === 'pro_monthly' || planKey === 'pro_quarterly' || planKey === 'pro_lifetime')) {
       // Pro plans
       const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
                                          planKey === 'pro_quarterly' ? 'quarterly' : 'yearly');
@@ -262,7 +262,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     // Create invoice record with subtotal and tax
     const finalInterval = interval || (planKey === 'pro_monthly' ? 'monthly' : 
                                        planKey === 'pro_quarterly' ? 'quarterly' : 
-                                       planKey === 'pro_yearly' ? 'yearly' : 
+                                       planKey === 'pro_lifetime' ? 'yearly' : 
                                        planKey === 'day_pass' ? 'one-time' : 'monthly');
     
     const invoice = await Invoice.create({
@@ -613,7 +613,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
           'subscription.providerCustomerId': paymentIntent.customer
         });
       }
-    } else if (planKey && (planKey === 'pro_monthly' || planKey === 'pro_quarterly' || planKey === 'pro_yearly')) {
+    } else if (planKey && (planKey === 'pro_monthly' || planKey === 'pro_quarterly' || planKey === 'pro_lifetime')) {
       // Handle pro plan activation (quarterly/yearly are one-time payments)
       const interval = planKey === 'pro_monthly' ? 'monthly' : 
                        planKey === 'pro_quarterly' ? 'quarterly' : 'yearly';

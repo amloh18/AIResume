@@ -63,18 +63,18 @@ export class PDFService extends BaseService {
         options.format || 'pdf'
       );
 
-      const cached = await pdfCacheService.get(cacheKey);
-      if (cached) {
-        await metricsService.trackOperation(
-          this.serviceName,
-          'generatePDF',
-          0,
-          true,
-          undefined,
-          { cached: true }
-        );
-        return cached;
-      }
+      // const cached = await pdfCacheService.get(cacheKey);
+      // if (cached) {
+      //   await metricsService.trackOperation(
+      //     this.serviceName,
+      //     'generatePDF',
+      //     0,
+      //     true,
+      //     undefined,
+      //     { cached: true }
+      //   );
+      //   return cached;
+      // }
 
       // Generate PDF with retry logic
       return this.withRetry(
@@ -131,7 +131,7 @@ export class PDFService extends BaseService {
             pdfBuffer = await fileProtectionService.protectPDF(pdfBuffer, options.password);
           }
 
-          const blob = new Blob([pdfBuffer], { type: 'application/pdf' });
+          const blob = new Blob([new Uint8Array(pdfBuffer)], { type: 'application/pdf' });
 
           // Cache the result
           await pdfCacheService.set(cacheKey, blob, cacheConfig.ttl);
@@ -162,10 +162,28 @@ export class PDFService extends BaseService {
         // Set timeout
         page.setDefaultTimeout(config.timeout);
 
+        // Set viewport to A4 WIDTH but very tall HEIGHT
+        // This allows all content to render continuously, then PDF pagination splits it
+        const viewportWidth = options.paperSize === 'Letter' ? 816 : 794;
+        await page.setViewport({
+          width: viewportWidth,
+          height: 10000, // Very tall to allow all content
+          deviceScaleFactor: 1
+        });
+
         // Set content
         await page.setContent(html, {
-          waitUntil: 'networkidle0'
+          waitUntil: ['load', 'domcontentloaded', 'networkidle0']
         });
+
+        // Wait for document to be fully laid out and calculate body height
+        const bodyHeight = await page.evaluate(() => {
+          // Force layout recalculation
+          document.body.offsetHeight;
+          return document.body.scrollHeight;
+        });
+
+        logger.info('PDF Generation - Body height measured', { bodyHeight, expectedMinHeight: 1123 });
 
         // Extract name for PDF metadata
         const name = (cvData.basics?.name || 'Resume').trim();
@@ -182,8 +200,6 @@ export class PDFService extends BaseService {
             bottom: '0mm',
             left: '0mm'
           },
-          // Ensure text is selectable (not rendered as image)
-          preferCSSPageSize: true,
           // Add metadata for ATS compatibility (Critical Action Item - Edge Case #36)
           displayHeaderFooter: false,
           // Ensure proper encoding

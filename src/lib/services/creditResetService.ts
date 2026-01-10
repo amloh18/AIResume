@@ -115,7 +115,7 @@ class CreditResetService {
         return 'monthly';
       case 'pro_quarterly':
         return 'quarterly';
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return 'yearly';
       default:
         return 'monthly';

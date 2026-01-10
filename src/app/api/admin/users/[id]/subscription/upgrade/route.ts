@@ -72,7 +72,7 @@ export async function POST(
     } else if (interval === 'quarterly' || planKey === 'pro_quarterly') {
       endDate.setMonth(endDate.getMonth() + 3);
       currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 3);
-    } else if (interval === 'yearly' || planKey === 'pro_yearly') {
+    } else if (interval === 'yearly' || planKey === 'pro_lifetime') {
       endDate.setFullYear(endDate.getFullYear() + 1);
       currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
     } else if (planKey === 'day_pass') {

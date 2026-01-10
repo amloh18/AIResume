@@ -14,7 +14,7 @@ import subscriptionService from '@/lib/services/subscriptionService';
 // Returns full CountryPricing data including stripePriceIds and razorpayPlanIds
 async function getCountryPricingForPlan(
   countryCode: string,
-  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly',
+  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
   billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time'
 ): Promise<{
   price: number;
@@ -28,10 +28,10 @@ async function getCountryPricingForPlan(
     // Map billingCycle to planKey if not provided
     let finalPlanKey = planKey;
     if (!finalPlanKey && billingCycle) {
-      const cycleToPlanKey: Record<string, 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly'> = {
+      const cycleToPlanKey: Record<string, 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'> = {
         'monthly': 'pro_monthly',
         'quarterly': 'pro_quarterly',
-        'yearly': 'pro_yearly',
+        'yearly': 'pro_lifetime',
         'one-time': 'day_pass'
       };
       finalPlanKey = cycleToPlanKey[billingCycle] || 'pro_monthly';
@@ -84,7 +84,7 @@ async function getCountryPricingForPlan(
       'day_pass': 'dayPass',
       'pro_monthly': 'monthly',
       'pro_quarterly': 'quarterly',
-      'pro_yearly': 'yearly'
+      'pro_lifetime': 'yearly'
     };
 
     const planPricesKey = planKeyMap[finalPlanKey];
@@ -119,7 +119,7 @@ async function getCountryPricingForPlan(
 import Coupon from '@/models/Coupon';
 import DiscountCode from '@/models/DiscountCode';
 
-type PaidPlanKey = 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+type PaidPlanKey = 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
 
 interface ZeroAmountActivationParams {
   user: any;
@@ -166,11 +166,11 @@ async function activatePlanWithCoupon({
     const normalizedInterval: 'monthly' | 'quarterly' | 'yearly' =
       interval === 'quarterly' ? 'quarterly' : interval === 'yearly' ? 'yearly' : 'monthly';
 
-    const proPlanKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' =
+    const proPlanKey: 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime' =
       planKey === 'pro_quarterly'
         ? 'pro_quarterly'
-        : planKey === 'pro_yearly'
-          ? 'pro_yearly'
+        : planKey === 'pro_lifetime'
+          ? 'pro_lifetime'
           : 'pro_monthly';
 
     activationResult = await subscriptionService.activateProPlan(
@@ -426,7 +426,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate plan key
-    const validPlanKeys = ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'];
+    const validPlanKeys = ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'];
     if (!validPlanKeys.includes(planKey)) {
       return NextResponse.json({ error: 'Invalid plan key' }, { status: 400 });
     }
@@ -1373,10 +1373,10 @@ async function handleProPlanPayment(
   couponDiscount?: any
 ) {
   // Map interval to planKey
-  const intervalToPlanKey: Record<string, 'pro_monthly' | 'pro_quarterly' | 'pro_yearly'> = {
+  const intervalToPlanKey: Record<string, 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'> = {
     'monthly': 'pro_monthly',
     'quarterly': 'pro_quarterly',
-    'yearly': 'pro_yearly'
+    'yearly': 'pro_lifetime'
   };
   const planKey = intervalToPlanKey[interval] || 'pro_monthly';
 

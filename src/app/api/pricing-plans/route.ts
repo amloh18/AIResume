@@ -33,19 +33,20 @@ const fallbackPlans = [
     _id: 'free',
     key: 'free',
     name: 'Free',
-    description: 'Perfect for getting started with basic CV creation',
+    description: 'Get started with your first professional CV',
     price_monthly: 0,
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      '1st CV free',
-      'Basic templates',
-      'PDF export',
-      'Email support'
+      'Create your first CV',
+      'Access to basic templates',
+      'Basic spelling & grammar check',
+      'PDF download'
     ],
     notIncludedFeatures: [
-      'Cover letters',
-      'Job application tracking'
+      'DOCX export',
+      'Cover Letter generator',
+      'Interview Coach'
     ],
     isPopular: false,
     isBestValue: false,
@@ -54,7 +55,7 @@ const fallbackPlans = [
     maxCVs: 1,
     maxExports: 1,
     maxCoverLetters: 0,
-    maxJobs: 0,
+    maxJobs: 3,
     maxJourneys: 0,
     billingCycle: 'free',
     category: 'essential'
@@ -63,20 +64,22 @@ const fallbackPlans = [
     _id: 'day_pass',
     key: 'day_pass',
     name: 'Day Pass',
-    description: 'One-day access to all premium features',
+    description: '24-hour unlimited access to premium tools',
     price_monthly: 0,
     price_one_time: 5,
     currency: 'GBP',
     features: [
-      'Unlimited CVs for 24 hours',
+      'Unlimited CV creation',
       'All premium templates',
-      'Basic ATS optimization',
-      'PDF, Doc Export'
+      'PDF & DOCX export',
+      'Manual Cover Letter editor',
+      'Deep ATS optimization',
+      'Standard support'
     ],
     notIncludedFeatures: [
-      'Priority support',
-      'Advanced analytics',
-      'Cover letter generator'
+      'Interview Coach',
+      'Job Application Tracker',
+      'Advanced analytics'
     ],
     isPopular: false,
     isBestValue: false,
@@ -85,7 +88,7 @@ const fallbackPlans = [
     maxCVs: -1,
     maxExports: -1,
     maxCoverLetters: -1,
-    maxJobs: -1,
+    maxJobs: 0,
     maxJourneys: -1,
     billingCycle: 'one-time',
     category: 'essential'
@@ -95,22 +98,22 @@ const fallbackPlans = [
     _id: 'pro_monthly',
     key: 'pro_monthly',
     name: 'Professional Monthly',
-    description: 'Full access to all features with monthly billing',
+    description: 'Complete career toolkit with monthly flexibility',
     price_monthly: 19,
     price_quarterly: 0,
     price_yearly: 0,
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      'Unlimited CVs',
+      'Unlimited CV creation',
       'All premium templates',
-      'Cover letter generator',
-      'Job application tracking & management',
+      'AI-powered Cover Letter generator',
+      'Job Application Tracker',
       'Deep ATS optimization',
-      'Chrome Extension',
-      'Interview Coach',
-      'Priority support',
-      'Advanced analytics'
+      'Chrome Extension for job saving',
+      'Interview Coach with AI feedback',
+      'Advanced career analytics',
+      'Standard support'
     ],
     notIncludedFeatures: [],
     isPopular: false,
@@ -129,15 +132,15 @@ const fallbackPlans = [
     _id: 'pro_quarterly',
     key: 'pro_quarterly',
     name: 'Professional Quarterly',
-    description: 'Full access to all features with quarterly billing',
+    description: 'Best value with priority support included',
     price_monthly: 0,
     price_quarterly: 49,
     price_yearly: 0,
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      'All Pro monthly benefits',
-      'Advanced analytics'
+      'Everything in Monthly plan',
+      'Priority support'
     ],
     notIncludedFeatures: [],
     isPopular: true,
@@ -156,16 +159,16 @@ const fallbackPlans = [
     _id: 'pro_lifetime',
     key: 'pro_lifetime',
     name: 'Lifetime',
-    description: 'Full access to all features with lifetime access',
+    description: 'One-time payment for lifetime access',
     price_monthly: 0,
     price_quarterly: 0,
     price_yearly: 0,
     price_one_time: 179,
     currency: 'GBP',
     features: [
-      'All Pro monthly benefits',
-      'Advanced analytics',
-      'New features first'
+      'All Professional features forever',
+      'Priority support',
+      'Early access to new features'
     ],
     notIncludedFeatures: [],
     isPopular: false,

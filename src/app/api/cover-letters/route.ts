@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
-    
+
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const status = searchParams.get('status');
@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Create base query - ensure userId is ObjectId for index usage
-    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId) 
-      ? new mongoose.Types.ObjectId(userId) 
+    const normalizedUserId = mongoose.Types.ObjectId.isValid(userId)
+      ? new mongoose.Types.ObjectId(userId)
       : userId;
     let query = CoverLetter.find({ userId: normalizedUserId });
 
@@ -110,8 +110,15 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await getConnection();
-    
+
     const body = await request.json();
+    console.log('📝 POST /api/cover-letters - Payload:', JSON.stringify(body, null, 2));
+
+    // Debug: Check active Mongoose model schema
+    const schemaContentPath = CoverLetter.schema.path('content');
+    console.log('🔍 Debug: CoverLetter schema path "content" required:', schemaContentPath?.isRequired);
+    console.log('🔍 Debug: CoverLetter schema path "content" options:', schemaContentPath?.options);
+
     const { userId, title, content, header, body: bodyContent, footer, targetCompany, targetPosition, keywords, jobId, cvId, journeyId, status, metadata } = body;
 
     if (!userId || !title) {
@@ -123,12 +130,16 @@ export async function POST(request: NextRequest) {
 
     // If header/body/footer are provided, use them; otherwise use content
     // If content is not provided and header/body/footer are not provided, return error
+    // Relaxed validation: Allow saving if we have title/userId (checked above)
+    // even if content/header/body/footer are empty (e.g. initializing a draft)
+    /*
     if (!content && !header && !bodyContent && !footer) {
       return NextResponse.json(
         { success: false, message: 'Either content or header/body/footer must be provided' },
         { status: 400 }
       );
     }
+    */
 
     // Build metadata object, merging provided metadata with defaults
     const coverLetterMetadata = {
@@ -147,7 +158,7 @@ export async function POST(request: NextRequest) {
         journeyId: journeyId,
         userId: toObjectId(userId)
       });
-      
+
       if (existingCoverLetter) {
         console.log('✅ Cover Letter API - Found existing cover letter for journey:', existingCoverLetter._id);
         return NextResponse.json({
@@ -169,13 +180,13 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    
+
     // DO NOT merge content - store header, body, footer separately
     // Content will be generated on-the-fly in preview only
     const coverLetter = new CoverLetter({
       userId,
       title,
-      content: '', // Leave empty - will be generated in preview only
+      content: ' ', // Single space to satisfy "required" validation if strict
       header: header || undefined,
       body: bodyContent || undefined,
       footer: footer || undefined,
@@ -220,7 +231,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     await getConnection();
-    
+
     const body = await request.json();
     const { id, title, content, header, body: bodyContent, footer, status, targetCompany, targetPosition, keywords } = body;
 
@@ -240,7 +251,7 @@ export async function PUT(request: NextRequest) {
     if (targetCompany !== undefined) updateData['metadata.targetCompany'] = targetCompany;
     if (targetPosition !== undefined) updateData['metadata.targetPosition'] = targetPosition;
     if (keywords) updateData['metadata.keywords'] = keywords;
-    
+
     // DO NOT merge into content - leave content empty or undefined
     // Content will be generated on-the-fly in preview only
 
@@ -285,7 +296,7 @@ export async function PUT(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     await getConnection();
-    
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -321,15 +332,15 @@ export async function DELETE(request: NextRequest) {
 function calculateCompletionPercentage(coverLetter: any): number {
   if (coverLetter.status === 'final') return 100;
   if (coverLetter.status === 'archived') return 0;
-  
+
   let score = 0;
   let maxScore = 5;
-  
+
   if (coverLetter.title && coverLetter.title.trim()) score += 1;
   if (coverLetter.content && coverLetter.content.trim()) score += 1;
   if (coverLetter.metadata?.targetCompany && coverLetter.metadata.targetCompany.trim()) score += 1;
   if (coverLetter.metadata?.targetPosition && coverLetter.metadata.targetPosition.trim()) score += 1;
   if (coverLetter.metadata?.keywords && coverLetter.metadata.keywords.length > 0) score += 1;
-  
+
   return Math.round((score / maxScore) * 100);
 }

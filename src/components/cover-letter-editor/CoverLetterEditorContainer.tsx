@@ -12,6 +12,7 @@ import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { extractHeaderFromContent, extractBodyFromContent } from '@/lib/utils/coverLetterUtils';
 import CoverLetterTemplateContent from '@/components/cover-letter-editor/CoverLetterTemplateContent';
 import TemplateSidebar from '@/components/cover-letter-editor/TemplateSidebar';
+import CoverLetterInitModal from '@/components/cover-letter-editor/CoverLetterInitModal';
 
 
 interface CoverLetterEditorContainerProps {
@@ -36,6 +37,7 @@ export default function CoverLetterEditorContainer({
   const [isLoading, setIsLoading] = useState(true);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [showInitModal, setShowInitModal] = useState(false);
   const initializedRef = useRef(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -363,7 +365,18 @@ export default function CoverLetterEditorContainer({
             console.error('Failed to check for existing cover letter:', error);
           }
         } else {
-          // Create mode - set title
+          // Create mode without cvId/jobId - show init modal
+          // Check if we need to show the init modal (no cvId, no jobId, mode is 'create')
+          const needsInitModal = mode === 'create' && !cvId && !jobId && !coverLetterId;
+
+          if (needsInitModal) {
+            setShowInitModal(true);
+            setIsLoading(false);
+            initializedRef.current = true;
+            return; // Don't continue - wait for modal
+          }
+
+          // Create mode with some context - set title
           dispatch({ type: 'SET_COVER_LETTER_TITLE', payload: 'Untitled Cover Letter' });
           // Auto-populate will happen in Step2Edit when CV data is set
         }
@@ -414,7 +427,13 @@ export default function CoverLetterEditorContainer({
 
   const canGoToNextStep = () => {
     if (state.currentStep === 1) {
-      return state.coverLetterData.content.trim().length > 0;
+      // Check if there is any content in body or legacy content field
+      // Also allow if header is populated as that counts as "started"
+      const hasBody = state.coverLetterData.body && state.coverLetterData.body.trim().length > 0;
+      const hasContent = state.coverLetterData.content && state.coverLetterData.content.trim().length > 0;
+      const hasHeader = state.coverLetterData.header && state.coverLetterData.header.trim().length > 0;
+
+      return hasBody || hasContent || hasHeader;
     }
     return true;
   };
@@ -422,6 +441,101 @@ export default function CoverLetterEditorContainer({
   const handleTemplateSelect = (template: CoverLetterTemplate) => {
     setTemplate(template);
     setShowTemplateModal(false);
+  };
+
+  // Handle init modal submission
+  const handleInitModalSubmit = async (data: {
+    cvId?: string;
+    jobDescription?: string;
+    companyName: string;
+    jobTitle: string;
+  }) => {
+    setIsLoading(true);
+    setShowInitModal(false);
+
+    try {
+      // Load CV data if provided
+      if (data.cvId) {
+        try {
+          const cvResponse = await fetch(`/api/cvs/${data.cvId}?userId=${userId}`);
+          if (cvResponse.ok) {
+            const cvResult = await cvResponse.json();
+            const cv = cvResult.data?.cv || cvResult.cv;
+            if (cv?.cvData) {
+              setCVData(cv.cvData as UnifiedCVDataStructure);
+              dispatch({ type: 'UPDATE_COVER_LETTER_DATA', payload: { cvId: data.cvId } });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load CV:', error);
+        }
+      }
+
+      // Store job data from the modal
+      const jobDataFromModal = {
+        id: `manual-${Date.now()}`,
+        jobTitle: data.jobTitle,
+        company: data.companyName,
+        jobDescription: data.jobDescription || '',
+        description: data.jobDescription || ''
+      };
+      setJobData(jobDataFromModal);
+
+      // Set a meaningful title
+      const title = data.companyName && data.jobTitle
+        ? `Cover Letter - ${data.jobTitle} at ${data.companyName}`
+        : data.companyName
+          ? `Cover Letter - ${data.companyName}`
+          : data.jobTitle
+            ? `Cover Letter - ${data.jobTitle}`
+            : `Cover Letter - ${new Date().toLocaleDateString()}`;
+      dispatch({ type: 'SET_COVER_LETTER_TITLE', payload: title });
+
+      // Create draft immediately via API
+      try {
+        const payload = {
+          userId,
+          title,
+          content: ' ', // Single space to satisfy validation
+          header: '', // Empty initially
+          body: '', // Empty initially
+          status: 'draft',
+          cvId: data.cvId,
+          jobId: undefined, // Will be set if jobData exists but we need to create job separately or use jobData structure
+          // We can't easily link to a job without creating it provided only string jobTitle/companyName
+          // For now, we store metadata or rely on subsequent saves
+          metadata: {
+            targetCompany: data.companyName,
+            targetPosition: data.jobTitle
+          },
+          templateId: state.selectedTemplate?.id
+        };
+
+        const response = await fetch('/api/cover-letters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const savedId = result.data?.id || result.data?.coverLetter?.id || result.id;
+          if (savedId) {
+            dispatch({ type: 'SET_COVER_LETTER_ID', payload: savedId });
+            // Update URL silently or just keep ID in state
+            // router.replace(`/dashboard/cover-letter?id=${savedId}`, undefined, { shallow: true });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create initial draft:', err);
+        // Continue anyway, user can save later
+      }
+
+    } catch (error) {
+      console.error('Failed to initialize from modal:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (isLoading) {
@@ -539,6 +653,14 @@ export default function CoverLetterEditorContainer({
         onClose={() => setShowTemplateModal(false)}
         selectedTemplate={state.selectedTemplate}
         onTemplateSelect={handleTemplateSelect}
+      />
+
+      {/* Init Modal for standalone cover letters */}
+      <CoverLetterInitModal
+        isOpen={showInitModal}
+        onClose={() => router.push('/dashboard/canvas')}
+        onSubmit={handleInitModalSubmit}
+        userId={userId}
       />
 
     </div>

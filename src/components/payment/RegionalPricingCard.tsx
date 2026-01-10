@@ -47,7 +47,7 @@ export function RegionalPricingCard({
         return <Zap className="w-6 h-6" />;
       case 'pro_monthly':
       case 'pro_quarterly':
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return <Crown className="w-6 h-6" />;
       default:
         return <Star className="w-6 h-6" />;
@@ -62,7 +62,7 @@ export function RegionalPricingCard({
         return 'text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/20';
       case 'pro_monthly':
       case 'pro_quarterly':
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       default:
         return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';

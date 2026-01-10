@@ -25,7 +25,7 @@ export interface ICountryPricing extends Document {
     };
     yearly: {
       price: number;
-      planId: mongoose.Types.ObjectId; // Reference to pro_yearly plan
+      planId: mongoose.Types.ObjectId; // Reference to pro_lifetime plan
     };
   };
   stripePriceIds?: {

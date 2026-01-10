@@ -110,13 +110,13 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
           word-wrap: break-word;
           overflow-wrap: break-word;
           min-width: 0;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .right-column {
           word-wrap: break-word;
           overflow-wrap: break-word;
-          overflow: hidden;
+          overflow: visible;
           min-width: 0;
           border-left: 1px solid #D1D5DB;
           padding-left: 1rem;

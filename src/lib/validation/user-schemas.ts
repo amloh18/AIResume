@@ -69,7 +69,7 @@ export const UserSettingsSchema = z.object({
 
 // Subscription schema
 export const SubscriptionSchema = z.object({
-  planKey: z.enum(['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly']),
+  planKey: z.enum(['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']),
   status: z.enum(['active', 'inactive', 'cancelled', 'expired']),
   provider: z.enum(['stripe', 'razorpay', 'admin']),
   providerSubscriptionId: z.string().optional(),

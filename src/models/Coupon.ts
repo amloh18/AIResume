@@ -84,7 +84,7 @@ const couponSchema = new Schema<ICoupon>({
   }],
   applicablePlanKeys: [{
     type: String,
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly']
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']
   }],
   requiresCreditCard: {
     type: Boolean,
