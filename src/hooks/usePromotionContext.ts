@@ -73,7 +73,7 @@ export function usePromotionContext(): PromotionContextData {
     }
 
     // Check user subscription status
-    const paidPlans = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'day_pass'];
+    const paidPlans = ['pro_monthly', 'pro_quarterly', 'pro_lifetime', 'day_pass'];
     if (user?.currentPlanKey) {
       isFreeUser = user.currentPlanKey === 'free';
       isPaidUser = paidPlans.includes(user.currentPlanKey);
@@ -89,7 +89,7 @@ export function usePromotionContext(): PromotionContextData {
       const userPlan = credits.planKey || user?.currentPlanKey;
 
       // Only check credit levels for free users or users with limited credits
-      // Paid plans (pro_monthly, pro_quarterly, pro_yearly) have unlimited credits (limit === -1)
+      // Paid plans (pro_monthly, pro_quarterly, pro_lifetime) have unlimited credits (limit === -1)
       if (jobLimit !== -1 && jobCredits !== undefined && userPlan === 'free') {
         creditPercentage = (jobCredits / jobLimit) * 100;
         

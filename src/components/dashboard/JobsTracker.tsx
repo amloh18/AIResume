@@ -1541,6 +1541,7 @@ const JobsTracker: React.FC = () => {
             });
             setShowDownloadModal(false);
           }}
+          cvType="journey"
           cvId={getJobJourneys(downloadJobId).find(j => j.cvId)?.cvId}
           coverLetterId={getJobJourneys(downloadJobId).find(j => j.coverLetterId)?.coverLetterId}
         />

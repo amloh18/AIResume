@@ -336,14 +336,24 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                               {regionalPrice} total
                             </div>
                           )}
+                          {/* Savings badge for quarterly */}
+                          {plan.key === 'pro_quarterly' && (
+                            <div className="text-xs text-lime-400 font-medium mt-1">
+                              Save <span className="bg-lime-400 text-black px-1 rounded font-bold">15%</span> vs monthly
+                            </div>
+                          )}
                         </div>
                       )}
                       <div className="text-white/60 text-xs tablet:text-xs mt-1">
                         {plan.key === 'day_pass'
                           ? 'one-time'
-                          : monthlyEquivalent.showMonthly
-                            ? 'billed as shown above'
-                            : (plan.key === 'pro_monthly' ? 'recurring' : plan.price_quarterly ? 'quarterly' : plan.key === 'pro_lifetime' ? 'one-time' : plan.price_monthly ? 'monthly' : 'one-time')}
+                          : plan.key === 'pro_quarterly'
+                            ? 'billed quarterly'
+                            : plan.key === 'pro_lifetime'
+                              ? 'one-time'
+                              : plan.key === 'pro_monthly'
+                                ? 'recurring'
+                                : 'one-time'}
                       </div>
                     </div>
                   )

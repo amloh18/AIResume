@@ -12,7 +12,7 @@ declare module 'next-auth' {
       image?: string;
       role?: string;
       type?: 'user' | 'admin';
-      planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+      planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
       subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
       emailVerified?: boolean;
     };
@@ -28,7 +28,7 @@ declare module 'next-auth' {
     image?: string;
     role?: string;
     type?: 'user' | 'admin';
-    planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+    planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
     subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
     emailVerified?: boolean;
   }
@@ -45,7 +45,7 @@ declare module 'next-auth/jwt' {
     lastName?: string;
     role?: string;
     type?: 'user' | 'admin';
-    planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+    planKey?: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
     subscriptionStatus?: 'active' | 'inactive' | 'cancelled' | 'expired';
     emailVerified?: boolean;
   }

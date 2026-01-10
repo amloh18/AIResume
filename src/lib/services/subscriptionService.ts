@@ -143,7 +143,7 @@ class SubscriptionService {
    */
   async activateProPlan(
     userId: string,
-    planKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly',
+    planKey: 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
     interval: 'monthly' | 'quarterly' | 'yearly',
     paymentId: string,
     region: string,
@@ -202,7 +202,7 @@ class SubscriptionService {
         expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
         daysRemaining = 90;
         autoRenew = false;
-      } else if (planKey === 'pro_yearly') {
+      } else if (planKey === 'pro_lifetime') {
         // Yearly: one-time payment for 365 days
         expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
         daysRemaining = 365;

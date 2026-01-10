@@ -24,7 +24,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
         .tech-pro-blue-template {
           font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           width: 100% !important;
-          height: 100% !important;
+          height: auto !important;
           margin: 0 !important;
           padding: 0 !important;
           background: white;
@@ -34,7 +34,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           grid-template-columns: 1fr 2fr;
           gap: 0;
           box-sizing: border-box;
-          min-height: 100vh;
+          min-height: 100%;
           position: relative;
           overflow: visible !important;
         }
@@ -43,11 +43,12 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           content: '';
           position: absolute;
           top: 0;
-          bottom: -10000px;
+          bottom: 0;
           left: 0;
           width: 33.3333%;
           background: #2C3E50;
           z-index: 0;
+          min-height: 100%;
         }
 
         .tech-pro-blue-template .sidebar {

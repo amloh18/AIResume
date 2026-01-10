@@ -33,7 +33,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           overflow-wrap: anywhere;
           word-break: break-word;
           box-sizing: border-box;
-          overflow: hidden;
+          overflow: visible;
         }
 
         /* Force black text for all headings to prevent dark mode bleed */
@@ -124,7 +124,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           word-wrap: break-word;
           overflow-wrap: break-word;
           hyphens: auto;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .vertical-separator {

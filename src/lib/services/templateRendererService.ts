@@ -15,6 +15,7 @@ import { cacheManager } from '@/lib/cache/cache-manager';
 import { configService } from './configService';
 import { PerformanceMonitor } from '@/lib/monitoring';
 import { logger } from '@/lib/structured-logger';
+import { generatePageBreakCSS } from '@/lib/utils/pageBreakHelper';
 import crypto from 'crypto';
 
 // Ensure React is available in global scope for SSR
@@ -119,9 +120,15 @@ export class ReactTemplateRenderer implements IRenderer {
         const pageWidth = options.paperSize === 'Letter' ? '8.5in' : '210mm';
         const pageHeight = options.paperSize === 'Letter' ? '11in' : '297mm';
 
-        // Check for full bleed templates (like Tech Pro Blue)
+        // Check for full bleed templates (like Tech Pro Blue) or custom renderers which handle their own padding
         const isFullBleed = template?.name?.toLowerCase().includes('tech pro blue');
-        const containerPadding = isFullBleed ? '0' : '15mm 20mm';
+        const hasCustomRenderer = !!template?.customRenderer;
+
+        // Custom renderers typically have internal padding (e.g. 32px), so we remove the container padding to avoid double padding
+        const containerPadding = (isFullBleed || hasCustomRenderer) ? '0' : '15mm 20mm';
+
+        // Debug
+        // logger.info('PDF Render Padding', { templateName: template?.name, customRenderer: template?.customRenderer, containerPadding });
 
         const fullHTML = `
 <!DOCTYPE html>
@@ -148,6 +155,8 @@ export class ReactTemplateRenderer implements IRenderer {
     html, body {
       width: ${pageWidth};
       min-height: ${pageHeight};
+      height: auto;
+      overflow: visible;
     }
     
     body {
@@ -166,6 +175,8 @@ export class ReactTemplateRenderer implements IRenderer {
     .cv-container {
       width: ${pageWidth};
       min-height: ${pageHeight};
+      height: auto;
+      overflow: visible;
       padding: ${containerPadding};
       margin: 0 auto;
       background: white;
@@ -186,8 +197,8 @@ export class ReactTemplateRenderer implements IRenderer {
     
     /* Page break control for multi-page CVs */
     .section-content {
-      page-break-inside: avoid;
-      break-inside: avoid-page;
+      page-break-inside: auto;
+      break-inside: auto;
     }
     
     /* Ensure minimum font size for ATS compatibility (Edge Case #41) */
@@ -198,7 +209,8 @@ export class ReactTemplateRenderer implements IRenderer {
     @media print {
       html, body {
         width: ${pageWidth};
-        height: auto;
+        height: auto !important;
+        overflow: visible !important;
       }
       
       body {
@@ -210,6 +222,9 @@ export class ReactTemplateRenderer implements IRenderer {
         width: 100%;
         max-width: ${pageWidth};
         padding: ${containerPadding};
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
       }
       
       /* Ensure text remains selectable in print */
@@ -224,6 +239,9 @@ export class ReactTemplateRenderer implements IRenderer {
         widows: 3;
       }
     }
+    
+    /* Inject smart page break CSS */
+    ${generatePageBreakCSS()}
   </style>
 </head>
 <body>

@@ -376,12 +376,12 @@ export async function getPricingForRegion(
     const { getPricingForPlan } = await import('@/lib/services/countryPricingService');
     
     // Map plan key
-    const planKeyMap: Record<string, 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly'> = {
+    const planKeyMap: Record<string, 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'> = {
       'free': 'free',
       'day_pass': 'day_pass',
       'pro_monthly': 'pro_monthly',
       'pro_quarterly': 'pro_quarterly',
-      'pro_yearly': 'pro_yearly'
+      'pro_lifetime': 'pro_lifetime'
     };
     
     const planKey = planKeyMap[plan.key] || 'pro_monthly';

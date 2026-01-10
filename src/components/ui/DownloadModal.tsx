@@ -7,6 +7,7 @@ import { X, FileText, Download as DownloadIcon, Crown, Package } from 'lucide-re
 import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { useSession } from 'next-auth/react';
 import { getPlanLimits } from '@/lib/utils/subscription-helpers';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 export type DocumentType = 'cv' | 'coverLetter' | 'cvAndCoverLetter' | 'all';
 export type FormatType = 'pdf' | 'docx';
@@ -22,6 +23,7 @@ interface DownloadModalProps {
   cvId?: string;
   coverLetterId?: string;
   userId?: string;
+  cvType?: 'master' | 'standalone' | 'journey'; // CV type to control which buttons to show
 }
 
 const DownloadModal: React.FC<DownloadModalProps> = ({
@@ -34,9 +36,12 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   isDownloading = false,
   cvId,
   coverLetterId,
-  userId
+  userId,
+  cvType = 'journey' // Default to journey to show all buttons
 }) => {
   const { data: session } = useSession();
+  const { userData } = useUserData();
+
   const [journeyInfo, setJourneyInfo] = useState<{
     hasCV: boolean;
     hasCoverLetter: boolean;
@@ -49,8 +54,16 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
   const [downloadingItem, setDownloadingItem] = useState<string | null>(null);
 
   // Check user's plan for DOCX export access
-  const userPlanKey = (session?.user as { currentPlanKey?: string })?.currentPlanKey || 'free';
+  const userPlanKey = userData?.currentPlanKey ||
+    userData?.subscription?.planKey ||
+    (session?.user as { currentPlanKey?: string })?.currentPlanKey ||
+    'free';
+
   const canExportDocx = getPlanLimits(userPlanKey).docxExport;
+
+  // Determine if we should show cover letter and package options
+  // Only show for journey CVs, not for master or standalone
+  const showCoverLetterOptions = cvType === 'journey';
 
   // Fetch journey info when modal opens
   useEffect(() => {
@@ -190,29 +203,31 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               )}
             </button>
 
-            {/* Cover Letter PDF Card */}
-            <button
-              onClick={() => handleDirectDownload('coverLetter', 'pdf', 'cl-pdf')}
-              disabled={!journeyInfo.hasCoverLetter || isDownloading}
-              className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!journeyInfo.hasCoverLetter
-                ? 'opacity-40 cursor-not-allowed bg-[#222]'
-                : 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
-                }`}
-            >
-              <DownloadIcon
-                className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
-                strokeWidth={1.5}
-              />
-              <div className="text-center space-y-1">
-                <span className="block text-base font-bold text-gray-100">Cover Letter</span>
-                <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
-              </div>
-              {downloadingItem === 'cl-pdf' && (
-                <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+            {/* Cover Letter PDF Card - Only show for journey CVs */}
+            {showCoverLetterOptions && (
+              <button
+                onClick={() => handleDirectDownload('coverLetter', 'pdf', 'cl-pdf')}
+                disabled={!journeyInfo.hasCoverLetter || isDownloading}
+                className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!journeyInfo.hasCoverLetter
+                  ? 'opacity-40 cursor-not-allowed bg-[#222]'
+                  : 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
+                  }`}
+              >
+                <DownloadIcon
+                  className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
+                  strokeWidth={1.5}
+                />
+                <div className="text-center space-y-1">
+                  <span className="block text-base font-bold text-gray-100">Cover Letter</span>
+                  <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">PDF Format</span>
                 </div>
-              )}
-            </button>
+                {downloadingItem === 'cl-pdf' && (
+                  <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </button>
+            )}
 
             {/* CV DOCX Card */}
             <button
@@ -247,57 +262,63 @@ const DownloadModal: React.FC<DownloadModalProps> = ({
               )}
             </button>
 
-            {/* Cover Letter DOCX Card */}
-            <button
-              onClick={() => handleDocxClick('coverLetter', 'cl-docx')}
-              disabled={!journeyInfo.hasCoverLetter || isDownloading}
-              className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!journeyInfo.hasCoverLetter
-                ? 'opacity-40 cursor-not-allowed bg-[#222]'
-                : !canExportDocx
-                  ? 'bg-[#222] hover:bg-[#2A2A2A] active:scale-[0.98]'
-                  : 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
-                }`}
-            >
-              {!canExportDocx ? (
-                <Crown className="w-8 h-8 text-amber-500 group-hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" strokeWidth={1.5} />
-              ) : (
-                <DownloadIcon
-                  className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
-                  strokeWidth={1.5}
-                />
-              )}
-              <div className="text-center space-y-1">
-                <span className="block text-base font-bold text-gray-100">Cover Letter</span>
-                <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Word (DOCX)</span>
-              </div>
-              {!canExportDocx && journeyInfo.hasCoverLetter && (
-                <span className="absolute top-4 right-4 text-[10px] bg-amber-500/10 text-amber-500 px-2 py-1 rounded-full font-bold tracking-wide border border-amber-500/20">PRO</span>
-              )}
-              {downloadingItem === 'cl-docx' && (
-                <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+            {/* Cover Letter DOCX Card - Only show for journey CVs */}
+            {showCoverLetterOptions && (
+              <button
+                onClick={() => handleDocxClick('coverLetter', 'cl-docx')}
+                disabled={!journeyInfo.hasCoverLetter || isDownloading}
+                className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!journeyInfo.hasCoverLetter
+                  ? 'opacity-40 cursor-not-allowed bg-[#222]'
+                  : !canExportDocx
+                    ? 'bg-[#222] hover:bg-[#2A2A2A] active:scale-[0.98]'
+                    : 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
+                  }`}
+              >
+                {!canExportDocx ? (
+                  <Crown className="w-8 h-8 text-amber-500 group-hover:drop-shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" strokeWidth={1.5} />
+                ) : (
+                  <DownloadIcon
+                    className={`w-8 h-8 transition-colors duration-300 ${journeyInfo.hasCoverLetter ? 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]' : 'text-gray-700'}`}
+                    strokeWidth={1.5}
+                  />
+                )}
+                <div className="text-center space-y-1">
+                  <span className="block text-base font-bold text-gray-100">Cover Letter</span>
+                  <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Word (DOCX)</span>
                 </div>
-              )}
-            </button>
+                {!canExportDocx && journeyInfo.hasCoverLetter && (
+                  <span className="absolute top-4 right-4 text-[10px] bg-amber-500/10 text-amber-500 px-2 py-1 rounded-full font-bold tracking-wide border border-amber-500/20">PRO</span>
+                )}
+                {downloadingItem === 'cl-docx' && (
+                  <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </button>
+            )}
           </div>
 
-          {/* Download Complete Package (ZIP) */}
-          <button
-            onClick={() => handleDirectDownload('all', 'pdf', 'bundle')}
-            disabled={(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter) || isDownloading}
-            className={`relative w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-semibold text-sm transition-all ${(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter)
-              ? 'opacity-40 cursor-not-allowed bg-[#222] text-gray-600'
-              : 'bg-[#80FF00] text-black hover:bg-[#99FF33] shadow-lg shadow-[#80FF00]/20 hover:shadow-xl hover:shadow-[#80FF00]/30 active:scale-[0.98]'
-              }`}
-          >
-            <Package className="w-5 h-5" />
-            <span>
-              {downloadingItem === 'bundle' ? 'Preparing Download...' : 'Download Complete Package'}
-            </span>
-          </button>
-          <p className="text-center text-xs text-gray-500">
-            Includes CV, Cover Letter, and ATS Report (ZIP)
-          </p>
+          {/* Download Complete Package (ZIP) - Only show for journey CVs */}
+          {showCoverLetterOptions && (
+            <>
+              <button
+                onClick={() => handleDirectDownload('all', 'pdf', 'bundle')}
+                disabled={(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter) || isDownloading}
+                className={`relative w-full flex items-center justify-center gap-3 px-5 py-4 rounded-2xl font-semibold text-sm transition-all ${(!journeyInfo.hasCV && !journeyInfo.hasCoverLetter)
+                  ? 'opacity-40 cursor-not-allowed bg-[#222] text-gray-600'
+                  : 'bg-[#80FF00] text-black hover:bg-[#99FF33] shadow-lg shadow-[#80FF00]/20 hover:shadow-xl hover:shadow-[#80FF00]/30 active:scale-[0.98]'
+                  }`}
+              >
+                <Package className="w-5 h-5" />
+                <span>
+                  {downloadingItem === 'bundle' ? 'Preparing Download...' : 'Download Complete Package'}
+                </span>
+              </button>
+              <p className="text-center text-xs text-gray-500">
+                Includes CV, Cover Letter, and ATS Report (ZIP)
+              </p>
+            </>
+          )}
         </div>
       </motion.div>
     </motion.div>

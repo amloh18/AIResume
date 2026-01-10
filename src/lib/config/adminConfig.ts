@@ -31,12 +31,12 @@ export async function getPlanKeys(): Promise<string[]> {
     const plans = await PricingPlan.find({ status: 'active' })
       .select('key name')
       .lean();
-    
+
     return plans.map(p => p.key);
   } catch (error) {
     console.error('Error fetching plan keys:', error);
     // Fallback to default plans
-    return ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'];
+    return ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'];
   }
 }
 
@@ -49,12 +49,12 @@ export async function getPlanDisplayNames(): Promise<Record<string, string>> {
     const plans = await PricingPlan.find({ status: 'active' })
       .select('key name')
       .lean();
-    
+
     const displayNames: Record<string, string> = {};
     plans.forEach(plan => {
       displayNames[plan.key] = plan.name;
     });
-    
+
     return displayNames;
   } catch (error) {
     console.error('Error fetching plan display names:', error);
@@ -64,7 +64,7 @@ export async function getPlanDisplayNames(): Promise<Record<string, string>> {
       'day_pass': 'Day Pass',
       'pro_monthly': 'Monthly Pro',
       'pro_quarterly': 'Quarterly Pro',
-      'pro_yearly': 'Yearly Pro'
+      'pro_lifetime': 'Lifetime'
     };
   }
 }
@@ -77,25 +77,25 @@ export async function getPlanConfig(): Promise<{
   planDisplayNames: Record<string, string>;
 }> {
   const now = new Date();
-  
+
   if (configCache && (now.getTime() - configCache.lastUpdated.getTime()) < CACHE_TTL) {
     return {
       plans: configCache.plans,
       planDisplayNames: configCache.planDisplayNames
     };
   }
-  
+
   const [plans, planDisplayNames] = await Promise.all([
     getPlanKeys(),
     getPlanDisplayNames()
   ]);
-  
+
   configCache = {
     plans,
     planDisplayNames,
     lastUpdated: now
   };
-  
+
   return { plans, planDisplayNames };
 }
 
