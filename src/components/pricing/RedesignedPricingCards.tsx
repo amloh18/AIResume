@@ -69,7 +69,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
     plan.key === 'free' || plan.key === 'day_pass'
   );
   const proPlans = safePlans.filter(plan =>
-    plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly'
+    plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_lifetime'
   );
 
   const getPlanIcon = (key: string) => {
@@ -80,7 +80,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
         return <Star className="w-6 h-6" />;
       case 'pro_monthly':
       case 'pro_quarterly':
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return <Crown className="w-6 h-6" />;
       default:
         return <CheckCircle className="w-6 h-6" />;
@@ -92,7 +92,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
     if (plan.key === 'day_pass') return plan.price_one_time || 0;
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
-    if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
+    if (plan.key === 'pro_lifetime') return plan.price_yearly || 0;
     return 0;
   };
 
@@ -106,7 +106,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
         return 'recurring';
       case 'pro_quarterly':
         return 'Per quarter';
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return 'Per year';
       default:
         return '';

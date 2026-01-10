@@ -135,13 +135,13 @@ class PricingValidationService {
    * Validate plan availability for a specific region
    */
   async validatePlanAvailability(
-    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly',
+    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
     region: string
   ): Promise<PlanValidationResult> {
     try {
       await getConnection();
 
-      const validPlanKeys = ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'];
+      const validPlanKeys = ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'];
       if (!validPlanKeys.includes(planKey)) {
         return {
           valid: false,
@@ -194,7 +194,7 @@ class PricingValidationService {
    * Validate pricing for a plan in a specific region with optional coupon
    */
   async validatePricing(
-    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly',
+    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
     region: string,
     currency: string,
     couponCode?: string,
@@ -245,7 +245,7 @@ class PricingValidationService {
         basePrice = (plan as any).price_monthly || 0;
       } else if (planKey === 'pro_quarterly') {
         basePrice = (plan as any).price_quarterly || 0;
-      } else if (planKey === 'pro_yearly') {
+      } else if (planKey === 'pro_lifetime') {
         basePrice = (plan as any).price_yearly || 0;
       } else if (planKey === 'day_pass') {
         basePrice = (plan as any).price_one_time || 0;

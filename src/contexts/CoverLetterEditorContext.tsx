@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { CoverLetterTemplate } from '@/lib/templates/cover-letter-templates';
+import { CoverLetterTemplate, COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent, extractHeaderFromContent, extractBodyFromContent, extractFooterFromContent, cleanHeaderContent } from '@/lib/utils/coverLetterUtils';
 
@@ -75,6 +75,9 @@ type CoverLetterEditorAction =
   | { type: 'RESET_STATE' }
   | { type: 'AUTO_POPULATE_HEADER' };
 
+// Find default template (Seattle Geometric)
+const DEFAULT_TEMPLATE = COVER_LETTER_TEMPLATES.find(t => t.id === 'seattle-geometric') || COVER_LETTER_TEMPLATES[0];
+
 // Initial State
 const initialState: CoverLetterEditorState = {
   mode: 'create',
@@ -87,7 +90,7 @@ const initialState: CoverLetterEditorState = {
     body: '',
     status: 'draft'
   },
-  selectedTemplate: null,
+  selectedTemplate: DEFAULT_TEMPLATE,
   cvData: null,
   jobData: null,
   isSaving: false,

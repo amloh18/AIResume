@@ -27,7 +27,7 @@ export const authOptionsMinimal: NextAuthOptions = {
       },
       async authorize(credentials) {
         console.log('🔍 Credentials authorize called with:', { email: credentials?.email });
-        
+
         if (!credentials?.email || !credentials?.password) {
           console.log('❌ Missing credentials');
           return null;
@@ -36,7 +36,7 @@ export const authOptionsMinimal: NextAuthOptions = {
         try {
           await getConnection();
           console.log('🔍 Database connected, searching for user:', credentials.email);
-          
+
           const user = await User.findOne({ email: credentials.email }).select('+password');
           console.log('🔍 User found:', { found: !!user, hasPassword: !!user?.password });
 
@@ -47,7 +47,7 @@ export const authOptionsMinimal: NextAuthOptions = {
 
           const isPasswordValid = await user.comparePassword(credentials.password);
           console.log('🔍 Password validation result:', isPasswordValid);
-          
+
           if (!isPasswordValid) {
             console.log('❌ Invalid password');
             return null;
@@ -72,8 +72,8 @@ export const authOptionsMinimal: NextAuthOptions = {
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log('🔍 SignIn callback:', { 
-        provider: account?.provider, 
+      console.log('🔍 SignIn callback:', {
+        provider: account?.provider,
         email: user.email,
         account: account,
         profile: profile
@@ -121,12 +121,26 @@ export const authOptionsMinimal: NextAuthOptions = {
       return true;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
       }
+
+      // Refresh currentPlanKey from database on every session access
+      // This ensures plan changes take effect immediately
+      if (token.sub) {
+        try {
+          await getConnection();
+          const dbUser = await User.findById(token.sub).select('currentPlanKey').lean();
+          token.currentPlanKey = (dbUser as any)?.currentPlanKey || 'free';
+        } catch (error) {
+          console.error('Error fetching currentPlanKey:', error);
+          token.currentPlanKey = 'free';
+        }
+      }
+
       return token;
     },
 
@@ -135,6 +149,7 @@ export const authOptionsMinimal: NextAuthOptions = {
         session.user.id = token.sub || '';
         session.user.email = token.email as string;
         session.user.name = token.name as string;
+        (session.user as any).currentPlanKey = token.currentPlanKey || 'free';
       }
       return session;
     },
@@ -144,8 +159,8 @@ export const authOptionsMinimal: NextAuthOptions = {
   },
   cookies: {
     sessionToken: {
-      name: process.env.NODE_ENV === 'production' 
-        ? '__Secure-next-auth.session-token' 
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.session-token'
         : 'next-auth.session-token',
       options: {
         httpOnly: true,
@@ -156,8 +171,8 @@ export const authOptionsMinimal: NextAuthOptions = {
       },
     },
     callbackUrl: {
-      name: process.env.NODE_ENV === 'production' 
-        ? '__Secure-next-auth.callback-url' 
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.callback-url'
         : 'next-auth.callback-url',
       options: {
         httpOnly: true,
@@ -168,8 +183,8 @@ export const authOptionsMinimal: NextAuthOptions = {
       },
     },
     csrfToken: {
-      name: process.env.NODE_ENV === 'production' 
-        ? '__Secure-next-auth.csrf-token' 
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.csrf-token'
         : 'next-auth.csrf-token',
       options: {
         httpOnly: true,

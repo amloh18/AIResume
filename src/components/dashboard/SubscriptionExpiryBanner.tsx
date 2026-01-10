@@ -120,7 +120,7 @@ export default function SubscriptionExpiryBanner({
   const planName = planKey === 'day_pass' ? 'Day Pass' : 
                    planKey === 'pro_monthly' ? 'Pro Monthly' :
                    planKey === 'pro_quarterly' ? 'Pro Quarterly' :
-                   planKey === 'pro_yearly' ? 'Pro Yearly' : 'Subscription';
+                   planKey === 'pro_lifetime' ? 'Pro Yearly' : 'Subscription';
 
   return (
     <AnimatePresence>

@@ -66,7 +66,7 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                     },
                     yearly: {
                         price: parseFloat(formData.yearly) || 0,
-                        planId: findPlanId('pro_yearly')
+                        planId: findPlanId('pro_lifetime')
                     }
                 }
             };

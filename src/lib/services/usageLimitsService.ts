@@ -110,7 +110,7 @@ class UsageLimitsService {
       }
 
       // For quarterly/yearly (one-time payments): check accessExpiresAt
-      if ((user.currentPlanKey === 'pro_quarterly' || user.currentPlanKey === 'pro_yearly' || user.currentPlanKey === 'pro_lifetime') && subscription.accessExpiresAt) {
+      if ((user.currentPlanKey === 'pro_quarterly' || user.currentPlanKey === 'pro_lifetime' || user.currentPlanKey === 'pro_lifetime') && subscription.accessExpiresAt) {
         const expiresAt = new Date(subscription.accessExpiresAt);
         const daysRemaining = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 

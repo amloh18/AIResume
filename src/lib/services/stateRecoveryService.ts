@@ -230,7 +230,7 @@ class StateRecoveryService {
     try {
       const usersWithSubscriptions = await User.find({
         'subscription.status': 'active',
-        'subscription.planKey': { $in: ['pro_monthly', 'pro_quarterly', 'pro_yearly'] }
+        'subscription.planKey': { $in: ['pro_monthly', 'pro_quarterly', 'pro_lifetime'] }
       }).select('_id subscription currentPlanKey');
 
       for (const user of usersWithSubscriptions) {

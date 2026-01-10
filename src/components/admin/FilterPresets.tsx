@@ -116,7 +116,7 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <Heart className="w-5 h-5" />,
         category: 'retention',
         filters: {
-            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly']
+            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_lifetime']
         },
         color: 'bg-pink-500/10 border-pink-500/30 hover:border-pink-500/50'
     },
@@ -155,7 +155,7 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <Star className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly']
+            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_lifetime']
         },
         color: 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50'
     },

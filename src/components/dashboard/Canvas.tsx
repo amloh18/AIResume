@@ -2655,13 +2655,16 @@ const Canvas: React.FC = () => {
                       coverLetter={{
                         id: coverLetter.id,
                         title: coverLetter.title,
-                        lastModified: coverLetter.lastModified,
+                        lastModified: String(coverLetter.lastModified), // Ensure string
                         status: coverLetter.status,
                         content: coverLetter.content || '',
                         isStarred: coverLetter.isStarred,
                         views: coverLetter.views || 0,
                         thumbnail: coverLetter.thumbnail || '',
-                        metadata: coverLetter.metadata
+                        metadata: coverLetter.metadata,
+                        journeyId: coverLetter.journeyId, // Pass these IDs
+                        cvId: coverLetter.cvId,
+                        jobId: coverLetter.jobId
                       }}
                       onEdit={(cl) => {
                         const params = new URLSearchParams();
@@ -2730,13 +2733,23 @@ const Canvas: React.FC = () => {
         />
       )}
 
-      {/* Download Modal */}
       <DownloadModal
         isOpen={downloadModalOpen}
         onClose={() => {
           setDownloadModalOpen(false);
           setSelectedCVForDownload(null);
+          setSelectedCoverLetterForDownload(null);
         }}
+        hasCV={!!selectedCVForDownload || (!!selectedCoverLetterForDownload && !!selectedCoverLetterForDownload.journeyId)}
+        hasCoverLetter={!!selectedCoverLetterForDownload}
+        coverLetterId={selectedCoverLetterForDownload?.id}
+        cvId={selectedCVForDownload?.id || selectedCoverLetterForDownload?.cvId}
+        userId={user?.id}
+        cvType={
+          selectedCVForDownload
+            ? (selectedCVForDownload.cvType === 'journey' ? 'journey' : (selectedCVForDownload.isMaster ? 'master' : 'standalone'))
+            : (selectedCoverLetterForDownload?.journeyId ? 'journey' : 'standalone')
+        }
         onDownload={handleDownload}
         onPaywallRequired={() => {
           openPaymentModal({
@@ -2746,11 +2759,7 @@ const Canvas: React.FC = () => {
           });
           setDownloadModalOpen(false);
         }}
-        hasCV={!!selectedCVForDownload}
-        hasCoverLetter={false}
-        isDownloading={isDownloading}
       />
-
       {/* JobSidebar */}
       {showJourneyModal && selectedJobForJourney && (
         <JobSidebar

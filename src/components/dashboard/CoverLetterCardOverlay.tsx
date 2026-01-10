@@ -34,6 +34,9 @@ interface CoverLetter {
     wordCount?: number;
     lastModified?: Date;
   };
+  journeyId?: string;
+  cvId?: string;
+  jobId?: string;
 }
 
 interface CoverLetterCardOverlayProps {

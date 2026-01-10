@@ -1,4 +1,4 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import { ISectionBlueprint } from '@/models/Template';
@@ -108,31 +108,27 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
   enabledSections,
   customStyles = {}
 }) => {
-  // CRITICAL FIX: Hooks must be called BEFORE any conditional returns (Rules of Hooks)
-  // Memoize CSS generation to avoid regenerating on every render
-  const templateCSS = useMemo(() => {
-    if (!template?.globalStyles) return '';
-    return generateTemplateCSS(template.globalStyles);
-  }, [template?.globalStyles]);
-  
-  // Memoize combined CSS to prevent recalculation (must be before conditional returns)
-  const combinedCSS = useMemo(() => {
-    return templateCSS + (template?.globalStyles?.customCSS || '');
-  }, [templateCSS, template?.globalStyles?.customCSS]);
-  
-  // NEW: Get sections from cvData.structure if it exists, otherwise fall back to legacy props
-  const sectionsFromStructure = useMemo(() => {
-    if (!cvData?.structure?.sections || !Array.isArray(cvData.structure.sections)) {
-      return null; // Fall back to legacy approach
-    }
+  // HOOK REMOVAL: Removed useMemo to avoid "Invalid hook call" errors during server-side PDF generation
+  // where the React dispatcher might not be correctly initialized in the manual renderToString context.
+  // Performance impact is negligible for these lightweight operations.
+
+  // Generate CSS 
+  const templateCSS = template?.globalStyles ? generateTemplateCSS(template.globalStyles) : '';
+
+  // Combine CSS
+  const combinedCSS = templateCSS + (template?.globalStyles?.customCSS || '');
+
+  // Get sections from structure if available
+  let sectionsFromStructure = null;
+  if (cvData?.structure?.sections && Array.isArray(cvData.structure.sections)) {
     // Use structure as source of truth - preserve all sections for lookup
-    return cvData.structure.sections.map(section => ({
+    sectionsFromStructure = cvData.structure.sections.map(section => ({
       id: section.id,
       type: section.type,
       visible: section.visible
     }));
-  }, [cvData?.structure]);
-  
+  }
+
   // IMPORTANT: Never use sample/hardcoded data - only use the provided cvData
   // If cvData is null or undefined, this component should not render
   // BUT: Check AFTER hooks are called (Rules of Hooks)
@@ -149,16 +145,16 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     availableKeys: Object.keys(HardcodedTemplates || {}),
     templateName: template.name
   });
-  
+
   if (customRenderer && HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates]) {
     const CustomTemplateComponent = HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates] as React.ComponentType<{
       cvData: UnifiedCVDataStructure;
       className?: string;
       enabledSections?: string[];
     }>;
-    
+
     console.log('✅ TemplateRenderer - Using custom renderer:', customRenderer);
-    
+
     // For custom renderers, pass full cvData and let CSS handle natural page breaks
     // Don't filter by enabledSections - let content flow naturally across pages
     return <CustomTemplateComponent cvData={cvData} className={className} />;
@@ -186,13 +182,13 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     finalSectionOrder = sectionOrder ? convertToTemplateSectionOrder(sectionOrder) : undefined;
     finalSectionVisibility = sectionVisibility;
   }
-  
+
   // Determine which sections to render
   // Ensure availableSections is an array before passing
-  let availableSectionsArray = Array.isArray(template?.availableSections) 
-    ? template.availableSections 
+  let availableSectionsArray = Array.isArray(template?.availableSections)
+    ? template.availableSections
     : [];
-  
+
   // FALLBACK: If availableSections is empty but columnLayout has sections, use those
   if (availableSectionsArray.length === 0 && template?.columnLayout?.main?.sections) {
     console.log('⚠️ TemplateRenderer - availableSections is empty, using columnLayout.main.sections as fallback');
@@ -215,10 +211,10 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
         'awards': 'Awards',
         'publications': 'Publications'
       };
-      
+
       const componentName = sectionKeyToComponentName[sectionKey] || sectionKey;
       const hasComponent = !!COMPONENT_REGISTRY[componentName];
-      
+
       return {
         key: sectionKey,
         displayName: sectionKey.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
@@ -230,17 +226,17 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
       // Only include sections that have a component in the registry
       return !!COMPONENT_REGISTRY[section.componentName];
     });
-    
+
     console.log('✅ TemplateRenderer - Generated availableSections from columnLayout:', availableSectionsArray);
   }
-  
+
   let sectionsToRender = getSectionsToRender(
     availableSectionsArray,
     finalSectionOrder,
     finalSectionVisibility,
     enabledSections
   );
-  
+
   console.log('📋 TemplateRenderer - Sections to render:', {
     availableSectionsCount: availableSectionsArray.length,
     sectionsToRenderCount: sectionsToRender.length,
@@ -248,8 +244,8 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     enabledSections: enabledSections || 'ALL SECTIONS',
     filteredByEnabled: enabledSections && enabledSections.length > 0 ? 'YES' : 'NO'
   });
-  
-  
+
+
   // CRITICAL: Ensure personal_header is ALWAYS first, but only if it's in the filtered list
   // Only sort if personal_header is actually in the sectionsToRender
   if (sectionsToRender.some(s => s.key === 'personal_header')) {
@@ -288,15 +284,15 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     if (!dataKey) return false;
 
     const data = cvData[dataKey];
-    
+
     // If no data exists, return false
     if (!data) return false;
-    
+
     // For array sections, check if array has items
     if (Array.isArray(data)) {
       return data.length > 0;
     }
-    
+
     // For object sections (like basics), check if it has meaningful content
     if (typeof data === 'object' && data !== null) {
       return Object.values(data).some(value => {
@@ -308,7 +304,7 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
         return false;
       });
     }
-    
+
     return false;
   };
 
@@ -316,7 +312,7 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     <>
       {/* Inject template CSS */}
       <style dangerouslySetInnerHTML={{ __html: combinedCSS }} />
-      
+
       <div
         className={`cv-container ${className}`}
         style={{
@@ -356,7 +352,7 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 
           // Check if section has data before rendering
           const hasData = hasDataForSection(section.key, sectionId);
-          
+
           // Skip rendering if section has no data
           if (!hasData) {
             return null;
@@ -407,11 +403,11 @@ function getSectionsToRender(
   // Filter by enabled sections if provided - THIS IS THE KEY FILTER FOR PAGE SPLITTING
   if (enabledSections && enabledSections.length > 0) {
     const beforeFilter = sectionsToRender.length;
-    sectionsToRender = sectionsToRender.filter(section => 
+    sectionsToRender = sectionsToRender.filter(section =>
       enabledSections.includes(section.key)
     );
     const afterFilter = sectionsToRender.length;
-    
+
     // Debug logging for duplicate detection
     if (beforeFilter !== afterFilter) {
       console.log('🔍 getSectionsToRender - Filtered sections:', {
@@ -426,7 +422,7 @@ function getSectionsToRender(
 
   // Filter by visibility settings
   if (sectionVisibility && Object.keys(sectionVisibility).length > 0) {
-    sectionsToRender = sectionsToRender.filter(section => 
+    sectionsToRender = sectionsToRender.filter(section =>
       sectionVisibility[section.key] !== false
     );
   }
@@ -460,7 +456,7 @@ export function validateTemplateData(cvData: UnifiedCVDataStructure, template: I
       const dataKey = SECTION_DATA_MAP[section.key as keyof SectionDataMapping];
       if (dataKey) {
         const data = cvData[dataKey];
-        
+
         if (!data) {
           errors.push(`Required section "${section.displayName}" is missing data`);
         } else if (Array.isArray(data) && data.length < section.minItems!) {
@@ -474,7 +470,7 @@ export function validateTemplateData(cvData: UnifiedCVDataStructure, template: I
       const dataKey = SECTION_DATA_MAP[section.key as keyof SectionDataMapping];
       if (dataKey) {
         const data = cvData[dataKey];
-        
+
         if (Array.isArray(data) && data.length > section.maxItems) {
           warnings.push(`Section "${section.displayName}" has ${data.length} items, which exceeds the recommended maximum of ${section.maxItems}`);
         }
@@ -510,7 +506,7 @@ export function generateTemplatePreview(template: ITemplate): UnifiedCVDataStruc
       projects: template.templateData.sampleProjects || []
     };
   }
-  
+
   // Return empty default structure - no hardcoded data
   return { ...DEFAULT_UNIFIED_CV_DATA };
 }

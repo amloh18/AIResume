@@ -456,7 +456,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         return regionalPricing.monthly;
       case 'pro_quarterly':
         return regionalPricing.quarterly;
-      case 'pro_yearly':
+      case 'pro_lifetime':
         return regionalPricing.yearly;
       case 'pro_lifetime':
         // Lifetime is not in standard regional pricing object, fallback to plan price
@@ -470,7 +470,8 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     }
   };
 
-  // Get monthly equivalent price for quarterly and yearly plans
+  // Get monthly equivalent price for quarterly plans only
+  // Note: pro_lifetime is a one-time payment, NOT yearly - do not calculate monthly equivalent
   const getMonthlyEquivalent = (plan: DatabasePricingPlan): { price: string; showMonthly: boolean } => {
     if (!regionalPricing) {
       return { price: '', showMonthly: false };
@@ -503,17 +504,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
       };
     }
 
-    if (plan.key === 'pro_yearly') {
-      // Extract numeric value from yearly price
-      const yearlyNum = extractNumericValue(regionalPricing.yearly);
-      const monthlyNum = yearlyNum / 12;
-      const formattedMonthly = formatMonthlyPrice(monthlyNum);
-      return {
-        price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,
-        showMonthly: true
-      };
-    }
-
+    // pro_lifetime is one-time payment - do NOT show monthly equivalent
     return { price: '', showMonthly: false };
   };
 

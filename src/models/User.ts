@@ -21,7 +21,7 @@ export interface IUser extends Document {
 
   // Subscription and usage tracking
   // STANDARDIZED: All plan keys use underscore format for consistency
-  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+  currentPlanKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
   monthlyGoal?: number;
   usage: {
     cvJourneyCount: number;
@@ -108,7 +108,7 @@ export interface IUser extends Document {
 
   // Subscription details
   subscription: {
-    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
     status: 'active' | 'inactive' | 'cancelled' | 'expired';
     startDate: Date;
     endDate?: Date;
@@ -234,7 +234,7 @@ const userSchema = new Schema<IUser>({
   // STANDARDIZED: Consistent plan key format across all models
   currentPlanKey: {
     type: String,
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'],
     default: 'free'
   },
   monthlyGoal: {
@@ -519,7 +519,7 @@ const userSchema = new Schema<IUser>({
   subscription: {
     planKey: {
       type: String,
-      enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly'],
+      enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'],
       default: 'free'
     },
     status: {

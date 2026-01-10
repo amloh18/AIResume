@@ -270,7 +270,7 @@ export const COVER_LETTER_TEMPLATES: CoverLetterTemplate[] = [
     layout: {
       headerAlignment: 'left',
       datePosition: 'left',
-      spacing: { paragraphSpacing: '20px', lineHeight: '1.6', margins: { top: '50px', bottom: '50px', left: '50px', right: '50px' } },
+      spacing: { paragraphSpacing: '20px', lineHeight: '1.6', margins: { top: '20px', bottom: '50px', left: '50px', right: '50px' } },
       typography: { fontFamily: 'sans-serif', headerFontSize: '2rem', bodyFontSize: '1rem', dateFormat: 'MM/DD/YYYY' },
       styling: { headerStyle: 'minimal', useAccentColor: true, primaryColor: '#2a2a2a', secondaryColor: '#4a90e2' }
     }

@@ -3548,6 +3548,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         hasCV={!!journey.cvId && !cvNotFound}
         hasCoverLetter={!!journey.coverLetterId && !coverLetterNotFound}
         isDownloading={isDownloading}
+        cvType="journey"
+        cvId={journey.cvId}
+        coverLetterId={journey.coverLetterId}
         onPaywallRequired={() => {
           openPaymentModal({
             preselectedPlanKey: 'pro_monthly',

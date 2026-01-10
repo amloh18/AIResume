@@ -158,7 +158,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
           color: #ffffff;
           font-weight: bold;
           flex-shrink: 0;
-          overflow: hidden;
+          overflow: visible;
           margin-right: -10px;
         }
         

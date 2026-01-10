@@ -60,7 +60,7 @@ function shouldResetMonthlyLimits(resetDate?: Date): boolean {
  * Get limits for a user based on their plan
  */
 function getLimitsForPlan(planKey: string): typeof FREE_TIER_LIMITS {
-  const proPlanKeys = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'day_pass'];
+  const proPlanKeys = ['pro_monthly', 'pro_quarterly', 'pro_lifetime', 'day_pass'];
   
   if (proPlanKeys.includes(planKey)) {
     return PRO_TIER_LIMITS;
