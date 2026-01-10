@@ -458,6 +458,11 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         return regionalPricing.quarterly;
       case 'pro_yearly':
         return regionalPricing.yearly;
+      case 'pro_lifetime':
+        // Lifetime is not in standard regional pricing object, fallback to plan price
+        // If we had a oneTime field in regional pricing, we would use it here
+        const lifetimePrice = (plan as any).price_one_time || (plan as any).price || 0;
+        return `${regionalPricing.currencySymbol}${lifetimePrice}`;
       default:
         // Use plan.price as fallback if specific key not found in regional pricing
         const fallbackPrice = (plan as any).price || 0;

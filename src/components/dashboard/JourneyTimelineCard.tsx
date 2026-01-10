@@ -42,6 +42,7 @@ import MoveToAppliedModal from '@/components/modals/MoveToAppliedModal';
 import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
 import { defaultCoverLetterService } from '@/lib/services/defaultCoverLetterService';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface Journey {
   id: string;
@@ -113,6 +114,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const { hasAI } = useUserPlan();
   const { data: session } = useSession();
   const router = useRouter();
+  const { openPaymentModal } = usePaymentModal();
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [userCVs, setUserCVs] = React.useState<CV[]>([]);
   const [freestandingCVs, setFreestandingCVs] = React.useState<CV[]>([]);
@@ -1658,8 +1660,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     format: FormatType = 'pdf'
   ) => {
     try {
-      // For DOC/DOCX formats, use CV export API with template
-      if ((format === 'docx' || format === 'doc') && downloadType === 'cv' && journey.cvId && linkedCV) {
+      // For DOCX format, use CV export API with template
+      if (format === 'docx' && downloadType === 'cv' && journey.cvId && linkedCV) {
         try {
           // Get CV data and template
           const cvResponse = await fetch(`/api/cvs/${journey.cvId}`);
@@ -1688,8 +1690,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
             }
           }
 
-          // Use DOCX format for both DOC and DOCX (DOC is legacy, DOCX is compatible)
-          const exportFormat = format === 'doc' ? 'docx' : format;
+          // Use DOCX format for export
+          const exportFormat = format;
 
           // Use CV export API for DOC/DOCX
           const exportResponse = await fetch('/api/cv/export', {
@@ -3546,6 +3548,14 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
         hasCV={!!journey.cvId && !cvNotFound}
         hasCoverLetter={!!journey.coverLetterId && !coverLetterNotFound}
         isDownloading={isDownloading}
+        onPaywallRequired={() => {
+          openPaymentModal({
+            preselectedPlanKey: 'pro_monthly',
+            triggerContext: 'docx-export',
+            returnUrl: window.location.href
+          });
+          setDownloadModalOpen(false);
+        }}
       />
     </motion.div>
   );

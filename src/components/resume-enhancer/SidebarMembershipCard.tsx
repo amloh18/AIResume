@@ -199,7 +199,7 @@ export default function SidebarMembershipCard() {
 
           <ul className="text-xs text-white/90 space-y-0.5 mb-3">
             <li>• Unlimited job creation</li>
-            <li>• Unlimited CVs & cover letters</li>
+            <li>• 1st CV Free</li>
             <li>• Unlimited ATS checks per job</li>
             <li>• Premium templates</li>
             <li>• Priority support</li>
@@ -265,7 +265,7 @@ export default function SidebarMembershipCard() {
         </div>
 
         <div className="text-xs text-white/95 mb-2 leading-relaxed">
-          <span>We have created tailored CVs/CLs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
+          <span>We have created tailored CVs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
         </div>
 
         {!isUnlimited && limit > 0 && (
@@ -380,8 +380,8 @@ export default function SidebarMembershipCard() {
     );
   }
 
-  // --- Pro Yearly (amber, best value badge) ---
-  if (planKey === 'pro_yearly') {
+  // --- Pro Lifetime (amber, best value badge) ---
+  if (planKey === 'pro_lifetime') {
     return (
       <div className="rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40 relative overflow-hidden">
         <div className="absolute right-[-35px] top-[10px] bg-white/25 text-white text-[8px] font-bold px-10 py-0.5 rotate-45 transform origin-center shadow-sm">
@@ -390,24 +390,22 @@ export default function SidebarMembershipCard() {
 
         <div className="flex items-center justify-between mb-2">
           <div>
-            <div className="text-sm font-semibold">Yearly Plan</div>
+            <div className="text-sm font-semibold">Lifetime Plan</div>
             <div className="text-xs text-white/80">Pro subscriber</div>
           </div>
-          {nextReset && (
-            <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
-              Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-            </div>
-          )}
+          <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+            Lifetime Access
+          </div>
         </div>
 
         <div className="bg-white/15 rounded-xl p-3 mb-2">
-          <div className="text-xs text-white/80 mb-0.5">Jobs created this year</div>
+          <div className="text-xs text-white/80 mb-0.5">Jobs created</div>
           <div className="text-xl font-bold">{totalCreated}</div>
           <div className="text-[10px] text-white/70 mt-0.5">Unlimited credits</div>
         </div>
 
         <div className="text-xs text-white/90 leading-relaxed">
-          <span>Annual plan • Best value with unlimited access all year</span>
+          <span>One-time payment • Best value with unlimited access forever</span>
         </div>
       </div>
     );

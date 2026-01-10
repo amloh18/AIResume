@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { stripHtmlTags } from '@/lib/utils/textFormatting';
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     // Generate the export based on format
     let exportResult;
-    
+
     switch (format) {
       case 'pdf':
         exportResult = await generatePDFExport(cvData, template);
@@ -82,12 +83,12 @@ export async function POST(request: NextRequest) {
 async function generatePDFExport(cvData: any, template: any) {
   // For now, we'll generate a simple HTML-based PDF
   // In production, you'd use a library like Puppeteer or jsPDF
-  
+
   const htmlContent = generateHTMLContent(cvData, template);
-  
+
   // Mock PDF generation - in production, use proper PDF library
   const pdfBuffer = Buffer.from(htmlContent, 'utf-8');
-  
+
   return {
     buffer: pdfBuffer,
     mimeType: 'application/pdf',
@@ -98,13 +99,13 @@ async function generatePDFExport(cvData: any, template: any) {
 async function generateDOCXExport(cvData: any, template: any) {
   // Use docx library for proper DOCX generation with template styling
   const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, WidthType } = await import('docx');
-  
+
   // Extract template styling
   const primaryColor = template?.globalStyles?.primaryColor || '#000000';
   const fontFamily = template?.globalStyles?.fontFamily || 'Calibri';
   const fontSize = template?.globalStyles?.fontSize || '11pt';
   const fontSizeNum = parseInt(fontSize) || 22; // Convert pt to half-points (11pt = 22 half-points)
-  
+
   // Helper to convert hex color to RGB
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -114,9 +115,9 @@ async function generateDOCXExport(cvData: any, template: any) {
       b: parseInt(result[3], 16)
     } : { r: 0, g: 0, b: 0 };
   };
-  
+
   const primaryRgb = hexToRgb(primaryColor);
-  
+
   const doc = new Document({
     sections: [{
       properties: {
@@ -169,7 +170,7 @@ async function generateDOCXExport(cvData: any, template: any) {
           alignment: AlignmentType.CENTER,
           spacing: { after: 400 },
         }),
-        
+
         // Summary
         ...(cvData.basics?.summary ? [
           new Paragraph({
@@ -188,7 +189,7 @@ async function generateDOCXExport(cvData: any, template: any) {
           new Paragraph({
             children: [
               new TextRun({
-                text: cvData.basics.summary,
+                text: stripHtmlTags(cvData.basics.summary),
                 size: fontSizeNum,
                 font: fontFamily,
               }),
@@ -196,7 +197,7 @@ async function generateDOCXExport(cvData: any, template: any) {
             spacing: { after: 400 },
           }),
         ] : []),
-        
+
         // Work Experience
         ...(cvData.work && cvData.work.length > 0 ? [
           new Paragraph({
@@ -239,7 +240,7 @@ async function generateDOCXExport(cvData: any, template: any) {
               new Paragraph({
                 children: [
                   new TextRun({
-                    text: work.summary,
+                    text: stripHtmlTags(work.summary),
                     size: fontSizeNum,
                     font: fontFamily,
                   }),
@@ -249,7 +250,7 @@ async function generateDOCXExport(cvData: any, template: any) {
             ] : []),
           ]),
         ] : []),
-        
+
         // Education
         ...(cvData.education && cvData.education.length > 0 ? [
           new Paragraph({
@@ -290,7 +291,7 @@ async function generateDOCXExport(cvData: any, template: any) {
             }),
           ]),
         ] : []),
-        
+
         // Skills
         ...(cvData.skills && cvData.skills.length > 0 ? [
           new Paragraph({
@@ -309,9 +310,9 @@ async function generateDOCXExport(cvData: any, template: any) {
           new Paragraph({
             children: [
               new TextRun({
-                text: cvData.skills.map((skill: any) => 
-                  typeof skill === 'string' ? skill : 
-                  (skill.category ? `${skill.category}: ${Array.isArray(skill.skills) ? skill.skills.join(', ') : skill.skills}` : skill.name || skill)
+                text: cvData.skills.map((skill: any) =>
+                  typeof skill === 'string' ? skill :
+                    (skill.category ? `${skill.category}: ${Array.isArray(skill.skills) ? skill.skills.join(', ') : skill.skills}` : skill.name || skill)
                 ).join(' • '),
                 size: fontSizeNum,
                 font: fontFamily,
@@ -320,7 +321,7 @@ async function generateDOCXExport(cvData: any, template: any) {
             spacing: { after: 400 },
           }),
         ] : []),
-        
+
         // Projects
         ...(cvData.projects && cvData.projects.length > 0 ? [
           new Paragraph({
@@ -365,9 +366,9 @@ async function generateDOCXExport(cvData: any, template: any) {
       ],
     }],
   });
-  
+
   const buffer = await Packer.toBuffer(doc);
-  
+
   return {
     buffer: buffer,
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -382,9 +383,9 @@ async function generateJSONExport(cvData: any, template: any) {
     exportDate: new Date().toISOString(),
     version: '1.0'
   }, null, 2);
-  
+
   const jsonBuffer = Buffer.from(jsonContent, 'utf-8');
-  
+
   return {
     buffer: jsonBuffer,
     mimeType: 'application/json',
@@ -395,7 +396,7 @@ async function generateJSONExport(cvData: any, template: any) {
 function generateHTMLContent(cvData: any, template: any): string {
   const primaryColor = template?.globalStyles?.primaryColor || '#059669';
   const fontFamily = template?.globalStyles?.fontFamily || 'Arial, sans-serif';
-  
+
   return `
     <!DOCTYPE html>
     <html>

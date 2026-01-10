@@ -7,6 +7,7 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import { templateRendererService } from './templateRendererService';
+import { stripHtmlTags } from '@/lib/utils/textFormatting';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, WidthType, Table, TableRow, TableCell } from 'docx';
 import { BaseService } from './baseService';
 import { configService } from './configService';
@@ -52,50 +53,50 @@ export class DOCXService extends BaseService {
       return this.withRetry(
         async () => {
           try {
-      // For high-fidelity conversion, we'll use structured docx generation
-      // This preserves formatting better than HTML conversion
-      // ATS-friendly: Use standard fonts and proper document structure
-      const doc = new Document({
-        creator: 'CVCircle',
-        title: 'CV/Resume',
-        description: 'Professional CV/Resume',
-        // Use standard fonts for ATS compatibility
-        styles: {
-          default: {
-            document: {
-              run: {
-                font: 'Calibri', // Standard ATS-friendly font
-                size: 22 // 11pt
-              },
-              paragraph: {
-                spacing: {
-                  line: 276, // 1.15 line spacing
-                  lineRule: 'auto'
+            // For high-fidelity conversion, we'll use structured docx generation
+            // This preserves formatting better than HTML conversion
+            // ATS-friendly: Use standard fonts and proper document structure
+            const doc = new Document({
+              creator: 'CVCircle',
+              title: 'CV/Resume',
+              description: 'Professional CV/Resume',
+              // Use standard fonts for ATS compatibility
+              styles: {
+                default: {
+                  document: {
+                    run: {
+                      font: 'Calibri', // Standard ATS-friendly font
+                      size: 22 // 11pt
+                    },
+                    paragraph: {
+                      spacing: {
+                        line: 276, // 1.15 line spacing
+                        lineRule: 'auto'
+                      }
+                    }
+                  }
                 }
-              }
-            }
-          }
-        },
-        sections: [{
-          properties: {
-            page: {
-              size: {
-                width: options.paperSize === 'Letter' ? 12240 : 11906, // in twips (1/20th of a point)
-                height: options.paperSize === 'Letter' ? 15840 : 16838
               },
-              margin: {
-                top: 1440, // 1 inch
-                right: 1440,
-                bottom: 1440,
-                left: 1440
-              }
-            }
-          },
-          children: this.buildDocumentContent(cvData, template)
-        }]
-      });
+              sections: [{
+                properties: {
+                  page: {
+                    size: {
+                      width: options.paperSize === 'Letter' ? 12240 : 11906, // in twips (1/20th of a point)
+                      height: options.paperSize === 'Letter' ? 15840 : 16838
+                    },
+                    margin: {
+                      top: 1440, // 1 inch
+                      right: 1440,
+                      bottom: 1440,
+                      left: 1440
+                    }
+                  }
+                },
+                children: this.buildDocumentContent(cvData, template)
+              }]
+            });
 
-      const buffer = await Packer.toBuffer(doc);
+            const buffer = await Packer.toBuffer(doc);
             return new Blob([buffer], {
               type: options.format === 'doc' ? 'application/msword' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
             });
@@ -148,7 +149,7 @@ export class DOCXService extends BaseService {
     if (contactInfo.length > 0) {
       content.push(
         new Paragraph({
-          children: contactInfo.map((info, index) => 
+          children: contactInfo.map((info, index) =>
             new TextRun({
               text: info + (index < contactInfo.length - 1 ? ' | ' : ''),
               size: 22, // 11pt
@@ -170,7 +171,7 @@ export class DOCXService extends BaseService {
           spacing: { before: 200, after: 200 }
         }),
         new Paragraph({
-          text: cvData.basics.summary,
+          text: stripHtmlTags(cvData.basics.summary),
           spacing: { after: 400 }
         })
       );
@@ -212,7 +213,7 @@ export class DOCXService extends BaseService {
         if (work.summary) {
           content.push(
             new Paragraph({
-              text: work.summary,
+              text: stripHtmlTags(work.summary),
               spacing: { after: 200 }
             })
           );
@@ -340,7 +341,7 @@ export class DOCXService extends BaseService {
         if (project.description) {
           content.push(
             new Paragraph({
-              text: project.description,
+              text: stripHtmlTags(project.description),
               spacing: { after: 200 }
             })
           );

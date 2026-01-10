@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
@@ -1142,9 +1143,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     }
   ];
 
-  if (!isOpen) return null;
+  // Handle hydration for portal
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
-  return (
+  if (!isOpen || !mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -1944,7 +1952,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
