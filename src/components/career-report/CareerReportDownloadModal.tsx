@@ -19,155 +19,119 @@ const CareerReportDownloadModal: React.FC<CareerReportDownloadModalProps> = ({
   onDownload,
   isDownloading = false
 }) => {
-  const [selectedFormat, setSelectedFormat] = useState<ReportFormatType>('pdf');
+  const [downloadingFormat, setDownloadingFormat] = useState<ReportFormatType | null>(null);
 
-  const handleDownload = () => {
-    onDownload(selectedFormat);
+  const handleDirectDownload = (format: ReportFormatType) => {
+    setDownloadingFormat(format);
+    onDownload(format);
+    // Reset state after a delay or rely on parent to handle close/completion
+    setTimeout(() => setDownloadingFormat(null), 2000);
   };
 
   return (
     <AnimatePresence>
       {isOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={onClose}
         >
           <motion.div
-            className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl shadow-sm w-[90%] max-w-md max-h-[85vh] overflow-hidden flex flex-col relative"
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            className="bg-[#161616] rounded-3xl shadow-2xl w-[90%] max-w-md overflow-hidden"
+            initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.2 }}
+            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-6 right-6 z-10 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              disabled={isDownloading}
-            >
-              <X size={20} />
-            </button>
-
-            {/* Header */}
-            <div className="p-8 pb-6 flex-shrink-0">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-[#80FF00] rounded flex items-center justify-center">
-                  <Download className="w-5 h-5 text-black" />
+            {/* Header - Lime Green Card */}
+            <div className="mx-5 mt-5 mb-6">
+              <div className="bg-[#80FF00] rounded-2xl p-5 flex items-center gap-4">
+                <div className="w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center shrink-0">
+                  <Download className="w-6 h-6 text-black" strokeWidth={2} />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Download Career Report
-                </h2>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Select the format you'd like to download your career report in.
-              </p>
-            </div>
-
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto min-h-0 px-8">
-              <div className="space-y-4 pb-4">
-                {/* Format Selection */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-3">
-                    Select Format
-                  </label>
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => setSelectedFormat('pdf')}
-                      disabled={isDownloading}
-                      className={`w-full p-4 rounded-lg border-2 transition-all ${
-                        selectedFormat === 'pdf'
-                          ? 'border-[#80FF00] bg-[#80FF00]/10 dark:bg-[#80FF00]/20'
-                          : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                      } ${isDownloading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded flex items-center justify-center ${
-                          selectedFormat === 'pdf'
-                            ? 'bg-[#80FF00]'
-                            : 'bg-gray-100 dark:bg-[#232f1c]'
-                        }`}>
-                          <FileText className={`w-5 h-5 ${
-                            selectedFormat === 'pdf' ? 'text-black' : 'text-gray-600 dark:text-gray-400'
-                          }`} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="font-semibold text-gray-900 dark:text-white">PDF</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            Best for printing and sharing
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-
-                    <button
-                      onClick={() => setSelectedFormat('html')}
-                      disabled={isDownloading}
-                      className={`w-full p-4 rounded-lg border-2 transition-all ${
-                        selectedFormat === 'html'
-                          ? 'border-[#80FF00] bg-[#80FF00]/10 dark:bg-[#80FF00]/20'
-                          : 'border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
-                      } ${isDownloading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded flex items-center justify-center ${
-                          selectedFormat === 'html'
-                            ? 'bg-[#80FF00]'
-                            : 'bg-gray-100 dark:bg-[#232f1c]'
-                        }`}>
-                          <FileText className={`w-5 h-5 ${
-                            selectedFormat === 'html' ? 'text-black' : 'text-gray-600 dark:text-gray-400'
-                          }`} />
-                        </div>
-                        <div className="flex-1 text-left">
-                          <div className="font-semibold text-gray-900 dark:text-white">HTML</div>
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            View in browser or email
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Info Note */}
-                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <p className="text-xs text-blue-800 dark:text-blue-300">
-                    <strong>Note:</strong> The downloaded report will be in shareable format (third person) suitable for sending to mentors, coaches, or recruiters.
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-black leading-tight">
+                    Career Report
+                  </h3>
+                  <p className="text-sm font-medium text-black/70 truncate">
+                    Download your analysis
                   </p>
                 </div>
+                <button
+                  onClick={onClose}
+                  className="w-10 h-10 flex items-center justify-center hover:bg-black/10 rounded-xl transition-colors shrink-0"
+                >
+                  <X className="w-6 h-6 text-black" />
+                </button>
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex justify-end gap-3 p-8 pt-4 border-t border-gray-200 dark:border-white/10 flex-shrink-0">
-              <button
-                onClick={onClose}
-                disabled={isDownloading}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#232f1c] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <motion.button
-                onClick={handleDownload}
-                disabled={isDownloading}
-                className="px-6 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-md font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                whileHover={{ scale: isDownloading ? 1 : 1.05 }}
-                whileTap={{ scale: isDownloading ? 1 : 0.95 }}
-              >
-                {isDownloading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    Downloading...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    Download
-                  </>
-                )}
-              </motion.button>
+            {/* Content */}
+            <div className="px-5 pb-6 space-y-4">
+              {/* Section Label */}
+              <div className="flex items-center justify-between px-1">
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-[0.2em]">
+                  SELECT FORMAT
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {/* PDF Button */}
+                <button
+                  onClick={() => handleDirectDownload('pdf')}
+                  disabled={isDownloading}
+                  className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!isDownloading
+                    ? 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
+                    : 'bg-[#222] opacity-50 cursor-not-allowed'
+                    }`}
+                >
+                  <FileText
+                    className={`w-8 h-8 transition-colors duration-300 ${isDownloading ? 'text-gray-500' : 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]'}`}
+                    strokeWidth={1.5}
+                  />
+                  <div className="text-center space-y-1">
+                    <span className="block text-base font-bold text-gray-100">PDF Report</span>
+                    <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">Best for printing</span>
+                  </div>
+                  {downloadingFormat === 'pdf' && (
+                    <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </button>
+
+                {/* HTML Button */}
+                <button
+                  onClick={() => handleDirectDownload('html')}
+                  disabled={isDownloading}
+                  className={`group relative flex flex-col items-center justify-center gap-4 p-6 rounded-3xl transition-all duration-300 ${!isDownloading
+                    ? 'bg-[#222] hover:bg-[#2A2A2A] hover:shadow-2xl hover:shadow-black/50 active:scale-[0.98]'
+                    : 'bg-[#222] opacity-50 cursor-not-allowed'
+                    }`}
+                >
+                  <FileText
+                    className={`w-8 h-8 transition-colors duration-300 ${isDownloading ? 'text-gray-500' : 'text-[#80FF00] group-hover:drop-shadow-[0_0_8px_rgba(128,255,0,0.5)]'}`}
+                    strokeWidth={1.5}
+                  />
+                  <div className="text-center space-y-1">
+                    <span className="block text-base font-bold text-gray-100">HTML Report</span>
+                    <span className="block text-xs font-medium text-gray-500 group-hover:text-gray-400 transition-colors">View in browser</span>
+                  </div>
+                  {downloadingFormat === 'html' && (
+                    <div className="absolute inset-0 bg-[#0D0D0D]/80 backdrop-blur-sm rounded-3xl flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  )}
+                </button>
+              </div>
+
+              {/* Info Note */}
+              <div className="p-4 bg-[#222] rounded-2xl flex gap-3">
+                <div className="w-1 bg-[#80FF00] rounded-full shrink-0" />
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  <strong className="text-gray-200">Note:</strong> The downloaded report is generated in a third-person professional format, making it ideal for sharing with mentors, coaches, or recruiters.
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>

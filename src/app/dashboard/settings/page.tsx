@@ -29,7 +29,9 @@ import {
   XCircle,
   RefreshCw,
   Send,
-  Loader2
+  Loader2,
+  Award,
+  Star
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
@@ -793,8 +795,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
 
                 {verificationMessage && (
                   <div className={`text-sm px-3 py-2 rounded-md ${verificationMessage.type === 'success'
-                      ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                      : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
+                    ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300'
+                    : 'bg-red-100 dark:bg-red-900/20 text-red-700 dark:text-red-300'
                     }`}>
                     {verificationMessage.text}
                   </div>
@@ -829,8 +831,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
                     setUsernameTimeout(timeoutId);
                   }}
                   className={`w-full px-3 py-2 pr-10 border rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent ${usernameError ? 'border-red-500 dark:border-red-400' :
-                      usernameStatus === 'available' ? 'border-green-500 dark:border-green-400' :
-                        'border-gray-300 dark:border-lime-500/20'
+                    usernameStatus === 'available' ? 'border-green-500 dark:border-green-400' :
+                      'border-gray-300 dark:border-lime-500/20'
                     }`}
                   placeholder="Choose a unique username"
                 />
@@ -1000,10 +1002,10 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
             onClick={handleSave}
             disabled={isSaving}
             className={`px-6 py-2 rounded-lg transition-all duration-300 flex items-center gap-2 ${saveStatus === 'success'
-                ? 'bg-green-500 text-white'
-                : saveStatus === 'error'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
+              ? 'bg-green-500 text-white'
+              : saveStatus === 'error'
+                ? 'bg-red-500 text-white'
+                : 'bg-gradient-to-r from-lime-500 to-lime-600 hover:from-lime-600 hover:to-lime-700 text-white shadow-lg hover:shadow-xl'
               } ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
           >
             {isSaving ? (
@@ -1245,7 +1247,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               </div>
               <button
                 onClick={() => showToastNotification('info', 'Two-factor authentication coming soon!')}
-                className={`w-12 h-6 rounded-full transition-colors ${twoFactorEnabled ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                className={`w-12 h-6 rounded-full transition-colors ${twoFactorEnabled ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'
@@ -1268,10 +1270,14 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               </div>
 
               {showPasswordForm && (
-                <form onSubmit={handlePasswordSubmit} className="mt-4 space-y-4 p-4 bg-gray-50 dark:bg-[#141810] rounded-lg border border-gray-200 dark:border-white/10">
+                <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-5 p-6 bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h4 className="text-lg font-semibold text-white">Change Password</h4>
+                  </div>
+
                   {/* Current Password */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    <label className="block text-white/80 text-sm font-medium mb-2">
                       Current Password
                     </label>
                     <div className="relative">
@@ -1280,21 +1286,21 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.currentPassword}
                         onChange={(e) => handlePasswordInputChange('currentPassword', e.target.value)}
                         placeholder="Enter your current password"
-                        className="w-full px-3 py-2 pr-10 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/60 hover:text-gray-600 dark:hover:text-white/80 transition-colors"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
                       >
-                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                   </div>
 
                   {/* New Password */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    <label className="block text-white/80 text-sm font-medium mb-2">
                       New Password
                     </label>
                     <div className="relative">
@@ -1303,24 +1309,24 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.newPassword}
                         onChange={(e) => handlePasswordInputChange('newPassword', e.target.value)}
                         placeholder="Enter your new password"
-                        className="w-full px-3 py-2 pr-10 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/60 hover:text-gray-600 dark:hover:text-white/80 transition-colors"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
                       >
-                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                     {passwordForm.newPassword && passwordForm.newPassword.length < 8 && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">Password must be at least 8 characters</p>
+                      <p className="mt-2 text-xs text-red-400">Password must be at least 8 characters</p>
                     )}
                   </div>
 
                   {/* Confirm Password */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                    <label className="block text-white/80 text-sm font-medium mb-2">
                       Confirm New Password
                     </label>
                     <div className="relative">
@@ -1329,33 +1335,33 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         value={passwordForm.confirmPassword}
                         onChange={(e) => handlePasswordInputChange('confirmPassword', e.target.value)}
                         placeholder="Confirm your new password"
-                        className="w-full px-3 py-2 pr-10 text-sm sm:text-base border border-gray-300 dark:border-lime-500/20 rounded-lg bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                        className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/60 hover:text-gray-600 dark:hover:text-white/80 transition-colors"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
                       >
-                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
                     </div>
                     {passwordForm.confirmPassword && passwordForm.newPassword !== passwordForm.confirmPassword && (
-                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">Passwords do not match</p>
+                      <p className="mt-2 text-xs text-red-400">Passwords do not match</p>
                     )}
                   </div>
 
                   {/* Error Message */}
                   {passwordErrors && (
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg p-3">
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
                       <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
-                        <p className="text-sm text-red-700 dark:text-red-300">{passwordErrors}</p>
+                        <AlertCircle className="w-4 h-4 text-red-400" />
+                        <p className="text-sm text-red-300">{passwordErrors}</p>
                       </div>
                     </div>
                   )}
 
                   {/* Submit Button */}
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex gap-4 pt-2">
                     <button
                       type="button"
                       onClick={() => {
@@ -1363,14 +1369,14 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                         setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
                         setPasswordErrors(null);
                       }}
-                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-white/10 text-gray-700 dark:text-white/70 bg-white dark:bg-[#1A201A] rounded-lg hover:bg-gray-50 dark:hover:bg-white/10 transition-colors font-medium"
+                      className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={passwordLoading || passwordForm.newPassword.length < 8 || passwordForm.newPassword !== passwordForm.confirmPassword}
-                      className="flex-1 px-4 py-2 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-500 disabled:bg-blue-300 dark:disabled:bg-blue-800/50 disabled:text-blue-100 dark:disabled:text-white/30 text-white rounded-lg transition-colors flex items-center justify-center gap-2 font-medium"
+                      className="flex-1 px-4 py-2.5 rounded-lg font-medium bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                     >
                       {passwordLoading ? (
                         <>
@@ -1378,7 +1384,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                           Changing...
                         </>
                       ) : (
-                        'Change Password'
+                        'Save Changes'
                       )}
                     </button>
                   </div>
@@ -1401,7 +1407,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <button
                 onClick={() => handleNotificationToggle('email', !emailNotifications)}
                 disabled={saving}
-                className={`w-12 h-6 rounded-full transition-colors ${emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                className={`w-12 h-6 rounded-full transition-colors ${emailNotifications ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'
                   } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
@@ -1417,7 +1423,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <button
                 onClick={() => handleDailySummaryToggle(!dailySummaryEmail)}
                 disabled={saving || !emailNotifications}
-                className={`w-12 h-6 rounded-full transition-colors ${dailySummaryEmail && emailNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                className={`w-12 h-6 rounded-full transition-colors ${dailySummaryEmail && emailNotifications ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'
                   } ${saving || !emailNotifications ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${dailySummaryEmail && emailNotifications ? 'translate-x-6' : 'translate-x-0.5'
@@ -1433,7 +1439,7 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
               <button
                 onClick={() => handleNotificationToggle('push', !pushNotifications)}
                 disabled={saving}
-                className={`w-12 h-6 rounded-full transition-colors ${pushNotifications ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
+                className={`w-12 h-6 rounded-full transition-colors ${pushNotifications ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'
                   } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-5 h-5 bg-white rounded-full transition-transform ${pushNotifications ? 'translate-x-6' : 'translate-x-0.5'
@@ -1521,7 +1527,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 h-full overflow-y-auto overflow-x-hidden min-w-0 max-w-full">
+    <div className="p-4 sm:p-6 lg:p-8 h-full overflow-y-auto overflow-x-hidden min-w-0 max-w-full bg-[#f3f2ee] dark:bg-transparent">
       <div className="space-y-8 min-w-0 max-w-full">
 
         {/* Plan Cards Section */}
@@ -1531,235 +1537,128 @@ const MembershipBilling = ({ user }: { user: User }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
             {/* Current Plan Card */}
             {loading ? (
-              <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative animate-pulse">
-                <div className="absolute top-4 right-4">
-                  <div className="h-6 w-20 bg-lime-300 dark:bg-lime-600 rounded-full"></div>
+              <div className="glass-widget-premium p-4 relative animate-pulse h-full">
+                <div className="absolute top-3 right-3">
+                  <div className="h-5 w-16 bg-lime-300 dark:bg-lime-600 rounded-full"></div>
                 </div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-lime-300 dark:bg-lime-600 rounded-lg"></div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-lime-300 dark:bg-lime-600 rounded-lg"></div>
                   <div className="flex-1">
-                    <div className="h-6 w-32 bg-lime-200 dark:bg-lime-700 rounded mb-2"></div>
-                    <div className="h-4 w-24 bg-lime-200 dark:bg-lime-700 rounded"></div>
+                    <div className="h-5 w-24 bg-lime-200 dark:bg-lime-700 rounded mb-1.5"></div>
+                    <div className="h-3 w-20 bg-lime-200 dark:bg-lime-700 rounded"></div>
                   </div>
                 </div>
-                <div className="h-4 w-40 bg-lime-200 dark:bg-lime-700 rounded mb-2"></div>
-                <div className="space-y-2">
-                  <div className="h-4 w-32 bg-lime-200 dark:bg-lime-700 rounded"></div>
-                  <div className="h-4 w-36 bg-lime-200 dark:bg-lime-700 rounded"></div>
+                <div className="space-y-1.5">
+                  <div className="h-3 w-full bg-lime-200 dark:bg-lime-700 rounded"></div>
+                  <div className="h-3 w-2/3 bg-lime-200 dark:bg-lime-700 rounded"></div>
                 </div>
               </div>
             ) : (
-              <div className="bg-gradient-to-r from-lime-50 to-lime-100 dark:from-lime-400/10 dark:to-lime-500/10 border border-lime-200 dark:border-lime-400/20 rounded-xl p-6 relative">
-                <div className="absolute top-4 right-4">
-                  <span className="px-3 py-1 bg-lime-500 text-white text-xs font-medium rounded-full">
-                    Current Plan
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-lime-500 rounded-lg flex items-center justify-center">
-                    <CreditCard className="w-6 h-6 text-white" />
+              <div className="glass-widget-premium p-4 relative h-full flex flex-col justify-between">
+                <div>
+                  <div className="absolute top-3 right-3">
+                    <span className="px-2.5 py-0.5 bg-lime-500 text-white text-[10px] font-medium rounded-full uppercase tracking-wide">
+                      Current
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      {currentPlanName}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Status: <span className={`font-medium ${subscription?.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                        {subscription?.status || 'Active'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-                {(() => {
-                  // Determine end date - prefer currentPeriodEnd, fallback to endDate
-                  const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
-                  const startDate = subscription?.currentPeriodStart;
-
-                  if (!endDate && !startDate) return null;
-
-                  return (
-                    <div className="text-sm text-gray-600 dark:text-gray-300 mb-2 space-y-1">
-                      {startDate && (
-                        <p>Start Date: {formatDate(startDate)}</p>
-                      )}
-                      {endDate && (
-                        <p>End Date: {formatDate(endDate)}</p>
-                      )}
-                      {subscription?.nextBillingDate && (
-                        <p>Next Billing: {formatDate(subscription.nextBillingDate)}</p>
-                      )}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-600 rounded-lg flex items-center justify-center shadow-md shadow-lime-500/20 shrink-0">
+                      <CreditCard className="w-5 h-5 text-white" />
                     </div>
-                  );
-                })()}
-                {subscription?.planDetails?.features && (
-                  <div className="text-sm text-gray-600 dark:text-gray-300">
-                    <p>CVs: {subscription.planDetails.features.maxCVs === -1 ? 'Unlimited' : subscription.planDetails.features.maxCVs}</p>
-                    <p>Exports: {subscription.planDetails.features.maxExports === -1 ? 'Unlimited' : subscription.planDetails.features.maxExports}</p>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                        {currentPlanName}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${subscription?.status === 'active'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
+                          <span className={`w-1 h-1 rounded-full ${subscription?.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}`}></span>
+                          {subscription?.status || 'Active'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {subscription?.amount && subscription?.currency && (
-                  <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-                    <p className="font-semibold">Price: {formatCurrency(subscription.amount, subscription.currency)}</p>
-                    <p>Billing Cycle: {subscription.billingCycle || 'N/A'}</p>
-                  </div>
-                )}
+                </div>
+
+                <div className="space-y-2 mt-auto">
+                  {(() => {
+                    const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
+                    const startDate = subscription?.currentPeriodStart;
+
+                    if (!endDate && !startDate) return null;
+
+                    return (
+                      <div className="bg-gray-50/50 dark:bg-white/5 rounded-lg p-2.5 space-y-1 text-xs">
+                        {startDate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Started</span>
+                            <span className="font-medium text-gray-900 dark:text-white">{formatDate(startDate)}</span>
+                          </div>
+                        )}
+                        {endDate && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-500 dark:text-gray-400">Renews</span>
+                            <span className="font-medium text-gray-900 dark:text-white">{formatDate(endDate)}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {subscription?.amount && subscription?.currency && (
+                    <div className="flex justify-between items-baseline text-xs pt-1 border-t border-gray-100 dark:border-gray-700/50">
+                      <span className="text-gray-500 dark:text-gray-400">Price</span>
+                      <div>
+                        <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(subscription.amount, subscription.currency)}</span>
+                        <span className="text-gray-500 dark:text-gray-400">/{subscription.billingCycle || 'mo'}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Change Plan Card */}
             {loading ? (
-              <div className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 animate-pulse">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-lg"></div>
+              <div className="glass-widget-premium p-4 animate-pulse h-full">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-lg"></div>
                   <div className="flex-1">
-                    <div className="h-6 w-28 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
-                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                    <div className="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded mb-1.5"></div>
+                    <div className="h-3 w-32 bg-gray-200 dark:bg-gray-600 rounded"></div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="h-4 w-32 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                  <div className="h-5 w-5 bg-gray-200 dark:bg-gray-600 rounded"></div>
-                </div>
+                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-600 rounded mt-auto"></div>
               </div>
             ) : (
               <div
-                className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-xl p-6 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="glass-widget-premium p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 group h-full flex flex-col items-center justify-center text-center gap-3"
                 onClick={() => setIsMembershipModalOpen(true)}
               >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                    <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">
-                      Change Plan
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Upgrade or downgrade your subscription
-                    </p>
-                  </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                  <Award className="w-6 h-6 text-gray-600 dark:text-gray-300" />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Click to change plan</span>
-                  <div className="transform transition-transform duration-200">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
+                    Upgrade Plan
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px] mx-auto line-clamp-2">
+                    Unlock premium features and AI-powered tools.
+                  </p>
                 </div>
+
+                <button className="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold rounded-md hover:opacity-90 transition-opacity mt-1">
+                  View Plans
+                </button>
               </div>
             )}
           </div>
 
         </div>
 
-        {/* Payment Methods Section */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Payment Methods
-            </h3>
-            {!loading && (
-              <button
-                className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg transition-colors"
-                onClick={() => setIsAddPaymentModalOpen(true)}
-              >
-                Add Payment Method
-              </button>
-            )}
-          </div>
 
-          {/* Loading State for Payment Methods */}
-          {loading && (
-            <div className="space-y-4">
-              <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="flex gap-4 overflow-x-auto pb-4">
-                {[1, 2].map((i) => (
-                  <div key={i} className="w-80 h-48 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Error Display */}
-          {paymentMethodsError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <div className="flex items-center gap-2">
-                <XCircle className="w-5 h-5 text-red-500" />
-                <p className="text-red-700 dark:text-red-300 text-sm">
-                  {paymentMethodsError}
-                </p>
-              </div>
-              <button
-                className="mt-2 text-red-600 dark:text-red-400 text-sm hover:underline"
-                onClick={() => {
-                  refetchBillingData();
-                }}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {!loading && paymentMethods.length > 0 ? (
-            <div className="space-y-4">
-              <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Saved Cards</h4>
-              <div className="flex gap-4 overflow-x-auto pb-4">
-                {paymentMethods.map((method) => (
-                  <div key={method.id} className="w-80 h-48 bg-gradient-to-r from-gray-800 to-gray-900 dark:from-gray-700 dark:to-gray-800 rounded-xl p-4 text-white relative">
-                    {/* Card Design */}
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-5 bg-white rounded flex items-center justify-center">
-                          <span className="text-xs font-bold text-gray-800">{method.brand.toUpperCase()}</span>
-                        </div>
-                        {method.isDefault && (
-                          <span className="px-2 py-1 bg-lime-500 text-white text-xs rounded-full">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-1 text-gray-300 hover:text-white transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-1 text-gray-300 hover:text-red-400 transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="text-lg font-mono tracking-wider">
-                        •••• •••• •••• <span className="text-white font-semibold">{method.last4 ? method.last4.padStart(4, '0') : '****'}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-gray-300">
-                        <span>Expires {method.expiryMonth?.toString().padStart(2, '0')}/{method.expiryYear}</span>
-                        <span className="uppercase">{method.brand || method.provider}</span>
-                      </div>
-                      {method.type && (
-                        <div className="text-xs text-gray-400 mt-1">
-                          {method.type === 'credit_card' ? 'Credit Card' : method.type === 'debit_card' ? 'Debit Card' : method.type}
-                          {method.provider && ` • ${method.provider.toUpperCase()}`}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : !loading && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <CreditCard className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-              </div>
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Payment Methods</h4>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                You haven't added any payment methods yet. Add a card to enable quick and secure payments.
-              </p>
-            </div>
-          )}
-        </div>
 
         {/* Payment History Section */}
         <div className="space-y-6">
@@ -1812,117 +1711,81 @@ const MembershipBilling = ({ user }: { user: User }) => {
           )}
 
           {!loading && invoices.length > 0 ? (
-            <div className="space-y-3">
-              {invoices.map((invoice) => (
-                <div key={invoice.id} className="bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 dark:text-white">
-                          {invoice.planName || 'Subscription'} - {invoice.billingCycle || 'One-time'}
-                        </p>
-                        <div className="mt-1 space-y-1">
-                          <p className="text-sm text-gray-600 dark:text-gray-300">
-                            Invoice #{invoice.invoiceNumber || invoice.id.substring(0, 8)} • {formatDate(invoice.invoiceDate || invoice.createdAt)}
-                          </p>
-                          {(invoice.paymentMethodLast4 || invoice.paymentMethodType) && (
-                            <p className="text-sm text-gray-600 dark:text-gray-300">
-                              <span className="font-medium">Payment Method:</span> {invoice.paymentMethodType?.toUpperCase() || 'CARD'}
-                              {invoice.paymentMethodLast4 && (
-                                <> ending in <span className="font-mono font-semibold text-gray-900 dark:text-white">{invoice.paymentMethodLast4.padStart(4, '0')}</span></>
-                              )}
-                            </p>
-                          )}
-                          {invoice.description && (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {invoice.description}
-                            </p>
-                          )}
-                        </div>
-                        {invoice.subtotal !== undefined && invoice.taxAmount !== undefined && (
-                          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
-                            <div className="flex justify-between">
-                              <span>Subtotal:</span>
-                              <span className="font-medium">{formatCurrency(invoice.subtotal, invoice.currency)}</span>
+            <div className="glass-widget-premium overflow-hidden rounded-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700/50 bg-gray-50/50 dark:bg-black/20">
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Plan</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upgrade Date</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Invoice</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 dark:divide-gray-700/50">
+                    {invoices.map((invoice) => (
+                      <tr key={invoice.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-lg bg-lime-100 dark:bg-lime-900/30 flex items-center justify-center mr-3 text-lime-600 dark:text-lime-400">
+                              <Star className="w-4 h-4" />
                             </div>
-                            {invoice.taxAmount > 0 && (
-                              <div className="flex justify-between">
-                                <span>Tax:</span>
-                                <span className="font-medium">{formatCurrency(invoice.taxAmount, invoice.currency)}</span>
-                              </div>
-                            )}
-                            <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700">
-                              <span className="font-medium">Total:</span>
-                              <span className="font-semibold">{formatCurrency(invoice.amount, invoice.currency)}</span>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                {invoice.planName || 'Subscription'}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {invoice.billingCycle || 'One-time'}
+                              </p>
                             </div>
                           </div>
-                        )}
-                        {invoice.items && invoice.items.length > 0 && (
-                          <details className="mt-2">
-                            <summary className="text-xs text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300 font-medium">
-                              View Line Items ({invoice.items.length})
-                            </summary>
-                            <div className="mt-2 space-y-1.5 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded p-2">
-                              {invoice.items.map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-start">
-                                  <span className="flex-1">{item.description || `Item ${idx + 1}`}</span>
-                                  <span className="ml-2 font-medium">{formatCurrency(item.amount || item.unitPrice || 0, invoice.currency)}</span>
-                                  {item.quantity && item.quantity > 1 && (
-                                    <span className="ml-2 text-gray-400">x{item.quantity}</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right flex flex-col items-end gap-2">
-                      <div>
-                        <p className="font-semibold text-lg text-gray-900 dark:text-white">
-                          {formatCurrency(invoice.amount, invoice.currency)}
-                        </p>
-                        <p className={`text-sm font-medium ${getStatusColor(invoice.status)}`}>
-                          {invoice.status.toUpperCase()}
-                        </p>
-                        {invoice.paidAt && (
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            Paid {formatDate(invoice.paidAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="text-sm text-gray-600 dark:text-gray-300">
+                            {formatDate(invoice.createdAt || invoice.date)}
                           </p>
-                        )}
-                        {invoice.dueDate && invoice.status !== 'paid' && (
-                          <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                            Due {formatDate(invoice.dueDate)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {formatCurrency(invoice.amount, invoice.currency)}
                           </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <a
-                          href={`/api/user/invoices/${invoice.id}/download`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                          title="Download Invoice"
-                        >
-                          <Download className="w-4 h-4" />
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize
+                            ${invoice.status === 'paid' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                              invoice.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                                'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                            {invoice.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex justify-end gap-2">
+                            <a
+                              href={`/api/user/invoices/${invoice.id}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                              title="Download Invoice"
+                            >
+                              <Download className="w-4 h-4" />
+                            </a>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : !loading && (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="glass-widget-premium rounded-xl p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700/50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400 dark:text-gray-500" />
               </div>
               <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Payment History</h4>
-              <p className="text-gray-600 dark:text-gray-300 mb-4">
-                You haven't made any purchases yet. Your payment history will appear here once you upgrade to a paid plan.
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">
+                You haven't made any purchases yet. Your payment history and invoices will appear here.
               </p>
             </div>
           )}

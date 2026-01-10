@@ -20,6 +20,7 @@ export interface CVWithTemplate {
     name: string;
     globalStyles: any;
     availableSections: any[];
+    customRenderer?: string;
   };
   status: 'draft' | 'published' | 'archived';
   version: number;
@@ -36,7 +37,7 @@ export interface CVWithTemplate {
 export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | null> {
   try {
     const cv = await CV.findById(cvId).lean();
-    
+
     if (!cv) {
       return null;
     }
@@ -45,21 +46,22 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     // cv might be an array from query result, get first item if array
     const cvDoc = Array.isArray(cv) ? cv[0] : cv;
     const templateIdString = cvDoc?.templateId?.toString() || '';
-    
+
     // First check if it's a hardcoded template
     const hardcodedTemplate = HARDCODED_TEMPLATES.find(
       t => t.id === templateIdString || t._id === templateIdString
     );
 
     let templateData;
-    
+
     if (hardcodedTemplate) {
       // Use hardcoded template data
       templateData = {
         _id: hardcodedTemplate.id || hardcodedTemplate._id,
         name: hardcodedTemplate.name,
         globalStyles: hardcodedTemplate.globalStyles,
-        availableSections: hardcodedTemplate.availableSections
+        availableSections: hardcodedTemplate.availableSections,
+        customRenderer: hardcodedTemplate.customRenderer
       };
       console.log('✅ getCVWithTemplate - Using hardcoded template:', hardcodedTemplate.name);
     } else {
@@ -72,7 +74,7 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
           query.populate('templateId', 'name globalStyles availableSections');
         }
         const populatedCv = await query.lean();
-        
+
         const populatedCvDoc = Array.isArray(populatedCv) ? populatedCv[0] : populatedCv;
         if (populatedCvDoc?.templateId && typeof populatedCvDoc.templateId === 'object') {
           templateData = {
@@ -93,7 +95,8 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
               _id: fallbackTemplate.id || fallbackTemplate._id,
               name: fallbackTemplate.name,
               globalStyles: fallbackTemplate.globalStyles,
-              availableSections: fallbackTemplate.availableSections
+              availableSections: fallbackTemplate.availableSections,
+              customRenderer: fallbackTemplate.customRenderer
             };
             console.log('✅ getCVWithTemplate - Found fallback hardcoded template:', fallbackTemplate.name);
           }
@@ -110,7 +113,8 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
               _id: fallbackTemplate.id || fallbackTemplate._id,
               name: fallbackTemplate.name,
               globalStyles: fallbackTemplate.globalStyles,
-              availableSections: fallbackTemplate.availableSections
+              availableSections: fallbackTemplate.availableSections,
+              customRenderer: fallbackTemplate.customRenderer
             };
             console.log('✅ getCVWithTemplate - Using fallback hardcoded template:', fallbackTemplate.name);
           }
@@ -122,7 +126,7 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     if (!cvDocToReturn) {
       return null;
     }
-    
+
     return {
       ...cvDocToReturn,
       _id: (cvDocToReturn._id as any).toString(),
@@ -167,22 +171,23 @@ export async function getCVsWithTemplates(
       if (!cvDoc) {
         return null as any;
       }
-      
+
       const templateIdString = (cvDoc as any).templateId?.toString() || '';
-      
+
       // Check hardcoded templates first
       const hardcodedTemplate = HARDCODED_TEMPLATES.find(
         t => t.id === templateIdString || t._id === templateIdString
       );
 
       let templateData;
-      
+
       if (hardcodedTemplate) {
         templateData = {
           _id: hardcodedTemplate.id || hardcodedTemplate._id,
           name: hardcodedTemplate.name,
           globalStyles: hardcodedTemplate.globalStyles,
-          availableSections: hardcodedTemplate.availableSections
+          availableSections: hardcodedTemplate.availableSections,
+          customRenderer: hardcodedTemplate.customRenderer
         };
       } else if ((cvDoc as any).templateId && typeof (cvDoc as any).templateId === 'object') {
         // Populated from database
@@ -212,10 +217,10 @@ export async function getCVsWithTemplates(
  */
 export async function getDefaultTemplate() {
   try {
-    const defaultTemplate = await Template.findOne({ 
-      isDefault: true, 
+    const defaultTemplate = await Template.findOne({
+      isDefault: true,
       category: 'cv',
-      isActive: true 
+      isActive: true
     }).lean();
 
     return defaultTemplate;
@@ -300,7 +305,7 @@ export async function createCVWithTemplate(
  * Update CV template (useful for template switching)
  */
 export async function updateCVTemplate(
-  cvId: string, 
+  cvId: string,
   newTemplateId: string
 ): Promise<boolean> {
   try {
@@ -313,7 +318,7 @@ export async function updateCVTemplate(
     // Update CV template
     const result = await CV.updateOne(
       { _id: cvId },
-      { 
+      {
         templateId: new mongoose.Types.ObjectId(newTemplateId),
         'metadata.lastModified': new Date()
       }
@@ -339,9 +344,9 @@ export async function getAvailableTemplates(
       isPublished: true,
       globalAccess: true
     })
-    .select('name description thumbnail tier globalStyles availableSections')
-    .sort({ isDefault: -1, name: 1 })
-    .lean();
+      .select('name description thumbnail tier globalStyles availableSections')
+      .sort({ isDefault: -1, name: 1 })
+      .lean();
 
     return templates;
   } catch (error) {

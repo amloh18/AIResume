@@ -42,7 +42,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
       case 'day_pass': return Star;
       case 'pro_monthly': return Crown;
       case 'pro_quarterly': return Users;
-      case 'pro_yearly': return Globe;
+      case 'pro_lifetime': return Globe;
       default: return Brain;
     }
   };
@@ -88,7 +88,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
       if (selectedCategory === 'essential') {
         return plan.key === 'free' || plan.key === 'day_pass';
       } else {
-        return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly';
+        return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_lifetime';
       }
     });
     return filtered;
@@ -343,7 +343,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                           ? 'one-time'
                           : monthlyEquivalent.showMonthly
                             ? 'billed as shown above'
-                            : (plan.key === 'pro_monthly' ? 'recurring' : plan.price_quarterly ? 'quarterly' : plan.price_yearly ? 'yearly' : plan.price_monthly ? 'monthly' : 'one-time')}
+                            : (plan.key === 'pro_monthly' ? 'recurring' : plan.price_quarterly ? 'quarterly' : plan.key === 'pro_lifetime' ? 'one-time' : plan.price_monthly ? 'monthly' : 'one-time')}
                       </div>
                     </div>
                   )

@@ -139,25 +139,55 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Get full template data
+    // Get full template data - prioritize the pre-resolved template from cvWithTemplate
     let template: any = null;
     const templateIdStr = cvWithTemplate.templateId?.toString() || '';
 
-    // Check hardcoded templates first
-    const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-      t => t.id === templateIdStr || t._id === templateIdStr
-    );
+    // First try to use the template from cvWithTemplate (includes customRenderer)
+    if (cvWithTemplate.template?.customRenderer) {
+      // Find the full hardcoded template to get all properties
+      const fullHardcodedTemplate = HARDCODED_TEMPLATES.find(
+        t => t.customRenderer === cvWithTemplate.template?.customRenderer ||
+          t.name === cvWithTemplate.template?.name ||
+          t.id === templateIdStr ||
+          t._id === templateIdStr
+      );
+      if (fullHardcodedTemplate) {
+        template = fullHardcodedTemplate;
+        safeLogger.info('Using hardcoded template with customRenderer:', {
+          templateName: template.name,
+          customRenderer: template.customRenderer
+        });
+      }
+    }
 
-    if (hardcodedTemplate) {
-      template = hardcodedTemplate;
-    } else if (templateIdStr && mongoose.Types.ObjectId.isValid(templateIdStr)) {
-      // Try database template
+    // Fallback: Check hardcoded templates by ID
+    if (!template) {
+      const hardcodedTemplate = HARDCODED_TEMPLATES.find(
+        t => t.id === templateIdStr || t._id === templateIdStr
+      );
+      if (hardcodedTemplate) {
+        template = hardcodedTemplate;
+      }
+    }
+
+    // Fallback: Try database template
+    if (!template && templateIdStr && mongoose.Types.ObjectId.isValid(templateIdStr)) {
       template = await Template.findById(templateIdStr);
     }
 
     if (!template) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
+
+    // Debug: Log template details before PDF generation
+    safeLogger.info('Download route - Template resolved:', {
+      templateName: template.name,
+      templateId: template.id || template._id,
+      customRenderer: template.customRenderer,
+      hasCustomRenderer: !!template.customRenderer,
+      globalStylesKeys: Object.keys(template.globalStyles || {})
+    });
 
     // Get CV data
     const cvData = cvWithTemplate.cvData || cvWithTemplate.data;

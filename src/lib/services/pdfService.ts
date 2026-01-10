@@ -87,6 +87,14 @@ export class PDFService extends BaseService {
           }
 
           // Render template to HTML
+          logger.info('PDF Generation - Rendering template to HTML', {
+            templateName: template?.name,
+            templateId: template?.id || template?._id,
+            customRenderer: template?.customRenderer,
+            hasCustomRenderer: !!template?.customRenderer,
+            paperSize: options.paperSize || 'A4'
+          });
+
           const html = await templateRendererService.renderToHTML(cvData, template, {
             paperSize: options.paperSize || 'A4',
             orientation: options.orientation || 'portrait',
@@ -94,13 +102,27 @@ export class PDFService extends BaseService {
             sectionVisibility: options.sectionVisibility
           });
 
+          // Log the first 500 chars of HTML for debugging template identification
+          logger.info('PDF Generation - HTML rendered', {
+            htmlLength: html.length,
+            htmlPreview: html.substring(0, 500),
+            containsCustomTemplateClass: html.includes('data-driven-pro-template') ||
+              html.includes('tech-pro-blue-template') ||
+              html.includes('elegant-timeline-template'),
+            containsGenericCV: html.includes('cv-container')
+          });
+
           // Generate PDF from HTML using Puppeteer pool
           let pdfBuffer: Buffer;
           try {
             pdfBuffer = await this.generatePDFFromHTML(cvData, html, options);
           } catch (puppeteerError) {
-            logger.error(`${this.serviceName}: Puppeteer PDF generation failed`, puppeteerError instanceof Error ? puppeteerError : new Error(String(puppeteerError)));
+            logger.error(`${this.serviceName}: Puppeteer PDF generation failed`, puppeteerError instanceof Error ? puppeteerError : new Error(String(puppeteerError)), {
+              templateName: template?.name,
+              customRenderer: template?.customRenderer
+            });
             // Fallback to alternative method
+            logger.warn('Falling back to jsPDF (template styling will NOT be applied)');
             return await this.generatePDFFallback(cvData, template, options);
           }
 

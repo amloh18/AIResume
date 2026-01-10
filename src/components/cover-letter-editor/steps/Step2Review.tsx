@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 import CoverLetterTemplateContent from '@/components/cover-letter-editor/CoverLetterTemplateContent';
 import DownloadModal from '@/components/ui/DownloadModal';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 
 interface Step2ReviewProps {
@@ -18,6 +19,7 @@ interface Step2ReviewProps {
 export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
   const { state, updateCoverLetter, dispatch, setTemplate } = useCoverLetterEditor();
   const router = useRouter();
+  const { openPaymentModal } = usePaymentModal();
   const [zoom, setZoom] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
@@ -315,8 +317,7 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
             }
 
             if (coverLetterId && documentType === 'coverLetter') {
-              const formatParam = format === 'doc' ? 'docx' : format;
-              window.open(`/api/cover-letters/${coverLetterId}/download?format=${formatParam}&paperSize=${pageSize}`, '_blank');
+              window.open(`/api/cover-letters/${coverLetterId}/download?format=${format}&paperSize=${pageSize}`, '_blank');
             }
 
             setShowDownloadModal(false);
@@ -325,6 +326,14 @@ export default function Step2Review({ userId, onSave }: Step2ReviewProps) {
           } finally {
             setIsDownloading(false);
           }
+        }}
+        onPaywallRequired={() => {
+          openPaymentModal({
+            preselectedPlanKey: 'pro_monthly',
+            triggerContext: 'docx-export',
+            returnUrl: window.location.href
+          });
+          setShowDownloadModal(false);
         }}
         hasCV={false}
         hasCoverLetter={true}

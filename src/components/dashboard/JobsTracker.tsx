@@ -28,6 +28,7 @@ import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
 import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface JobApplication {
   id: string;
@@ -86,6 +87,7 @@ const JobsTracker: React.FC = () => {
 
   // Get user ID for data fetching
   const userId = getUserIdForAPI(user);
+  const { openPaymentModal } = usePaymentModal();
 
   // State management
   const [jobs, setJobs] = useState<JobApplication[]>([]);
@@ -1529,6 +1531,14 @@ const JobsTracker: React.FC = () => {
 
             // Trigger download
             window.open(`${baseUrl}?${params.toString()}`, '_blank');
+            setShowDownloadModal(false);
+          }}
+          onPaywallRequired={() => {
+            openPaymentModal({
+              preselectedPlanKey: 'pro_monthly',
+              triggerContext: 'docx-export',
+              returnUrl: window.location.href
+            });
             setShowDownloadModal(false);
           }}
           cvId={getJobJourneys(downloadJobId).find(j => j.cvId)?.cvId}

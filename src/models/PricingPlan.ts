@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPricingPlan extends Document {
-  key: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+  key: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
   name: string;
   description: string;
 
@@ -76,7 +76,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   key: {
     type: String,
     required: [true, 'Plan key is required'],
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_yearly']
+    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']
   },
   name: {
     type: String,

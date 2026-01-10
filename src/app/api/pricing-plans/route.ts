@@ -38,14 +38,14 @@ const fallbackPlans = [
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      '1 CVs',
+      '1st CV free',
       'Basic templates',
       'PDF export',
       'Email support'
     ],
     notIncludedFeatures: [
       'Cover letters',
-      'Job tracking'
+      'Job application tracking'
     ],
     isPopular: false,
     isBestValue: false,
@@ -70,13 +70,13 @@ const fallbackPlans = [
     features: [
       'Unlimited CVs for 24 hours',
       'All premium templates',
-      'Cover letter generator',
-      'Job tracking',
-      'ATS optimization'
+      'Basic ATS optimization',
+      'PDF, Doc Export'
     ],
     notIncludedFeatures: [
       'Priority support',
-      'Advanced analytics'
+      'Advanced analytics',
+      'Cover letter generator'
     ],
     isPopular: false,
     isBestValue: false,
@@ -105,8 +105,10 @@ const fallbackPlans = [
       'Unlimited CVs',
       'All premium templates',
       'Cover letter generator',
-      'Job tracking & management',
-      'ATS optimization',
+      'Job application tracking & management',
+      'Deep ATS optimization',
+      'Chrome Extension',
+      'Interview Coach',
       'Priority support',
       'Advanced analytics'
     ],
@@ -134,12 +136,7 @@ const fallbackPlans = [
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      'Unlimited CVs',
-      'All premium templates',
-      'Cover letter generator',
-      'Job tracking & management',
-      'ATS optimization',
-      'Priority support',
+      'All Pro monthly benefits',
       'Advanced analytics'
     ],
     notIncludedFeatures: [],
@@ -156,23 +153,19 @@ const fallbackPlans = [
     category: 'professional'
   },
   {
-    _id: 'pro_yearly',
-    key: 'pro_yearly',
-    name: 'Professional Yearly',
-    description: 'Full access to all features with yearly billing',
+    _id: 'pro_lifetime',
+    key: 'pro_lifetime',
+    name: 'Lifetime',
+    description: 'Full access to all features with lifetime access',
     price_monthly: 0,
     price_quarterly: 0,
-    price_yearly: 179,
-    price_one_time: 0,
+    price_yearly: 0,
+    price_one_time: 179,
     currency: 'GBP',
     features: [
-      'Unlimited CVs',
-      'All premium templates',
-      'Cover letter generator',
-      'Job tracking & management',
-      'ATS optimization',
-      'Priority support',
-      'Advanced analytics'
+      'All Pro monthly benefits',
+      'Advanced analytics',
+      'New features first'
     ],
     notIncludedFeatures: [],
     isPopular: false,
@@ -184,7 +177,7 @@ const fallbackPlans = [
     maxCoverLetters: -1,
     maxJobs: -1,
     maxJourneys: -1,
-    billingCycle: 'yearly',
+    billingCycle: 'one-time',
     category: 'professional'
   }
 ];
@@ -199,7 +192,7 @@ export async function GET(request: NextRequest) {
     // Create cache key based on query parameters
     const cacheKey = `pricing-${currency || 'all'}-${includeInactive}-${publicOnly}`;
     const now = Date.now();
-    
+
     // Check cache first
     const cached = pricingCache.get(cacheKey);
     if (cached && (now - cached.timestamp) < CACHE_TTL) {
@@ -218,7 +211,7 @@ export async function GET(request: NextRequest) {
     try {
       // Add timeout to region detection to prevent slow API calls
       const regionPromise = detectUserRegion(ip);
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Region detection timeout')), 2000)
       );
       regionInfo = await Promise.race([regionPromise, timeoutPromise]) as any;
@@ -234,11 +227,11 @@ export async function GET(request: NextRequest) {
     }
 
     let query: any = {};
-    
+
     if (!includeInactive) {
       query.status = 'active';
     }
-    
+
     if (currency) {
       query.currency = currency;
     }
@@ -250,7 +243,7 @@ export async function GET(request: NextRequest) {
     }
 
     let plans = [];
-    
+
     try {
       await getConnection();
       const PricingPlanModel = await getAdminPricingPlan();
@@ -258,7 +251,7 @@ export async function GET(request: NextRequest) {
       const dbPlans = await PricingPlanModel.find(query)
         .sort({ sortOrder: 1 })
         .lean();
-      
+
       if (dbPlans && dbPlans.length > 0) {
         plans = dbPlans;
       } else {
@@ -274,10 +267,10 @@ export async function GET(request: NextRequest) {
     // Get country pricing for user's region (if available)
     // This is the primary source for prices - all prices come from CountryPricing collection
     const { getCountryPricing } = await import('@/lib/services/countryPricingService');
-    const countryPricing = regionInfo?.countryCode 
+    const countryPricing = regionInfo?.countryCode
       ? await getCountryPricing(regionInfo.countryCode)
       : null;
-    
+
     // Get default country pricing from plan's defaultCountryPricingId as fallback
     // This ensures we always have pricing even if user's country pricing doesn't exist
     let defaultCountryPricing = null;
@@ -291,7 +284,7 @@ export async function GET(request: NextRequest) {
     // Add promotional pricing, country pricing, and computed fields
     const currentDate = new Date();
     const enhancedPlans = await Promise.all(plans.map(async (plan) => {
-      
+
       // Check if promotion is active
       const isPromotionActive = (plan as any).promotionValidFrom && (plan as any).promotionValidUntil &&
         new Date((plan as any).promotionValidFrom) <= currentDate && new Date((plan as any).promotionValidUntil) >= currentDate;
@@ -300,23 +293,23 @@ export async function GET(request: NextRequest) {
       // Priority: 1. User's country pricing, 2. Plan's defaultCountryPricingId, 3. Legacy plan prices (deprecated)
       const getCountryPriceForPlan = (planKey: string, pricingSource: any) => {
         if (!pricingSource) return null;
-        
+
         const planKeyMap: Record<string, keyof typeof pricingSource.planPrices> = {
           'free': 'free',
           'day_pass': 'dayPass',
           'pro_monthly': 'monthly',
           'pro_quarterly': 'quarterly',
-          'pro_yearly': 'yearly'
+          'pro_lifetime': 'oneTime'
         };
-        
+
         const pricingKey = planKeyMap[planKey];
         return pricingKey ? pricingSource.planPrices[pricingKey]?.price : null;
       };
-      
+
       // Get price from user's country pricing, or fallback to plan's defaultCountryPricingId
       const activePricing = countryPricing || defaultCountryPricing;
       const planDefaultPricingId = (plan as any).defaultCountryPricingId;
-      
+
       // Try to get default pricing from ObjectId reference (fetch manually, no populate)
       let planDefaultCountryPricing = null;
       if (planDefaultPricingId) {
@@ -327,32 +320,32 @@ export async function GET(request: NextRequest) {
 
       // All prices MUST come from CountryPricing - no legacy fallbacks
       const basePrice = {
-        monthly: getCountryPriceForPlan('pro_monthly', activePricing) 
+        monthly: getCountryPriceForPlan('pro_monthly', activePricing)
           || getCountryPriceForPlan('pro_monthly', planDefaultCountryPricing)
           || 0, // No legacy fallback - prices must be in CountryPricing
         quarterly: getCountryPriceForPlan('pro_quarterly', activePricing)
           || getCountryPriceForPlan('pro_quarterly', planDefaultCountryPricing)
           || 0, // No legacy fallback
-        yearly: getCountryPriceForPlan('pro_yearly', activePricing)
-          || getCountryPriceForPlan('pro_yearly', planDefaultCountryPricing)
-          || 0, // No legacy fallback
+        yearly: 0, // No yearly price
         oneTime: getCountryPriceForPlan('day_pass', activePricing)
+          || getCountryPriceForPlan('pro_lifetime', activePricing)
           || getCountryPriceForPlan('day_pass', planDefaultCountryPricing)
+          || getCountryPriceForPlan('pro_lifetime', planDefaultCountryPricing)
           || 0 // No legacy fallback
       };
 
       const effectivePrice = {
-        monthly: isPromotionActive && (plan as any).promotionalPrice_monthly 
-          ? (plan as any).promotionalPrice_monthly 
+        monthly: isPromotionActive && (plan as any).promotionalPrice_monthly
+          ? (plan as any).promotionalPrice_monthly
           : basePrice.monthly,
-        quarterly: isPromotionActive && (plan as any).promotionalPrice_quarterly 
-          ? (plan as any).promotionalPrice_quarterly 
+        quarterly: isPromotionActive && (plan as any).promotionalPrice_quarterly
+          ? (plan as any).promotionalPrice_quarterly
           : basePrice.quarterly,
-        yearly: isPromotionActive && (plan as any).promotionalPrice_yearly 
-          ? (plan as any).promotionalPrice_yearly 
+        yearly: isPromotionActive && (plan as any).promotionalPrice_yearly
+          ? (plan as any).promotionalPrice_yearly
           : basePrice.yearly,
-        oneTime: isPromotionActive && (plan as any).promotionalPrice_one_time 
-          ? (plan as any).promotionalPrice_one_time 
+        oneTime: isPromotionActive && (plan as any).promotionalPrice_one_time
+          ? (plan as any).promotionalPrice_one_time
           : basePrice.oneTime
       };
 
@@ -377,22 +370,22 @@ export async function GET(request: NextRequest) {
           durationType: 'month',
           displayText: '3 months'
         };
-      } else if (plan.key === 'pro_yearly') {
+      } else if (plan.key === 'pro_lifetime') {
         durationInfo = {
-          durationInDays: 365,
+          durationInDays: -1,
           durationType: 'year',
-          displayText: '1 year'
+          displayText: 'Lifetime'
         };
       }
 
       // Get currency from CountryPricing (primary source) - no legacy fallbacks
-      const planCurrency = activePricing?.currency 
-        || planDefaultCountryPricing?.currency 
-        || regionInfo?.currency 
+      const planCurrency = activePricing?.currency
+        || planDefaultCountryPricing?.currency
+        || regionInfo?.currency
         || 'GBP'; // Default to GBP (matches our defaultCountryPricing)
-      
-      const planCurrencySymbol = activePricing?.currencySymbol 
-        || planDefaultCountryPricing?.currencySymbol 
+
+      const planCurrencySymbol = activePricing?.currencySymbol
+        || planDefaultCountryPricing?.currencySymbol
         || getCurrencySymbol(planCurrency);
 
       return {
@@ -491,7 +484,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     // CRITICAL: Always return JSON, never let Next.js return HTML
     console.error('Error fetching pricing plans:', error);
-    
+
     // Return fallback plans even on error, but ensure it's JSON
     try {
       return NextResponse.json({

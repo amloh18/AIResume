@@ -1,4 +1,4 @@
-export type PlanKey = 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly';
+export type PlanKey = 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
 
 export interface UserPlan {
   currentPlanKey: PlanKey;
@@ -15,17 +15,17 @@ export interface UserPlan {
  */
 export function hasAIAccess(userPlan: UserPlan | null): boolean {
   if (!userPlan) return false;
-  
-  const proPlans: PlanKey[] = ['pro_monthly', 'pro_quarterly', 'pro_yearly'];
+
+  const proPlans: PlanKey[] = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'];
   const hasProPlan = proPlans.includes(userPlan.currentPlanKey);
-  
+
   // Check if subscription is active
   const isActive = userPlan.subscription?.status === 'active';
-  
+
   // Check if subscription hasn't expired
-  const notExpired = !userPlan.subscription?.currentPeriodEnd || 
+  const notExpired = !userPlan.subscription?.currentPeriodEnd ||
     new Date() < new Date(userPlan.subscription.currentPeriodEnd);
-  
+
   return hasProPlan && isActive && notExpired;
 }
 
@@ -38,9 +38,9 @@ export function getPlanName(planKey: PlanKey): string {
     day_pass: 'Day Pass',
     pro_monthly: 'Pro Monthly',
     pro_quarterly: 'Pro Quarterly',
-    pro_yearly: 'Pro Yearly'
+    pro_lifetime: 'Pro Lifetime'
   };
-  
+
   return planNames[planKey] || 'Unknown Plan';
 }
 
@@ -49,13 +49,13 @@ export function getPlanName(planKey: PlanKey): string {
  */
 export function hasSpecificAIAccess(userPlan: UserPlan | null, feature: 'basic' | 'advanced' | 'all'): boolean {
   if (!hasAIAccess(userPlan)) return false;
-  
+
   switch (feature) {
     case 'basic':
       return true; // All PRO users get basic AI
     case 'advanced':
       // Advanced features for quarterly and yearly plans
-      return ['pro_quarterly', 'pro_yearly'].includes(userPlan?.currentPlanKey || 'free');
+      return ['pro_quarterly', 'pro_lifetime'].includes(userPlan?.currentPlanKey || 'free');
     case 'all':
       return true; // All PRO users get all features
     default:
