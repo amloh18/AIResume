@@ -162,11 +162,24 @@ export const convertLineBreaksToParagraphs = (text: string): string => {
 };
 
 /**
- * Strip HTML tags from text
+ * Strip HTML tags from text, converting list items to bullet points
+ * Suitable for DOCX/PDF export where HTML cannot be rendered
  */
 export const stripHtmlTags = (text: string): string => {
   if (!text) return '';
-  return text.replace(/<[^>]*>/g, '').trim();
+  return text
+    // Convert </li> to newline + bullet for next item
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<\/li>/gi, '\n')
+    // Convert </p> and <br> to newlines
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Remove all other HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Clean up multiple consecutive newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim whitespace
+    .trim();
 };
 
 /**

@@ -15,10 +15,12 @@ import ScorecardPanel from '@/components/resume-enhancer/panels/ScorecardPanel';
 import DateFormatSelector from '@/components/resume-enhancer/DateFormatSelector';
 import { getDefaultPaperSize } from '@/lib/services/paperSizeService';
 import type { DateFormatStyle } from '@/lib/utils/textFormatting';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch } = useResumeEnhancer();
   const router = useRouter();
+  const { openPaymentModal } = usePaymentModal();
   const [zoom, setZoom] = useState(0.5); // Will be recalculated on mount
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -537,6 +539,14 @@ export default function Step4Review() {
           if (documentType === 'cv' && format === 'pdf') {
             await handleDownload();
           }
+          setShowDownloadModal(false);
+        }}
+        onPaywallRequired={() => {
+          openPaymentModal({
+            preselectedPlanKey: 'pro_monthly',
+            triggerContext: 'docx-export',
+            returnUrl: window.location.href
+          });
           setShowDownloadModal(false);
         }}
         hasCV={true}

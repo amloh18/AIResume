@@ -69,6 +69,7 @@ import { CVJourneyLookupService } from '@/lib/services/cvJourneyLookupService';
 import { filterMasterCVs, filterRegularCVs } from '@/lib/utils/cvFilterUtils';
 import CareerReportSidebar from './CareerReportSidebar';
 import CreditExhaustionModal from '@/components/payment/CreditExhaustionModal';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface CV {
   id: string;
@@ -376,6 +377,7 @@ const Canvas: React.FC = () => {
   const { createCV } = useCreateCV();
   const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
   const { userData, loading: userLoading, error: userError } = useUserData();
+  const { openPaymentModal } = usePaymentModal();
 
   // Use centralized dashboard data context for CVs and cover letters (prevents refetching on navigation)
   const {
@@ -2736,6 +2738,14 @@ const Canvas: React.FC = () => {
           setSelectedCVForDownload(null);
         }}
         onDownload={handleDownload}
+        onPaywallRequired={() => {
+          openPaymentModal({
+            preselectedPlanKey: 'pro_monthly',
+            triggerContext: 'docx-export',
+            returnUrl: window.location.href
+          });
+          setDownloadModalOpen(false);
+        }}
         hasCV={!!selectedCVForDownload}
         hasCoverLetter={false}
         isDownloading={isDownloading}

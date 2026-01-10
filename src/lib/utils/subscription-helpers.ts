@@ -29,7 +29,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     surgeonRuns: 10,
     downloads: 5,
     premiumTemplates: false,
-    maxCVs: 5,
+    maxCVs: 1,
     maxJobs: 3,                 // 3 Jobs total (including archived)
     aiSurgeonMode: 'spelling_only',  // NEW: AI mode restriction
     coverLetterAI: false,       // NEW: No AI cover letter
@@ -44,7 +44,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     maxCVs: -1,
     maxJobs: 100,
     aiSurgeonMode: 'full',      // Full AI rewrite
-    coverLetterAI: true,
+    coverLetterAI: false,
     docxExport: true
   },
   pro_monthly: {
@@ -71,7 +71,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     coverLetterAI: true,
     docxExport: true
   },
-  pro_yearly: {
+  pro_lifetime: {
     journeyCVs: -1,            // Unlimited
     activeJourneyCVs: -1,
     surgeonRuns: -1,
@@ -84,19 +84,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     docxExport: true,
     hasVault: true              // NEW: Career Vault feature
   },
-  pro_lifetime: {
-    journeyCVs: -1,            // Unlimited
-    activeJourneyCVs: -1, // Explicit active count
-    surgeonRuns: -1,
-    downloads: -1,
-    premiumTemplates: true,
-    maxCVs: -1,
-    maxJobs: -1,
-    aiSurgeonMode: 'full',
-    coverLetterAI: true,
-    docxExport: true,
-    hasVault: true
-  },
+
   pro: {
     journeyCVs: 50,             // Default to monthly limits for generic pro
     activeJourneyCVs: 50,
