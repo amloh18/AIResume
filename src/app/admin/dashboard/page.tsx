@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, Users, Settings, LogOut, ArrowLeft, BarChart3, Mail, DollarSign, MessageSquare, Activity, Crown, FileText, LayoutTemplate, ChevronDown, User, Sparkles, Bell } from 'lucide-react';
+import { Shield, Users, Settings, LogOut, ArrowLeft, BarChart3, Mail, DollarSign, MessageSquare, Activity, Crown, FileText, LayoutTemplate, ChevronDown, User, Sparkles, Bell, Database } from 'lucide-react';
 import Link from 'next/link';
 import RecentActivityPanel from '@/components/admin/RecentActivityPanel';
 
@@ -26,6 +26,7 @@ import TestimonialManager from '@/components/admin/TestimonialManager';
 import AIAnalytics from '@/components/admin/AIAnalytics';
 import LogsViewer from '@/components/admin/LogsViewer';
 import ContentAnalytics from '@/components/admin/ContentAnalytics';
+import SponsorshipManager from '@/components/admin/SponsorshipManager';
 
 export default function AdminDashboard() {
   const { data: session, status } = useSession();
@@ -497,6 +498,10 @@ export default function AdminDashboard() {
                     <FileText className="h-4 w-4 mr-2" />
                     CV Drafts
                   </TabsTrigger>
+                  <TabsTrigger value="sponsorships" className="data-[state=active]:bg-gray-700 data-[state=active]:text-white text-gray-300 rounded-none px-6 py-3">
+                    <Database className="h-4 w-4 mr-2" />
+                    Data
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="users" className="mt-6">
@@ -513,6 +518,10 @@ export default function AdminDashboard() {
 
                 <TabsContent value="drafts" className="mt-6">
                   <DraftManagement />
+                </TabsContent>
+
+                <TabsContent value="sponsorships" className="mt-6">
+                  <SponsorshipManager />
                 </TabsContent>
               </Tabs>
             </div>

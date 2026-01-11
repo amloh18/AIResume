@@ -2,6 +2,7 @@ import { getConnection } from '@/lib/database';
 import { JobApplication, ApplicationJourney, User } from '@/models';
 import { sendEmail } from '@/lib/email-service';
 import mongoose from 'mongoose';
+import SystemEmailTracker from './SystemEmailTracker';
 
 interface DailySummary {
   jobsAdded: number;
@@ -371,6 +372,11 @@ View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}
       }
 
       console.log(`✅ Daily summary emails completed: ${results.sent} sent, ${results.skipped} skipped, ${results.failed} failed`);
+
+      // Track this batch in the system campaign log
+      if (results.sent > 0) {
+        await SystemEmailTracker.trackEmail('daily_summary', results.sent);
+      }
 
       return results;
     } catch (error: any) {

@@ -16,7 +16,7 @@ export type UserRole = typeof USER_ROLES[number];
 export const TEMPLATE_TIERS = ['free', 'premium'] as const;
 export type TemplateTier = typeof TEMPLATE_TIERS[number];
 
-export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sent', 'cancelled'] as const;
+export const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sent', 'cancelled', 'recurring', 'archived'] as const;
 export type CampaignStatus = typeof CAMPAIGN_STATUSES[number];
 
 /**

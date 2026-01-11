@@ -115,6 +115,15 @@ export async function POST(request: NextRequest) {
         const adminEmail = session.user.email || 'admin@cvcircle.io';
         const adminName = session.user.name || adminEmail.split('@')[0];
 
+        // Handle recurring campaign setup
+        if (body.status === 'recurring') {
+            body.isRecurring = true;
+            // If nextRunAt is not set, default to scheduledAt or now
+            if (!body.nextRunAt) {
+                body.nextRunAt = body.scheduledAt || new Date();
+            }
+        }
+
         // Create campaign
         const campaign = await EmailCampaign.create({
             ...body,

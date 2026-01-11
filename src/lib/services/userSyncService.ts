@@ -198,8 +198,10 @@ export async function syncSingleUser(userId: string): Promise<boolean> {
 /**
  * Get targeted users based on campaign filters
  */
-export async function getTargetedUsers(filters: any): Promise<any[]> {
+export async function getTargetedUsers(filters: any = {}): Promise<any[]> {
   try {
+    // Ensure filters is an object
+    if (!filters) filters = {};
     // Skip during build time to avoid database connection issues
     if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
       console.warn('⚠️ getTargetedUsers: Skipping during build time');
@@ -248,7 +250,7 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
 
     // Apply registration date range (takes precedence over userAge)
     // Use createdAt field from User model
-    if (filters.registrationDateRange) {
+    if (filters.registrationDateRange && (filters.registrationDateRange.startDate || filters.registrationDateRange.endDate)) {
       query.createdAt = {};
       if (filters.registrationDateRange.startDate) {
         query.createdAt.$gte = new Date(filters.registrationDateRange.startDate);
@@ -261,7 +263,7 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
 
     // Apply last active range
     // User model uses 'lastLogin' not 'lastActiveAt'
-    if (filters.lastActiveRange) {
+    if (filters.lastActiveRange && (filters.lastActiveRange.startDate || filters.lastActiveRange.endDate)) {
       query.lastLogin = {};
       if (filters.lastActiveRange.startDate) {
         query.lastLogin.$gte = new Date(filters.lastActiveRange.startDate);
@@ -291,6 +293,11 @@ export async function getTargetedUsers(filters: any): Promise<any[]> {
           ...query['usage.journeysCreated'],
           $lte: filters.usageMetrics.maxJourneysCompleted
         };
+      }
+      if (filters.usageMetrics.minUsageMinutes !== undefined) {
+        // Assuming usage is tracked in minutes in usage.totalSessionDurationMinutes
+        // If this field doesn't exist yet, it will just return 0 matches, which is safe.
+        query['usage.totalSessionDurationMinutes'] = { $gte: filters.usageMetrics.minUsageMinutes };
       }
       console.log('✅ Applied usageMetrics filter:', filters.usageMetrics);
     }

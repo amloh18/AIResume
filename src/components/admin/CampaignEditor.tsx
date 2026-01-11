@@ -20,6 +20,7 @@ import {
   ChevronUp,
   AlertCircle,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import CampaignFilters from "./CampaignFilters";
 import FilterPresets from "./FilterPresets";
@@ -76,6 +77,7 @@ interface Props {
 type Step = "template" | "audience" | "review" | "send";
 
 export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
+  const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState<Step>("template");
   const [selectedTemplate, setSelectedTemplate] =
     useState<CampaignTemplate | null>(null);
@@ -84,7 +86,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const [previewMode, setPreviewMode] = useState(false);
   const [targetedCount, setTargetedCount] = useState(0);
   const [previewingTargets, setPreviewingTargets] = useState(false);
-  const [testEmails, setTestEmails] = useState("");
+  const [testEmails, setTestEmails] = useState("amlohsl@icloud.com, amlowwh@gmail.com");
   const [previewedEmails, setPreviewedEmails] = useState<string[]>([]);
   const [availableTemplates, setAvailableTemplates] =
     useState<CampaignTemplate[]>(campaignTemplates);
@@ -126,7 +128,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
     notes: "",
     campaignType: "marketing",
     fromName: "CVCircle Team",
-    fromEmail: "noreply@cvcircle.io",
+    fromEmail: "support@cvcircle.io",
     replyTo: "support@cvcircle.io",
     previewText: "",
     sendType: "now",
@@ -138,7 +140,10 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (campaign) {
-      setFormData(campaign);
+      setFormData({
+        ...campaign,
+        targetFilters: campaign.targetFilters || {}
+      });
       if (campaign.targetedUserCount) {
         setTargetedCount(campaign.targetedUserCount);
       }
@@ -193,8 +198,18 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (selectedTemplate) {
+      const dateStr = new Date().toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+
       setFormData((prev) => ({
         ...prev,
+        // Auto-generate name if creating new or if name is empty
+        campaignName: !campaign || !prev.campaignName
+          ? `${selectedTemplate.name} - ${dateStr}`
+          : prev.campaignName,
         subject: selectedTemplate.subjectTemplate,
         previewText: selectedTemplate.previewText || "",
         htmlContent: selectedTemplate.htmlContent,
@@ -255,9 +270,11 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Preview targets API error:", response.status, errorText);
-        alert(
-          `Failed to preview targets: ${response.status} ${response.statusText}`,
-        );
+        toast({
+          title: "Preview Failed",
+          description: `Failed to preview targets: ${response.status} ${response.statusText}`,
+          variant: "destructive"
+        });
         setPreviewingTargets(false);
         return;
       }
@@ -267,7 +284,11 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
       if (!contentType || !contentType.includes("application/json")) {
         const errorText = await response.text();
         console.error("Non-JSON response from preview-targets:", errorText);
-        alert("Invalid response from server. Please try again.");
+        toast({
+          title: "Error",
+          description: "Invalid response from server. Please try again.",
+          variant: "destructive"
+        });
         setPreviewingTargets(false);
         return;
       }
@@ -283,14 +304,20 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
           setPreviewedEmails(emails);
         }
       } else {
-        alert(`Failed to preview targets: ${data.error || "Unknown error"}`);
+        toast({
+          title: "Preview Failed",
+          description: `Failed to preview targets: ${data.error || "Unknown error"}`,
+          variant: "destructive"
+        });
         setTargetedCount(0);
       }
     } catch (error: any) {
       console.error("Failed to preview targets:", error);
-      alert(
-        `Error: ${error.message || "Failed to preview targets. Please try again."}`,
-      );
+      toast({
+        title: "Error",
+        description: `Error: ${error.message || "Failed to preview targets. Please try again."}`,
+        variant: "destructive"
+      });
       setTargetedCount(0);
     } finally {
       setPreviewingTargets(false);
@@ -299,7 +326,11 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
   const handleSendTest = async () => {
     if (!testEmails.trim()) {
-      alert("Please enter test email addresses");
+      toast({
+        title: "Validation Error",
+        description: "Please enter at least one email address",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -307,8 +338,53 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
       .split(",")
       .map((e) => e.trim())
       .filter(Boolean);
-    // Implementation for sending test emails
-    alert(`Test emails would be sent to: ${emailList.join(", ")}`);
+
+    setLoading(true); // Reuse loading or add specific state
+    try {
+      const response = await fetch("/api/admin/email-campaigns/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          emails: emailList,
+          subject: formData.subject,
+          htmlContent: formData.htmlContent,
+          fromName: formData.fromName,
+          fromEmail: formData.fromEmail
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        if (data.results.failed > 0) {
+          toast({
+            title: "Test Email Status",
+            description: `Sent: ${data.results.sent}, Failed: ${data.results.failed}. Error: ${data.results.errors[0] || 'Unknown error'}`,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Test Emails Sent",
+            description: `Successfully sent to ${data.results.sent} recipients.`,
+            variant: "success"
+          });
+        }
+      } else {
+        toast({
+          title: "Send Failed",
+          description: data.error || "Failed to send test emails",
+          variant: "destructive"
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleApplyFilterPreset = (filters: any, presetName: string) => {
@@ -325,25 +401,29 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
   const handleSaveCustomPreset = (name: string, filters: any) => {
     // TODO: Implement saving custom preset to backend
     console.log("Saving custom preset:", name, filters);
-    alert(`Custom preset "${name}" saved successfully!`);
+    toast({
+      title: "Preset Saved",
+      description: `Custom preset "${name}" saved successfully!`,
+      variant: "success"
+    });
   };
 
-  const handleSave = async (status: "draft" | "scheduled" | "sent") => {
+  const handleSave = async (status: "draft" | "scheduled" | "sent" | "recurring") => {
     // Validation
     if (!formData.campaignName || formData.campaignName.length < 5) {
-      alert("Campaign name must be at least 5 characters");
+      toast({ title: "Validation Error", description: "Campaign name must be at least 5 characters", variant: "destructive" });
       return;
     }
     if (!formData.subject) {
-      alert("Subject line is required");
+      toast({ title: "Validation Error", description: "Subject line is required", variant: "destructive" });
       return;
     }
     if (!formData.htmlContent) {
-      alert("Email content is required");
+      toast({ title: "Validation Error", description: "Email content is required", variant: "destructive" });
       return;
     }
     if (!formData.fromName || !formData.fromEmail) {
-      alert("Sender information is required");
+      toast({ title: "Validation Error", description: "Sender information is required", variant: "destructive" });
       return;
     }
     // Empty filters {} is valid (means "all users"), so no validation needed
@@ -369,34 +449,67 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
         scheduledAt = date.toISOString();
       }
 
-      const response = await fetch(url, {
+      // 1. Save/Update Campaign First
+      const saveResponse = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
-          status,
+          targetFilters: formData.targetFilters || {},
+          status: status === "sent" ? "draft" : status, // Save as draft first if sending now, to prevent premature 'sent' status before actual send
           scheduledAt,
           targetedUserCount: targetedCount,
           abTestConfig: abTestConfig.enabled ? abTestConfig : undefined,
         }),
       });
 
-      const contentType = response.headers.get("content-type");
+      const contentType = saveResponse.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         throw new Error("Invalid response format from server");
       }
 
-      const data = await response.json();
+      const saveData = await saveResponse.json();
 
-      if (data.success) {
-        alert("Campaign saved successfully!");
-        onSave();
-      } else {
-        alert("Failed to save campaign: " + data.error);
+      if (!saveData.success) {
+        throw new Error(saveData.error || "Failed to save campaign");
       }
-    } catch (error) {
-      console.error("Failed to save campaign:", error);
-      alert("Failed to save campaign");
+
+      const campaignId = saveData.campaign._id;
+
+      // 2. If "Send Now" (status === 'sent'), trigger the send endpoint
+      if (status === "sent") {
+        const sendResponse = await fetch(`/api/admin/email-campaigns/${campaignId}/send`, {
+          method: "POST",
+        });
+
+        const sendData = await sendResponse.json();
+
+        if (!sendData.success) {
+          // If send fails, the user will be alerted but campaign remains saved as draft (from step 1) or whatever state it was
+          throw new Error(sendData.error || "Campaign saved but failed to send");
+        }
+
+        toast({
+          title: "Campaign Sent",
+          description: `Campaign sent successfully! Sent: ${sendData.sentValues?.sent}, Failed: ${sendData.sentValues?.failed}`,
+          variant: "success"
+        });
+      } else {
+        toast({
+          title: "Campaign Saved",
+          description: "Campaign saved successfully!",
+          variant: "success"
+        });
+      }
+
+      onSave();
+    } catch (error: any) {
+      console.error("Failed to save/send campaign:", error);
+      toast({
+        title: "Error",
+        description: `Error: ${error.message}`,
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -440,7 +553,11 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
 
   const nextStep = () => {
     if (!canProceed()) {
-      alert("Please complete all required fields before proceeding");
+      toast({
+        title: "Incomplete Step",
+        description: "Please complete all required fields before proceeding",
+        variant: "destructive"
+      });
       return;
     }
     const nextIndex = currentStepIndex + 1;
@@ -564,28 +681,22 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                           All Categories
                         </SelectItem>
                         <SelectItem
-                          value="marketing"
+                          value="onboarding"
                           className="text-white focus:bg-gray-800"
                         >
-                          Marketing
+                          Onboarding
                         </SelectItem>
                         <SelectItem
-                          value="promotional"
+                          value="upsell"
                           className="text-white focus:bg-gray-800"
                         >
-                          Promotional
+                          Upsell & Monetization
                         </SelectItem>
                         <SelectItem
-                          value="announcement"
+                          value="engagement"
                           className="text-white focus:bg-gray-800"
                         >
-                          Announcement
-                        </SelectItem>
-                        <SelectItem
-                          value="newsletter"
-                          className="text-white focus:bg-gray-800"
-                        >
-                          Newsletter
+                          Engagement
                         </SelectItem>
                         <SelectItem
                           value="transactional"
@@ -594,10 +705,22 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                           Transactional
                         </SelectItem>
                         <SelectItem
-                          value="automated"
+                          value="trigger"
                           className="text-white focus:bg-gray-800"
                         >
-                          Automated
+                          Trigger / Automated
+                        </SelectItem>
+                        <SelectItem
+                          value="newsletter"
+                          className="text-white focus:bg-gray-800"
+                        >
+                          Newsletter (Manual)
+                        </SelectItem>
+                        <SelectItem
+                          value="retention"
+                          className="text-white focus:bg-gray-800"
+                        >
+                          Retention / Win-back
                         </SelectItem>
                       </SelectContent>
                     </Select>
@@ -852,6 +975,33 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                 exit={{ opacity: 0, x: -20 }}
                 className="space-y-6"
               >
+                {/* Test Send Section */}
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <Mail className="w-4 h-4" />
+                    Send Test Email
+                  </h3>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex-1">
+                      <Input
+                        value={testEmails}
+                        onChange={(e) => setTestEmails(e.target.value)}
+                        placeholder="Enter email addresses (comma separated)"
+                        className="bg-gray-900 border-gray-600 text-white"
+                      />
+                      <p className="text-xs text-gray-400 mt-2">
+                        Separate multiple emails with commas.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleSendTest}
+                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white border border-gray-600 rounded-lg whitespace-nowrap h-10"
+                    >
+                      Send Test
+                    </button>
+                  </div>
+                </div>
+
                 <h3 className="text-lg font-semibold text-white">
                   Scheduling Options
                 </h3>
@@ -1115,7 +1265,13 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
             ) : (
               <button
                 onClick={() =>
-                  handleSave(formData.sendType === "now" ? "sent" : "scheduled")
+                  handleSave(
+                    formData.sendType === "now"
+                      ? "sent"
+                      : formData.sendType === "recurring"
+                        ? "recurring"
+                        : "scheduled"
+                  )
                 }
                 disabled={loading || !canProceed()}
                 className="flex items-center gap-2 px-4 py-2 bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-lg transition-all disabled:opacity-50"
