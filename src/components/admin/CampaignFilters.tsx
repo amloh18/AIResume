@@ -449,6 +449,17 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
               placeholder="999"
             />
           </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-1">Min Usage (Minutes)</label>
+            <input
+              type="number"
+              min="0"
+              value={localFilters.usageMetrics?.minUsageMinutes ?? ''}
+              onChange={(e) => handleUsageMetricChange('minUsageMinutes', parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-2 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-400/50"
+              placeholder="e.g. 10"
+            />
+          </div>
         </div>
       </div>
 
@@ -548,6 +559,9 @@ export default function CampaignFilters({ filters, onChange, twoColumn = false }
               )}
               {localFilters.region && (
                 <div>• Region: {localFilters.region}</div>
+              )}
+              {localFilters.usageMetrics?.minUsageMinutes && (
+                <div>• Min Usage: {localFilters.usageMetrics.minUsageMinutes} minutes</div>
               )}
             </div>
           </div>

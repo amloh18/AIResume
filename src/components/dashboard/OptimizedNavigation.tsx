@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -277,7 +277,8 @@ const OptimizedNavigation: React.FC = () => {
       'settings': '/dashboard/settings',
       'resume-enhancer': '/resume-enhancer',
       'cover-letter-generator': '/cover-letter-editor?mode=create',
-      'interview-coach': '/interview-coach'
+      'interview-coach': '/interview-coach',
+      'linkedin-enhancer': '/linkedin-enhancer'
     };
 
     const targetRoute = routes[sectionId as keyof typeof routes];
@@ -346,7 +347,6 @@ const OptimizedNavigation: React.FC = () => {
       description: 'AI-powered CV optimization',
       route: '/resume-enhancer'
     },
-
     {
       id: 'cover-letter-generator',
       name: 'Cover Letter Generator',
@@ -360,6 +360,14 @@ const OptimizedNavigation: React.FC = () => {
       icon: Mic,
       description: 'AI interview preparation',
       route: '/interview-coach'
+    },
+    {
+      id: 'linkedin-enhancer',
+      name: 'LinkedIn Enhancer',
+      icon: Linkedin,
+      description: 'Optimize your LinkedIn profile',
+      route: '/linkedin-enhancer',
+      badge: 'NEW'
     },
     {
       id: 'extension',

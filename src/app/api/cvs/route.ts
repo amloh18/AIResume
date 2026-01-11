@@ -713,7 +713,26 @@ export async function POST(request: NextRequest) {
 
     await newCV.save();
 
-    // Link CV to journey if journeyId is provided (for journey mode)
+    // Trigger Automated Emails (Fire and Forget)
+    setTimeout(async () => {
+      try {
+        const { triggerService } = await import('@/lib/services/triggerEmailService');
+        // We need full user for personalization
+        const { User } = await import('@/models');
+        const user = await User.findById(userId).select('email firstName lastName');
+        if (user) {
+          // 1. Saved Success (with deduplication to avoid spamming every save)
+          await triggerService.trigger('5-draft-saved', user, {}, true);
+
+          // 2. Guide to Master CV (if first CV)
+          if (isFirstCV) {
+            await triggerService.trigger('9-master-cv-guide', user, {}, true);
+          }
+        }
+      } catch (err) {
+        console.error('Trigger email error:', err);
+      }
+    }, 2000);
     if (journeyId && newCV._id) {
       try {
         const { ApplicationJourneyRelationshipService } = await import('@/lib/services/cvJourneyRelationshipService');

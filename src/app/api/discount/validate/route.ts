@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminDiscountCode, getAdminPricingPlan } from '@/models/admin-models';
 import { LocationService } from '@/lib/payment/locationService';
+import Coupon from '@/models/Coupon';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,26 +24,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the discount code
-    const DiscountCode = await getAdminDiscountCode();
-    const discountCode = await DiscountCode.findOne({ 
-      code: code.toUpperCase(),
-      isActive: true 
-    });
+    const upperCode = code.toUpperCase();
+    let discountCode: any = null;
+    let isCouponModel = false;
 
-    if (!discountCode) {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid discount code'
+    // 1. First, check the Coupon model (admin-generated coupons from 'coupons' collection)
+    try {
+      const coupon = await Coupon.findOne({
+        code: upperCode,
+        isActive: true
       });
+
+      if (coupon) {
+        // Check if coupon is valid using its built-in method
+        const validity = coupon.isValid();
+        if (validity.valid) {
+          discountCode = coupon;
+          isCouponModel = true;
+        } else {
+          return NextResponse.json({
+            success: false,
+            error: validity.reason || 'Coupon is not valid'
+          });
+        }
+      }
+    } catch (couponError) {
+      console.error('Error checking Coupon model:', couponError);
+      // Continue to check DiscountCode model
     }
 
-    // Check if code is still valid
-    if (!discountCode.isValid) {
-      return NextResponse.json({
-        success: false,
-        error: 'Discount code has expired or reached usage limit'
+    // 2. If not found in Coupon, check DiscountCode model (legacy)
+    if (!discountCode) {
+      const DiscountCodeModel = await getAdminDiscountCode();
+      discountCode = await DiscountCodeModel.findOne({
+        code: upperCode,
+        isActive: true
       });
+
+      if (!discountCode) {
+        return NextResponse.json({
+          success: false,
+          error: 'Invalid discount code'
+        });
+      }
+
+      // Check if code is still valid (DiscountCode model)
+      if (!discountCode.isValid) {
+        return NextResponse.json({
+          success: false,
+          error: 'Discount code has expired or reached usage limit'
+        });
+      }
     }
 
     // Ensure discount type has a valid value, default to 'percentage' if not set
@@ -87,17 +119,17 @@ export async function POST(request: NextRequest) {
     if (discountCode.applicablePlans && discountCode.applicablePlans.length > 0) {
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findById(planId);
-      
+
       if (!plan) {
         return NextResponse.json({
           success: false,
           error: 'Plan not found'
         });
       }
-      
+
       // Populate applicablePlans to check both IDs and keys
-      const populatedDiscount = await DiscountCode.populate(discountCode, { path: 'applicablePlans', select: 'key _id' });
-      
+      const populatedDiscount = await discountCode.populate({ path: 'applicablePlans', select: 'key _id' });
+
       // Check if code applies to plan ID or plan key
       const isApplicable = populatedDiscount.applicablePlans.some((planRef: any) => {
         if (planRef && typeof planRef === 'object') {
@@ -113,7 +145,7 @@ export async function POST(request: NextRequest) {
         const planRefStr = planRef.toString ? planRef.toString() : String(planRef);
         return planRefStr === plan._id.toString();
       });
-      
+
       if (!isApplicable) {
         return NextResponse.json({
           success: false,
@@ -121,12 +153,12 @@ export async function POST(request: NextRequest) {
         });
       }
     }
-    
+
     // Also check applicablePlanKeys if available (for Coupon model compatibility)
     if (discountCode.applicablePlanKeys && discountCode.applicablePlanKeys.length > 0) {
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findById(planId);
-      
+
       if (!plan || !discountCode.applicablePlanKeys.includes(plan.key)) {
         return NextResponse.json({
           success: false,

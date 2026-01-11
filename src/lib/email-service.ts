@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { 
+import {
   getNewUserTemplate,
   getLimitExhaustedTemplate,
   getSpecialOffersTemplate,
@@ -9,6 +9,7 @@ import {
   getPasswordResetTemplate,
   EmailTemplateData
 } from './email-templates';
+import SystemEmailTracker from './services/SystemEmailTracker';
 
 // Enhanced email service configuration with multiple provider support
 interface EmailConfig {
@@ -80,14 +81,14 @@ const getEmailConfig = (): EmailConfig | null => {
   console.warn('   - SendGrid: SENDGRID_API_KEY, SENDGRID_FROM_EMAIL');
   console.warn('   - Mailgun: MAILGUN_API_KEY, MAILGUN_DOMAIN');
   console.warn('   - AWS SES: AWS_SES_ACCESS_KEY_ID, AWS_SES_SECRET_ACCESS_KEY, AWS_SES_REGION');
-  
+
   return null;
 };
 
 // Create email transporter
 const createTransporter = () => {
   const config = getEmailConfig();
-  
+
   if (!config) {
     return null;
   }
@@ -100,26 +101,26 @@ const getSenderEmail = (): string => {
   if (process.env.SENDGRID_FROM_EMAIL) {
     return process.env.SENDGRID_FROM_EMAIL;
   }
-  
+
   if (process.env.MAILGUN_DOMAIN) {
     return `noreply@${process.env.MAILGUN_DOMAIN}`;
   }
-  
+
   if (process.env.AWS_SES_FROM_EMAIL) {
     return process.env.AWS_SES_FROM_EMAIL;
   }
-  
+
   if (process.env.EMAIL_SERVER_USER) {
     return process.env.EMAIL_SERVER_USER;
   }
-  
+
   return 'noreply@cvcircle.com';
 };
 
 // Send email verification
 export async function sendEmailVerification(email: string, verificationLink: string, firstName: string) {
   const transporter = createTransporter();
-  
+
   if (!transporter) {
     console.error('❌ Email service not configured');
     return { success: false, error: 'Email service not configured' };
@@ -132,7 +133,7 @@ export async function sendEmailVerification(email: string, verificationLink: str
       email,
       link: verificationLink
     };
-    
+
     const html = getEmailVerificationTemplate(templateData);
     const text = `Verify Your Email - CVCircle\n\nHello ${firstName},\n\nPlease click the link below to verify your email address:\n${verificationLink}\n\nIf you didn't create an account with CVCircle, you can safely ignore this email.\n\n©2024 CVCircle. All rights reserved.`;
 
@@ -146,6 +147,8 @@ export async function sendEmailVerification(email: string, verificationLink: str
 
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ Email verification sent successfully:', result.messageId);
+    // Track in system
+    SystemEmailTracker.trackEmail('verification_code');
     return { success: true, messageId: result.messageId };
   } catch (error: any) {
     console.error('❌ Failed to send email verification:', error);
@@ -156,7 +159,7 @@ export async function sendEmailVerification(email: string, verificationLink: str
 // Send password reset email
 export async function sendPasswordResetEmail(email: string, resetLink: string, firstName: string) {
   const transporter = createTransporter();
-  
+
   if (!transporter) {
     console.error('❌ Email service not configured');
     return { success: false, error: 'Email service not configured' };
@@ -169,7 +172,7 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
       email,
       link: resetLink
     };
-    
+
     const html = getPasswordResetTemplate(templateData);
     const text = `Reset Your Password - CVCircle\n\nHello ${firstName},\n\nWe received a request to reset your password. Click the link below to set a new password:\n${resetLink}\n\nThis link will expire in 1 hour. If you didn't request this password reset, please ignore this email.\n\n©2024 CVCircle. All rights reserved.`;
 
@@ -183,6 +186,8 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
 
     const result = await transporter.sendMail(mailOptions);
     console.log('✅ Password reset email sent successfully:', result.messageId);
+    // Track in system
+    SystemEmailTracker.trackEmail('password_reset');
     return { success: true, messageId: result.messageId };
   } catch (error: any) {
     console.error('❌ Failed to send password reset email:', error);
@@ -193,7 +198,7 @@ export async function sendPasswordResetEmail(email: string, resetLink: string, f
 // Test email service configuration
 export async function testEmailService() {
   const transporter = createTransporter();
-  
+
   if (!transporter) {
     return {
       success: false,
@@ -210,9 +215,9 @@ export async function testEmailService() {
 }
 
 // Generic email sending function
-export async function sendEmail({ to, subject, text, html }: { to: string; subject: string; text: string; html: string }) {
+export async function sendEmail({ to, subject, text, html, from }: { to: string; subject: string; text: string; html: string; from?: string }) {
   const transporter = createTransporter();
-  
+
   if (!transporter) {
     console.error('❌ Email service not configured');
     return { success: false, error: 'Email service not configured' };
@@ -221,7 +226,7 @@ export async function sendEmail({ to, subject, text, html }: { to: string; subje
   try {
     const senderEmail = getSenderEmail();
     const mailOptions = {
-      from: `"CVCircle" <${senderEmail}>`,
+      from: from || `"CVCircle" <${senderEmail}>`,
       to,
       subject,
       text,
@@ -240,7 +245,7 @@ export async function sendEmail({ to, subject, text, html }: { to: string; subje
 // Get email service status
 export function getEmailServiceStatus() {
   const config = getEmailConfig();
-  
+
   if (!config) {
     return {
       configured: false,
@@ -311,7 +316,7 @@ export async function sendVerificationCode(
       code,
       email
     };
-    
+
     const html = getVerificationCodeTemplate(templateData);
 
     const text = `
@@ -338,6 +343,8 @@ Didn't receive a code? You can request a new one from the app.
     });
 
     console.log(`✅ Verification code email sent to ${email}`);
+    // Track in system
+    SystemEmailTracker.trackEmail('verification_code');
     return { success: true };
 
   } catch (error: any) {

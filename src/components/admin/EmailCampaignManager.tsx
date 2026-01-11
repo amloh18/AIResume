@@ -18,9 +18,11 @@ import {
   FileText,
   Target,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Archive
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import CampaignDetailView from './CampaignDetailView';
 import CampaignEditor from './CampaignEditor';
 import CampaignFilters from './CampaignFilters';
 import { formatDate } from '@/lib/utils';
@@ -64,6 +66,7 @@ export default function EmailCampaignManager() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [metrics, setMetrics] = useState({ totalUsers: 0 });
+  const [viewingCampaign, setViewingCampaign] = useState<Campaign | null>(null);
 
   // Delete Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -237,12 +240,64 @@ export default function EmailCampaignManager() {
     fetchCampaigns();
   };
 
+  // Archive State
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [campaignToArchive, setCampaignToArchive] = useState<Campaign | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+
+  const handleArchiveClick = (campaign: Campaign) => {
+    setCampaignToArchive(campaign);
+    setArchiveDialogOpen(true);
+  };
+
+  const confirmArchive = async () => {
+    if (!campaignToArchive) return;
+
+    setIsArchiving(true);
+    try {
+      const response = await fetch(`/api/admin/email-campaigns/${campaignToArchive._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'archived' }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Campaign archived successfully",
+          variant: "success"
+        });
+        fetchCampaigns();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        toast({
+          title: "Error",
+          description: data.error || "Failed to archive campaign",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to archive campaign",
+        variant: "destructive"
+      });
+      console.error(error);
+    } finally {
+      setIsArchiving(false);
+      setArchiveDialogOpen(false);
+      setCampaignToArchive(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const styles = {
       draft: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
       scheduled: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       sent: 'bg-green-500/20 text-green-400 border-green-500/30',
       cancelled: 'bg-red-500/20 text-red-400 border-red-500/30',
+      recurring: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+      archived: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
     };
 
     return (
@@ -292,7 +347,17 @@ export default function EmailCampaignManager() {
     <div className="space-y-6">
       {/* Header */}
       <div className="mb-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+        {/* Campaign Detail View */}
+        <AnimatePresence>
+          {viewingCampaign && (
+            <CampaignDetailView
+              campaign={viewingCampaign}
+              onClose={() => setViewingCampaign(null)}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-white mb-2">Email Campaigns</h1>
@@ -393,7 +458,14 @@ export default function EmailCampaignManager() {
                 return (
                   <tr
                     key={campaign._id}
-                    className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                    className="bg-gray-800 border border-gray-700 rounded-lg p-5 hover:border-neon-green transition-colors cursor-pointer"
+                    onClick={() => {
+                      if (['sent', 'sending', 'cancelled', 'archived'].includes(campaign.status)) {
+                        setViewingCampaign(campaign);
+                      } else {
+                        handleEditCampaign(campaign);
+                      }
+                    }}
                   >
                     <td className="px-6 py-4">
                       <div className="text-white font-medium">{campaign.campaignName}</div>
@@ -424,20 +496,35 @@ export default function EmailCampaignManager() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleEditCampaign(campaign)}
-                          className="text-blue-400 hover:text-blue-300 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(campaign)}
-                          className="text-red-400 hover:text-red-300 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!['sent', 'sending', 'archived'].includes(campaign.status) && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditCampaign(campaign);
+                            }}
+                            className="text-blue-400 hover:text-blue-300 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                        {['sent', 'sending', 'recurring'].includes(campaign.status) ? (
+                          <button
+                            onClick={() => handleArchiveClick(campaign)}
+                            className="text-yellow-400 hover:text-yellow-300 transition-colors"
+                            title="Archive"
+                          >
+                            <Archive className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteClick(campaign)}
+                            className="text-red-400 hover:text-red-300 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -468,6 +555,43 @@ export default function EmailCampaignManager() {
             >
               Cancel
             </Button>
+            {/* Archive Confirmation Dialog */}
+            <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+              <DialogContent className="bg-gray-900 border-gray-700 text-white">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2 text-yellow-400">
+                    <Archive className="w-5 h-5" />
+                    Archive Campaign
+                  </DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Are you sure you want to archive "{campaignToArchive?.campaignName}"? It will be moved to the archived list but statistics will be preserved.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button
+                    variant="ghost"
+                    onClick={() => setArchiveDialogOpen(false)}
+                    className="text-gray-400 hover:text-white hover:bg-gray-800"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={confirmArchive}
+                    disabled={isArchiving}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
+                  >
+                    {isArchiving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Archiving...
+                      </>
+                    ) : (
+                      'Archive Campaign'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
             <Button
               variant="destructive"
               onClick={confirmDelete}

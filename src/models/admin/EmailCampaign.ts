@@ -1,11 +1,12 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+
 export interface IEmailCampaign extends Document {
   campaignName: string;
   subject: string;
   htmlContent: string;
   plainTextContent?: string;
-  status: 'draft' | 'scheduled' | 'sent' | 'cancelled';
+  status: 'draft' | 'scheduled' | 'sent' | 'cancelled' | 'sending' | 'recurring';
 
   // Targeting filters
   targetFilters: {
@@ -27,6 +28,7 @@ export interface IEmailCampaign extends Document {
       maxCVsCreated?: number;
       minJourneysCompleted?: number;
       maxJourneysCompleted?: number;
+      minUsageMinutes?: number;
     };
     emailVerified?: boolean;
     isDeleted?: boolean; // Target deleted users
@@ -102,6 +104,14 @@ export interface IEmailCampaign extends Document {
   scheduledAt?: Date;
   sentAt?: Date;
 
+  // Recurrence
+  isRecurring?: boolean;
+  recurringFrequency?: 'daily' | 'weekly' | 'monthly';
+  nextRunAt?: Date;
+  lastRunAt?: Date;
+  endDate?: Date;
+  parentCampaignId?: mongoose.Types.ObjectId;
+
   // Campaign Goal
   campaignGoal?: string; // 'clicks', 'conversions', 'opens', 'signups', 'revenue'
 
@@ -148,7 +158,7 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
     },
     status: {
       type: String,
-      enum: ['draft', 'scheduled', 'sent', 'cancelled'],
+      enum: ['draft', 'scheduled', 'sent', 'cancelled', 'sending', 'recurring'],
       default: 'draft',
     },
     targetFilters: {
@@ -173,6 +183,7 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
         maxCVsCreated: Number,
         minJourneysCompleted: Number,
         maxJourneysCompleted: Number,
+        minUsageMinutes: Number,
       },
       emailVerified: Boolean,
       isDeleted: Boolean,
@@ -260,6 +271,15 @@ const EmailCampaignSchema = new Schema<IEmailCampaign>(
     filterPresetName: String,
     scheduledAt: Date,
     sentAt: Date,
+    isRecurring: Boolean,
+    recurringFrequency: {
+      type: String,
+      enum: ['daily', 'weekly', 'monthly']
+    },
+    nextRunAt: Date,
+    lastRunAt: Date,
+    endDate: Date,
+    parentCampaignId: Schema.Types.ObjectId,
     campaignGoal: String,
     fromName: String,
     fromEmail: String,

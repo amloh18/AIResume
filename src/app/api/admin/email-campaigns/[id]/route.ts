@@ -99,8 +99,8 @@ export async function PUT(
       );
     }
 
-    // Prevent updating sent campaigns
-    if (campaign.status === 'sent') {
+    // Prevent updating sent campaigns, UNLESS archiving
+    if (campaign.status === 'sent' && body.status !== 'archived') {
       return NextResponse.json(
         { error: 'Cannot update a campaign that has already been sent' },
         { status: 400 }
@@ -115,6 +115,15 @@ export async function PUT(
       } catch (error) {
         console.warn('⚠️ Failed to get targeted users during build:', error);
         body.targetedUserCount = 0;
+      }
+    }
+
+    // Handle recurring campaign setup
+    if (body.status === 'recurring') {
+      body.isRecurring = true;
+      // If nextRunAt is not set, default to scheduledAt or now
+      if (!body.nextRunAt) {
+        body.nextRunAt = body.scheduledAt || new Date();
       }
     }
 
