@@ -5,8 +5,8 @@ import { getConnection } from '@/lib/database';
 import VerificationToken from '@/models/VerificationToken';
 import User from '@/models/User';
 import mongoose from 'mongoose';
-import { 
-  validateCodeFormat, 
+import {
+  validateCodeFormat,
   incrementFailedAttempts,
   getRemainingAttempts,
   isCodeExpired,
@@ -85,8 +85,8 @@ export async function POST(request: NextRequest) {
       const remainingAttempts = 5 - newAttemptCount;
 
       return NextResponse.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: verificationResult.message,
           remainingAttempts: Math.max(0, remainingAttempts)
         },
@@ -106,10 +106,18 @@ export async function POST(request: NextRequest) {
         // Mark user as verified
         user = await User.findOne({ email: email.toLowerCase() });
         if (user) {
-          await User.findByIdAndUpdate(user._id, { 
+          await User.findByIdAndUpdate(user._id, {
             isEmailVerified: true,
             emailVerifiedAt: new Date()
           });
+
+          // Trigger Welcome Email (Fire and Forget)
+          setTimeout(() => {
+            import('@/lib/services/triggerEmailService').then(({ triggerService }) => {
+              triggerService.trigger('1-welcome', user);
+            }).catch(err => console.error('Failed to trigger welcome email:', err));
+          }, 1000);
+
           responseData.userId = user._id;
           responseData.requiresSignIn = true;
           responseData.message = 'Email verified successfully! You can now sign in.';
@@ -119,7 +127,7 @@ export async function POST(request: NextRequest) {
       case 'passwordless-login':
         // Find user or create new one for passwordless login
         user = await User.findOne({ email: email.toLowerCase() });
-        
+
         if (!user) {
           // Create new user for passwordless login
           user = new User({
@@ -160,17 +168,17 @@ export async function POST(request: NextRequest) {
               languagePreference: 'en'
             }
           });
-          
+
           await user.save();
           console.log('✅ New user created for passwordless login:', user._id.toString());
         } else {
           // Update existing user to be verified
-          await User.findByIdAndUpdate(user._id, { 
+          await User.findByIdAndUpdate(user._id, {
             isEmailVerified: true,
             emailVerifiedAt: new Date()
           });
         }
-        
+
         responseData.userId = user._id;
         responseData.email = user.email;
         responseData.name = `${user.firstName} ${user.lastName}`;

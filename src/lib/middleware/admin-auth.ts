@@ -18,7 +18,7 @@ import { errorResponse } from '@/lib/validation/api-validator';
  */
 export async function requireAdmin(request: NextRequest) {
   const session = await getServerSession(authConfig);
-  
+
   if (!session?.user) {
     throw new Error('UNAUTHORIZED');
   }
@@ -39,12 +39,12 @@ export async function requireAdmin(request: NextRequest) {
  * Can be used with or without validation
  */
 export function withAdminAuth(
-  handler: (request: NextRequest) => Promise<NextResponse>
+  handler: (request: NextRequest, ...args: any[]) => Promise<NextResponse>
 ) {
-  return async (request: NextRequest): Promise<NextResponse> => {
+  return async (request: NextRequest, ...args: any[]): Promise<NextResponse> => {
     try {
       await requireAdmin(request);
-      return await handler(request);
+      return await handler(request, ...args);
     } catch (error) {
       if (error instanceof Error) {
         if (error.message === 'UNAUTHORIZED') {

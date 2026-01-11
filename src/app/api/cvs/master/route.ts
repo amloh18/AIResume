@@ -9,13 +9,13 @@ import mongoose from 'mongoose';
 export async function GET(request: NextRequest) {
   try {
     await getConnection();
-    
+
     // Check for explicit userId parameter (backward compatibility)
     const { searchParams } = new URL(request.url);
     const explicitUserId = searchParams.get('userId');
-    
+
     let userId: string;
-    
+
     if (explicitUserId) {
       // Use explicit userId parameter (backward compatibility)
       console.log('🔍 Master CV API - Using explicit userId:', explicitUserId);
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       userId = authResult.userId;
       console.log('🔍 Master CV API - Using authenticated user:', authResult.userEmail);
     }
-    
+
     console.log('🔍 Master CV API - User ID:', userId);
 
     // CRITICAL: Master CV is ONLY identified by ai-career-report creation
@@ -75,20 +75,8 @@ export async function GET(request: NextRequest) {
       basicsKeys: masterCV?.cvData?.basics ? Object.keys(masterCV.cvData.basics) : []
     });
 
-    // Also check all CVs for this user to see what's in the database
-    const allCVsQuery = { userId: new mongoose.Types.ObjectId(userId) };
-    const allCVs = await CV.find(allCVsQuery).lean();
-    console.log('🔍 Master CV API - All CVs for user:', allCVs.length);
-    allCVs.forEach((cv, index) => {
-      console.log(`🔍 Master CV API - CV ${index + 1}:`, {
-        id: cv._id,
-        title: cv.title,
-        isMaster: cv.isMaster,
-        metadataIsMaster: cv.metadata?.isMaster,
-        status: cv.status,
-        userId: cv.userId
-      });
-    });
+    // console.log for production - skip in development for performance
+    // Debug logging removed to improve API response time
 
     if (!masterCV) {
       return NextResponse.json({
@@ -122,7 +110,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Get master CV error:', error);
     const errorResponse = createErrorResponse(error);
-    
+
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }
@@ -134,7 +122,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await getConnection();
-    
+
     // Use new authentication system
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -144,10 +132,10 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = authResult.userId;
     console.log('🔍 Master CV POST API - Using authenticated user:', authResult.userEmail);
-    
+
     const body = await request.json();
     const { jobTitle, company, jobId } = body;
 
@@ -189,7 +177,7 @@ export async function POST(request: NextRequest) {
     const generateUniqueTitle = async (baseTitle: string, userId: string) => {
       let finalTitle = baseTitle;
       let counter = 1;
-      
+
       // Check for existing CVs with the same title
       while (true) {
         const query = { userId: new mongoose.Types.ObjectId(userId), title: finalTitle };
@@ -197,18 +185,18 @@ export async function POST(request: NextRequest) {
         if (!existingCV) {
           break;
         }
-        
+
         finalTitle = `${baseTitle} ${counter}`;
         counter++;
       }
-      
+
       return finalTitle;
     };
 
-    const baseTitle = jobTitle && company 
+    const baseTitle = jobTitle && company
       ? `${jobTitle}-${company}-CV`
       : `${masterCV.title} (Copy)`;
-    
+
     const duplicatedTitle = await generateUniqueTitle(baseTitle, userId);
 
     // Determine cvType for duplicated CV
@@ -262,7 +250,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Duplicate master CV error:', error);
     const errorResponse = createErrorResponse(error);
-    
+
     return NextResponse.json(
       errorResponse,
       { status: errorResponse.statusCode || 500 }
