@@ -18,15 +18,40 @@ export interface PlanLimits {
   maxJobs: number;              // Job tracker limit
   standaloneCVs: boolean;       // Can create standalone CVs
   aiSurgeonMode: 'spelling_only' | 'full';  // AI mode restriction
-  coverLetterAI: boolean;       // Automated AI cover letter
+  coverLetterAI: boolean;       // Cover letter generator access
   docxExport: boolean;          // DOCX export
   interviewCoach: boolean;      // Interview Coach access
-  jobTracker: boolean;          // Job Application Tracker access
+  jobTracker: boolean;          // Job Application Tracker access (add/track jobs)
+  jobParsing: boolean;          // Can parse job descriptions
   prioritySupport: boolean;     // Priority support
   advancedAnalytics: boolean;   // Advanced analytics
   hasVault?: boolean;           // Career Vault feature (Lifetime only)
+  // LinkedIn Enhancer restrictions
+  linkedinToneChange: boolean;  // Can change tone in LinkedIn Enhancer
+  linkedinCVSelection: boolean; // Can select different CVs in LinkedIn Enhancer
 }
 
+/**
+ * Feature matrix by tier:
+ * 
+ * FREE:
+ *   - Master CV only (no standalone, no journey)
+ *   - LinkedIn Enhancer (basic - no tone change, no CV selection, uses Master CV)
+ *   - PDF export only
+ *   - NO tracker (no job parsing, no add jobs)
+ * 
+ * DAY PASS:
+ *   - Master CV + Unlimited Standalone CVs
+ *   - LinkedIn Enhancer with tone change + CV selection
+ *   - Cover Letter Generator
+ *   - PDF + DOCX export
+ *   - NO tracker (no job parsing, no journey CVs)
+ * 
+ * PRO (monthly/quarterly/lifetime):
+ *   - Everything: Master + Standalone + Journey CVs
+ *   - Full tracker (job parsing, add jobs, Kanban)
+ *   - All tools with full access
+ */
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
     journeyCVs: 0,              // No Journey CVs for free
@@ -35,32 +60,38 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     downloads: 5,
     premiumTemplates: false,
     maxCVs: 1,                  // Only 1 Master CV
-    maxJobs: 3,                 // 3 Jobs total
+    maxJobs: 0,                 // No Job Tracker
     standaloneCVs: false,       // Cannot create standalone CVs
     aiSurgeonMode: 'spelling_only',
     coverLetterAI: false,       // No cover letter generator
     docxExport: false,          // PDF only
     interviewCoach: false,      // No Interview Coach
-    jobTracker: false,          // No Job Tracker (limited to 3 jobs display only)
+    jobTracker: false,          // No Job Tracker
+    jobParsing: false,          // Cannot parse job descriptions
     prioritySupport: false,
-    advancedAnalytics: false
+    advancedAnalytics: false,
+    linkedinToneChange: false,  // No tone change in LinkedIn Enhancer
+    linkedinCVSelection: false  // No CV selection - uses Master CV only
   },
   day_pass: {
-    journeyCVs: -1,             // Unlimited during 24h
-    activeJourneyCVs: -1,
+    journeyCVs: 0,              // No Journey CVs for day pass
+    activeJourneyCVs: 0,        // No active journeys
     surgeonRuns: -1,
     downloads: -1,
     premiumTemplates: true,
-    maxCVs: -1,
+    maxCVs: -1,                 // Unlimited CVs
     maxJobs: 0,                 // No Job Tracker
-    standaloneCVs: true,
+    standaloneCVs: true,        // Can create unlimited standalone CVs
     aiSurgeonMode: 'full',      // Full AI rewrite
-    coverLetterAI: false,       // Manual cover letter only
+    coverLetterAI: true,        // Cover letter generator included
     docxExport: true,
     interviewCoach: false,      // No Interview Coach
     jobTracker: false,          // No Job Tracker
-    prioritySupport: false,     // Regular support
-    advancedAnalytics: false    // No advanced analytics
+    jobParsing: false,          // Cannot parse job descriptions
+    prioritySupport: false,
+    advancedAnalytics: false,
+    linkedinToneChange: true,   // Can change tone in LinkedIn Enhancer
+    linkedinCVSelection: true   // Can select different CVs
   },
   pro_monthly: {
     journeyCVs: -1,             // Unlimited
@@ -69,15 +100,18 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     downloads: -1,
     premiumTemplates: true,
     maxCVs: -1,
-    maxJobs: -1,
+    maxJobs: -1,                // Unlimited jobs
     standaloneCVs: true,
     aiSurgeonMode: 'full',
-    coverLetterAI: true,        // Automated cover letter
+    coverLetterAI: true,
     docxExport: true,
-    interviewCoach: true,       // Full Interview Coach
+    interviewCoach: true,
     jobTracker: true,           // Full Job Tracker
-    prioritySupport: false,     // Regular support
-    advancedAnalytics: true
+    jobParsing: true,           // Can parse job descriptions
+    prioritySupport: false,
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true
   },
   pro_quarterly: {
     journeyCVs: -1,             // Unlimited
@@ -93,8 +127,11 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     docxExport: true,
     interviewCoach: true,
     jobTracker: true,
+    jobParsing: true,
     prioritySupport: true,      // Priority Support
-    advancedAnalytics: true
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true
   },
   pro_lifetime: {
     journeyCVs: -1,             // Unlimited
@@ -110,9 +147,12 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     docxExport: true,
     interviewCoach: true,
     jobTracker: true,
+    jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
-    hasVault: true              // Career Vault feature
+    hasVault: true,             // Career Vault feature
+    linkedinToneChange: true,
+    linkedinCVSelection: true
   },
 
   pro: {
@@ -129,8 +169,11 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     docxExport: true,
     interviewCoach: true,
     jobTracker: true,
+    jobParsing: true,
     prioritySupport: false,
-    advancedAnalytics: true
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true
   }
 };
 
