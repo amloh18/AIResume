@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getJobParserService } from '@/lib/services/jobParserService';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { verifySponsorship } from '@/lib/services/sponsorshipVerificationService';
-import { checkJobLimit } from '@/lib/utils/subscription-helpers';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
+import { getPlanLimits } from '@/lib/utils/subscription-helpers';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🔍 Job Parse API - Request received');
-    
+
     const auth = await authenticateRequest(request);
     if (!auth) {
       console.error('❌ Job Parse API - Unauthorized');
@@ -18,11 +18,11 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
-    
+
     const userId = auth.userId;
     console.log('✅ Job Parse API - Authenticated user:', userId);
 
-    // Check credits/membership BEFORE parsing to save AI tokens
+    // Connect to database to get user info
     await connectToDatabase();
     const user = await User.findById(userId);
     if (!user) {
@@ -33,31 +33,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check membership for job parsing access
+    // Only Pro users (monthly, quarterly, lifetime) can parse job descriptions
     const planKey = user.currentPlanKey || 'free';
-    
-    // Check job limit (count-based, not credit-based)
-    const jobLimitCheck = await checkJobLimit(
-      userId.toString(),
-      planKey,
-      user.subscription
-    );
+    const planLimits = getPlanLimits(planKey);
 
-    console.log('🔍 Job Parse API - Job limit check result:', {
-      allowed: jobLimitCheck.allowed,
-      message: jobLimitCheck.message,
-      currentCount: jobLimitCheck.currentCount,
-      limit: jobLimitCheck.limit,
-      planKey
-    });
-
-    if (!jobLimitCheck.allowed) {
-      console.log('❌ Job Parse API - Job limit check failed:', jobLimitCheck.message);
+    if (!planLimits.jobParsing) {
+      console.log('❌ Job Parse API - Job parsing not allowed for plan:', planKey);
       return NextResponse.json(
         {
-          error: jobLimitCheck.message || 'Job limit exceeded. Please upgrade to parse job descriptions.',
-          requiresUpgrade: jobLimitCheck.upgradeRequired,
-          currentCount: jobLimitCheck.currentCount,
-          limit: jobLimitCheck.limit,
+          error: 'Job parsing requires a Pro membership. Upgrade to parse and track jobs.',
+          requiresUpgrade: true,
+          planKey,
           gateType: 'hard'
         },
         { status: 403 }
@@ -133,13 +120,13 @@ export async function POST(request: NextRequest) {
 
       // Build job description with requirements and benefits
       let jobDescription = parsedData.description || '';
-      
+
       // Add requirements if available
       if (parsedData.requirements && Array.isArray(parsedData.requirements) && parsedData.requirements.length > 0) {
         const requirementsText = `\n\nRequirements:\n${parsedData.requirements.join('\n')}`;
         jobDescription += requirementsText;
       }
-      
+
       // Add benefits if available
       if (parsedData.benefits && Array.isArray(parsedData.benefits) && parsedData.benefits.length > 0) {
         const benefitsText = `\n\nBenefits:\n${parsedData.benefits.join('\n')}`;
@@ -162,15 +149,15 @@ export async function POST(request: NextRequest) {
             ? parsedData.salary.period
             : 'yearly'
         } : undefined,
-        deadline: parsedData.applicationDeadline 
+        deadline: parsedData.applicationDeadline
           ? (() => {
-              try {
-                const date = new Date(parsedData.applicationDeadline);
-                return isNaN(date.getTime()) ? undefined : date;
-              } catch {
-                return undefined;
-              }
-            })()
+            try {
+              const date = new Date(parsedData.applicationDeadline);
+              return isNaN(date.getTime()) ? undefined : date;
+            } catch {
+              return undefined;
+            }
+          })()
           : undefined,
         source: url ? 'linkedin' : 'manual', // Can be enhanced to detect source
         sourceUrl: url || parsedData.sourceUrl,
@@ -198,7 +185,7 @@ export async function POST(request: NextRequest) {
       const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('❌ Job Parse API - Error details:', { errorMessage, errorStack });
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to parse job description',
           details: errorMessage,
           ...(process.env.NODE_ENV === 'development' && { stack: errorStack })
@@ -212,7 +199,7 @@ export async function POST(request: NextRequest) {
     const errorStack = error instanceof Error ? error.stack : undefined;
     console.error('❌ Job Parse API - Outer error details:', { errorMessage, errorStack });
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         details: errorMessage,
         ...(process.env.NODE_ENV === 'development' && { stack: errorStack })

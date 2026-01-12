@@ -196,8 +196,8 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     setJdText(jdText);
     setShowJDInput(false);
     // JD submitted - now need to get CV data (upload or manual)
-    // Show the regular parse options but with Journey mode active
-    setParseMethod(null);
+    // Proceed to upload option to continue the flow
+    setParseMethod('upload');
   };
 
   const handleStartWithJob = () => {
@@ -248,13 +248,68 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
           </motion.div>
 
           <div className={`grid gap-8 ${mode === 'edit-master' || cvType === 'master' ? 'md:grid-cols-2 max-w-4xl mx-auto' : 'md:grid-cols-3'}`}>
-            {/* Apply to Job Option - Most prominent for Journey CV */}
+            {/* Upload Option - First card */}
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 }}
+              onClick={() => setParseMethod('upload')}
+              className={`group relative bg-white dark:bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 border border-gray-200 dark:border-transparent ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
+                  <Upload className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
+                </div>
+                <h3 className={`font-semibold text-gray-900 dark:text-white ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
+                  Upload Resume
+                </h3>
+                <p className={`text-gray-600 dark:text-gray-300 ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
+                  Upload your current resume and we'll extract the information
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center pt-2">
+                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
+                    PDF
+                  </span>
+                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
+                    DOCX
+                  </span>
+                </div>
+              </div>
+            </motion.button>
+
+            {/* Manual Entry Option - Second card */}
+            <motion.button
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              onClick={() => handleManualEntry()}
+              className={`group relative bg-white dark:bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 border border-gray-200 dark:border-transparent ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
+            >
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
+                  <Edit3 className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
+                </div>
+                <h3 className={`font-semibold text-gray-900 dark:text-white ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
+                  Start Fresh
+                </h3>
+                <p className={`text-gray-600 dark:text-gray-300 ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
+                  Build your resume from scratch with our guided forms
+                </p>
+                <div className="flex items-center gap-2 justify-center pt-2">
+                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
+                    For beginners
+                  </span>
+                </div>
+              </div>
+            </motion.button>
+
+            {/* Apply to Job Option - Third card */}
             {/* Hide for master CV mode (edit-master or cvType === 'master') */}
             {!(mode === 'edit-master' || cvType === 'master') && (
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.05 }}
+                transition={{ delay: 0.15 }}
                 onClick={handleStartWithJob}
                 className="group relative bg-gradient-to-br from-white to-gray-50 dark:from-[#141810] dark:to-[#1a1f14] rounded-2xl p-8 shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-[var(--accent-primary)]/20 hover:scale-105 border border-gray-200 dark:border-[var(--accent-primary)]/20"
               >
@@ -283,61 +338,6 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 </div>
               </motion.button>
             )}
-
-            {/* Upload Option */}
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              onClick={() => setParseMethod('upload')}
-              className={`group relative bg-white dark:bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 border border-gray-200 dark:border-transparent ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
-                  <Upload className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
-                </div>
-                <h3 className={`font-semibold text-gray-900 dark:text-white ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
-                  Upload Resume
-                </h3>
-                <p className={`text-gray-600 dark:text-gray-300 ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
-                  Upload your current resume and we'll extract the information
-                </p>
-                <div className="flex flex-wrap gap-2 justify-center pt-2">
-                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
-                    PDF
-                  </span>
-                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
-                    DOCX
-                  </span>
-                </div>
-              </div>
-            </motion.button>
-
-            {/* Manual Entry Option */}
-            <motion.button
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.15 }}
-              onClick={() => handleManualEntry()}
-              className={`group relative bg-white dark:bg-[#141810] rounded-2xl shadow-lg shadow-black/10 dark:shadow-black/40 transition-all duration-300 hover:shadow-xl hover:shadow-black/20 dark:hover:shadow-black/50 hover:scale-105 border border-gray-200 dark:border-transparent ${mode === 'edit-master' || cvType === 'master' ? 'p-12' : 'p-8'}`}
-            >
-              <div className="flex flex-col items-center text-center space-y-4">
-                <div className={`bg-[#80FF00]/15 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${mode === 'edit-master' || cvType === 'master' ? 'w-20 h-20' : 'w-16 h-16'}`}>
-                  <Edit3 className={`text-[#80FF00] ${mode === 'edit-master' || cvType === 'master' ? 'w-10 h-10' : 'w-8 h-8'}`} />
-                </div>
-                <h3 className={`font-semibold text-gray-900 dark:text-white ${mode === 'edit-master' || cvType === 'master' ? 'text-2xl' : 'text-xl'}`}>
-                  Start Fresh
-                </h3>
-                <p className={`text-gray-600 dark:text-gray-300 ${mode === 'edit-master' || cvType === 'master' ? 'text-base' : 'text-sm'}`}>
-                  Build your resume from scratch with our guided forms
-                </p>
-                <div className="flex items-center gap-2 justify-center pt-2">
-                  <span className="text-xs px-3 py-1 bg-[var(--bg-tertiary)] rounded-full text-[color:var(--text-secondary)]">
-                    For beginners
-                  </span>
-                </div>
-              </div>
-            </motion.button>
           </div>
 
           {/* First CV info banner */}
@@ -349,7 +349,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl text-center"
             >
               <p className="text-sm text-blue-400">
-                <strong>First resume?</strong> This will become your Master CV - your source of truth for all future applications.
+                <strong>First resume?</strong> This will become your Primary CV - your source of truth for all future applications.
               </p>
             </motion.div>
           )}

@@ -2,10 +2,11 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Home, Bell, ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
+import { Home, Bell, ChevronDown, RefreshCw, Sparkles, Crown, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useUserData } from '@/lib/hooks/useUserData';
+import { useMembership } from '@/lib/hooks/useMembership';
 import type { CVSelectionItem, LinkedInUserContext } from '@/types/linkedin';
 
 interface LinkedInHeaderProps {
@@ -16,6 +17,7 @@ interface LinkedInHeaderProps {
     isEnhancing: boolean;
     currentTone: LinkedInUserContext['tone_selection'];
     onToneChange: (tone: LinkedInUserContext['tone_selection']) => void;
+    onUpgradeClick?: () => void;
 }
 
 const TONES: LinkedInUserContext['tone_selection'][] = ['Professional', 'Visionary', 'Technical', 'Relatable'];
@@ -28,13 +30,19 @@ export default function LinkedInHeader({
     isEnhancing,
     currentTone,
     onToneChange,
+    onUpgradeClick,
 }: LinkedInHeaderProps) {
     const router = useRouter();
     const { userData } = useUserData();
+    const { canAccess, membership } = useMembership();
     const [showCvDropdown, setShowCvDropdown] = useState(false);
     const [showToneDropdown, setShowToneDropdown] = useState(false);
 
     const selectedCv = availableCvs.find(cv => cv.id === selectedCvId);
+
+    // Check permissions for LinkedIn Enhancer features
+    const canChangeTone = canAccess('linkedinToneChange');
+    const canSelectCv = canAccess('linkedinCVSelection');
 
     const handleHomeClick = useCallback(() => {
         router.push('/dashboard');
@@ -83,18 +91,20 @@ export default function LinkedInHeader({
                         {availableCvs.length > 0 && (
                             <div className="relative">
                                 <motion.button
-                                    onClick={() => setShowCvDropdown(!showCvDropdown)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 bg-white text-sm"
+                                    onClick={() => canSelectCv ? setShowCvDropdown(!showCvDropdown) : (onUpgradeClick?.())}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!canSelectCv ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white'} hover:border-gray-300 text-sm`}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                 >
+                                    {!canSelectCv && <Crown className="w-3 h-3 text-amber-500" />}
                                     <span className="text-gray-700">
-                                        {selectedCv ? selectedCv.name : 'Select CV'}
+                                        {selectedCv ? selectedCv.name : 'Master CV'}
                                     </span>
-                                    <ChevronDown className="w-4 h-4 text-gray-500" />
+                                    {canSelectCv && <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                    {!canSelectCv && <span className="text-xs text-amber-600 font-medium">PRO</span>}
                                 </motion.button>
 
-                                {showCvDropdown && (
+                                {showCvDropdown && canSelectCv && (
                                     <motion.div
                                         initial={{ opacity: 0, y: -10 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -123,17 +133,19 @@ export default function LinkedInHeader({
                         {/* Tone Selector */}
                         <div className="relative">
                             <motion.button
-                                onClick={() => setShowToneDropdown(!showToneDropdown)}
-                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 hover:border-gray-300 bg-white text-sm"
+                                onClick={() => canChangeTone ? setShowToneDropdown(!showToneDropdown) : (onUpgradeClick?.())}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${!canChangeTone ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white'} hover:border-gray-300 text-sm`}
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                             >
+                                {!canChangeTone && <Crown className="w-3 h-3 text-amber-500" />}
                                 <Sparkles className="w-4 h-4 text-amber-500" />
                                 <span className="text-gray-700">{currentTone}</span>
-                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                                {canChangeTone && <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                {!canChangeTone && <span className="text-xs text-amber-600 font-medium">PRO</span>}
                             </motion.button>
 
-                            {showToneDropdown && (
+                            {showToneDropdown && canChangeTone && (
                                 <motion.div
                                     initial={{ opacity: 0, y: -10 }}
                                     animate={{ opacity: 1, y: 0 }}
