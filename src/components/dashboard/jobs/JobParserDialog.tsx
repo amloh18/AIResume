@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { X, Sparkles, FileText, Loader2, CheckCircle, AlertCircle, ScanLine } from 'lucide-react';
+import { X, Sparkles, FileText, Loader2, CheckCircle, AlertCircle, ScanLine, Crown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
-import { useCredits } from '@/lib/hooks/useCredits';
+import { useMembership } from '@/lib/hooks/useMembership';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
 
 interface ParsedJobData {
@@ -48,13 +48,13 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
   onSaveAndTrack
 }) => {
   const { user } = useUnifiedAuth();
-  const { credits, loading: creditsLoading } = useCredits();
+  const { membership, loading: membershipLoading, canAccess } = useMembership();
   const [inputText, setInputText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedJobData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
-  
+
   // Editable fields state
   const [editedJobTitle, setEditedJobTitle] = useState('');
   const [editedCompany, setEditedCompany] = useState('');
@@ -82,31 +82,25 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       return;
     }
 
-    // Wait for credits to load before checking
-    if (creditsLoading) {
-      setError('Loading membership information...');
-      return;
-    }
-
-    // Check if user is on free plan and show upgrade popup BEFORE parsing to save AI tokens
-    if (credits && user?.id) {
-      const isFreeUser = credits.planKey === 'free';
-      const hasNoCredits = credits.creditsRemaining <= 0 && credits.limit !== -1;
-      
-      if (isFreeUser || hasNoCredits) {
-        // Show upgrade popup before parsing - this saves AI tokens by prompting upgrade first
-        setShowUpgradePopup(true);
-        return; // Don't parse yet - wait for user to upgrade or dismiss
-      }
-    } else if (!user?.id) {
+    // Check if user is signed in first
+    if (!user?.id) {
       setError('Please sign in to parse job descriptions');
       return;
-    } else if (!credits) {
-      setError('Unable to verify membership. Please try again.');
+    }
+
+    // Wait for membership to load
+    if (membershipLoading) {
+      setIsParsing(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // Check if user has job parsing access (Pro only)
+    if (!canAccess('jobParsing')) {
+      // Show upgrade popup for Free and Day Pass users
+      setShowUpgradePopup(true);
       return;
     }
 
-    // Proceed with parsing if user has credits or is paid user
     await performParse();
   };
 
@@ -128,7 +122,7 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
 
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // If credit check failed, show upgrade popup
         if (errorData.requiresUpgrade && response.status === 403) {
           setShowUpgradePopup(true);
@@ -136,12 +130,12 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
           setIsParsing(false);
           return;
         }
-        
+
         throw new Error(errorData.error || 'Failed to parse job description');
       }
 
       const result = await response.json();
-      
+
       if (result.success && result.data) {
         setParsedData(result.data);
         // Initialize editable fields with parsed data
@@ -333,6 +327,11 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Parsing...
+                  </>
+                ) : !canAccess('jobParsing') ? (
+                  <>
+                    <Crown className="w-4 h-4 mr-2" />
+                    Parse · PRO
                   </>
                 ) : (
                   <>

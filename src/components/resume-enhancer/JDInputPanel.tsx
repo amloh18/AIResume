@@ -155,13 +155,10 @@ export default function JDInputPanel({
         >
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-lime-600 dark:text-[#80FF00]" />
-            <span className="text-sm font-medium text-lime-700 dark:text-[#80FF00]">
-              This will create a Journey CV
+            <span className="text-sm text-gray-700 dark:text-white/90">
+              Your CV will be tailored specifically for this job with keyword optimization and ATS scoring.
             </span>
           </div>
-          <p className="text-xs text-gray-600 dark:text-white/70 mt-1">
-            Your CV will be tailored specifically for this job with keyword optimization and ATS scoring.
-          </p>
         </motion.div>
       )}
 
