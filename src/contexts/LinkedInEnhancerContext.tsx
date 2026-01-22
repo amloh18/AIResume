@@ -119,12 +119,42 @@ function reducer(state: LinkedInEnhancerState, action: Action): LinkedInEnhancer
             return { ...state, career_guide: action.payload };
         case 'SET_SELECTED_CV':
             return { ...state, selectedCvId: action.payload.id, selectedCvType: action.payload.type };
-        case 'SET_ENHANCED_DATA':
+        case 'SET_ENHANCED_DATA': {
+            // Merge experience arrays - match by ID to preserve original_data while adding enhanced_data
+            const mergedExperience = state.sections.experience.map((exp, idx) => {
+                // Find matching enhanced data by ID or index
+                const enhanced = action.payload.sections?.experience?.find(
+                    (e: any) => e.id === exp.id
+                ) || action.payload.sections?.experience?.[idx];
+                
+                if (enhanced?.enhanced_data) {
+                    return {
+                        ...exp,
+                        enhanced_data: enhanced.enhanced_data,
+                    };
+                }
+                return exp;
+            });
+
+            // Merge projects arrays - same logic
+            const mergedProjects = state.sections.projects.map((proj, idx) => {
+                const enhanced = action.payload.sections?.projects?.find(
+                    (p: any) => p.id === proj.id
+                ) || action.payload.sections?.projects?.[idx];
+                
+                if (enhanced?.enhanced_data) {
+                    return {
+                        ...proj,
+                        enhanced_data: enhanced.enhanced_data,
+                    };
+                }
+                return proj;
+            });
+
             return {
                 ...state,
                 sections: {
                     ...state.sections,
-                    ...action.payload.sections,
                     hero: {
                         ...state.sections.hero,
                         ...action.payload.sections?.hero,
@@ -135,12 +165,19 @@ function reducer(state: LinkedInEnhancerState, action: Action): LinkedInEnhancer
                         ...action.payload.sections?.about,
                         status: 'suggestion_available',
                     },
+                    experience: mergedExperience,
+                    projects: mergedProjects,
+                    skills_matrix: {
+                        ...state.sections.skills_matrix,
+                        ...action.payload.sections?.skills_matrix,
+                    },
                 },
                 side_cards: { ...state.side_cards, ...action.payload.side_cards },
                 audit: action.payload.audit || state.audit,
                 career_guide: action.payload.career_guide || state.career_guide,
                 isEnhancing: false,
             };
+        }
         case 'LOAD_CV_DATA':
             return {
                 ...state,

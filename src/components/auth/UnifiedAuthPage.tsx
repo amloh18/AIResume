@@ -89,26 +89,8 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
 
   const handleSignIn = async (formData: Record<string, string>) => {
     try {
-      // First check if user exists and is verified
-      const checkUserResponse = await fetch('/api/check-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: formData.email }),
-      });
-
-      const checkUserResult = await checkUserResponse.json();
-
-      // If user exists but is not verified, route to verification
-      if (checkUserResult.exists && !checkUserResult.isEmailVerified) {
-        setEmail(formData.email);
-        setVerificationType('email-verification');
-        // Send verification code
-        await handleSendCode(formData.email, 'email-verification');
-        setSuccess('Account not verified. Please enter the verification code sent to your email.');
-        return;
-      }
-
       // Verify credentials and check for 2FA
+      // This single call handles: user not found, email not verified, wrong password, 2FA
       const verifyResponse = await fetch('/api/auth/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -121,6 +103,22 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       const verifyResult = await verifyResponse.json();
 
       if (!verifyResult.success) {
+        // Handle specific error codes
+        if (verifyResult.code === 'EMAIL_NOT_VERIFIED') {
+          // User exists but is not verified, route to verification
+          setEmail(formData.email);
+          setVerificationType('email-verification');
+          // Send verification code
+          await handleSendCode(formData.email, 'email-verification');
+          setSuccess('Account not verified. Please enter the verification code sent to your email.');
+          return;
+        }
+
+        if (verifyResult.code === 'OAUTH_USER') {
+          setError('This account uses Google sign-in. Please use the "Continue with Google" button.');
+          return;
+        }
+
         setError(verifyResult.error || 'Invalid email or password.');
         return;
       }
@@ -179,6 +177,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       }
     }
   };
+
 
   const handleSignUp = async (formData: Record<string, string>) => {
     const response = await fetch('/api/auth/register-user', {

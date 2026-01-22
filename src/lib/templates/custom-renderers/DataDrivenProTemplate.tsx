@@ -9,14 +9,32 @@ interface DataDrivenProTemplateProps {
   className?: string;
   enabledSections?: string[];
   dateFormat?: DateFormatStyle;
+  sectionWrapper?: React.ComponentType<any>;
+  AddSectionButton?: React.ComponentType<{ onClick: () => void }>;
+  onAddSection?: (sectionType: string) => void;
 }
 
 export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
   cvData,
   className = '',
-  dateFormat = 'MMM_YYYY'
+  dateFormat = 'MMM_YYYY',
+  sectionWrapper: SectionWrapper,
+  AddSectionButton,
+  onAddSection
 }) => {
   const { basics, work, education, skills, projects, volunteer, certificates, awards, publications, languages, interests, references } = cvData;
+
+  // Helper to wrap section content with DraggableSection when provided
+  const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
+    if (SectionWrapper) {
+      return (
+        <SectionWrapper sectionId={id} sectionType={sectionType}>
+          {children}
+        </SectionWrapper>
+      );
+    }
+    return <div data-section-id={id}>{children}</div>;
+  };
 
   return (
     <div className={`data-driven-pro-template ${className}`}>
@@ -377,21 +395,23 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
       {/* Header */}
       {basics?.name && (
-        <div className="header" data-section-id="personal">
-          <div className="header-left">
-            <h1 className="name">{basics.name}</h1>
-            {basics.label && <p className="title">{basics.label}</p>}
+        <Wrapper id="personal" sectionType="personal">
+          <div className="header">
+            <div className="header-left">
+              <h1 className="name">{basics.name}</h1>
+              {basics.label && <p className="title">{basics.label}</p>}
+            </div>
+            <div className="header-right">
+              {basics.image && (
+                <img
+                  src={basics.image}
+                  alt="Profile"
+                  className="profile-picture"
+                />
+              )}
+            </div>
           </div>
-          <div className="header-right">
-            {basics.image && (
-              <img
-                src={basics.image}
-                alt="Profile"
-                className="profile-picture"
-              />
-            )}
-          </div>
-        </div>
+        </Wrapper>
       )}
 
       {/* Horizontal Separator */}
@@ -402,7 +422,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         {/* Left Column (25%) */}
         <div className="left-column">
           {/* Contact */}
-          <div data-section-id="personal">
+          <Wrapper id="contact" sectionType="contact">
             <h3 className="section-title">Contact</h3>
             {basics?.phone && (
               <div className="contact-item">
@@ -428,50 +448,54 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                 <span>{basics.url || basics.profiles?.[0]?.url}</span>
               </div>
             )}
-          </div>
+          </Wrapper>
 
           {/* Education */}
-          <div style={{ marginTop: '1.5rem' }} data-section-id="education">
-            <h3 className="section-title">Education</h3>
-            {education?.map((edu, index) => (
-              <div key={index} className="education-item" data-item-id={index}>
-                <div className="degree-title">{edu.studyType || 'ENTER YOUR MAJOR'}</div>
-                <div className="institution-info">{edu.institution || 'Name of University'}</div>
-                <div className="education-dates">{formatDateRangeWithStyle(edu.startDate || '2005', edu.endDate || '2007', dateFormat)}</div>
-              </div>
-            ))}
-            {(!education || education.length === 0) && (
-              <div className="education-item">
-                <div className="degree-title">ENTER YOUR MAJOR</div>
-                <div className="institution-info">Name of University</div>
-                <div className="education-dates">2005 - 2007</div>
-              </div>
-            )}
-          </div>
+          <Wrapper id="education" sectionType="education">
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 className="section-title">Education</h3>
+              {education?.map((edu, index) => (
+                <div key={index} className="education-item" data-item-id={index}>
+                  <div className="degree-title">{edu.studyType || 'ENTER YOUR MAJOR'}</div>
+                  <div className="institution-info">{edu.institution || 'Name of University'}</div>
+                  <div className="education-dates">{formatDateRangeWithStyle(edu.startDate || '2005', edu.endDate || '2007', dateFormat)}</div>
+                </div>
+              ))}
+              {(!education || education.length === 0) && (
+                <div className="education-item">
+                  <div className="degree-title">ENTER YOUR MAJOR</div>
+                  <div className="institution-info">Name of University</div>
+                  <div className="education-dates">2005 - 2007</div>
+                </div>
+              )}
+            </div>
+          </Wrapper>
 
           {/* Skills - Always render with placeholder if empty */}
-          <div style={{ marginTop: '1.5rem' }} data-section-id="skills">
-            <h3 className="section-title">Skills</h3>
-            {skills && skills.length > 0 ? (
-              skills.map((skill, index) => (
-                <div key={index} className="skills-category" data-item-id={index}>
-                  <div className="skills-category-title">{skill.category || 'Professional'}</div>
-                  <div className="skills-list">
-                    {Array.isArray(skill.skills) && skill.skills.length > 0 ? (
-                      skill.skills.map(s => stripHtmlTags(s)).join(', ')
-                    ) : (
-                      stripHtmlTags(skill.category || '')
-                    )}
+          <Wrapper id="skills" sectionType="skills">
+            <div style={{ marginTop: '1.5rem' }}>
+              <h3 className="section-title">Skills</h3>
+              {skills && skills.length > 0 ? (
+                skills.map((skill, index) => (
+                  <div key={index} className="skills-category" data-item-id={index}>
+                    <div className="skills-category-title">{skill.category || 'Professional'}</div>
+                    <div className="skills-list">
+                      {Array.isArray(skill.skills) && skill.skills.length > 0 ? (
+                        skill.skills.map(s => stripHtmlTags(s)).join(', ')
+                      ) : (
+                        stripHtmlTags(skill.category || '')
+                      )}
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="skills-category placeholder-item">
+                  <div className="skills-category-title placeholder-text">Skill Category</div>
+                  <div className="skills-list placeholder-text">Click to add your skills</div>
                 </div>
-              ))
-            ) : (
-              <div className="skills-category placeholder-item">
-                <div className="skills-category-title placeholder-text">Skill Category</div>
-                <div className="skills-list placeholder-text">Click to add your skills</div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </Wrapper>
         </div>
 
         {/* Vertical Separator */}
@@ -513,16 +537,16 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
         <div className="right-column">
           {/* Profile */}
           {basics?.summary && (
-            <div data-section-id="summary">
+            <Wrapper id="summary" sectionType="summary">
               <h2 className="main-section-title">Profile</h2>
               <p className="summary-text">
                 {stripHtmlTags(basics.summary)}
               </p>
-            </div>
+            </Wrapper>
           )}
 
           {/* Work Experience - Always render with placeholder if empty */}
-          <div data-section-id="work">
+          <Wrapper id="work" sectionType="work">
             <h2 className="main-section-title">Work Experience</h2>
             {work && work.length > 0 ? (
               work.map((job, index) => (
@@ -563,11 +587,11 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                 </div>
               </div>
             )}
-          </div>
+          </Wrapper>
 
           {/* Projects */}
           {projects && projects.length > 0 && (
-            <div data-section-id="projects">
+            <Wrapper id="projects" sectionType="projects">
               <h2 className="main-section-title">Projects</h2>
               {projects.map((project, index) => (
                 <div key={index} className="project-item" data-item-id={index}>
@@ -590,7 +614,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                   </div>
                 </div>
               ))}
-            </div>
+            </Wrapper>
           )}
 
           {/* Volunteer */}

@@ -16,7 +16,23 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       sessionStorage.setItem('logout-in-progress', 'true');
     }
 
-    // Step 1: Sign out from NextAuth (this calls NextAuth's built-in /api/auth/signout endpoint)
+    // Step 1: Call our custom signout API endpoint FIRST to invalidate server-side cache
+    // This needs to happen while the session is still valid to get the user ID
+    try {
+      console.log('🔍 Calling custom signout API endpoint...');
+      await fetch('/api/auth/signout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      console.log('✅ Custom signout API endpoint called, cache invalidated');
+    } catch (error) {
+      console.error('❌ Error calling signout API:', error);
+    }
+
+    // Step 2: Sign out from NextAuth (this destroys the session)
     try {
       console.log('🔍 Signing out from NextAuth...');
       await signOut({
@@ -28,20 +44,6 @@ export const comprehensiveSignOut = async (): Promise<void> => {
       console.error('❌ Error signing out from NextAuth:', error);
     }
 
-    // Step 2: Call our custom signout API endpoint to invalidate server-side cache
-    try {
-      console.log('🔍 Calling custom signout API endpoint...');
-      await fetch('/api/auth/signout', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      console.log('✅ Custom signout API endpoint called');
-    } catch (error) {
-      console.error('❌ Error calling signout API:', error);
-    }
 
     // Step 3: Explicitly clear all NextAuth cookies (in case signOut didn't work)
     if (typeof document !== 'undefined') {

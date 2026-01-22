@@ -1,8 +1,14 @@
 @import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;600;700;800;900&display=swap');
 
+/* CV Editor drag-and-drop UI styles */
+@import '../styles/cv-editor-print-styles.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+
 
 /* CSS Variables */
 :root {
@@ -75,6 +81,96 @@
   --modal-border: rgba(255, 255, 255, 0.08);
 }
 
+/* =========================================
+   CROSS-BROWSER COMPATIBILITY FIXES
+   ========================================= */
+
+/* Firefox-specific fixes */
+@-moz-document url-prefix() {
+
+  /* Fix backdrop-filter for Firefox */
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    background-color: rgba(20, 24, 16, 0.95) !important;
+  }
+
+  /* Fix gradient text in Firefox */
+  .bg-clip-text {
+    -webkit-background-clip: text;
+    background-clip: text;
+  }
+
+  /* Fix flex gap support in older Firefox */
+  .gap-6,
+  .gap-12,
+  .gap-20 {
+    gap: inherit;
+  }
+}
+
+/* Webkit prefix fallbacks for Safari and older browsers */
+.backdrop-blur-xl {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+.backdrop-blur-2xl {
+  -webkit-backdrop-filter: blur(40px);
+  backdrop-filter: blur(40px);
+}
+
+.backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+/* Fallback for browsers without backdrop-filter support */
+@supports not (backdrop-filter: blur(10px)) {
+
+  .backdrop-blur-xl,
+  .backdrop-blur-2xl,
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    background-color: rgba(20, 24, 16, 0.98);
+  }
+
+  .bg-white\/10 {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .bg-white\/5 {
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Gradient text compatibility */
+.text-transparent.bg-clip-text {
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Ensure proper transform support */
+.translate-x-1\/2,
+.-translate-x-1\/2,
+.translate-y-1\/2,
+.-translate-y-1\/2 {
+  -webkit-transform: translateX(-50%);
+  -moz-transform: translateX(-50%);
+  -ms-transform: translateX(-50%);
+  transform: translateX(-50%);
+}
+
+/* Fix for motion.div animations in non-Chromium browsers */
+[style*="opacity"],
+[style*="transform"] {
+  -webkit-transform: translateZ(0);
+  -moz-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
 /* Performance optimizations */
 * {
   box-sizing: border-box;
@@ -116,9 +212,9 @@ body {
 
 /* Light theme gradient background */
 body:not(.dark) {
-  background: #f3f2ee;
-  background-attachment: fixed;
-  background-size: 100% 100%;
+  background-color: #f3f2ee !important;
+  background-image: none !important;
+  /* Remove gradient which might be causing issues */
 }
 
 /* Dark theme solid background */
@@ -129,9 +225,9 @@ body.dark {
 
 /* Main dashboard background - theme aware */
 .dashboard-page {
-  background: #f3f2ee;
-  /* Matches bg-[#f3f2ee] */
+  background-color: #f3f2ee;
   min-height: 100vh;
+  width: 100%;
 }
 
 .dark .dashboard-page {
@@ -145,7 +241,7 @@ body.dark {
   We do this by overriding surface variables ONLY when html is NOT dark.
 */
 html:not(.dark) .resume-enhancer-page {
-  background: #f3f2ee;
+  background-color: #f3f2ee;
 
   /* App shell surfaces (light) */
   --bg-primary: #f3f2ee;
