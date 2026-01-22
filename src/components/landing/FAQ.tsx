@@ -94,11 +94,10 @@ const FAQ = () => {
   };
 
   return (
-    <section id="faq" className="relative pt-32 pb-32 bg-gradient-to-b from-black to-gray-900 overflow-hidden">
-      {/* Enhanced Background Effects */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+    <section id="faq" className="relative pt-32 pb-32 bg-[#141810] overflow-hidden">
+      {/* Background Effects - Subtle dark glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#81ff00]/3 rounded-full blur-[150px]"></div>
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto px-4 tablet:px-6 desktop:px-8">

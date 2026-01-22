@@ -59,8 +59,8 @@ export function useCredits(): UseCreditsReturn {
       // Use usage-limits endpoint which includes credit info
       const response = await fetch('/api/user/usage-limits', {
         headers: {
-          'If-Modified-Since': lastFetchRef.current > 0 
-            ? new Date(lastFetchRef.current).toUTCString() 
+          'If-Modified-Since': lastFetchRef.current > 0
+            ? new Date(lastFetchRef.current).toUTCString()
             : undefined
         } as any
       });
@@ -71,8 +71,18 @@ export function useCredits(): UseCreditsReturn {
         return;
       }
 
+      if (response.status === 401 || response.status === 403) {
+        // Session invalid or expired on server side
+        console.warn('Session expired or invalid, clearing credits');
+        setCredits(null);
+        return;
+      }
+
       if (!response.ok) {
-        throw new Error('Failed to fetch credits');
+        // Silently fail for other errors to avoid console spam, just log warn
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.warn(`Could not fetch credits: ${response.status} ${errorText}`);
+        return;
       }
 
       const data = await response.json();
@@ -155,7 +165,7 @@ export function useCredits(): UseCreditsReturn {
       if (data.success) {
         return {
           available: data.allowed || false,
-          creditsRemaining: data.currentUsage !== undefined 
+          creditsRemaining: data.currentUsage !== undefined
             ? (data.limit === -1 ? -1 : data.limit - data.currentUsage)
             : 0,
           limit: data.limit ?? 0

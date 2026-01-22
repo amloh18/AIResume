@@ -186,6 +186,7 @@ export default function FloatingPulsePill({
     };
 
     const handleIssueClick = (issue: Issue) => {
+        // Scroll to section and highlight it
         if (issue.deepLink) {
             // Attempt to find element by ID or Section ID
             const targetId = issue.deepLink.sectionId || issue.deepLink.section;
@@ -203,6 +204,33 @@ export default function FloatingPulsePill({
                     element?.classList.remove('ring-2', 'ring-[#80FF00]');
                 }, 2000);
             }
+        }
+
+        // Dispatch a custom event to open the floating form editor for this section
+        // This allows Step3BuilderSurgeon to handle opening the editor
+        const sectionId = issue.deepLink?.section || issue.section;
+        if (sectionId) {
+            // Map section names to editor-compatible IDs
+            const sectionMap: Record<string, string> = {
+                'work': 'work',
+                'work_experience': 'work',
+                'skills': 'skills',
+                'summary': 'personal', // Summary is part of personal info
+                'education': 'education',
+                'projects': 'projects',
+                'basics': 'personal',
+                'personal_header': 'personal'
+            };
+            const editorSectionId = sectionMap[sectionId] || sectionId;
+
+            // Dispatch event for the editor to open
+            window.dispatchEvent(new CustomEvent('openSectionEditor', {
+                detail: {
+                    sectionId: editorSectionId,
+                    issueId: issue.id,
+                    suggestedFixId: issue.suggestedFixId
+                }
+            }));
         }
     };
 
@@ -426,11 +454,11 @@ export default function FloatingPulsePill({
                 <AnimatePresence>
                     {showContextCard && (
                         <motion.div
-                            initial={{ opacity: 0, height: 0, scale: 0.95, x: 20 }}
-                            animate={{ opacity: 1, height: 'auto', scale: 1, x: 0 }}
-                            exit={{ opacity: 0, height: 0, scale: 0.95, x: 20 }}
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
                             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                            className="self-end mt-2 z-30 origin-top-right absolute right-[110%] top-0 mr-4" // Position to the left of the pill
+                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top-right z-30 self-end mt-2"
                         >
                             <SmartContextCard
                                 issues={issues}

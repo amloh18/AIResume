@@ -2592,7 +2592,7 @@ export default function ResumeEnhancerContainer({
                     name={
                       isGuestMode
                         ? 'Guest'
-                        : (state.cvData?.basics?.name?.trim() || getUserDisplayName(userData))
+                        : getUserDisplayName(userData)
                     }
                     size="sm"
                     className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0"
@@ -2602,13 +2602,13 @@ export default function ResumeEnhancerContainer({
                     <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                       {isGuestMode
                         ? 'Guest'
-                        : (state.cvData?.basics?.name?.trim() || getUserDisplayName(userData))
+                        : getUserDisplayName(userData)
                       }
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                       {isGuestMode
                         ? 'Not signed in'
-                        : (state.cvData?.basics?.email?.trim() || userData?.email || '')
+                        : (userData?.email || '')
                       }
                     </div>
                   </div>

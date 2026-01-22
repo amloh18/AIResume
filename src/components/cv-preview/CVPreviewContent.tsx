@@ -12,6 +12,8 @@ import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix
 import { renderRichText } from '@/lib/utils/format-utils';
 import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 import { getPlainTextCV } from '@/lib/utils/cv-analysis-utils';
+import { DraggableSection } from '@/components/resume-enhancer/dnd/DraggableSection';
+import { InlineAddSectionButton } from '@/components/resume-enhancer/dnd/InlineAddSectionButton';
 
 export type ViewMode = 'edit' | 'recruiter' | 'ats';
 
@@ -96,6 +98,7 @@ interface CVPreviewContentProps {
   onToggleSidebar?: () => void;
   pageFormat?: 'a4' | 'letter';
   dateFormat?: DateFormatStyle;
+  onAddSection?: (sectionType: string) => void;
 }
 
 const SectionWrapper = ({
@@ -171,6 +174,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   onToggleSidebar,
   pageFormat = 'a4',
   dateFormat = 'MMM_YYYY',
+  onAddSection,
 }) => {
   // CRITICAL FIX: All hooks must be called BEFORE any conditional returns (Rules of Hooks)
   const isDark = theme === 'dark';
@@ -508,14 +512,15 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                 <div style={{
                   padding: '32px',
                   height: '100%',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  color: '#00ff00' // Ensure green text color is inherited
                 }}>
-                  <div className="flex items-center gap-2 mb-4 opacity-70 border-b border-green-500/30 pb-2">
+                  <div className="flex items-center gap-2 mb-4 opacity-70 border-b border-green-500/30 pb-2" style={{ color: '#00ff00' }}>
                     <div className="w-2 h-2 rounded-full bg-[#00ff00] animate-pulse" />
-                    <span className="font-bold tracking-wider">ATS_PARSE_PREVIEW</span>
-                    <span className="ml-auto text-[10px] opacity-50">CHARS: {plainText.length}</span>
+                    <span className="font-bold tracking-wider" style={{ color: '#00ff00' }}>ATS_PARSE_PREVIEW</span>
+                    <span className="ml-auto text-[10px] opacity-50" style={{ color: '#00ff00' }}>CHARS: {plainText.length}</span>
                   </div>
-                  <pre className="whitespace-pre-wrap leading-relaxed font-mono">
+                  <pre className="whitespace-pre-wrap leading-relaxed font-mono" style={{ color: '#00ff00' }}>
                     {plainText || 'No parseable content found.'}
                   </pre>
                 </div>
@@ -558,7 +563,13 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                       ? `translateY(calc(-${pageIndex} * (${pageDimensions.height} - ${isFullBleed ? '0px' : (pagePadding.top + pagePadding.bottom) + 'px'})))`
                       : 'none'
                   }}>
-                    <CustomRenderer cvData={cvData} dateFormat={dateFormat} />
+                    <CustomRenderer
+                      cvData={cvData}
+                      dateFormat={dateFormat}
+                      sectionWrapper={viewMode === 'edit' ? DraggableSection : undefined}
+                      AddSectionButton={viewMode === 'edit' ? InlineAddSectionButton : undefined}
+                      onAddSection={viewMode === 'edit' ? onAddSection : undefined}
+                    />
                   </div>
                 </div>
               </div>

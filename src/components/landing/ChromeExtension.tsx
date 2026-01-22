@@ -5,13 +5,12 @@ import { motion } from 'framer-motion';
 
 const ChromeExtension = () => {
   return (
-    <section id="chrome-extension" className="relative pt-32 pb-20 bg-gradient-to-b from-gray-900 to-black overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+    <section id="chrome-extension" className="relative pt-32 pb-20 bg-[#141810] overflow-hidden">
+      {/* Background Effects - Subtle dark glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#81ff00]/5 rounded-full blur-[150px]"></div>
       </div>
-      
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
         {/* Header */}
         <motion.div
@@ -99,7 +98,7 @@ const ChromeExtension = () => {
                 <span className="font-semibold">{site.name}</span>
               </motion.div>
             ))}
-            
+
             {/* Duplicate set for seamless loop */}
             {[
               { name: 'LinkedIn', logoUrl: 'https://logo.clearbit.com/linkedin.com' },

@@ -67,10 +67,19 @@ interface EducationEntryProps {
 }
 
 function EducationEntry({ data, isLast }: EducationEntryProps) {
+    // Parse activities into bullet points
+    const activitiesBullets = data.activities
+        ? data.activities
+            .split(/\n|;|(?<=[.!?])\s+(?=[A-Z])/)  // Split by newlines, semicolons, or sentence boundaries
+            .map((s: string) => s.trim())
+            .filter((s: string) => s.length > 0)
+        : [];
+
     const entryContent = [
         data.institution,
         `${data.degree}${data.field ? ` in ${data.field}` : ''}`,
         data.grade ? `Grade: ${data.grade}` : '',
+        ...activitiesBullets.map(a => `• ${a}`),
     ].filter(Boolean).join('\n');
 
     return (
@@ -115,13 +124,22 @@ function EducationEntry({ data, isLast }: EducationEntryProps) {
                         </div>
                     )}
 
-                    {/* Activities */}
-                    {data.activities && (
-                        <CopyableText
-                            text={data.activities}
-                            className="text-sm text-gray-500 mt-2 p-1 -ml-1"
-                            showIcon={false}
-                        />
+                    {/* Activities as Bullet Points */}
+                    {activitiesBullets.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Activities & Achievements</span>
+                            {activitiesBullets.map((bullet, idx) => (
+                                <CopyableText
+                                    key={idx}
+                                    text={bullet}
+                                    className="text-sm text-gray-700 pl-3 relative p-1"
+                                    showIcon={false}
+                                >
+                                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-gray-400 rounded-full" />
+                                    <span>{bullet}</span>
+                                </CopyableText>
+                            ))}
+                        </div>
                     )}
                 </div>
             </div>

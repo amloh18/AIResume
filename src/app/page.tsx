@@ -53,11 +53,10 @@ function LandingPageContent() {
   }, []); // Empty deps - only run once on mount
 
   const navLinks = [
+    { label: 'How to', href: '#how-it-works', ariaLabel: 'View how it works section' },
     { label: 'Features', href: '#features', ariaLabel: 'View features section' },
     { label: 'Extension', href: '#chrome-extension', ariaLabel: 'View browser extension section' },
-    { label: 'Templates', href: '#premium-templates', ariaLabel: 'View premium templates section' },
     { label: 'Pricing', href: '#pricing', ariaLabel: 'View pricing section' },
-    { label: 'FAQ', href: '#faq', ariaLabel: 'View FAQ section' }
   ];
 
   const handleCtaClick = () => {
@@ -107,50 +106,63 @@ function LandingPageContent() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900">
-        {/* Navigation */}
-        <CardNav
-          logo="CVCircle"
-          links={navLinks}
-          onCtaClick={handleCtaClick}
-        />
+      <div className="min-h-screen bg-[#141810] relative overflow-hidden">
+        {/* Unified Background Gradient Effects */}
+        <div className="fixed inset-0 z-0 pointer-events-none">
+          {/* Top center purple/magenta glow */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-b from-purple-900/30 via-pink-900/20 to-transparent rounded-full blur-[150px]" />
+          {/* Bottom left orange glow */}
+          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-orange-600/10 rounded-full blur-[120px]" />
+          {/* Bottom right blue glow */}
+          <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px]" />
+        </div>
 
-        {/* Hero Section */}
-        <Hero />
+        {/* Content with relative z-index */}
+        <div className="relative z-10">
+          {/* Navigation */}
+          <CardNav
+            logo="CVCircle"
+            links={navLinks}
+            onCtaClick={handleCtaClick}
+          />
 
-        {/* How It Works Section */}
-        <HowItWorks />
+          {/* Hero Section */}
+          <Hero />
 
-        {/* Features Section */}
-        <Features />
+          {/* How It Works Section */}
+          <HowItWorks />
 
-        {/* Product Video Section - Hidden */}
-        {/* <ProductVideo /> */}
+          {/* Features Section */}
+          <Features />
 
-        {/* Chrome Extension Section */}
-        <ChromeExtension />
+          {/* Product Video Section - Hidden */}
+          {/* <ProductVideo /> */}
 
-
-
-        {/* Premium Templates Section */}
-        <PremiumTemplates />
+          {/* Chrome Extension Section */}
+          <ChromeExtension />
 
 
 
-        {/* Testimonials Section */}
-        <Testimonials />
+          {/* Premium Templates Section */}
+          <PremiumTemplates />
 
-        {/* Pricing Section */}
-        <Pricing onPlanSelect={(plan) => {
-          // Redirect to sign-up with plan selection
-          window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
-        }} />
 
-        {/* FAQ Section */}
-        <FAQ />
 
-        {/* Footer */}
-        <Footer />
+          {/* Testimonials Section */}
+          <Testimonials />
+
+          {/* Pricing Section */}
+          <Pricing onPlanSelect={(plan) => {
+            // Redirect to sign-up with plan selection
+            window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
+          }} />
+
+          {/* FAQ Section */}
+          <FAQ />
+
+          {/* Footer */}
+          <Footer />
+        </div>
       </div>
     </>
   );

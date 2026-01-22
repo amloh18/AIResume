@@ -13,7 +13,7 @@
   display: block;
   height: 70px;
   padding: 0;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: rgba(20, 24, 16, 0.75);
   backdrop-filter: blur(20px);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-radius: 35px;
@@ -62,9 +62,6 @@
   flex-shrink: 0;
   border-radius: 12px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .logo-image {
@@ -218,7 +215,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: rgba(20, 24, 16, 0.9);
   backdrop-filter: blur(20px);
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-top: none;
@@ -233,6 +230,7 @@
     opacity: 0;
     transform: translateY(-10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);

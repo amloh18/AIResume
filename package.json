@@ -1,7 +1,7 @@
 {
-  "name": "cvcircle-app",
+  "name": "cvcircle_app",
   "version": "0.9.9",
-  "description": "Circle CV Application - A modern CV builder and management system",
+  "description": "CV Circle - A modern job application tracker and resume builder",
   "private": true,
   "scripts": {
     "dev": "next dev",

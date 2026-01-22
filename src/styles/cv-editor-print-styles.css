@@ -1,0 +1,372 @@
+/**
+ * CV Editor Print Styles
+ * 
+ * These styles hide all editor UI elements (drag handles, add buttons, hover controls)
+ * when printing or exporting to PDF/DOCX.
+ */
+
+/* ========================================
+ * PRINT MEDIA QUERY
+ * Hides editor UI when using browser print
+ * ======================================== */
+@media print {
+
+  .cv-drag-handle,
+  .cv-drag-overlay,
+  .inline-add-section-button,
+  .section-hover-controls,
+  .cv-editor-only,
+  .cv-section-drag-overlay,
+  .cv-drop-zone-indicator {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Remove drag cursor styling in print */
+  [data-draggable-section] {
+    cursor: default !important;
+  }
+
+  /* Remove hover effects in print */
+  [data-draggable-section]:hover {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ========================================
+ * PDF EXPORT CLASS
+ * Used by PDF generation service
+ * ======================================== */
+.pdf-export .cv-drag-handle,
+.pdf-export .cv-drag-overlay,
+.pdf-export .inline-add-section-button,
+.pdf-export .section-hover-controls,
+.pdf-export .cv-editor-only,
+.pdf-export .cv-section-drag-overlay,
+.pdf-export .cv-drop-zone-indicator {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+.pdf-export [data-draggable-section] {
+  cursor: default !important;
+}
+
+.pdf-export [data-draggable-section]:hover {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* ========================================
+ * DOCX EXPORT CLASS
+ * Used by DOCX generation service
+ * ======================================== */
+.docx-export .cv-drag-handle,
+.docx-export .cv-drag-overlay,
+.docx-export .inline-add-section-button,
+.docx-export .section-hover-controls,
+.docx-export .cv-editor-only,
+.docx-export .cv-section-drag-overlay,
+.docx-export .cv-drop-zone-indicator {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* ========================================
+ * DRAGGABLE SECTION WRAPPER
+ * Base styling for draggable sections
+ * ======================================== */
+.cv-draggable-section {
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cv-draggable-section.is-dragging {
+  opacity: 0.5;
+  z-index: 100;
+}
+
+.cv-draggable-section.is-drop-target {
+  outline: 2px dashed #00ff88;
+  outline-offset: 2px;
+}
+
+/* ========================================
+ * CENTERED DRAG OVERLAY (NEW DESIGN)
+ * Full-section overlay with centered drag icon
+ * ======================================== */
+.cv-drag-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 255, 136, 0.03);
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: 20;
+  cursor: pointer;
+}
+
+.cv-drag-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+  background: rgba(0, 255, 136, 0.08);
+  border-color: rgba(0, 255, 136, 0.4);
+}
+
+/* Centered drag icon container */
+.cv-drag-icon-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 20px;
+  background: rgba(17, 17, 17, 0.85);
+  border: 1px solid rgba(0, 255, 136, 0.5);
+  border-radius: 8px;
+  cursor: grab;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.cv-drag-icon-container:hover {
+  background: rgba(17, 17, 17, 0.95);
+  border-color: #00ff88;
+  box-shadow: 0 4px 20px rgba(0, 255, 136, 0.2);
+  transform: scale(1.02);
+}
+
+.cv-drag-icon-container:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+.cv-drag-icon {
+  color: #00ff88;
+}
+
+.cv-drag-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.3px;
+}
+
+/* Delete button in overlay */
+.cv-delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(17, 17, 17, 0.85);
+  border: 1px solid rgba(255, 100, 100, 0.3);
+  border-radius: 6px;
+  color: rgba(255, 100, 100, 0.8);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.cv-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.9);
+  border-color: transparent;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* ========================================
+ * DROP ZONE INDICATOR
+ * Shows where section will be dropped
+ * ======================================== */
+.cv-drop-zone-indicator {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #00ff88, #00ff88, transparent);
+  border-radius: 2px;
+  z-index: 25;
+  animation: drop-zone-pulse 1s ease-in-out infinite;
+}
+
+@keyframes drop-zone-pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    box-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+  }
+
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 16px rgba(0, 255, 136, 0.5);
+  }
+}
+
+/* ========================================
+ * LEGACY DRAG HANDLE (keeping for fallback)
+ * ======================================== */
+.cv-drag-handle {
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: #9ca3af;
+  z-index: 10;
+}
+
+.cv-drag-handle:active {
+  cursor: grabbing;
+}
+
+[data-draggable-section]:hover .cv-drag-handle {
+  opacity: 1;
+}
+
+/* ========================================
+ * INLINE ADD SECTION BUTTON
+ * ======================================== */
+.inline-add-section-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 16px;
+  margin: 4px 0;
+  border: 1px dashed #d1d5db;
+  border-radius: 4px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: all 0.2s ease;
+}
+
+.inline-add-section-button:hover {
+  opacity: 1;
+  border-color: #00ff88;
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.05);
+}
+
+.inline-add-section-button .add-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+/* ========================================
+ * LEGACY SECTION HOVER CONTROLS
+ * ======================================== */
+.section-hover-controls {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+}
+
+[data-draggable-section]:hover .section-hover-controls {
+  opacity: 1;
+}
+
+.section-hover-controls button {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.section-hover-controls button:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+.section-hover-controls button.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+/* Legacy wrapper styling */
+[data-draggable-section] {
+  position: relative;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+[data-draggable-section].is-dragging {
+  opacity: 0.5;
+  z-index: 100;
+}
+
+/* Drag overlay (ghost element for dnd-kit) */
+.cv-section-drag-overlay {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: white;
+  cursor: grabbing;
+}
+
+/* Drop placeholder */
+.cv-section-drop-placeholder {
+  border: 2px dashed #00ff88;
+  border-radius: 4px;
+  background: rgba(0, 255, 136, 0.05);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #00ff88;
+  font-size: 12px;
+}
+
+/* Empty column placeholder */
+.cv-column-empty-placeholder {
+  border: 2px dashed #d1d5db;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.02);
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 12px;
+  text-align: center;
+  padding: 16px;
+}
+
+/* ========================================
+ * SECTION CONTENT WRAPPER
+ * ======================================== */
+.cv-section-content {
+  position: relative;
+  z-index: 1;
+}

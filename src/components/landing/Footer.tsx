@@ -27,7 +27,7 @@ const Footer = () => {
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
     if (element) {
-      element.scrollIntoView({ 
+      element.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });
@@ -36,7 +36,7 @@ const Footer = () => {
 
   const handleNewsletterSubscription = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes('@')) {
       setSubscriptionStatus('error');
       setStatusMessage('Please enter a valid email address');
@@ -77,15 +77,14 @@ const Footer = () => {
   };
 
   return (
-    <footer className="relative bg-black border-t border-white/10 overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[600px] h-[600px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+    <footer className="relative bg-[#141810] overflow-hidden">
+      {/* Background Effects - Subtle dark glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-[500px] h-[500px] bg-[#81ff00]/3 rounded-full blur-[150px]"></div>
       </div>
-      
+
       <div className="relative z-10 max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 py-20">
-        <motion.div 
+        <motion.div
           className="grid grid-cols-2 tablet:grid-cols-2 desktop:grid-cols-4 gap-4 tablet:gap-6"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -93,7 +92,7 @@ const Footer = () => {
           viewport={{ once: true }}
         >
           {/* Column 1: Contact Details (Mobile: Column 1) */}
-          <motion.div 
+          <motion.div
             className="space-y-4 tablet:space-y-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -101,17 +100,17 @@ const Footer = () => {
             viewport={{ once: true }}
           >
             <h3 className="text-base tablet:text-lg font-bold text-white mb-4 tablet:mb-6">Contact Us</h3>
-            
+
             <div className="space-y-4 tablet:space-y-6">
               {/* Email */}
-              <motion.div 
+              <motion.div
                 className="flex items-center space-x-2 tablet:space-x-4 group"
                 whileHover={{ x: 5 }}
                 transition={{ duration: 0.3 }}
               >
-                <motion.div 
+                <motion.div
                   className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-lime-400 to-lime-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.1,
                     rotateY: 15,
                     boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
@@ -125,8 +124,8 @@ const Footer = () => {
                 </motion.div>
                 <div>
                   <p className="text-white/60 text-xs tablet:text-xs">Email</p>
-                  <a 
-                    href="mailto:support@cvcircle.io" 
+                  <a
+                    href="mailto:support@cvcircle.io"
                     className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs tablet:text-sm break-all"
                   >
                     support@cvcircle.io
@@ -135,14 +134,14 @@ const Footer = () => {
               </motion.div>
 
               {/* Phone */}
-              <motion.div 
+              <motion.div
                 className="flex items-center space-x-2 tablet:space-x-4 group"
                 whileHover={{ x: 5 }}
                 transition={{ duration: 0.3 }}
               >
-                <motion.div 
+                <motion.div
                   className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-blue-400 to-blue-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.1,
                     rotateY: 15,
                     boxShadow: "0 20px 40px -12px rgba(59, 130, 246, 0.5)"
@@ -156,8 +155,8 @@ const Footer = () => {
                 </motion.div>
                 <div>
                   <p className="text-white/60 text-xs tablet:text-xs">Phone</p>
-                  <a 
-                    href="tel:+447879768984" 
+                  <a
+                    href="tel:+447879768984"
                     className="text-white hover:text-lime-400 transition-colors duration-300 font-medium text-xs tablet:text-sm"
                   >
                     +44 7879768984
@@ -166,14 +165,14 @@ const Footer = () => {
               </motion.div>
 
               {/* Address */}
-              <motion.div 
+              <motion.div
                 className="flex items-center space-x-2 tablet:space-x-4 group"
                 whileHover={{ x: 5 }}
                 transition={{ duration: 0.3 }}
               >
-                <motion.div 
+                <motion.div
                   className="w-8 h-8 tablet:w-10 tablet:h-10 bg-gradient-to-r from-purple-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0"
-                  whileHover={{ 
+                  whileHover={{
                     scale: 1.1,
                     rotateY: 15,
                     boxShadow: "0 20px 40px -12px rgba(168, 85, 247, 0.5)"
@@ -196,7 +195,7 @@ const Footer = () => {
           </motion.div>
 
           {/* Column 2: Quick Links (Mobile: Column 2) */}
-          <motion.div 
+          <motion.div
             className="space-y-4 tablet:space-y-8"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -206,7 +205,7 @@ const Footer = () => {
             <h3 className="text-base tablet:text-lg font-bold text-white mb-4 tablet:mb-6">Quick Links</h3>
             <ul className="space-y-3">
               {quickLinks.map((link, index) => (
-                <motion.li 
+                <motion.li
                   key={index}
                   className="flex"
                   whileHover={{ x: -10 }}
@@ -235,7 +234,7 @@ const Footer = () => {
           </motion.div>
 
           {/* Column 3: Logo + Mission (Mobile: Full width below) */}
-          <motion.div 
+          <motion.div
             className="space-y-8 col-span-2 tablet:col-span-1"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -249,7 +248,7 @@ const Footer = () => {
               <Logo size="lg" className="text-white" />
             </motion.div>
             <p className="text-white/70 leading-relaxed max-w-sm text-base">
-              Empowering job seekers with modern tools to create stunning CVs, 
+              Empowering job seekers with modern tools to create stunning CVs,
               track applications, and connect with industry professionals.
             </p>
             <div className="flex space-x-4">
@@ -261,7 +260,7 @@ const Footer = () => {
                     href={social.href}
                     className={`group relative w-12 h-12 bg-gradient-to-br ${social.color} rounded-2xl flex items-center justify-center text-white shadow-2xl hover:shadow-xl transition-all duration-300 overflow-hidden`}
                     title={social.name}
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.1,
                       rotateY: 15,
                       y: -5,
@@ -289,7 +288,7 @@ const Footer = () => {
           </motion.div>
 
           {/* Column 4: Newsletter */}
-          <motion.div 
+          <motion.div
             className="space-y-8 col-span-2 tablet:col-span-1"
             initial={{ opacity: 0, y: 50 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -310,12 +309,12 @@ const Footer = () => {
                 whileFocus={{ scale: 1.02 }}
                 disabled={isSubscribing}
               />
-              
-              <motion.button 
+
+              <motion.button
                 type="submit"
                 disabled={isSubscribing}
                 className="w-full group relative bg-gradient-to-r from-lime-400 to-lime-500 text-black px-3 py-2 rounded-xl font-semibold hover:shadow-2xl hover:shadow-lime-400/25 transition-all duration-300 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ 
+                whileHover={{
                   scale: isSubscribing ? 1 : 1.05,
                   rotateY: isSubscribing ? 0 : 5,
                   boxShadow: isSubscribing ? "none" : "0 20px 40px -12px rgba(132, 204, 22, 0.4)"
@@ -355,26 +354,25 @@ const Footer = () => {
                   )}
                 </motion.div>
               </motion.button>
-              
+
               {/* Status Message */}
               {statusMessage && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`flex items-center gap-2 text-xs ${
-                    subscriptionStatus === 'success' 
-                      ? 'text-lime-400' 
-                      : subscriptionStatus === 'error' 
-                        ? 'text-red-400' 
-                        : 'text-white/60'
-                  }`}
+                  className={`flex items-center gap-2 text-xs ${subscriptionStatus === 'success'
+                    ? 'text-lime-400'
+                    : subscriptionStatus === 'error'
+                      ? 'text-red-400'
+                      : 'text-white/60'
+                    }`}
                 >
                   {subscriptionStatus === 'success' && <CheckCircle size={16} />}
                   {subscriptionStatus === 'error' && <AlertCircle size={16} />}
                   {statusMessage}
                 </motion.div>
               )}
-              
+
               <p className="text-xs text-white/40">
                 We respect your privacy. Unsubscribe at any time.
               </p>
@@ -384,14 +382,14 @@ const Footer = () => {
         </motion.div>
 
         {/* Enhanced Bottom Bar */}
-        <motion.div 
+        <motion.div
           className="border-t border-white/10 mt-16 pt-12 flex flex-col tablet:flex-row justify-between items-center gap-4"
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
           viewport={{ once: true }}
         >
-          <motion.div 
+          <motion.div
             className="text-white/60 text-xs flex items-center gap-2"
             whileHover={{ scale: 1.05 }}
           >
@@ -403,9 +401,9 @@ const Footer = () => {
               <Heart size={14} className="text-red-400 fill-current" />
             </motion.div>
           </motion.div>
-          
+
           <div className="flex space-x-8">
-            <motion.a 
+            <motion.a
               href="/legal#privacy"
               className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
@@ -413,7 +411,7 @@ const Footer = () => {
             >
               Privacy Policy
             </motion.a>
-            <motion.a 
+            <motion.a
               href="/legal#terms"
               className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
@@ -421,7 +419,7 @@ const Footer = () => {
             >
               Terms of Service
             </motion.a>
-            <motion.a 
+            <motion.a
               href="/legal#cookies"
               className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}
@@ -429,7 +427,7 @@ const Footer = () => {
             >
               Cookie Policy
             </motion.a>
-            <motion.a 
+            <motion.a
               href="/legal#support"
               className="text-white/60 hover:text-lime-400 text-xs transition-colors duration-300 font-medium"
               whileHover={{ y: -2 }}

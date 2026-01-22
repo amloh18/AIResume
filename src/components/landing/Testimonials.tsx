@@ -263,54 +263,82 @@ const Testimonials = () => {
   };
 
   return (
-    <section id="testimonials" className="relative pt-32 pb-20 flex items-center bg-gradient-to-b from-gray-900 to-black overflow-hidden">
-      {/* Grid Pattern Background */}
+    <section id="testimonials" className="relative pt-32 pb-20 flex items-center bg-gradient-to-b from-[#141810] to-[#141810] overflow-hidden">
+      {/* Grid Pattern Background with Glowing Dots */}
       <div className="absolute inset-0">
-        {/* Grid Lines */}
+        {/* Grid Lines - Much more visible */}
         <div
-          className="absolute inset-0 opacity-10"
+          className="absolute inset-0 opacity-50"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(132, 204, 22, 0.3) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(132, 204, 22, 0.3) 1px, transparent 1px)
+              linear-gradient(rgba(132, 204, 22, 0.8) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(132, 204, 22, 0.8) 1px, transparent 1px)
             `,
             backgroundSize: '50px 50px'
           }}
         />
 
-        {/* Grid Dots */}
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: `
-              radial-gradient(circle, rgba(132, 204, 22, 0.4) 2px, transparent 2px)
-            `,
-            backgroundSize: '50px 50px',
-            backgroundPosition: '25px 25px'
-          }}
-        />
+        {/* Glowing Dots at Grid Intersections */}
+        <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
+          <defs>
+            <filter id="glow-testimonial">
+              <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          {/* Generate dots at grid intersections */}
+          {Array.from({ length: 40 }).map((_, i) => {
+            // Position dots at regular intervals (grid intersections)
+            const col = (i % 20) * 5; // Every 5% horizontally (20 columns)
+            const row = Math.floor(i / 20) * 5; // Every 5% vertically
+            // Only show some dots with animation for variety
+            const shouldGlow = i % 3 === 0 || i % 5 === 0;
 
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900/80 to-black/80"></div>
+            return shouldGlow ? (
+              <circle
+                key={i}
+                cx={`${col}%`}
+                cy={`${row}%`}
+                r="2.5"
+                fill="#81ff00"
+                opacity={0.4}
+                filter="url(#glow-testimonial)"
+              >
+                <animate
+                  attributeName="opacity"
+                  values="0.4;0.8;0.4"
+                  dur={`${3 + (i % 3)}s`}
+                  repeatCount="indefinite"
+                />
+              </circle>
+            ) : null;
+          })}
+        </svg>
+
+        {/* Gradient Overlay - Reduced to show grid */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#141810]/50 to-[#141810]/50"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-2 tablet:px-6 desktop:px-8 w-full h-full flex flex-col justify-center">
         {/* Section Header */}
         <motion.div
-          className="text-center mb-16"
+          className="text-left mb-16"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-center">
+          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-left">
             The new way to{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
               build Tailored CV
             </span>
           </h2>
-          <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl leading-relaxed">
             Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle</span>.
           </p>
         </motion.div>

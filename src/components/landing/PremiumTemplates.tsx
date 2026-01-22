@@ -118,17 +118,16 @@ const PremiumTemplates = () => {
   }, []);
 
   return (
-    <section 
-      id="premium-templates" 
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-gray-900 via-black to-gray-900"
+    <section
+      id="premium-templates"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#141810]"
     >
-      {/* Background Effects - Matching Landing Page Theme */}
-      <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/3 to-blue-400/3 rounded-full blur-3xl"></div>
+      {/* Background Effects - Subtle dark glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#603a86]/20 rounded-full blur-[150px]"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-[1500px] mx-auto px-4 tablet:px-6 desktop:px-8 py-20">
+      <div className="relative z-10 w-full max-w-[1500px] mx-auto px-4 tablet:px-6 desktop:px-8 pt-8 pb-20">
         {/* Main Container with Luxury Design - Matching Landing Page Theme */}
         <motion.div
           className="relative backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden min-h-[700px] pt-4 tablet:pt-0 bg-[#603a86]"
@@ -142,12 +141,12 @@ const PremiumTemplates = () => {
           viewport={{ once: true }}
         >
           <div className="relative w-full h-full flex flex-col desktop:flex-row items-center justify-between min-h-[700px] pl-8 tablet:pl-12 desktop:pl-16 pb-4 tablet:pb-6 desktop:pb-8">
-              {/* Left Side - Text Content */}
+            {/* Left Side - Text Content */}
             <div className="flex-1 flex flex-col justify-center space-y-6 desktop:space-y-8 z-10">
-                {/* Badge */}
-                <div className="text-lime-400 uppercase tracking-wider text-xs tablet:text-xs font-semibold">
-                  CRAFTED FOR SUCCESS
-                </div>
+              {/* Badge */}
+              <div className="text-lime-400 uppercase tracking-wider text-xs tablet:text-xs font-semibold">
+                CRAFTED FOR SUCCESS
+              </div>
 
               {/* Title - Shows active template name */}
               <motion.h2
@@ -158,28 +157,28 @@ const PremiumTemplates = () => {
                 transition={{ duration: 0.5, ease: "easeInOut" }}
                 className="text-3xl tablet:text-4xl desktop:text-6xl font-bold text-white leading-tight"
               >
-                  {templates[currentIndex].name.split(' ').map((word, i) => (
-                    <React.Fragment key={i}>
-                      {word}
-                      {i < templates[currentIndex].name.split(' ').length - 1 && <br />}
-                    </React.Fragment>
-                  ))}
+                {templates[currentIndex].name.split(' ').map((word, i) => (
+                  <React.Fragment key={i}>
+                    {word}
+                    {i < templates[currentIndex].name.split(' ').length - 1 && <br />}
+                  </React.Fragment>
+                ))}
               </motion.h2>
 
-                {/* Description */}
-                <p className="text-white/70 text-sm tablet:text-base desktop:text-lg leading-relaxed max-w-lg">
-                  A clean, modern, and straightforward design that lets your experience speak for itself. Perfect for any industry.
-                </p>
+              {/* Description */}
+              <p className="text-white/70 text-sm tablet:text-base desktop:text-lg leading-relaxed max-w-lg">
+                A clean, modern, and straightforward design that lets your experience speak for itself. Perfect for any industry.
+              </p>
 
-                {/* CTA Button */}
-                <motion.button
-                  onClick={handleCtaClick}
-                  className="bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[rgb(129,255,0)]/30 w-fit"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
+              {/* CTA Button */}
+              <motion.button
+                onClick={handleCtaClick}
+                className="bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[rgb(129,255,0)]/30 w-fit"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
                 View Templates
-                </motion.button>
+              </motion.button>
             </div>
 
             {/* Right Side - CardSwap Component */}
@@ -196,26 +195,26 @@ const PremiumTemplates = () => {
                   skewAmount={6}
                   easing="elastic"
                 >
-                {templates.map((template) => (
-                  <Card
-                          key={template.id}
-                    customClass="bg-white rounded-2xl overflow-hidden shadow-2xl"
-                          >
-                            <div className="relative w-full h-full p-4">
-                              <Image
-                                src={template.preview}
-                                alt={template.name}
-                                fill
-                                className="object-contain rounded-lg"
-                                quality={80}
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                loading="lazy"
-                              />
-                            </div>
-                  </Card>
+                  {templates.map((template) => (
+                    <Card
+                      key={template.id}
+                      customClass="bg-white rounded-2xl overflow-hidden shadow-2xl"
+                    >
+                      <div className="relative w-full h-full p-4">
+                        <Image
+                          src={template.preview}
+                          alt={template.name}
+                          fill
+                          className="object-contain rounded-lg"
+                          quality={80}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          loading="lazy"
+                        />
+                      </div>
+                    </Card>
                   ))}
                 </CardSwap>
-          </div>
+              </div>
             </div>
           </div>
         </motion.div>
