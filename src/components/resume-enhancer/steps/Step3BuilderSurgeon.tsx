@@ -33,6 +33,11 @@ import RecruiterModeOverlay from '@/components/resume-enhancer/overlays/Recruite
 import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
 import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
 
+// Drag-and-drop components for canvas-based editing
+import { CVPreviewDragContext } from '@/components/resume-enhancer/dnd';
+import type { CVSectionStructure } from '@/types/unified-cv-schema';
+
+
 
 
 interface Step3BuilderSurgeonProps {
@@ -100,6 +105,52 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       };
       toast(descriptions[mode] || `Switched to ${mode} mode`, { icon: mode === 'ats' ? '🤖' : mode === 'edit' ? '✏️' : '👁️' });
     };
+
+    // Listen for openSectionEditor event from SmartContextCard Fix Now button
+    useEffect(() => {
+      const handleOpenSectionEditor = (event: CustomEvent<{ sectionId: string; issueId?: string; suggestedFixId?: string }>) => {
+        const { sectionId } = event.detail;
+        if (sectionId) {
+          // Find a section element to get position for the editor
+          const sectionElement = document.querySelector(`[data-section-id="${sectionId}"]`);
+          if (sectionElement) {
+            const rect = sectionElement.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const editorWidth = 480;
+            const gap = 24;
+
+            let left = rect.right + gap;
+            let alignment: 'left' | 'right' = 'left';
+
+            if (left + editorWidth > viewportWidth - 20) {
+              left = rect.left - editorWidth - gap;
+              alignment = 'right';
+            }
+
+            setEditorPosition({
+              top: Math.max(88, rect.top),
+              left: left,
+              height: rect.height,
+              alignment
+            });
+          } else {
+            // Fallback: position editor in center-right of viewport
+            setEditorPosition({
+              top: 120,
+              left: window.innerWidth - 520,
+              height: 400,
+              alignment: 'left'
+            });
+          }
+          setActiveEditorSectionId(sectionId);
+        }
+      };
+
+      window.addEventListener('openSectionEditor', handleOpenSectionEditor as EventListener);
+      return () => {
+        window.removeEventListener('openSectionEditor', handleOpenSectionEditor as EventListener);
+      };
+    }, []);
 
     const handleAddKeyword = (keyword: string) => {
       // Add keyword to skills section
@@ -783,7 +834,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       toast.success(`Removed ${sectionId.replace(/_/g, ' ')} section`);
     };
 
-    // Reorder sections function - reorders sections in structure
+    // Reorder sections function - reorders sections in structure (for sidebar, accepts string IDs)
     const handleSectionReorder = (sectionIds: string[]) => {
       console.log('Reordering sections:', sectionIds);
 
@@ -827,6 +878,28 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
       toast.success('Sections reordered');
     };
+
+    // Reorder sections handler for CVPreviewDragContext (accepts full CVSectionStructure array)
+    const handleDragContextReorder = (newSections: CVSectionStructure[]) => {
+      console.log('Canvas drag reorder:', newSections.map(s => s.type));
+
+      if (!state.cvData.structure) {
+        console.warn('No structure found in CV data');
+        return;
+      }
+
+      // Update structure with the new order
+      dispatch({
+        type: 'SET_CV_DATA',
+        payload: {
+          ...state.cvData,
+          structure: { ...state.cvData.structure, sections: newSections }
+        }
+      });
+
+      toast.success('Sections reordered');
+    };
+
 
     // Expose functions to parent via ref
     useImperativeHandle(ref, () => ({
@@ -936,30 +1009,39 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 className={`flex flex-col items-start gap-8 transition-all duration-300 ease-in-out`}
                 style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
               >
-                <CVPreviewContent
-                  cvData={state.cvData}
-                  templateName={state.selectedTemplate?.name}
-                  theme="light"
-                  showBadge={true}
-                  annotations={state.fixAnnotations}
-                  activeFixId={state.activeFixId}
-                  onSelectFix={(fixId: string) => dispatch({ type: 'SET_ACTIVE_FIX', payload: fixId })}
-                  onApplyFix={applyAnnotation}
-                  onDismissFix={dismissAnnotation}
-                  ignoreStructureVisibility={true}
-                  renderMode="pages"
-                  onSectionClick={(viewMode === 'edit' && !(state.cvType === 'journey' && ['applied', 'interviewing', 'offer', 'hired', 'rejected'].includes(state.jobData?.status?.toLowerCase()))) ? handleSectionClick : undefined}
-                  overlaysEnabled={viewMode === 'edit' || viewMode === 'ats'}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  currentZoom={zoomLevel}
-                  onZoomIn={handleZoomIn}
-                  onZoomOut={handleZoomOut}
-                  isSidebarOpen={false}
-                  onToggleSidebar={() => { /* No-op for old sidebar toggle */ }}
-                  onTotalPagesChange={setTotalPages}
-                  pageFormat={pageFormat}
-                />
+                {/* Canvas-based drag-and-drop wrapper for sections */}
+                <CVPreviewDragContext
+                  sections={state.cvData.structure?.sections || []}
+                  onSectionsReorder={handleDragContextReorder}
+                  layoutType={state.selectedTemplate?.layoutType === 'two-column' ? 'two-column' : 'one-column'}
+                  enabled={viewMode === 'edit'} // Only enable drag in edit mode
+                >
+                  <CVPreviewContent
+                    cvData={state.cvData}
+                    templateName={state.selectedTemplate?.name}
+                    theme="light"
+                    showBadge={true}
+                    annotations={state.fixAnnotations}
+                    activeFixId={state.activeFixId}
+                    onSelectFix={(fixId: string) => dispatch({ type: 'SET_ACTIVE_FIX', payload: fixId })}
+                    onApplyFix={applyAnnotation}
+                    onDismissFix={dismissAnnotation}
+                    ignoreStructureVisibility={true}
+                    renderMode="pages"
+                    onSectionClick={(viewMode === 'edit' && !(state.cvType === 'journey' && ['applied', 'interviewing', 'offer', 'hired', 'rejected'].includes(state.jobData?.status?.toLowerCase()))) ? handleSectionClick : undefined}
+                    overlaysEnabled={viewMode === 'edit' || viewMode === 'ats'}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    currentZoom={zoomLevel}
+                    onZoomIn={handleZoomIn}
+                    onZoomOut={handleZoomOut}
+                    isSidebarOpen={false}
+                    onToggleSidebar={() => { /* No-op for old sidebar toggle */ }}
+                    onTotalPagesChange={setTotalPages}
+                    pageFormat={pageFormat}
+                    onAddSection={addNewSection}
+                  />
+                </CVPreviewDragContext>
 
                 {/* Recruiter Mode Overlay */}
                 {viewMode === 'recruiter' && (
@@ -973,6 +1055,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 {/* ATS Mode Overlay removed - handled by CVPreviewContent internally as page replacement */}
               </div>
             </div>
+
 
           </div>
 

@@ -1,182 +1,100 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { AnimatePresence, motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
+import Image from 'next/image';
 
 const Hero = () => {
-  const [currentTime, setCurrentTime] = useState(() => new Date());
-  const sectionRef = useRef<HTMLElement>(null);
-  
-  // Parallax scroll effect with spring for smoother animation
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"]
-  });
-  
-  // Use spring for smoother, less jittery animations
-  const smoothProgress = useSpring(scrollYProgress, {
-    stiffness: 100,
-    damping: 30,
-    restDelta: 0.001
-  });
-  
-  // Image moves slower than scroll (parallax effect)
-  const imageY = useTransform(smoothProgress, [0, 1], ['0%', '20%']);
-  const textY = useTransform(smoothProgress, [0, 1], ['0%', '30%']);
-  const opacity = useTransform(smoothProgress, [0, 0.6], [1, 0]);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const minutes = currentTime.getMinutes().toString().padStart(2, '0');
-  const seconds = currentTime.getSeconds().toString().padStart(2, '0');
-
   return (
-    // Layer 1: Main Section
-    <section ref={sectionRef} id="hero" className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-black">
-
-      {/* Background Effects (Layer 1 Content) */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-br from-lime-400/5 to-blue-400/5"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/10 to-blue-400/10 rounded-full blur-3xl opacity-50"></div>
+    <section
+      id="hero"
+      className="relative min-h-screen w-full overflow-hidden flex flex-col items-center justify-center pt-24 pb-20"
+    >
+      {/* Background Glow Effects */}
+      <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+        {/* Top center glow - purple/magenta */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-purple-600/20 via-pink-500/10 to-transparent rounded-full blur-[120px]" />
+        {/* Left subtle glow */}
+        <div className="absolute top-1/3 -left-40 w-[400px] h-[400px] bg-orange-500/10 rounded-full blur-[100px]" />
+        {/* Right subtle glow */}
+        <div className="absolute top-1/4 -right-40 w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[100px]" />
       </div>
 
-      {/* Layer 2: Banner Container with Parallax */}
-      <motion.div
-        className="absolute rounded-3xl overflow-hidden z-10 border border-white/10 shadow-2xl will-change-transform"
-        style={{ 
-          top: '15px', 
-          left: '15px', 
-          right: '15px', 
-          bottom: '15px',
-          y: imageY,
-          transform: 'translateZ(0)' // Force GPU acceleration
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, ease: "easeOut" }}
-      >
-        {/* Banner Image - using loading="eager" for LCP */}
-        <img
-          src="/images/herobanner.png"
-          alt="CV Circle Dashboard"
-          className="w-full h-full object-cover object-top"
-          loading="eager"
-          decoding="async"
-          fetchPriority="high"
-        />
-      </motion.div>
+      {/* Content Container */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col items-center text-center mt-20 tablet:mt-24 desktop:mt-32">
 
-      {/* Layer 3: Hero Text Container with Parallax */}
-      <motion.div 
-        className="relative z-20 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 flex flex-col justify-center items-center text-center will-change-transform"
-        style={{ y: textY, opacity, transform: 'translateZ(0)' }}
-      >
-
-        {/* Main Heading */}
+        {/* Main Headline */}
         <motion.h1
-          className="text-2xl tablet:text-4xl desktop:text-6xl text-white mb-6 font-bold tracking-tight will-change-transform"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          style={{
-            textShadow: '0 0 30px rgba(0,0,0,0.5)',
-          }}
+          className="text-3xl tablet:text-5xl desktop:text-6xl font-bold text-white mb-2 tracking-tight leading-tight text-center"
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <span className="inline-block">
-            Stop wasting{' '}
-            <span className="inline-flex items-center -space-x-1 tablet:-space-x-2 font-mono align-bottom">
-              <AnimatePresence initial={false} mode="wait">
-                <motion.span
-                  key={currentTime.getHours()}
-                  className="text-white text-2xl tablet:text-4xl desktop:text-6xl uppercase"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                >
-                  ti
-                </motion.span>
-              </AnimatePresence>
-              <motion.span
-                className="text-lime-400 text-2xl tablet:text-4xl desktop:text-6xl mx-0.5"
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 1, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                :
-              </motion.span>
-              <AnimatePresence initial={false} mode="wait">
-                <motion.span
-                  key={minutes}
-                  className="text-white text-2xl tablet:text-4xl desktop:text-6xl uppercase"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.3, ease: 'easeOut' }}
-                >
-                  me
-                </motion.span>
-              </AnimatePresence>
-            </span>
+          <span className="relative inline-block">
+            {/* Marker background effect */}
+            <span className="absolute inset-0 bg-[#81ff00] opacity-40 blur-sm -skew-y-1 transform scale-105 rounded-sm"></span>
+            <span className="absolute inset-0 bg-[#81ff00] opacity-60 -z-10 transform -skew-y-1 rounded-sm"></span>
+            <span className="relative text-black px-3 py-1 font-extrabold">Stop wasting time</span>
           </span>
         </motion.h1>
 
-        <motion.h2
-          className="text-xl tablet:text-3xl desktop:text-4xl text-white/90 mb-8 drop-shadow-lg will-change-transform"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, ease: "easeOut", delay: 0.1 }}
-        >
-          <span className="inline-block italic font-light">
-            Start getting interviews
-          </span>
-        </motion.h2>
-
-        {/* Subheading */}
+        {/* Subtitle */}
         <motion.p
-          className="text-sm tablet:text-lg desktop:text-xl text-white/80 mb-12 max-w-3xl mx-auto leading-relaxed drop-shadow-md"
+          className="text-3xl tablet:text-5xl desktop:text-6xl text-white mb-6 font-bold tracking-tight"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+        >
+          Start getting interviews.
+        </motion.p>
+
+        {/* Description */}
+        <motion.p
+          className="text-sm tablet:text-base desktop:text-lg text-gray-400 mb-6 max-w-xl mx-auto leading-relaxed text-center"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
+        >
+          AI-powered CV builder with ATS optimization, tailored cover letters, and job tracking—all in one fast, beautiful workspace.
+        </motion.p>
+
+        {/* CTA Button */}
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
         >
-          Fully automated application tracker with cv, cover letter providing maximum ats compatibility
-        </motion.p>
-
-        {/* CTA Buttons */}
-        <motion.div
-          className="flex flex-col tablet:flex-row gap-6 justify-center items-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.5, ease: "easeOut" }}
-        >
-          <motion.a
+          <a
             href="/sign-up?callbackUrl=/dashboard"
-            className="group relative inline-block bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black px-6 py-3 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-bold text-xs tablet:text-sm desktop:text-base shadow-2xl hover:shadow-[rgb(129,255,0)]/50 transition-all overflow-hidden"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="inline-flex items-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-8 py-4 tablet:px-10 tablet:py-5 rounded-full font-bold text-sm tablet:text-base shadow-lg transition-all hover:scale-105 uppercase tracking-wide"
           >
-            <div className="relative flex items-center gap-2 tablet:gap-3">
-              <span>Start Free</span>
-              <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5 transition-transform group-hover:translate-x-1" />
-            </div>
-          </motion.a>
-
-          <motion.a
-            href="/resume-enhancer"
-            className="group relative border-2 border-white/30 text-white px-6 py-3 tablet:px-8 tablet:py-4 desktop:px-10 desktop:py-5 rounded-full font-bold text-xs tablet:text-sm desktop:text-base hover:bg-white/10 hover:border-white/50 transition-all backdrop-blur-md flex items-center gap-2 tablet:gap-3"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <span>Career Guide</span>
-            <ArrowRight className="w-4 h-4 tablet:w-5 tablet:h-5 transition-transform group-hover:translate-x-1" />
-          </motion.a>
+            START FREE
+            <ArrowRight className="w-5 h-5" />
+          </a>
         </motion.div>
-      </motion.div>
+
+        {/* App Preview Image - Simplified Container */}
+        <motion.div
+          className="relative w-full max-w-7xl mt-12 tablet:mt-16 flex justify-center items-center"
+          initial={{ opacity: 0, y: 60 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.6, ease: "easeOut" }}
+        >
+          {/* Main image - Direct rendering without complex wrappers */}
+          <div className="relative w-full h-auto">
+            <Image
+              src="/images/herobanner.png"
+              alt="CVCircle Dashboard"
+              width={1920}
+              height={1080}
+              className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
+              priority
+              quality={100}
+            />
+          </div>
+        </motion.div>
+      </div>
     </section>
   );
 };

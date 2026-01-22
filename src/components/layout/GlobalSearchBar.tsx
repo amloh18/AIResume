@@ -56,7 +56,7 @@ const GlobalSearchBar: React.FC = () => {
   const [selectedCoverLetterData, setSelectedCoverLetterData] = useState<any>(null);
   const [coverLetterCVData, setCoverLetterCVData] = useState<any>(null);
   const [coverLetterJobData, setCoverLetterJobData] = useState<any>(null);
-  
+
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -104,16 +104,16 @@ const GlobalSearchBar: React.FC = () => {
         `/api/search?q=${encodeURIComponent(searchQuery)}&limit=5`,
         user.id
       );
-      
+
       if (!response.ok) {
         console.error('Search API error:', response.status, response.statusText);
         setResults({ jobs: [], cvs: [], coverLetters: [] });
         setIsOpen(false);
         return;
       }
-      
+
       const data: SearchResponse = await response.json();
-      
+
       if (data.success && data.data) {
         setResults(data.data);
         const totalResults = data.data.jobs.length + data.data.cvs.length + data.data.coverLetters.length;
@@ -147,18 +147,18 @@ const GlobalSearchBar: React.FC = () => {
 
     try {
       console.log('Loading job:', job.id);
-      
+
       // Fetch full job data - try both API endpoints
       let jobResponse;
       let jobData;
-      
+
       // First try the route with ID in path
       try {
         jobResponse = await authenticatedFetchWithUserId(
           `/api/jobs/${job.id}`,
           user.id
         );
-        
+
         if (!jobResponse.ok) {
           // Fallback to query parameter endpoint
           jobResponse = await authenticatedFetchWithUserId(
@@ -166,12 +166,12 @@ const GlobalSearchBar: React.FC = () => {
             user.id
           );
         }
-        
+
         if (!jobResponse.ok) {
           console.error('Job API error:', jobResponse.status, jobResponse.statusText);
           return;
         }
-        
+
         jobData = await jobResponse.json();
         console.log('Job data received:', jobData);
       } catch (fetchError) {
@@ -181,7 +181,7 @@ const GlobalSearchBar: React.FC = () => {
 
       if (jobData.success && (jobData.data?.job || jobData.job)) {
         const fetchedJob = jobData.data?.job || jobData.job;
-        
+
         // Fetch journeys for this job
         try {
           const journeysResponse = await authenticatedFetchWithUserId(
@@ -223,19 +223,19 @@ const GlobalSearchBar: React.FC = () => {
         `/api/cvs/${cv.id}?userId=${user.id}`,
         user.id
       );
-      
+
       if (!cvResponse.ok) {
         console.error('CV API error:', cvResponse.status, cvResponse.statusText);
         return;
       }
 
       const cvData = await cvResponse.json();
-      
+
       if (cvData.success && cvData.data?.cv) {
         // Extract cvData from the response - handle different response structures
         const cv = cvData.data.cv;
         const unifiedCVData = cv.cvData || cv;
-        
+
         // Ensure it's in the UnifiedCVDataStructure format
         if (unifiedCVData && (unifiedCVData.basics || unifiedCVData.name)) {
           setSelectedCVData(unifiedCVData as UnifiedCVDataStructure);
@@ -261,25 +261,25 @@ const GlobalSearchBar: React.FC = () => {
         `/api/cover-letters/${coverLetter.id}?userId=${user.id}`,
         user.id
       );
-      
+
       if (!clResponse.ok) {
         console.error('Cover Letter API error:', clResponse.status, clResponse.statusText);
         return;
       }
 
       const clData = await clResponse.json();
-      
+
       if (clData.success && clData.coverLetter) {
         const coverLetterData = {
           title: clData.coverLetter.title || 'Untitled Cover Letter',
           content: clData.coverLetter.content || '',
           metadata: clData.coverLetter.metadata || {}
         };
-        
+
         // Try to fetch CV data if journeyId or cvId is available
         let cvData = null;
         let jobData = null;
-        
+
         if (coverLetter.journeyId || clData.coverLetter.journeyId) {
           try {
             const journeyId = coverLetter.journeyId || clData.coverLetter.journeyId;
@@ -291,7 +291,7 @@ const GlobalSearchBar: React.FC = () => {
               const journeyData = await journeyResponse.json();
               if (journeyData.success && journeyData.data?.journey) {
                 const journey = journeyData.data.journey;
-                
+
                 // Fetch CV if cvId exists
                 if (journey.cvId) {
                   const cvRes = await authenticatedFetchWithUserId(
@@ -305,7 +305,7 @@ const GlobalSearchBar: React.FC = () => {
                     }
                   }
                 }
-                
+
                 // Fetch Job if jobId exists
                 if (journey.jobId) {
                   const jobRes = await authenticatedFetchWithUserId(
@@ -326,7 +326,7 @@ const GlobalSearchBar: React.FC = () => {
             // Continue without CV/Job data - preview will use defaults
           }
         }
-        
+
         setCoverLetterCVData(cvData);
         setCoverLetterJobData(jobData);
         setSelectedCoverLetterData(coverLetterData);
@@ -385,12 +385,11 @@ const GlobalSearchBar: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex-shrink-0">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${
-                      job.status === 'applied' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
-                      job.status === 'interview' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
-                      job.status === 'offer' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
-                      'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400'
-                    }`}>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${job.status === 'applied' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                        job.status === 'interview' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                          job.status === 'offer' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400' :
+                            'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-400'
+                      }`}>
                       {job.status}
                     </span>
                   </div>
@@ -550,7 +549,7 @@ const GlobalSearchBar: React.FC = () => {
                   setQuery('');
                 }}
               />
-              
+
               {/* Search Overlay */}
               <motion.div
                 initial={{ opacity: 0, y: -20 }}

@@ -26,8 +26,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'CVCircle - AI-Powered CV Builder & ATS Resume Optimizer | CV Circle',
-    template: '%s | CVCircle'
+    default: 'CVCIRCLE - Job Application tracker and AI based ATS Resume Enhancer',
+    template: '%s | CVCIRCLE'
   },
   description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes and land your dream job.',
   keywords: [
@@ -58,7 +58,23 @@ export const metadata: Metadata = {
     'CVCircle',
     'cvcircle',
     'cv circle builder',
-    'CV Circle resume builder'
+    'CV Circle resume builder',
+    // Advanced & Trending Keywords
+    'AI resume writer',
+    'automated cover letter generator',
+    'job application tracker',
+    'AI interview coach',
+    'LinkedIn profile optimizer',
+    'career gap analysis',
+    'resume scoring',
+    'job match technology',
+    'smart job search',
+    'ATS compliance',
+    'career copilot',
+    'resume parser',
+    'job tracking system',
+    'application management',
+    'AI career insights'
   ],
   authors: [{ name: 'CVCircle Team' }],
   creator: 'CVCircle',
@@ -111,11 +127,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/favicon.ico', sizes: 'any' },
       { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
       { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
       { url: '/images/favicon.png', sizes: '128x128', type: 'image/png' },
     ],
-    shortcut: '/images/favicon.png',
+    shortcut: '/favicon.ico',
     apple: [
       { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
     ],

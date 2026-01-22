@@ -15,7 +15,9 @@ export interface CVSectionStructure {
   id: string;        // Unique UUID, e.g., "uuid-1", "uuid-2"
   type: string;      // Section type, e.g., "personal_header", "work_experience"
   visible: boolean;  // Section visibility
+  column?: 'sidebar' | 'main'; // For two-column layouts
 }
+
 
 /**
  * CV structure defining section order and metadata
@@ -33,10 +35,10 @@ export interface UnifiedCVDataStructure {
   // Structure and Content Map (new architecture)
   structure?: CVStructure;  // Optional for backward compatibility
   content?: CVContentMap;   // Optional for backward compatibility
-  
+
   // Template ID
   templateId?: string;      // Template ID for structure initialization
-  
+
   // Personal Information
   basics: {
     name: string;
@@ -168,22 +170,22 @@ export interface UnifiedCVDocument {
   id: string;
   userId: string;
   title: string;
-  
+
   // CV Content (using unified structure)
   cvData: UnifiedCVDataStructure;
-  
+
   // Template Information
   templateId: string;
   templateName?: string;
-  
+
   // Document Status
   status: 'draft' | 'published' | 'archived';
   version: number;
-  
+
   // Journey and Type Information
   journeyId?: string; // Optional link to an application journey
   cvType?: 'master' | 'journey' | 'standalone'; // CV type for Resume Enhancer
-  
+
   // Metadata
   metadata: {
     isMaster: boolean;
@@ -201,7 +203,7 @@ export interface UnifiedCVDocument {
     starred: boolean;
     cvType?: 'master' | 'journey' | 'standalone'; // Also in metadata for backward compatibility
   };
-  
+
   // Timestamps
   createdAt: Date;
   updatedAt: Date;

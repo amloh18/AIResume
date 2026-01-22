@@ -5,6 +5,11 @@ import { generateAndSendTwoFactorCode, isTwoFactorEnabled } from '@/lib/services
 /**
  * Verify credentials and check if 2FA is required
  * This endpoint is called before NextAuth sign-in to check 2FA status
+ * 
+ * Returns structured error codes for frontend handling:
+ * - EMAIL_NOT_VERIFIED: User exists but hasn't verified email
+ * - OAUTH_USER: User should sign in with Google
+ * - INVALID_CREDENTIALS: Wrong email or password
  */
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +17,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { success: false, error: 'Email and password are required' },
+        { success: false, error: 'Email and password are required', code: 'MISSING_FIELDS' },
         { status: 400 }
       );
     }
@@ -21,8 +26,20 @@ export async function POST(request: NextRequest) {
     const authResult = await UserService.authenticateUser(email, password);
 
     if (!authResult.user || authResult.error) {
+      // Parse error message to determine error code for frontend handling
+      let errorCode = 'INVALID_CREDENTIALS';
+      let errorMessage = authResult.error || 'Invalid credentials';
+
+      if (authResult.error?.includes('verify your email')) {
+        errorCode = 'EMAIL_NOT_VERIFIED';
+        errorMessage = 'Please verify your email before signing in';
+      } else if (authResult.error?.includes('sign in with Google')) {
+        errorCode = 'OAUTH_USER';
+        errorMessage = 'This account uses Google sign-in. Please use the Google button.';
+      }
+
       return NextResponse.json(
-        { success: false, error: authResult.error || 'Invalid credentials' },
+        { success: false, error: errorMessage, code: errorCode },
         { status: 401 }
       );
     }
@@ -39,7 +56,7 @@ export async function POST(request: NextRequest) {
 
       if (!codeResult.success) {
         return NextResponse.json(
-          { success: false, error: codeResult.error || 'Failed to send 2FA code' },
+          { success: false, error: codeResult.error || 'Failed to send 2FA code', code: 'TWO_FACTOR_SEND_FAILED' },
           { status: 500 }
         );
       }
@@ -64,7 +81,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ Error verifying credentials:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Authentication failed' },
+      { success: false, error: error.message || 'Authentication failed', code: 'SERVER_ERROR' },
       { status: 500 }
     );
   }
