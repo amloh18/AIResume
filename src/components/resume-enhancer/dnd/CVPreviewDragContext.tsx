@@ -54,9 +54,15 @@ export const CVPreviewDragContext: React.FC<CVPreviewDragContextProps> = ({
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
     const [activeSectionType, setActiveSectionType] = useState<string | null>(null);
 
-    // Memoize section IDs for SortableContext
+    // Header sections that should not be draggable
+    const HEADER_SECTION_TYPES = ['personal', 'personal_header', 'contact', 'summary'];
+
+    // Memoize section IDs for SortableContext - exclude header sections
     const sectionIds = useMemo(
-        () => sections.filter(s => s.visible !== false).map(s => s.id),
+        () => sections
+            .filter(s => s.visible !== false)
+            .filter(s => !HEADER_SECTION_TYPES.includes(s.type)) // Exclude header sections from dragging
+            .map(s => s.id),
         [sections]
     );
 

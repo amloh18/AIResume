@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import {
   Sparkles,
-  Component, Eye, Target, ZoomIn, ZoomOut
+  Component, Eye, Target, ZoomIn, ZoomOut, Plus
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -788,6 +788,13 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const handleDeleteSectionFromSidebar = (sectionId: string) => {
       console.log('Deleting section:', sectionId);
 
+      // Prevent deletion of header sections (personal, contact, etc.)
+      const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
+      if (headerSectionTypes.includes(sectionId)) {
+        toast.error('Cannot delete header section. This section is required for all CVs.');
+        return;
+      }
+
       // Map section IDs to their data field names
       const sectionToFieldMap: Record<string, string> = {
         volunteer: 'volunteer',
@@ -1042,6 +1049,75 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     onAddSection={addNewSection}
                   />
                 </CVPreviewDragContext>
+
+                {/* Add Section Button - Only in Edit Mode */}
+                {viewMode === 'edit' && (
+                  <div className="w-full flex justify-center mt-4 mb-8 cv-editor-only">
+                    <div className="relative">
+                      <button
+                        onClick={() => {
+                          const menu = document.getElementById('add-section-menu');
+                          if (menu) {
+                            menu.classList.toggle('hidden');
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#00ff88] hover:bg-[#00dd77] text-black font-medium rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Section</span>
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      <div
+                        id="add-section-menu"
+                        className="hidden absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-50"
+                      >
+                        {[
+                          { id: 'volunteer', label: 'Volunteer Experience', icon: '🤝' },
+                          { id: 'publications', label: 'Publications', icon: '📚' },
+                          { id: 'languages', label: 'Languages', icon: '🌐' },
+                          { id: 'interests', label: 'Interests', icon: '⭐' },
+                          { id: 'references', label: 'References', icon: '📝' },
+                          { id: 'awards', label: 'Awards', icon: '🏆' },
+                          { id: 'certificates', label: 'Certificates', icon: '📜' },
+                          { id: 'projects', label: 'Projects', icon: '💼' },
+                        ].map((section) => {
+                          // Check if section already exists and is visible
+                          const existingSection = state.cvData.structure?.sections?.find(
+                            s => s.type === section.id && s.visible !== false
+                          );
+                          const hasData = state.cvData[section.id as keyof typeof state.cvData];
+                          const isAlreadyAdded = existingSection || (Array.isArray(hasData) && hasData.length > 0);
+
+                          return (
+                            <button
+                              key={section.id}
+                              onClick={() => {
+                                if (!isAlreadyAdded) {
+                                  addNewSection(section.id);
+                                }
+                                // Close menu
+                                const menu = document.getElementById('add-section-menu');
+                                if (menu) menu.classList.add('hidden');
+                              }}
+                              disabled={isAlreadyAdded}
+                              className={`w-full flex items-center gap-3 px-4 py-2 text-left text-sm transition-colors ${isAlreadyAdded
+                                ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-700'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100'
+                                }`}
+                            >
+                              <span className="text-lg">{section.icon}</span>
+                              <span className="flex-1">{section.label}</span>
+                              {isAlreadyAdded && (
+                                <span className="text-xs text-gray-500">Added</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Recruiter Mode Overlay */}
                 {viewMode === 'recruiter' && (

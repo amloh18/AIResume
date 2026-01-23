@@ -16,6 +16,8 @@ interface DraggableSectionProps {
     showEditorUI?: boolean;
     /** Whether this section can be deleted */
     canDelete?: boolean;
+    /** Whether this section is locked (header sections - cannot be dragged or deleted) */
+    isLocked?: boolean;
     /** Callback when delete button is clicked */
     onDelete?: (sectionId: string) => void;
     /** Callback when section is clicked (for opening editor) */
@@ -40,6 +42,7 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
     children,
     showEditorUI = true,
     canDelete = true,
+    isLocked = false,
     onDelete,
     onSectionClick,
     className = '',
@@ -57,7 +60,7 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
         isOver,
     } = useSortable({
         id: sectionId,
-        disabled: isDragDisabled || !showEditorUI,
+        disabled: isDragDisabled || !showEditorUI || isLocked, // Locked sections cannot be dragged
         data: {
             type: 'section',
             sectionType,
@@ -112,7 +115,8 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
             onMouseLeave={() => setIsHovered(false)}
         >
             {/* Centered Drag Overlay - appears on hover, hidden in print/PDF */}
-            {showEditorUI && (
+            {/* Don't show overlay for locked sections */}
+            {showEditorUI && !isLocked && (
                 <div
                     className={`cv-drag-overlay cv-editor-only ${isHovered && !isDragging ? 'visible' : ''}`}
                     onClick={handleOverlayClick}
