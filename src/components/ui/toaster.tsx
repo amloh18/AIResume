@@ -16,16 +16,16 @@ export function Toaster() {
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {
+        // Check if description is a React element (custom component)
+        const isCustomComponent = typeof description === 'object' && description !== null && 'type' in description;
+
         return (
           <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle className="text-white">{title}</ToastTitle>}
-              {description && (
-                <ToastDescription className="text-gray-300">{description}</ToastDescription>
-              )}
-            </div>
+            {title && <ToastTitle className="text-white">{title}</ToastTitle>}
+            {description}
             {action}
-            <ToastClose />
+            {/* Only show close button for non-custom components */}
+            {!isCustomComponent && <ToastClose />}
           </Toast>
         )
       })}
@@ -33,3 +33,4 @@ export function Toaster() {
     </ToastProvider>
   )
 }
+

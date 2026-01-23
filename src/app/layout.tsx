@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     default: 'CVCIRCLE - Job Application tracker and AI based ATS Resume Enhancer',
     template: '%s | CVCIRCLE'
   },
-  description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, and real-time analytics. Build your perfect resume in minutes and land your dream job.',
+  description: 'CVCircle (CV Circle) - Create ATS-optimized CVs with AI assistance. Free AI career guide, professional templates, resume analysis, career coaching, interview coaching,and real-time analytics. Build your perfect resume in minutes and land your dream job.',
   keywords: [
     'CV builder',
     'resume builder',

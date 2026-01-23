@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Users, 
-  FileText, 
-  TrendingUp, 
+import {
+  Users,
+  FileText,
+  TrendingUp,
   Activity,
   Calendar,
   DollarSign,
@@ -36,6 +36,7 @@ interface KPIData {
   activeUsers?: number;
   totalCVs?: number;
   totalJobs?: number;
+  draftJobs?: number;
   totalCoverLetters?: number;
   aiUsage?: number;
   revenue?: number;
@@ -63,14 +64,14 @@ const AdminKPIs: React.FC = () => {
   useEffect(() => {
     // Prevent duplicate calls if timeRange hasn't actually changed or was just called
     const now = Date.now();
-    if (lastFetchRef.current && 
-        lastFetchRef.current.timeRange === timeRange && 
-        (now - lastFetchRef.current.timestamp) < 1000) {
+    if (lastFetchRef.current &&
+      lastFetchRef.current.timeRange === timeRange &&
+      (now - lastFetchRef.current.timestamp) < 1000) {
       return; // Skip if same timeRange was fetched less than 1 second ago
     }
-    
+
     lastFetchRef.current = { timeRange, timestamp: now };
-    
+
     // Fetch both in parallel for better performance
     Promise.all([fetchKPIData(), fetchChartData()]);
   }, [timeRange]);
@@ -79,23 +80,23 @@ const AdminKPIs: React.FC = () => {
     try {
       setDataLoading(true);
       const response = await fetch(`/api/admin/kpis?range=${timeRange}`);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       // Check content type before parsing
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Invalid response format from server');
       }
-      
+
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
+
       setKpiData(data);
     } catch (error) {
       console.error('Error fetching KPI data:', error);
@@ -118,13 +119,13 @@ const AdminKPIs: React.FC = () => {
   const fetchChartData = async () => {
     try {
       const response = await fetch(`/api/admin/charts?range=${timeRange}`);
-      
+
       // Check content type before parsing
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         throw new Error('Invalid response format from server');
       }
-      
+
       const data = await response.json();
       setChartData(data);
     } catch (error) {
@@ -155,7 +156,7 @@ const AdminKPIs: React.FC = () => {
     for (let i = points - 1; i >= 0; i--) {
       const date = new Date(now.getTime() - (i * interval));
       data.push({
-        date: range === 'today' 
+        date: range === 'today'
           ? date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
           : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         users: Math.floor(Math.random() * 20) + 10,
@@ -171,7 +172,7 @@ const AdminKPIs: React.FC = () => {
   const generateMockChartData = (): ChartData[] => {
     let days: number;
     let data: ChartData[] = [];
-    
+
     if (timeRange === 'today') {
       // Generate hourly data for today
       const hours = 24;
@@ -180,18 +181,18 @@ const AdminKPIs: React.FC = () => {
       const baseJobs = 2;
       const baseCoverLetters = 1;
       const baseAIUsage = 12;
-      
+
       for (let i = 0; i < hours; i++) {
         const hour = i;
         const isWorkHours = hour >= 9 && hour <= 17;
         const isLunchTime = hour >= 12 && hour <= 13;
         const isEvening = hour >= 18 && hour <= 22;
-        
+
         let activityMultiplier = 0.3; // Night time
         if (isWorkHours) activityMultiplier = 1.2;
         if (isLunchTime) activityMultiplier = 0.8;
         if (isEvening) activityMultiplier = 0.9;
-        
+
         data.push({
           date: `${hour}:00`,
           users: Math.floor((baseUsers * activityMultiplier) + (Math.random() * 6 - 3)),
@@ -203,35 +204,35 @@ const AdminKPIs: React.FC = () => {
       }
       return data;
     }
-    
+
     days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
-    
+
     // Base values that scale with time range
     const baseUsers = timeRange === '7d' ? 15 : timeRange === '30d' ? 25 : timeRange === '90d' ? 35 : 45;
     const baseCVs = timeRange === '7d' ? 8 : timeRange === '30d' ? 12 : timeRange === '90d' ? 18 : 25;
     const baseJobs = timeRange === '7d' ? 5 : timeRange === '30d' ? 8 : timeRange === '90d' ? 12 : 18;
     const baseCoverLetters = timeRange === '7d' ? 3 : timeRange === '30d' ? 6 : timeRange === '90d' ? 10 : 15;
     const baseAIUsage = timeRange === '7d' ? 25 : timeRange === '30d' ? 40 : timeRange === '90d' ? 60 : 85;
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      
+
       // Generate more realistic data with trends
       const trendFactor = 1 + (Math.sin(i * 0.1) * 0.3); // Weekly trend
       const weekendFactor = [0, 6].includes(date.getDay()) ? 0.7 : 1; // Weekend reduction
       const monthlyFactor = date.getDate() < 15 ? 1.1 : 0.9; // Monthly pattern
-      
-          // For yearly data, group by months to reduce clutter
-    let dateLabel: string;
-    if (timeRange === 'today') {
-      dateLabel = `${date.getHours()}:00`;
-    } else if (timeRange === '1y') {
-      dateLabel = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-    } else {
-      dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-      
+
+      // For yearly data, group by months to reduce clutter
+      let dateLabel: string;
+      if (timeRange === 'today') {
+        dateLabel = `${date.getHours()}:00`;
+      } else if (timeRange === '1y') {
+        dateLabel = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+      } else {
+        dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+
       data.push({
         date: dateLabel,
         users: Math.floor((baseUsers * trendFactor * weekendFactor * monthlyFactor) + (Math.random() * 10 - 5)),
@@ -241,11 +242,11 @@ const AdminKPIs: React.FC = () => {
         aiUsage: Math.floor((baseAIUsage * trendFactor * weekendFactor * monthlyFactor) + (Math.random() * 15 - 7))
       });
     }
-    
+
     // For yearly data, aggregate by month to reduce clutter
     if (timeRange === '1y') {
       const monthlyData: { [key: string]: ChartData } = {};
-      
+
       data.forEach(item => {
         if (monthlyData[item.date]) {
           monthlyData[item.date].users += item.users;
@@ -257,10 +258,10 @@ const AdminKPIs: React.FC = () => {
           monthlyData[item.date] = { ...item };
         }
       });
-      
+
       return Object.values(monthlyData);
     }
-    
+
     return data;
   };
 
@@ -298,7 +299,9 @@ const AdminKPIs: React.FC = () => {
     },
     {
       title: 'Jobs Tracked',
-      value: kpiData?.totalJobs?.toLocaleString() || '0',
+      value: kpiData?.totalJobs
+        ? `${kpiData.draftJobs || 0} / ${Math.max(0, (kpiData.totalJobs - (kpiData.draftJobs || 0)))} / ${kpiData.totalJobs}`
+        : '0 / 0 / 0',
       change: kpiData?.totalJobs ? calculateChange(kpiData.totalJobs, 15) : '+0%',
       changeType: (kpiData?.totalJobs ?? 0) > 15 ? 'positive' : 'negative',
       icon: TrendingUp,
@@ -313,10 +316,10 @@ const AdminKPIs: React.FC = () => {
       color: 'bg-indigo-500'
     },
     {
-      title: 'AI Usage',
-      value: kpiData?.aiUsage?.toLocaleString() || '0',
-      change: kpiData?.aiUsage ? calculateChange(kpiData.aiUsage, 200) : '+0%',
-      changeType: (kpiData?.aiUsage ?? 0) > 200 ? 'positive' : 'negative',
+      title: 'AI Usage (Tokens)',
+      value: kpiData?.aiUsage ? (kpiData.aiUsage > 1000000 ? `${(kpiData.aiUsage / 1000000).toFixed(1)}M` : kpiData.aiUsage > 1000 ? `${(kpiData.aiUsage / 1000).toFixed(1)}k` : kpiData.aiUsage.toLocaleString()) : '0',
+      change: kpiData?.aiUsage ? calculateChange(kpiData.aiUsage, 50000) : '+0%',
+      changeType: (kpiData?.aiUsage ?? 0) > 50000 ? 'positive' : 'negative',
       icon: Activity,
       color: 'bg-pink-500'
     },
@@ -381,7 +384,7 @@ const AdminKPIs: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">KPIs & Analytics</h1>
           <p className="text-gray-600 dark:text-gray-400">Monitor your application's performance and growth</p>
         </div>
-        
+
         <div className="flex items-center space-x-2">
           <select
             value={timeRange}
@@ -391,10 +394,10 @@ const AdminKPIs: React.FC = () => {
             {TIME_RANGES.map((range) => (
               <option key={range} value={range}>
                 {range === 'today' ? 'Today' :
-                 range === '7d' ? 'Last 7 days' :
-                 range === '30d' ? 'Last 30 days' :
-                 range === '90d' ? 'Last 90 days' :
-                 range === '1y' ? 'Last year' : range}
+                  range === '7d' ? 'Last 7 days' :
+                    range === '30d' ? 'Last 30 days' :
+                      range === '90d' ? 'Last 90 days' :
+                        range === '1y' ? 'Last year' : range}
               </option>
             ))}
           </select>
@@ -429,9 +432,8 @@ const AdminKPIs: React.FC = () => {
                   </div>
                 ) : (
                   <>
-                    <span className={`text-sm font-medium ${
-                      card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <span className={`text-sm font-medium ${card.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+                      }`}>
                       {card.change}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">from last period</span>
@@ -457,44 +459,44 @@ const AdminKPIs: React.FC = () => {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={chartData}>
-              <XAxis 
-                dataKey="date" 
-                stroke="#6B7280"
-                fontSize={12}
-                interval={timeRange === 'today' ? 2 : timeRange === '1y' ? 0 : 'preserveStartEnd'}
-              />
-              <YAxis 
-                stroke="#6B7280"
-                fontSize={12}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#F9FAFB'
-                }}
-              />
-              <Legend />
-              <Area 
-                type="monotone" 
-                dataKey="users" 
-                stackId="1"
-                stroke="#3B82F6" 
-                fill="#3B82F6" 
-                fillOpacity={0.6}
-                name="Users"
-              />
-              <Area 
-                type="monotone" 
-                dataKey="cvs" 
-                stackId="1"
-                stroke="#8B5CF6" 
-                fill="#8B5CF6" 
-                fillOpacity={0.6}
-                name="CVs"
-              />
-            </AreaChart>
+                <XAxis
+                  dataKey="date"
+                  stroke="#6B7280"
+                  fontSize={12}
+                  interval={timeRange === 'today' ? 2 : timeRange === '1y' ? 0 : 'preserveStartEnd'}
+                />
+                <YAxis
+                  stroke="#6B7280"
+                  fontSize={12}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#F9FAFB'
+                  }}
+                />
+                <Legend />
+                <Area
+                  type="monotone"
+                  dataKey="users"
+                  stackId="1"
+                  stroke="#3B82F6"
+                  fill="#3B82F6"
+                  fillOpacity={0.6}
+                  name="Users"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="cvs"
+                  stackId="1"
+                  stroke="#8B5CF6"
+                  fill="#8B5CF6"
+                  fillOpacity={0.6}
+                  name="CVs"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
@@ -511,29 +513,29 @@ const AdminKPIs: React.FC = () => {
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={chartData}>
-              <XAxis 
-                dataKey="date" 
-                stroke="#6B7280"
-                fontSize={12}
-                interval={timeRange === 'today' ? 2 : timeRange === '1y' ? 0 : 'preserveStartEnd'}
-              />
-              <YAxis 
-                stroke="#6B7280"
-                fontSize={12}
-              />
-              <Tooltip 
-                contentStyle={{
-                  backgroundColor: '#1F2937',
-                  border: '1px solid #374151',
-                  borderRadius: '8px',
-                  color: '#F9FAFB'
-                }}
-              />
-              <Legend />
-              <Bar dataKey="jobs" fill="#F59E0B" name="Jobs" />
-              <Bar dataKey="coverLetters" fill="#10B981" name="Cover Letters" />
-              <Bar dataKey="aiUsage" fill="#EC4899" name="AI Usage" />
-            </BarChart>
+                <XAxis
+                  dataKey="date"
+                  stroke="#6B7280"
+                  fontSize={12}
+                  interval={timeRange === 'today' ? 2 : timeRange === '1y' ? 0 : 'preserveStartEnd'}
+                />
+                <YAxis
+                  stroke="#6B7280"
+                  fontSize={12}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#1F2937',
+                    border: '1px solid #374151',
+                    borderRadius: '8px',
+                    color: '#F9FAFB'
+                  }}
+                />
+                <Legend />
+                <Bar dataKey="jobs" fill="#F59E0B" name="Jobs" />
+                <Bar dataKey="coverLetters" fill="#10B981" name="Cover Letters" />
+                <Bar dataKey="aiUsage" fill="#EC4899" name="AI Usage" />
+              </BarChart>
             </ResponsiveContainer>
           )}
         </div>
@@ -548,17 +550,17 @@ const AdminKPIs: React.FC = () => {
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <XAxis 
-                dataKey="date" 
+              <XAxis
+                dataKey="date"
                 stroke="#6B7280"
                 fontSize={12}
                 interval={timeRange === 'today' ? 2 : timeRange === '1y' ? 0 : 'preserveStartEnd'}
               />
-              <YAxis 
+              <YAxis
                 stroke="#6B7280"
                 fontSize={12}
               />
-              <Tooltip 
+              <Tooltip
                 contentStyle={{
                   backgroundColor: '#1F2937',
                   border: '1px solid #374151',
@@ -567,26 +569,26 @@ const AdminKPIs: React.FC = () => {
                 }}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="users" 
-                stroke="#3B82F6" 
+              <Line
+                type="monotone"
+                dataKey="users"
+                stroke="#3B82F6"
                 strokeWidth={2}
                 dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
                 name="Users"
               />
-              <Line 
-                type="monotone" 
-                dataKey="cvs" 
-                stroke="#8B5CF6" 
+              <Line
+                type="monotone"
+                dataKey="cvs"
+                stroke="#8B5CF6"
                 strokeWidth={2}
                 dot={{ fill: '#8B5CF6', strokeWidth: 2, r: 4 }}
                 name="CVs"
               />
-              <Line 
-                type="monotone" 
-                dataKey="jobs" 
-                stroke="#F59E0B" 
+              <Line
+                type="monotone"
+                dataKey="jobs"
+                stroke="#F59E0B"
                 strokeWidth={2}
                 dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
                 name="Jobs"
@@ -621,7 +623,7 @@ const AdminKPIs: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{
                       backgroundColor: '#1F2937',
                       border: '1px solid #374151',
@@ -632,14 +634,14 @@ const AdminKPIs: React.FC = () => {
                   />
                 </PieChart>
               </ResponsiveContainer>
-              
+
               {/* Custom Legend with better spacing and styling */}
               <div className="mt-4 w-full">
                 <div className="grid grid-cols-1 tablet:grid-cols-2 gap-3">
                   {pieChartData.map((entry, index) => (
                     <div key={index} className="flex items-center space-x-2">
-                      <div 
-                        className="w-4 h-4 rounded-full" 
+                      <div
+                        className="w-4 h-4 rounded-full"
                         style={{ backgroundColor: entry.color }}
                       ></div>
                       <span className="text-sm text-gray-600 dark:text-gray-300">

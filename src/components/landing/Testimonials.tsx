@@ -271,8 +271,8 @@ const Testimonials = () => {
           className="absolute inset-0 opacity-50"
           style={{
             backgroundImage: `
-              linear-gradient(rgba(132, 204, 22, 0.8) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(132, 204, 22, 0.8) 1px, transparent 1px)
+              linear-gradient(rgba(132, 204, 22, 0.1) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(132, 204, 22, 0.1) 1px, transparent 1px)
             `,
             backgroundSize: '50px 50px'
           }}
@@ -304,12 +304,12 @@ const Testimonials = () => {
                 cy={`${row}%`}
                 r="2.5"
                 fill="#81ff00"
-                opacity={0.4}
+                opacity={0.1}
                 filter="url(#glow-testimonial)"
               >
                 <animate
                   attributeName="opacity"
-                  values="0.4;0.8;0.4"
+                  values="0.1;0.4;0.1"
                   dur={`${3 + (i % 3)}s`}
                   repeatCount="indefinite"
                 />

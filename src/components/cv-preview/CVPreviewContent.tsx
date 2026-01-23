@@ -113,6 +113,7 @@ interface CVPreviewContentProps {
   pageFormat?: 'a4' | 'letter';
   dateFormat?: DateFormatStyle;
   onAddSection?: (sectionType: string) => void;
+  onOpenAddSectionModal?: () => void;
 }
 
 const SectionWrapper = ({
@@ -189,6 +190,7 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
   pageFormat = 'a4',
   dateFormat = 'MMM_YYYY',
   onAddSection,
+  onOpenAddSectionModal,
 }) => {
   // CRITICAL FIX: All hooks must be called BEFORE any conditional returns (Rules of Hooks)
   const isDark = theme === 'dark';
@@ -1730,6 +1732,19 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
                           </div>
                         </div>
                       </SectionWrapper>
+                    )}
+
+                    {/* Add Section Button - Inside CV Page */}
+                    {viewMode === 'edit' && onOpenAddSectionModal && (
+                      <div className="mt-8 mb-4 flex justify-center cv-editor-only">
+                        <button
+                          onClick={onOpenAddSectionModal}
+                          className="flex items-center gap-2 px-4 py-2 bg-[#00ff88] hover:bg-[#00dd77] text-black font-medium rounded-lg shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                          <span>Add Section</span>
+                        </button>
+                      </div>
                     )}
                   </>
                 )}
