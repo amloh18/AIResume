@@ -60,17 +60,8 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
     return !sidebarSectionTypes.includes(s.type); // Fallback for legacy data
   });
 
-  // Helper to render section content safely
-  const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    if (SectionWrapper) {
-      return (
-        <SectionWrapper sectionId={id} sectionType={sectionType}>
-          {children}
-        </SectionWrapper>
-      );
-    }
-    return <div data-section-id={id}>{children}</div>;
-  };
+  // Header sections (personal, contact, summary) should not be draggable
+  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
 
 
   const renderSectionContent = (section: CVSectionStructure) => {
@@ -685,9 +676,13 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
 
           return (
             <React.Fragment key={section.id}>
-              <Wrapper id={section.id} sectionType={section.type}>
-                {content}
-              </Wrapper>
+              {SectionWrapper ? (
+                <SectionWrapper sectionId={section.id} sectionType={section.type} isLocked={headerSectionTypes.includes(section.type)}>
+                  {content}
+                </SectionWrapper>
+              ) : (
+                <div data-section-id={section.id}>{content}</div>
+              )}
               {onAddSection && AddSectionButton && (
                 <div className="add-section-container" style={{ margin: '8px 0' }}>
                   <AddSectionButton onClick={() => onAddSection('')} />
@@ -706,9 +701,13 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
 
           return (
             <React.Fragment key={section.id}>
-              <Wrapper id={section.id} sectionType={section.type}>
-                {content}
-              </Wrapper>
+              {SectionWrapper ? (
+                <SectionWrapper sectionId={section.id} sectionType={section.type} isLocked={headerSectionTypes.includes(section.type)}>
+                  {content}
+                </SectionWrapper>
+              ) : (
+                <div data-section-id={section.id}>{content}</div>
+              )}
               {onAddSection && AddSectionButton && (
                 <div className="add-section-container" style={{ margin: '8px 0' }}>
                   <AddSectionButton onClick={() => onAddSection('')} />

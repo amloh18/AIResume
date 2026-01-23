@@ -23,17 +23,7 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
 }) => {
   const { basics, work, education, skills, certificates, languages, interests } = cvData;
 
-  // Helper to wrap section content with DraggableSection when provided
-  const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    if (SectionWrapper) {
-      return (
-        <SectionWrapper sectionId={id} sectionType={sectionType}>
-          {children}
-        </SectionWrapper>
-      );
-    }
-    return <div data-section-id={id}>{children}</div>;
-  };
+
 
   // Flatten skills for display
   const allSkills = skills?.reduce((acc: string[], skill) => {

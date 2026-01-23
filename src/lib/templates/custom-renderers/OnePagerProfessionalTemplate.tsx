@@ -24,10 +24,15 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
   const { basics, work, education, skills, projects, certificates } = cvData;
 
   // Helper to wrap section content with DraggableSection when provided
+  // Header sections (personal, contact, summary) should not be draggable
+  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
+
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
+    const isHeader = headerSectionTypes.includes(sectionType);
+
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType}>
+        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
