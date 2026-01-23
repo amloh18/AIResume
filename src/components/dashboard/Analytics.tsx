@@ -1291,28 +1291,38 @@ const PerformanceInsights: React.FC<{
   );
 };
 
-// 5. The "Recent Jobs" Widget - Matching image design
+// 5. The "Recent Jobs" Widget - Compact inline display
 const RecentJobsWidget: React.FC<{
   jobs: any[];
   onViewJob: (jobId: string) => void;
   onCreateJob?: () => void;
   analyticsData?: any;
 }> = ({ jobs, onViewJob, onCreateJob, analyticsData }) => {
-  const lastJobs = jobs
-    .sort((a, b) => new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime())
-    .slice(0, 3);
+  // Sort by most recent and limit to 6
+  const sortedJobs = [...jobs].sort((a, b) =>
+    new Date(b.createdAt || b.created_at || 0).getTime() - new Date(a.createdAt || a.created_at || 0).getTime()
+  );
+
+  const displayedJobs = sortedJobs.slice(0, 6);
+  const hasMoreJobs = sortedJobs.length > 6;
 
   const getStatusStyle = (status: string) => {
     const normalizedStatus = status?.toLowerCase() || 'created';
     switch (normalizedStatus) {
       case 'applied':
-        return 'bg-blue-500 text-white';
+        return 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
       case 'interview':
       case 'interviewing':
-        return 'bg-purple-500 text-white';
+        return 'bg-purple-500/20 text-purple-400 border border-purple-500/30';
+      case 'offer':
+        return 'bg-green-500/20 text-green-400 border border-green-500/30';
+      case 'rejected':
+        return 'bg-red-500/20 text-red-400 border border-red-500/30';
+      case 'screening':
+        return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
       case 'created':
       default:
-        return 'text-gray-600 dark:text-gray-400';
+        return 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
     }
   };
 
@@ -1324,10 +1334,26 @@ const RecentJobsWidget: React.FC<{
       case 'interview':
       case 'interviewing':
         return 'Interview';
+      case 'offer':
+        return 'Offer';
+      case 'rejected':
+        return 'Rejected';
+      case 'screening':
+        return 'Screening';
       case 'created':
       default:
         return 'Created';
     }
+  };
+
+  const getDaysSinceAdded = (createdAt: string | Date) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1d ago';
+    return `${diffDays}d ago`;
   };
 
   return (
@@ -1336,12 +1362,15 @@ const RecentJobsWidget: React.FC<{
       data-analytics-widget="recent-jobs"
     >
       {/* Header */}
-      <div className="mb-4">
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">Recent Jobs</h2>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {displayedJobs.length}{hasMoreJobs ? `/${sortedJobs.length}` : ''} jobs
+        </span>
       </div>
 
       {/* Content */}
-      {lastJobs.length === 0 ? (
+      {displayedJobs.length === 0 ? (
         // Empty State
         <div className="flex-1 flex flex-col items-center justify-center py-8">
           <SearchX className="w-16 h-16 text-gray-300 dark:text-gray-500 mb-4" />
@@ -1357,47 +1386,50 @@ const RecentJobsWidget: React.FC<{
           )}
         </div>
       ) : (
-        // Populated State
-        <div className="flex-1 flex flex-col">
-          <div className="space-y-4 flex-1">
-            {lastJobs.map((job, index) => (
+        // Populated State - scrollable list
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 space-y-2">
+            {displayedJobs.map((job, index) => (
               <div
                 key={job.id || job._id || index}
-                className="flex items-start gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 transition-colors group"
                 onClick={() => onViewJob(job.id || job._id)}
               >
-                {/* Briefcase Icon */}
-                <div className="flex-shrink-0 mt-0.5">
-                  <Briefcase className="w-5 h-5 text-red-500" />
+                {/* Job Title - Company inline */}
+                <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {job.jobTitle || job.title || 'Untitled'}
+                  </span>
+                  <span className="text-gray-400 dark:text-gray-500 flex-shrink-0">•</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                    {job.companyName || job.company || 'Unknown'}
+                  </span>
                 </div>
 
-                {/* Job Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 mb-1">
-                    <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                      {job.jobTitle || job.title || 'Untitled Job'}
-                    </h3>
-                    <span className={`px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0 ${getStatusStyle(job.status)}`}>
-                      {getStatusLabel(job.status)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-500">
-                    {job.companyName || job.company || 'Unknown Company'}
-                  </p>
-                </div>
+                {/* Days since added */}
+                <span className="text-xs text-gray-400 dark:text-gray-500 flex-shrink-0 whitespace-nowrap">
+                  {getDaysSinceAdded(job.createdAt || job.created_at)}
+                </span>
+
+                {/* Status Badge */}
+                <span className={`px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap flex-shrink-0 ${getStatusStyle(job.status)}`}>
+                  {getStatusLabel(job.status)}
+                </span>
               </div>
             ))}
           </div>
 
-          {/* View All Link */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => window.location.href = '/dashboard/tracker'}
-              className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
-            >
-              View All
-            </button>
-          </div>
+          {/* View All Link - only shown when there are more than 7 jobs */}
+          {hasMoreJobs && (
+            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-white/10 text-center flex-shrink-0">
+              <button
+                onClick={() => window.location.href = '/dashboard/tracker'}
+                className="text-red-500 hover:text-red-600 text-sm font-medium transition-colors"
+              >
+                View All ({sortedJobs.length}) →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

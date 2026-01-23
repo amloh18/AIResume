@@ -14,6 +14,7 @@ import { Lightbulb } from 'lucide-react';
 import type { FixAnnotation } from './annotations/fix-annotation';
 import type { AnalysisMode } from '@/lib/utils/analysis-mode';
 import { Issue } from '@/lib/pill-engine/types';
+import { useContextToasts } from '@/hooks/useContextToasts';
 
 interface FloatingPulsePillProps {
     className?: string;
@@ -112,6 +113,63 @@ export default function FloatingPulsePill({
             setCurrentFixScore(calcScore);
         }
     }, [state.fixAnnotations, isFixingAll, scoreResult, isJourneyCV]);
+
+    // MERGE FIX ANNOTATIONS INTO ISSUES FOR SMART CONTEXT
+    const allIssues = useMemo(() => {
+        const engineIssues = issues || [];
+
+        if (!state.fixAnnotations || state.fixAnnotations.length === 0) {
+            return engineIssues;
+        }
+
+        // Map surgical fixes to Issues
+        const surgicalIssues: Issue[] = state.fixAnnotations
+            .filter(f => f.status === 'open')
+            .map(fix => {
+                // Map category to IssueType roughly
+                let type: Issue['type'] = 'IMPROVEMENT';
+                if (fix.category === 'grammar') type = 'TENSE_GRAMMAR';
+                if (fix.category === 'keywords') type = 'KEYWORD_GAP';
+
+                // Map severity
+                let severity: Issue['severity'] = 'info';
+                if (fix.severity === 'high') severity = 'critical';
+                else if (fix.severity === 'medium') severity = 'warning';
+
+                // Determine section
+                const sectionMap: Record<string, any> = {
+                    'work': 'work',
+                    'experience': 'work',
+                    'employment': 'work',
+                    'education': 'education',
+                    'skills': 'skills',
+                    'projects': 'projects',
+                    'summary': 'summary',
+                    'basics': 'basics'
+                };
+
+                // Extract root section from fieldPath (e.g. "work[0].highlights[1]" -> "work")
+                const rootSection = fix.fieldPath ? fix.fieldPath.split(/[.[]/)[0] : 'basics';
+                const section = sectionMap[rootSection] || 'basics';
+
+                return {
+                    id: fix.id,
+                    type,
+                    severity,
+                    priority: 'suggestion',
+                    tier: 2,
+                    section,
+                    sectionId: rootSection, // approximate
+                    message: fix.issue,
+                    deepLink: { section, sectionId: rootSection },
+                    suggestedFixId: fix.id // Link back to the fix
+                } as Issue;
+            });
+
+        // Filter out engine issues that might duplicate surgical fixes (optional, but good for cleanliness)
+        // For now, simple merge
+        return [...engineIssues, ...surgicalIssues];
+    }, [issues, state.fixAnnotations]);
 
     const handleFixAll = async () => {
         // Debugging: Log to see if function fires
@@ -234,6 +292,20 @@ export default function FloatingPulsePill({
         }
     };
 
+    // REALTIME TOAST NOTIFICATIONS FOR CONTEXT ISSUES
+    useContextToasts(allIssues, {
+        onFix: handleIssueClick,
+        onDismiss: (issueId) => {
+            // Optional: Track dismissals in state if needed
+            console.log('Issue dismissed:', issueId);
+        },
+        onAiAssist: (issue) => {
+            console.log('AI Assist Triggered from toast', issue);
+            // TODO: Implement AI Hook Call
+        },
+        enabled: true // Could make this conditional based on user preferences
+    });
+
     // Use Engine Health Score for Journey CVs/Command Center Mode
     // Fallback to legacy calc if needed, but Engine is primary for Command Center
     // FIX: Prioritize CVScoringService result (scoreResult) for Journey CVs to match backend
@@ -241,7 +313,7 @@ export default function FloatingPulsePill({
         ? (scoreResult?.atsScore?.total ?? Math.round(atsScore))
         : Math.round(masterScore);
     const scoreInfo = getScoreColor(displayScore);
-    const pendingCount = issues.length; // Use Engine issues count
+    const pendingCount = allIssues.length; // Use merged issues count
 
     // Only show "Fix All" if we actually have surgical fixes in the queue
     const fixableCount = (state.fixAnnotations || []).filter(f => f.status === 'open').length;
@@ -360,11 +432,11 @@ export default function FloatingPulsePill({
                         {(() => {
                             // Glow Logic Helper
                             const getGlowConfig = () => {
-                                if (issues.length === 0) return null;
+                                if (allIssues.length === 0) return null;
 
-                                const hasCritical = issues.some(i => i.priority === 'critical' || i.severity === 'critical');
-                                const hasAi = issues.some(i => i.priority === 'ai-insight');
-                                const hasSuggestion = issues.some(i => i.severity === 'warning' || i.priority === 'suggestion');
+                                const hasCritical = allIssues.some(i => i.priority === 'critical' || i.severity === 'critical');
+                                const hasAi = allIssues.some(i => i.priority === 'ai-insight');
+                                const hasSuggestion = allIssues.some(i => i.severity === 'warning' || i.priority === 'suggestion');
 
                                 if (hasCritical) return { color: 'rgba(255, 0, 0, 0.6)', duration: 1 };      // Fast
                                 if (hasAi) return { color: 'rgba(138, 43, 226, 0.5)', duration: 2.5 };      // Breathing
@@ -458,10 +530,10 @@ export default function FloatingPulsePill({
                             animate={{ opacity: 1, height: 'auto', scale: 1 }}
                             exit={{ opacity: 0, height: 0, scale: 0.95 }}
                             transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top-right z-30 self-end mt-2"
+                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top-right z-30 self-end mt-2 pointer-events-auto"
                         >
                             <SmartContextCard
-                                issues={issues}
+                                issues={allIssues}
                                 onFix={handleIssueClick}
                                 onDismiss={(id) => { /* TODO: Implement dismiss/ignore logic */ }}
                                 onAiAssist={(issue) => {

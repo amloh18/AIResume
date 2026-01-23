@@ -40,16 +40,16 @@ export default function ContextTipItem({ issue, onFix, onDismiss, onAiAssist }: 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className={`relative p-3 rounded-xl border ${visual.border} ${visual.bg} hover:bg-opacity-20 transition-all group`}
+            className={`relative p-2 rounded-xl border ${visual.border} ${visual.bg} hover:bg-opacity-20 transition-all group`}
         >
             <button
                 onClick={(e) => { e.stopPropagation(); onDismiss(issue.id); }}
-                className="absolute top-2 right-2 text-white/20 hover:text-white/60 transition-colors opacity-0 group-hover:opacity-100"
+                className="absolute top-1 right-1 text-white/20 hover:text-white/60 transition-colors opacity-0 group-hover:opacity-100"
             >
                 <X size={12} />
             </button>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2 pr-4">
                 <div className="mt-0.5 flex-shrink-0" style={{ color: visual.color }}>
                     <Icon size={16} />
                 </div>

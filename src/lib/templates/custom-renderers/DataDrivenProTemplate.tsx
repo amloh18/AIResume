@@ -49,7 +49,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 100%;
           margin: 0;
-          padding: 32px 32px 32px 32px;
+          padding: 0;
           background: white;
           color: #000 !important;
           line-height: 1.4;
@@ -376,6 +376,8 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
             color-adjust: exact;
+            padding: 0 !important;
+            margin: 0 !important;
           }
           
           /* Allow natural page breaks */
@@ -390,7 +392,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
             break-after: avoid;
           }
           
-          /* Keep experience items together */
+          /* Keep experience items together when possible */
           .experience-item, .project-item {
             page-break-inside: avoid;
             break-inside: avoid;
