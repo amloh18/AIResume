@@ -120,15 +120,12 @@ export class ReactTemplateRenderer implements IRenderer {
         const pageWidth = options.paperSize === 'Letter' ? '8.5in' : '210mm';
         const pageHeight = options.paperSize === 'Letter' ? '11in' : '297mm';
 
-        // Check for full bleed templates (like Tech Pro Blue) or custom renderers which handle their own padding
-        const isFullBleed = template?.name?.toLowerCase().includes('tech pro blue');
-        const hasCustomRenderer = !!template?.customRenderer;
-
-        // Custom renderers typically have internal padding (e.g. 32px), so we remove the container padding to avoid double padding
-        const containerPadding = (isFullBleed || hasCustomRenderer) ? '0' : '15mm 20mm';
-
-        // Debug
-        // logger.info('PDF Render Padding', { templateName: template?.name, customRenderer: template?.customRenderer, containerPadding });
+        // Set consistent margins for all templates to avoid double padding
+        // Custom renderers will have their padding REMOVED in print mode
+        const pageMarginTop = '12mm';
+        const pageMarginRight = '15mm';
+        const pageMarginBottom = '12mm';
+        const pageMarginLeft = '15mm';
 
         const fullHTML = `
 <!DOCTYPE html>
@@ -140,10 +137,10 @@ export class ReactTemplateRenderer implements IRenderer {
   <!-- ATS-friendly metadata -->
   <meta name="format-detection" content="telephone=yes">
   <style>
-    /* Critical: Define page size for PDF generation */
+    /* Critical: Define page size for PDF generation with proper print margins */
     @page {
       size: ${pageWidth} ${pageHeight};
-      margin: 0;
+      margin: ${pageMarginTop} ${pageMarginRight} ${pageMarginBottom} ${pageMarginLeft};
     }
     
     * {
@@ -170,15 +167,18 @@ export class ReactTemplateRenderer implements IRenderer {
       -moz-user-select: text;
       -ms-user-select: text;
       user-select: text;
+      /* Remove body padding for print - margins handled by @page */
+      padding: 0;
+      margin: 0;
     }
     
     .cv-container {
-      width: ${pageWidth};
+      width: 100%;
       min-height: ${pageHeight};
       height: auto;
       overflow: visible;
-      padding: ${containerPadding};
-      margin: 0 auto;
+      padding: 0;
+      margin: 0;
       background: white;
       /* Single-column layout for ATS compatibility */
       display: block;
@@ -211,17 +211,15 @@ export class ReactTemplateRenderer implements IRenderer {
         width: ${pageWidth};
         height: auto !important;
         overflow: visible !important;
-      }
-      
-      body {
-        padding: 0;
-        margin: 0;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       
       .cv-container {
         width: 100%;
         max-width: ${pageWidth};
-        padding: ${containerPadding};
+        padding: 0 !important;
+        margin: 0 !important;
         height: auto !important;
         overflow: visible !important;
         display: block !important;

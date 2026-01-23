@@ -65,7 +65,7 @@ const Features = () => {
       description: 'Get an edge over other candidates by practising industry standard interview questions.',
       cta: 'Start Practice',
       ctaLink: '/interview-coach',
-      image: '/images/image_asset/hero-interview-mode',
+      image: '/images/image_asset/hero-interview-mode.png',
     },
     {
       id: 'dark-light-mode',
@@ -122,7 +122,7 @@ const Features = () => {
             .map((feature, index) => (
               <motion.div
                 key={feature.id}
-                className="group relative rounded-2xl overflow-hidden desktop:col-span-2 desktop:w-1/2 desktop:mx-auto"
+                className="group relative rounded-2xl overflow-hidden desktop:col-span-2 w-full"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
@@ -135,7 +135,7 @@ const Features = () => {
                   </p>
                 </div>
 
-                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl mx-4 mb-4">
+                <div className="relative aspect-[16/6] overflow-hidden rounded-2xl mx-4 mb-4">
                   <Image
                     src={feature.image}
                     alt={feature.title}

@@ -44,6 +44,7 @@ interface AIUsageData {
   usageByUser: Array<{
     userId: string;
     userName: string;
+    userEmail?: string;
     requests: number;
     tokens: number;
     cost: number;
@@ -351,7 +352,7 @@ const AIAnalytics: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white">{user.userName || 'Unknown User'}</p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">User ID: {user.userId || 'Unknown'}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{user.userEmail || user.userId || 'Unknown'}</p>
                 </div>
               </div>
               <div className="text-right">

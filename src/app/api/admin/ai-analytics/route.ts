@@ -34,8 +34,39 @@ export async function GET(request: NextRequest) {
     }).lean();
 
     // Calculate metrics
+    // Cost Constants for Gemini Flash (per 1M tokens)
+    const INPUT_COST_PER_1M = 0.075;
+    const OUTPUT_COST_PER_1M = 0.30;
+
+    // Helper to estimate cost
+    const calculateLogCost = (log: any) => {
+      // If cost is already stored and non-zero, presume it's correct? 
+      // User asked to "fix it", implying stored might be wrong. Let's recalculate.
+
+      let inputTokens = 0;
+      let outputTokens = 0;
+
+      // Try to get from metadata if available (some loggers might store it)
+      if (log.aiMetadata?.inputTokens) inputTokens = log.aiMetadata.inputTokens;
+      else if (log.aiMetadata?.prompt) inputTokens = Math.ceil(log.aiMetadata.prompt.length / 4);
+
+      if (log.aiMetadata?.outputTokens) outputTokens = log.aiMetadata.outputTokens;
+      else if (log.aiMetadata?.responseLength) outputTokens = Math.ceil(log.aiMetadata.responseLength / 4);
+      // Fallback if only total is known: assume 80% input, 20% output? 
+      else if (log.aiMetadata?.tokensUsed) {
+        inputTokens = Math.ceil(log.aiMetadata.tokensUsed * 0.8);
+        outputTokens = log.aiMetadata.tokensUsed - inputTokens;
+      }
+
+      const inputCost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M;
+      const outputCost = (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
+
+      return inputCost + outputCost;
+    };
+
+    // Calculate metrics
     const totalTokens = aiUsageLogs.reduce((sum, log) => sum + (log.aiMetadata?.tokensUsed || 0), 0);
-    const totalCost = aiUsageLogs.reduce((sum, log) => sum + (log.aiMetadata?.cost || 0), 0);
+    const totalCost = aiUsageLogs.reduce((sum, log) => sum + calculateLogCost(log), 0);
     const totalRequests = aiUsageLogs.length;
     const averageTokensPerRequest = totalRequests > 0 ? totalTokens / totalRequests : 0;
     const costPerToken = totalTokens > 0 ? totalCost / totalTokens : 0;
@@ -48,7 +79,7 @@ export async function GET(request: NextRequest) {
       }
       acc[endpoint].requests += 1;
       acc[endpoint].tokens += log.aiMetadata?.tokensUsed || 0;
-      acc[endpoint].cost += log.aiMetadata?.cost || 0;
+      acc[endpoint].cost += calculateLogCost(log);
       return acc;
     }, {} as Record<string, { requests: number; tokens: number; cost: number }>);
 
@@ -60,31 +91,45 @@ export async function GET(request: NextRequest) {
     }));
 
     // Group by user
-    // We need to fetch user details for the logs
     const userIds = Array.from(new Set(aiUsageLogs.map(log => log.userId?.toString()).filter(Boolean)));
     const users = await User.find({ _id: { $in: userIds } }).select('firstName lastName email').lean();
     const userMap = new Map(users.map((u: any) => [u._id.toString(), u]));
 
     const usageByUser = aiUsageLogs.reduce((acc, log) => {
+      // Use userId if available, otherwise 'anonymous'
+      // But we key by userId to aggregate. 
       const userId = log.userId?.toString() || 'anonymous';
-      if (!acc[userId]) {
-        acc[userId] = { requests: 0, tokens: 0, cost: 0 };
-      }
-      acc[userId].requests += 1;
-      acc[userId].tokens += log.aiMetadata?.tokensUsed || 0;
-      acc[userId].cost += log.aiMetadata?.cost || 0;
-      return acc;
-    }, {} as Record<string, { requests: number; tokens: number; cost: number }>);
 
-    const usageByUserArray = Object.entries(usageByUser).map(([userId, data]) => {
-      const user = userMap.get(userId);
-      const userName = user ? `${user.firstName} ${user.lastName}` : 'Anonymous';
-      const userEmail = user ? user.email : 'N/A';
+      // If we don't have a userId but have an email in the log, track by email?
+      // The current UI expects a list of objects.
+      // Let's stick to userId grouping, but we'll fallback to Email for display name.
+      const key = userId === 'anonymous' && log.userEmail ? log.userEmail : userId;
+
+      if (!acc[key]) {
+        acc[key] = {
+          requests: 0,
+          tokens: 0,
+          cost: 0,
+          userId: userId,
+          emailFallback: log.userEmail
+        };
+      }
+      acc[key].requests += 1;
+      acc[key].tokens += log.aiMetadata?.tokensUsed || 0;
+      acc[key].cost += calculateLogCost(log);
+      return acc;
+    }, {} as Record<string, { requests: number; tokens: number; cost: number; userId: string; emailFallback?: string }>);
+
+    const usageByUserArray = Object.entries(usageByUser).map(([key, data]) => {
+      const user = userMap.get(data.userId);
+      // Fallback logic: User DB > Log Email > "Anonymous"
+      const userName = user ? `${user.firstName} ${user.lastName}` : (data.emailFallback || 'Anonymous');
+      const userEmail = user ? user.email : (data.emailFallback || 'N/A');
 
       return {
-        userId,
+        userId: data.userId,
         userName,
-        userEmail, // Added email for better identification
+        userEmail,
         requests: data.requests,
         tokens: data.tokens,
         cost: data.cost

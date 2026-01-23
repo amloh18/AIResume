@@ -27,7 +27,7 @@ import ATSFactorsList from '@/components/resume-enhancer/ATSFactorsList';
 import { computeATSFactorScores } from '@/lib/utils/resumeEnhancerFactors';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
-import ResumeEnhancerSidebar from '@/components/resume-enhancer/ResumeEnhancerSidebar';
+
 import { getVisibleCVSections } from '@/lib/selectors/cv-section-selectors';
 import { migrateLegacyCV } from '@/lib/migrations/cv-structure-migration';
 import { getSectionIcon } from '@/lib/utils/cv-section-selectors';
@@ -2626,28 +2626,7 @@ export default function ResumeEnhancerContainer({
           </div>
         </aside>
 
-        {/* Structure Sidebar - Only for Step 3 */}
-        {state.currentStep === 3 && (
-          <div className="flex-shrink-0 overflow-hidden h-[calc(100vh-64px)] ml-2 mb-2 mt-2">
-            <ResumeEnhancerSidebar
-              cvSections={cvSections}
-              activeSection={activeSection}
-              onSectionClick={(sectionId) => {
-                setActiveSection(sectionId);
-                step3Ref.current?.scrollToSection(sectionId);
-              }}
-              onAddSection={(sectionId) => {
-                step3Ref.current?.addNewSection(sectionId);
-              }}
-              onDeleteSection={(sectionId) => {
-                step3Ref.current?.handleDeleteSectionFromSidebar(sectionId);
-              }}
-              onSectionReorder={(sectionIds) => {
-                step3Ref.current?.handleSectionReorder(sectionIds);
-              }}
-            />
-          </div>
-        )}
+
 
         {/* Main Content */}
         <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">

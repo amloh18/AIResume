@@ -45,9 +45,9 @@ export default function SmartContextCard({
     const displayIssues = sortedIssues.slice(0, 5);
 
     return (
-        <div className="w-[340px] bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden p-4 space-y-4">
+        <div className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden p-3 space-y-2.5 pointer-events-auto">
             {/* Header - Simple Style matching ScorecardPanel section headers */}
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <h3 className="text-xs font-semibold text-[#80FF00] uppercase tracking-wider flex items-center gap-2">
                     <Lightbulb className="w-3.5 h-3.5" />
                     Smart Context
@@ -86,7 +86,7 @@ export default function SmartContextCard({
             )}
 
             {/* List */}
-            <div className="space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="space-y-2 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 <AnimatePresence mode="popLayout">
                     {displayIssues.length > 0 ? (
                         displayIssues.map((issue) => (
