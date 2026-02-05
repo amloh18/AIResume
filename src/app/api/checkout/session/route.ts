@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
-import { getStripe } from '@/lib/payment/stripe';
+import { getPolar } from '@/lib/payment/polar';
 import { getRazorpay } from '@/lib/payment/razorpay';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { getPricingForPlan } from '@/lib/services/countryPricingService';
@@ -511,7 +511,7 @@ export async function POST(request: NextRequest) {
 
     // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
     if (!userCountryPricing && regionInfo.countryCode !== 'IN') {
-      console.log('No pricing found for non-India country, falling back to GB for Stripe:', {
+      console.log('No pricing found for non-India country, falling back to GB for Polar:', {
         countryCode: regionInfo.countryCode,
         planKey,
         interval,
@@ -545,18 +545,18 @@ export async function POST(request: NextRequest) {
       regionPaymentPartner: regionInfo.paymentPartner
     });
 
-    // ENFORCE: Razorpay = INR only (India), Stripe = all other currencies (all other countries)
+    // ENFORCE: Razorpay = INR only (India), Polar = all other currencies (all other countries)
     // Determine payment provider based on country code and currency
     let paymentProvider = provider;
 
     if (!paymentProvider) {
       // Auto-select provider based on country code first, then currency
-      // India (IN) = Razorpay, all other countries = Stripe
+      // India (IN) = Razorpay, all other countries = Polar
       if (regionInfo.countryCode === 'IN' && detectedCurrency === 'INR') {
         paymentProvider = 'razorpay';
       } else {
-        // All non-India countries use Stripe
-        paymentProvider = 'stripe';
+        // All non-India countries use Polar
+        paymentProvider = 'polar';
         // Ensure currency is not INR for non-India countries
         if (detectedCurrency === 'INR' && regionInfo.countryCode !== 'IN') {
           console.warn('Non-India country detected with INR currency, using region currency instead:', {
@@ -593,17 +593,18 @@ export async function POST(request: NextRequest) {
           fallingBackTo: 'stripe'
         });
 
-        // Force switch to Stripe for non-INR currencies
-        if (!stripe) {
+        // Force switch to Polar for non-INR currencies
+        const polar = getPolar();
+        if (!polar) {
           return NextResponse.json({
-            error: 'Razorpay only supports INR currency. Stripe is required for other currencies but is not configured.',
+            error: 'Razorpay only supports INR currency. Polar is required for other currencies but is not configured.',
             unsupportedCurrency: true,
             detectedCurrency,
-            requiresStripe: true,
+            requiresPolar: true,
             requiresConfiguration: true
           }, { status: 400 });
         }
-        paymentProvider = 'stripe';
+        paymentProvider = 'polar';
       }
 
       // Additional validation: Ensure we have INR pricing
@@ -611,34 +612,38 @@ export async function POST(request: NextRequest) {
         // Try to get India pricing explicitly
         const indiaPricing = await getCountryPricingForPlan('IN', planKey as any, interval as any);
         if (!indiaPricing || indiaPricing.currency !== 'INR') {
-          console.warn('No INR pricing found for Razorpay, switching to Stripe');
-          if (!stripe) {
+          console.warn('No INR pricing found for Razorpay, switching to Polar');
+          const polar = getPolar();
+          if (!polar) {
             return NextResponse.json({
-              error: 'INR pricing not available. Stripe is required but not configured.',
-              requiresStripe: true,
+              error: 'INR pricing not available. Polar is required but not configured.',
+              requiresPolar: true,
               requiresConfiguration: true
             }, { status: 400 });
           }
-          paymentProvider = 'stripe';
+          paymentProvider = 'polar';
         }
       }
     }
 
-    // VALIDATION: Ensure Stripe is available for non-INR currencies
-    if (paymentProvider === 'stripe' && !stripe) {
-      return NextResponse.json({
-        error: 'Stripe is not configured. Please add STRIPE_SECRET_KEY to your .env.local file.',
-        requiresConfiguration: true,
-        provider: 'stripe',
-        detectedCurrency
-      }, { status: 500 });
+    // VALIDATION: Ensure Polar is available for non-INR currencies
+    if (paymentProvider === 'polar') {
+      const polar = getPolar();
+      if (!polar) {
+        return NextResponse.json({
+          error: 'Polar is not configured. Please add POLAR_ACCESS_TOKEN to your .env.local file.',
+          requiresConfiguration: true,
+          provider: 'polar',
+          detectedCurrency
+        }, { status: 500 });
+      }
     }
 
     console.log('Final provider selection:', {
       provider: paymentProvider,
       currency: detectedCurrency,
       countryCode: regionInfo.countryCode,
-      reason: paymentProvider === 'razorpay' ? 'INR currency' : 'Non-INR currency or explicit Stripe selection'
+      reason: paymentProvider === 'razorpay' ? 'INR currency' : 'Non-INR currency or explicit Polar selection'
     });
 
     // Handle different plan types
@@ -717,7 +722,7 @@ async function handleDayPassPayment(
   couponDiscount?: any
 ) {
   // ENFORCE: Razorpay = INR only, get India pricing explicitly
-  // Stripe = use region-based pricing
+  // Polar = use region-based pricing
   let countryPricing;
   if (provider === 'razorpay') {
     // Razorpay ONLY supports INR - get India pricing explicitly
@@ -732,7 +737,7 @@ async function handleDayPassPayment(
       throw new Error('INR pricing not available for Razorpay');
     }
   } else {
-    // Stripe: Use region-based pricing (supports all currencies)
+    // Polar: Use region-based pricing (supports all currencies)
     // For non-India countries, ensure we get Stripe-compatible pricing
     const countryCode = regionInfo?.countryCode || 'GB';
     countryPricing = await getCountryPricingForPlan(
@@ -743,7 +748,7 @@ async function handleDayPassPayment(
 
     // If no pricing found for non-India country, fallback to GB (Stripe-compatible)
     if (!countryPricing && countryCode !== 'IN') {
-      console.log('No pricing found for country, falling back to GB for Stripe:', {
+      console.log('No pricing found for country, falling back to GB for Polar:', {
         countryCode,
         fallbackTo: 'GB'
       });
@@ -757,7 +762,7 @@ async function handleDayPassPayment(
 
   if (countryPricing) {
     amount = countryPricing.price * 100; // Convert to cents/paisa
-    // ENFORCE: Razorpay = INR only, Stripe = actual currency from CountryPricing
+    // ENFORCE: Razorpay = INR only, Polar = actual currency from CountryPricing
     if (provider === 'razorpay') {
       currency = 'INR'; // Force INR for Razorpay
       // Validate amount is in INR (should already be from India pricing)
@@ -785,7 +790,7 @@ async function handleDayPassPayment(
         if (gbPricing) {
           const dayPassPrice = gbPricing.planPrices.dayPass?.price || 0;
           amount = dayPassPrice * 100;
-          // ENFORCE: Razorpay = INR only (must get India pricing), Stripe = GB currency
+          // ENFORCE: Razorpay = INR only (must get India pricing), Polar = GB currency
           if (provider === 'razorpay') {
             // For Razorpay, we MUST have INR - try India pricing
             const indiaPricing = await getCountryPricing('IN');
@@ -820,7 +825,7 @@ async function handleDayPassPayment(
           throw new Error('INR pricing not available for Razorpay');
         }
       } else {
-        // Stripe: Use GB as fallback
+        // Polar: Use GB as fallback
         const { getCountryPricing } = await import('@/lib/services/countryPricingService');
         const gbPricing = await getCountryPricing('GB');
         if (gbPricing && gbPricing.planPrices.dayPass) {
@@ -890,7 +895,7 @@ async function handleDayPassPayment(
     });
   }
 
-  if (provider === 'stripe') {
+  if (provider === 'polar') {
     if (amount <= 0) {
       console.log('Coupon covered full pro plan cost (Stripe). Activating subscription without payment.');
       return activatePlanWithCoupon({
@@ -905,13 +910,13 @@ async function handleDayPassPayment(
     }
 
     // Validate Stripe configuration before creating payment
-    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const secretKey = process.env.POLAR_ACCESS_TOKEN;
 
     if (!secretKey) {
-      console.error('❌ Stripe Payment Creation Failed (Day Pass): STRIPE_SECRET_KEY is missing');
+      console.error('❌ Stripe Payment Creation Failed (Day Pass): POLAR_ACCESS_TOKEN is missing');
       console.error('   → This is the MOST COMMON issue on Vercel deployments');
       console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
-      console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
+      console.error('   → Ensure POLAR_ACCESS_TOKEN is set (without NEXT_PUBLIC_ prefix)');
       console.error('   → Redeploy after adding environment variables');
       return NextResponse.json({
         error: 'Stripe is currently unavailable. Please contact support.',
@@ -975,7 +980,7 @@ async function handleDayPassPayment(
             // Check for common errors
             if (sessionError.message?.toLowerCase().includes('api key') ||
               sessionError.message?.toLowerCase().includes('authentication')) {
-              console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+              console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
               console.error('   → Verify the secret key in Vercel Environment Variables');
               console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
             }
@@ -1018,7 +1023,7 @@ async function handleDayPassPayment(
           // Check for common errors
           if (paymentIntentError.message?.toLowerCase().includes('api key') ||
             paymentIntentError.message?.toLowerCase().includes('authentication')) {
-            console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+            console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
             console.error('   → Verify the secret key in Vercel Environment Variables');
             console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
           }
@@ -1386,8 +1391,8 @@ async function handleProPlanPayment(
   let countryPricing = await getCountryPricingForPlan(countryCode, planKey, interval as any);
 
   // If no pricing found for non-India country, fallback to GB (Stripe-compatible)
-  if (!countryPricing && countryCode !== 'IN' && provider === 'stripe') {
-    console.log('No pricing found for country, falling back to GB for Stripe:', {
+  if (!countryPricing && countryCode !== 'IN' && provider === 'polar') {
+    console.log('No pricing found for country, falling back to GB for Polar:', {
       countryCode,
       planKey,
       interval,
@@ -1410,8 +1415,8 @@ async function handleProPlanPayment(
   // Yearly = recurring yearly subscription
   // All use 'subscription' mode for automatic recurring charges
 
-  if (provider === 'stripe') {
-    // Stripe: Use country pricing from CountryPricing collection (supports all currencies)
+  if (provider === 'polar') {
+    // Polar: Use country pricing from CountryPricing collection (supports all currencies)
     // All prices and currency come from CountryPricing collection
     if (interval === 'monthly') {
       priceId = countryPricing?.stripePriceIds?.monthly || plan.stripePriceId_monthly;
@@ -1517,13 +1522,13 @@ async function handleProPlanPayment(
     }
 
     // Validate Stripe configuration before creating payment
-    const secretKey = process.env.STRIPE_SECRET_KEY;
+    const secretKey = process.env.POLAR_ACCESS_TOKEN;
 
     if (!secretKey) {
-      console.error('❌ Stripe Payment Creation Failed (Pro Plan): STRIPE_SECRET_KEY is missing');
+      console.error('❌ Stripe Payment Creation Failed (Pro Plan): POLAR_ACCESS_TOKEN is missing');
       console.error('   → This is the MOST COMMON issue on Vercel deployments');
       console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
-      console.error('   → Ensure STRIPE_SECRET_KEY is set (without NEXT_PUBLIC_ prefix)');
+      console.error('   → Ensure POLAR_ACCESS_TOKEN is set (without NEXT_PUBLIC_ prefix)');
       console.error('   → Redeploy after adding environment variables');
       return NextResponse.json({
         error: 'Stripe is currently unavailable. Please contact support.',
@@ -1568,7 +1573,7 @@ async function handleProPlanPayment(
             // Check for common errors
             if (customerError.message?.toLowerCase().includes('api key') ||
               customerError.message?.toLowerCase().includes('authentication')) {
-              console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+              console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
               console.error('   → Verify the secret key in Vercel Environment Variables');
               console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
             }
@@ -1704,7 +1709,7 @@ async function handleProPlanPayment(
             // Check for common errors
             if (sessionError.message?.toLowerCase().includes('api key') ||
               sessionError.message?.toLowerCase().includes('authentication')) {
-              console.error('⚠️  This error suggests STRIPE_SECRET_KEY may be incorrect or missing');
+              console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
               console.error('   → Verify the secret key in Vercel Environment Variables');
               console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
             }

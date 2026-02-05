@@ -33,97 +33,88 @@ export const AddSectionModal: React.FC<AddSectionModalProps> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9998] cv-editor-only"
-                    />
-
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                     {/* Modal */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        transition={{ type: 'spring', duration: 0.3 }}
-                        className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-[9999] w-full max-w-2xl mx-4 cv-editor-only"
+                        transition={{ duration: 0.3 }}
+                        className="relative w-full max-w-2xl bg-[var(--modal-bg)] rounded-2xl shadow-2xl shadow-black/30 dark:shadow-black/60 overflow-hidden"
                     >
-                        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
-                            {/* Header */}
-                            <div className="bg-gradient-to-r from-lime-500 to-lime-600 dark:from-lime-600 dark:to-lime-700 p-6 text-white">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-2xl font-bold">Add Section</h2>
-                                        <p className="text-lime-100 text-sm mt-1">Choose a section to add to your CV</p>
-                                    </div>
-                                    <button
-                                        onClick={onClose}
-                                        className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-                                    >
-                                        <X className="w-5 h-5" />
-                                    </button>
+                        {/* Header */}
+                        <div className="p-6 shadow-sm shadow-black/10 dark:shadow-black/30">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-[color:var(--text-primary)] mb-2">Add Section</h2>
+                                    <p className="text-[color:var(--text-secondary)] text-sm">
+                                        Choose a section to add to your CV
+                                    </p>
                                 </div>
-                            </div>
-
-                            {/* Content */}
-                            <div className="p-6 max-h-[60vh] overflow-y-auto">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {AVAILABLE_SECTIONS.map((section) => {
-                                        const isAlreadyAdded = existingSections.includes(section.id);
-
-                                        return (
-                                            <motion.button
-                                                key={section.id}
-                                                onClick={() => {
-                                                    if (!isAlreadyAdded) {
-                                                        onAddSection(section.id);
-                                                        onClose();
-                                                    }
-                                                }}
-                                                disabled={isAlreadyAdded}
-                                                whileHover={!isAlreadyAdded ? { scale: 1.02, y: -2 } : {}}
-                                                whileTap={!isAlreadyAdded ? { scale: 0.98 } : {}}
-                                                className={`relative p-4 rounded-xl text-left transition-all ${isAlreadyAdded
-                                                        ? 'bg-gray-100 dark:bg-gray-800 opacity-50 cursor-not-allowed'
-                                                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-lime-50 dark:hover:bg-lime-900/20 hover:shadow-md border-2 border-transparent hover:border-lime-500'
-                                                    }`}
-                                            >
-                                                <div className="flex items-start gap-3">
-                                                    <div className="text-3xl flex-shrink-0">{section.icon}</div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <h3 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">
-                                                            {section.label}
-                                                        </h3>
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
-                                                            {section.description}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {isAlreadyAdded && (
-                                                    <div className="absolute top-2 right-2">
-                                                        <span className="px-2 py-0.5 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-xs rounded-full font-medium">
-                                                            Added
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </motion.button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Footer */}
-                            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-                                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                                    Select a section to add it to your CV. Already added sections are disabled.
-                                </p>
+                                <button
+                                    onClick={onClose}
+                                    className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"
+                                >
+                                    <X className="h-5 w-5 text-[color:var(--text-secondary)]" />
+                                </button>
                             </div>
                         </div>
+
+                        {/* Content */}
+                        <div className="p-6 max-h-[60vh] overflow-y-auto">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {AVAILABLE_SECTIONS.map((section) => {
+                                    const isAlreadyAdded = existingSections.includes(section.id);
+
+                                    return (
+                                        <motion.button
+                                            key={section.id}
+                                            onClick={() => {
+                                                if (!isAlreadyAdded) {
+                                                    onAddSection(section.id);
+                                                    onClose();
+                                                }
+                                            }}
+                                            disabled={isAlreadyAdded}
+                                            whileHover={!isAlreadyAdded ? { scale: 1.02, y: -2 } : {}}
+                                            whileTap={!isAlreadyAdded ? { scale: 0.98 } : {}}
+                                            className={`relative p-4 rounded-xl text-left transition-all ${isAlreadyAdded
+                                                ? 'bg-black/5 dark:bg-white/5 opacity-50 cursor-not-allowed'
+                                                : 'bg-[var(--bg-tertiary)] hover:bg-[color:var(--accent-primary)]/10 hover:shadow-md border-2 border-transparent hover:border-[color:var(--accent-primary)]'
+                                                }`}
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className="text-3xl flex-shrink-0">{section.icon}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className="font-semibold text-[color:var(--text-primary)] text-sm mb-1">
+                                                        {section.label}
+                                                    </h3>
+                                                    <p className="text-xs text-[color:var(--text-tertiary)] line-clamp-2">
+                                                        {section.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {isAlreadyAdded && (
+                                                <div className="absolute top-2 right-2">
+                                                    <span className="px-2 py-0.5 bg-black/10 dark:bg-white/10 text-[color:var(--text-secondary)] text-xs rounded-full font-medium">
+                                                        Added
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </motion.button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 bg-[var(--bg-tertiary)] border-t border-[color:var(--border-secondary)]">
+                            <p className="text-xs text-[color:var(--text-tertiary)] text-center">
+                                Select a section to add it to your CV. Already added sections are disabled.
+                            </p>
+                        </div>
                     </motion.div>
-                </>
+                </div>
             )}
         </AnimatePresence>
     );
