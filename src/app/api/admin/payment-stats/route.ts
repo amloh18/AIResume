@@ -48,19 +48,19 @@ export async function GET(request: NextRequest) {
     let stripeTransactions = 0;
     let razorpayRevenue = 0;
     let razorpayTransactions = 0;
-    const currencyBreakdownStripe: { [key: string]: number } = {};
+    const currencyBreakdownPolar: { [key: string]: number } = {};
     const currencyBreakdownRazorpay: { [key: string]: number } = {};
 
     // Process subscriptions
     subscriptions.forEach((sub: any) => {
       const amount = sub.amount || 0;
-      const provider = sub.provider || 'stripe';
+      const provider = sub.provider || 'polar';
       const subCurrency = sub.currency || 'EUR';
 
-      if (provider === 'stripe') {
+      if (provider === 'polar') {
         stripeRevenue += amount;
         stripeTransactions += 1;
-        currencyBreakdownStripe[subCurrency] = (currencyBreakdownStripe[subCurrency] || 0) + amount;
+        currencyBreakdownPolar[subCurrency] = (currencyBreakdownPolar[subCurrency] || 0) + amount;
       } else if (provider === 'razorpay') {
         razorpayRevenue += amount;
         razorpayTransactions += 1;
@@ -71,13 +71,13 @@ export async function GET(request: NextRequest) {
     // Process invoices
     invoices.forEach((invoice: any) => {
       const amount = invoice.amount || 0;
-      const provider = invoice.provider || 'stripe';
+      const provider = invoice.provider || 'polar';
       const invCurrency = invoice.currency || 'EUR';
 
-      if (provider === 'stripe') {
+      if (provider === 'polar') {
         stripeRevenue += amount;
         stripeTransactions += 1;
-        currencyBreakdownStripe[invCurrency] = (currencyBreakdownStripe[invCurrency] || 0) + amount;
+        currencyBreakdownPolar[invCurrency] = (currencyBreakdownPolar[invCurrency] || 0) + amount;
       } else if (provider === 'razorpay') {
         razorpayRevenue += amount;
         razorpayTransactions += 1;
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
         totalRevenue: stripeRevenue,
         totalTransactions: stripeTransactions,
         averageOrderValue: stripeTransactions > 0 ? stripeRevenue / stripeTransactions : 0,
-        currencyBreakdown: currencyBreakdownStripe
+        currencyBreakdown: currencyBreakdownPolar
       },
       razorpay: {
         totalRevenue: razorpayRevenue,

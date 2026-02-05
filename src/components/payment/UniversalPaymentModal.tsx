@@ -68,14 +68,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
-  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'razorpay'>('stripe');
+  const [paymentProvider, setPaymentProvider] = useState<'polar' | 'razorpay'>('stripe');
   const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
   const [providerHealth, setProviderHealth] = useState<{
-    stripe: boolean | null;
+    polar: boolean | null;
     razorpay: boolean | null;
-  }>({ stripe: null, razorpay: null });
+  }>({ polar: null, razorpay: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
   const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
   const [isDayPassOpen, setIsDayPassOpen] = useState(false);
@@ -339,7 +339,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
   // Check provider health when modal opens
   useEffect(() => {
-    const checkProviderHealth = async (provider: 'stripe' | 'razorpay') => {
+    const checkProviderHealth = async (provider: 'polar' | 'razorpay') => {
       try {
         // Add timeout to prevent hanging requests
         const controller = new AbortController();
@@ -374,21 +374,21 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
       setProviderHealthLoading(true);
       try {
-        const [stripeHealthy, razorpayHealthy] = await Promise.all([
+        const [polarHealthy, razorpayHealthy] = await Promise.all([
           checkProviderHealth('stripe'),
           checkProviderHealth('razorpay')
         ]);
 
         setProviderHealth({
-          stripe: stripeHealthy,
+          polar: polarHealthy,
           razorpay: razorpayHealthy
         });
 
         // Auto-switch to healthy provider if current provider is down
-        if (paymentProvider === 'stripe' && !stripeHealthy && razorpayHealthy) {
+        if (paymentProvider === 'polar' && !polarHealthy && razorpayHealthy) {
           console.warn('Stripe is down, switching to Razorpay');
           setPaymentProvider('razorpay');
-        } else if (paymentProvider === 'razorpay' && !razorpayHealthy && stripeHealthy) {
+        } else if (paymentProvider === 'razorpay' && !razorpayHealthy && polarHealthy) {
           console.warn('Razorpay is down, switching to Stripe');
           setPaymentProvider('stripe');
         }
@@ -1807,7 +1807,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                       <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                                       <div className="flex-1">
                                         <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                                          {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is currently unavailable
+                                          {paymentProvider === 'polar' ? 'Polar' : 'Razorpay'} is currently unavailable
                                         </p>
                                         <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
                                           {providerHealth.stripe && providerHealth.razorpay ? (
@@ -1828,7 +1828,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-lg">
                                     <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
                                       <Check className="w-4 h-4" />
-                                      <span>Payment via {paymentProvider === 'stripe' ? 'Stripe' : 'Razorpay'} is available</span>
+                                      <span>Payment via {paymentProvider === 'polar' ? 'Polar' : 'Razorpay'} is available</span>
                                     </div>
                                   </div>
                                 )}

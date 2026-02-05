@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
-import StripeService from '@/lib/payment/stripe';
+import PolarService from '@/lib/payment/polar';
 import RazorpayService from '@/lib/payment/razorpay';
 import { LocationService } from '@/lib/payment/locationService';
 
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     await getConnection();
 
     const body = await request.json();
-    const { planName, amount, currency, paymentMethod, billingCycle } = body;
+    const { planName, amount, currency, paymentMethod, billingCycle, productPriceId, returnUrl } = body;
 
     if (!planName || !amount || !currency || !paymentMethod) {
       return NextResponse.json(
@@ -29,7 +29,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user
     const user = await User.findOne({ email: session.user.email });
     if (!user) {
       return NextResponse.json(
@@ -38,41 +37,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine payment partner based on currency
-    const partner = currency === 'INR' ? 'razorpay' : 'stripe';
+    const partner = currency === 'INR' ? 'razorpay' : 'polar';
 
-    if (partner === 'stripe') {
-      // Handle Stripe payment
-      const stripeResult = await StripeService.createPaymentIntent({
-        amount: amount,
-        currency: currency.toLowerCase(),
-        customerId: user.stripeCustomerId,
+    if (partner === 'polar') {
+      if (!productPriceId) {
+        return NextResponse.json(
+          { success: false, error: 'Product price ID is required for Polar' },
+          { status: 400 }
+        );
+      }
+
+      const polarResult = await PolarService.createCheckout({
+        productPriceId: productPriceId,
+        customerEmail: user.email,
+        customerName: `${user.firstName} ${user.lastName}`,
+        successUrl: returnUrl || `${process.env.NEXTAUTH_URL}/dashboard?success=true`,
         metadata: {
           userId: user._id.toString(),
           planName: planName,
           billingCycle: billingCycle || 'one-time'
-        },
-        description: `CV Circle - ${planName}`
+        }
       });
 
-      if (!stripeResult.success) {
+      if (!polarResult.success) {
         return NextResponse.json(
-          { success: false, error: stripeResult.error },
+          { success: false, error: polarResult.error },
           { status: 400 }
         );
       }
 
       return NextResponse.json({
         success: true,
-        paymentIntentId: stripeResult.paymentIntentId,
-        clientSecret: stripeResult.clientSecret,
-        amount: stripeResult.amount,
-        currency: stripeResult.currency,
-        paymentMethod: 'stripe'
+        checkoutId: polarResult.checkoutId,
+        checkoutUrl: polarResult.checkoutUrl,
+        paymentMethod: 'polar'
       });
 
     } else {
-      // Handle Razorpay payment
       const razorpayResult = await RazorpayService.createOrder({
         amount: amount,
         currency: currency,
