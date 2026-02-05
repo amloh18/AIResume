@@ -62,7 +62,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
     window.addEventListener('welcomeDismissed', handleWelcomeDismissed);
     // Listen for storage events (cross tab)
     window.addEventListener('storage', handleStorageChange);
-    
+
     return () => {
       window.removeEventListener('masterCVCreated', handleMasterCVCreated);
       window.removeEventListener('welcomeDismissed', handleWelcomeDismissed);
@@ -84,13 +84,13 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
         isChecking,
         hasChecked: hasCheckedRef.current
       });
-      
+
       // Prevent multiple API calls
       if (hasCheckedRef.current) {
         console.log('🔍 CVCheckRedirect - Already checked, skipping');
         return;
       }
-      
+
       // Wait for auth to be available
       if (authLoading) {
         console.log('🔍 CVCheckRedirect - Auth still loading, waiting...');
@@ -126,7 +126,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
               parsed.cvData?.projects?.length > 0 ||
               parsed.currentStep > 1
             );
-            
+
             if (hasCvData) {
               console.log('✅ User has AI career report data in localStorage, redirecting to continue...');
               console.log('🔍 CVCheckRedirect - AI Career Report data:', {
@@ -134,7 +134,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 hasWork: parsed.cvData?.work?.length > 0,
                 hasEducation: parsed.cvData?.education?.length > 0
               });
-              
+
               // Redirect to AI career report to continue where they left off
               const step = parsed.currentStep || 3;
               router.push(`/ai-career-report?step=${step}`);
@@ -162,8 +162,8 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
         sessionStorage.removeItem('fromOnboarding');
         sessionStorage.removeItem('fromAICareerReport');
         sessionStorage.removeItem('masterCVCreated');
-        
-        
+
+
         // Set hasMasterCV to true since we're skipping the check
         setHasMasterCV(true);
         setIsChecking(false);
@@ -172,41 +172,41 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
 
       try {
         console.log('🔍 Checking CVs for user:', user.id);
-      console.log('🔍 CVCheckRedirect - User details:', {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        isNextAuthUser: user.isNextAuthUser,
-        isFirebaseUser: user.isFirebaseUser
-      });
-        
+        console.log('🔍 CVCheckRedirect - User details:', {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          isNextAuthUser: user.isNextAuthUser,
+
+        });
+
         // Add a small delay to ensure database is updated after master CV creation
         await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
         // First, try the master CV API endpoint for a direct check
         console.log('🔍 CVCheckRedirect - Checking master CV API first');
         try {
           const masterCVResponse = await fetch(`/api/cvs/master?userId=${user.id}`);
           const masterCVResult = await masterCVResponse.json();
-          
+
           console.log('🔍 CVCheckRedirect - Master CV API result:', masterCVResult);
-          
+
           if (masterCVResult.success && masterCVResult.data?.masterCV) {
             console.log('✅ Master CV found via master CV API, staying on dashboard');
             setHasMasterCV(true);
             setIsChecking(false);
             return;
           }
-          
+
           // If master CV API didn't find it, try again after a short delay
           console.log('🔍 CVCheckRedirect - Master CV not found, retrying after delay...');
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
+
           const retryResponse = await fetch(`/api/cvs/master?userId=${user.id}`);
           const retryResult = await retryResponse.json();
-          
+
           console.log('🔍 CVCheckRedirect - Master CV API retry result:', retryResult);
-          
+
           if (retryResult.success && retryResult.data?.masterCV) {
             console.log('✅ Master CV found via master CV API retry, staying on dashboard');
             setHasMasterCV(true);
@@ -216,15 +216,15 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
         } catch (masterCVError) {
           console.log('⚠️ Master CV API call failed, falling back to all CVs check:', masterCVError);
         }
-        
+
         // Fallback: Check all CVs and look for master CV
         console.log('🔍 CVCheckRedirect - Master CV not found, checking all CVs');
         const response = await fetch(`/api/cvs?userId=${user.id}`);
         const result = await response.json();
-        
+
         console.log('📊 CV Data Result:', result);
         console.log('🔍 CVCheckRedirect - Full API response:', JSON.stringify(result, null, 2));
-        
+
         if (result.success) {
           if (result.data && result.data.cvs && result.data.cvs.length > 0) {
             // Debug: Log all CVs to see their structure
@@ -234,14 +234,14 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
               isMaster: cv.isMaster,
               metadata: cv.metadata
             })));
-            
+
             // Check if user has any master CVs
             // Handle both old format (isMaster at root) and new format (metadata.isMaster)
             const hasMasterCV = result.data.cvs.some((cv: any) => {
               const isMasterAtRoot = cv.isMaster === true;
               const isMasterInMetadata = cv.metadata?.isMaster === true;
               const isMasterInMetadataString = cv.metadata?.isMaster === 'true';
-              
+
               console.log('🔍 CV Master check:', {
                 id: cv.id,
                 title: cv.title,
@@ -250,10 +250,10 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 isMasterInMetadataString,
                 metadata: cv.metadata
               });
-              
+
               return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
             });
-            
+
             console.log('🔍 Master CV check result:', {
               hasMasterCV,
               cvCount: result.data.cvs.length,
@@ -264,7 +264,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 return isMasterAtRoot || isMasterInMetadata || isMasterInMetadataString;
               }).length
             });
-            
+
             if (hasMasterCV) {
               console.log('✅ User has master CV, staying on dashboard');
               setHasMasterCV(true);
@@ -274,29 +274,17 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
                 sessionStorage.removeItem('needsCVSetup');
               }
             } else {
-              console.log('📝 User has CVs but no master CV, showing master CV card');
-              setHasMasterCV(false);
+              console.log('📝 User has CVs but no master CV, redirecting to resume enhancer');
+              // Redirect to resume enhancer to create master CV
+              router.push('/resume-enhancer?master=true');
               setIsChecking(false);
-              // Check if card was dismissed in this session
-              const wasDismissed = typeof window !== 'undefined' && 
-                sessionStorage.getItem('masterCVCardDismissed') === 'true';
-              // Show card if not dismissed (dismissal doesn't prevent showing on add job)
-              if (!wasDismissed) {
-                setShowMasterCVCard(true);
-              }
               return;
             }
           } else {
-            console.log('📝 User has no CVs, showing master CV card');
-            setHasMasterCV(false);
+            console.log('📝 User has no CVs, redirecting to resume enhancer');
+            // Redirect to resume enhancer to create master CV
+            router.push('/resume-enhancer?master=true');
             setIsChecking(false);
-            // Check if card was dismissed in this session
-            const wasDismissed = typeof window !== 'undefined' && 
-              sessionStorage.getItem('masterCVCardDismissed') === 'true';
-            // Show card if not dismissed (dismissal doesn't prevent showing on add job)
-            if (!wasDismissed) {
-              setShowMasterCVCard(true);
-            }
             return;
           }
         } else {
@@ -307,16 +295,9 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
             error: result.error,
             message: result.message
           });
-          // Fallback: show master CV card if we can't check
-          setHasMasterCV(false);
+          // Fallback: redirect to resume enhancer if we can't check
+          router.push('/resume-enhancer?master=true');
           setIsChecking(false);
-          // Check if card was dismissed in this session
-          const wasDismissed = typeof window !== 'undefined' && 
-            sessionStorage.getItem('masterCVCardDismissed') === 'true';
-          // Show card if not dismissed
-          if (!wasDismissed) {
-            setShowMasterCVCard(true);
-          }
           return;
         }
       } catch (error) {
@@ -332,7 +313,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
   // CRITICAL FIX: Always render the same structure to maintain consistent hook count
   // Conditionally show/hide content instead of conditionally returning different components
   // This prevents "Rendered fewer hooks than expected" errors
-  
+
   console.log('🔍 CVCheckRedirect - Rendering', {
     isChecking,
     hasMasterCV,
@@ -351,11 +332,11 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
     <>
       {/* Always render children - they handle their own loading states */}
       {children}
-      
+
       {/* Conditionally show master CV card if needed */}
       {!isChecking && !hasMasterCV && user?.id && showMasterCVCard && (
-        <CreateMasterCVCard 
-          userId={user.id} 
+        <CreateMasterCVCard
+          userId={user.id}
           onClose={handleMasterCVCardClose}
         />
       )}

@@ -67,14 +67,24 @@ export type NotificationType =
   | 'extension_download';
 
 export type NotificationChannel = 'in-app' | 'email' | 'push';
-export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type NotificationPriority = 'low' | 'medium' | 'high' | 'urgent' | 'critical';
+export type NotificationCategory = 
+  | 'application_tracker'
+  | 'ats_score'
+  | 'cv_document'
+  | 'analytics'
+  | 'payment'
+  | 'system'
+  | 'account';
 
 export interface INotification extends Document {
   userId: mongoose.Types.ObjectId | string;
   type: NotificationType;
+  category?: NotificationCategory;
   title: string;
   message: string;
   actionType?: string; // e.g., 'move_to_next_stage', 'review_job', 'view_offer'
+  actionUrl?: string; // Direct URL for action
   actionData?: {
     jobId?: string;
     journeyId?: string;
@@ -194,6 +204,19 @@ const notificationSchema = new Schema<INotification>(
       required: true
       // Note: Index defined in compound index below
     },
+    category: {
+      type: String,
+      enum: [
+        'application_tracker',
+        'ats_score',
+        'cv_document',
+        'analytics',
+        'payment',
+        'system',
+        'account'
+      ],
+      required: false
+    },
     title: {
       type: String,
       required: true,
@@ -207,6 +230,10 @@ const notificationSchema = new Schema<INotification>(
       maxlength: 1000,
     },
     actionType: {
+      type: String,
+      trim: true,
+    },
+    actionUrl: {
       type: String,
       trim: true,
     },
@@ -228,7 +255,7 @@ const notificationSchema = new Schema<INotification>(
     },
     priority: {
       type: String,
-      enum: ['low', 'medium', 'high', 'urgent'],
+      enum: ['low', 'medium', 'high', 'urgent', 'critical'],
       default: 'medium'
       // Note: Index not needed - not used in queries
     },

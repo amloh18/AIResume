@@ -9,8 +9,8 @@ export interface ISubscription extends Document {
   billingCycle: 'monthly' | 'quarterly' | 'yearly' | 'one-time'; // FIXED: Added quarterly
   amount: number;
   currency: string;
-  paymentMethod: 'stripe' | 'razorpay';
-  paymentProviderId: string; // Stripe/Razorpay subscription ID
+  paymentMethod: 'polar' | 'razorpay';
+  paymentProviderId: string; // Polar/Razorpay subscription ID
   discountCodeId?: mongoose.Types.ObjectId;
   discountAmount?: number;
   finalAmount: number;
@@ -18,7 +18,7 @@ export interface ISubscription extends Document {
   cancelledAt?: Date;
   cancellationReason?: string;
   metadata: {
-    stripeCustomerId?: string;
+    polarCustomerId?: string;
     razorpayCustomerId?: string;
     invoiceUrl?: string;
     receiptUrl?: string;
@@ -80,7 +80,7 @@ const subscriptionSchema = new Schema<ISubscription>({
   paymentMethod: {
     type: String,
     required: [true, 'Payment method is required'],
-    enum: ['stripe', 'razorpay']
+    enum: ['polar', 'razorpay']
   },
   paymentProviderId: {
     type: String,
@@ -111,7 +111,7 @@ const subscriptionSchema = new Schema<ISubscription>({
     maxlength: [500, 'Cancellation reason cannot exceed 500 characters']
   },
   metadata: {
-    stripeCustomerId: String,
+    polarCustomerId: String,
     razorpayCustomerId: String,
     invoiceUrl: String,
     receiptUrl: String

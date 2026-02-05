@@ -304,8 +304,8 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
             </motion.button>
 
             {/* Apply to Job Option - Third card */}
-            {/* Hide for master CV mode (edit-master or cvType === 'master') */}
-            {!(mode === 'edit-master' || cvType === 'master') && (
+            {/* Hide for master CV mode (edit-master or cvType === 'master') OR if user has no master CV */}
+            {!(mode === 'edit-master' || cvType === 'master') && userHasMasterCV && (
               <motion.button
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -1007,7 +1007,17 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     <ZoomIn className="w-3 h-3" />
                   </button>
                 </div>
+                {/* Add Section Button */}
+                <div className="h-4 w-px bg-black/10 dark:bg-white/10 mx-2" />
+                <button
+                  onClick={() => setShowAddSectionModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium shadow-sm shadow-black/10 dark:shadow-black/30 transition-colors"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add section</span>
+                </button>
               </div>
+
               {/* Right side: Preview title */}
               <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
             </div>

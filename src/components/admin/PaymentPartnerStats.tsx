@@ -153,7 +153,7 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
 
   const pieChartData = [
     {
-      name: 'Stripe',
+      name: 'Polar',
       value: stats.stripe.totalRevenue,
       color: '#3B82F6',
       transactions: stats.stripe.totalTransactions
@@ -170,7 +170,7 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
     ...Object.entries(stats.stripe.currencyBreakdown).map(([currency, amount]) => ({
       currency,
       amount,
-      partner: 'Stripe',
+      partner: 'Polar',
       color: '#3B82F6'
     })),
     ...Object.entries(stats.razorpay.currencyBreakdown).map(([currency, amount]) => ({
@@ -237,7 +237,7 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Stripe Revenue</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Polar Revenue</p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {formatCurrency(stats.stripe.totalRevenue, selectedCurrency)}
               </p>
@@ -331,11 +331,11 @@ const PaymentPartnerStats: React.FC<PaymentPartnerStatsProps> = ({ selectedCurre
 
       {/* Detailed Statistics */}
       <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
-        {/* Stripe Statistics */}
+        {/* Polar Statistics */}
         <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3 mb-4">
             <CreditCard className="h-6 w-6 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Stripe Statistics</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Polar Statistics</h3>
           </div>
           
           <div className="space-y-4">

@@ -56,7 +56,7 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3, ease: "easeOut" }}
         >
-          AI-powered CV builder with ATS optimization, tailored cover letters, and job tracking—all in one fast, beautiful workspace.
+          Job tracker with automated CV and cover letter generation.
         </motion.p>
 
         {/* CTA Button */}

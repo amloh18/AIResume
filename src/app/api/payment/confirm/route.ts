@@ -6,7 +6,7 @@ import { User } from '@/models';
 import Invoice from '@/models/Invoice';
 import InvoiceItem from '@/models/InvoiceItem';
 import { getAdminPricingPlan, getAdminDiscountCode, getAdminSubscription } from '@/models/admin-models';
-import StripeService from '@/lib/payment/stripe';
+import PolarService from '@/lib/payment/polar';
 import RazorpayService from '@/lib/payment/razorpay';
 import { createTransaction } from '@/lib/services/transactionService';
 import mongoose from 'mongoose';
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       paymentMethod,
-      paymentIntentId, // For Stripe
+      checkoutId, // For Polar
       orderId, // For Razorpay
       paymentId, // For Razorpay
       signature, // For Razorpay verification
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For development/testing, allow simulation without full payment verification
-    const isSimulation = process.env.NODE_ENV === 'development' && !paymentIntentId && !orderId;
+    const isSimulation = process.env.NODE_ENV === 'development' && !checkoutId && !orderId;
 
     // Get the pricing plan
     const PricingPlan = await getAdminPricingPlan();
@@ -97,19 +97,24 @@ export async function POST(request: NextRequest) {
           billingCycle: plan.billingCycle
         }
       };
-    } else if (paymentMethod === 'stripe') {
-      if (!paymentIntentId) {
+    } else if (paymentMethod === 'polar') {
+      if (!checkoutId) {
         return NextResponse.json(
-          { error: 'Payment intent ID is required for Stripe' },
+          { error: 'Checkout ID is required for Polar' },
           { status: 400 }
         );
       }
 
-      // Get payment intent details from Stripe
-      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      const checkoutResult = await PolarService.getCheckout(checkoutId);
+      if (!checkoutResult.success || !checkoutResult.checkout) {
+        return NextResponse.json(
+          { error: 'Failed to retrieve checkout details' },
+          { status: 400 }
+        );
+      }
 
-      if (paymentIntent.status !== 'succeeded') {
+      const checkout = checkoutResult.checkout;
+      if (checkout.status !== 'confirmed' && checkout.status !== 'succeeded') {
         return NextResponse.json(
           { error: 'Payment not completed' },
           { status: 400 }
@@ -117,10 +122,10 @@ export async function POST(request: NextRequest) {
       }
 
       paymentDetails = {
-        paymentProviderId: paymentIntent.id,
-        amount: paymentIntent.amount / 100, // Convert from cents
-        currency: paymentIntent.currency,
-        metadata: paymentIntent.metadata
+        paymentProviderId: checkout.id,
+        amount: checkout.amount / 100,
+        currency: checkout.currency,
+        metadata: checkout.metadata || {}
       };
 
     } else if (paymentMethod === 'razorpay') {
@@ -210,7 +215,7 @@ export async function POST(request: NextRequest) {
       discountAmount,
       finalAmount: paymentDetails.amount,
       metadata: {
-        stripeCustomerId: paymentMethod === 'stripe' ? paymentDetails.metadata?.stripeCustomerId : undefined,
+        polarCustomerId: paymentMethod === 'polar' ? paymentDetails.metadata?.polarCustomerId : undefined,
         razorpayCustomerId: paymentMethod === 'razorpay' ? paymentDetails.metadata?.razorpayCustomerId : undefined,
         invoiceUrl: paymentDetails.metadata?.invoiceUrl,
         receiptUrl: paymentDetails.metadata?.receiptUrl
@@ -231,7 +236,7 @@ export async function POST(request: NextRequest) {
         planName: plan.name,
         planId: plan._id,
         billingCycle: plan.billingCycle,
-        paymentMethodType: paymentMethod === 'stripe' ? 'stripe' : paymentMethod === 'razorpay' ? 'razorpay' : 'unknown',
+        paymentMethodType: paymentMethod === 'polar' ? 'polar' : paymentMethod === 'razorpay' ? 'razorpay' : 'unknown',
         paymentMethodLast4: '****',
         paidAt: new Date(),
         invoiceDate: new Date(),
@@ -272,7 +277,7 @@ export async function POST(request: NextRequest) {
         amount: paymentDetails.amount,
         status: 'success',
         gatewayReferenceId: paymentDetails.paymentProviderId,
-        gateway: paymentMethod === 'stripe' ? 'stripe' : 'razorpay',
+        gateway: paymentMethod === 'polar' ? 'polar' : 'razorpay',
         metadata: {
           subscriptionId: subscription._id.toString(),
           discountCodeId: discountCodeId || null,
