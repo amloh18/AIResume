@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface ExecutiveProfessionalLayoutTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -58,21 +60,25 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 }) => {
   const { basics, work, education, skills, projects, languages } = cvData;
 
+  // Create a section ID resolver to map section types to actual UUIDs from structure
+  const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
   // Helper to wrap section content with DraggableSection when provided
   // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+  // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    const isHeader = headerSectionTypes.includes(sectionType);
+    const isHeader = isHeaderSection(sectionType);
+    // Resolve the actual section ID from structure (UUID) for drag-and-drop
+    const actualId = resolveSectionId(sectionType);
 
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+        <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
     }
-    return <div data-section-id={id}>{children}</div>;
+    return <div data-section-id={actualId}>{children}</div>;
   };
 
   return (
@@ -294,107 +300,119 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
 
       {/* Summary Section */}
       {basics?.summary && (
-        <div className="section" data-section-id="summary">
-          <h2 className="section-title">SUMMARY</h2>
-          <div className="summary-text">{stripHtmlTags(basics.summary)}</div>
-        </div>
+        <Wrapper id="summary" sectionType="summary">
+          <div className="section">
+            <h2 className="section-title">SUMMARY</h2>
+            <div className="summary-text">{stripHtmlTags(basics.summary)}</div>
+          </div>
+        </Wrapper>
       )}
 
       {/* Experience Section */}
       {work && work.length > 0 && (
-        <div className="section" data-section-id="work">
-          <h2 className="section-title">EXPERIENCE</h2>
-          {work.map((job, index) => (
-            <div key={index} className="experience-item" data-item-id={index}>
-              <div className="experience-header">
-                <div>
-                  <span className="job-title">{job.position}</span>
-                  <span className="company-name">- {job.name}</span>
+        <Wrapper id="work" sectionType="work">
+          <div className="section">
+            <h2 className="section-title">EXPERIENCE</h2>
+            {work.map((job, index) => (
+              <div key={index} className="experience-item" data-item-id={index}>
+                <div className="experience-header">
+                  <div>
+                    <span className="job-title">{job.position}</span>
+                    <span className="company-name">- {job.name}</span>
+                  </div>
+                  <div className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
                 </div>
-                <div className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
+                {job.summary && (
+                  <div className="job-description">
+                    {stripHtmlTags(job.summary)}
+                  </div>
+                )}
               </div>
-              {job.summary && (
-                <div className="job-description">
-                  {stripHtmlTags(job.summary)}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* Education Section */}
       {education && education.length > 0 && (
-        <div className="section" data-section-id="education">
-          <h2 className="section-title">EDUCATION</h2>
-          {education.map((edu, index) => (
-            <div key={index} className="education-item" data-item-id={index}>
-              <div className="education-header">
-                <div>
-                  <span className="degree-title">{edu.studyType} {edu.area && `in ${edu.area}`}</span>
-                  <span className="institution-name">- {edu.institution}</span>
+        <Wrapper id="education" sectionType="education">
+          <div className="section">
+            <h2 className="section-title">EDUCATION</h2>
+            {education.map((edu, index) => (
+              <div key={index} className="education-item" data-item-id={index}>
+                <div className="education-header">
+                  <div>
+                    <span className="degree-title">{edu.studyType} {edu.area && `in ${edu.area}`}</span>
+                    <span className="institution-name">- {edu.institution}</span>
+                  </div>
+                  <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                 </div>
-                <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
+                {edu.description && (
+                  <div className="education-description">
+                    {stripHtmlTags(edu.description)}
+                  </div>
+                )}
               </div>
-              {edu.description && (
-                <div className="education-description">
-                  {stripHtmlTags(edu.description)}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* Skills Section */}
       {skills && skills.length > 0 && (
-        <div className="section" data-section-id="skills">
-          <h2 className="section-title">SKILLS</h2>
-          <div className="skills-container">
-            {skills
-              .filter(skill => skill && skill.skills && Array.isArray(skill.skills) && skill.skills.length > 0)
-              .map((skill, index) => (
-                <div key={index} className="skill-item">
-                  <span className="skill-category">{skill.category}:</span>
-                  <span className="skill-list">{skill.skills.join(', ')}</span>
-                </div>
-              ))}
+        <Wrapper id="skills" sectionType="skills">
+          <div className="section">
+            <h2 className="section-title">SKILLS</h2>
+            <div className="skills-container">
+              {skills
+                .filter(skill => skill && skill.skills && Array.isArray(skill.skills) && skill.skills.length > 0)
+                .map((skill, index) => (
+                  <div key={index} className="skill-item">
+                    <span className="skill-category">{skill.category}:</span>
+                    <span className="skill-list">{skill.skills.join(', ')}</span>
+                  </div>
+                ))}
+            </div>
           </div>
-        </div>
+        </Wrapper>
       )}
 
       {/* Projects Section */}
       {projects && projects.length > 0 && (
-        <div className="section" data-section-id="projects">
-          <h2 className="section-title">PROJECTS</h2>
-          {projects.map((project, index) => (
-            <div key={index} className="project-item" data-item-id={index}>
-              <div className="project-header">
-                <div>
-                  <div className="project-title">{project.name}</div>
+        <Wrapper id="projects" sectionType="projects">
+          <div className="section">
+            <h2 className="section-title">PROJECTS</h2>
+            {projects.map((project, index) => (
+              <div key={index} className="project-item" data-item-id={index}>
+                <div className="project-header">
+                  <div>
+                    <div className="project-title">{project.name}</div>
+                  </div>
+                  <div className="project-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>
                 </div>
-                <div className="project-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>
+                {project.description && (
+                  <div className="project-description">{stripHtmlTags(project.description)}</div>
+                )}
               </div>
-              {project.description && (
-                <div className="project-description">{stripHtmlTags(project.description)}</div>
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* Languages Section */}
       {languages && languages.length > 0 && (
-        <div className="section" data-section-id="languages">
-          <h2 className="section-title">LANGUAGES</h2>
-          <div className="languages-list">
-            <ul>
-              {languages.map((lang, index) => (
-                <li key={index}>{lang.language} ({lang.fluency})</li>
-              ))}
-            </ul>
+        <Wrapper id="languages" sectionType="languages">
+          <div className="section">
+            <h2 className="section-title">LANGUAGES</h2>
+            <div className="languages-list">
+              <ul>
+                {languages.map((lang, index) => (
+                  <li key={index}>{lang.language} ({lang.fluency})</li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
+        </Wrapper>
       )}
     </div>
   );

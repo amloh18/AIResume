@@ -78,7 +78,7 @@ export const AddSectionModal: React.FC<AddSectionModalProps> = ({
                                             disabled={isAlreadyAdded}
                                             whileHover={!isAlreadyAdded ? { scale: 1.02, y: -2 } : {}}
                                             whileTap={!isAlreadyAdded ? { scale: 0.98 } : {}}
-                                            className={`relative p-4 rounded-xl text-left transition-all ${isAlreadyAdded
+                                            className={`relative p-4 rounded-xl text-left transition-all duration-200 ${isAlreadyAdded
                                                 ? 'bg-black/5 dark:bg-white/5 opacity-50 cursor-not-allowed'
                                                 : 'bg-[var(--bg-tertiary)] hover:bg-[color:var(--accent-primary)]/10 hover:shadow-md border-2 border-transparent hover:border-[color:var(--accent-primary)]'
                                                 }`}

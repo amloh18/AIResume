@@ -147,11 +147,11 @@ function LinkedInEnhancerContent() {
                 payload: { sections, cvId, cvType },
             });
 
-            // Try to load saved enhancement data
-            // regenerate=false will check DB first
-            setTimeout(() => {
+            // Trigger enhancement immediately after state update
+            // Use requestAnimationFrame to ensure state is committed
+            requestAnimationFrame(() => {
                 triggerEnhancement(cvId, cvType, false);
-            }, 500);
+            });
 
             dispatch({ type: 'SET_LOADING', payload: false });
         } catch (error) {
@@ -180,6 +180,16 @@ function LinkedInEnhancerContent() {
         }
     }, [triggerEnhancement, state.selectedCvId, state.selectedCvType, availableCvs]);
 
+    // Handle tone change with regeneration
+    const handleToneChangeWithRegenerate = useCallback((tone: 'Professional' | 'Visionary' | 'Technical' | 'Relatable') => {
+        // Update tone in state
+        setTone(tone);
+        // Trigger regeneration with new tone
+        if (state.selectedCvId && state.selectedCvType) {
+            triggerEnhancement(state.selectedCvId, state.selectedCvType, true);
+        }
+    }, [setTone, triggerEnhancement, state.selectedCvId, state.selectedCvType]);
+
     // Loading steps for initial load
     const loadingSteps = [
         { label: 'Connecting to profile...', icon: '🔗' },
@@ -188,7 +198,7 @@ function LinkedInEnhancerContent() {
         { label: 'Preparing workspace...', icon: '🚀' },
     ];
 
-    // Show loading state while checking for CVs
+    // Show loading state with skeleton sections while checking for CVs
     if (!initialLoadComplete) {
         return (
             <div
@@ -204,123 +214,34 @@ function LinkedInEnhancerContent() {
                     currentTone={state.user_context.tone_selection}
                     onToneChange={setTone}
                 />
-                <div className="flex-1 flex items-center justify-center p-8">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full"
-                    >
-                        {/* LinkedIn to Document Transfer Animation */}
-                        <div className="relative w-48 h-20 mx-auto mb-6 flex items-center justify-center">
-                            {/* LinkedIn Icon */}
-                            <motion.div
-                                className="w-14 h-14 rounded-lg flex items-center justify-center shadow-md"
-                                style={{ backgroundColor: '#0a66c2' }}
-                                animate={{ scale: [1, 1.05, 1] }}
-                                transition={{ duration: 1.5, repeat: Infinity }}
-                            >
-                                <span className="text-white text-xl font-bold">in</span>
-                            </motion.div>
-
-                            {/* Animated Transfer Dots */}
-                            <div className="relative w-16 h-8 mx-2">
-                                {[0, 1, 2].map((i) => (
-                                    <motion.div
-                                        key={i}
-                                        className="absolute top-1/2 w-2 h-2 rounded-full bg-blue-500"
-                                        initial={{ x: 0, opacity: 0 }}
-                                        animate={{
-                                            x: [0, 48],
-                                            opacity: [0, 1, 1, 0],
-                                        }}
-                                        transition={{
-                                            duration: 1.2,
-                                            repeat: Infinity,
-                                            delay: i * 0.3,
-                                            ease: "easeInOut"
-                                        }}
-                                        style={{ translateY: '-50%' }}
-                                    />
-                                ))}
-                                {/* Arrow line */}
-                                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-gray-200 -translate-y-1/2" />
-                            </div>
-
-                            {/* Document Icon */}
-                            <motion.div
-                                className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center shadow-md border border-gray-200"
-                                animate={{
-                                    scale: [1, 1.1, 1],
-                                    borderColor: ['#e5e7eb', '#3b82f6', '#e5e7eb']
-                                }}
-                                transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
-                            >
-                                <FileText className="w-7 h-7 text-blue-600" />
-                            </motion.div>
-                        </div>
-
-                        <motion.h2
-                            className="text-lg font-semibold text-gray-900 mb-4 text-center"
-                            animate={{ opacity: [0.7, 1, 0.7] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                        >
-                            Loading Your Profile
-                        </motion.h2>
-
-                        {/* Animated loading steps */}
-                        <div className="space-y-3 mb-6">
-                            {loadingSteps.map((step, idx) => (
-                                <motion.div
-                                    key={idx}
-                                    className="flex items-center gap-3"
-                                    initial={{ opacity: 0, x: -20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.5 }}
-                                >
-                                    <motion.span
-                                        className="text-lg"
-                                        animate={{ scale: [1, 1.2, 1] }}
-                                        transition={{ delay: idx * 0.5, duration: 0.5 }}
-                                    >
-                                        {step.icon}
-                                    </motion.span>
-                                    <motion.span
-                                        className="text-sm text-gray-600"
-                                        animate={{ opacity: [0.5, 1] }}
-                                        transition={{ delay: idx * 0.5 + 0.2 }}
-                                    >
-                                        {step.label}
-                                    </motion.span>
-                                    <motion.div
-                                        className="ml-auto"
-                                        initial={{ opacity: 0, scale: 0 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: idx * 0.5 + 0.4 }}
-                                    >
-                                        <motion.div
-                                            className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: idx * 0.5 + 0.6 }}
-                                        >
-                                            <span className="text-white text-xs">✓</span>
-                                        </motion.div>
-                                    </motion.div>
-                                </motion.div>
+                {/* Show skeleton sections instead of loading card */}
+                <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-2 space-y-4">
+                            {[1, 2, 3, 4].map((i) => (
+                                <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
+                                    <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
+                                    <div className="space-y-2">
+                                        <div className="h-4 bg-gray-100 rounded w-full" />
+                                        <div className="h-4 bg-gray-100 rounded w-5/6" />
+                                        <div className="h-4 bg-gray-100 rounded w-4/6" />
+                                    </div>
+                                </div>
                             ))}
                         </div>
-
-                        {/* Progress bar */}
-                        <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
-                            <motion.div
-                                className="h-full bg-blue-600"
-                                initial={{ width: '0%' }}
-                                animate={{ width: '100%' }}
-                                transition={{ duration: 2.5, ease: 'easeInOut' }}
-                            />
+                        <div className="space-y-4">
+                            {[1, 2].map((i) => (
+                                <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
+                                    <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
+                                    <div className="space-y-2">
+                                        <div className="h-3 bg-gray-100 rounded w-full" />
+                                        <div className="h-3 bg-gray-100 rounded w-3/4" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    </motion.div>
-                </div>
+                    </div>
+                </main>
             </div>
         );
     }
@@ -381,6 +302,7 @@ function LinkedInEnhancerContent() {
                 isEnhancing={state.isEnhancing}
                 currentTone={state.user_context.tone_selection}
                 onToneChange={setTone}
+                onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
             />
 
             {/* Main Content */}
@@ -418,6 +340,56 @@ function LinkedInEnhancerContent() {
                                 ))}
                             </div>
                         </motion.div>
+                    ) : state.error && state.sections.hero.status === 'default' ? (
+                        // Show skeleton sections if AI failed and no enhanced data
+                        <motion.div
+                            key="skeleton"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+                        >
+                            {/* Error Banner */}
+                            <div className="lg:col-span-3 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                                <div className="flex-1">
+                                    <p className="text-red-800 font-medium">AI Enhancement Failed</p>
+                                    <p className="text-red-600 text-sm">{state.error}</p>
+                                </div>
+                                <motion.button
+                                    onClick={handleRegenerate}
+                                    className="px-4 py-1.5 bg-red-600 text-white text-sm rounded-lg"
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                >
+                                    Retry
+                                </motion.button>
+                            </div>
+
+                            {/* Skeleton Sections */}
+                            <div className="lg:col-span-2 space-y-4">
+                                {[1, 2, 3, 4].map((i) => (
+                                    <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
+                                        <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
+                                        <div className="space-y-2">
+                                            <div className="h-4 bg-gray-100 rounded w-full" />
+                                            <div className="h-4 bg-gray-100 rounded w-5/6" />
+                                            <div className="h-4 bg-gray-100 rounded w-4/6" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="space-y-4">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="bg-white rounded-lg p-6 animate-pulse">
+                                        <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
+                                        <div className="space-y-2">
+                                            <div className="h-3 bg-gray-100 rounded w-full" />
+                                            <div className="h-3 bg-gray-100 rounded w-3/4" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </motion.div>
                     ) : (
                         <motion.div
                             key="content"
@@ -425,7 +397,7 @@ function LinkedInEnhancerContent() {
                             animate={{ opacity: 1, y: 0 }}
                             className="grid grid-cols-1 lg:grid-cols-3 gap-6"
                         >
-                            {/* Error Banner */}
+                            {/* Error Banner - shown when there's an error but we have data to display */}
                             {state.error && (
                                 <div className="lg:col-span-3 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
                                     <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
@@ -484,9 +456,9 @@ function LinkedInEnhancerContent() {
                 </AnimatePresence>
             </main>
 
-            {/* Enhancement Loading Overlay */}
+            {/* Enhancement Loading Overlay - Only show on regenerate */}
             <AnimatePresence>
-                {state.isEnhancing && (
+                {state.showEnhancingOverlay && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

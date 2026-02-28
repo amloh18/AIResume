@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface OnePagerProfessionalTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -23,21 +25,25 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
 }) => {
   const { basics, work, education, skills, projects, certificates } = cvData;
 
+  // Create a section ID resolver to map section types to actual UUIDs from structure
+  const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
   // Helper to wrap section content with DraggableSection when provided
   // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+  // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    const isHeader = headerSectionTypes.includes(sectionType);
+    const isHeader = isHeaderSection(sectionType);
+    // Resolve the actual section ID from structure (UUID) for drag-and-drop
+    const actualId = resolveSectionId(sectionType);
 
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+        <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
     }
-    return <div data-section-id={id}>{children}</div>;
+    return <div data-section-id={actualId}>{children}</div>;
   };
 
   // Format location
@@ -397,20 +403,24 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
       {/* ====== TOP SECTION: Single Column ====== */}
 
       {/* Header - Name and Title */}
-      <div className="opp-header" data-section-id="personal">
-        <h1 className="opp-name">{basics?.name || 'YOUR NAME'}</h1>
-        <p className="opp-title">{basics?.label || 'Professional Title'}</p>
-      </div>
+      <Wrapper id="personal" sectionType="personal">
+        <div className="opp-header">
+          <h1 className="opp-name">{basics?.name || 'YOUR NAME'}</h1>
+          <p className="opp-title">{basics?.label || 'Professional Title'}</p>
+        </div>
+      </Wrapper>
 
       {/* Thin Separator */}
       <div className="opp-separator"></div>
 
       {/* Profile Summary */}
       {basics?.summary && (
-        <div className="opp-profile-section" data-section-id="summary">
-          <h2 className="opp-section-title">Profile</h2>
-          <p className="opp-profile-text">{stripHtmlTags(basics.summary)}</p>
-        </div>
+        <Wrapper id="summary" sectionType="summary">
+          <div className="opp-profile-section">
+            <h2 className="opp-section-title">Profile</h2>
+            <p className="opp-profile-text">{stripHtmlTags(basics.summary)}</p>
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== MAIN SECTION: Two Columns ====== */}
@@ -420,98 +430,106 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
         <div className="opp-sidebar">
 
           {/* Contact Information */}
-          <div className="opp-sidebar-section" data-section-id="personal">
-            <h3 className="opp-sidebar-title">Contact</h3>
-            <div className="opp-sidebar-content">
-              {basics?.email && (
-                <div className="opp-contact-item">
-                  <span className="opp-contact-icon">✉</span>
-                  <span className="opp-contact-text">{basics.email}</span>
-                </div>
-              )}
-              {basics?.phone && (
-                <div className="opp-contact-item">
-                  <span className="opp-contact-icon">☎</span>
-                  <span className="opp-contact-text">{basics.phone}</span>
-                </div>
-              )}
-              {formatLocation() && (
-                <div className="opp-contact-item">
-                  <span className="opp-contact-icon">📍</span>
-                  <span className="opp-contact-text">{formatLocation()}</span>
-                </div>
-              )}
-              {basics?.url && (
-                <div className="opp-contact-item">
-                  <span className="opp-contact-icon">🔗</span>
-                  <span className="opp-contact-text">{basics.url}</span>
-                </div>
-              )}
-              {basics?.profiles?.map((profile, idx) => (
-                <div key={idx} className="opp-contact-item">
-                  <span className="opp-contact-icon">◆</span>
-                  <span className="opp-contact-text">{profile.url || profile.username}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Education */}
-          {education && education.length > 0 && (
-            <div className="opp-sidebar-section" data-section-id="education">
-              <h3 className="opp-sidebar-title">Education</h3>
+          <Wrapper id="contact" sectionType="contact">
+            <div className="opp-sidebar-section">
+              <h3 className="opp-sidebar-title">Contact</h3>
               <div className="opp-sidebar-content">
-                {education.map((edu, index) => (
-                  <div key={index} className="opp-edu-item" data-item-id={index}>
-                    <p className="opp-edu-degree">
-                      {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
-                    </p>
-                    <p className="opp-edu-institution">{edu.institution}</p>
-                    <p className="opp-edu-dates">
-                      {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
-                    </p>
+                {basics?.email && (
+                  <div className="opp-contact-item">
+                    <span className="opp-contact-icon">✉</span>
+                    <span className="opp-contact-text">{basics.email}</span>
+                  </div>
+                )}
+                {basics?.phone && (
+                  <div className="opp-contact-item">
+                    <span className="opp-contact-icon">☎</span>
+                    <span className="opp-contact-text">{basics.phone}</span>
+                  </div>
+                )}
+                {formatLocation() && (
+                  <div className="opp-contact-item">
+                    <span className="opp-contact-icon">📍</span>
+                    <span className="opp-contact-text">{formatLocation()}</span>
+                  </div>
+                )}
+                {basics?.url && (
+                  <div className="opp-contact-item">
+                    <span className="opp-contact-icon">🔗</span>
+                    <span className="opp-contact-text">{basics.url}</span>
+                  </div>
+                )}
+                {basics?.profiles?.map((profile, idx) => (
+                  <div key={idx} className="opp-contact-item">
+                    <span className="opp-contact-icon">◆</span>
+                    <span className="opp-contact-text">{profile.url || profile.username}</span>
                   </div>
                 ))}
               </div>
             </div>
+          </Wrapper>
+
+          {/* Education */}
+          {education && education.length > 0 && (
+            <Wrapper id="education" sectionType="education">
+              <div className="opp-sidebar-section">
+                <h3 className="opp-sidebar-title">Education</h3>
+                <div className="opp-sidebar-content">
+                  {education.map((edu, index) => (
+                    <div key={index} className="opp-edu-item" data-item-id={index}>
+                      <p className="opp-edu-degree">
+                        {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
+                      </p>
+                      <p className="opp-edu-institution">{edu.institution}</p>
+                      <p className="opp-edu-dates">
+                        {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Wrapper>
           )}
 
           {/* Skills as Chips */}
           {skills && skills.length > 0 && (
-            <div className="opp-sidebar-section" data-section-id="skills">
-              <h3 className="opp-sidebar-title">Skills</h3>
-              <div className="opp-sidebar-content">
-                <div className="opp-skills-container">
-                  {skills.flatMap((skillCategory, catIdx) =>
-                    skillCategory.skills?.map((skill, skillIdx) => (
-                      <span
-                        key={`${catIdx}-${skillIdx}`}
-                        className="opp-skill-chip"
-                      >
-                        {skill}
-                      </span>
-                    )) || []
-                  )}
+            <Wrapper id="skills" sectionType="skills">
+              <div className="opp-sidebar-section">
+                <h3 className="opp-sidebar-title">Skills</h3>
+                <div className="opp-sidebar-content">
+                  <div className="opp-skills-container">
+                    {skills.flatMap((skillCategory, catIdx) =>
+                      skillCategory.skills?.map((skill, skillIdx) => (
+                        <span
+                          key={`${catIdx}-${skillIdx}`}
+                          className="opp-skill-chip"
+                        >
+                          {skill}
+                        </span>
+                      )) || []
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Wrapper>
           )}
 
           {/* Certificates */}
           {certificates && certificates.length > 0 && (
-            <div className="opp-sidebar-section" data-section-id="certificates">
-              <h3 className="opp-sidebar-title">Certifications</h3>
-              <div className="opp-sidebar-content">
-                {certificates.map((cert, index) => (
-                  <div key={index} className="opp-cert-item" data-item-id={index}>
-                    <p className="opp-cert-name">{cert.name}</p>
-                    {cert.issuer && (
-                      <p className="opp-cert-issuer">{cert.issuer}</p>
-                    )}
-                  </div>
-                ))}
+            <Wrapper id="certificates" sectionType="certificates">
+              <div className="opp-sidebar-section">
+                <h3 className="opp-sidebar-title">Certifications</h3>
+                <div className="opp-sidebar-content">
+                  {certificates.map((cert, index) => (
+                    <div key={index} className="opp-cert-item" data-item-id={index}>
+                      <p className="opp-cert-name">{cert.name}</p>
+                      {cert.issuer && (
+                        <p className="opp-cert-issuer">{cert.issuer}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </Wrapper>
           )}
         </div>
 
@@ -520,65 +538,69 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
 
           {/* Experience with Timeline */}
           {work && work.length > 0 && (
-            <div className="opp-content-section" data-section-id="work">
-              <h3 className="opp-content-title">Experience</h3>
-              <div className="opp-timeline">
-                {work.map((job, index) => (
-                  <div key={index} className="opp-timeline-item" data-item-id={index}>
-                    <div className="opp-timeline-header">
-                      <h4 className="opp-timeline-role">{job.position}</h4>
-                      <span className="opp-timeline-dates">
-                        {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
-                      </span>
+            <Wrapper id="work" sectionType="work">
+              <div className="opp-content-section">
+                <h3 className="opp-content-title">Experience</h3>
+                <div className="opp-timeline">
+                  {work.map((job, index) => (
+                    <div key={index} className="opp-timeline-item" data-item-id={index}>
+                      <div className="opp-timeline-header">
+                        <h4 className="opp-timeline-role">{job.position}</h4>
+                        <span className="opp-timeline-dates">
+                          {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
+                        </span>
+                      </div>
+                      <p className="opp-timeline-org">{job.name}</p>
+                      {job.summary && (
+                        <div
+                          className="opp-timeline-description"
+                          dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
+                        />
+                      )}
                     </div>
-                    <p className="opp-timeline-org">{job.name}</p>
-                    {job.summary && (
-                      <div
-                        className="opp-timeline-description"
-                        dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
-                      />
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </Wrapper>
           )}
 
           {/* Projects with Timeline */}
           {projects && projects.length > 0 && (
-            <div className="opp-content-section" data-section-id="projects">
-              <h3 className="opp-content-title">Projects</h3>
-              <div className="opp-timeline">
-                {projects.map((project, index) => (
-                  <div key={index} className="opp-timeline-item" data-item-id={index}>
-                    <div className="opp-timeline-header">
-                      <h4 className="opp-project-name">{project.name}</h4>
-                      {project.startDate && (
-                        <span className="opp-timeline-dates">
-                          {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
-                        </span>
+            <Wrapper id="projects" sectionType="projects">
+              <div className="opp-content-section">
+                <h3 className="opp-content-title">Projects</h3>
+                <div className="opp-timeline">
+                  {projects.map((project, index) => (
+                    <div key={index} className="opp-timeline-item" data-item-id={index}>
+                      <div className="opp-timeline-header">
+                        <h4 className="opp-project-name">{project.name}</h4>
+                        {project.startDate && (
+                          <span className="opp-timeline-dates">
+                            {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
+                          </span>
+                        )}
+                      </div>
+                      {project.url && (
+                        <p className="opp-project-url">{project.url}</p>
+                      )}
+                      {project.description && (
+                        <div
+                          className="opp-timeline-description"
+                          dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }}
+                        />
+                      )}
+                      {project.highlights && project.highlights.length > 0 && (
+                        <div className="opp-timeline-description">
+                          <ul>
+                            {project.highlights.map((h, i) => <li key={i}>{h}</li>)}
+                          </ul>
+                        </div>
                       )}
                     </div>
-                    {project.url && (
-                      <p className="opp-project-url">{project.url}</p>
-                    )}
-                    {project.description && (
-                      <div
-                        className="opp-timeline-description"
-                        dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }}
-                      />
-                    )}
-                    {project.highlights && project.highlights.length > 0 && (
-                      <div className="opp-timeline-description">
-                        <ul>
-                          {project.highlights.map((h, i) => <li key={i}>{h}</li>)}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </Wrapper>
           )}
         </div>
       </div>
