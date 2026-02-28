@@ -157,6 +157,7 @@ export interface LinkedInEnhancerState {
     version: string;
     isLoading: boolean;
     isEnhancing: boolean;
+    showEnhancingOverlay: boolean; // Only show overlay on regenerate, not initial load
     error: string | null;
     user_context: LinkedInUserContext;
     sections: LinkedInProfileSections;

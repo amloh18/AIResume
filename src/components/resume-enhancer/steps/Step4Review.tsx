@@ -449,6 +449,9 @@ export default function Step4Review() {
             {state.selectedTemplate ? (
               <div
                 style={{
+                  // PREVIEW ZOOM: This transform is for UI preview only
+                  // It does NOT affect PDF/DOCX export which uses fixed viewport (794px for A4, 816px for Letter)
+                  // Export services render at 100% scale with exact viewport matching @page CSS dimensions
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top center',
                   transition: 'transform 0.2s ease-out',

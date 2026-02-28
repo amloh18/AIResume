@@ -5,7 +5,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import {
   Sparkles,
-  Component, Eye, Target, ZoomIn, ZoomOut, Plus
+  Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -37,6 +37,7 @@ import AddSectionModal from '@/components/resume-enhancer/AddSectionModal';
 // Drag-and-drop components for canvas-based editing
 import { CVPreviewDragContext } from '@/components/resume-enhancer/dnd';
 import type { CVSectionStructure } from '@/types/unified-cv-schema';
+import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
 
 
 
@@ -402,13 +403,21 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         dispatch({ type: 'SET_SURGEON_ANALYSIS', payload: { score: result.score, fixes: result.fixes } });
         dispatch({ type: 'SET_FIX_ANNOTATIONS', payload: result.annotations });
 
-        // Update ATS context with surgeon's audit_report for ScorecardPanel to display
-        if (result.audit_report && state.cvId) {
+        // Store keyword gap analysis result for ATS scoring (journey CVs)
+        if ((result as any).keywordGapAnalysis) {
+          dispatch({ type: 'SET_KEYWORD_GAP_ANALYSIS', payload: (result as any).keywordGapAnalysis });
+        }
+
+        // Update ATS context with analysis results for ScorecardPanel to display
+        if (state.cvId) {
+          const keywordAnalysis = (result as any).keywordGapAnalysis;
+          const atsScore = (result as any).atsScore || result.score;
           updateATSScore(
-            result.score,
+            atsScore,
             {
-              score: result.score,
-              missingKeywords: [],
+              score: atsScore,
+              missingKeywords: keywordAnalysis?.gaps?.map((g: any) => g.keyword) || [],
+              matchedKeywords: keywordAnalysis?.matchedKeywords || [],
               strengths: [],
               suggestions: [],
               audit_report: result.audit_report,
@@ -783,7 +792,67 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
         // Show success toast
         toast.success(`Added ${sectionType.replace(/_/g, ' ')} section`);
+
+        // Auto-open the floating editor for the new section
+        // Use setTimeout to ensure the DOM has updated and the section is rendered
+        setTimeout(() => {
+          const sectionElement = document.querySelector(`[data-section-id="${sectionType}"]`);
+          if (sectionElement) {
+            const rect = sectionElement.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const editorWidth = 480;
+            const gap = 24;
+
+            // Calculate position
+            let left = rect.right + gap;
+            let alignment: 'left' | 'right' = 'left';
+
+            if (left + editorWidth > viewportWidth - 20) {
+              left = rect.left - editorWidth - gap;
+              alignment = 'right';
+            }
+
+            setEditorPosition({
+              top: Math.max(88, rect.top),
+              left: left,
+              height: rect.height,
+              alignment
+            });
+            setActiveEditorSectionId(sectionType);
+
+            // Scroll the section into view
+            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
       }
+    };
+
+    // Auto-arrange sections for two-column layouts
+    const handleAutoArrangeSections = () => {
+      if (!state.cvData.structure?.sections) {
+        toast.error('No sections to arrange');
+        return;
+      }
+
+      const currentSections = state.cvData.structure.sections;
+      const rebalancedSections = calculateOptimalColumnDistribution(
+        currentSections,
+        state.cvData,
+        state.selectedTemplate?.name || ''
+      );
+
+      dispatch({
+        type: 'SET_CV_DATA',
+        payload: {
+          ...state.cvData,
+          structure: {
+            ...state.cvData.structure,
+            sections: rebalancedSections,
+          },
+        },
+      });
+
+      toast.success('Sections arranged for optimal balance');
     };
 
     // Delete section function - clears section data and marks as hidden in structure
@@ -1011,11 +1080,23 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 <div className="h-4 w-px bg-black/10 dark:bg-white/10 mx-2" />
                 <button
                   onClick={() => setShowAddSectionModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium shadow-sm shadow-black/10 dark:shadow-black/30 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium shadow-sm shadow-black/10 dark:shadow-black/30 transition-all duration-200 hover:-translate-y-0.5"
                 >
                   <Plus className="w-3 h-3" />
                   <span>Add section</span>
                 </button>
+
+                {/* Auto-Arrange Sections Button (only for two-column templates) */}
+                {state.selectedTemplate?.layoutType === 'two-column' && (
+                  <button
+                    onClick={handleAutoArrangeSections}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium shadow-sm shadow-black/10 dark:shadow-black/30 transition-all duration-200 hover:-translate-y-0.5"
+                    title="Automatically balance sections across columns"
+                  >
+                    <Shuffle className="w-3 h-3" />
+                    <span>Auto-Arrange</span>
+                  </button>
+                )}
               </div>
 
               {/* Right side: Preview title */}
@@ -1026,6 +1107,9 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4">
               <div
                 className={`flex flex-col items-start gap-8 transition-all duration-300 ease-in-out`}
+                // PREVIEW ZOOM: This transform is for UI preview only
+                // It does NOT affect PDF/DOCX export which uses fixed viewport (794px for A4, 816px for Letter)
+                // Export services render at 100% scale with exact viewport matching @page CSS dimensions
                 style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
               >
                 {/* Canvas-based drag-and-drop wrapper for sections */}

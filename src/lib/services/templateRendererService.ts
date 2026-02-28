@@ -238,12 +238,109 @@ export class ReactTemplateRenderer implements IRenderer {
       }
     }
     
+    /* ========================================
+     * EDITOR UI HIDING - PDF/DOCX EXPORT
+     * Hide all editor controls for clean export
+     * ======================================== */
+    .pdf-export .cv-drag-handle,
+    .pdf-export .cv-drag-overlay,
+    .pdf-export .inline-add-section-button,
+    .pdf-export .section-hover-controls,
+    .pdf-export .cv-editor-only,
+    .pdf-export .cv-section-drag-overlay,
+    .pdf-export .cv-drop-zone-indicator,
+    .docx-export .cv-drag-handle,
+    .docx-export .cv-drag-overlay,
+    .docx-export .inline-add-section-button,
+    .docx-export .section-hover-controls,
+    .docx-export .cv-editor-only,
+    .docx-export .cv-section-drag-overlay,
+    .docx-export .cv-drop-zone-indicator {
+      display: none !important;
+      visibility: hidden !important;
+    }
+    
+    .pdf-export [data-draggable-section],
+    .docx-export [data-draggable-section] {
+      cursor: default !important;
+    }
+    
+    .pdf-export [data-draggable-section]:hover,
+    .docx-export [data-draggable-section]:hover {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    
+    /* ========================================
+     * TEMPLATE-SPECIFIC PADDING REMOVAL
+     * Remove internal padding from templates to avoid double padding with @page margins
+     * The @page rule provides 12mm/15mm margins, so templates should have 0 internal padding
+     * ======================================== */
+    .pdf-export .template-wrapper,
+    .pdf-export .cv-page-wrapper,
+    .pdf-export .cv-content-wrapper,
+    .docx-export .template-wrapper,
+    .docx-export .cv-page-wrapper,
+    .docx-export .cv-content-wrapper {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    
+    /* Specific template padding removal */
+    .pdf-export .designer-modern-template,
+    .pdf-export .elegant-timeline-template,
+    .pdf-export .executive-minimal-template,
+    .pdf-export .executive-professional-layout-template,
+    .pdf-export .executive-standard-template,
+    .pdf-export .minimal-professional-template,
+    .pdf-export .one-pager-professional-template,
+    .pdf-export .professional-minimal-template,
+    .pdf-export .the-modern-cv-template,
+    .docx-export .designer-modern-template,
+    .docx-export .elegant-timeline-template,
+    .docx-export .executive-minimal-template,
+    .docx-export .executive-professional-layout-template,
+    .docx-export .executive-standard-template,
+    .docx-export .minimal-professional-template,
+    .docx-export .one-pager-professional-template,
+    .docx-export .professional-minimal-template,
+    .docx-export .the-modern-cv-template {
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    
+    /* For templates with nested padding (like TheModernCVTemplate) */
+    .pdf-export .the-modern-cv-template .left-column,
+    .pdf-export .the-modern-cv-template .right-column,
+    .docx-export .the-modern-cv-template .left-column,
+    .docx-export .the-modern-cv-template .right-column {
+      padding-left: 1rem !important;
+      padding-right: 0 !important;
+    }
+    
+    /* For templates with sidebar padding */
+    .pdf-export .tech-pro-blue-template .sidebar,
+    .pdf-export .tech-pro-blue-template .main-content,
+    .docx-export .tech-pro-blue-template .sidebar,
+    .docx-export .tech-pro-blue-template .main-content {
+      padding: 1rem !important;
+    }
+    
+    /* Header Professional Template adjustments */
+    .pdf-export .hp-header,
+    .pdf-export .hp-section-header,
+    .docx-export .hp-header,
+    .docx-export .hp-section-header {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+    
     /* Inject smart page break CSS */
     ${generatePageBreakCSS()}
   </style>
 </head>
 <body>
-  <div class="cv-container">
+  <div class="cv-container pdf-export">
     ${htmlString}
   </div>
 </body>

@@ -14,20 +14,7 @@ import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 import { getPlainTextCV } from '@/lib/utils/cv-analysis-utils';
 import { DraggableSection } from '@/components/resume-enhancer/dnd/DraggableSection';
 import { InlineAddSectionButton } from '@/components/resume-enhancer/dnd/InlineAddSectionButton';
-
-// Header section types that should not be draggable or deletable
-// These sections form the header/contact area of CVs and should remain locked
-const HEADER_SECTION_TYPES = [
-  'personal',
-  'personal_header',
-  'contact',
-  'summary', // Some templates include summary as part of header
-];
-
-// Helper function to check if a section is a header section
-const isHeaderSection = (sectionType: string): boolean => {
-  return HEADER_SECTION_TYPES.includes(sectionType);
-};
+import { isHeaderSection } from '@/lib/constants/cv-sections';
 
 export type ViewMode = 'edit' | 'recruiter' | 'ats';
 

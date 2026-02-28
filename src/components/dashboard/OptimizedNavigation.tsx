@@ -323,6 +323,14 @@ const OptimizedNavigation: React.FC = () => {
       route: '/dashboard'
     },
     {
+      id: 'jobs-dashboard',
+      name: 'Jobs',
+      icon: Zap,
+      description: 'Job matching & automation (Beta)',
+      route: '/dashboard/jobs',
+      badge: 'BETA'
+    },
+    {
       id: 'jobs',
       name: 'Tracker',
       icon: Briefcase,

@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface DesignerModernTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -23,21 +25,25 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
 }) => {
   const { basics, work, education, skills, projects, volunteer, awards, certificates, publications, languages, interests, references } = cvData;
 
+  // Create a section ID resolver to map section types to actual UUIDs from structure
+  const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
   // Helper to wrap section content with DraggableSection when provided
   // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+  // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    const isHeader = headerSectionTypes.includes(sectionType);
+    const isHeader = isHeaderSection(sectionType);
+    // Resolve the actual section ID from structure (UUID) for drag-and-drop
+    const actualId = resolveSectionId(sectionType);
 
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+        <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
     }
-    return <div data-section-id={id}>{children}</div>;
+    return <div data-section-id={actualId}>{children}</div>;
   };
 
   return (
@@ -324,27 +330,29 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
       `}} />
 
       {/* Header Section */}
-      <div className="header" data-section-id="personal">
-        {/* Left Column - Row 1: Name and Title */}
-        <div className="left-header">
-          <div className="name">
-            <div className="name-first">{basics?.name?.split(' ')[0] || 'DAVID'}</div>
-            <div className="name-last">{basics?.name?.split(' ').slice(1).join(' ') || 'MATTHEW'}</div>
+      <Wrapper id="personal" sectionType="personal">
+        <div className="header">
+          {/* Left Column - Row 1: Name and Title */}
+          <div className="left-header">
+            <div className="name">
+              <div className="name-first">{basics?.name?.split(' ')[0] || 'DAVID'}</div>
+              <div className="name-last">{basics?.name?.split(' ').slice(1).join(' ') || 'MATTHEW'}</div>
+            </div>
+            <div className="title">{basics?.label || 'UX DESIGNER'}</div>
           </div>
-          <div className="title">{basics?.label || 'UX DESIGNER'}</div>
-        </div>
 
-        {/* Right Column - Row 1: Contact Info */}
-        <div className="right-header">
-          <div className="contact-section">
-            <div className="contact-info">
-              {basics?.phone && <div>P: {basics.phone}</div>}
-              {basics?.email && <div>E: {basics.email}</div>}
-              {basics?.location?.city && <div>{basics.location.city}</div>}
+          {/* Right Column - Row 1: Contact Info */}
+          <div className="right-header">
+            <div className="contact-section">
+              <div className="contact-info">
+                {basics?.phone && <div>P: {basics.phone}</div>}
+                {basics?.email && <div>E: {basics.email}</div>}
+                {basics?.location?.city && <div>{basics.location.city}</div>}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </Wrapper>
 
       {/* Second Row */}
       {basics?.image ? (
@@ -361,22 +369,26 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
           </div>
 
           {/* Right Column - Row 2: Profile Section */}
-          <div className="right-header-left-aligned" data-section-id="summary">
-            <div className="section-title">Profile</div>
-            {basics?.summary && (
-              <div className="profile-section">
-                <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
-              </div>
-            )}
-          </div>
+          <Wrapper id="summary" sectionType="summary">
+            <div className="right-header-left-aligned">
+              <div className="section-title">Profile</div>
+              {basics?.summary && (
+                <div className="profile-section">
+                  <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
+                </div>
+              )}
+            </div>
+          </Wrapper>
         </div>
       ) : (
         /* No image - Full width profile section */
         basics?.summary && (
-          <div className="header-second-row-full-width" data-section-id="summary">
-            <div className="section-title">Profile</div>
-            <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
-          </div>
+          <Wrapper id="summary" sectionType="summary">
+            <div className="header-second-row-full-width">
+              <div className="section-title">Profile</div>
+              <div className="profile-text">{stripHtmlTags(basics.summary)}</div>
+            </div>
+          </Wrapper>
         )
       )}
 
@@ -386,134 +398,150 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         <div className="left-column">
           {/* Education Section */}
           {education && education.length > 0 && (
-            <div className="section" data-section-id="education">
-              <div className="section-title">Education</div>
-              {education.map((edu, index) => (
-                <div key={index} className="education-item" data-item-id={index}>
-                  <div className="education-header">
-                    <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
-                    <div className="university">{edu.institution}</div>
-                    <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
+            <Wrapper id="education" sectionType="education">
+              <div className="section">
+                <div className="section-title">Education</div>
+                {education.map((edu, index) => (
+                  <div key={index} className="education-item" data-item-id={index}>
+                    <div className="education-header">
+                      <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
+                      <div className="university">{edu.institution}</div>
+                      <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Skills Section */}
           {skills && skills.length > 0 && (
-            <div className="section" data-section-id="skills">
-              <div className="section-title">Skills</div>
-              <div className="skills-list">
-                {skills.map((skill, index) => (
-                  <div key={index} className="skill-item">
-                    <span className="skill-category">{skill.category}:</span> {skill.skills.join(', ')}
-                  </div>
-                ))}
+            <Wrapper id="skills" sectionType="skills">
+              <div className="section">
+                <div className="section-title">Skills</div>
+                <div className="skills-list">
+                  {skills.map((skill, index) => (
+                    <div key={index} className="skill-item">
+                      <span className="skill-category">{skill.category}:</span> {skill.skills.join(', ')}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </Wrapper>
           )}
 
           {/* Languages Section */}
           {languages && languages.length > 0 && (
-            <div className="section" data-section-id="languages">
-              <div className="section-title">Languages</div>
-              <div className="skills-list">
-                {languages.map((lang, index) => (
-                  <div key={index} className="skill-item">
-                    <span className="skill-category">{lang.language}:</span> {lang.fluency}
-                  </div>
-                ))}
+            <Wrapper id="languages" sectionType="languages">
+              <div className="section">
+                <div className="section-title">Languages</div>
+                <div className="skills-list">
+                  {languages.map((lang, index) => (
+                    <div key={index} className="skill-item">
+                      <span className="skill-category">{lang.language}:</span> {lang.fluency}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </Wrapper>
           )}
 
           {/* Awards Section */}
           {awards && awards.length > 0 && (
-            <div className="section" data-section-id="awards">
-              <div className="section-title">Awards</div>
-              {awards.map((award, index) => (
-                <div key={index} className="education-item">
-                  <div className="education-header">
-                    <div className="degree">{award.title}</div>
-                    <div className="university">{award.awarder}</div>
-                    <div className="education-dates">{award.date}</div>
-                    {award.summary && (
-                      <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(award.summary)}</div>
-                    )}
+            <Wrapper id="awards" sectionType="awards">
+              <div className="section">
+                <div className="section-title">Awards</div>
+                {awards.map((award, index) => (
+                  <div key={index} className="education-item">
+                    <div className="education-header">
+                      <div className="degree">{award.title}</div>
+                      <div className="university">{award.awarder}</div>
+                      <div className="education-dates">{award.date}</div>
+                      {award.summary && (
+                        <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(award.summary)}</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Certificates Section */}
           {certificates && certificates.length > 0 && (
-            <div className="section" data-section-id="certificates">
-              <div className="section-title">Certificates</div>
-              {certificates.map((cert, index) => (
-                <div key={index} className="education-item">
-                  <div className="education-header">
-                    <div className="degree">{cert.name}</div>
-                    <div className="university">{cert.issuer}</div>
-                    <div className="education-dates">{cert.date}</div>
-                    {cert.description && (
-                      <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(cert.description)}</div>
-                    )}
+            <Wrapper id="certificates" sectionType="certificates">
+              <div className="section">
+                <div className="section-title">Certificates</div>
+                {certificates.map((cert, index) => (
+                  <div key={index} className="education-item">
+                    <div className="education-header">
+                      <div className="degree">{cert.name}</div>
+                      <div className="university">{cert.issuer}</div>
+                      <div className="education-dates">{cert.date}</div>
+                      {cert.description && (
+                        <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(cert.description)}</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Publications Section */}
           {publications && publications.length > 0 && (
-            <div className="section" data-section-id="publications">
-              <div className="section-title">Publications</div>
-              {publications.map((pub, index) => (
-                <div key={index} className="education-item">
-                  <div className="education-header">
-                    <div className="degree">{pub.name}</div>
-                    <div className="university">{pub.publisher}</div>
-                    <div className="education-dates">{pub.releaseDate}</div>
-                    {pub.summary && (
-                      <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(pub.summary)}</div>
-                    )}
+            <Wrapper id="publications" sectionType="publications">
+              <div className="section">
+                <div className="section-title">Publications</div>
+                {publications.map((pub, index) => (
+                  <div key={index} className="education-item">
+                    <div className="education-header">
+                      <div className="degree">{pub.name}</div>
+                      <div className="university">{pub.publisher}</div>
+                      <div className="education-dates">{pub.releaseDate}</div>
+                      {pub.summary && (
+                        <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(pub.summary)}</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Interests Section */}
           {interests && interests.length > 0 && (
-            <div className="section" data-section-id="interests">
-              <div className="section-title">Interests</div>
-              <div className="skills-list">
-                {interests.map((interest, index) => (
-                  <div key={index} className="skill-item">
-                    <span className="skill-category">{interest.name}:</span> {interest.keywords?.join(', ') || ''}
-                  </div>
-                ))}
+            <Wrapper id="interests" sectionType="interests">
+              <div className="section">
+                <div className="section-title">Interests</div>
+                <div className="skills-list">
+                  {interests.map((interest, index) => (
+                    <div key={index} className="skill-item">
+                      <span className="skill-category">{interest.name}:</span> {interest.keywords?.join(', ') || ''}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            </Wrapper>
           )}
 
           {/* References Section */}
           {references && references.length > 0 && (
-            <div className="section" data-section-id="references">
-              <div className="section-title">References</div>
-              {references.map((ref, index) => (
-                <div key={index} className="education-item">
-                  <div className="education-header">
-                    <div className="degree">{ref.name}</div>
-                    {ref.reference && (
-                      <div className="university" style={{ marginTop: '4px', fontSize: '12px', fontStyle: 'italic' }}>"{ref.reference}"</div>
-                    )}
+            <Wrapper id="references" sectionType="references">
+              <div className="section">
+                <div className="section-title">References</div>
+                {references.map((ref, index) => (
+                  <div key={index} className="education-item">
+                    <div className="education-header">
+                      <div className="degree">{ref.name}</div>
+                      {ref.reference && (
+                        <div className="university" style={{ marginTop: '4px', fontSize: '12px', fontStyle: 'italic' }}>"{ref.reference}"</div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
         </div>
 
@@ -521,84 +549,90 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         <div className="right-column">
           {/* Experience Section */}
           {work && work.length > 0 && (
-            <div className="section" data-section-id="work">
-              <div className="section-title">Experience</div>
-              {work.map((job, index) => (
-                <div key={index} className="experience-item" data-item-id={index}>
-                  <div className="experience-header">
-                    <div className="job-title">{job.position}</div>
-                    <div className="company-info">
-                      <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
+            <Wrapper id="work" sectionType="work">
+              <div className="section">
+                <div className="section-title">Experience</div>
+                {work.map((job, index) => (
+                  <div key={index} className="experience-item" data-item-id={index}>
+                    <div className="experience-header">
+                      <div className="job-title">{job.position}</div>
+                      <div className="company-info">
+                        <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
+                      </div>
                     </div>
+                    {job.summary && (
+                      <div className="job-description">
+                        {stripHtmlTags(job.summary)}
+                      </div>
+                    )}
                   </div>
-                  {job.summary && (
-                    <div className="job-description">
-                      {stripHtmlTags(job.summary)}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Projects Section */}
           {projects && projects.length > 0 && (
-            <div className="section" data-section-id="projects">
-              <div className="section-title">Projects</div>
-              {projects.map((project, index) => (
-                <div key={index} className="experience-item" data-item-id={index}>
-                  <div className="experience-header">
-                    <div className="job-title">{project.name}</div>
-                    {project.startDate && (
-                      <div className="company-info">
-                        <span className="job-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</span>
+            <Wrapper id="projects" sectionType="projects">
+              <div className="section">
+                <div className="section-title">Projects</div>
+                {projects.map((project, index) => (
+                  <div key={index} className="experience-item" data-item-id={index}>
+                    <div className="experience-header">
+                      <div className="job-title">{project.name}</div>
+                      {project.startDate && (
+                        <div className="company-info">
+                          <span className="job-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</span>
+                        </div>
+                      )}
+                    </div>
+                    {project.description && (
+                      <div className="job-description">
+                        {stripHtmlTags(project.description)}
+                      </div>
+                    )}
+                    {project.keywords && project.keywords.length > 0 && (
+                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#999999', fontStyle: 'italic' }}>
+                        Technologies: {project.keywords.join(', ')}
                       </div>
                     )}
                   </div>
-                  {project.description && (
-                    <div className="job-description">
-                      {stripHtmlTags(project.description)}
-                    </div>
-                  )}
-                  {project.keywords && project.keywords.length > 0 && (
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#999999', fontStyle: 'italic' }}>
-                      Technologies: {project.keywords.join(', ')}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Volunteer Experience Section */}
           {volunteer && volunteer.length > 0 && (
-            <div className="section" data-section-id="volunteer">
-              <div className="section-title">Volunteer Experience</div>
-              {volunteer.map((vol, index) => (
-                <div key={index} className="experience-item" data-item-id={index}>
-                  <div className="experience-header">
-                    <div className="job-title">{vol.position}</div>
-                    <div className="company-info">
-                      <span className="company-name">{vol.organization}</span> | <span className="job-dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</span>
+            <Wrapper id="volunteer" sectionType="volunteer">
+              <div className="section">
+                <div className="section-title">Volunteer Experience</div>
+                {volunteer.map((vol, index) => (
+                  <div key={index} className="experience-item" data-item-id={index}>
+                    <div className="experience-header">
+                      <div className="job-title">{vol.position}</div>
+                      <div className="company-info">
+                        <span className="company-name">{vol.organization}</span> | <span className="job-dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</span>
+                      </div>
                     </div>
+                    {vol.summary && (
+                      <div className="job-description">
+                        {stripHtmlTags(vol.summary)}
+                      </div>
+                    )}
+                    {vol.highlights && vol.highlights.length > 0 && (
+                      <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                        {vol.highlights.map((highlight, hIndex) => (
+                          <li key={hIndex} style={{ marginBottom: '4px', fontSize: '13px', lineHeight: '1.6', color: '#555555' }}>
+                            {stripHtmlTags(highlight)}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  {vol.summary && (
-                    <div className="job-description">
-                      {stripHtmlTags(vol.summary)}
-                    </div>
-                  )}
-                  {vol.highlights && vol.highlights.length > 0 && (
-                    <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
-                      {vol.highlights.map((highlight, hIndex) => (
-                        <li key={hIndex} style={{ marginBottom: '4px', fontSize: '13px', lineHeight: '1.6', color: '#555555' }}>
-                          {stripHtmlTags(highlight)}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
         </div>
       </div>

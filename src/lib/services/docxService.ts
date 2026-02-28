@@ -81,14 +81,20 @@ export class DOCXService extends BaseService {
                 properties: {
                   page: {
                     size: {
-                      width: options.paperSize === 'Letter' ? 12240 : 11906, // in twips (1/20th of a point)
+                      // DOCX uses twips (1/20th of a point = 1/1440th of an inch)
+                      // A4: 210mm x 297mm, Letter: 216mm x 279mm (8.5in x 11in)
+                      width: options.paperSize === 'Letter' ? 12240 : 11906, // in twips
                       height: options.paperSize === 'Letter' ? 15840 : 16838
                     },
                     margin: {
-                      top: 1440, // 1 inch
-                      right: 1440,
-                      bottom: 1440,
-                      left: 1440
+                      // CRITICAL: Match PDF margins as closely as possible
+                      // PDF uses: 12mm (top/bottom), 15mm (left/right)
+                      // Convert to twips: 12mm ≈ 680 twips, 15mm ≈ 850 twips
+                      // Using slightly larger margins for DOCX readability: 0.75in ≈ 19mm
+                      top: 1080,    // 0.75 inch ≈ 19mm (slightly larger than PDF's 12mm for headers)
+                      right: 1080,  // 0.75 inch ≈ 19mm (matches PDF's 15mm closely)
+                      bottom: 1080, // 0.75 inch ≈ 19mm
+                      left: 1080    // 0.75 inch ≈ 19mm
                     }
                   }
                 },
@@ -388,6 +394,234 @@ export class DOCXService extends BaseService {
             spacing: { after: 100 }
           })
         );
+      });
+    }
+
+    // Languages
+    if (cvData.languages && cvData.languages.length > 0) {
+      content.push(
+        new Paragraph({
+          text: 'Languages',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        })
+      );
+
+      cvData.languages.forEach((lang) => {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${lang.language || ''}: `,
+                bold: true,
+                font: 'Calibri'
+              }),
+              new TextRun({
+                text: lang.fluency || '',
+                font: 'Calibri'
+              })
+            ],
+            spacing: { after: 100 }
+          })
+        );
+      });
+    }
+
+    // Volunteer
+    if (cvData.volunteer && cvData.volunteer.length > 0) {
+      content.push(
+        new Paragraph({
+          text: 'Volunteer Experience',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        })
+      );
+
+      cvData.volunteer.forEach((vol) => {
+        content.push(
+          new Paragraph({
+            text: vol.position || '',
+            heading: HeadingLevel.HEADING_3,
+            spacing: { after: 100 }
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${vol.organization || ''} | `,
+                bold: true,
+                font: 'Calibri'
+              }),
+              new TextRun({
+                text: `${vol.startDate || ''} - ${vol.endDate || 'Present'}`,
+                font: 'Calibri'
+              })
+            ],
+            spacing: { after: 100 }
+          })
+        );
+
+        if (vol.summary) {
+          content.push(
+            new Paragraph({
+              text: stripHtmlTags(vol.summary),
+              spacing: { after: 200 }
+            })
+          );
+        }
+      });
+    }
+
+    // Awards
+    if (cvData.awards && cvData.awards.length > 0) {
+      content.push(
+        new Paragraph({
+          text: 'Awards',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        })
+      );
+
+      cvData.awards.forEach((award) => {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `${award.title || ''} | `,
+                bold: true,
+                font: 'Calibri'
+              }),
+              new TextRun({
+                text: `${award.awarder || ''} | ${award.date || ''}`,
+                font: 'Calibri'
+              })
+            ],
+            spacing: { after: 100 }
+          })
+        );
+
+        if (award.summary) {
+          content.push(
+            new Paragraph({
+              text: stripHtmlTags(award.summary),
+              spacing: { after: 200 }
+            })
+          );
+        }
+      });
+    }
+
+    // Publications
+    if (cvData.publications && cvData.publications.length > 0) {
+      content.push(
+        new Paragraph({
+          text: 'Publications',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        })
+      );
+
+      cvData.publications.forEach((pub) => {
+        content.push(
+          new Paragraph({
+            text: pub.name || '',
+            heading: HeadingLevel.HEADING_3,
+            spacing: { after: 100 }
+          })
+        );
+
+        if (pub.publisher || pub.releaseDate) {
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: `${pub.publisher || ''} | ${pub.releaseDate || ''}`,
+                  font: 'Calibri'
+                })
+              ],
+              spacing: { after: 100 }
+            })
+          );
+        }
+
+        if (pub.summary) {
+          content.push(
+            new Paragraph({
+              text: stripHtmlTags(pub.summary),
+              spacing: { after: 200 }
+            })
+          );
+        }
+      });
+    }
+
+    // Interests
+    if (cvData.interests && cvData.interests.length > 0) {
+      content.push(
+        new Paragraph({
+          text: 'Interests',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: cvData.interests.map((interest) => 
+                typeof interest === 'string' ? interest : interest.name
+              ).join(' • '),
+              font: 'Calibri'
+            })
+          ],
+          spacing: { after: 200 }
+        })
+      );
+    }
+
+    // References
+    if (cvData.references && cvData.references.length > 0) {
+      content.push(
+        new Paragraph({
+          text: 'References',
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 200, after: 200 }
+        })
+      );
+
+      cvData.references.forEach((ref) => {
+        content.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: ref.name || '',
+                bold: true,
+                font: 'Calibri'
+              })
+            ],
+            spacing: { after: 100 }
+          })
+        );
+
+        if (ref.position || ref.company) {
+          content.push(
+            new Paragraph({
+              text: `${ref.position || ''}${ref.company ? ` at ${ref.company}` : ''}`,
+              spacing: { after: 100 }
+            })
+          );
+        }
+
+        if (ref.email || ref.phone) {
+          content.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: [ref.email, ref.phone].filter(Boolean).join(' | '),
+                  font: 'Calibri'
+                })
+              ],
+              spacing: { after: 200 }
+            })
+          );
+        }
       });
     }
 

@@ -5,6 +5,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 export interface ATSAnalysis {
   score: number;
   missingKeywords: string[];
+  matchedKeywords?: string[];
   strengths: string[];
   suggestions: string[];
   factorBreakdown?: {

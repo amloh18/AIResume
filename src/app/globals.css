@@ -2319,3 +2319,172 @@ h3 {
   scrollbar-width: none !important;
   /* Firefox */
 }
+/* =========================================
+   JOBS DASHBOARD STYLES
+   ========================================= */
+
+/* Glass widget premium for Jobs Dashboard */
+.glass-widget-premium {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  transition: all 0.2s ease-in-out;
+}
+
+.dark .glass-widget-premium {
+  background: rgba(20, 24, 16, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.glass-widget-premium:hover {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.dark .glass-widget-premium:hover {
+  background: rgba(20, 24, 16, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Glass card premium */
+.glass-card-premium {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.dark .glass-card-premium {
+  background: rgba(20, 24, 16, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Metric card */
+.metric-card {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.metric-card:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+}
+
+/* Match score bar */
+.match-score-bar {
+  height: 0.5rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: linear-gradient(to right, #ef4444, #f59e0b, #eab308, #84cc16, #22c55e);
+}
+
+.match-score-bar.excellent {
+  background: linear-gradient(to right, #22c55e, #10b981);
+}
+
+.match-score-bar.good {
+  background: linear-gradient(to right, #84cc16, #22c55e);
+}
+
+.match-score-bar.moderate {
+  background: linear-gradient(to right, #eab308, #f59e0b);
+}
+
+.match-score-bar.fair {
+  background: linear-gradient(to right, #f59e0b, #ef4444);
+}
+
+.match-score-bar.low {
+  background: linear-gradient(to right, #ef4444, #dc2626);
+}
+
+/* Fade in animation for metrics grid */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Jobs table alternating rows */
+.jobs-table-row:nth-child(even) {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .jobs-table-row:nth-child(even) {
+  background: rgba(20, 24, 16, 0.3);
+}
+
+.jobs-table-row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .jobs-table-row:nth-child(odd) {
+  background: rgba(20, 24, 16, 0.5);
+}
+
+/* Chart tooltips */
+.recharts-tooltip-wrapper {
+  z-index: 999 !important;
+}
+
+.recharts-default-tooltip {
+  background: rgba(17, 24, 39, 0.95) !important;
+  border: 1px solid #374151 !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+  padding: 8px 12px !important;
+}
+
+/* Beta badge */
+.beta-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+  background: rgba(132, 204, 22, 0.2);
+  color: #84cc16;
+}
+
+.dark .beta-badge {
+  background: rgba(153, 255, 0, 0.2);
+  color: #99FF00;
+}
+
+/* Jobs dashboard specific scrollbar styling */
+.jobs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(132, 204, 22, 0.5) transparent;
+}
+
+.jobs-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.jobs-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.jobs-scroll::-webkit-scrollbar-thumb {
+  background: rgba(132, 204, 22, 0.5);
+  border-radius: 3px;
+}
+
+.jobs-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(132, 204, 22, 0.7);
+}

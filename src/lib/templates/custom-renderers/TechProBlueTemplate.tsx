@@ -3,6 +3,7 @@
 import React from 'react';
 import { UnifiedCVDataStructure, CVSectionStructure } from '@/types/unified-cv-schema';
 import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
 
 interface TechProBlueTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -59,9 +60,6 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
     if (s.column === 'sidebar') return false;
     return !sidebarSectionTypes.includes(s.type); // Fallback for legacy data
   });
-
-  // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
 
 
   const renderSectionContent = (section: CVSectionStructure) => {
@@ -677,7 +675,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           return (
             <React.Fragment key={section.id}>
               {SectionWrapper ? (
-                <SectionWrapper sectionId={section.id} sectionType={section.type} isLocked={headerSectionTypes.includes(section.type)}>
+                <SectionWrapper sectionId={section.id} sectionType={section.type} isLocked={isHeaderSection(section.type)}>
                   {content}
                 </SectionWrapper>
               ) : (
@@ -702,7 +700,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
           return (
             <React.Fragment key={section.id}>
               {SectionWrapper ? (
-                <SectionWrapper sectionId={section.id} sectionType={section.type} isLocked={headerSectionTypes.includes(section.type)}>
+                <SectionWrapper sectionId={section.id} sectionType={section.type} isLocked={isHeaderSection(section.type)}>
                   {content}
                 </SectionWrapper>
               ) : (

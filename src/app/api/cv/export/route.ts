@@ -48,11 +48,7 @@ export async function POST(request: NextRequest) {
         resourceType: 'cv',
         resourceId: cvId || 'unknown',
         resourceName: cvData.basics?.name || 'CV',
-        status: 'success',
-        metadata: {
-          templateId: template?.id || template?._id,
-          jobId: jobId
-        }
+        status: 'success'
       });
     } catch (logError) {
       console.error('Failed to log export:', logError);
@@ -81,299 +77,87 @@ export async function POST(request: NextRequest) {
 }
 
 async function generatePDFExport(cvData: any, template: any) {
-  // For now, we'll generate a simple HTML-based PDF
-  // In production, you'd use a library like Puppeteer or jsPDF
-
-  const htmlContent = generateHTMLContent(cvData, template);
-
-  // Mock PDF generation - in production, use proper PDF library
-  const pdfBuffer = Buffer.from(htmlContent, 'utf-8');
-
-  return {
-    buffer: pdfBuffer,
-    mimeType: 'application/pdf',
-    filename: `${cvData.basics?.name || 'CV'}.pdf`
-  };
+  // Use the existing PDFService for consistent PDF generation
+  // This ensures the exported PDF matches the preview exactly
+  try {
+    const { PDFService } = await import('@/lib/services/pdfService');
+    
+    // Create a template object compatible with PDFService
+    const compatibleTemplate = template || {
+      id: 'default',
+      name: 'Default Template',
+      globalStyles: {
+        primaryColor: '#059669',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11pt'
+      }
+    };
+    
+    const blob = await PDFService.generatePDF(cvData, compatibleTemplate, {
+      paperSize: 'A4',
+      orientation: 'portrait'
+    });
+    
+    // Convert Blob to Buffer for Next.js response
+    const arrayBuffer = await blob.arrayBuffer();
+    const pdfBuffer = Buffer.from(arrayBuffer);
+    
+    return {
+      buffer: pdfBuffer,
+      mimeType: 'application/pdf',
+      filename: `${cvData.basics?.name || 'CV'}.pdf`
+    };
+  } catch (error) {
+    console.error('PDF generation failed, falling back to HTML:', error);
+    // Fallback: Return HTML with a warning (not a valid PDF but better than crashing)
+    // In production, you may want to throw an error instead
+    const htmlContent = generateHTMLContent(cvData, template);
+    const htmlBuffer = Buffer.from(htmlContent, 'utf-8');
+    
+    return {
+      buffer: htmlBuffer,
+      mimeType: 'text/html', // Correct mime type for HTML fallback
+      filename: `${cvData.basics?.name || 'CV'}.html`
+    };
+  }
 }
 
 async function generateDOCXExport(cvData: any, template: any) {
-  // Use docx library for proper DOCX generation with template styling
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, WidthType } = await import('docx');
-
-  // Extract template styling
-  const primaryColor = template?.globalStyles?.primaryColor || '#000000';
-  const fontFamily = template?.globalStyles?.fontFamily || 'Calibri';
-  const fontSize = template?.globalStyles?.fontSize || '11pt';
-  const fontSizeNum = parseInt(fontSize) || 22; // Convert pt to half-points (11pt = 22 half-points)
-
-  // Helper to convert hex color to RGB
-  const hexToRgb = (hex: string) => {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : { r: 0, g: 0, b: 0 };
-  };
-
-  const primaryRgb = hexToRgb(primaryColor);
-
-  const doc = new Document({
-    sections: [{
-      properties: {
-        page: {
-          size: {
-            width: 12240, // A4 width in twips (8.5in)
-            height: 15840, // A4 height in twips (11in)
-          },
-          margin: {
-            top: 1440, // 1 inch
-            right: 1440,
-            bottom: 1440,
-            left: 1440,
-          },
-        },
-      },
-      children: [
-        // Header with template styling
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: cvData.basics?.name || 'Your Name',
-              bold: true,
-              size: fontSizeNum * 1.5, // Larger for name
-              color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-              font: fontFamily,
-            }),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 },
-        }),
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: cvData.basics?.label || 'Professional Title',
-              size: fontSizeNum,
-              color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-              font: fontFamily,
-            }),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 200 },
-        }),
-        new Paragraph({
-          children: [
-            ...(cvData.basics?.email ? [new TextRun({ text: cvData.basics.email, size: fontSizeNum - 2, font: fontFamily })] : []),
-            ...(cvData.basics?.phone ? [new TextRun({ text: cvData.basics.phone, size: fontSizeNum - 2, font: fontFamily, break: 1 })] : []),
-            ...(cvData.basics?.location?.city ? [new TextRun({ text: cvData.basics.location.city, size: fontSizeNum - 2, font: fontFamily, break: 1 })] : []),
-          ],
-          alignment: AlignmentType.CENTER,
-          spacing: { after: 400 },
-        }),
-
-        // Summary
-        ...(cvData.basics?.summary ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'PROFESSIONAL SUMMARY',
-                bold: true,
-                size: fontSizeNum + 2,
-                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-                font: fontFamily,
-                underline: {},
-              }),
-            ],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: stripHtmlTags(cvData.basics.summary),
-                size: fontSizeNum,
-                font: fontFamily,
-              }),
-            ],
-            spacing: { after: 400 },
-          }),
-        ] : []),
-
-        // Work Experience
-        ...(cvData.work && cvData.work.length > 0 ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'WORK EXPERIENCE',
-                bold: true,
-                size: fontSizeNum + 2,
-                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-                font: fontFamily,
-                underline: {},
-              }),
-            ],
-            spacing: { after: 200 },
-          }),
-          ...cvData.work.flatMap((work: any) => [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: work.position || 'Position',
-                  bold: true,
-                  size: fontSizeNum,
-                  font: fontFamily,
-                }),
-              ],
-              spacing: { after: 100 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${work.name || 'Company'} | ${work.startDate || ''} - ${work.endDate || 'Present'}`,
-                  size: fontSizeNum - 2,
-                  italics: true,
-                  font: fontFamily,
-                }),
-              ],
-              spacing: { after: 100 },
-            }),
-            ...(work.summary ? [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: stripHtmlTags(work.summary),
-                    size: fontSizeNum,
-                    font: fontFamily,
-                  }),
-                ],
-                spacing: { after: 200 },
-              }),
-            ] : []),
-          ]),
-        ] : []),
-
-        // Education
-        ...(cvData.education && cvData.education.length > 0 ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'EDUCATION',
-                bold: true,
-                size: fontSizeNum + 2,
-                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-                font: fontFamily,
-                underline: {},
-              }),
-            ],
-            spacing: { after: 200 },
-          }),
-          ...cvData.education.flatMap((edu: any) => [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${edu.studyType || 'Degree'} in ${edu.area || 'Field'}`,
-                  bold: true,
-                  size: fontSizeNum,
-                  font: fontFamily,
-                }),
-              ],
-              spacing: { after: 100 },
-            }),
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `${edu.institution || 'Institution'} | ${edu.startDate || ''} - ${edu.endDate || ''}`,
-                  size: fontSizeNum - 2,
-                  italics: true,
-                  font: fontFamily,
-                }),
-              ],
-              spacing: { after: 200 },
-            }),
-          ]),
-        ] : []),
-
-        // Skills
-        ...(cvData.skills && cvData.skills.length > 0 ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'SKILLS',
-                bold: true,
-                size: fontSizeNum + 2,
-                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-                font: fontFamily,
-                underline: {},
-              }),
-            ],
-            spacing: { after: 200 },
-          }),
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: cvData.skills.map((skill: any) =>
-                  typeof skill === 'string' ? skill :
-                    (skill.category ? `${skill.category}: ${Array.isArray(skill.skills) ? skill.skills.join(', ') : skill.skills}` : skill.name || skill)
-                ).join(' • '),
-                size: fontSizeNum,
-                font: fontFamily,
-              }),
-            ],
-            spacing: { after: 400 },
-          }),
-        ] : []),
-
-        // Projects
-        ...(cvData.projects && cvData.projects.length > 0 ? [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: 'PROJECTS',
-                bold: true,
-                size: fontSizeNum + 2,
-                color: primaryColor.startsWith('#') ? primaryColor.substring(1) : primaryColor,
-                font: fontFamily,
-                underline: {},
-              }),
-            ],
-            spacing: { after: 200 },
-          }),
-          ...cvData.projects.flatMap((project: any) => [
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: project.name || 'Project',
-                  bold: true,
-                  size: fontSizeNum,
-                  font: fontFamily,
-                }),
-              ],
-              spacing: { after: 100 },
-            }),
-            ...(project.description ? [
-              new Paragraph({
-                children: [
-                  new TextRun({
-                    text: project.description,
-                    size: fontSizeNum,
-                    font: fontFamily,
-                  }),
-                ],
-                spacing: { after: 200 },
-              }),
-            ] : []),
-          ]),
-        ] : []),
-      ],
-    }],
-  });
-
-  const buffer = await Packer.toBuffer(doc);
-
-  return {
-    buffer: buffer,
-    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    filename: `${cvData.basics?.name || 'CV'}.docx`
-  };
+  // Use the existing DOCXService for consistent DOCX generation
+  // This ensures all CV sections are properly exported
+  try {
+    const { docxService } = await import('@/lib/services/docxService');
+    
+    // Create a template object compatible with DOCXService
+    const compatibleTemplate = template || {
+      id: 'default',
+      name: 'Default Template',
+      globalStyles: {
+        primaryColor: '#000000',
+        fontFamily: 'Calibri',
+        fontSize: '11pt'
+      }
+    };
+    
+    const blob = await docxService.generateDOCX(cvData, compatibleTemplate, {
+      paperSize: 'A4',
+      orientation: 'portrait',
+      format: 'docx'
+    });
+    
+    // Convert Blob to Buffer for Next.js response
+    const arrayBuffer = await blob.arrayBuffer();
+    const docxBuffer = Buffer.from(arrayBuffer);
+    
+    return {
+      buffer: docxBuffer,
+      mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      filename: `${cvData.basics?.name || 'CV'}.docx`
+    };
+  } catch (error) {
+    console.error('DOCX generation failed:', error);
+    throw new Error('Failed to generate DOCX document');
+  }
 }
 
 async function generateJSONExport(cvData: any, template: any) {

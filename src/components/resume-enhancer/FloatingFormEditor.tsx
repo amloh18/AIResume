@@ -110,6 +110,23 @@ export default function FloatingFormEditor({
         return () => window.removeEventListener('keydown', handleTab);
     }, [position]);
 
+    // Auto-focus first input when opened (for custom positioned mode)
+    useEffect(() => {
+        if (!position) return;
+
+        const modal = modalRef.current;
+        if (!modal) return;
+
+        setTimeout(() => {
+            const firstInput = modal.querySelector('input, textarea, select') as HTMLElement;
+            if (firstInput) {
+                firstInput.focus();
+                // Scroll the modal into view if needed
+                modal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }, 100);
+    }, [sectionId, position]);
+
     // CV data update handlers
     const updateCVData = useCallback((data: Partial<typeof state.cvData>) => {
         dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, ...data } });
@@ -461,7 +478,7 @@ export default function FloatingFormEditor({
                             <button
                                 onClick={onClose}
                                 onPointerDown={(e) => e.stopPropagation()}
-                                className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                                className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:-translate-y-0.5"
                                 aria-label="Cancel"
                                 title="Cancel"
                             >
@@ -470,7 +487,7 @@ export default function FloatingFormEditor({
                             <button
                                 onClick={onClose}
                                 onPointerDown={(e) => e.stopPropagation()}
-                                className="p-2 rounded-lg bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-colors"
+                                className="p-2 rounded-lg bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:-translate-y-0.5"
                                 aria-label="Accept"
                                 title="Accept"
                             >

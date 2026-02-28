@@ -16,6 +16,7 @@ const initialState: LinkedInEnhancerState = {
     version: '2026.1',
     isLoading: true,
     isEnhancing: false,
+    showEnhancingOverlay: false, // Only show overlay on regenerate, not initial load
     error: null,
     user_context: {
         tone_selection: 'Professional',
@@ -87,6 +88,7 @@ const initialState: LinkedInEnhancerState = {
 type Action =
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'SET_ENHANCING'; payload: boolean }
+    | { type: 'SET_SHOW_ENHANCING_OVERLAY'; payload: boolean }
     | { type: 'SET_ERROR'; payload: string | null }
     | { type: 'SET_USER_CONTEXT'; payload: Partial<LinkedInUserContext> }
     | { type: 'SET_SECTIONS'; payload: LinkedInProfileSections }
@@ -105,6 +107,8 @@ function reducer(state: LinkedInEnhancerState, action: Action): LinkedInEnhancer
             return { ...state, isLoading: action.payload };
         case 'SET_ENHANCING':
             return { ...state, isEnhancing: action.payload };
+        case 'SET_SHOW_ENHANCING_OVERLAY':
+            return { ...state, showEnhancingOverlay: action.payload };
         case 'SET_ERROR':
             return { ...state, error: action.payload };
         case 'SET_USER_CONTEXT':
@@ -176,6 +180,7 @@ function reducer(state: LinkedInEnhancerState, action: Action): LinkedInEnhancer
                 audit: action.payload.audit || state.audit,
                 career_guide: action.payload.career_guide || state.career_guide,
                 isEnhancing: false,
+                showEnhancingOverlay: false,
             };
         }
         case 'LOAD_CV_DATA':
@@ -232,6 +237,8 @@ export function LinkedInEnhancerProvider({ children }: { children: ReactNode }) 
         }
 
         dispatch({ type: 'SET_ENHANCING', payload: true });
+        // Only show overlay on regenerate, not on initial load
+        dispatch({ type: 'SET_SHOW_ENHANCING_OVERLAY', payload: regenerate });
         dispatch({ type: 'SET_ERROR', payload: null });
 
         try {
@@ -268,6 +275,7 @@ export function LinkedInEnhancerProvider({ children }: { children: ReactNode }) 
                 payload: error instanceof Error ? error.message : 'Enhancement failed',
             });
             dispatch({ type: 'SET_ENHANCING', payload: false });
+            dispatch({ type: 'SET_SHOW_ENHANCING_OVERLAY', payload: false });
         }
     }, [state.selectedCvId, state.selectedCvType, state.user_context]);
 

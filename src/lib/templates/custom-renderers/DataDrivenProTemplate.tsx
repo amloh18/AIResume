@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { renderFormattedText, stripHtmlTags, formatDateRangeWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface DataDrivenProTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -24,21 +26,25 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 }) => {
   const { basics, work, education, skills, projects, volunteer, certificates, awards, publications, languages, interests, references } = cvData;
 
+  // Create a section ID resolver to map section types to actual UUIDs from structure
+  const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
   // Helper to wrap section content with DraggableSection when provided
   // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+  // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    const isHeader = headerSectionTypes.includes(sectionType);
+    const isHeader = isHeaderSection(sectionType);
+    // Resolve the actual section ID from structure (UUID) for drag-and-drop
+    const actualId = resolveSectionId(sectionType);
 
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+        <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
     }
-    return <div data-section-id={id}>{children}</div>;
+    return <div data-section-id={actualId}>{children}</div>;
   };
 
   return (
@@ -626,160 +632,174 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
 
           {/* Volunteer */}
           {volunteer && volunteer.length > 0 && (
-            <div data-section-id="volunteer">
-              <h2 className="main-section-title">Volunteer Experience</h2>
-              {volunteer.map((vol, index) => (
-                <div key={index} className="experience-item" data-item-id={index}>
-                  <div className="experience-header">
-                    <div>
-                      <div className="job-title">{vol.position || ''}</div>
-                      <div className="company-info">
-                        {vol.organization || ''}
-                        {(vol.organization && (vol.startDate || vol.endDate)) && ' | '}
-                        {formatDateRangeWithStyle(vol.startDate || '', vol.endDate || '', dateFormat)}
+            <Wrapper id="volunteer" sectionType="volunteer">
+              <div>
+                <h2 className="main-section-title">Volunteer Experience</h2>
+                {volunteer.map((vol, index) => (
+                  <div key={index} className="experience-item" data-item-id={index}>
+                    <div className="experience-header">
+                      <div>
+                        <div className="job-title">{vol.position || ''}</div>
+                        <div className="company-info">
+                          {vol.organization || ''}
+                          {(vol.organization && (vol.startDate || vol.endDate)) && ' | '}
+                          {formatDateRangeWithStyle(vol.startDate || '', vol.endDate || '', dateFormat)}
+                        </div>
                       </div>
                     </div>
+                    <div className="experience-description">
+                      {vol.summary && (
+                        <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
+                          {stripHtmlTags(vol.summary)}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="experience-description">
-                    {vol.summary && (
-                      <div style={{ marginBottom: '0.5rem', fontSize: '0.75rem', color: '#374151' }}>
-                        {stripHtmlTags(vol.summary)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
 
           {/* Certificates */}
           {certificates && certificates.length > 0 && (
-            <div>
-              <h2 className="main-section-title">Certificates</h2>
-              {certificates.map((cert, index) => (
-                <div key={index} className="experience-item">
-                  <div className="experience-header">
-                    <div>
-                      <div className="job-title">{cert.name || ''}</div>
-                      <div className="company-info">
-                        {cert.issuer || ''}
-                        {(cert.issuer && cert.date) && ' | '}
-                        {cert.date || ''}
+            <Wrapper id="certificates" sectionType="certificates">
+              <div>
+                <h2 className="main-section-title">Certificates</h2>
+                {certificates.map((cert, index) => (
+                  <div key={index} className="experience-item">
+                    <div className="experience-header">
+                      <div>
+                        <div className="job-title">{cert.name || ''}</div>
+                        <div className="company-info">
+                          {cert.issuer || ''}
+                          {(cert.issuer && cert.date) && ' | '}
+                          {cert.date || ''}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {cert.description && (
-                    <div className="experience-description">
-                      <div style={{ fontSize: '0.75rem', color: '#374151' }}>
-                        {stripHtmlTags(cert.description)}
+                    {cert.description && (
+                      <div className="experience-description">
+                        <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                          {stripHtmlTags(cert.description)}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Awards */}
-          {awards && awards.length > 0 && (
-            <div>
-              <h2 className="main-section-title">Awards</h2>
-              {awards.map((award, index) => (
-                <div key={index} className="experience-item">
-                  <div className="experience-header">
-                    <div>
-                      <div className="job-title">{award.title || ''}</div>
-                      <div className="company-info">
-                        {award.awarder || ''}
-                        {(award.awarder && award.date) && ' | '}
-                        {award.date || ''}
-                      </div>
-                    </div>
-                  </div>
-                  {award.summary && (
-                    <div className="experience-description">
-                      <div style={{ fontSize: '0.75rem', color: '#374151' }}>
-                        {stripHtmlTags(award.summary)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Publications */}
-          {publications && publications.length > 0 && (
-            <div>
-              <h2 className="main-section-title">Publications</h2>
-              {publications.map((pub, index) => (
-                <div key={index} className="experience-item">
-                  <div className="experience-header">
-                    <div>
-                      <div className="job-title">{pub.name || ''}</div>
-                      <div className="company-info">
-                        {pub.publisher || ''}
-                        {(pub.publisher && pub.releaseDate) && ' | '}
-                        {pub.releaseDate || ''}
-                      </div>
-                    </div>
-                  </div>
-                  {pub.summary && (
-                    <div className="experience-description">
-                      <div style={{ fontSize: '0.75rem', color: '#374151' }}>
-                        {stripHtmlTags(pub.summary)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Languages */}
-          {languages && languages.length > 0 && (
-            <div>
-              <h2 className="main-section-title">Languages</h2>
-              <div style={{ fontSize: '0.75rem', color: '#374151' }}>
-                {languages.map((lang, index) => (
-                  <div key={index} style={{ marginBottom: '0.25rem' }}>
-                    <strong>{lang.language}</strong> - {lang.fluency}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Interests */}
-          {interests && interests.length > 0 && (
-            <div>
-              <h2 className="main-section-title">Interests</h2>
-              <div style={{ fontSize: '0.75rem', color: '#374151' }}>
-                {interests.map((interest, index) => (
-                  <div key={index} style={{ marginBottom: '0.25rem' }}>
-                    <strong>{interest.name}</strong>
-                    {interest.keywords && interest.keywords.length > 0 && (
-                      <span> - {interest.keywords.join(', ')}</span>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
+            </Wrapper>
+          )}
+
+          {/* Awards */}
+          {awards && awards.length > 0 && (
+            <Wrapper id="awards" sectionType="awards">
+              <div>
+                <h2 className="main-section-title">Awards</h2>
+                {awards.map((award, index) => (
+                  <div key={index} className="experience-item">
+                    <div className="experience-header">
+                      <div>
+                        <div className="job-title">{award.title || ''}</div>
+                        <div className="company-info">
+                          {award.awarder || ''}
+                          {(award.awarder && award.date) && ' | '}
+                          {award.date || ''}
+                        </div>
+                      </div>
+                    </div>
+                    {award.summary && (
+                      <div className="experience-description">
+                        <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                          {stripHtmlTags(award.summary)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Wrapper>
+          )}
+
+          {/* Publications */}
+          {publications && publications.length > 0 && (
+            <Wrapper id="publications" sectionType="publications">
+              <div>
+                <h2 className="main-section-title">Publications</h2>
+                {publications.map((pub, index) => (
+                  <div key={index} className="experience-item">
+                    <div className="experience-header">
+                      <div>
+                        <div className="job-title">{pub.name || ''}</div>
+                        <div className="company-info">
+                          {pub.publisher || ''}
+                          {(pub.publisher && pub.releaseDate) && ' | '}
+                          {pub.releaseDate || ''}
+                        </div>
+                      </div>
+                    </div>
+                    {pub.summary && (
+                      <div className="experience-description">
+                        <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                          {stripHtmlTags(pub.summary)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Wrapper>
+          )}
+
+          {/* Languages */}
+          {languages && languages.length > 0 && (
+            <Wrapper id="languages" sectionType="languages">
+              <div>
+                <h2 className="main-section-title">Languages</h2>
+                <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                  {languages.map((lang, index) => (
+                    <div key={index} style={{ marginBottom: '0.25rem' }}>
+                      <strong>{lang.language}</strong> - {lang.fluency}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Wrapper>
+          )}
+
+          {/* Interests */}
+          {interests && interests.length > 0 && (
+            <Wrapper id="interests" sectionType="interests">
+              <div>
+                <h2 className="main-section-title">Interests</h2>
+                <div style={{ fontSize: '0.75rem', color: '#374151' }}>
+                  {interests.map((interest, index) => (
+                    <div key={index} style={{ marginBottom: '0.25rem' }}>
+                      <strong>{interest.name}</strong>
+                      {interest.keywords && interest.keywords.length > 0 && (
+                        <span> - {interest.keywords.join(', ')}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Wrapper>
           )}
 
           {/* References */}
           {references && references.length > 0 && (
-            <div>
-              <h2 className="main-section-title">References</h2>
-              {references && references.length > 0 && references.map((ref, index) => (
-                <div key={index} className="experience-item">
-                  <div className="job-title">{ref.name || ''}</div>
-                  <div style={{ fontSize: '0.75rem', color: '#374151', marginTop: '0.25rem' }}>
-                    {stripHtmlTags(ref.reference)}
+            <Wrapper id="references" sectionType="references">
+              <div>
+                <h2 className="main-section-title">References</h2>
+                {references && references.length > 0 && references.map((ref, index) => (
+                  <div key={index} className="experience-item">
+                    <div className="job-title">{ref.name || ''}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#374151', marginTop: '0.25rem' }}>
+                      {stripHtmlTags(ref.reference)}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </Wrapper>
           )}
         </div>
       </div>

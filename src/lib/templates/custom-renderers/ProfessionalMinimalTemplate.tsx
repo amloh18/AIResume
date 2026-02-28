@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface ProfessionalMinimalTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -23,21 +25,25 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
 }) => {
   const { basics, work, education, skills, projects, certificates, languages, awards } = cvData;
 
+  // Create a section ID resolver to map section types to actual UUIDs from structure
+  const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
   // Helper to wrap section content with DraggableSection when provided
   // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+  // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    const isHeader = headerSectionTypes.includes(sectionType);
+    const isHeader = isHeaderSection(sectionType);
+    // Resolve the actual section ID from structure (UUID) for drag-and-drop
+    const actualId = resolveSectionId(sectionType);
 
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+        <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
     }
-    return <div data-section-id={id}>{children}</div>;
+    return <div data-section-id={actualId}>{children}</div>;
   };
 
   // Format location
@@ -293,186 +299,204 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       `}} />
 
       {/* ====== HEADER ====== */}
-      <div className="pm-header" data-section-id="personal">
-        <div className="pm-name-row">
-          <h1 className="pm-name">{basics?.name || 'YOUR NAME'}</h1>
-          <span className="pm-title">{basics?.label || 'Professional Title'}</span>
+      <Wrapper id="personal" sectionType="personal">
+        <div className="pm-header">
+          <div className="pm-name-row">
+            <h1 className="pm-name">{basics?.name || 'YOUR NAME'}</h1>
+            <span className="pm-title">{basics?.label || 'Professional Title'}</span>
+          </div>
+          <div className="pm-contact-row">
+            {basics?.email && (
+              <span className="pm-contact-item">✉ {basics.email}</span>
+            )}
+            {basics?.phone && (
+              <span className="pm-contact-item">☎ {basics.phone}</span>
+            )}
+            {formatLocation() && (
+              <span className="pm-contact-item">📍 {formatLocation()}</span>
+            )}
+            {basics?.url && (
+              <span className="pm-contact-item">🔗 {basics.url}</span>
+            )}
+            {basics?.profiles?.map((profile, idx) => (
+              <span key={idx} className="pm-contact-item">◆ {profile.url || profile.username}</span>
+            ))}
+          </div>
         </div>
-        <div className="pm-contact-row">
-          {basics?.email && (
-            <span className="pm-contact-item">✉ {basics.email}</span>
-          )}
-          {basics?.phone && (
-            <span className="pm-contact-item">☎ {basics.phone}</span>
-          )}
-          {formatLocation() && (
-            <span className="pm-contact-item">📍 {formatLocation()}</span>
-          )}
-          {basics?.url && (
-            <span className="pm-contact-item">🔗 {basics.url}</span>
-          )}
-          {basics?.profiles?.map((profile, idx) => (
-            <span key={idx} className="pm-contact-item">◆ {profile.url || profile.username}</span>
-          ))}
-        </div>
-      </div>
+      </Wrapper>
 
       {/* ====== PROFILE ====== */}
       {basics?.summary && (
-        <div className="pm-section" data-section-id="summary">
-          <h2 className="pm-section-title">Profile</h2>
-          <p className="pm-summary-text">{stripHtmlTags(basics.summary)}</p>
-        </div>
+        <Wrapper id="summary" sectionType="summary">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Profile</h2>
+            <p className="pm-summary-text">{stripHtmlTags(basics.summary)}</p>
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== WORK EXPERIENCE - 30/70 Split ====== */}
       {work && work.length > 0 && (
-        <div className="pm-section" data-section-id="work">
-          <h2 className="pm-section-title">Work Experience</h2>
-          {work.map((job, index) => (
-            <div key={index} className="pm-split-item" data-item-id={index}>
-              <div className="pm-split-left">
-                <p className="pm-split-company">{job.name}</p>
-                <p className="pm-split-position">{job.position}</p>
-                <p className="pm-split-dates">
-                  {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
-                </p>
+        <Wrapper id="work" sectionType="work">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Work Experience</h2>
+            {work.map((job, index) => (
+              <div key={index} className="pm-split-item" data-item-id={index}>
+                <div className="pm-split-left">
+                  <p className="pm-split-company">{job.name}</p>
+                  <p className="pm-split-position">{job.position}</p>
+                  <p className="pm-split-dates">
+                    {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
+                  </p>
+                </div>
+                <div className="pm-split-right">
+                  {job.summary && (
+                    <div dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }} />
+                  )}
+                </div>
               </div>
-              <div className="pm-split-right">
-                {job.summary && (
-                  <div dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }} />
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== EDUCATION - 30/70 Split ====== */}
       {education && education.length > 0 && (
-        <div className="pm-section" data-section-id="education">
-          <h2 className="pm-section-title">Education</h2>
-          {education.map((edu, index) => (
-            <div key={index} className="pm-split-item" data-item-id={index}>
-              <div className="pm-split-left">
-                <p className="pm-split-company">{edu.institution}</p>
-                <p className="pm-split-position">
-                  {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
-                </p>
-                <p className="pm-split-dates">
-                  {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
-                </p>
+        <Wrapper id="education" sectionType="education">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Education</h2>
+            {education.map((edu, index) => (
+              <div key={index} className="pm-split-item" data-item-id={index}>
+                <div className="pm-split-left">
+                  <p className="pm-split-company">{edu.institution}</p>
+                  <p className="pm-split-position">
+                    {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
+                  </p>
+                  <p className="pm-split-dates">
+                    {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
+                  </p>
+                </div>
+                <div className="pm-split-right">
+                  {edu.score && <p>Score: {edu.score}</p>}
+                  {edu.courses && edu.courses.length > 0 && (
+                    <p>Courses: {edu.courses.join(', ')}</p>
+                  )}
+                </div>
               </div>
-              <div className="pm-split-right">
-                {edu.score && <p>Score: {edu.score}</p>}
-                {edu.courses && edu.courses.length > 0 && (
-                  <p>Courses: {edu.courses.join(', ')}</p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== SKILLS - Two Column ====== */}
       {skills && skills.length > 0 && (
-        <div className="pm-section" data-section-id="skills">
-          <h2 className="pm-section-title">Skills</h2>
-          <div className="pm-two-col-grid">
-            {skills.map((skillCategory, index) => (
-              <div key={index} className="pm-skill-category">
-                <span className="pm-skill-category-name">{skillCategory.category}: </span>
-                <span className="pm-skill-list">
-                  {skillCategory.skills?.join(', ')}
-                </span>
-              </div>
-            ))}
+        <Wrapper id="skills" sectionType="skills">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Skills</h2>
+            <div className="pm-two-col-grid">
+              {skills.map((skillCategory, index) => (
+                <div key={index} className="pm-skill-category">
+                  <span className="pm-skill-category-name">{skillCategory.category}: </span>
+                  <span className="pm-skill-list">
+                    {skillCategory.skills?.join(', ')}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Wrapper>
       )}
 
       {/* ====== PROJECTS - 30/70 Split ====== */}
       {projects && projects.length > 0 && (
-        <div className="pm-section" data-section-id="projects">
-          <h2 className="pm-section-title">Projects</h2>
-          {projects.map((project, index) => (
-            <div key={index} className="pm-split-item" data-item-id={index}>
-              <div className="pm-split-left">
-                <p className="pm-split-company">{project.name}</p>
-                {project.startDate && (
-                  <p className="pm-split-dates">
-                    {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
-                  </p>
-                )}
-                {project.url && (
-                  <p className="pm-split-dates" style={{ wordBreak: 'break-all' }}>{project.url}</p>
-                )}
+        <Wrapper id="projects" sectionType="projects">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Projects</h2>
+            {projects.map((project, index) => (
+              <div key={index} className="pm-split-item" data-item-id={index}>
+                <div className="pm-split-left">
+                  <p className="pm-split-company">{project.name}</p>
+                  {project.startDate && (
+                    <p className="pm-split-dates">
+                      {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
+                    </p>
+                  )}
+                  {project.url && (
+                    <p className="pm-split-dates" style={{ wordBreak: 'break-all' }}>{project.url}</p>
+                  )}
+                </div>
+                <div className="pm-split-right">
+                  {project.description && (
+                    <div dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }} />
+                  )}
+                  {project.highlights && project.highlights.length > 0 && (
+                    <ul>
+                      {project.highlights.map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  )}
+                </div>
               </div>
-              <div className="pm-split-right">
-                {project.description && (
-                  <div dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }} />
-                )}
-                {project.highlights && project.highlights.length > 0 && (
-                  <ul>
-                    {project.highlights.map((h, i) => <li key={i}>{h}</li>)}
-                  </ul>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== CERTIFICATES - Single Column ====== */}
       {certificates && certificates.length > 0 && (
-        <div className="pm-section" data-section-id="certificates">
-          <h2 className="pm-section-title">Certifications</h2>
-          {certificates.map((cert, index) => (
-            <div key={index} className="pm-item" data-item-id={index}>
-              <div className="pm-item-header">
-                <h3 className="pm-item-title">{cert.name}</h3>
-                {cert.date && (
-                  <span className="pm-item-dates">{cert.date}</span>
-                )}
+        <Wrapper id="certificates" sectionType="certificates">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Certifications</h2>
+            {certificates.map((cert, index) => (
+              <div key={index} className="pm-item" data-item-id={index}>
+                <div className="pm-item-header">
+                  <h3 className="pm-item-title">{cert.name}</h3>
+                  {cert.date && (
+                    <span className="pm-item-dates">{cert.date}</span>
+                  )}
+                </div>
+                <p className="pm-item-subtitle">{cert.issuer}</p>
               </div>
-              <p className="pm-item-subtitle">{cert.issuer}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== LANGUAGES - Single Column Inline ====== */}
       {languages && languages.length > 0 && (
-        <div className="pm-section" data-section-id="languages">
-          <h2 className="pm-section-title">Languages</h2>
-          <p className="pm-inline-list">
-            {languages.map((lang, index) => (
-              <span key={index}>
-                <strong>{lang.language}</strong>
-                {lang.fluency && ` (${lang.fluency})`}
-                {index < languages.length - 1 ? ' • ' : ''}
-              </span>
-            ))}
-          </p>
-        </div>
+        <Wrapper id="languages" sectionType="languages">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Languages</h2>
+            <p className="pm-inline-list">
+              {languages.map((lang, index) => (
+                <span key={index}>
+                  <strong>{lang.language}</strong>
+                  {lang.fluency && ` (${lang.fluency})`}
+                  {index < languages.length - 1 ? ' • ' : ''}
+                </span>
+              ))}
+            </p>
+          </div>
+        </Wrapper>
       )}
 
       {/* ====== AWARDS - Single Column ====== */}
       {awards && awards.length > 0 && (
-        <div className="pm-section" data-section-id="awards">
-          <h2 className="pm-section-title">Awards</h2>
-          {awards.map((award, index) => (
-            <div key={index} className="pm-award-item" data-item-id={index}>
-              <span className="pm-award-title">{award.title}</span>
-              {award.awarder && (
-                <span className="pm-award-info"> – {award.awarder}</span>
-              )}
-              {award.date && (
-                <span className="pm-award-info"> ({award.date})</span>
-              )}
-            </div>
-          ))}
-        </div>
+        <Wrapper id="awards" sectionType="awards">
+          <div className="pm-section">
+            <h2 className="pm-section-title">Awards</h2>
+            {awards.map((award, index) => (
+              <div key={index} className="pm-award-item" data-item-id={index}>
+                <span className="pm-award-title">{award.title}</span>
+                {award.awarder && (
+                  <span className="pm-award-info"> – {award.awarder}</span>
+                )}
+                {award.date && (
+                  <span className="pm-award-info"> ({award.date})</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Wrapper>
       )}
     </div>
   );

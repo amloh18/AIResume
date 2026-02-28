@@ -162,13 +162,28 @@ export class PDFService extends BaseService {
         // Set timeout
         page.setDefaultTimeout(config.timeout);
 
-        // Set viewport to A4 WIDTH but very tall HEIGHT
-        // This allows all content to render continuously, then PDF pagination splits it
+        // Set viewport to match @page CSS dimensions EXACTLY
+        // CRITICAL: This viewport width MUST match the page width defined in templateRendererService.ts
+        // A4: 210mm = 794px (at 96 DPI), Letter: 8.5in = 816px (at 96 DPI)
+        // Height is set very tall (10000px) to allow continuous rendering before PDF pagination
         const viewportWidth = options.paperSize === 'Letter' ? 816 : 794;
+        
+        // Validate viewport matches expected dimensions
+        const expectedWidthMM = options.paperSize === 'Letter' ? 216 : 210; // Letter = 8.5in = 216mm
+        const actualWidthMM = Math.round((viewportWidth / 96) * 25.4); // Convert px to mm
+        
+        logger.info('PDF Generation - Viewport Configuration', {
+          paperSize: options.paperSize || 'A4',
+          viewportWidthPx: viewportWidth,
+          expectedWidthMM,
+          actualWidthMM,
+          widthMatches: Math.abs(expectedWidthMM - actualWidthMM) <= 2 // Allow 2mm tolerance
+        });
+        
         await page.setViewport({
           width: viewportWidth,
           height: 10000, // Very tall to allow all content
-          deviceScaleFactor: 1
+          deviceScaleFactor: 1 // No scaling to match CSS exactly
         });
 
         // Set content
@@ -194,6 +209,9 @@ export class PDFService extends BaseService {
           format: options.paperSize || 'A4',
           landscape: options.orientation === 'landscape',
           printBackground: true,
+          // CRITICAL: Margins set to 0mm because @page CSS rule in HTML provides the actual margins
+          // The HTML contains: @page { margin: 12mm 15mm 12mm 15mm; }
+          // Setting margins here would ADD to those CSS margins, causing double padding
           margin: {
             top: '0mm',
             right: '0mm',

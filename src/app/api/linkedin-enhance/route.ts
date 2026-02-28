@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. Check for existing snapshot IF not forcing regeneration
+    // Also check if tone matches - if tone changed, we should regenerate
     if (!regenerate && cvId) {
       try {
         const existingSnapshot = await LinkedInSnapshot.findOne({
@@ -43,7 +44,8 @@ export async function POST(request: NextRequest) {
           sourceCvId: cvId
         }).sort({ updatedAt: -1 });
 
-        if (existingSnapshot) {
+        // Only return cached if tone matches
+        if (existingSnapshot && existingSnapshot.tone === tone) {
           console.log('Returning cached LinkedIn enhancement for CV:', cvId);
           return NextResponse.json({
             success: true,
@@ -89,15 +91,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Build the AI prompt
-    const prompt = buildLinkedInEnhancerPrompt(cv, tone, targetIndustry);
+    // Build the AI prompt with variation seed for regeneration
+    const variationSeed = regenerate ? Date.now() : undefined;
+    const prompt = buildLinkedInEnhancerPrompt(cv, tone, targetIndustry, variationSeed);
 
     // Call Gemini API with fallback
     let aiResponse: string | null = null;
     try {
       aiResponse = await callGeminiWithAllKeysFallback(prompt, {
         model: 'gemini-2.0-flash',
-        temperature: 0.7,
+        temperature: regenerate ? 0.9 : 0.7, // Higher temperature for variations
         maxTokens: 4000,
       });
     } catch (error) {
@@ -158,12 +161,23 @@ export async function POST(request: NextRequest) {
 /**
  * Build the comprehensive AI prompt with 50+ edge case handling
  */
-function buildLinkedInEnhancerPrompt(cvData: any, tone: string, targetIndustry?: string): string {
+function buildLinkedInEnhancerPrompt(cvData: any, tone: string, targetIndustry?: string, variationSeed?: number): string {
   const cvJson = JSON.stringify(cvData, null, 2);
+  
+  // Add variation instruction if seed is provided
+  const variationInstruction = variationSeed 
+    ? `\n# VARIATION REQUEST (Seed: ${variationSeed})
+This is a regeneration request. Create a FRESH and DIFFERENT version of the LinkedIn profile:
+- Use different wording and phrasing while maintaining the same professional quality
+- Explore alternative narrative strategies for the About section
+- Vary the bullet point structures in Experience
+- Consider different SEO keyword combinations
+- Ensure this feels like a distinct alternative, not a rehash`
+    : '';
 
   return `# MISSION
 You are a Senior Executive Career Brand Strategist. Your goal is to transform a CV JSON into a high-conversion LinkedIn Profile. You are optimized to handle 100+ complex professional edge cases, ensuring no profile is generic or broken.
-
+${variationInstruction}
 # TONE INSTRUCTION
 Apply the "${tone}" tone to all generated content:
 - Professional: Authoritative, polished, formal business language

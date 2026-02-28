@@ -8,17 +8,27 @@ interface UseContextToastsConfig {
     onDismiss?: (issueId: string) => void;
     onAiAssist?: (issue: Issue) => void;
     enabled?: boolean;
+    maxDismissedItems?: number; // Limit for dismissed issues to prevent memory leak
 }
+
+// Default max dismissed items to prevent unbounded memory growth
+const DEFAULT_MAX_DISMISSED = 100;
 
 export function useContextToasts(
     issues: Issue[],
     config: UseContextToastsConfig
 ) {
+    const { 
+        onFix, 
+        onDismiss, 
+        onAiAssist, 
+        enabled = true,
+        maxDismissedItems = DEFAULT_MAX_DISMISSED 
+    } = config;
+    
     const [dismissedIssueIds, setDismissedIssueIds] = useState<Set<string>>(new Set());
     const previousIssuesRef = useRef<Map<string, Issue>>(new Map());
     const toastIdsRef = useRef<Map<string, { id: string, dismiss: () => void }>>(new Map());
-
-    const { onFix, onDismiss, onAiAssist, enabled = true } = config;
 
     useEffect(() => {
         if (!enabled) return;
@@ -44,8 +54,17 @@ export function useContextToasts(
                     toastIdsRef.current.delete(issueId);
                 }
 
-                // Mark as dismissed
-                setDismissedIssueIds(prev => new Set(prev).add(issueId));
+                // Mark as dismissed with max limit to prevent memory leak
+                setDismissedIssueIds(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(issueId);
+                    // Enforce max limit by removing oldest entries
+                    if (newSet.size > maxDismissedItems) {
+                        const entries = Array.from(newSet);
+                        return new Set(entries.slice(-maxDismissedItems));
+                    }
+                    return newSet;
+                });
 
                 // Call external dismiss handler if provided
                 onDismiss?.(issueId);
