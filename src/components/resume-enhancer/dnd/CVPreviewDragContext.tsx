@@ -20,6 +20,7 @@ import {
     arrayMove,
 } from '@dnd-kit/sortable';
 import type { CVSectionStructure } from '@/types/unified-cv-schema';
+import { HEADER_SECTION_TYPES, isHeaderSection } from '@/lib/constants/cv-sections';
 
 interface CVPreviewDragContextProps {
     /** Current sections from cvData.structure.sections */
@@ -42,6 +43,10 @@ interface CVPreviewDragContextProps {
  * Wraps the CV preview with DndContext and SortableContext(s).
  * For single-column: one vertical sortable context
  * For two-column: TODO - two separate sortable contexts for sidebar and main content
+ * 
+ * NOTE: All visible sections are included in the SortableContext.
+ * Header sections (personal, contact, summary) are marked as "locked" via isHeaderSection()
+ * and the DraggableSection component handles the locking behavior (no drag, but still clickable).
  */
 export const CVPreviewDragContext: React.FC<CVPreviewDragContextProps> = ({
     sections,
@@ -54,14 +59,12 @@ export const CVPreviewDragContext: React.FC<CVPreviewDragContextProps> = ({
     const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
     const [activeSectionType, setActiveSectionType] = useState<string | null>(null);
 
-    // Header sections that should not be draggable
-    const HEADER_SECTION_TYPES = ['personal', 'personal_header', 'contact', 'summary'];
-
-    // Memoize section IDs for SortableContext - exclude header sections
+    // Memoize section IDs for SortableContext - include ALL visible sections
+    // Header sections are still included but will be locked via DraggableSection's isLocked prop
+    // This ensures header sections are still clickable for editing
     const sectionIds = useMemo(
         () => sections
             .filter(s => s.visible !== false)
-            .filter(s => !HEADER_SECTION_TYPES.includes(s.type)) // Exclude header sections from dragging
             .map(s => s.id),
         [sections]
     );

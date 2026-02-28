@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface MinimalProfessionalTemplateProps {
     cvData: UnifiedCVDataStructure;
@@ -23,21 +25,25 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
 }) => {
     const { basics, work, education, skills, projects, certificates, languages, awards } = cvData;
 
+    // Create a section ID resolver to map section types to actual UUIDs from structure
+    const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
     // Helper to wrap section content with DraggableSection when provided
     // Header sections (personal, contact, summary) should not be draggable
-    const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+    // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
     const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-        const isHeader = headerSectionTypes.includes(sectionType);
+        const isHeader = isHeaderSection(sectionType);
+        // Resolve the actual section ID from structure (UUID) for drag-and-drop
+        const actualId = resolveSectionId(sectionType);
 
         if (SectionWrapper) {
             return (
-                <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+                <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
                     {children}
                 </SectionWrapper>
             );
         }
-        return <div data-section-id={id}>{children}</div>;
+        return <div data-section-id={actualId}>{children}</div>;
     };
 
     // Format location
@@ -289,211 +295,229 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
       `}} />
 
             {/* ====== HEADER ====== */}
-            <div className="mp-header" data-section-id="personal">
-                <div className="mp-header-left">
-                    <div className="mp-name-row">
-                        <h1 className="mp-name">{basics?.name || 'YOUR NAME'}</h1>
-                        <span className="mp-title">{basics?.label || 'Professional Title'}</span>
+            <Wrapper id="personal" sectionType="personal">
+                <div className="mp-header">
+                    <div className="mp-header-left">
+                        <div className="mp-name-row">
+                            <h1 className="mp-name">{basics?.name || 'YOUR NAME'}</h1>
+                            <span className="mp-title">{basics?.label || 'Professional Title'}</span>
+                        </div>
+                        <div className="mp-contact-row">
+                            {basics?.email && (
+                                <span className="mp-contact-item">
+                                    <span className="mp-contact-icon">✉</span>
+                                    {basics.email}
+                                </span>
+                            )}
+                            {basics?.phone && (
+                                <span className="mp-contact-item">
+                                    <span className="mp-contact-icon">☎</span>
+                                    {basics.phone}
+                                </span>
+                            )}
+                            {formatLocation() && (
+                                <span className="mp-contact-item">
+                                    <span className="mp-contact-icon">📍</span>
+                                    {formatLocation()}
+                                </span>
+                            )}
+                            {basics?.url && (
+                                <span className="mp-contact-item">
+                                    <span className="mp-contact-icon">🔗</span>
+                                    {basics.url}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                    <div className="mp-contact-row">
-                        {basics?.email && (
-                            <span className="mp-contact-item">
-                                <span className="mp-contact-icon">✉</span>
-                                {basics.email}
-                            </span>
-                        )}
-                        {basics?.phone && (
-                            <span className="mp-contact-item">
-                                <span className="mp-contact-icon">☎</span>
-                                {basics.phone}
-                            </span>
-                        )}
-                        {formatLocation() && (
-                            <span className="mp-contact-item">
-                                <span className="mp-contact-icon">📍</span>
-                                {formatLocation()}
-                            </span>
-                        )}
-                        {basics?.url && (
-                            <span className="mp-contact-item">
-                                <span className="mp-contact-icon">🔗</span>
-                                {basics.url}
-                            </span>
-                        )}
-                    </div>
+                    {/* Profile Picture - Only show if image exists */}
+                    {basics?.image && (
+                        <img
+                            src={basics.image}
+                            alt={basics.name || 'Profile'}
+                            className="mp-profile-pic"
+                        />
+                    )}
                 </div>
-                {/* Profile Picture - Only show if image exists */}
-                {basics?.image && (
-                    <img
-                        src={basics.image}
-                        alt={basics.name || 'Profile'}
-                        className="mp-profile-pic"
-                    />
-                )}
-            </div>
+            </Wrapper>
 
             {/* ====== SUMMARY ====== */}
             {basics?.summary && (
-                <div className="mp-section" data-section-id="summary">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Profile</h2>
+                <Wrapper id="summary" sectionType="summary">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Profile</h2>
+                        </div>
+                        <p className="mp-summary-text">{stripHtmlTags(basics.summary)}</p>
                     </div>
-                    <p className="mp-summary-text">{stripHtmlTags(basics.summary)}</p>
-                </div>
+                </Wrapper>
             )}
 
             {/* ====== WORK EXPERIENCE ====== */}
             {work && work.length > 0 && (
-                <div className="mp-section" data-section-id="work">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Work Experience</h2>
-                    </div>
-                    {work.map((job, index) => (
-                        <div key={index} className="mp-item" data-item-id={index}>
-                            <div className="mp-item-header">
-                                <h3 className="mp-item-title">{job.position}</h3>
-                                <span className="mp-item-dates">
-                                    {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
-                                </span>
-                            </div>
-                            <p className="mp-item-subtitle">{job.name}</p>
-                            {job.summary && (
-                                <div
-                                    className="mp-item-description"
-                                    dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
-                                />
-                            )}
+                <Wrapper id="work" sectionType="work">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Work Experience</h2>
                         </div>
-                    ))}
-                </div>
+                        {work.map((job, index) => (
+                            <div key={index} className="mp-item" data-item-id={index}>
+                                <div className="mp-item-header">
+                                    <h3 className="mp-item-title">{job.position}</h3>
+                                    <span className="mp-item-dates">
+                                        {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
+                                    </span>
+                                </div>
+                                <p className="mp-item-subtitle">{job.name}</p>
+                                {job.summary && (
+                                    <div
+                                        className="mp-item-description"
+                                        dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary) }}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </Wrapper>
             )}
 
             {/* ====== EDUCATION ====== */}
             {education && education.length > 0 && (
-                <div className="mp-section" data-section-id="education">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Education</h2>
-                    </div>
-                    {education.map((edu, index) => (
-                        <div key={index} className="mp-item" data-item-id={index}>
-                            <div className="mp-item-header">
-                                <h3 className="mp-item-title">
-                                    {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
-                                </h3>
-                                <span className="mp-item-dates">
-                                    {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
-                                </span>
-                            </div>
-                            <p className="mp-item-subtitle">{edu.institution}</p>
-                            {edu.score && (
-                                <div className="mp-item-description">Score: {edu.score}</div>
-                            )}
+                <Wrapper id="education" sectionType="education">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Education</h2>
                         </div>
-                    ))}
-                </div>
+                        {education.map((edu, index) => (
+                            <div key={index} className="mp-item" data-item-id={index}>
+                                <div className="mp-item-header">
+                                    <h3 className="mp-item-title">
+                                        {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
+                                    </h3>
+                                    <span className="mp-item-dates">
+                                        {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
+                                    </span>
+                                </div>
+                                <p className="mp-item-subtitle">{edu.institution}</p>
+                                {edu.score && (
+                                    <div className="mp-item-description">Score: {edu.score}</div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </Wrapper>
             )}
 
             {/* ====== SKILLS ====== */}
             {skills && skills.length > 0 && (
-                <div className="mp-section" data-section-id="skills">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Skills</h2>
-                    </div>
-                    {skills.map((skillCategory, index) => (
-                        <div key={index} className="mp-skill-category">
-                            <div className="mp-skill-category-name">{skillCategory.category}</div>
-                            <div className="mp-skill-list">
-                                {skillCategory.skills?.join(' • ')}
-                            </div>
+                <Wrapper id="skills" sectionType="skills">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Skills</h2>
                         </div>
-                    ))}
-                </div>
+                        {skills.map((skillCategory, index) => (
+                            <div key={index} className="mp-skill-category">
+                                <div className="mp-skill-category-name">{skillCategory.category}</div>
+                                <div className="mp-skill-list">
+                                    {skillCategory.skills?.join(' • ')}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </Wrapper>
             )}
 
             {/* ====== PROJECTS ====== */}
             {projects && projects.length > 0 && (
-                <div className="mp-section" data-section-id="projects">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Projects</h2>
-                    </div>
-                    {projects.map((project, index) => (
-                        <div key={index} className="mp-item" data-item-id={index}>
-                            <div className="mp-item-header">
-                                <h3 className="mp-item-title">{project.name}</h3>
-                                {project.startDate && (
-                                    <span className="mp-item-dates">
-                                        {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
-                                    </span>
+                <Wrapper id="projects" sectionType="projects">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Projects</h2>
+                        </div>
+                        {projects.map((project, index) => (
+                            <div key={index} className="mp-item" data-item-id={index}>
+                                <div className="mp-item-header">
+                                    <h3 className="mp-item-title">{project.name}</h3>
+                                    {project.startDate && (
+                                        <span className="mp-item-dates">
+                                            {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
+                                        </span>
+                                    )}
+                                </div>
+                                {project.description && (
+                                    <div
+                                        className="mp-item-description"
+                                        dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }}
+                                    />
                                 )}
                             </div>
-                            {project.description && (
-                                <div
-                                    className="mp-item-description"
-                                    dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }}
-                                />
-                            )}
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                </Wrapper>
             )}
 
             {/* ====== CERTIFICATES ====== */}
             {certificates && certificates.length > 0 && (
-                <div className="mp-section" data-section-id="certificates">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Certifications</h2>
-                    </div>
-                    {certificates.map((cert, index) => (
-                        <div key={index} className="mp-item" data-item-id={index}>
-                            <div className="mp-item-header">
-                                <h3 className="mp-item-title">{cert.name}</h3>
-                                {cert.date && (
-                                    <span className="mp-item-dates">{cert.date}</span>
-                                )}
-                            </div>
-                            <p className="mp-item-subtitle">{cert.issuer}</p>
+                <Wrapper id="certificates" sectionType="certificates">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Certifications</h2>
                         </div>
-                    ))}
-                </div>
+                        {certificates.map((cert, index) => (
+                            <div key={index} className="mp-item" data-item-id={index}>
+                                <div className="mp-item-header">
+                                    <h3 className="mp-item-title">{cert.name}</h3>
+                                    {cert.date && (
+                                        <span className="mp-item-dates">{cert.date}</span>
+                                    )}
+                                </div>
+                                <p className="mp-item-subtitle">{cert.issuer}</p>
+                            </div>
+                        ))}
+                    </div>
+                </Wrapper>
             )}
 
             {/* ====== LANGUAGES ====== */}
             {languages && languages.length > 0 && (
-                <div className="mp-section" data-section-id="languages">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Languages</h2>
+                <Wrapper id="languages" sectionType="languages">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Languages</h2>
+                        </div>
+                        <div className="mp-languages-inline">
+                            {languages.map((lang, index) => (
+                                <span key={index} className="mp-language-item">
+                                    <span className="mp-language-name">{lang.language}</span>
+                                    {lang.fluency && (
+                                        <span className="mp-language-level"> – {lang.fluency}</span>
+                                    )}
+                                </span>
+                            ))}
+                        </div>
                     </div>
-                    <div className="mp-languages-inline">
-                        {languages.map((lang, index) => (
-                            <span key={index} className="mp-language-item">
-                                <span className="mp-language-name">{lang.language}</span>
-                                {lang.fluency && (
-                                    <span className="mp-language-level"> – {lang.fluency}</span>
-                                )}
-                            </span>
-                        ))}
-                    </div>
-                </div>
+                </Wrapper>
             )}
 
             {/* ====== AWARDS ====== */}
             {awards && awards.length > 0 && (
-                <div className="mp-section" data-section-id="awards">
-                    <div className="mp-section-header">
-                        <h2 className="mp-section-title">Awards</h2>
-                    </div>
-                    {awards.map((award, index) => (
-                        <div key={index} className="mp-award-item" data-item-id={index}>
-                            <span className="mp-award-title">{award.title}</span>
-                            {award.awarder && (
-                                <span className="mp-award-awarder"> – {award.awarder}</span>
-                            )}
-                            {award.date && (
-                                <span className="mp-item-dates" style={{ marginLeft: '8px' }}>({award.date})</span>
-                            )}
+                <Wrapper id="awards" sectionType="awards">
+                    <div className="mp-section">
+                        <div className="mp-section-header">
+                            <h2 className="mp-section-title">Awards</h2>
                         </div>
-                    ))}
-                </div>
+                        {awards.map((award, index) => (
+                            <div key={index} className="mp-award-item" data-item-id={index}>
+                                <span className="mp-award-title">{award.title}</span>
+                                {award.awarder && (
+                                    <span className="mp-award-awarder"> – {award.awarder}</span>
+                                )}
+                                {award.date && (
+                                    <span className="mp-item-dates" style={{ marginLeft: '8px' }}>({award.date})</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </Wrapper>
             )}
         </div>
     );

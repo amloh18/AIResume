@@ -36,7 +36,11 @@ import {
   Plus,
   X,
   Trophy,
-  FileText
+  FileText,
+  ZoomIn,
+  ZoomOut,
+  Eye,
+  Shuffle
 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { getAddableCVSections } from '@/lib/selectors/cv-section-selectors';
@@ -56,6 +60,15 @@ interface ResumeEnhancerSidebarProps {
   onAddSection?: (sectionId: string) => void;
   onDeleteSection?: (sectionId: string) => void;
   onSectionReorder?: (sectionIds: string[]) => void;
+  // Preview controls
+  totalPages?: number;
+  zoomLevel?: number;
+  onZoomIn?: () => void;
+  onZoomOut?: () => void;
+  pageFormat?: 'a4' | 'letter';
+  onPageFormatChange?: (format: 'a4' | 'letter') => void;
+  layoutType?: 'one-column' | 'two-column';
+  onAutoArrange?: () => void;
 }
 
 // Core sections that cannot be deleted - these are essential CV sections
@@ -196,6 +209,15 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
   onAddSection,
   onDeleteSection,
   onSectionReorder,
+  // Preview controls
+  totalPages = 1,
+  zoomLevel = 1,
+  onZoomIn,
+  onZoomOut,
+  pageFormat = 'a4',
+  onPageFormatChange,
+  layoutType,
+  onAutoArrange,
 }) => {
   const { state } = useResumeEnhancer();
   const [isHovered, setIsHovered] = useState(false);
@@ -330,6 +352,71 @@ const ResumeEnhancerSidebar: React.FC<ResumeEnhancerSidebarProps> = ({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
+        {/* Preview Controls - Below sections list */}
+        <div className="px-1.5 tablet:px-3 py-2 border-b border-gray-200 dark:border-white/10">
+          <div className="flex items-center justify-between text-xs text-[color:var(--text-secondary)]">
+            {/* Page format toggle */}
+            <div className="flex items-center gap-2">
+              <Eye className="w-3 h-3" />
+              <div className="flex items-center bg-[var(--bg-tertiary)] rounded-full p-0.5">
+                <button
+                  onClick={() => onPageFormatChange?.('a4')}
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'a4'
+                    ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
+                    : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                    }`}
+                >
+                  A4
+                </button>
+                <button
+                  onClick={() => onPageFormatChange?.('letter')}
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'letter'
+                    ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
+                    : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
+                    }`}
+                >
+                  Letter
+                </button>
+              </div>
+              <span className="text-[color:var(--text-muted)]">•</span>
+              <span>{totalPages} {totalPages > 1 ? 'Pages' : 'Page'}</span>
+            </div>
+            {/* Zoom controls */}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px]">{Math.round(zoomLevel * 100)}%</span>
+              <div className="flex space-x-1">
+                <button
+                  onClick={onZoomOut}
+                  className="p-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs"
+                  title="Zoom out"
+                >
+                  <ZoomOut className="w-3 h-3" />
+                </button>
+                <button
+                  onClick={onZoomIn}
+                  className="p-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs"
+                  title="Zoom in"
+                >
+                  <ZoomIn className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          </div>
+          {/* Auto-Arrange button for two-column templates */}
+          {layoutType === 'two-column' && onAutoArrange && (
+            <div className="px-1.5 tablet:px-3 pb-2">
+              <button
+                onClick={onAutoArrange}
+                className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium transition-all duration-200 hover:-translate-y-0.5"
+                title="Automatically balance sections across columns"
+              >
+                <Shuffle className="w-3 h-3" />
+                <span>Auto-Arrange</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* CV Sections List */}
         <div className="flex-1 p-1.5 tablet:p-3 space-y-2 overflow-y-auto min-h-0 overscroll-contain">
           {cvSections.length > 0 && (

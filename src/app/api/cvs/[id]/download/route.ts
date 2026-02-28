@@ -139,58 +139,29 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 
-    // Get full template data - prioritize the pre-resolved template from cvWithTemplate
-    let template: any = null;
-    const templateIdStr = cvWithTemplate.templateId?.toString() || '';
-
-    // First try to use the template from cvWithTemplate (includes customRenderer)
-    if (cvWithTemplate.template?.customRenderer) {
-      // Find the full hardcoded template to get all properties
-      const fullHardcodedTemplate = HARDCODED_TEMPLATES.find(
-        t => t.customRenderer === cvWithTemplate.template?.customRenderer ||
-          t.name === cvWithTemplate.template?.name ||
-          t.id === templateIdStr ||
-          t._id === templateIdStr
-      );
-      if (fullHardcodedTemplate) {
-        template = fullHardcodedTemplate;
-        safeLogger.info('Using hardcoded template with customRenderer:', {
-          templateName: template.name,
-          customRenderer: template.customRenderer
-        });
-      }
-    }
-
-    // Fallback: Check hardcoded templates by ID
-    if (!template) {
-      const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-        t => t.id === templateIdStr || t._id === templateIdStr
-      );
-      if (hardcodedTemplate) {
-        template = hardcodedTemplate;
-      }
-    }
-
-    // Fallback: Try database template
-    if (!template && templateIdStr && mongoose.Types.ObjectId.isValid(templateIdStr)) {
-      template = await Template.findById(templateIdStr);
-    }
-
-    if (!template) {
+    // Resolve template using the unified TemplateResolutionService
+    const { resolveTemplate } = await import('@/lib/services/templateResolutionService');
+    const resolutionResult = await resolveTemplate(cvWithTemplate);
+    
+    if (!resolutionResult.template) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
 
-    // Debug: Log template details before PDF generation
+    const template = resolutionResult.template;
+
+    // Log template resolution details
     safeLogger.info('Download route - Template resolved:', {
       templateName: template.name,
       templateId: template.id || template._id,
-      customRenderer: template.customRenderer,
-      hasCustomRenderer: !!template.customRenderer,
+      customRenderer: (template as any).customRenderer,
+      source: resolutionResult.source,
+      confidence: resolutionResult.confidence,
+      hasCustomRenderer: !!(template as any).customRenderer,
       globalStylesKeys: Object.keys(template.globalStyles || {})
     });
 
     // Get CV data
-    const cvData = cvWithTemplate.cvData || cvWithTemplate.data;
+    const cvData = cvWithTemplate.cvData;
 
     if (!cvData) {
       return NextResponse.json({ error: 'CV data not found' }, { status: 404 });
@@ -255,7 +226,7 @@ export async function GET(
         cvId: id,
         format,
         paperSize,
-        templateId: templateIdStr,
+        templateId: resolutionResult.templateId,
         fileSize: fileBlob.size,
         success: true
       });

@@ -11,6 +11,7 @@ import Step2Template from './steps/Step2Template';
 import Step3BuilderSurgeon from './steps/Step3BuilderSurgeon';
 import Step4Review from './steps/Step4Review';
 import RoleSelectorModal from './RoleSelectorModal';
+import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -2642,24 +2643,32 @@ export default function ResumeEnhancerContainer({
                 className="h-full min-h-0 flex flex-col"
               >
                 {state.currentStep === 1 && (
-                  <Step1Parser
-                    onComplete={handleStep1Complete}
-                    mode={mode}
-                    cvType={state.cvType}
-                  />
+                  <ErrorBoundary stepName="CV Parser" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
+                    <Step1Parser
+                      onComplete={handleStep1Complete}
+                      mode={mode}
+                      cvType={state.cvType}
+                    />
+                  </ErrorBoundary>
                 )}
                 {state.currentStep === 2 && (
-                  <Step2Template onComplete={handleStep2Complete} />
+                  <ErrorBoundary stepName="Template Selection" onReset={() => dispatch({ type: 'SET_STEP', payload: 2 })}>
+                    <Step2Template onComplete={handleStep2Complete} />
+                  </ErrorBoundary>
                 )}
                 {state.currentStep === 3 && (
-                  <Step3BuilderSurgeon
-                    ref={step3Ref}
-                    onComplete={handleStep3Complete}
-                    onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
-                  />
+                  <ErrorBoundary stepName="CV Builder" onReset={() => dispatch({ type: 'SET_STEP', payload: 3 })}>
+                    <Step3BuilderSurgeon
+                      ref={step3Ref}
+                      onComplete={handleStep3Complete}
+                      onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
+                    />
+                  </ErrorBoundary>
                 )}
                 {state.currentStep === 4 && (
-                  <Step4Review />
+                  <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 4 })}>
+                    <Step4Review />
+                  </ErrorBoundary>
                 )}
               </motion.div>
             </AnimatePresence>

@@ -169,13 +169,55 @@ export const downloadAsImage = async (elementRef: HTMLElement, filename: string 
   }
 };
 
-// Download CV as DOCX using docx library
-export const downloadAsDOCX = async (cvData: UnifiedCVDataStructure, filename: string = 'cv.docx') => {
+// Download CV as DOCX - uses server-side API for consistent output
+export const downloadAsDOCX = async (
+  cvData: UnifiedCVDataStructure,
+  filename: string = 'cv.docx',
+  cvId?: string,
+  options?: {
+    paperSize?: 'A4' | 'Letter';
+  }
+) => {
   try {
     // Check if we're in browser environment
     if (typeof window === 'undefined') {
       throw new Error('DOCX generation is only available in browser environment');
     }
+
+    // If cvId is provided, use server-side API for consistent output
+    if (cvId) {
+      try {
+        const params = new URLSearchParams({
+          format: 'docx',
+          paperSize: options?.paperSize || 'A4',
+        });
+
+        const response = await fetch(`/api/cvs/${cvId}/download?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error(`Server DOCX generation failed: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        return; // Success - exit early
+      } catch (apiError) {
+        console.warn('Server-side DOCX generation failed, falling back to client-side:', apiError);
+        // Continue to fallback method below
+      }
+    }
+
+    // Fallback: Client-side DOCX generation using docx library
+    // Note: This is a simplified version - server-side generation is preferred for full section support
+    console.log('Using client-side DOCX generation (fallback - limited section support)');
 
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx');
 

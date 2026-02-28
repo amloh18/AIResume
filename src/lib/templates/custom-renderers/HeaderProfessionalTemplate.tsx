@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { renderFormattedText, formatDateRangeWithStyle, stripHtmlTags, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { isHeaderSection } from '@/lib/constants/cv-sections';
+import { createSectionIdResolver } from '@/lib/utils/section-id-resolver';
 
 interface HeaderProfessionalTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -23,21 +25,25 @@ export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProp
 }) => {
   const { basics, work, education, skills, projects, certificates, languages } = cvData;
 
+  // Create a section ID resolver to map section types to actual UUIDs from structure
+  const resolveSectionId = useMemo(() => createSectionIdResolver(cvData), [cvData]);
+
   // Helper to wrap section content with DraggableSection when provided
   // Header sections (personal, contact, summary) should not be draggable
-  const headerSectionTypes = ['personal', 'personal_header', 'contact', 'summary'];
-
+  // IMPORTANT: Resolves sectionType to actual UUID for drag-and-drop compatibility
   const Wrapper = ({ id, sectionType, children }: { id: string; sectionType: string; children: React.ReactNode }) => {
-    const isHeader = headerSectionTypes.includes(sectionType);
+    const isHeader = isHeaderSection(sectionType);
+    // Resolve the actual section ID from structure (UUID) for drag-and-drop
+    const actualId = resolveSectionId(sectionType);
 
     if (SectionWrapper) {
       return (
-        <SectionWrapper sectionId={id} sectionType={sectionType} isLocked={isHeader}>
+        <SectionWrapper sectionId={actualId} sectionType={sectionType} isLocked={isHeader}>
           {children}
         </SectionWrapper>
       );
     }
-    return <div data-section-id={id}>{children}</div>;
+    return <div data-section-id={actualId}>{children}</div>;
   };
 
   // Format location

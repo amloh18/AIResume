@@ -17,6 +17,7 @@ interface LinkedInHeaderProps {
     isEnhancing: boolean;
     currentTone: LinkedInUserContext['tone_selection'];
     onToneChange: (tone: LinkedInUserContext['tone_selection']) => void;
+    onToneChangeWithRegenerate?: (tone: LinkedInUserContext['tone_selection']) => void;
     onUpgradeClick?: () => void;
 }
 
@@ -30,6 +31,7 @@ export default function LinkedInHeader({
     isEnhancing,
     currentTone,
     onToneChange,
+    onToneChangeWithRegenerate,
     onUpgradeClick,
 }: LinkedInHeaderProps) {
     const router = useRouter();
@@ -156,7 +158,12 @@ export default function LinkedInHeader({
                                         <button
                                             key={tone}
                                             onClick={() => {
-                                                onToneChange(tone);
+                                                // Use the regenerate version if available (triggers enhancement with new tone)
+                                                if (onToneChangeWithRegenerate) {
+                                                    onToneChangeWithRegenerate(tone);
+                                                } else {
+                                                    onToneChange(tone);
+                                                }
                                                 setShowToneDropdown(false);
                                             }}
                                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${tone === currentTone ? 'bg-blue-50 text-blue-700' : 'text-gray-700'

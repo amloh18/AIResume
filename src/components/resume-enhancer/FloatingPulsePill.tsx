@@ -15,6 +15,7 @@ import type { FixAnnotation } from './annotations/fix-annotation';
 import type { AnalysisMode } from '@/lib/utils/analysis-mode';
 import { Issue } from '@/lib/pill-engine/types';
 import { useContextToasts } from '@/hooks/useContextToasts';
+import { mergeIssues, surgicalFixesToIssues } from '@/lib/services/surgicalFixToIssueAdapter';
 
 interface FloatingPulsePillProps {
     className?: string;
@@ -115,60 +116,29 @@ export default function FloatingPulsePill({
     }, [state.fixAnnotations, isFixingAll, scoreResult, isJourneyCV]);
 
     // MERGE FIX ANNOTATIONS INTO ISSUES FOR SMART CONTEXT
+    // Using the centralized SurgicalFixToIssueAdapter
     const allIssues = useMemo(() => {
         const engineIssues = issues || [];
-
-        if (!state.fixAnnotations || state.fixAnnotations.length === 0) {
-            return engineIssues;
-        }
-
-        // Map surgical fixes to Issues
-        const surgicalIssues: Issue[] = state.fixAnnotations
+        
+        // Convert fixAnnotations to SurgicalFix format if needed
+        // The adapter handles the conversion
+        const surgicalFixes = (state.fixAnnotations || [])
             .filter(f => f.status === 'open')
-            .map(fix => {
-                // Map category to IssueType roughly
-                let type: Issue['type'] = 'IMPROVEMENT';
-                if (fix.category === 'grammar') type = 'TENSE_GRAMMAR';
-                if (fix.category === 'keywords') type = 'KEYWORD_GAP';
-
-                // Map severity
-                let severity: Issue['severity'] = 'info';
-                if (fix.severity === 'high') severity = 'critical';
-                else if (fix.severity === 'medium') severity = 'warning';
-
-                // Determine section
-                const sectionMap: Record<string, any> = {
-                    'work': 'work',
-                    'experience': 'work',
-                    'employment': 'work',
-                    'education': 'education',
-                    'skills': 'skills',
-                    'projects': 'projects',
-                    'summary': 'summary',
-                    'basics': 'basics'
-                };
-
-                // Extract root section from fieldPath (e.g. "work[0].highlights[1]" -> "work")
-                const rootSection = fix.fieldPath ? fix.fieldPath.split(/[.[]/)[0] : 'basics';
-                const section = sectionMap[rootSection] || 'basics';
-
-                return {
-                    id: fix.id,
-                    type,
-                    severity,
-                    priority: 'suggestion',
-                    tier: 2,
-                    section,
-                    sectionId: rootSection, // approximate
-                    message: fix.issue,
-                    deepLink: { section, sectionId: rootSection },
-                    suggestedFixId: fix.id // Link back to the fix
-                } as Issue;
-            });
-
-        // Filter out engine issues that might duplicate surgical fixes (optional, but good for cleanliness)
-        // For now, simple merge
-        return [...engineIssues, ...surgicalIssues];
+            .map(fix => ({
+                id: fix.id,
+                section: fix.fieldPath?.split(/[.[]/)[0] || 'basics',
+                category: fix.category as any,
+                severity: fix.severity as any,
+                fieldPath: fix.fieldPath,
+                issue: fix.issue,
+                original_text: fix.originalText || '',
+                fixed_text: fix.replacementText || '',
+                impact_score_delta: fix.impactScoreDelta || 0,
+                status: 'pending' as const,
+            }));
+        
+        // Use the adapter to merge issues
+        return mergeIssues(engineIssues, surgicalFixes);
     }, [issues, state.fixAnnotations]);
 
     const handleFixAll = async () => {
