@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
+import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle
@@ -608,8 +609,10 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           console.warn('Failed to update URL with journey details (non-critical):', urlError);
         }
 
-        // Show success message
-        alert(`Job tracking created! Now tracking: ${state.targetRole} at ${companyName}`);
+        // Show success message - sanitize user input to prevent XSS
+        const sanitizedRole = sanitizeErrorMessage(state.targetRole || 'position');
+        const sanitizedCompany = sanitizeErrorMessage(companyName || 'company');
+        alert(`Job tracking created! Now tracking: ${sanitizedRole} at ${sanitizedCompany}`);
 
         // If we provided a text override for Master CV, enable JD input show
         if (typeof arg === 'string') {
@@ -618,7 +621,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         }
       } catch (error) {
         console.error('Failed to convert to journey:', error);
-        alert(`Failed to create journey: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        const message = sanitizeErrorMessage(error, 'Failed to create journey. Please try again.');
+        alert(message);
       }
     };
 
@@ -1302,7 +1306,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   }
                 } catch (saveError: any) {
                   console.error('Failed to save CV before creating job:', saveError);
-                  alert(`Failed to save CV: ${saveError.message || 'Unknown error'}. Please try again.`);
+                  const message = sanitizeErrorMessage(saveError, 'Failed to save CV. Please try again.');
+                  alert(message);
                   return;
                 }
               }
@@ -1335,9 +1340,9 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   const errorData = await jobResponse.json().catch(() => ({}));
                   const errorMessage = errorData.error || errorData.message || 'Failed to save job';
 
-                  // EDGE CASE 9: Check for credit errors
+                  // EDGE CASE 9: Check for tier/plan errors
                   if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-                    throw new Error('Insufficient credits to save and track this job. Please upgrade your plan.');
+                    throw new Error('This feature requires a Pro membership. Please upgrade your plan to continue.');
                   }
                   throw new Error(errorMessage);
                 }
@@ -1458,7 +1463,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             } catch (error) {
               // EDGE CASE 3: Job creation failure - don't update state
               console.error('Failed to save and track:', error);
-              alert(`Failed to save and track: ${error instanceof Error ? error.message : 'Unknown error'}`);
+              const message = sanitizeErrorMessage(error, 'Failed to save and track. Please try again.');
+              alert(message);
               // Don't update local state if operation fails - CV remains standalone
             }
           }}

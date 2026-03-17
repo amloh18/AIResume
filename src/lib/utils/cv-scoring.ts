@@ -1,146 +1,71 @@
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { CentralScoreManager, CVScoreBreakdown, ATSScoreBreakdown, ScoreResult } from '@/lib/pill-engine/CentralScoreManager';
+import { KeywordGapAnalysisResult } from '@/types/keyword-gap';
 
-export interface CVScoreBreakdown {
-    overall: number;
-    roleAlignment: number;
-    quantifiableMetrics: number;
-    seniorityIndicators: number;
-    keywordMatch: number;
-    details: {
-        totalKeywordsFound: number;
-        totalKeywordsExpected: number;
-        metricsCount: number;
-        seniorityKeywordsFound: string[];
-    };
-}
+// Re-export types from CentralScoreManager for convenience
+export type { CVScoreBreakdown, ATSScoreBreakdown, ScoreResult };
 
 /**
- * Calculate CV score based on role and seniority alignment
+ * Unified CV Scoring API
+ * 
+ * This module provides a unified interface to the CentralScoreManager.
+ * All CV/ATS scoring calculations should use these functions to ensure
+ * consistency across the application.
+ */
+
+/**
+ * Calculate CV Score (Master/Standalone CVs - Human factors)
+ * Uses CentralScoreManager for consistent scoring across the application
+ * 
+ * @param cvData - The CV data structure
+ * @returns CVScoreBreakdown with completeness, impact, quantification, formatting, readability scores
  */
 export function calculateCVScore(
-    cvData: UnifiedCVDataStructure,
-    targetRole: string,
-    seniorityLevel: string
+    cvData: UnifiedCVDataStructure
 ): CVScoreBreakdown {
-    let roleAlignment = 0;
-    let quantifiableMetrics = 0;
-    let seniorityIndicators = 0;
-    let keywordMatch = 0;
-
-    // Convert CV to text for keyword analysis
-    const cvText = JSON.stringify(cvData).toLowerCase();
-    const roleKeywords = extractRoleKeywords(targetRole).map(k => k.toLowerCase());
-    const seniorityKeywords = extractSeniorityKeywords(seniorityLevel).map(k => k.toLowerCase());
-
-    // 1. Role Alignment (0-30 points)
-    const keywordsFound = roleKeywords.filter(keyword => cvText.includes(keyword));
-    roleAlignment = Math.min(30, (keywordsFound.length / roleKeywords.length) * 30);
-
-    // 2. Quantifiable Metrics (0-25 points)
-    const metricsCount = countQuantifiableMetrics(cvData);
-    quantifiableMetrics = Math.min(25, metricsCount * 2);
-
-    // 3. Seniority Indicators (0-25 points)
-    const seniorityFound = seniorityKeywords.filter(keyword => cvText.includes(keyword));
-    seniorityIndicators = Math.min(25, (seniorityFound.length / seniorityKeywords.length) * 25);
-
-    // 4. Keyword Match Quality (0-20 points)
-    keywordMatch = Math.min(20, (keywordsFound.length / Math.max(roleKeywords.length, 1)) * 20);
-
-    const overall = Math.round(roleAlignment + quantifiableMetrics + seniorityIndicators + keywordMatch);
-
-    return {
-        overall: Math.min(100, overall),
-        roleAlignment: Math.round(roleAlignment),
-        quantifiableMetrics: Math.round(quantifiableMetrics),
-        seniorityIndicators: Math.round(seniorityIndicators),
-        keywordMatch: Math.round(keywordMatch),
-        details: {
-            totalKeywordsFound: keywordsFound.length,
-            totalKeywordsExpected: roleKeywords.length,
-            metricsCount,
-            seniorityKeywordsFound: seniorityFound
-        }
-    };
+    return CentralScoreManager.getInstance().calculateCVScore(cvData);
 }
 
 /**
- * Extract role-specific keywords
+ * Calculate ATS Score (Journey CVs against Job Description)
+ * Uses CentralScoreManager for consistent scoring across the application
+ * 
+ * @param cvData - The CV data structure
+ * @param keywordAnalysis - Optional keyword gap analysis result
+ * @param atsScoreCap - Maximum possible ATS score (default: 100)
+ * @returns ATSScoreBreakdown with keywordMatch, formatting, sectionAlignment, recency, contactability scores
  */
-function extractRoleKeywords(role: string): string[] {
-    const roleKeywordsMap: Record<string, string[]> = {
-        'Data Analyst': ['data', 'analysis', 'SQL', 'Excel', 'visualization', 'reporting', 'metrics', 'insights', 'dashboard'],
-        'Data Scientist': ['machine learning', 'Python', 'R', 'statistics', 'modeling', 'algorithm', 'ML', 'data science'],
-        'Software Engineer': ['programming', 'code', 'software', 'development', 'API', 'testing', 'debugging', 'Git'],
-        'Product Manager': ['product', 'roadmap', 'stakeholder', 'user stories', 'agile', 'features', 'launch', 'metrics'],
-        'Marketing Manager': ['marketing', 'campaign', 'brand', 'SEO', 'content', 'social media', 'analytics', 'ROI'],
-        // Add more mappings as needed
-    };
-
-    // Check for exact match
-    if (roleKeywordsMap[role]) {
-        return roleKeywordsMap[role];
-    }
-
-    // Generic keywords based on role category
-    const roleLower = role.toLowerCase();
-    if (roleLower.includes('engineer') || roleLower.includes('developer')) {
-        return ['programming', 'code', 'development', 'technical', 'software', 'system', 'architecture'];
-    }
-    if (roleLower.includes('analyst') || roleLower.includes('data')) {
-        return ['data', 'analysis', 'reporting', 'metrics', 'insights', 'Excel', 'SQL'];
-    }
-    if (roleLower.includes('manager')) {
-        return ['management', 'team', 'leadership', 'strategy', 'planning', 'budget', 'stakeholder'];
-    }
-
-    // Default keywords
-    return ['experience', 'skills', 'project', 'team', 'results', 'achievement'];
+export function calculateATSScore(
+    cvData: UnifiedCVDataStructure,
+    keywordAnalysis?: KeywordGapAnalysisResult | null,
+    atsScoreCap: number = 100
+): ATSScoreBreakdown {
+    return CentralScoreManager.getInstance().calculateATSScore(cvData, keywordAnalysis || null, atsScoreCap);
 }
 
 /**
- * Extract seniority-specific keywords
+ * Calculate complete score (both CV and ATS)
+ * Returns ScoreResult with all breakdowns and recommendations
+ * 
+ * @param cvData - The CV data structure
+ * @param keywordAnalysis - Optional keyword gap analysis result
+ * @param atsScoreCap - Maximum possible ATS score (default: 100)
+ * @returns ScoreResult with cvScore, atsScore, overallGrade, issues, and recommendations
  */
-function extractSeniorityKeywords(seniority: string): string[] {
-    const seniorityKeywordsMap: Record<string, string[]> = {
-        'Beginner': ['assisted', 'supported', 'learned', 'contributed', 'participated', 'trained'],
-        'Experienced': ['implemented', 'executed', 'delivered', 'collaborated', 'developed', 'created'],
-        'Professional': ['led', 'designed', 'architected', 'optimized', 'mentored', 'improved'],
-        'Senior': ['strategic', 'transformed', 'scaled', 'managed', 'influenced', 'directed'],
-        'Executive': ['vision', 'drove', 'ROI', 'P&L', 'executive', 'board', 'C-level', 'organization']
-    };
-
-    return seniorityKeywordsMap[seniority] || [];
+export function calculateScore(
+    cvData: UnifiedCVDataStructure,
+    keywordAnalysis?: KeywordGapAnalysisResult | null,
+    atsScoreCap: number = 100
+): ScoreResult {
+    return CentralScoreManager.getInstance().getScoreSync(cvData, keywordAnalysis || null, atsScoreCap);
 }
 
 /**
- * Count quantifiable metrics in CV
- */
-function countQuantifiableMetrics(cvData: UnifiedCVDataStructure): number {
-    let count = 0;
-    const text = JSON.stringify(cvData);
-
-    // Regex patterns for metrics
-    const patterns = [
-        /\d+%/g,  // Percentages
-        /\$\d+[KMB]?/gi,  // Money
-        /\d+x/gi,  // Multipliers
-        /\d+\+/g,  // Plus numbers
-        /\d{1,3}(,\d{3})*/g  // Large numbers with commas
-    ];
-
-    patterns.forEach(pattern => {
-        const matches = text.match(pattern);
-        if (matches) {
-            count += matches.length;
-        }
-    });
-
-    return count;
-}
-
-/**
- * Get score color and label
+ * Get score color and label based on score value
+ * Uses consistent color scheme across the application
+ * 
+ * @param score - Score value (0-100)
+ * @returns Object with color hex, label, and background color class
  */
 export function getScoreColor(score: number): { color: string; label: string; bgColor: string } {
     if (score >= 80) {

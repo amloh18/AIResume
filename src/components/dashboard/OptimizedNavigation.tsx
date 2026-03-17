@@ -235,8 +235,7 @@ const OptimizedNavigation: React.FC = () => {
   useEffect(() => {
     const routesToPrefetch = [
       '/dashboard',
-      '/dashboard/tracker',
-      '/dashboard/canvas',
+      '/dashboard/jobs',
       '/dashboard/settings'
     ];
 
@@ -248,12 +247,10 @@ const OptimizedNavigation: React.FC = () => {
 
   // Update active section based on current path
   useEffect(() => {
-    if (pathname === '/dashboard') {
+    if (pathname === '/dashboard' || pathname.startsWith('/dashboard?')) {
       setActiveSection('analytics');
-    } else if (pathname.includes('/tracker')) {
-      setActiveSection('jobs');
-    } else if (pathname.includes('/canvas')) {
-      setActiveSection('canvas');
+    } else if (pathname.includes('/jobs')) {
+      setActiveSection('jobs-dashboard');
     } else if (pathname.includes('/settings')) {
       setActiveSection('settings');
     }
@@ -272,8 +269,8 @@ const OptimizedNavigation: React.FC = () => {
     // Navigate immediately
     const routes = {
       'analytics': '/dashboard',
-      'jobs': '/dashboard/tracker',
-      'canvas': '/dashboard/canvas',
+      'jobs': '/dashboard/jobs',
+      'jobs-dashboard': '/dashboard/jobs',
       'settings': '/dashboard/settings',
       'resume-enhancer': '/resume-enhancer',
       'cover-letter-generator': '/cover-letter-editor?mode=create',
@@ -319,7 +316,7 @@ const OptimizedNavigation: React.FC = () => {
       id: 'analytics',
       name: 'Analytics',
       icon: BarChart3,
-      description: 'Progress Tracking',
+      description: 'Tracker, Documents & Analytics',
       route: '/dashboard'
     },
     {
@@ -330,21 +327,6 @@ const OptimizedNavigation: React.FC = () => {
       route: '/dashboard/jobs',
       badge: 'BETA'
     },
-    {
-      id: 'jobs',
-      name: 'Tracker',
-      icon: Briefcase,
-      description: 'Application tracking with CV journeys',
-      route: '/dashboard/tracker'
-    },
-    {
-      id: 'canvas',
-      name: 'Documents',
-      icon: FileText,
-      description: 'Saved CVs/ CL and Reports',
-      route: '/dashboard/canvas'
-    },
-
   ];
 
   const toolSections = [
@@ -680,7 +662,7 @@ const OptimizedNavigation: React.FC = () => {
                   {!isUnlimited && limit > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
-                        <span>Job credits used</span>
+                        <span>Job usage</span>
                         <span>{used}/{limit}</span>
                       </div>
                       <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -696,7 +678,7 @@ const OptimizedNavigation: React.FC = () => {
 
                   {!hasCredits && (
                     <div className="text-xs text-yellow-300 mb-2 font-medium">
-                      ⚠️ Job credits exhausted. Upgrade to continue tracking jobs.
+                      ⚠️ Job Tracker requires Pro membership. Upgrade to track jobs.
                     </div>
                   )}
 
@@ -798,7 +780,7 @@ const OptimizedNavigation: React.FC = () => {
                   {!isUnlimited && limit > 0 && (
                     <div className="mb-3">
                       <div className="flex items-center justify-between text-[11px] text-white/85 mb-1">
-                        <span>Credits used</span>
+                        <span>Feature usage</span>
                         <span>{used}/{limit}</span>
                       </div>
                       <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -814,7 +796,7 @@ const OptimizedNavigation: React.FC = () => {
 
                   {!hasCredits && !isExpired && (
                     <div className="text-xs text-yellow-200 mb-2 font-medium">
-                      ⚠️ Credits exhausted. Upgrade to continue.
+                      ⚠️ Feature limit reached. Upgrade to continue.
                     </div>
                   )}
 
@@ -866,7 +848,7 @@ const OptimizedNavigation: React.FC = () => {
                       {totalCreated}
                     </div>
                     <div className="text-[10px] text-white/70 mt-0.5">
-                      Unlimited credits
+                      Unlimited access
                     </div>
                   </div>
 
@@ -911,7 +893,7 @@ const OptimizedNavigation: React.FC = () => {
                       {totalCreated}
                     </div>
                     <div className="text-[10px] text-white/70 mt-0.5">
-                      Unlimited credits
+                      Unlimited access
                     </div>
                   </div>
 
@@ -951,7 +933,7 @@ const OptimizedNavigation: React.FC = () => {
                       {totalCreated}
                     </div>
                     <div className="text-[10px] text-white/70 mt-0.5">
-                      Unlimited credits
+                      Unlimited access
                     </div>
                   </div>
 

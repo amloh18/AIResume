@@ -30,15 +30,18 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
     return null;
   }
 
+  const matchDistribution = metrics.matchDistribution || {};
+  
   const matchDistributionData = [
-    { name: '0-20', count: metrics.matchDistribution.low, fill: '#ef4444' },
-    { name: '20-40', count: metrics.matchDistribution.fair, fill: '#f59e0b' },
-    { name: '40-60', count: metrics.matchDistribution.moderate, fill: '#eab308' },
-    { name: '60-80', count: metrics.matchDistribution.good, fill: '#84cc16' },
-    { name: '80-100', count: metrics.matchDistribution.excellent, fill: '#22c55e' },
+    { name: '0-20', count: matchDistribution.low || 0, fill: '#ef4444' },
+    { name: '20-40', count: matchDistribution.fair || 0, fill: '#f59e0b' },
+    { name: '40-60', count: matchDistribution.moderate || 0, fill: '#eab308' },
+    { name: '60-80', count: matchDistribution.good || 0, fill: '#84cc16' },
+    { name: '80-100', count: matchDistribution.excellent || 0, fill: '#22c55e' },
   ];
 
-  const sourceData = Object.entries(metrics.sourceDistribution).map(
+  const sourceDistribution = metrics.sourceDistribution || {};
+  const sourceData = Object.entries(sourceDistribution).map(
     ([name, value]) => ({
       name: name.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
       value,
@@ -48,7 +51,7 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Match Score Distribution */}
-      <div className="glass-widget-premium rounded-xl p-6">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Match Score Distribution
         </h3>
@@ -79,7 +82,7 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
       </div>
 
       {/* Source Breakdown */}
-      <div className="glass-widget-premium rounded-xl p-6">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
           Source Breakdown
         </h3>
@@ -91,7 +94,7 @@ export default function ChartsRow({ metrics, loading }: ChartsRowProps) {
               cy="50%"
               labelLine={false}
               label={({ name, percent }) =>
-                `${name}: ${(percent * 100).toFixed(0)}%`
+                `${name}: ${((percent || 0) * 100).toFixed(0)}%`
               }
               outerRadius={80}
               fill="#8884d8"

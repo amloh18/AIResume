@@ -4,6 +4,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
+// Note: This component receives pre-calculated scores from parent components.
+// The actual scoring calculation is done via CentralScoreManager in the backend/API layer.
+
 interface ATSCompatibilityMeterProps {
   impactScore?: {
     quantifiableStatements?: number;

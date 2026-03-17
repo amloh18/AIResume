@@ -3,18 +3,21 @@
 import React, { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
-// Dynamically import Analytics component for code splitting
-// Removed loading skeleton - dashboard loads without animation
-const Analytics = dynamic(() => import('@/components/dashboard/Analytics'), {
+// Use the consolidated AnalyticsPage with tabs
+const AnalyticsPage = dynamic(() => import('@/components/dashboard/AnalyticsPage'), {
   ssr: false,
 });
 
-const Dashboard: React.FC = () => {
+const DashboardPage: React.FC = () => {
   return (
-    <Suspense fallback={null}>
-      <Analytics />
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-500"></div>
+      </div>
+    }>
+      <AnalyticsPage />
     </Suspense>
   );
 };
 
-export default Dashboard; 
+export default DashboardPage; 

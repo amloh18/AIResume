@@ -34,7 +34,7 @@ export default function JobsTable({
 }: JobsTableProps) {
   if (loading) {
     return (
-      <div className="glass-widget-premium rounded-xl p-6">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6">
         <div className="space-y-3">
           {[...Array(10)].map((_, i) => (
             <div
@@ -49,7 +49,7 @@ export default function JobsTable({
 
   if (jobs.length === 0) {
     return (
-      <div className="glass-widget-premium rounded-xl p-12 text-center">
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-12 text-center">
         <p className="text-gray-600 dark:text-gray-400">
           No jobs match your filters. Try adjusting your search criteria.
         </p>
@@ -58,40 +58,40 @@ export default function JobsTable({
   }
 
   return (
-    <div className="glass-widget-premium rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-[#141810] rounded-xl overflow-hidden shadow-lg border border-gray-200 dark:border-white/10">
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="bg-gray-100 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+            <tr className="bg-gray-50 dark:bg-[#1a230f] border-b-2 border-gray-300 dark:border-gray-600">
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Job Title
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Company
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Location
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Match
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-[#141810]">
             {jobs.map((job, index) => (
               <tr
                 key={job._id}
                 className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
                   index % 2 === 0
-                    ? 'bg-white/5 dark:bg-gray-800/30'
-                    : 'bg-white/10 dark:bg-gray-800/50'
+                    ? 'bg-white dark:bg-[#141810]'
+                    : 'bg-gray-50 dark:bg-[#1a230f]'
                 }`}
               >
                 <td className="px-4 py-4">
@@ -120,7 +120,7 @@ export default function JobsTable({
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onJobSelect(job)}
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors text-gray-600 dark:text-gray-400"
                       title="View details"
                     >
                       <Eye className="w-4 h-4" />
@@ -129,7 +129,7 @@ export default function JobsTable({
                       href={job.applyUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                      className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors text-gray-600 dark:text-gray-400"
                       title="Open job"
                     >
                       <ExternalLink className="w-4 h-4" />

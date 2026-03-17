@@ -25,7 +25,7 @@ export default function MetricsGrid({ metrics, loading }: MetricsGridProps) {
         {[...Array(8)].map((_, i) => (
           <div
             key={i}
-            className="glass-widget-premium rounded-xl p-6 animate-pulse"
+            className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 animate-pulse"
           >
             <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-24 mb-4"></div>
             <div className="h-8 bg-gray-300 dark:bg-gray-700 rounded w-16"></div>
@@ -38,41 +38,41 @@ export default function MetricsGrid({ metrics, loading }: MetricsGridProps) {
   const metricCards = [
     {
       label: 'Total Jobs Matched',
-      value: metrics.totalJobsMatched,
+      value: metrics.totalJobsMatched || 0,
       icon: Briefcase,
       color: 'text-lime-500',
       bgColor: 'bg-lime-500/20',
     },
     {
       label: 'Average Match Score',
-      value: `${metrics.averageMatchScore}%`,
+      value: `${metrics.averageMatchScore || 0}%`,
       icon: TrendingUp,
       color:
-        metrics.averageMatchScore >= 70
+        (metrics.averageMatchScore || 0) >= 70
           ? 'text-green-400'
           : 'text-yellow-400',
       bgColor:
-        metrics.averageMatchScore >= 70
+        (metrics.averageMatchScore || 0) >= 70
           ? 'bg-green-400/20'
           : 'bg-yellow-400/20',
     },
     {
       label: 'Application Success Rate',
-      value: `${metrics.applicationSuccessRate}%`,
+      value: `${metrics.applicationSuccessRate || 0}%`,
       icon: CheckCircle,
       color: 'text-emerald-500',
       bgColor: 'bg-emerald-500/20',
     },
     {
       label: 'Pending Applications',
-      value: metrics.pendingApplications,
+      value: metrics.pendingApplications || 0,
       icon: Clock,
       color: 'text-blue-400',
       bgColor: 'bg-blue-400/20',
     },
     {
       label: 'Applied This Week',
-      value: metrics.appliedThisWeek,
+      value: metrics.appliedThisWeek || 0,
       icon: Calendar,
       color: 'text-purple-400',
       bgColor: 'bg-purple-400/20',
@@ -87,21 +87,21 @@ export default function MetricsGrid({ metrics, loading }: MetricsGridProps) {
     },
     {
       label: 'Companies Hiring',
-      value: metrics.companiesCount,
+      value: metrics.companiesCount || 0,
       icon: Building2,
       color: 'text-orange-400',
       bgColor: 'bg-orange-400/20',
     },
     {
       label: 'Job Locations',
-      value: metrics.locationsCount,
+      value: metrics.locationsCount || 0,
       icon: MapPin,
       color: 'text-cyan-400',
       bgColor: 'bg-cyan-400/20',
     },
     {
       label: 'Average Salary',
-      value: `£${Math.round(metrics.salaryStats.average).toLocaleString()}`,
+      value: `£${Math.round(metrics.salaryStats?.average || metrics.salaryStats?.median || 0).toLocaleString()}`,
       icon: DollarSign,
       color: 'text-amber-400',
       bgColor: 'bg-amber-400/20',
@@ -115,7 +115,7 @@ export default function MetricsGrid({ metrics, loading }: MetricsGridProps) {
         return (
           <div
             key={card.label}
-            className="glass-widget-premium rounded-xl p-6 hover:shadow-lg hover:scale-105 transition-all duration-200"
+            className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-6 hover:shadow-lg hover:scale-105 transition-all duration-200"
             style={{
               animation: `fadeIn 0.5s ease-in-out ${index * 0.1}s both`,
             }}

@@ -422,8 +422,6 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
 
     if (authStatus !== 'authenticated' || !currentSession?.user?.id) {
       // User is not authenticated - save to localStorage and redirect to signup
-      console.log('👤 User not authenticated, saving to localStorage and redirecting to signup...');
-
       try {
         const dataToSave = {
           cvData: state.cvData,
@@ -438,22 +436,19 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
         };
 
         localStorage.setItem('ai-career-report-data', JSON.stringify(dataToSave));
-        console.log('✅ Data saved to localStorage');
 
         // Redirect to signup with callback to this step
         const callbackUrl = encodeURIComponent('/ai-career-report?step=3');
         router.push(`/signup?callbackUrl=${callbackUrl}`);
         return;
       } catch (e) {
-        console.error('❌ Failed to save data to localStorage:', e);
+        console.error('Failed to save data to localStorage:', e);
         alert('Failed to save your progress. Please try again.');
         return;
       }
     }
 
     try {
-      console.log('🚀 Starting Master CV creation from database draft...');
-
       // First, ensure latest data is saved to database
       const saveResponse = await fetch('/api/cv-draft/save', {
         method: 'POST',
@@ -471,21 +466,19 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
       });
 
       if (!saveResponse.ok) {
-        console.warn('⚠️ Failed to save draft before creating Master CV, continuing anyway...');
+        console.warn('Failed to save draft before creating Master CV, continuing anyway...');
       }
 
       // Convert draft to Master CV
       const requestBody: any = {};
       if (isEditingMasterCV && masterCVId) {
         requestBody.masterCVId = masterCVId;
-        console.log('🔄 Flow 3: Passing explicit masterCVId for update:', masterCVId);
       }
       // Include selected template ID if available
       if (state.selectedTemplate) {
         const templateId = state.selectedTemplate.id || state.selectedTemplate._id;
         if (templateId) {
           requestBody.templateId = templateId;
-          console.log('✅ Passing selected templateId:', templateId);
         }
       }
 
@@ -494,8 +487,6 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody)
       });
-
-      console.log('📡 Master CV creation response status:', response.status);
 
       if (!response.ok) {
         let errorMessage = `Master CV creation failed: ${response.status} ${response.statusText}`;
@@ -509,7 +500,7 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
           }
         } catch (parseError) {
           const errorText = await response.text();
-          console.error('❌ Master CV creation failed (text response):', errorText);
+          console.error('Master CV creation failed (text response):', errorText);
           errorMessage = errorText || errorMessage;
         }
 
@@ -518,11 +509,9 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
       }
 
       const result = await response.json();
-      console.log('📥 Master CV creation result:', result);
 
       if (result.success) {
         const actionVerb = isEditingMasterCV ? 'updated' : 'created';
-        console.log(`✅ Master CV ${actionVerb} successfully:`, result.cv?.id);
 
         // Mark as created/updated
         if (typeof window !== 'undefined') {
@@ -538,9 +527,8 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
           try {
             localStorage.removeItem('ai-career-report-data');
             sessionStorage.removeItem('ai-career-report-backup');
-            console.log('✅ Cleared localStorage after saving Master CV');
           } catch (error) {
-            console.warn('⚠️ Failed to clear localStorage:', error);
+            console.warn('Failed to clear localStorage:', error);
           }
 
           // Dispatch custom event to notify other components
@@ -549,10 +537,7 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
 
         // CRITICAL SECURITY: Only trigger completion if user is still authenticated
         if (authStatus === 'authenticated' && currentSession?.user?.id) {
-          console.log('✅ Master CV saved, user authenticated, redirecting to dashboard');
           router.push('/dashboard');
-        } else {
-          console.warn('🚫 Security: User not authenticated after save, preventing dashboard redirect');
           alert('Please sign in to complete the process');
         }
       } else {
@@ -573,8 +558,6 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
   }, [currentSession, authStatus, state, isEditingMasterCV, masterCVId, router]);
 
   const addNewSection = (sectionType: string) => {
-    console.log('Adding new section:', sectionType);
-
     // Initialize CV data for the new section
     let newSectionData: any = null;
     let fieldName: string = sectionType;
@@ -725,7 +708,6 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
       });
     }
 
-    console.log('CV data after adding section:', state.cvData);
     setShowAddSectionModal(false);
   };
 

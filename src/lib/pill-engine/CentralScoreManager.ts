@@ -3,7 +3,7 @@ import { Issue, ResumeState } from './types';
 import { globalRegistry, RuleRegistry } from './registry';
 import { KeywordGapAnalysisResult } from '@/types/keyword-gap';
 
-// --- Constants from CVScoringService ---
+// --- Constants (Centralized Scoring) ---
 const IMPACT_VERBS = [
     'led', 'managed', 'developed', 'created', 'implemented', 'improved',
     'increased', 'reduced', 'optimized', 'designed', 'built', 'established',
@@ -237,7 +237,7 @@ export class CentralScoreManager {
 
     /**
      * Main entry point to refresh scores.
-     * Replaces both old manager logic and CVScoringService logic.
+     * Replaces old scoring logic with CentralScoreManager.
      */
     public async refreshScore(
         cvData: UnifiedCVDataStructure,
@@ -248,7 +248,7 @@ export class CentralScoreManager {
         return Promise.resolve(this.getScoreSync(cvData, keywordAnalysis, atsScoreCap));
     }
 
-    // --- Core Calculation Logic (Migrated from CVScoringService) ---
+    // --- Core Calculation Logic (Unified via CentralScoreManager) ---
 
     // 1. Human / Master CV Score
     public calculateCVScore(cvData: UnifiedCVDataStructure): CVScoreBreakdown {

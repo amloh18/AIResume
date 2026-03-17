@@ -5,7 +5,7 @@ export interface RegionInfo {
   countryName: string;
   currency: string;
   currencySymbol: string;
-  paymentPartner: 'stripe' | 'razorpay';
+  paymentPartner: 'polar' | 'razorpay';
 }
 
 // Import currency and payment partner mappings from locationService
@@ -54,48 +54,48 @@ const COUNTRY_CURRENCIES: Record<string, { currency: string; symbol: string }> =
   'default': { currency: 'USD', symbol: '$' }
 };
 
-const COUNTRY_PAYMENT_PARTNERS: Record<string, 'stripe' | 'razorpay'> = {
+const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar' | 'razorpay'> = {
   'IN': 'razorpay',
-  'US': 'stripe',
-  'CA': 'stripe',
-  'GB': 'stripe',
-  'AU': 'stripe',
-  'DE': 'stripe',
-  'FR': 'stripe',
-  'IT': 'stripe',
-  'ES': 'stripe',
-  'NL': 'stripe',
-  'BE': 'stripe',
-  'AT': 'stripe',
-  'CH': 'stripe',
-  'SE': 'stripe',
-  'NO': 'stripe',
-  'DK': 'stripe',
-  'FI': 'stripe',
-  'PL': 'stripe',
-  'CZ': 'stripe',
-  'HU': 'stripe',
-  'RO': 'stripe',
-  'BG': 'stripe',
-  'HR': 'stripe',
-  'SI': 'stripe',
-  'SK': 'stripe',
-  'LT': 'stripe',
-  'LV': 'stripe',
-  'EE': 'stripe',
-  'IE': 'stripe',
-  'PT': 'stripe',
-  'GR': 'stripe',
-  'CY': 'stripe',
-  'MT': 'stripe',
-  'LU': 'stripe',
-  'IS': 'stripe',
-  'LI': 'stripe',
-  'MC': 'stripe',
-  'SM': 'stripe',
-  'VA': 'stripe',
-  'AD': 'stripe',
-  'default': 'stripe'
+  'US': 'polar',
+  'CA': 'polar',
+  'GB': 'polar',
+  'AU': 'polar',
+  'DE': 'polar',
+  'FR': 'polar',
+  'IT': 'polar',
+  'ES': 'polar',
+  'NL': 'polar',
+  'BE': 'polar',
+  'AT': 'polar',
+  'CH': 'polar',
+  'SE': 'polar',
+  'NO': 'polar',
+  'DK': 'polar',
+  'FI': 'polar',
+  'PL': 'polar',
+  'CZ': 'polar',
+  'HU': 'polar',
+  'RO': 'polar',
+  'BG': 'polar',
+  'HR': 'polar',
+  'SI': 'polar',
+  'SK': 'polar',
+  'LT': 'polar',
+  'LV': 'polar',
+  'EE': 'polar',
+  'IE': 'polar',
+  'PT': 'polar',
+  'GR': 'polar',
+  'CY': 'polar',
+  'MT': 'polar',
+  'LU': 'polar',
+  'IS': 'polar',
+  'LI': 'polar',
+  'MC': 'polar',
+  'SM': 'polar',
+  'VA': 'polar',
+  'AD': 'polar',
+  'default': 'polar'
 };
 
 // Cache for region detection results (in-memory, can be replaced with Redis)
@@ -195,7 +195,7 @@ export async function detectUserRegion(ip?: string): Promise<RegionInfo> {
     countryName: 'United Kingdom',
     currency: 'GBP',
     currencySymbol: '£',
-    paymentPartner: 'stripe'
+    paymentPartner: 'polar'
   };
   
   // Cache the fallback
@@ -223,8 +223,8 @@ function getCurrencySymbolForCountry(countryCode: string): string {
 /**
  * Helper to get payment partner for country code with fallback
  */
-function getPaymentPartnerForCountry(countryCode: string): 'stripe' | 'razorpay' {
-  return COUNTRY_PAYMENT_PARTNERS[countryCode] || COUNTRY_PAYMENT_PARTNERS['default'] || 'stripe';
+function getPaymentPartnerForCountry(countryCode: string): 'polar' | 'razorpay' {
+  return COUNTRY_PAYMENT_PARTNERS[countryCode] || COUNTRY_PAYMENT_PARTNERS['default'] || 'polar';
 }
 
 /**
@@ -358,7 +358,7 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
     countryName: 'United Kingdom',
     currency: 'GBP',
     currencySymbol: '£',
-    paymentPartner: 'stripe'
+    paymentPartner: 'polar'
   };
 }
 
