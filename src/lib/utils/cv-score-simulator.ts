@@ -2,10 +2,13 @@
  * CV Score Simulator
  * 
  * Offline client-side scoring for instant feedback as users edit their CV.
- * Mirrors the backend weighted formulas from cv-scoring-service.ts
+ * This module mirrors the formulas from CentralScoreManager for offline use.
+ * For server-side or full-featured scoring, use CentralScoreManager directly.
  * 
- * CV Score Formula: (C + I + Q + F + R) × V
- * ATS Score Formula: [(K × 0.4) + (F × 0.2) + (S × 0.15) + (R × 0.15) + (C × 0.1)] × P
+ * CV Score Formula (CentralScoreManager): (C + I + Q + F + R) × V
+ * ATS Score Formula (CentralScoreManager): [(K × 0.4) + (F × 0.2) + (S × 0.15) + (R × 0.15) + (C × 0.1)] × P
+ * 
+ * @see CentralScoreManager for the authoritative scoring implementation
  */
 
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';

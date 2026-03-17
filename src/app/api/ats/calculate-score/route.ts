@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
       // Use ATS score if available (journey CV), otherwise fall back to CV score
       const finalScore = scoreResult.atsScore?.total ?? scoreResult.cvScore.total;
 
-      console.log('✅ ATS Calculate Score API - Score calculated using CVScoringService:', {
+      console.log('✅ ATS Calculate Score API - Score calculated using CentralScoreManager:', {
         score: finalScore,
         hasAtsScore: !!scoreResult.atsScore,
         cvScoreTotal: scoreResult.cvScore.total,

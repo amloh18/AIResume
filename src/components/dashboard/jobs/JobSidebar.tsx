@@ -1287,7 +1287,7 @@ ${userName}`
                         </li>
                       </ul>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                        This action requires 1 job credit.
+                        This action requires a Pro membership.
                       </p>
                       <motion.button
                         onClick={handleMoveToCreated}

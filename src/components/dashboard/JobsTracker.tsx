@@ -844,7 +844,7 @@ const JobsTracker: React.FC = () => {
               },
               'pro_monthly'
             );
-            throw new Error('Insufficient credits to create journey');
+            throw new Error('This feature requires a Pro membership to create a journey');
           }
 
           // Only log non-credit errors to console

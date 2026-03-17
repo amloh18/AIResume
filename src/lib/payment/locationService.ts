@@ -3,7 +3,7 @@ export interface LocationData {
   countryCode: string;
   currency: string;
   currencySymbol: string;
-  paymentPartner: 'stripe' | 'razorpay';
+  paymentPartner: 'polar' | 'razorpay';
   exchangeRate: number;
 }
 
@@ -13,7 +13,7 @@ export interface PricingData {
   convertedPrice: number;
   convertedCurrency: string;
   exchangeRate: number;
-  paymentPartner: 'stripe' | 'razorpay';
+  paymentPartner: 'polar' | 'razorpay';
 }
 
 // Exchange rates (simplified - in production, use a real API)
@@ -137,48 +137,48 @@ const EXCHANGE_RATES: Record<string, number> = {
 };
 
 // Country to payment partner mapping
-const COUNTRY_PAYMENT_PARTNERS: Record<string, 'stripe' | 'razorpay'> = {
+const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar' | 'razorpay'> = {
   'IN': 'razorpay', // India
-  'US': 'stripe',   // United States
-  'CA': 'stripe',   // Canada
-  'GB': 'stripe',   // United Kingdom
-  'AU': 'stripe',   // Australia
-  'DE': 'stripe',   // Germany
-  'FR': 'stripe',   // France
-  'IT': 'stripe',   // Italy
-  'ES': 'stripe',   // Spain
-  'NL': 'stripe',   // Netherlands
-  'BE': 'stripe',   // Belgium
-  'AT': 'stripe',   // Austria
-  'CH': 'stripe',   // Switzerland
-  'SE': 'stripe',   // Sweden
-  'NO': 'stripe',   // Norway
-  'DK': 'stripe',   // Denmark
-  'FI': 'stripe',   // Finland
-  'PL': 'stripe',   // Poland
-  'CZ': 'stripe',   // Czech Republic
-  'HU': 'stripe',   // Hungary
-  'RO': 'stripe',   // Romania
-  'BG': 'stripe',   // Bulgaria
-  'HR': 'stripe',   // Croatia
-  'SI': 'stripe',   // Slovenia
-  'SK': 'stripe',   // Slovakia
-  'LT': 'stripe',   // Lithuania
-  'LV': 'stripe',   // Latvia
-  'EE': 'stripe',   // Estonia
-  'IE': 'stripe',   // Ireland
-  'PT': 'stripe',   // Portugal
-  'GR': 'stripe',   // Greece
-  'CY': 'stripe',   // Cyprus
-  'MT': 'stripe',   // Malta
-  'LU': 'stripe',   // Luxembourg
-  'IS': 'stripe',   // Iceland
-  'LI': 'stripe',   // Liechtenstein
-  'MC': 'stripe',   // Monaco
-  'SM': 'stripe',   // San Marino
-  'VA': 'stripe',   // Vatican City
-  'AD': 'stripe',   // Andorra
-  'default': 'stripe'
+  'US': 'polar',   // United States
+  'CA': 'polar',   // Canada
+  'GB': 'polar',   // United Kingdom
+  'AU': 'polar',   // Australia
+  'DE': 'polar',   // Germany
+  'FR': 'polar',   // France
+  'IT': 'polar',   // Italy
+  'ES': 'polar',   // Spain
+  'NL': 'polar',   // Netherlands
+  'BE': 'polar',   // Belgium
+  'AT': 'polar',   // Austria
+  'CH': 'polar',   // Switzerland
+  'SE': 'polar',   // Sweden
+  'NO': 'polar',   // Norway
+  'DK': 'polar',   // Denmark
+  'FI': 'polar',   // Finland
+  'PL': 'polar',   // Poland
+  'CZ': 'polar',   // Czech Republic
+  'HU': 'polar',   // Hungary
+  'RO': 'polar',   // Romania
+  'BG': 'polar',   // Bulgaria
+  'HR': 'polar',   // Croatia
+  'SI': 'polar',   // Slovenia
+  'SK': 'polar',   // Slovakia
+  'LT': 'polar',   // Lithuania
+  'LV': 'polar',   // Latvia
+  'EE': 'polar',   // Estonia
+  'IE': 'polar',   // Ireland
+  'PT': 'polar',   // Portugal
+  'GR': 'polar',   // Greece
+  'CY': 'polar',   // Cyprus
+  'MT': 'polar',   // Malta
+  'LU': 'polar',   // Luxembourg
+  'IS': 'polar',   // Iceland
+  'LI': 'polar',   // Liechtenstein
+  'MC': 'polar',   // Monaco
+  'SM': 'polar',   // San Marino
+  'VA': 'polar',   // Vatican City
+  'AD': 'polar',   // Andorra
+  'default': 'polar'
 };
 
 // Country to currency mapping
@@ -351,7 +351,7 @@ export class LocationService {
       countryCode: 'US',
       currency: 'USD',
       currencySymbol: '$',
-      paymentPartner: 'stripe',
+      paymentPartner: 'polar',
       exchangeRate: 1.08
     };
   }
@@ -363,7 +363,7 @@ export class LocationService {
     const convertedPrice = originalPrice * exchangeRate;
 
     // Determine payment partner based on target currency
-    const paymentPartner = targetCurrency === 'INR' ? 'razorpay' : 'stripe';
+    const paymentPartner = targetCurrency === 'INR' ? 'razorpay' : 'polar';
 
     return {
       originalPrice,
@@ -392,8 +392,8 @@ export class LocationService {
     ];
   }
 
-  static getPaymentPartnerForCurrency(currency: string): 'stripe' | 'razorpay' {
-    return currency === 'INR' ? 'razorpay' : 'stripe';
+  static getPaymentPartnerForCurrency(currency: string): 'polar' | 'razorpay' {
+    return currency === 'INR' ? 'razorpay' : 'polar';
   }
 
   static formatPrice(price: number, currency: string, symbol?: string): string {

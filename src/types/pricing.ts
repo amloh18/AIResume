@@ -52,6 +52,6 @@ export interface PricingData {
   convertedPrice: number;
   convertedCurrency: string;
   exchangeRate: number;
-  paymentPartner: 'stripe' | 'razorpay';
+  paymentPartner: 'polar' | 'razorpay';
 }
 

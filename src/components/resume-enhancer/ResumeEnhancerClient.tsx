@@ -33,7 +33,10 @@ function ResumeEnhancerContent() {
     const { state: aiReportState } = useAICareerReport();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const step = parseInt(searchParams.get('step') || '1');
+    // Validate step parameter - must be 1-4
+    const stepParam = searchParams.get('step');
+    const parsedStep = stepParam ? parseInt(stepParam, 10) : 1;
+    const step = isNaN(parsedStep) ? 1 : Math.max(1, Math.min(4, parsedStep));
 
     // Check if user has any CVs and if this is their first CV creation
     useEffect(() => {
@@ -44,19 +47,12 @@ function ResumeEnhancerContent() {
                     const data = await response.json();
                     const isFirstCV = data.isFirstCV || data.cvCount === 0;
 
-                    console.log('🔍 Resume Enhancer - CV count check:', {
-                        isFirstCV,
-                        cvCount: data.cvCount
-                    });
-
                     if (isFirstCV) {
                         // This is the first CV - enforce Master CV mode
                         dispatch({ type: 'SET_IS_FIRST_CV_CREATION', payload: true });
                         dispatch({ type: 'SET_ENFORCE_MASTER_CV_MODE', payload: true });
                         dispatch({ type: 'SET_CV_TYPE', payload: 'master' });
                         dispatch({ type: 'SET_HAS_MASTER_CV', payload: false });
-
-                        console.log('✅ Resume Enhancer - First CV detected, enforcing Master CV mode');
                     } else {
                         dispatch({ type: 'SET_IS_FIRST_CV_CREATION', payload: false });
                         dispatch({ type: 'SET_ENFORCE_MASTER_CV_MODE', payload: false });
@@ -89,7 +85,6 @@ function ResumeEnhancerContent() {
             // Check if we need to sync (avoid infinite loops/unnecessary updates)
             const hasData = state.cvData.basics?.name;
             if (!hasData || JSON.stringify(aiReportState.cvData) !== JSON.stringify(state.cvData)) {
-                console.log('🔄 Syncing CV data from AI Career Report to Resume Enhancer');
                 dispatch({ type: 'SET_CV_DATA', payload: aiReportState.cvData });
             }
         }

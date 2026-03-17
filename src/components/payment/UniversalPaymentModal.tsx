@@ -68,7 +68,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
-  const [paymentProvider, setPaymentProvider] = useState<'polar' | 'razorpay'>('stripe');
+  const [paymentProvider, setPaymentProvider] = useState<'polar' | 'razorpay'>('polar');
   const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
@@ -375,7 +375,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       setProviderHealthLoading(true);
       try {
         const [polarHealthy, razorpayHealthy] = await Promise.all([
-          checkProviderHealth('stripe'),
+          checkProviderHealth('polar'),
           checkProviderHealth('razorpay')
         ]);
 
@@ -389,8 +389,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           console.warn('Stripe is down, switching to Razorpay');
           setPaymentProvider('razorpay');
         } else if (paymentProvider === 'razorpay' && !razorpayHealthy && polarHealthy) {
-          console.warn('Razorpay is down, switching to Stripe');
-          setPaymentProvider('stripe');
+          console.warn('Razorpay is down, switching to Polar');
+          setPaymentProvider('polar');
         }
       } catch (error) {
         console.error('Error checking provider health:', error);
@@ -964,19 +964,19 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               });
             }
 
-            // If currency is not supported by Razorpay, automatically retry with Stripe
-            if (errorData && errorData.unsupportedCurrency && errorData.suggestedProvider === 'stripe' && paymentProvider === 'razorpay') {
-              console.log('Currency not supported by Razorpay, switching to Stripe');
+            // If currency is not supported by Razorpay, automatically retry with Polar
+            if (errorData && errorData.unsupportedCurrency && errorData.suggestedProvider === 'polar' && paymentProvider === 'razorpay') {
+              console.log('Currency not supported by Razorpay, switching to Polar');
               shouldRetryWithStripe = true;
-              setPaymentProvider('stripe');
+              setPaymentProvider('polar');
 
-              // Retry the payment with Stripe
+              // Retry the payment with Polar
               const retryBody = {
                 planKey: selectedPlan?.key,
                 interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
                 discountCode: appliedDiscount?.code || undefined,
                 couponCode: appliedDiscount?.code || undefined,
-                provider: 'stripe',
+                provider: 'polar',
                 returnUrl: returnUrl || window.location.href,
                 triggerContext
               };
@@ -1174,29 +1174,37 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             onClick={onClose}
           />
 
-          {/* Full Screen Modal Container */}
+          {/* Modal Container - Centered with backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[99999] flex bg-white dark:bg-[#141810]"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 dark:bg-black/70 backdrop-blur-sm p-4"
+            onClick={(e) => e.target === e.currentTarget && onClose?.()}
           >
-            {/* Left Side - Features & Info */}
             <motion.div
-              initial={{ x: '-100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '-100%', opacity: 0 }}
-              transition={{
-                type: 'spring',
-                damping: 25,
-                stiffness: 200,
-                mass: 0.8
-              }}
-              className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto hidden tablet:block"
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
+              {/* Left Side - Features & Info */}
+              <motion.div
+                initial={{ x: '-100%', opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '-100%', opacity: 0 }}
+                transition={{
+                  type: 'spring',
+                  damping: 25,
+                  stiffness: 200,
+                  mass: 0.8
+                }}
+                className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto hidden tablet:block"
+              >
+                <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-l-2xl">
                 {/* Logo */}
                 <div className="mb-8 flex items-center gap-3">
                   <img
@@ -1886,6 +1894,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                   }
                 </div>
               </div>
+            </motion.div>
             </motion.div>
           </motion.div>
         </>
