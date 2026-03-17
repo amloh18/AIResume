@@ -107,7 +107,7 @@ export default function FloatingPulsePill({
                     status: 'pending'
                 }));
             setFixQueue(openFixes);
-            // Use CVScoringService calculated score
+            // Use CentralScoreManager calculated score
             const calcScore = isJourneyCV && scoreResult?.atsScore
                 ? scoreResult.atsScore.total
                 : (scoreResult?.cvScore?.total ?? 0);
@@ -278,7 +278,7 @@ export default function FloatingPulsePill({
 
     // Use Engine Health Score for Journey CVs/Command Center Mode
     // Fallback to legacy calc if needed, but Engine is primary for Command Center
-    // FIX: Prioritize CVScoringService result (scoreResult) for Journey CVs to match backend
+    // FIX: Prioritize CentralScoreManager result (scoreResult) for Journey CVs to match backend
     const displayScore = isJourneyCV
         ? (scoreResult?.atsScore?.total ?? Math.round(atsScore))
         : Math.round(masterScore);

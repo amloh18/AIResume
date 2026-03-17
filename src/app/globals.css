@@ -163,12 +163,22 @@
   transform: translateX(-50%);
 }
 
-/* Fix for motion.div animations in non-Chromium browsers */
-[style*="opacity"],
-[style*="transform"] {
-  -webkit-transform: translateZ(0);
-  -moz-transform: translateZ(0);
-  transform: translateZ(0);
+/* Fix for motion.div animations in non-Chromium browsers - more targeted approach */
+/* Only apply transform override to elements that are NOT absolutely positioned (common for input icons) */
+[style*="opacity"] {
+  /* Preserve opacity styles */
+}
+
+/* Remove broad transform override that was breaking input field icon centering */
+/* The original rule was: [style*="transform"] { transform: translateZ(0); } */
+/* This has been removed as it interferes with input field icon positioning */
+
+/* Ensure input field icons maintain their vertical centering transform */
+.absolute[class*="left-"][class*="top-"],
+.absolute.left-2,
+.absolute.left-3,
+.absolute.left-4 {
+  /* Preserve the original transform set by Tailwind's -translate-y-1/2 */
 }
 
 /* Performance optimizations */
@@ -1485,23 +1495,6 @@ img[src*="/images/"] {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
-}
-
-/* Fix for Framer Motion animations not triggering */
-[style*="opacity:0"] {
-  opacity: 1 !important;
-}
-
-[style*="transform:translateY"] {
-  transform: translateY(0) !important;
-}
-
-[style*="transform:translateX"] {
-  transform: translateX(0) !important;
-}
-
-[style*="transform:scale"] {
-  transform: scale(1) !important;
 }
 
 /* Apply transitions only where needed */

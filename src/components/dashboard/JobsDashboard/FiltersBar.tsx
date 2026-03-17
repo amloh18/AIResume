@@ -20,7 +20,7 @@ export default function FiltersBar({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="glass-widget-premium rounded-xl p-4 space-y-4">
+    <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-4 space-y-4">
       {/* Search and Toggle */}
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
@@ -30,12 +30,12 @@ export default function FiltersBar({
             placeholder="Search by job title, company..."
             value={filters.searchText || ''}
             onChange={(e) => onChange({ searchText: e.target.value })}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 text-gray-900 dark:text-white"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-[#1a230f] border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
         >
           <SlidersHorizontal className="w-5 h-5" />
           <span className="hidden sm:inline">Filters</span>

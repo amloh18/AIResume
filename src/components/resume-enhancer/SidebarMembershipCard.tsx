@@ -173,7 +173,7 @@ export default function SidebarMembershipCard() {
           {!isUnlimited && limit > 0 && (
             <div className="mb-3">
               <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
-                <span>Credits used</span>
+                <span>Feature usage</span>
                 <span>{used}/{limit}</span>
               </div>
               <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -189,7 +189,7 @@ export default function SidebarMembershipCard() {
 
           {!hasCredits && (
             <div className="text-xs text-yellow-300 mb-2 font-medium">
-              ⚠️ Credits exhausted. Upgrade to continue.
+              ⚠️ Feature limit reached. Upgrade to continue.
             </div>
           )}
 
@@ -287,7 +287,7 @@ export default function SidebarMembershipCard() {
 
         {!hasCredits && !isExpired && (
           <div className="text-xs text-yellow-200 mb-2 font-medium">
-            ⚠️ Credits exhausted. Upgrade to continue.
+            ⚠️ Feature limit reached. Upgrade to continue.
           </div>
         )}
 
@@ -331,7 +331,7 @@ export default function SidebarMembershipCard() {
         <div className="bg-white/15 rounded-xl p-3 mb-2">
           <div className="text-xs text-white/80 mb-0.5">Jobs created this month</div>
           <div className="text-xl font-bold">{totalCreated}</div>
-          <div className="text-[10px] text-white/70 mt-0.5">Unlimited credits</div>
+          <div className="text-[10px] text-white/70 mt-0.5">Unlimited access</div>
         </div>
 
         <div className="text-xs text-white/90 mb-2.5 leading-relaxed">
@@ -370,7 +370,7 @@ export default function SidebarMembershipCard() {
         <div className="bg-white/15 rounded-xl p-3 mb-2">
           <div className="text-xs text-white/80 mb-0.5">Jobs created this quarter</div>
           <div className="text-xl font-bold">{totalCreated}</div>
-          <div className="text-[10px] text-white/70 mt-0.5">Unlimited credits</div>
+          <div className="text-[10px] text-white/70 mt-0.5">Unlimited access</div>
         </div>
 
         <div className="text-xs text-white/90 leading-relaxed">
@@ -401,7 +401,7 @@ export default function SidebarMembershipCard() {
         <div className="bg-white/15 rounded-xl p-3 mb-2">
           <div className="text-xs text-white/80 mb-0.5">Jobs created</div>
           <div className="text-xl font-bold">{totalCreated}</div>
-          <div className="text-[10px] text-white/70 mt-0.5">Unlimited credits</div>
+          <div className="text-[10px] text-white/70 mt-0.5">Unlimited access</div>
         </div>
 
         <div className="text-xs text-white/90 leading-relaxed">

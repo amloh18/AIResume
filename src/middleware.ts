@@ -57,6 +57,16 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Redirect old routes to new consolidated analytics page with tabs
+  // /dashboard/tracker -> /dashboard?tab=tracker
+  // /dashboard/canvas -> /dashboard?tab=documents
+  if (pathname === '/dashboard/tracker') {
+    return NextResponse.redirect(new URL('/dashboard?tab=tracker', req.url));
+  }
+  if (pathname === '/dashboard/canvas') {
+    return NextResponse.redirect(new URL('/dashboard?tab=documents', req.url));
+  }
+
   // Allow public routes
   if (isPublicRoute(req)) {
     log.debug('Public route accessed', { pathname, method });

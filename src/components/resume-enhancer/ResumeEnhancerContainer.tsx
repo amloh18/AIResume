@@ -101,6 +101,7 @@ export default function ResumeEnhancerContainer({
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
   const [showJobSidebar, setShowJobSidebar] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [journeysForJob, setJourneysForJob] = useState<CVJourney[]>([]);
   const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
@@ -494,7 +495,6 @@ export default function ResumeEnhancerContainer({
   // Sync cvId prop to state if available and state doesn't have it
   useEffect(() => {
     if (cvId && !state.cvId) {
-      console.log('🔄 Syncing cvId prop to state:', cvId);
       dispatch({ type: 'SET_CV_ID', payload: cvId });
     }
   }, [cvId, state.cvId]);
@@ -507,7 +507,6 @@ export default function ResumeEnhancerContainer({
           const result = await guestCVService.loadGuestDraft();
           if (result.success && result.data) {
             const draft = result.data;
-            console.log('📦 Restoring guest draft:', draft);
 
             // Restore CV data
             if (draft.cvData) {
@@ -611,7 +610,6 @@ export default function ResumeEnhancerContainer({
         transferAttemptedRef.current = true;
 
         if (isTransferringDraft) {
-          console.log('⏳ Draft transfer already in progress, skipping...');
           return;
         }
 
@@ -622,7 +620,6 @@ export default function ResumeEnhancerContainer({
         try {
           const sessionId = guestCVService.getSessionId();
           if (!sessionId) {
-            console.log('ℹ️ No session ID available for transfer, skipping...');
             setIsTransferringDraft(false);
             return;
           }
@@ -631,24 +628,20 @@ export default function ResumeEnhancerContainer({
           // This prevents infinite loops of 404s when user logs in with a fresh guest session
           const hasDraft = await guestCVService.hasDraft(sessionId);
           if (!hasDraft) {
-            console.log('ℹ️ No guest draft found to transfer, skipping...');
             setIsTransferringDraft(false);
             return;
           }
 
-          console.log('🔄 Transferring draft with sessionId:', sessionId, 'userId:', session.user.id);
           const result = await guestCVService.transferDraftToUser(sessionId, session.user.id);
 
           if (result.success && result.cvId) {
-            console.log('✅ Draft transferred successfully:', result);
             // Reload page to switch to authenticated mode
             window.location.href = `/resume-enhancer?cvId=${result.cvId}&mode=edit&step=${result.step || 3}`;
           } else {
             // Check for specific error indicating draft not found or already transferred
             if (result.error?.includes('Draft not found') || result.error?.includes('already transferred')) {
-              console.warn('⚠️ Draft transfer skipped:', result.error);
+              console.warn('Draft transfer skipped:', result.error);
             } else {
-              console.error('❌ Failed to transfer draft:', result.error);
               const errorMsg = result.error || 'Unknown error occurred';
               // Only alert on standard errors, not expected "not found" flows
               alert(`Failed to transfer your draft: ${errorMsg}. Please try refreshing the page or contact support.`);
@@ -720,7 +713,6 @@ export default function ResumeEnhancerContainer({
     // Update title if it's different from current
     if (state.cvTitle !== newTitle) {
       dispatch({ type: 'SET_CV_TITLE', payload: newTitle });
-      console.log('✅ Auto-updated CV title:', newTitle, 'for cvType:', state.cvType);
     }
   }, [state.cvType, state.jobData?.company, state.jobData?.jobTitle, state.cvData?.basics?.name, state.cvData?.basics?.label]);
 
@@ -746,12 +738,7 @@ export default function ResumeEnhancerContainer({
 
     // Only trigger if we have a previous context to compare against (skip initial load)
     if (state.lastAnalysisContext && (modeChanged || roleHashChanged || jdHashChanged)) {
-      console.log('🔄 Analysis context changed - invalidating cached scores:', {
-        from: state.lastAnalysisContext?.mode,
-        to: modeInfo.mode,
-        roleChanged: roleHashChanged,
-        jdChanged: jdHashChanged
-      });
+      // Context changed - invalidate cached scores
 
       // Invalidate cached analysis
       dispatch({ type: 'INVALIDATE_ANALYSIS' });
@@ -830,7 +817,6 @@ export default function ResumeEnhancerContainer({
       if (mode === 'edit' || mode === 'edit-master') {
         // Load existing CV
         if (!cvId) {
-          console.error('CV ID required for edit mode');
           return;
         }
 
@@ -852,11 +838,7 @@ export default function ResumeEnhancerContainer({
 
           // For journey CVs: ensure we have jobData to show journey-based interface
           if (resolvedCvType === 'journey') {
-            console.log('🎯 Journey CV detected - will show journey-based interface', {
-              cvId: cv.id,
-              journeyId: cv.journeyId,
-              hasJobData: !!cv.jobData
-            });
+            // Journey CV detected
 
             // If jobData is missing but journeyId exists, try to fetch it
             if (!cv.jobData && cv.journeyId) {
@@ -889,7 +871,6 @@ export default function ResumeEnhancerContainer({
 
           // Edge case: Master CV with JD - don't treat as journey
           if (resolvedCvType === 'master' && cv.jobData) {
-            console.log('ℹ️ Master CV has job data - ignoring (master CVs are role-based)');
             // Don't set jobData for master CVs
             loadCV({
               cvId: cv.id,
@@ -957,7 +938,6 @@ export default function ResumeEnhancerContainer({
             currentParams.set('cvId', cvId);
             const newUrl = `${pathname}?${currentParams.toString()}`;
             router.replace(newUrl);
-            console.log('✅ Updated URL with mode:', urlMode);
           }
 
           // Mark as initialized
@@ -1313,7 +1293,6 @@ export default function ResumeEnhancerContainer({
     if (isEditingExistingCV) {
       // In edit mode, preserve the existing CV type
       // Don't allow changing master CVs to standalone/journey via role modal
-      console.log('📝 Edit mode: Preserving existing CV type:', state.cvType);
       // No cvType change - just update role context
       // Do not proceed to step 2 - we're just updating the role
     } else {
@@ -1551,9 +1530,9 @@ export default function ResumeEnhancerContainer({
               const errorData = await jobResponse.json().catch(() => ({}));
               const errorMessage = errorData.error || errorData.message || 'Failed to create job';
 
-              // EDGE CASE 9: Check for credit errors
+              // EDGE CASE 9: Check for tier/plan errors
               if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-                alert('Insufficient credits. Please upgrade your plan to track jobs.');
+                alert('This feature requires a Pro membership. Please upgrade your plan to continue.');
               } else {
                 alert(`Failed to create job: ${errorMessage}`);
               }
@@ -1662,9 +1641,9 @@ export default function ResumeEnhancerContainer({
           const errorData = await jobResponse.json().catch(() => ({}));
           const errorMessage = errorData.error || errorData.message || 'Failed to create job';
 
-          // EDGE CASE 9: Check for credit errors
+          // EDGE CASE 9: Check for tier/plan errors
           if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-            throw new Error('Insufficient credits. Please upgrade your plan to track jobs.');
+            throw new Error('This feature requires a Pro membership. Please upgrade your plan to continue.');
           }
           throw new Error(errorMessage);
         }
@@ -1879,7 +1858,6 @@ export default function ResumeEnhancerContainer({
 
     // Guest mode: Save to draft instead of creating CV
     if (isGuestMode) {
-      console.log('💾 Guest mode: Saving to draft instead of creating CV...');
       try {
         await guestCVService.saveGuestDraft({
           cvData: state.cvData,
@@ -1900,7 +1878,6 @@ export default function ResumeEnhancerContainer({
     }
 
     // CV not saved yet - save it first
-    console.log('💾 CV not saved yet, saving CV first before saving job...');
 
     try {
       const completionPercentage = calculateCompletionPercentage();

@@ -14,10 +14,18 @@ import {
  */
 export async function GET(request: NextRequest) {
   try {
-    // TODO: Add authentication/authorization
-    // Example: Check for API key in headers
+    // Security: Verify CRON_API_KEY is configured
+    const cronApiKey = process.env.CRON_API_KEY;
+    if (!cronApiKey) {
+      console.error('CRON_API_KEY is not configured - blocking request');
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+
     const apiKey = request.headers.get('x-api-key');
-    if (apiKey !== process.env.CRON_API_KEY) {
+    if (apiKey !== cronApiKey) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

@@ -147,11 +147,6 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
           projects: normalizeProjectDates(result.projects || [])
         };
 
-        console.log('✅ ChoosePathStep - CV parsed successfully');
-        console.log('📅 Work dates normalized:', normalizedResult.work);
-        console.log('📅 Education dates normalized:', normalizedResult.education);
-        console.log('📅 Project dates normalized:', normalizedResult.projects);
-
         // Update the AI Career Report context with normalized data
         dispatch({ type: 'SET_CV_DATA', payload: normalizedResult });
         dispatch({ type: 'SET_UPLOADED_FILE', payload: file });
@@ -241,6 +236,8 @@ export default function ChoosePathStep({ onNext }: ChoosePathStepProps) {
         return result;
       }
     } catch (error) {
+      // Silently fail for invalid dates - return empty string
+      console.warn('Could not parse date format:', trimmed);
     }
 
     return '';

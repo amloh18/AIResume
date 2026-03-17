@@ -11,7 +11,7 @@ import {
     Target,
 } from 'lucide-react';
 import type { AnalysisMode } from '@/lib/utils/analysis-mode';
-import type { ScoreResult, CVScoreBreakdown, ATSScoreBreakdown } from '@/lib/services/cv-scoring-service';
+import type { ScoreResult, CVScoreBreakdown, ATSScoreBreakdown } from '@/lib/utils/cv-scoring';
 
 // ============================================================================
 // Types
@@ -78,7 +78,7 @@ export interface ATSResult {
 
 interface ScorecardPanelProps {
     atsResult?: ATSResult | null; // Legacy support
-    scoreResult?: ScoreResult | null; // New: CVScoringService result
+    scoreResult?: ScoreResult | null; // New: CentralScoreManager result
     cvType?: 'master' | 'journey' | 'standalone'; // Determines which score to show
     isLoading: boolean;
     analysisMode: AnalysisMode;
@@ -148,7 +148,7 @@ export default function ScorecardPanel({
         );
     }
 
-    // Use scoreResult from CVScoringService (preferred) or fallback to atsResult
+    // Use scoreResult from CentralScoreManager (preferred) or fallback to atsResult
     const isJourneyCV = cvType === 'journey';
     const displayScore = scoreResult
         ? (isJourneyCV && scoreResult.atsScore ? scoreResult.atsScore.total : scoreResult.cvScore.total)

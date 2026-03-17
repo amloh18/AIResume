@@ -446,7 +446,7 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
 
               {/* Info Message */}
               <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Job will be saved as draft. Move it to "Created" stage to start CV journey (requires credit).
+                Job will be saved as draft. Move it to "Created" stage to start CV journey (requires Pro membership).
               </p>
 
               {/* Action Buttons */}

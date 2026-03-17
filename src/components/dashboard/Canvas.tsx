@@ -46,7 +46,8 @@ import {
   Activity,
   AlertTriangle,
   AlertCircle,
-  SortAsc
+  SortAsc,
+  BarChart3
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
 import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
@@ -696,7 +697,7 @@ const Canvas: React.FC = () => {
               cv.metadata?.isMaster === 'true' ||
               cv.isMaster === true ||
               cv.metadata?.createdVia === 'ai-career-report',
-            atsScore: cv.metadata?.atsScore, // Single source of truth from CVScoringService
+            atsScore: cv.metadata?.atsScore, // Single source of truth from CentralScoreManager
             metadata: cv.metadata // Include full metadata
           } as CV;
         });
@@ -2297,7 +2298,7 @@ const Canvas: React.FC = () => {
         isMobileMenuOpen={isMobileMenuOpen}
       />
 
-      {/* Tab Navigation */}
+      {/* Document Type Toggle (CVs / Cover Letters) */}
       <div className="flex items-center justify-between gap-4 mb-6">
         <div className="flex-1">
           <div className="border-b border-gray-200 dark:border-gray-700">
