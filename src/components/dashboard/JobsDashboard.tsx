@@ -40,7 +40,9 @@ export default function JobsDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch metrics');
+        console.warn('Failed to fetch metrics, using default values');
+        setMetrics(null);
+        return;
       }
 
       const data = await response.json();
@@ -84,7 +86,10 @@ export default function JobsDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch jobs');
+        console.warn('Failed to fetch jobs, using default values');
+        setJobs([]);
+        setLoading(false);
+        return;
       }
 
       const data = await response.json();
