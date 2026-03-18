@@ -53,10 +53,46 @@ function LandingPageContent() {
   }, []); // Empty deps - only run once on mount
 
   const navLinks = [
-    { label: 'How to', href: '#how-it-works', ariaLabel: 'View how it works section' },
-    { label: 'Features', href: '#features', ariaLabel: 'View features section' },
-    { label: 'Extension', href: '#chrome-extension', ariaLabel: 'View browser extension section' },
-    { label: 'Pricing', href: '#pricing', ariaLabel: 'View pricing section' },
+    { 
+      label: 'How to', 
+      href: '#how-it-works', 
+      ariaLabel: 'View how it works section',
+      submenu: [
+        { label: 'Create Resume', href: '#how-it-works', ariaLabel: 'Learn how to create a resume' },
+        { label: 'Cover Letters', href: '#how-it-works', ariaLabel: 'Learn about cover letters' },
+        { label: 'Career Tips', href: '#features', ariaLabel: 'View career tips' },
+      ]
+    },
+    { 
+      label: 'Features', 
+      href: '#features', 
+      ariaLabel: 'View features section',
+      submenu: [
+        { label: 'AI Builder', href: '#features', ariaLabel: 'AI-powered resume builder' },
+        { label: 'ATS Check', href: '#features', ariaLabel: 'ATS compatibility check' },
+        { label: 'Templates', href: '#premium-templates', ariaLabel: 'View premium templates' },
+      ]
+    },
+    { 
+      label: 'Extension', 
+      href: '#chrome-extension', 
+      ariaLabel: 'View browser extension section',
+      submenu: [
+        { label: 'Chrome', href: '#chrome-extension', ariaLabel: 'Chrome extension' },
+        { label: 'Edge', href: '#chrome-extension', ariaLabel: 'Edge extension' },
+        { label: 'Firefox', href: '#chrome-extension', ariaLabel: 'Firefox extension' },
+      ]
+    },
+    { 
+      label: 'Pricing', 
+      href: '#pricing', 
+      ariaLabel: 'View pricing section',
+      submenu: [
+        { label: 'Free Plan', href: '#pricing', ariaLabel: 'Free plan details' },
+        { label: 'Premium', href: '#pricing', ariaLabel: 'Premium plan details' },
+        { label: 'Enterprise', href: '#pricing', ariaLabel: 'Enterprise plan details' },
+      ]
+    },
   ];
 
   const handleCtaClick = () => {
