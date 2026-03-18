@@ -9,6 +9,11 @@ interface NavLink {
   label: string;
   href: string;
   ariaLabel?: string;
+  submenu?: Array<{
+    label: string;
+    href: string;
+    ariaLabel?: string;
+  }>;
 }
 
 interface CardNavProps {
@@ -27,7 +32,11 @@ const CardNav = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentSection, setCurrentSection] = useState<string | null>(null);
   const [isAtHero, setIsAtHero] = useState(true);
+  const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
+
+  // Determine if any submenu is currently open
+  const isAnySubmenuOpen = hoveredLink !== null;
 
   const handleCtaClick = () => {
     if (onCtaClick) {
@@ -131,7 +140,7 @@ const CardNav = ({
   }, [links]);
 
   return (
-    <div className={`card-nav-container ${className}`}>
+    <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
           <button 
@@ -169,19 +178,43 @@ const CardNav = ({
               const sectionId = link.href.startsWith('#') ? link.href.substring(1) : null;
               const isCurrentSection = sectionId === currentSection;
               const shouldHide = !isAtHero && isCurrentSection;
+              const hasSubmenu = link.submenu && link.submenu.length > 0;
+              const isHovered = hoveredLink === link.label;
               
               return (
-                <button
+                <div
                   key={`${link.label}-${index}`}
-                  className="nav-link"
-                  onClick={() => scrollToSection(link.href)}
-                  aria-label={link.ariaLabel}
-                  style={{
-                    display: shouldHide ? 'none' : 'block'
-                  }}
+                  className={`nav-link-wrapper ${hasSubmenu ? 'has-submenu' : ''} ${isHovered ? 'hovered' : ''}`}
+                  onMouseEnter={() => hasSubmenu && setHoveredLink(link.label)}
+                  onMouseLeave={() => hasSubmenu && setHoveredLink(null)}
                 >
-                  {link.label}
-                </button>
+                  <button
+                    className="nav-link"
+                    onClick={() => scrollToSection(link.href)}
+                    aria-label={link.ariaLabel}
+                    style={{
+                      display: shouldHide ? 'none' : 'block'
+                    }}
+                  >
+                    {link.label}
+                  </button>
+                  
+                  {/* Submenu Dropdown */}
+                  {hasSubmenu && (
+                    <div className="submenu-dropdown">
+                      {link.submenu!.map((subLink, subIndex) => (
+                        <button
+                          key={`sub-${link.label}-${subIndex}`}
+                          className="submenu-link"
+                          onClick={() => scrollToSection(subLink.href)}
+                          aria-label={subLink.ariaLabel}
+                        >
+                          {subLink.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

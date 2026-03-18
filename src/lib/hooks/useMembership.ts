@@ -98,7 +98,21 @@ export function useMembership(): UseMembershipReturn {
             const response = await fetch('/api/user/usage-limits');
 
             if (!response.ok) {
-                throw new Error('Failed to fetch membership info');
+                console.warn('Failed to fetch membership info, using default values');
+                // Default to free plan
+                setMembership({
+                    planKey: 'free',
+                    planName: 'Free',
+                    isFreePlan: true,
+                    isDayPass: false,
+                    isProMember: false,
+                    isLifetimeMember: false,
+                    limits: PLAN_LIMITS.free,
+                    isSubscriptionActive: true,
+                    expiresAt: null,
+                });
+                setLoading(false);
+                return;
             }
 
             const data = await response.json();
