@@ -7,7 +7,7 @@ import { useAICareerReport } from '@/contexts/AICareerReportContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 
 interface ChoosePathStepProps {
-  onNext: () => void;
+  onNext: (cvData?: any, isExistingCV?: boolean) => void;
 }
 
 // Parsing progress messages component with random interval display

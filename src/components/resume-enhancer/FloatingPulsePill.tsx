@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, Zap, Eye, Target, Component, PenTool } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
@@ -13,7 +14,8 @@ import SmartContextCard from './panels/SmartContextCard';
 import { Lightbulb } from 'lucide-react';
 import type { FixAnnotation } from './annotations/fix-annotation';
 import type { AnalysisMode } from '@/lib/utils/analysis-mode';
-import { Issue } from '@/lib/pill-engine/types';
+import type { ValidationResult, ValidationWarning } from '@/lib/validation/cv-preview-validator';
+import { Issue, type IssueType, type IssueSeverity, type IssuePriority } from '@/lib/pill-engine/types';
 import { useContextToasts } from '@/hooks/useContextToasts';
 import { mergeIssues, surgicalFixesToIssues } from '@/lib/services/surgicalFixToIssueAdapter';
 
@@ -22,6 +24,14 @@ interface FloatingPulsePillProps {
     atsResult?: ATSResult | null;
     isLoading?: boolean;
     analysisMode?: AnalysisMode;
+    /** CV layout validation result — merged into smart context suggestions */
+    validationResult?: ValidationResult | null;
+    /** DOM element to portal panels into (e.g. side panel container). When set, panels render there instead of below the pill. */
+    portalTarget?: HTMLElement | null;
+    /** Called when an issue is hovered — for highlighting the affected text in preview */
+    onIssueHover?: (fieldPath: string | null) => void;
+    /** Called when any panel opens/closes — parent uses this to show/hide the side panel container */
+    onPanelOpenChange?: (isOpen: boolean) => void;
     // Sidebar Control (now just Toggle)
     isSidebarOpen?: boolean;
     onToggleSidebar?: () => void;
@@ -44,6 +54,10 @@ export default function FloatingPulsePill({
     atsResult,
     isLoading = false,
     analysisMode = 'insufficient-data',
+    validationResult,
+    portalTarget,
+    onIssueHover,
+    onPanelOpenChange,
     onToggleSidebar,
     onFixATS,
     onOpenReport,
@@ -56,9 +70,8 @@ export default function FloatingPulsePill({
     onAddJD
 }: FloatingPulsePillProps) {
     const { state, dispatch } = useResumeEnhancer();
-    const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [showScorecard, setShowScorecard] = useState(false);
-    const [showContextCard, setShowContextCard] = useState(false); // Valid default to false (Idle state)
+    const [showScorecard, setShowScorecard] = useState(true); // Default expanded
+    const [showContextCard, setShowContextCard] = useState(false);
 
     // Pill Engine Integration (Command Center)
     const { issues, healthScore, masterScore, atsScore, isAnalyzing: isEngineAnalyzing, scoreResult } = usePillEngine(
@@ -136,10 +149,63 @@ export default function FloatingPulsePill({
                 impact_score_delta: fix.impactScoreDelta || 0,
                 status: 'pending' as const,
             }));
-        
-        // Use the adapter to merge issues
-        return mergeIssues(engineIssues, surgicalFixes);
-    }, [issues, state.fixAnnotations]);
+
+        // Convert validation warnings to issues
+        const validationIssues = (validationResult?.warnings || []).map(w => {
+            // Map validation rule to IssueType
+            const ruleToType: Record<string, IssueType> = {
+                'profile-max-lines': 'SUMMARY_TOO_LONG',
+                'profile-max-chars': 'SUMMARY_TOO_LONG',
+                'missing-name': 'EMPTY_SECTION',
+                'missing-email': 'UNPROFESSIONAL_EMAIL',
+                'missing-summary': 'GENERIC_OBJECTIVE',
+                'long-url': 'VISUAL_DENSITY',
+                'job-description-format': 'LOW_BULLET_COUNT',
+                'bullet-action-verb': 'WEAK_VERB',
+                'max-bullets': 'UNBALANCED_DETAIL',
+                'required-dates': 'CHRONOLOGY_ERROR',
+                'required-fields': 'EMPTY_SECTION',
+                'recommended-fields': 'EMPTY_SECTION',
+                'skill-max-words': 'VISUAL_DENSITY',
+            };
+
+            return {
+                id: w.id,
+                type: ruleToType[w.rule] || 'IMPROVEMENT',
+                severity: (w.type === 'error' ? 'critical' : w.type === 'warning' ? 'warning' : 'info') as IssueSeverity,
+                priority: (w.type === 'error' ? 'critical' : 'suggestion') as IssuePriority,
+                tier: w.type === 'error' ? 1 : w.type === 'warning' ? 2 : 3,
+                section: (w.section === 'work_experience' ? 'work' : w.section === 'personal_header' ? 'basics' : w.section),
+                sectionId: w.section,
+                message: w.message,
+                meta: { field: w.field, rule: w.rule },
+                deepLink: { section: w.section === 'work_experience' ? 'work' : w.section === 'personal_header' ? 'basics' : w.section },
+            } as Issue;
+        });
+
+        // Use the adapter to merge engine + surgical fixes, then append validation issues
+        const merged = mergeIssues(engineIssues, surgicalFixes);
+        return [...merged, ...validationIssues] as Issue[];
+    }, [issues, state.fixAnnotations, validationResult]);
+
+    // Auto-open smart context when suggestions are available - Only on initial load if needed
+    // Removed to allow manual toggle without side effects on scorecard state
+    /*
+    useEffect(() => {
+        if (allIssues.length > 0 && !showContextCard) {
+            setShowContextCard(true);
+            setShowScorecard(false);
+        }
+    }, [allIssues.length, showContextCard]);
+    */
+
+    // Notify parent when any panel opens/closes - Disabled as sidebar column is removed
+    /*
+    const hasAnyPanelOpen = showScorecard || showContextCard || isFixingAll || viewMode === 'recruiter';
+    useEffect(() => {
+        onPanelOpenChange?.(hasAnyPanelOpen);
+    }, [hasAnyPanelOpen, onPanelOpenChange]);
+    */
 
     const handleFixAll = async () => {
         // Debugging: Log to see if function fires
@@ -193,24 +259,6 @@ export default function FloatingPulsePill({
 
     const cancelFixing = () => {
         setIsFixingAll(false);
-        // Maybe reload fresh state?
-    };
-
-    useEffect(() => {
-        const savedPos = localStorage.getItem('cvcircle_pill_position');
-        if (savedPos) {
-            try {
-                setPosition(JSON.parse(savedPos));
-            } catch (e) {
-                console.error('Failed to parse saved position', e);
-            }
-        }
-    }, []);
-
-    const handleDragEnd = (event: any, info: any) => {
-        const newPos = { x: position.x + info.offset.x, y: position.y + info.offset.y };
-        setPosition(newPos);
-        localStorage.setItem('cvcircle_pill_position', JSON.stringify(newPos));
     };
 
     const handleIssueClick = (issue: Issue) => {
@@ -288,20 +336,119 @@ export default function FloatingPulsePill({
     // Only show "Fix All" if we actually have surgical fixes in the queue
     const fixableCount = (state.fixAnnotations || []).filter(f => f.status === 'open').length;
 
+    // ─── PANELS CONTENT ────────────────────────────────────
+    function renderPanels() {
+        return (
+            <div className="absolute top-full mt-3 left-0 w-full flex flex-col gap-3 pointer-events-none z-[100]">
+                {/* Scorecard Panel - ALWAYS TOP */}
+                <AnimatePresence>
+                    {showScorecard && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top pointer-events-auto"
+                        >
+                            <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar space-y-4">
+                                <ScorecardPanel
+                                    atsResult={atsResult || null}
+                                    scoreResult={scoreResult}
+                                    cvType={state.cvType}
+                                    isLoading={isLoading}
+                                    analysisMode={analysisMode}
+                                    compact={true}
+                                    scoreLabel={isJourneyCV ? 'ATS Score' : 'CV Score'}
+                                    onAddKeyword={onAddKeyword}
+                                />
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Smart Context Card */}
+                <AnimatePresence>
+                    {showContextCard && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top pointer-events-auto max-h-[60vh] overflow-y-auto custom-scrollbar"
+                        >
+                            <SmartContextCard
+                                issues={allIssues}
+                                onFix={handleIssueClick}
+                                onDismiss={(id) => { }}
+                                onAiAssist={(issue) => console.log('AI Assist Triggered', issue)}
+                                onIssueHover={(issue) => {
+                                    const fieldPath = issue?.meta?.field || issue?.deepLink?.field || null;
+                                    onIssueHover?.(fieldPath);
+                                }}
+                                onSetRole={onSetRole || undefined}
+                                onAddJD={onAddJD || undefined}
+                                showMissingContextWarning={analysisMode === 'insufficient-data'}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Fix All Progress Panel */}
+                <AnimatePresence>
+                    {isFixingAll && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3 }}
+                            className="w-full pointer-events-auto origin-top"
+                        >
+                            <FixCardPanel
+                                fixes={fixQueue}
+                                currentScore={currentFixScore}
+                                targetScore={100}
+                                onCancel={cancelFixing}
+                                onComplete={() => setIsFixingAll(false)}
+                                isFinished={fixQueue.every(f => f.status === 'completed')}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Recruiter Mode Panel */}
+                <AnimatePresence>
+                    {viewMode === 'recruiter' && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                            className="w-full pointer-events-auto origin-top"
+                        >
+                            <RecruiterModePanel
+                                cvData={state.cvData}
+                                features={recruiterFeatures}
+                                onFeaturesChange={setRecruiterFeatures}
+                            />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        );
+    }
+
+    const panelsContent = renderPanels();
+
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, x: position.x, y: position.y }}
-                animate={{ opacity: 1, x: position.x, y: position.y }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                drag
-                dragMomentum={false}
-                onDragEnd={handleDragEnd}
-                className={`flex flex-col gap-0 z-[9999] items-end ${className || 'fixed top-[88px] right-6'} `}
-            >
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className={`relative inline-block z-[150] max-sm:fixed max-sm:top-[72px] max-sm:left-1/2 max-sm:-translate-x-1/2 ${className}`}
+        >
                 {/* 1. Main Control Bar */}
                 <div
-                    className="relative flex items-center bg-[#1a1a1a] rounded-full p-1.5 shadow-2xl border border-white/5 transition-transform hover:scale-[1.01] active:scale-[0.99] group select-none z-20 gap-4"
+                    className="relative flex items-center bg-[#1a1a1a] rounded-full p-1.5 shadow-2xl border border-white/5 transition-transform hover:scale-[1.01] active:scale-[0.99] group select-none z-[120] gap-4"
                     style={{
                         boxShadow: `0 0 30px ${scoreInfo.color}40`,
                     }}
@@ -442,7 +589,7 @@ export default function FloatingPulsePill({
                                             e.stopPropagation();
                                             setShowContextCard(!showContextCard);
                                         }}
-                                        className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 border border-white/5 shadow-lg ${showContextCard
+                                        className={`relative z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 border border-white/5 shadow-lg ${showContextCard
                                             ? 'bg-[#80FF00] text-black hover:bg-[#70e600] ring-2 ring-[#80FF00]/20'
                                             : 'bg-[#1a1a1a] text-white/40 hover:text-white hover:bg-white/5'
                                             }`}
@@ -461,107 +608,11 @@ export default function FloatingPulsePill({
                             );
                         })()}
                     </div>
-
-
-
                 </div>
 
-                {/* Dropdown 1: Scorecard Panel (Left/Main alignment) */}
-                <AnimatePresence>
-                    {showScorecard && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top-right z-10 self-end mt-2"
-                        >
-                            <div className="p-4 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-4">
-                                <ScorecardPanel
-                                    atsResult={atsResult || null}
-                                    scoreResult={scoreResult}
-                                    cvType={state.cvType}
-                                    isLoading={isLoading}
-                                    analysisMode={analysisMode}
-                                    compact={true}
-                                    scoreLabel={isJourneyCV ? 'ATS Score' : 'CV Score'}
-                                    onAddKeyword={onAddKeyword}
-                                />
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Dropdown: Smart Context Card */}
-                <AnimatePresence>
-                    {showContextCard && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                            className="w-full bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden origin-top-right z-30 self-end mt-2 pointer-events-auto"
-                        >
-                            <SmartContextCard
-                                issues={allIssues}
-                                onFix={handleIssueClick}
-                                onDismiss={(id) => { /* TODO: Implement dismiss/ignore logic */ }}
-                                onAiAssist={(issue) => {
-                                    // Placeholder for Tier 2 Trigger
-                                    console.log('AI Assist Triggered', issue);
-                                    // TODO: Implement AI Hook Call
-                                }}
-                                onSetRole={onSetRole || undefined}
-                                onAddJD={onAddJD || undefined}
-                                showMissingContextWarning={analysisMode === 'insufficient-data'}
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Dropdown: Fix All Progress Panel */}
-                <AnimatePresence>
-                    {isFixingAll && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                            transition={{ duration: 0.3 }}
-                            className="w-full self-end mt-2 z-20 origin-top"
-                        >
-                            <FixCardPanel
-                                fixes={fixQueue}
-                                currentScore={currentFixScore}
-                                targetScore={100} // or calc max potential
-                                onCancel={cancelFixing}
-                                onComplete={() => setIsFixingAll(false)}
-                                isFinished={fixQueue.every(f => f.status === 'completed')}
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* Dropdown: Recruiter Mode Panel */}
-                <AnimatePresence>
-                    {viewMode === 'recruiter' && (
-                        <motion.div
-                            initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                            exit={{ opacity: 0, height: 0, scale: 0.95 }}
-                            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
-                            className="self-end mt-2 z-10 origin-top-right"
-                        >
-                            <RecruiterModePanel
-                                cvData={state.cvData}
-                                features={recruiterFeatures}
-                                onFeaturesChange={setRecruiterFeatures}
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-
+                {/* Panels Rendering: Always inline below pill now as requested */}
+                {panelsContent}
             </motion.div>
-        </AnimatePresence>
     );
 }
+

@@ -1,7 +1,14 @@
 'use client';
 
-import React from 'react';
-import { Bold, Italic, Underline, List, Undo2, Redo2, Sparkles, WandSparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  Bold, Italic, Underline, Strikethrough,
+  List, ListOrdered, Undo2, Redo2,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
+  Heading1, Heading2, Heading3, Quote, Minus,
+  Type, Palette, Link2, Unlink, Sparkles, WandSparkles,
+  ChevronDown, X
+} from 'lucide-react';
 import { fixFormattingToBullets } from '@/lib/utils/format-utils';
 
 interface WYSIWYGToolbarProps {
@@ -14,12 +21,183 @@ interface WYSIWYGToolbarProps {
   onBulletList?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
+  onStrikethrough?: () => void;
+  onHeading?: (level: 1 | 2 | 3) => void;
+  onAlign?: (alignment: 'left' | 'center' | 'right' | 'justify') => void;
+  onOrderedList?: () => void;
+  onBlockquote?: () => void;
+  onHorizontalRule?: () => void;
+  onFontSize?: (size: string) => void;
+  onTextColor?: (color: string) => void;
+  onLink?: () => void;
+  onUnlink?: () => void;
   showAIButton?: boolean;
   fieldType?: 'summary' | 'experience' | 'other';
   onAIGenerate?: () => void;
   onAISuggestions?: () => void;
   isGenerating?: boolean;
 }
+
+const FONT_SIZES = ['8', '9', '10', '11', '12', '14', '16', '18', '20', '24', '28', '32', '36', '48'];
+
+const TEXT_COLORS = [
+  { label: 'Default', value: '#000000' },
+  { label: 'Gray', value: '#6B7280' },
+  { label: 'Red', value: '#EF4444' },
+  { label: 'Orange', value: '#F97316' },
+  { label: 'Yellow', value: '#EAB308' },
+  { label: 'Green', value: '#22C55E' },
+  { label: 'Blue', value: '#3B82F6' },
+  { label: 'Purple', value: '#A855F7' },
+  { label: 'Pink', value: '#EC4899' },
+];
+
+// Helper to execute execCommand with focus preservation
+function execCommandOnEditor(command: string, value?: string) {
+  let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+  if (!editor) {
+    const allEditors = document.querySelectorAll('[contenteditable="true"]');
+    editor = Array.from(allEditors).find(el => {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        return el.contains(range.commonAncestorContainer);
+      }
+      return false;
+    }) as HTMLElement || (allEditors[0] as HTMLElement);
+  }
+
+  if (editor) {
+    const selection = window.getSelection();
+    let savedRange: Range | null = null;
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (editor.contains(range.commonAncestorContainer)) {
+        savedRange = range.cloneRange();
+      }
+    }
+
+    editor.focus();
+
+    if (savedRange && selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+    } else if (!savedRange && selection) {
+      const range = document.createRange();
+      range.selectNodeContents(editor);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    requestAnimationFrame(() => {
+      document.execCommand(command, false, value || undefined);
+    });
+  }
+}
+
+// Font Size Dropdown
+const FontSizeDropdown: React.FC<{
+  onSelect: (size: string) => void;
+}> = ({ onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-0.5 p-1 hover:opacity-70 transition-opacity opacity-60"
+        title="Font Size"
+      >
+        <Type size={16} className="text-[color:var(--text-secondary)]" />
+        <ChevronDown size={10} className="text-[color:var(--text-secondary)]" />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-xl z-50 py-1 min-w-[60px] max-h-[200px] overflow-y-auto">
+          {FONT_SIZES.map(size => (
+            <button
+              key={size}
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onSelect(size); setIsOpen(false); }}
+              className="w-full px-3 py-1 text-left text-sm text-[color:var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            >
+              {size}px
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Text Color Picker
+const TextColorPicker: React.FC<{
+  onSelect: (color: string) => void;
+}> = ({ onSelect }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1 hover:opacity-70 transition-opacity opacity-60"
+        title="Text Color"
+      >
+        <Palette size={16} className="text-[color:var(--text-secondary)]" />
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-1 bg-[var(--bg-secondary)] border border-[var(--border-primary)] rounded-lg shadow-xl z-50 p-2 min-w-[140px]">
+          <div className="text-xs text-[color:var(--text-tertiary)] mb-2 font-medium">Text Color</div>
+          <div className="grid grid-cols-3 gap-1">
+            {TEXT_COLORS.map(({ label, value }) => (
+              <button
+                key={value}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => { onSelect(value); setIsOpen(false); }}
+                className="flex flex-col items-center gap-0.5 p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors"
+                title={label}
+              >
+                <div
+                  className="w-5 h-5 rounded-full border border-[var(--border-primary)]"
+                  style={{ backgroundColor: value }}
+                />
+                <span className="text-[9px] text-[color:var(--text-tertiary)]">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
   formatState = { bold: false, italic: false, underline: false },
@@ -31,6 +209,16 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
   onBulletList,
   onUndo,
   onRedo,
+  onStrikethrough,
+  onHeading,
+  onAlign,
+  onOrderedList,
+  onBlockquote,
+  onHorizontalRule,
+  onFontSize,
+  onTextColor,
+  onLink,
+  onUnlink,
   showAIButton = false,
   fieldType = 'other',
   onAIGenerate,
@@ -55,7 +243,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
     };
 
     document.addEventListener('selectionchange', updateState);
-    const interval = setInterval(updateState, 100); // Poll for changes
+    const interval = setInterval(updateState, 100);
 
     return () => {
       document.removeEventListener('selectionchange', updateState);
@@ -63,143 +251,28 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
     };
   }, []);
 
-  // If handlers not provided, use document.execCommand on focused element
-  const handleBoldClick = onBold || (() => {
-    // Try to find the focused editor, or any editor if none is focused
-    let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
-    if (!editor) {
-      // If no editor is focused, find the closest one (might be in same component)
-      const allEditors = document.querySelectorAll('[contenteditable="true"]');
-      editor = Array.from(allEditors).find(el => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          return el.contains(range.commonAncestorContainer);
-        }
-        return false;
-      }) as HTMLElement || (allEditors[0] as HTMLElement);
+  const handleBoldClick = onBold || (() => execCommandOnEditor('bold'));
+  const handleItalicClick = onItalic || (() => execCommandOnEditor('italic'));
+  const handleUnderlineClick = onUnderline || (() => execCommandOnEditor('underline'));
+  const handleStrikethroughClick = onStrikethrough || (() => execCommandOnEditor('strikeThrough'));
+  const handleAlignLeft = onAlign ? () => onAlign('left') : () => execCommandOnEditor('justifyLeft');
+  const handleAlignCenter = onAlign ? () => onAlign('center') : () => execCommandOnEditor('justifyCenter');
+  const handleAlignRight = onAlign ? () => onAlign('right') : () => execCommandOnEditor('justifyRight');
+  const handleOrderedListClick = onOrderedList || (() => execCommandOnEditor('insertOrderedList'));
+  const handleBlockquoteClick = onBlockquote || (() => execCommandOnEditor('formatBlock', 'blockquote'));
+  const handleHorizontalRuleClick = onHorizontalRule || (() => execCommandOnEditor('insertHorizontalRule'));
+  const handleFontSize = onFontSize || ((size: string) => execCommandOnEditor('fontSize', size));
+  const handleTextColor = onTextColor || ((color: string) => execCommandOnEditor('foreColor', color));
+
+  const handleHeadingClick = (level: 1 | 2 | 3) => {
+    if (onHeading) {
+      onHeading(level);
+    } else {
+      execCommandOnEditor('formatBlock', `h${level}`);
     }
+  };
 
-    if (editor) {
-      // Preserve selection before focusing
-      const selection = window.getSelection();
-      let savedRange: Range | null = null;
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (editor.contains(range.commonAncestorContainer)) {
-          savedRange = range.cloneRange();
-        }
-      }
-
-      editor.focus();
-
-      // Restore selection
-      if (savedRange && selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedRange);
-      } else if (!savedRange && selection) {
-        // No valid selection, create one at end
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-
-      // Apply formatting
-      requestAnimationFrame(() => {
-        document.execCommand('bold', false, null);
-      });
-    }
-  });
-  const handleItalicClick = onItalic || (() => {
-    // Try to find the focused editor, or any editor if none is focused
-    let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
-    if (!editor) {
-      const allEditors = document.querySelectorAll('[contenteditable="true"]');
-      editor = Array.from(allEditors).find(el => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          return el.contains(range.commonAncestorContainer);
-        }
-        return false;
-      }) as HTMLElement || (allEditors[0] as HTMLElement);
-    }
-
-    if (editor) {
-      const selection = window.getSelection();
-      let savedRange: Range | null = null;
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (editor.contains(range.commonAncestorContainer)) {
-          savedRange = range.cloneRange();
-        }
-      }
-
-      editor.focus();
-
-      if (savedRange && selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedRange);
-      } else if (!savedRange && selection) {
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-
-      requestAnimationFrame(() => {
-        document.execCommand('italic', false, null);
-      });
-    }
-  });
-  const handleUnderlineClick = onUnderline || (() => {
-    // Try to find the focused editor, or any editor if none is focused
-    let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
-    if (!editor) {
-      const allEditors = document.querySelectorAll('[contenteditable="true"]');
-      editor = Array.from(allEditors).find(el => {
-        const selection = window.getSelection();
-        if (selection && selection.rangeCount > 0) {
-          const range = selection.getRangeAt(0);
-          return el.contains(range.commonAncestorContainer);
-        }
-        return false;
-      }) as HTMLElement || (allEditors[0] as HTMLElement);
-    }
-
-    if (editor) {
-      const selection = window.getSelection();
-      let savedRange: Range | null = null;
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (editor.contains(range.commonAncestorContainer)) {
-          savedRange = range.cloneRange();
-        }
-      }
-
-      editor.focus();
-
-      if (savedRange && selection) {
-        selection.removeAllRanges();
-        selection.addRange(savedRange);
-      } else if (!savedRange && selection) {
-        const range = document.createRange();
-        range.selectNodeContents(editor);
-        range.collapse(false);
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-
-      requestAnimationFrame(() => {
-        document.execCommand('underline', false, null);
-      });
-    }
-  });
   const handleBulletListClick = onBulletList || (() => {
-    // Try to find the focused editor, or any editor if none is focused
     let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
     if (!editor) {
       const allEditors = document.querySelectorAll('[contenteditable="true"]');
@@ -214,7 +287,6 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
     }
 
     if (editor) {
-      // Preserve selection before focusing
       const selection = window.getSelection();
       let savedRange: Range | null = null;
       if (selection && selection.rangeCount > 0) {
@@ -226,12 +298,10 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
 
       editor.focus();
 
-      // Restore selection
       if (savedRange && selection) {
         selection.removeAllRanges();
         selection.addRange(savedRange);
       } else if (!savedRange && selection) {
-        // No valid selection, create one at end
         const range = document.createRange();
         range.selectNodeContents(editor);
         range.collapse(false);
@@ -239,9 +309,7 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
         selection.addRange(range);
       }
 
-      // Apply bullet list formatting
       requestAnimationFrame(() => {
-        // Check if we're in a list already
         const currentSelection = window.getSelection();
         if (currentSelection && currentSelection.rangeCount > 0) {
           const range = currentSelection.getRangeAt(0);
@@ -251,13 +319,10 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
             : (container as Element).closest('li');
 
           if (listItem && listItem.parentElement?.tagName === 'UL') {
-            // Remove bullet list
             document.execCommand('insertUnorderedList', false, null);
           } else {
-            // Add bullet list - check if we have selected text
             const selectedText = range.toString();
             if (selectedText.trim()) {
-              // Has selection: split by periods and create list
               const sentences = selectedText.split(/\.\s*/).filter(s => s.trim());
               if (sentences.length > 0) {
                 range.deleteContents();
@@ -284,7 +349,6 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
                 document.execCommand('insertUnorderedList', false, null);
               }
             } else {
-              // No selection: use default behavior
               document.execCommand('insertUnorderedList', false, null);
             }
           }
@@ -294,112 +358,216 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
       });
     }
   });
+
+  const handleLinkClick = onLink || (() => {
+    const url = prompt('Enter URL:');
+    if (url) {
+      execCommandOnEditor('createLink', url);
+    }
+  });
+
+  const handleUnlinkClick = onUnlink || (() => execCommandOnEditor('unlink'));
+
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5 flex-wrap">
+      {/* Undo / Redo */}
       <button
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleBoldClick();
-        }}
-        className={`p-1 hover:opacity-70 transition-opacity ${currentFormatState.bold ? 'opacity-100' : 'opacity-60'
-          }`}
-        title="Bold"
+        onClick={onUndo || (() => execCommandOnEditor('undo'))}
+        disabled={undoStack ? undoStack.length === 0 : false}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Undo (Ctrl+Z)"
       >
-        <Bold size={16} className="text-[color:var(--text-secondary)]" />
+        <Undo2 size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onClick={onRedo || (() => execCommandOnEditor('redo'))}
+        disabled={redoStack ? redoStack.length === 0 : false}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+        title="Redo (Ctrl+Shift+Z)"
+      >
+        <Redo2 size={15} className="text-[color:var(--text-secondary)]" />
       </button>
 
+      <div className="w-px h-5 bg-[var(--border-primary)] mx-1" />
+
+      {/* Text Style: Bold, Italic, Underline, Strikethrough */}
       <button
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleItalicClick();
-        }}
-        className={`p-1 hover:opacity-70 transition-opacity ${currentFormatState.italic ? 'opacity-100' : 'opacity-60'
-          }`}
-        title="Italic"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleBoldClick}
+        className={`p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors ${currentFormatState.bold ? 'bg-[var(--bg-tertiary)] opacity-100' : 'opacity-60'}`}
+        title="Bold (Ctrl+B)"
       >
-        <Italic size={16} className="text-[color:var(--text-secondary)]" />
+        <Bold size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleItalicClick}
+        className={`p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors ${currentFormatState.italic ? 'bg-[var(--bg-tertiary)] opacity-100' : 'opacity-60'}`}
+        title="Italic (Ctrl+I)"
+      >
+        <Italic size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleUnderlineClick}
+        className={`p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors ${currentFormatState.underline ? 'bg-[var(--bg-tertiary)] opacity-100' : 'opacity-60'}`}
+        title="Underline (Ctrl+U)"
+      >
+        <Underline size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleStrikethroughClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Strikethrough"
+      >
+        <Strikethrough size={15} className="text-[color:var(--text-secondary)]" />
       </button>
 
+      <div className="w-px h-5 bg-[var(--border-primary)] mx-1" />
+
+      {/* Headings */}
       <button
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleUnderlineClick();
-        }}
-        className={`p-1 hover:opacity-70 transition-opacity ${currentFormatState.underline ? 'opacity-100' : 'opacity-60'
-          }`}
-        title="Underline"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => handleHeadingClick(1)}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Heading 1"
       >
-        <Underline size={16} className="text-[color:var(--text-secondary)]" />
+        <Heading1 size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => handleHeadingClick(2)}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Heading 2"
+      >
+        <Heading2 size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => handleHeadingClick(3)}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Heading 3"
+      >
+        <Heading3 size={15} className="text-[color:var(--text-secondary)]" />
       </button>
 
-      <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
+      <div className="w-px h-5 bg-[var(--border-primary)] mx-1" />
 
+      {/* Text Alignment */}
       <button
         type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          handleBulletListClick();
-        }}
-        onMouseDown={(e) => {
-          // Prevent losing focus when clicking the button
-          e.preventDefault();
-        }}
-        className="p-1 hover:opacity-70 transition-opacity opacity-60"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleAlignLeft}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Align Left"
+      >
+        <AlignLeft size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleAlignCenter}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Align Center"
+      >
+        <AlignCenter size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleAlignRight}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Align Right"
+      >
+        <AlignRight size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+
+      <div className="w-px h-5 bg-[var(--border-primary)] mx-1" />
+
+      {/* Lists */}
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleBulletListClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
         title="Bullet List"
       >
-        <List size={16} className="text-[color:var(--text-secondary)]" />
+        <List size={15} className="text-[color:var(--text-secondary)]" />
       </button>
-
-      <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
-
       <button
         type="button"
-        onClick={onUndo || (() => {
-          const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
-          if (editor) {
-            editor.focus();
-            document.execCommand('undo', false);
-          }
-        })}
-        disabled={undoStack ? undoStack.length === 0 : false}
-        className="p-1 hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed opacity-60"
-        title="Undo"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleOrderedListClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Numbered List"
       >
-        <Undo2 size={16} className="text-[color:var(--text-secondary)]" />
+        <ListOrdered size={15} className="text-[color:var(--text-secondary)]" />
       </button>
-
       <button
         type="button"
-        onClick={onRedo || (() => {
-          const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
-          if (editor) {
-            editor.focus();
-            document.execCommand('redo', false);
-          }
-        })}
-        disabled={redoStack ? redoStack.length === 0 : false}
-        className="p-1 hover:opacity-70 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed opacity-60"
-        title="Redo"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleBlockquoteClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Blockquote"
       >
-        <Redo2 size={16} className="text-[color:var(--text-secondary)]" />
+        <Quote size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleHorizontalRuleClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Horizontal Line"
+      >
+        <Minus size={15} className="text-[color:var(--text-secondary)]" />
       </button>
 
-      <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
+      <div className="w-px h-5 bg-[var(--border-primary)] mx-1" />
 
-      {/* Fix Formatting Button */}
+      {/* Font Size */}
+      <FontSizeDropdown onSelect={handleFontSize} />
+
+      {/* Text Color */}
+      <TextColorPicker onSelect={handleTextColor} />
+
+      {/* Link */}
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleLinkClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Insert Link"
+      >
+        <Link2 size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={handleUnlinkClick}
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
+        title="Remove Link"
+      >
+        <Unlink size={15} className="text-[color:var(--text-secondary)]" />
+      </button>
+
+      <div className="w-px h-5 bg-[var(--border-primary)] mx-1" />
+
+      {/* Fix Formatting */}
       <button
         type="button"
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          // Find the focused editor or any editor with selection
           let editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
           if (!editor) {
             const allEditors = document.querySelectorAll('[contenteditable="true"]');
@@ -413,40 +581,34 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
             }) as HTMLElement || (allEditors[0] as HTMLElement);
           }
           if (editor) {
-            // Get current content and fix formatting
             const currentContent = editor.innerHTML;
             const fixedContent = fixFormattingToBullets(currentContent);
             editor.innerHTML = fixedContent;
-            // Trigger input event to update the value in React state
             editor.dispatchEvent(new Event('input', { bubbles: true }));
           }
         }}
         onMouseDown={(e) => e.preventDefault()}
-        className="p-1 hover:opacity-70 transition-opacity opacity-60"
+        className="p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60"
         title="Fix Formatting - Clean up text into bullet points"
       >
-        <WandSparkles size={16} className="text-[color:var(--text-secondary)]" />
+        <WandSparkles size={15} className="text-[color:var(--text-secondary)]" />
       </button>
 
+      {/* AI Button */}
       {showAIButton && (
-        <>
-          <div className="w-px h-4 bg-[var(--border-primary)] mx-0.5" />
-          <button
-            type="button"
-            onClick={onAISuggestions || onAIGenerate}
-            disabled={isGenerating}
-            className={`p-1 hover:opacity-70 transition-opacity opacity-60 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            title="AI: Generate 4 writing method suggestions"
-          >
-            <Sparkles
-              size={16}
-              className={`text-[color:var(--text-secondary)] ${isGenerating ? 'animate-pulse' : ''}`}
-            />
-          </button>
-        </>
+        <button
+          type="button"
+          onClick={onAISuggestions || onAIGenerate}
+          disabled={isGenerating}
+          className={`p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          title="AI: Generate writing suggestions"
+        >
+          <Sparkles
+            size={15}
+            className={`text-[color:var(--text-secondary)] ${isGenerating ? 'animate-pulse' : ''}`}
+          />
+        </button>
       )}
     </div>
   );
 };
-
