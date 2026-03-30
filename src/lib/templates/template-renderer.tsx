@@ -4,6 +4,7 @@ import { ITemplate } from '@/types/template';
 import { ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
 import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
+import { generateEnforcedCSS } from './shared-layout-css';
 import * as CustomTemplates from './custom-renderers';
 
 // Component registry for dynamic section rendering
@@ -157,7 +158,13 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 
     // For custom renderers, pass full cvData and let CSS handle natural page breaks
     // Don't filter by enabledSections - let content flow naturally across pages
-    return <CustomTemplateComponent cvData={cvData} className={className} />;
+    const enforcedCSS = generateEnforcedCSS();
+    return (
+      <>
+        <style dangerouslySetInnerHTML={{ __html: enforcedCSS }} />
+        <CustomTemplateComponent cvData={cvData} className={className} />
+      </>
+    );
   } else if (customRenderer) {
     console.error('❌ TemplateRenderer - Custom renderer not found:', {
       customRenderer,

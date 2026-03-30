@@ -943,111 +943,62 @@ export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-5rem)] bg-[#1A201A]">
-      <div className="flex flex-1 overflow-hidden">
-        {/* Fixed Sidebar - Always visible with proper width */}
-        <div className="w-64 flex-shrink-0 p-4 transition-all duration-300 ease-in-out">
-          <div className="bg-[#222B22] rounded-2xl border border-white/10 h-full flex flex-col shadow-xl">
-            {/* Sidebar Header with Step Info */}
-            <div className="p-6 border-b border-white/10">
-              <div className="text-center mb-4">
-                <div className="text-[#80FF00] font-bold text-lg mb-1">Step 2 of 3</div>
-                <div className="text-xl font-bold text-gray-900 dark:text-white mb-2">Details Sections</div>
-                <div className="text-white/70 text-sm leading-relaxed">
-                  Review and edit your CV sections.<br />
-                  Click on a section title to navigate.
-                </div>
-              </div>
-            </div>
+    <div className="flex flex-col min-h-screen bg-[#1A201A]">
+      <div className="flex-1 overflow-y-auto relative">
+        <div className="max-w-4xl mx-auto p-6">
+          {/* Add Section Button */}
+          <div className="mb-6">
+            <button
+              onClick={() => setShowAddSectionModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#80FF00]/20 text-[#80FF00] hover:bg-[#80FF00]/30 transition-colors rounded-lg"
+            >
+              <Plus size={18} />
+              <span className="font-medium text-sm">Add Section</span>
+            </button>
+          </div>
 
-            {/* Section Navigation - Using visible sections from selector */}
-            <div className="flex-1 p-4 space-y-2 overflow-y-auto">
-              {sidebarSections.map((section) => {
-                const IconComponent = section.icon;
-                const isActive = state.activeSection === section.id;
+          {/* Dynamic Sections - Using visible sections from selector */}
+          {sidebarSections.map((section, index) => renderSection(section, index))}
 
-                return (
-                  <motion.button
-                    key={section.id}
-                    onClick={() => {
-                      dispatch({ type: 'SET_ACTIVE_SECTION', payload: section.id });
-                      scrollToSection(section.id);
-                    }}
-                    className={`w-full flex items-center justify-start gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${isActive
-                      ? 'bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black shadow-lg'
-                      : 'text-white/70 hover:text-white hover:bg-white/5'
-                      }`}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    title={section.title}
-                  >
-                    {React.createElement(IconComponent, { size: 18 })}
-                    <span className="font-medium text-sm">{section.title}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
-
-            {/* Sidebar Footer */}
-            <div className="p-4 border-t border-white/10">
-              <button
-                onClick={() => setShowAddSectionModal(true)}
-                className="w-full flex items-center justify-start gap-3 px-4 py-3 text-[#80FF00] hover:text-[#70e600] transition-colors rounded-xl hover:bg-white/5"
-                title="Add New Section"
-              >
-                <Plus size={18} />
-                <span className="font-medium text-sm">Add New Section</span>
-              </button>
-            </div>
+          {/* Bottom Navigation */}
+          <div className="flex items-center justify-start mt-12 pt-8 border-t border-white/10">
+            <motion.button
+              onClick={onBack}
+              className="flex items-center gap-2 px-6 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <ArrowLeft size={20} />
+              Previous: Enter Details
+            </motion.button>
           </div>
         </div>
 
-        {/* Main Content Area - Constrained width to allow more space for CV Surgeon */}
-        <div className="flex-1 overflow-y-auto relative">
-          <div className="max-w-4xl mx-auto">
-            {/* Dynamic Sections - Using visible sections from selector */}
-            {sidebarSections.map((section, index) => renderSection(section, index))}
-
-            {/* Bottom Navigation */}
-            <div className="flex items-center justify-start mt-12 pt-8 border-t border-white/10">
-              <motion.button
-                onClick={onBack}
-                className="flex items-center gap-2 px-6 py-3 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <ArrowLeft size={20} />
-                Previous: Enter Details
-              </motion.button>
-            </div>
+        {/* Finish & Save CV Button - Sticky button centered to form for unauth route OR auth route with no master CV (creating new) */}
+        {(!authStatus || authStatus !== 'authenticated' || !isEditingMasterCV) && (
+          <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
+            <button
+              onClick={handleSaveMasterCV}
+              className="bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:from-[#70e600] hover:to-[#60d600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
+            >
+              Finish & Save CV
+              <ArrowRight size={16} />
+            </button>
           </div>
+        )}
 
-          {/* Finish & Save CV Button - Sticky button centered to form for unauth route OR auth route with no master CV (creating new) */}
-          {(!authStatus || authStatus !== 'authenticated' || !isEditingMasterCV) && (
-            <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
-              <button
-                onClick={handleSaveMasterCV}
-                className="bg-gradient-to-r from-[#80FF00] to-[#70e600] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:from-[#70e600] hover:to-[#60d600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
-              >
-                Finish & Save CV
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          )}
-
-          {/* Update Master CV Button - Sticky button centered to form for auth route with master CV edit/update */}
-          {authStatus === 'authenticated' && isEditingMasterCV && (
-            <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
-              <button
-                onClick={handleSaveMasterCV}
-                className="bg-[#80FF00] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#70e600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
-              >
-                Update Master CV
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          )}
-        </div>
+        {/* Update Master CV Button - Sticky button centered to form for auth route with master CV edit/update */}
+        {authStatus === 'authenticated' && isEditingMasterCV && (
+          <div className="sticky bottom-4 flex justify-center p-6 pointer-events-none">
+            <button
+              onClick={handleSaveMasterCV}
+              className="bg-[#80FF00] text-black px-6 py-2.5 rounded-lg font-semibold text-sm hover:bg-[#70e600] transition-colors flex items-center justify-center gap-2 shadow-lg pointer-events-auto"
+            >
+              Update Master CV
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        )}
       </div>
 
 

@@ -9,6 +9,8 @@ interface SmartContextCardProps {
     onFix: (issue: Issue) => void;
     onDismiss: (issueId: string) => void;
     onAiAssist?: (issue: Issue) => void;
+    /** Called when an issue is hovered — for highlighting affected text in preview */
+    onIssueHover?: (issue: Issue | null) => void;
     activeSection?: string;
     // New props for context warning
     onSetRole?: () => void;
@@ -21,6 +23,7 @@ export default function SmartContextCard({
     onFix,
     onDismiss,
     onAiAssist,
+    onIssueHover,
     activeSection,
     onSetRole,
     onAddJD,
@@ -90,13 +93,17 @@ export default function SmartContextCard({
                 <AnimatePresence mode="popLayout">
                     {displayIssues.length > 0 ? (
                         displayIssues.map((issue) => (
-                            <ContextTipItem
-                                key={issue.id}
-                                issue={issue}
-                                onFix={onFix}
-                                onDismiss={onDismiss}
-                                onAiAssist={onAiAssist}
-                            />
+                            <div key={issue.id}
+                                onMouseEnter={() => onIssueHover?.(issue)}
+                                onMouseLeave={() => onIssueHover?.(null)}
+                            >
+                                <ContextTipItem
+                                    issue={issue}
+                                    onFix={onFix}
+                                    onDismiss={onDismiss}
+                                    onAiAssist={onAiAssist}
+                                />
+                            </div>
                         ))
                     ) : (
                         <motion.div

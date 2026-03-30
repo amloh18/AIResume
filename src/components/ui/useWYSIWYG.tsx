@@ -451,7 +451,8 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
     handleUndo,
     handleRedo,
     undoStack,
-    redoStack
+    redoStack,
+    applyFormatting,
   };
 }
 

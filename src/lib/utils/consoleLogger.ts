@@ -137,59 +137,68 @@ class ConsoleLogger {
   }
 
   private handleLog(level: ConsoleLogEntry['level'], args: any[]) {
-    // Skip logging if args contain Event objects or problematic empty objects
-    const hasEventObject = args.some(arg => 
-      arg && typeof arg === 'object' && 
-      (arg instanceof Event || ('target' in arg && 'preventDefault' in arg))
-    );
-    
-    const hasEmptyObject = args.some(arg => {
-      if (!arg || typeof arg !== 'object') return false;
-      try {
-        const keys = Object.keys(arg);
-        const ownProps = Object.getOwnPropertyNames(arg);
-        return keys.length === 0 && ownProps.length === 0 &&
-          Object.getPrototypeOf(arg) === Object.prototype;
-      } catch {
-        return false;
+    try {
+      if (!args || !Array.isArray(args)) return;
+
+      // Skip logging if args contain Event objects or problematic empty objects
+      const hasEventObject = args.some(arg => 
+        arg && typeof arg === 'object' && 
+        (arg instanceof Event || ('target' in arg && 'preventDefault' in arg))
+      );
+      
+      const hasEmptyObject = args.some(arg => {
+        if (!arg || typeof arg !== 'object') return false;
+        try {
+          const keys = Object.keys(arg);
+          const ownProps = Object.getOwnPropertyNames(arg);
+          return keys.length === 0 && ownProps.length === 0 &&
+            Object.getPrototypeOf(arg) === Object.prototype;
+        } catch {
+          return false;
+        }
+      });
+      
+      // If we have problematic objects, skip our custom logging but still call original console
+      if (hasEventObject || hasEmptyObject) {
+        return; // Original console already called in the wrapper
       }
-    });
-    
-    // If we have problematic objects, skip our custom logging but still call original console
-    if (hasEventObject || hasEmptyObject) {
-      return; // Original console already called in the wrapper
-    }
-    
-    const message = this.formatMessage(args);
-    const entry: ConsoleLogEntry = {
-      level,
-      message,
-      timestamp: new Date(),
-      data: args.length > 1 ? args.slice(1) : undefined,
-    };
+      
+      const message = this.formatMessage(args);
+      const entry: ConsoleLogEntry = {
+        level,
+        message,
+        timestamp: new Date(),
+        data: args.length > 1 ? args.slice(1) : undefined,
+      };
 
-    // Determine if we should show toast or inline message based on current page
-    const currentPath = window.location.pathname;
-    const isAuthPage = currentPath.includes('/sign-in') || 
-                      currentPath.includes('/sign-up') || 
-                      currentPath.includes('/reset-password') ||
-                      currentPath.includes('/auth/');
-    
-    const isDashboardOrStudio = currentPath.includes('/dashboard') || 
-                               currentPath.includes('/studio') ||
-                               currentPath.includes('/canvas');
+      // Determine if we should show toast or inline message based on current page
+      const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+      const isAuthPage = currentPath.includes('/sign-in') || 
+                        currentPath.includes('/sign-up') || 
+                        currentPath.includes('/reset-password') ||
+                        currentPath.includes('/auth/');
+      
+      const isDashboardOrStudio = currentPath.includes('/dashboard') || 
+                                 currentPath.includes('/studio') ||
+                                 currentPath.includes('/canvas');
 
-    // Only show user-relevant messages as notifications
-    const shouldShowAsNotification = this.shouldShowAsNotification(entry);
+      // Only show user-relevant messages as notifications
+      const shouldShowAsNotification = this.shouldShowAsNotification(entry);
 
-    // Show toast notifications for dashboard and studio pages (only user-relevant messages)
-    if (isDashboardOrStudio && this.notificationCallback && shouldShowAsNotification) {
-      this.notificationCallback(entry);
-    }
-    
-    // Show inline messages for auth pages (only user-relevant messages)
-    if (isAuthPage && this.inlineMessageCallback && shouldShowAsNotification) {
-      this.inlineMessageCallback(entry);
+      // Show toast notifications for dashboard and studio pages (only user-relevant messages)
+      if (typeof window !== 'undefined' && isDashboardOrStudio && this.notificationCallback && shouldShowAsNotification) {
+        this.notificationCallback(entry);
+      }
+      
+      // Show inline messages for auth pages (only user-relevant messages)
+      if (typeof window !== 'undefined' && isAuthPage && this.inlineMessageCallback && shouldShowAsNotification) {
+        this.inlineMessageCallback(entry);
+      }
+    } catch (e) {
+      // Fail silently to avoid recursion/crashing
+      if (this.originalConsole && this.originalConsole.warn) {
+        this.originalConsole.warn('ConsoleLogger failed to process log safely:', e);
+      }
     }
   }
 

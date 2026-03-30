@@ -206,6 +206,19 @@ export class CentralScoreManager {
         keywordAnalysis?: KeywordGapAnalysisResult | null,
         atsScoreCap: number = 100
     ): ScoreResult {
+        // Null guard
+        if (!cvData) {
+            return {
+                cvScore: {
+                    completeness: 0, impactVerbs: 0, quantification: 0, formatting: 0, readability: 0,
+                    total: 0, rawTotal: 0, validityMultiplier: 1.0, penaltyReasons: []
+                },
+                overallGrade: 'F',
+                issues: [],
+                recommendations: ['Add resume data to see your score']
+            };
+        }
+
         // Calculate Core CV Score (Human/Master Factors)
         const cvScore = this.calculateCVScore(cvData);
 
@@ -252,6 +265,13 @@ export class CentralScoreManager {
 
     // 1. Human / Master CV Score
     public calculateCVScore(cvData: UnifiedCVDataStructure): CVScoreBreakdown {
+        if (!cvData) {
+            return {
+                completeness: 0, impactVerbs: 0, quantification: 0, formatting: 0, readability: 0,
+                total: 0, rawTotal: 0, validityMultiplier: 1.0, penaltyReasons: []
+            };
+        }
+
         const completeness = this.calculateCompletenessScore(cvData);
         const impactVerbs = this.calculateImpactVerbsScore(cvData);
         const quantification = this.calculateQuantificationScore(cvData);
@@ -283,6 +303,13 @@ export class CentralScoreManager {
         keywordAnalysis: KeywordGapAnalysisResult | null,
         atsScoreCap: number = 100
     ): ATSScoreBreakdown {
+        if (!cvData) {
+            return {
+                keywordMatch: 0, formatting: 0, sectionAlignment: 0, recency: 0, contactability: 0,
+                total: 0, rawTotal: 0, parsabilityMultiplier: 1.0, context: 'industry-general'
+            };
+        }
+
         let keywordMatch: number;
         let actualContext: 'jd-specific' | 'industry-general';
 
@@ -326,10 +353,12 @@ export class CentralScoreManager {
     // --- Private Helper Methods ---
 
     private getWordCount(cvData: UnifiedCVDataStructure): number {
+        if (!cvData) return 0;
         return JSON.stringify(cvData).split(/\s+/).length;
     }
 
     private getAllText(cvData: UnifiedCVDataStructure): string {
+        if (!cvData) return '';
         const parts: string[] = [];
         if (cvData.basics?.summary) parts.push(cvData.basics.summary);
         if (cvData.work) {

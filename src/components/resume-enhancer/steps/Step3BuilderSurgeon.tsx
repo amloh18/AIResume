@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef } from 'react';
+import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, useMemo, useCallback } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import {
   Sparkles,
-  Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle
+  Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X
 } from 'lucide-react';
 
 // Import CV Builder form components
@@ -14,7 +14,8 @@ import {
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
-import CVPreviewContent, { ViewMode } from '@/components/cv-preview/CVPreviewContent';
+import { BuilderPreview } from '@/components/preview/BuilderPreview';
+import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
 import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { AnimatedScore } from '@/components/ui/AnimatedScore';
@@ -24,21 +25,20 @@ import { useATS } from '@/contexts/ATSContext';
 import { CVSurgeonService, SurgicalFix } from '@/lib/services/cv-surgeon-service';
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
-import AnalysisModeBadge from '@/components/resume-enhancer/components/AnalysisModeBadge';
-import toast from 'react-hot-toast';
-import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
-import { ScorecardPanel, KeywordMatchPanel, type ATSResult } from '@/components/resume-enhancer/panels';
-import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
-import FloatingPulsePill from '@/components/resume-enhancer/FloatingPulsePill';
-import RecruiterModeOverlay from '@/components/resume-enhancer/overlays/RecruiterModeOverlay';
+import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
 import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/RecruiterModePanel';
 import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
+import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
+import toast from 'react-hot-toast';
+import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
+import FloatingPulsePill from '@/components/resume-enhancer/FloatingPulsePill';
 import AddSectionModal from '@/components/resume-enhancer/AddSectionModal';
+import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ITemplate } from '@/types/template';
+import { gsap } from 'gsap';
 
-// Drag-and-drop components for canvas-based editing
-import { CVPreviewDragContext } from '@/components/resume-enhancer/dnd';
-import type { CVSectionStructure } from '@/types/unified-cv-schema';
-import { calculateOptimalColumnDistribution } from '@/services/sectionRebalancer';
+type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
 
 
 
@@ -54,6 +54,8 @@ export interface Step3BuilderSurgeonRef {
   addNewSection: (sectionId: string) => void;
   handleDeleteSectionFromSidebar: (sectionId: string) => void;
   handleSectionReorder: (sectionIds: string[]) => void;
+  openAddSection: () => void;
+  openTemplateSelector: () => void;
   activeSection: string;
 }
 
@@ -61,7 +63,7 @@ export interface Step3BuilderSurgeonRef {
 
 const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurgeonProps>(
   ({ onComplete, onActiveSectionChange }, ref) => {
-    const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo } = useResumeEnhancer();
+    const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap } = useResumeEnhancer();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -70,45 +72,53 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [showAddSectionModal, setShowAddSectionModal] = useState(false);
-    const [totalPages, setTotalPages] = useState(1); // Added totalPages state
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
+    const templateModalRef = useRef<HTMLDivElement>(null);
+    const templateModalContentRef = useRef<HTMLDivElement>(null);
+    const [totalPages, setTotalPages] = useState(1);
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
+    const sidePanelRef = useRef<HTMLDivElement>(null);
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
     const [editorPosition, setEditorPosition] = useState<{ top: number; left: number; height: number; alignment: 'left' | 'right' } | null>(null);
 
-    // Layout Controls State
-    // const [showRightPanel, setShowRightPanel] = useState(true); // Removed right panel logic
-    const [zoomLevel, setZoomLevel] = useState(1);
     const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
-    const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4'); // A4 or US Letter
+    const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4');
+    const [highlightedField, setHighlightedField] = useState<string | null>(null);
 
-    // Mode-specific feature states
-    const [recruiterFeatures, setRecruiterFeatures] = useState<RecruiterFeatures>({
-      heatmap: true,
-      impactHighlighting: true,
-      redFlags: true,
-      speedRead: false,
-    });
-    const [atsFeatures, setATSFeatures] = useState<ATSFeatures>({
-      plainText: true,
-      keywordHeatmap: true,
-      parsingConfidence: true,
-    });
-
-    const handleZoomIn = () => setZoomLevel(prev => Math.min(prev + 0.1, 2));
-    const handleZoomOut = () => setZoomLevel(prev => Math.max(prev - 0.1, 0.5));
+    // CV Layout Validation — runs whenever cvData changes
+    const validationResult = useMemo(() => {
+      if (!state.cvData) return null;
+      return validateCVPreview(state.cvData);
+    }, [state.cvData]);
 
     const handleViewModeChange = (mode: ViewMode) => {
       setViewMode(mode);
-      const descriptions = {
-        edit: 'Edit Mode: Interactive builder active',
-        recruiter: 'Recruiter Mode: Clean, human-readable view',
-        ats: 'ATS Mode: Machine vision simulation'
-      };
-      toast(descriptions[mode] || `Switched to ${mode} mode`, { icon: mode === 'ats' ? '🤖' : mode === 'edit' ? '✏️' : '👁️' });
     };
+
+    const handleTemplateSelect = (template: ITemplate) => {
+      setTemplate(template);
+      dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: template });
+      setShowTemplateModal(false);
+    };
+
+    // GSAP template modal animation
+    useEffect(() => {
+      if (!showTemplateModal || !templateModalRef.current || !templateModalContentRef.current) return;
+
+      const tl = gsap.timeline();
+      tl.fromTo(templateModalRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.3, ease: 'power2.out' }
+      );
+      tl.fromTo(templateModalContentRef.current,
+        { scale: 0.95, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.1)' },
+        '-=0.15'
+      );
+    }, [showTemplateModal]);
 
     // Listen for openSectionEditor event from SmartContextCard Fix Now button
     useEffect(() => {
@@ -961,27 +971,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       toast.success('Sections reordered');
     };
 
-    // Reorder sections handler for CVPreviewDragContext (accepts full CVSectionStructure array)
-    const handleDragContextReorder = (newSections: CVSectionStructure[]) => {
-      console.log('Canvas drag reorder:', newSections.map(s => s.type));
-
-      if (!state.cvData.structure) {
-        console.warn('No structure found in CV data');
-        return;
-      }
-
-      // Update structure with the new order
-      dispatch({
-        type: 'SET_CV_DATA',
-        payload: {
-          ...state.cvData,
-          structure: { ...state.cvData.structure, sections: newSections }
-        }
-      });
-
-      toast.success('Sections reordered');
-    };
-
 
     // Expose functions to parent via ref
     useImperativeHandle(ref, () => ({
@@ -990,186 +979,102 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       addNewSection,
       handleDeleteSectionFromSidebar,
       handleSectionReorder,
+      openAddSection: () => setShowAddSectionModal(true),
+      openTemplateSelector: () => setShowTemplateModal(true),
       activeSection: 'personal'
     }));
 
 
 
+    if (!state.cvData) {
+      return (
+        <div className="flex flex-col h-[calc(100vh-64px)] items-center justify-center bg-gray-50 dark:bg-[#1a230f]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-500 dark:text-gray-400 font-medium">Initializing Builder...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
-        {/* View Mode Toggle Header - REMOVED per user request */}
-
-        {/* Floating Control Pill */}
-        <FloatingPulsePill
-          atsResult={atsAnalysis ? {
-            ...atsAnalysis,
-            // Ensure ScorecardPanel receives the keywords in the expected 'details' structure
-            details: {
-              matchedKeywords: atsAnalysis.matchedKeywords || [],
-              missingKeywords: atsAnalysis.missingKeywords || [],
-              experienceYears: 0,
-              educationLevel: '',
-              formatIssues: []
-            }
-          } : undefined}
-          isLoading={isAnalyzing}
-          analysisMode={analysisModeInfo.mode}
-          className="absolute top-0 right-3 z-50 transition-all duration-300 ease-in-out"
-          isSidebarOpen={false} // Sidebar removed
-          onToggleSidebar={() => dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay })} // Toggle overlay instead
-          onFixATS={() => handleRunAnalysis()}
-          onOpenReport={() => {
-            // Placeholder: Open full report or modal if implemented
-            console.log("Open Report Clicked");
-          }}
-          viewMode={viewMode}
-          onViewModeChange={handleViewModeChange}
-          onAddKeyword={handleAddKeyword}
-          onApplyFix={applyAnnotation}
-        />
-
-        {/* Main Container - Always Optimisation/Report View */}
-        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 -mt-1">
-          {/* LEFT PANEL: CV Preview */}
+        {/* Main Container */}
+        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3">
+          {/* CV Preview — pill is rendered inside the toolbar */}
           <div className="flex-1 min-h-0 relative flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-            {/* Preview Header with Controls - matching Step 4 */}
-            <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between border-b border-gray-200 dark:border-white/10">
-              {/* Left side: Page info and zoom controls */}
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
-                  <Eye className="w-3.5 h-3.5" />
-                  {/* A4 / US Letter Toggle */}
-                  <div className="flex items-center bg-[var(--bg-tertiary)] rounded-full p-0.5">
-                    <button
-                      onClick={() => setPageFormat('a4')}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'a4'
-                        ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
-                        : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
-                        }`}
-                    >
-                      A4
-                    </button>
-                    <button
-                      onClick={() => setPageFormat('letter')}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${pageFormat === 'letter'
-                        ? 'bg-lime-500/20 text-lime-600 dark:text-lime-400'
-                        : 'text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]'
-                        }`}
-                    >
-                      Letter
-                    </button>
-                  </div>
-                  <span className="text-[color:var(--text-muted)]">•</span>
-                  <span>{totalPages} {totalPages > 1 ? 'Pages' : 'Page'}</span>
-                </div>
-                <div className="h-4 w-px bg-black/10 dark:bg-white/10" />
-                <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
-                  <span>Zoom: {Math.round(zoomLevel * 100)}%</span>
-                </div>
-                <div className="flex space-x-1">
-                  <button
-                    onClick={handleZoomOut}
-                    className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs shadow-sm shadow-black/10 dark:shadow-black/30"
-                  >
-                    <ZoomOut className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={handleZoomIn}
-                    className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs shadow-sm shadow-black/10 dark:shadow-black/30"
-                  >
-                    <ZoomIn className="w-3 h-3" />
-                  </button>
-                </div>
-                {/* Add Section Button */}
-                <div className="h-4 w-px bg-black/10 dark:bg-white/10 mx-2" />
-                <button
-                  onClick={() => setShowAddSectionModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium shadow-sm shadow-black/10 dark:shadow-black/30 transition-all duration-200 hover:-translate-y-0.5"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>Add section</span>
-                </button>
-
-                {/* Auto-Arrange Sections Button (only for two-column templates) */}
-                {state.selectedTemplate?.layoutType === 'two-column' && (
-                  <button
-                    onClick={handleAutoArrangeSections}
-                    className="flex items-center gap-1.5 px-3 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs font-medium shadow-sm shadow-black/10 dark:shadow-black/30 transition-all duration-200 hover:-translate-y-0.5"
-                    title="Automatically balance sections across columns"
-                  >
-                    <Shuffle className="w-3 h-3" />
-                    <span>Auto-Arrange</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Right side: Preview title */}
-              <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
-            </div>
-
-            {/* CV Preview Content Area */}
-            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-4">
-              <div
-                className={`flex flex-col items-start gap-8 transition-all duration-300 ease-in-out`}
-                // PREVIEW ZOOM: This transform is for UI preview only
-                // It does NOT affect PDF/DOCX export which uses fixed viewport (794px for A4, 816px for Letter)
-                // Export services render at 100% scale with exact viewport matching @page CSS dimensions
-                style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}
-              >
-                {/* Canvas-based drag-and-drop wrapper for sections */}
-                <CVPreviewDragContext
-                  sections={state.cvData.structure?.sections || []}
-                  onSectionsReorder={handleDragContextReorder}
-                  layoutType={state.selectedTemplate?.layoutType === 'two-column' ? 'two-column' : 'one-column'}
-                  enabled={viewMode === 'edit'} // Only enable drag in edit mode
-                >
-                  <CVPreviewContent
-                    cvData={state.cvData}
-                    templateName={state.selectedTemplate?.name}
-                    theme="light"
-                    showBadge={true}
-                    annotations={state.fixAnnotations}
-                    activeFixId={state.activeFixId}
-                    onSelectFix={(fixId: string) => dispatch({ type: 'SET_ACTIVE_FIX', payload: fixId })}
-                    onApplyFix={applyAnnotation}
-                    onDismissFix={dismissAnnotation}
-                    ignoreStructureVisibility={true}
-                    renderMode="pages"
-                    onSectionClick={(viewMode === 'edit' && !(state.cvType === 'journey' && ['applied', 'interviewing', 'offer', 'hired', 'rejected'].includes(state.jobData?.status?.toLowerCase()))) ? handleSectionClick : undefined}
-                    overlaysEnabled={viewMode === 'edit' || viewMode === 'ats'}
-                    viewMode={viewMode}
-                    onViewModeChange={setViewMode}
-                    currentZoom={zoomLevel}
-                    onZoomIn={handleZoomIn}
-                    onZoomOut={handleZoomOut}
+            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
+              <BuilderPreview
+                cvData={state.cvData}
+                template={state.selectedTemplate as any}
+                mode="edit"
+                pageFormat={pageFormat}
+                showToolbar={true}
+                initialZoom={1}
+                toolbarRightSlot={
+                  <FloatingPulsePill
+                    atsResult={atsAnalysis ? {
+                      score: atsAnalysis.score,
+                      atsScore: atsAnalysis.score,
+                      audit_report: atsAnalysis.audit_report,
+                      suggestions: atsAnalysis.suggestions,
+                      details: {
+                        matchedKeywords: atsAnalysis.matchedKeywords || [],
+                        missingKeywords: atsAnalysis.missingKeywords || [],
+                        experienceYears: atsAnalysis.factorBreakdown?.experienceLength?.years || 0,
+                        educationLevel: '',
+                        formatIssues: atsAnalysis.factorBreakdown?.formatting?.issues || []
+                      }
+                    } : null}
+                    isLoading={isAnalyzing}
+                    analysisMode={analysisModeInfo.mode}
+                    validationResult={validationResult}
+                    onIssueHover={(fieldPath) => setHighlightedField(fieldPath)}
+                    className=""
                     isSidebarOpen={false}
-                    onToggleSidebar={() => { /* No-op for old sidebar toggle */ }}
-                    onTotalPagesChange={setTotalPages}
-                    pageFormat={pageFormat}
-                    onAddSection={addNewSection}
-                    onOpenAddSectionModal={() => setShowAddSectionModal(true)}
+                    onToggleSidebar={() => dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay })}
+                    onFixATS={() => handleRunAnalysis()}
+                    onOpenReport={() => console.log("Open Report Clicked")}
+                    viewMode={viewMode}
+                    onViewModeChange={handleViewModeChange}
+                    onAddKeyword={handleAddKeyword}
+                    onApplyFix={applyAnnotation}
                   />
-                </CVPreviewDragContext>
+                }
+                sidePanelRef={sidePanelRef}
+                highlightedField={highlightedField}
+                onCVDataChange={(updatedData) => {
+                  dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, ...updatedData } });
+                }}
+                onSectionClick={(sectionId) => {
+                  console.log('Opening editor for section:', sectionId);
+                  const sectionElement = document.querySelector(`[data-section-id="${sectionId}"]`);
+                  const target = sectionElement || document.querySelector('.builder-preview');
+                  const rect = target?.getBoundingClientRect();
+                  const viewportWidth = window.innerWidth;
+                  const editorWidth = 500;
+                  const gap = 24;
 
-                {/* Recruiter Mode Overlay */}
-                {viewMode === 'recruiter' && (
-                  <RecruiterModeOverlay
-                    cvData={state.cvData}
-                    features={recruiterFeatures}
-                    containerRef={cvPreviewRef}
-                  />
-                )}
+                  let left = (rect?.right || viewportWidth * 0.6) + gap;
+                  let alignment: 'left' | 'right' = 'left';
 
-                {/* ATS Mode Overlay removed - handled by CVPreviewContent internally as page replacement */}
-              </div>
+                  if (left + editorWidth > viewportWidth - 20) {
+                    left = (rect?.left || 80) - editorWidth - gap;
+                    alignment = 'right';
+                  }
+
+                  setEditorPosition({
+                    top: Math.max(88, rect?.top || 120),
+                    left,
+                    height: rect?.height || 400,
+                    alignment
+                  });
+                  setActiveEditorSectionId(sectionId);
+                }}
+              />
             </div>
-
 
           </div>
-
-          {/* RIGHT PANEL: Scorecard + Keywords + Fix Queue */}
-
-
 
         </div >
         {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}
@@ -1481,6 +1386,40 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               .map(s => s.type) || []
           }
         />
+
+        {/* Template Selector Modal */}
+        {showTemplateModal && (
+          <div
+            ref={templateModalRef}
+            className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4"
+            onClick={() => setShowTemplateModal(false)}
+          >
+            <div
+              ref={templateModalContentRef}
+              className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <h2 className="text-xl font-bold text-[color:var(--text-primary)]">
+                  Select Template
+                </h2>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-[color:var(--text-primary)]" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6">
+                <TemplateSelector
+                  selectedTemplate={state.selectedTemplate}
+                  onTemplateSelect={handleTemplateSelect}
+                  cvData={state.cvData}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
       </div >
     );
