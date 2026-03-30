@@ -185,14 +185,12 @@ export default function ScorecardPanel({
         if (isJourneyCV && scoreResult?.atsScore) {
             return (
                 <div className="space-y-2">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] font-bold text-[#80FF00] uppercase tracking-wider">ATS Compatibility</span>
-                        <span className="text-xs font-bold text-white/90">{scoreResult.atsScore.total}</span>
-                    </div>
                     <div className="space-y-1.5">
-                        {renderMetricBar('Keywords', scoreResult.atsScore.keywordMatch, 40, 'bg-[#80FF00]')}
-                        {renderMetricBar('Formatting', scoreResult.atsScore.formatting, 20, 'bg-[#80FF00]')}
-                        {renderMetricBar('Sections', scoreResult.atsScore.sectionAlignment, 15, 'bg-[#80FF00]')}
+                        {renderMetricBar('Keywords (K)', scoreResult.atsScore.keywordMatch, 40, 'bg-[#80FF00]')}
+                        {renderMetricBar('Formatting (F)', scoreResult.atsScore.formatting, 20, 'bg-[#80FF00]')}
+                        {renderMetricBar('Section Alignment (S)', scoreResult.atsScore.sectionAlignment, 15, 'bg-[#80FF00]')}
+                        {renderMetricBar('Recency (R)', scoreResult.atsScore.recency, 15, 'bg-[#80FF00]')}
+                        {renderMetricBar('Contactability (C)', scoreResult.atsScore.contactability, 10, 'bg-[#80FF00]')}
                     </div>
                 </div>
             );
@@ -202,14 +200,12 @@ export default function ScorecardPanel({
         if (cvScore) {
             return (
                 <div className="space-y-2">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Profile Strength</span>
-                        <span className="text-xs font-bold text-white/90">{cvScore.total}</span>
-                    </div>
                     <div className="space-y-1.5">
-                        {renderMetricBar('Completeness', cvScore.completeness, 25, 'bg-blue-500')}
-                        {renderMetricBar('Impact', cvScore.impactVerbs, 20, 'bg-blue-500')}
-                        {renderMetricBar('Formatting', cvScore.formatting, 15, 'bg-blue-500')}
+                        {renderMetricBar('Completeness (C)', cvScore.completeness, 25, 'bg-blue-500')}
+                        {renderMetricBar('Impact Verbs (I)', cvScore.impactVerbs, 20, 'bg-blue-500')}
+                        {renderMetricBar('Quantification (Q)', cvScore.quantification, 20, 'bg-blue-500')}
+                        {renderMetricBar('Formatting (F)', cvScore.formatting, 15, 'bg-blue-500')}
+                        {renderMetricBar('Readability (R)', cvScore.readability, 20, 'bg-blue-500')}
                     </div>
                 </div>
             );
@@ -253,7 +249,7 @@ export default function ScorecardPanel({
     // 3. Main Render Logic
     if (compact) {
         return (
-            <div className="flex items-center p-5 pl-4 pb-6 h-full gap-8">
+            <div className="flex items-center p-5 h-full gap-8">
                 {/* Left side - Score Ring with compact footprint */}
                 <div className="flex-shrink-0 w-28 flex flex-col items-center justify-center">
                     {renderScoreRing('w-20 h-20')}

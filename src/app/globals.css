@@ -320,6 +320,103 @@ html:not(.dark) .cover-letter-editor-page {
   color: #757575 !important;
 }
 
+/* ═══════════════════════════════════════════
+   CV PREVIEW TEXT VISIBILITY PROTECTION
+   Ensures CV preview text is always dark/visible
+   even when rendered inside dark-mode dashboard
+   ═══════════════════════════════════════════ */
+.cv-page,
+.cv-page-custom,
+.builder-preview,
+.cv-container,
+.live-preview-container {
+  color: #111827 !important;
+}
+
+.dark .cv-page,
+.dark .cv-page-custom,
+.dark .builder-preview,
+.dark .cv-container,
+.dark .live-preview-container {
+  color: #111827 !important;
+}
+
+/* Protect headings in CV preview from dark mode overrides */
+.dark .cv-page h1, .dark .cv-page h2, .dark .cv-page h3,
+.dark .cv-page h4, .dark .cv-page h5, .dark .cv-page h6,
+.dark .cv-page-custom h1, .dark .cv-page-custom h2, .dark .cv-page-custom h3,
+.dark .cv-page-custom h4, .dark .cv-page-custom h5, .dark .cv-page-custom h6,
+.dark .builder-preview h1, .dark .builder-preview h2, .dark .builder-preview h3,
+.dark .builder-preview h4, .dark .builder-preview h5, .dark .builder-preview h6,
+.dark .cv-container h1, .dark .cv-container h2, .dark .cv-container h3,
+.dark .cv-container h4, .dark .cv-container h5, .dark .cv-container h6,
+.dark .live-preview-container h1, .dark .live-preview-container h2, .dark .live-preview-container h3,
+.dark .live-preview-container h4, .dark .live-preview-container h5, .dark .live-preview-container h6,
+.dark .dashboard-page .cv-page h1, .dark .dashboard-page .cv-page h2, .dark .dashboard-page .cv-page h3,
+.dark .dashboard-page .cv-page h4, .dark .dashboard-page .cv-page h5, .dark .dashboard-page .cv-page h6,
+.dark .dashboard-page .cv-page-custom h1, .dark .dashboard-page .cv-page-custom h2, .dark .dashboard-page .cv-page-custom h3,
+.dark .dashboard-page .cv-page-custom h4, .dark .dashboard-page .cv-page-custom h5, .dark .dashboard-page .cv-page-custom h6,
+.dark .dashboard-page .builder-preview h1, .dark .dashboard-page .builder-preview h2, .dark .dashboard-page .builder-preview h3,
+.dark .dashboard-page .builder-preview h4, .dark .dashboard-page .builder-preview h5, .dark .dashboard-page .builder-preview h6,
+.dark .dashboard-page .cv-container h1, .dark .dashboard-page .cv-container h2, .dark .dashboard-page .cv-container h3,
+.dark .dashboard-page .cv-container h4, .dark .dashboard-page .cv-container h5, .dark .dashboard-page .cv-container h6,
+.dark .dashboard-page .live-preview-container h1, .dark .dashboard-page .live-preview-container h2, .dark .dashboard-page .live-preview-container h3,
+.dark .dashboard-page .live-preview-container h4, .dark .dashboard-page .live-preview-container h5, .dark .dashboard-page .live-preview-container h6 {
+  color: #111827 !important;
+}
+
+.dark .cv-page .text-gray-900,
+.dark .cv-page-custom .text-gray-900,
+.dark .builder-preview .text-gray-900,
+.dark .cv-container .text-gray-900,
+.dark .live-preview-container .text-gray-900,
+.dark .dashboard-page .cv-page .text-gray-900,
+.dark .dashboard-page .cv-page-custom .text-gray-900,
+.dark .dashboard-page .builder-preview .text-gray-900,
+.dark .dashboard-page .cv-container .text-gray-900,
+.dark .dashboard-page .live-preview-container .text-gray-900 {
+  color: #111827 !important;
+}
+
+.dark .cv-page .text-gray-600,
+.dark .cv-page-custom .text-gray-600,
+.dark .builder-preview .text-gray-600,
+.dark .cv-container .text-gray-600,
+.dark .live-preview-container .text-gray-600,
+.dark .dashboard-page .cv-page .text-gray-600,
+.dark .dashboard-page .cv-page-custom .text-gray-600,
+.dark .dashboard-page .builder-preview .text-gray-600,
+.dark .dashboard-page .cv-container .text-gray-600,
+.dark .dashboard-page .live-preview-container .text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.dark .cv-page .text-gray-500,
+.dark .cv-page-custom .text-gray-500,
+.dark .builder-preview .text-gray-500,
+.dark .cv-container .text-gray-500,
+.dark .live-preview-container .text-gray-500,
+.dark .dashboard-page .cv-page .text-gray-500,
+.dark .dashboard-page .cv-page-custom .text-gray-500,
+.dark .dashboard-page .builder-preview .text-gray-500,
+.dark .dashboard-page .cv-container .text-gray-500,
+.dark .dashboard-page .live-preview-container .text-gray-500 {
+  color: #6b7280 !important;
+}
+
+.dark .cv-page .text-gray-400,
+.dark .cv-page-custom .text-gray-400,
+.dark .builder-preview .text-gray-400,
+.dark .cv-container .text-gray-400,
+.dark .live-preview-container .text-gray-400,
+.dark .dashboard-page .cv-page .text-gray-400,
+.dark .dashboard-page .cv-page-custom .text-gray-400,
+.dark .dashboard-page .builder-preview .text-gray-400,
+.dark .dashboard-page .cv-container .text-gray-400,
+.dark .dashboard-page .live-preview-container .text-gray-400 {
+  color: #9ca3af !important;
+}
+
 /* Dashboard accent colors - Dark theme only */
 .dark .dashboard-page .text-lime-400 {
   color: #99FF00 !important;
@@ -2219,7 +2316,7 @@ img[src*="/images/"] {
   font-weight: 500;
 }
 
-h3 {
+.bento-box h3 {
   font-size: 1.5rem;
   /* 24px */
   font-weight: 600;
@@ -2480,4 +2577,61 @@ h3 {
 
 .jobs-scroll::-webkit-scrollbar-thumb:hover {
   background: rgba(132, 204, 22, 0.7);
+}
+
+/* ═══════════════════════════════════════════
+   TipTap Editor Highlight Marks
+   ═══════════════════════════════════════════ */
+
+mark[data-type="highlight"] {
+  color: #000000 !important;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ═══════════════════════════════════════════
+   CV Inline Highlights (Shosho-style)
+   ═══════════════════════════════════════════ */
+
+.cv-highlight {
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0 1px;
+  transition: all 0.2s ease;
+  position: relative;
+  color: #000000;
+}
+
+.cv-highlight:hover {
+  filter: brightness(1.3);
+}
+
+/* Critical — soft red */
+.cv-highlight--critical {
+  background-color: rgba(239, 68, 68, 0.15);
+  border-bottom: 2px solid rgba(239, 68, 68, 0.7);
+}
+
+.cv-highlight--critical:hover {
+  background-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Warning — soft amber */
+.cv-highlight--warning {
+  background-color: rgba(245, 158, 11, 0.15);
+  border-bottom: 2px solid rgba(245, 158, 11, 0.6);
+}
+
+.cv-highlight--warning:hover {
+  background-color: rgba(245, 158, 11, 0.25);
+}
+
+/* Info / Improvement — soft blue (Grammarly-style) */
+.cv-highlight--info {
+  background-color: rgba(56, 189, 248, 0.12);
+  border-bottom: 2px solid rgba(56, 189, 248, 0.5);
+}
+
+.cv-highlight--info:hover {
+  background-color: rgba(56, 189, 248, 0.22);
 }

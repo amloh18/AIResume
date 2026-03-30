@@ -14,6 +14,8 @@ import {
 import { ThemeConfig } from '@/lib/templates/template-definition';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
+import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
+import { getHighlitHTML } from '@/components/resume-enhancer/annotations/highlitHtml';
 
 const A4_WIDTH_PX = 794;
 const A4_HEIGHT_PX = 1122;
@@ -42,6 +44,10 @@ interface BuilderPreviewProps {
   sidePanelRef?: React.Ref<HTMLDivElement>;
   /** Field path to highlight in the CV preview (e.g. 'work[0].highlights[2]') */
   highlightedField?: string | null;
+  /** Open fix annotations for inline highlighting in preview */
+  fixAnnotations?: FixAnnotation[];
+  /** Called when a highlight span is clicked in the preview */
+  onAnnotationClick?: (fixId: string) => void;
 }
 
 const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5];
@@ -173,6 +179,8 @@ const EditableText = memo(({
   multiline = false,
   placeholder = 'Click to edit...',
   style = {},
+  annotations = [],
+  fieldPath = '',
 }: {
   value: string;
   onChange: (val: string) => void;
@@ -181,11 +189,24 @@ const EditableText = memo(({
   multiline?: boolean;
   placeholder?: string;
   style?: React.CSSProperties;
+  annotations?: FixAnnotation[];
+  fieldPath?: string;
 }) => {
   const ref = useRef<HTMLElement>(null);
   const [isEmpty, setIsEmpty] = useState(!value || value.trim() === '' || value === '<br>');
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Annotations that apply to this field
+  const fieldAnnotations = fieldPath
+    ? annotations.filter(a => a.fieldPath === fieldPath && a.status === 'open')
+    : [];
+  const hasAnnotations = fieldAnnotations.length > 0;
+  // When annotations exist and we're not focused, we use dangerouslySetInnerHTML
+  // so the useEffect must NOT overwrite it
+  const useAnnotationMode = hasAnnotations && !isFocused;
 
   useEffect(() => {
+    if (useAnnotationMode) return; // Don't overwrite annotation HTML
     if (ref.current && document.activeElement !== ref.current) {
       const html = value || '';
       if (ref.current.innerHTML !== html) {
@@ -193,7 +214,7 @@ const EditableText = memo(({
       }
       setIsEmpty(!html || html.trim() === '' || html === '<br>');
     }
-  }, [value]);
+  }, [value, useAnnotationMode]);
 
   const handleInput = useCallback(() => {
     if (ref.current) {
@@ -202,7 +223,10 @@ const EditableText = memo(({
     }
   }, []);
 
+  const handleFocus = useCallback(() => setIsFocused(true), []);
+
   const handleBlur = useCallback(() => {
+    setIsFocused(false);
     if (ref.current) {
       const newValue = ref.current.innerHTML;
       if (newValue === '<br>' || newValue.trim() === '') {
@@ -228,16 +252,28 @@ const EditableText = memo(({
 
   return (
     <span className="relative inline-block w-full">
-      {React.createElement(Tag, {
-        ref,
-        contentEditable: true,
-        suppressContentEditableWarning: true,
-        onBlur: handleBlur,
-        onInput: handleInput,
-        onKeyDown: handleKeyDown,
-        className: `${className} outline-none transition-all cursor-text min-h-[1em] text-inherit hover:bg-lime-50/30 dark:hover:bg-lime-900/10 focus:bg-lime-50/50 dark:focus:bg-lime-900/20 focus:ring-1 focus:ring-lime-400/30 rounded-sm px-0.5`,
-        style: { ...style, minHeight: '1em', caretColor: '#84cc16' },
-      })}
+      {/* Show highlighted preview when not focused and annotations exist */}
+      {hasAnnotations && !isFocused ? (
+        React.createElement(Tag, {
+          ref,
+          className: `${className} cursor-text min-h-[1em] rounded-sm px-0.5`,
+          style: { ...style, minHeight: '1em' },
+          onClick: () => { ref.current?.focus(); },
+          dangerouslySetInnerHTML: { __html: getHighlitHTML(value || '', fieldAnnotations, false) },
+        })
+      ) : (
+        React.createElement(Tag, {
+          ref,
+          contentEditable: true,
+          suppressContentEditableWarning: true,
+          onFocus: handleFocus,
+          onBlur: handleBlur,
+          onInput: handleInput,
+          onKeyDown: handleKeyDown,
+          className: `${className} outline-none transition-all cursor-text min-h-[1em] text-inherit hover:bg-lime-50/30 dark:hover:bg-lime-900/10 focus:bg-lime-50/50 dark:focus:bg-lime-900/20 focus:ring-1 focus:ring-lime-400/30 rounded-sm px-0.5`,
+          style: { ...style, minHeight: '1em', caretColor: '#84cc16' },
+        })
+      )}
       {isEmpty && (
         <span
           className="absolute left-0.5 top-0 pointer-events-none text-gray-400/60 italic text-[inherit]"
@@ -349,6 +385,8 @@ export const BuilderPreview: React.FC<BuilderPreviewProps> = ({
   sidePanelOpen = false,
   sidePanelRef,
   highlightedField,
+  fixAnnotations = [],
+  onAnnotationClick,
 }) => {
   const [zoom, setZoom] = useState(initialZoom);
   const [activePageFormat, setActivePageFormat] = useState<PageFormat>(pageFormat);
@@ -366,6 +404,20 @@ export const BuilderPreview: React.FC<BuilderPreviewProps> = ({
   const handleZoomOut = useCallback(() => {
     setZoom(prev => { const idx = ZOOM_LEVELS.indexOf(prev); return idx > 0 ? ZOOM_LEVELS[idx - 1] : prev; });
   }, []);
+
+  // Annotation click handler — detects clicks on .cv-highlight spans
+  const handlePreviewClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const highlight = target.closest('.cv-highlight') as HTMLElement | null;
+    if (highlight && onAnnotationClick) {
+      const fixId = highlight.getAttribute('data-fix-id');
+      if (fixId) {
+        e.preventDefault();
+        e.stopPropagation();
+        onAnnotationClick(fixId);
+      }
+    }
+  }, [onAnnotationClick]);
 
   // Data helpers
   const updateField = useCallback((path: (string | number)[], value: any) => {
@@ -427,7 +479,7 @@ export const BuilderPreview: React.FC<BuilderPreviewProps> = ({
       {/* MAIN CONTENT — CV preview + optional side panel */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* CV PREVIEW */}
-        <div className="flex-1 overflow-auto bg-[#525659] p-6 flex justify-center transition-all duration-300">
+        <div className="flex-1 overflow-auto bg-[#525659] p-6 flex justify-center transition-all duration-300" onClick={handlePreviewClick}>
           <div style={{ transform: `scale(${zoom})`, transformOrigin: 'top center' }}>
             <div className="bg-white shadow-2xl relative" style={{ width: `${pageWidth}px`, minHeight: `${pageHeight}px`, fontFamily }}>
               <div style={{ padding: `${PAGE_MARGIN}px` }}>
@@ -438,6 +490,7 @@ export const BuilderPreview: React.FC<BuilderPreviewProps> = ({
                     isEdit={isEdit}
                     activeSection={activeSection}
                     highlightedField={highlightedField}
+                    fixAnnotations={fixAnnotations}
                     onSectionFocus={setActiveSection}
                     updateField={updateField}
                     addItem={addItem}
@@ -493,6 +546,7 @@ function InlineCVDocument({
   isEdit,
   activeSection,
   highlightedField,
+  fixAnnotations = [],
   onSectionFocus,
   updateField,
   addItem,
@@ -504,6 +558,7 @@ function InlineCVDocument({
   isEdit: boolean;
   activeSection: string | null;
   highlightedField?: string | null;
+  fixAnnotations?: FixAnnotation[];
   onSectionFocus: (id: string | null) => void;
   updateField: (path: (string | number)[], value: any) => void;
   addItem: (path: (string | number)[], tpl: any) => void;
@@ -542,15 +597,15 @@ function InlineCVDocument({
         onClick={() => isEdit && onSectionFocus('basics')}
       >
         {isEdit && <SectionToolbar label="Personal Info" />}
-        <EditableText tag="h1" value={b.name || ''} onChange={(v) => updateField(['basics', 'name'], v)} className="text-2xl font-bold text-gray-900" placeholder="Your Name" />
-        <EditableText tag="p" value={b.label || ''} onChange={(v) => updateField(['basics', 'label'], v)} className="text-sm text-gray-600 mt-0.5" placeholder="Professional Title" />
+        <EditableText tag="h1" value={b.name || ''} onChange={(v) => updateField(['basics', 'name'], v)} className="text-2xl font-bold text-gray-900" placeholder="Your Name" annotations={fixAnnotations} fieldPath="basics.name" />
+        <EditableText tag="p" value={b.label || ''} onChange={(v) => updateField(['basics', 'label'], v)} className="text-sm text-gray-600 mt-0.5" placeholder="Professional Title" annotations={fixAnnotations} fieldPath="basics.label" />
         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] text-gray-500">
-          <EditableText value={b.email || ''} onChange={(v) => updateField(['basics', 'email'], v)} placeholder="email@example.com" className="text-gray-500" />
-          <EditableText value={b.phone || ''} onChange={(v) => updateField(['basics', 'phone'], v)} placeholder="+1 234 567 890" />
-          <EditableText value={b.location?.city || ''} onChange={(v) => updateField(['basics', 'location', 'city'], v)} placeholder="City, Country" />
-          <EditableText value={b.url || ''} onChange={(v) => updateField(['basics', 'url'], v)} placeholder="website.com" className="text-lime-600" />
+          <EditableText value={b.email || ''} onChange={(v) => updateField(['basics', 'email'], v)} placeholder="email@example.com" className="text-gray-500" annotations={fixAnnotations} fieldPath="basics.email" />
+          <EditableText value={b.phone || ''} onChange={(v) => updateField(['basics', 'phone'], v)} placeholder="+1 234 567 890" annotations={fixAnnotations} fieldPath="basics.phone" />
+          <EditableText value={b.location?.city || ''} onChange={(v) => updateField(['basics', 'location', 'city'], v)} placeholder="City, Country" annotations={fixAnnotations} fieldPath="basics.location.city" />
+          <EditableText value={b.url || ''} onChange={(v) => updateField(['basics', 'url'], v)} placeholder="website.com" className="text-lime-600" annotations={fixAnnotations} fieldPath="basics.url" />
         </div>
-        <EditableText tag="p" value={b.summary || ''} onChange={(v) => updateField(['basics', 'summary'], v)} className="mt-3 text-gray-700 leading-relaxed" multiline placeholder="Professional summary..." />
+        <EditableText tag="p" value={b.summary || ''} onChange={(v) => updateField(['basics', 'summary'], v)} className="mt-3 text-gray-700 leading-relaxed" multiline placeholder="Professional summary..." annotations={fixAnnotations} fieldPath="basics.summary" />
       </div>
 
       {/* ===== WORK ===== */}
@@ -564,16 +619,16 @@ function InlineCVDocument({
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['work'], i)} onAddBelow={() => addItem(['work'], { name: '', position: '', startDate: '', endDate: '', summary: '', highlights: [] })} label={job.position || 'Entry'} />}
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <EditableText tag="div" value={String(job.position || '')} onChange={(v) => updateField(['work', i, 'position'], v)} className="font-semibold text-gray-900" placeholder="Position Title" />
-                    <EditableText tag="div" value={String(job.name || '')} onChange={(v) => updateField(['work', i, 'name'], v)} className="text-gray-600" placeholder="Company Name" />
+                    <EditableText tag="div" value={String(job.position || '')} onChange={(v) => updateField(['work', i, 'position'], v)} className="font-semibold text-gray-900" placeholder="Position Title" annotations={fixAnnotations} fieldPath={`work[${i}].position`} />
+                    <EditableText tag="div" value={String(job.name || '')} onChange={(v) => updateField(['work', i, 'name'], v)} className="text-gray-600" placeholder="Company Name" annotations={fixAnnotations} fieldPath={`work[${i}].name`} />
                   </div>
                   <div className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
-                    <EditableText value={String(job.startDate || '')} onChange={(v) => updateField(['work', i, 'startDate'], v)} placeholder="2020" />
+                    <EditableText value={String(job.startDate || '')} onChange={(v) => updateField(['work', i, 'startDate'], v)} placeholder="2020" annotations={fixAnnotations} fieldPath={`work[${i}].startDate`} />
                     <span>–</span>
-                    <EditableText value={String(job.endDate || '')} onChange={(v) => updateField(['work', i, 'endDate'], v)} placeholder="Present" />
+                    <EditableText value={String(job.endDate || '')} onChange={(v) => updateField(['work', i, 'endDate'], v)} placeholder="Present" annotations={fixAnnotations} fieldPath={`work[${i}].endDate`} />
                   </div>
                 </div>
-                <EditableText tag="p" value={String(job.summary || '')} onChange={(v) => updateField(['work', i, 'summary'], v)} className="mt-1 text-gray-600" multiline placeholder="Describe your role..." />
+                <EditableText tag="p" value={String(job.summary || '')} onChange={(v) => updateField(['work', i, 'summary'], v)} className="mt-1 text-gray-600" multiline placeholder="Describe your role..." annotations={fixAnnotations} fieldPath={`work[${i}].summary`} />
                 <EditableBullets items={job.highlights || []} onChange={(v) => updateField(['work', i, 'highlights'], v)} className="mt-1 text-gray-600" />
               </div>
             ))}
@@ -592,15 +647,15 @@ function InlineCVDocument({
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['education'], i)} onAddBelow={() => addItem(['education'], { institution: '', studyType: '', area: '', startDate: '', endDate: '' })} />}
                 <div className="flex-1">
                   <div className="flex gap-1 flex-wrap">
-                    <EditableText tag="span" value={String(e.studyType || '')} onChange={(v) => updateField(['education', i, 'studyType'], v)} className="font-semibold text-gray-900" placeholder="Degree" />
-                    <EditableText tag="span" value={String(e.area ? `in ${e.area}` : '')} onChange={(v) => updateField(['education', i, 'area'], v.replace(/^in\s+/i, ''))} className="text-gray-700" placeholder="in Field" />
+                    <EditableText tag="span" value={String(e.studyType || '')} onChange={(v) => updateField(['education', i, 'studyType'], v)} className="font-semibold text-gray-900" placeholder="Degree" annotations={fixAnnotations} fieldPath={`education[${i}].studyType`} />
+                    <EditableText tag="span" value={String(e.area ? `in ${e.area}` : '')} onChange={(v) => updateField(['education', i, 'area'], v.replace(/^in\s+/i, ''))} className="text-gray-700" placeholder="in Field" annotations={fixAnnotations} fieldPath={`education[${i}].area`} />
                   </div>
-                  <EditableText tag="div" value={String(e.institution || '')} onChange={(v) => updateField(['education', i, 'institution'], v)} className="text-gray-600" placeholder="Institution Name" />
+                  <EditableText tag="div" value={String(e.institution || '')} onChange={(v) => updateField(['education', i, 'institution'], v)} className="text-gray-600" placeholder="Institution Name" annotations={fixAnnotations} fieldPath={`education[${i}].institution`} />
                 </div>
                 <div className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
-                  <EditableText value={String(e.startDate || '')} onChange={(v) => updateField(['education', i, 'startDate'], v)} placeholder="2016" />
+                  <EditableText value={String(e.startDate || '')} onChange={(v) => updateField(['education', i, 'startDate'], v)} placeholder="2016" annotations={fixAnnotations} fieldPath={`education[${i}].startDate`} />
                   <span>–</span>
-                  <EditableText value={String(e.endDate || '')} onChange={(v) => updateField(['education', i, 'endDate'], v)} placeholder="2020" />
+                  <EditableText value={String(e.endDate || '')} onChange={(v) => updateField(['education', i, 'endDate'], v)} placeholder="2020" annotations={fixAnnotations} fieldPath={`education[${i}].endDate`} />
                 </div>
               </div>
             ))}
@@ -617,8 +672,8 @@ function InlineCVDocument({
             {skills.map((sg: any, i: number) => (
               <div key={i} className="relative group/item pl-2">
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['skills'], i)} onAddBelow={() => addItem(['skills'], { category: '', skills: [] })} />}
-                <EditableText tag="span" value={String(sg.category ? `${sg.category}: ` : '')} onChange={(v) => updateField(['skills', i, 'category'], v.replace(/:\s*$/, ''))} className="font-semibold text-gray-700" placeholder="Category: " />
-                <EditableText tag="span" value={String((sg.skills || []).join(', '))} onChange={(v) => updateField(['skills', i, 'skills'], v.split(',').map((s: string) => s.trim()).filter(Boolean))} className="text-gray-600" placeholder="Skill 1, Skill 2, Skill 3" />
+                <EditableText tag="span" value={String(sg.category ? `${sg.category}: ` : '')} onChange={(v) => updateField(['skills', i, 'category'], v.replace(/:\s*$/, ''))} className="font-semibold text-gray-700" placeholder="Category: " annotations={fixAnnotations} fieldPath={`skills[${i}].category`} />
+                <EditableText tag="span" value={String((sg.skills || []).join(', '))} onChange={(v) => updateField(['skills', i, 'skills'], v.split(',').map((s: string) => s.trim()).filter(Boolean))} className="text-gray-600" placeholder="Skill 1, Skill 2, Skill 3" annotations={fixAnnotations} fieldPath={`skills[${i}].skills`} />
               </div>
             ))}
           </div>
@@ -635,14 +690,14 @@ function InlineCVDocument({
               <div key={i} className="relative group/item pl-2">
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['projects'], i)} onAddBelow={() => addItem(['projects'], { name: '', description: '', highlights: [] })} />}
                 <div className="flex justify-between items-start">
-                  <EditableText tag="div" value={String(p.name || '')} onChange={(v) => updateField(['projects', i, 'name'], v)} className="font-semibold text-gray-900" placeholder="Project Name" />
+                  <EditableText tag="div" value={String(p.name || '')} onChange={(v) => updateField(['projects', i, 'name'], v)} className="font-semibold text-gray-900" placeholder="Project Name" annotations={fixAnnotations} fieldPath={`projects[${i}].name`} />
                   <div className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
-                    <EditableText value={String(p.startDate || '')} onChange={(v) => updateField(['projects', i, 'startDate'], v)} placeholder="Start" />
+                    <EditableText value={String(p.startDate || '')} onChange={(v) => updateField(['projects', i, 'startDate'], v)} placeholder="Start" annotations={fixAnnotations} fieldPath={`projects[${i}].startDate`} />
                     <span>–</span>
-                    <EditableText value={String(p.endDate || '')} onChange={(v) => updateField(['projects', i, 'endDate'], v)} placeholder="End" />
+                    <EditableText value={String(p.endDate || '')} onChange={(v) => updateField(['projects', i, 'endDate'], v)} placeholder="End" annotations={fixAnnotations} fieldPath={`projects[${i}].endDate`} />
                   </div>
                 </div>
-                <EditableText tag="p" value={String(p.description || '')} onChange={(v) => updateField(['projects', i, 'description'], v)} className="mt-0.5 text-gray-600" multiline placeholder="Describe the project..." />
+                <EditableText tag="p" value={String(p.description || '')} onChange={(v) => updateField(['projects', i, 'description'], v)} className="mt-0.5 text-gray-600" multiline placeholder="Describe the project..." annotations={fixAnnotations} fieldPath={`projects[${i}].description`} />
                 <EditableBullets items={p.highlights || []} onChange={(v) => updateField(['projects', i, 'highlights'], v)} className="mt-1 text-gray-600" />
               </div>
             ))}
@@ -660,10 +715,10 @@ function InlineCVDocument({
               <div key={i} className="relative group/item flex justify-between items-start pl-2">
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['certificates'], i)} onAddBelow={() => addItem(['certificates'], { name: '', issuer: '', date: '' })} />}
                 <div>
-                  <EditableText tag="div" value={String(c.name || '')} onChange={(v) => updateField(['certificates', i, 'name'], v)} className="font-semibold text-gray-900" placeholder="Certificate Name" />
-                  <EditableText tag="div" value={String(c.issuer || '')} onChange={(v) => updateField(['certificates', i, 'issuer'], v)} className="text-gray-600" placeholder="Issuing Organization" />
+                  <EditableText tag="div" value={String(c.name || '')} onChange={(v) => updateField(['certificates', i, 'name'], v)} className="font-semibold text-gray-900" placeholder="Certificate Name" annotations={fixAnnotations} fieldPath={`certificates[${i}].name`} />
+                  <EditableText tag="div" value={String(c.issuer || '')} onChange={(v) => updateField(['certificates', i, 'issuer'], v)} className="text-gray-600" placeholder="Issuing Organization" annotations={fixAnnotations} fieldPath={`certificates[${i}].issuer`} />
                 </div>
-                <EditableText value={String(c.date || '')} onChange={(v) => updateField(['certificates', i, 'date'], v)} className="text-[10px] text-gray-400 flex-shrink-0" placeholder="2023" />
+                <EditableText value={String(c.date || '')} onChange={(v) => updateField(['certificates', i, 'date'], v)} className="text-[10px] text-gray-400 flex-shrink-0" placeholder="2023" annotations={fixAnnotations} fieldPath={`certificates[${i}].date`} />
               </div>
             ))}
           </div>
@@ -679,8 +734,8 @@ function InlineCVDocument({
             {langs.map((l: any, i: number) => (
               <div key={i} className="relative group/item">
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['languages'], i)} onAddBelow={() => addItem(['languages'], { language: '', fluency: '' })} />}
-                <EditableText tag="span" value={String(l.language || '')} onChange={(v) => updateField(['languages', i, 'language'], v)} className="text-gray-700 font-medium" placeholder="Language" />
-                <EditableText tag="span" value={String(l.fluency ? ` – ${l.fluency}` : '')} onChange={(v) => updateField(['languages', i, 'fluency'], v.replace(/^[\s–-]+/, '').trim())} className="text-gray-500 text-[10px]" placeholder="Fluency" />
+                <EditableText tag="span" value={String(l.language || '')} onChange={(v) => updateField(['languages', i, 'language'], v)} className="text-gray-700 font-medium" placeholder="Language" annotations={fixAnnotations} fieldPath={`languages[${i}].language`} />
+                <EditableText tag="span" value={String(l.fluency ? ` – ${l.fluency}` : '')} onChange={(v) => updateField(['languages', i, 'fluency'], v.replace(/^[\s–-]+/, '').trim())} className="text-gray-500 text-[10px]" placeholder="Fluency" annotations={fixAnnotations} fieldPath={`languages[${i}].fluency`} />
               </div>
             ))}
           </div>
@@ -698,16 +753,16 @@ function InlineCVDocument({
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['volunteer'], i)} onAddBelow={() => addItem(['volunteer'], { position: '', organization: '', startDate: '', endDate: '', summary: '' })} />}
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <EditableText tag="div" value={String(v.position || '')} onChange={(val) => updateField(['volunteer', i, 'position'], val)} className="font-semibold text-gray-900" placeholder="Role" />
-                    <EditableText tag="div" value={String(v.organization || '')} onChange={(val) => updateField(['volunteer', i, 'organization'], val)} className="text-gray-600" placeholder="Organization" />
+                    <EditableText tag="div" value={String(v.position || '')} onChange={(val) => updateField(['volunteer', i, 'position'], val)} className="font-semibold text-gray-900" placeholder="Role" annotations={fixAnnotations} fieldPath={`volunteer[${i}].position`} />
+                    <EditableText tag="div" value={String(v.organization || '')} onChange={(val) => updateField(['volunteer', i, 'organization'], val)} className="text-gray-600" placeholder="Organization" annotations={fixAnnotations} fieldPath={`volunteer[${i}].organization`} />
                   </div>
                   <div className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
-                    <EditableText value={String(v.startDate || '')} onChange={(val) => updateField(['volunteer', i, 'startDate'], val)} placeholder="Start" />
+                    <EditableText value={String(v.startDate || '')} onChange={(val) => updateField(['volunteer', i, 'startDate'], val)} placeholder="Start" annotations={fixAnnotations} fieldPath={`volunteer[${i}].startDate`} />
                     <span>–</span>
-                    <EditableText value={String(v.endDate || '')} onChange={(val) => updateField(['volunteer', i, 'endDate'], val)} placeholder="End" />
+                    <EditableText value={String(v.endDate || '')} onChange={(val) => updateField(['volunteer', i, 'endDate'], val)} placeholder="End" annotations={fixAnnotations} fieldPath={`volunteer[${i}].endDate`} />
                   </div>
                 </div>
-                <EditableText tag="p" value={String(v.summary || '')} onChange={(val) => updateField(['volunteer', i, 'summary'], val)} className="mt-0.5 text-gray-600" multiline placeholder="Describe..." />
+                <EditableText tag="p" value={String(v.summary || '')} onChange={(val) => updateField(['volunteer', i, 'summary'], val)} className="mt-0.5 text-gray-600" multiline placeholder="Describe..." annotations={fixAnnotations} fieldPath={`volunteer[${i}].summary`} />
               </div>
             ))}
           </div>
@@ -724,10 +779,10 @@ function InlineCVDocument({
               <div key={i} className="relative group/item flex justify-between items-start pl-2">
                 {isEdit && <EntryToolbar onDelete={() => removeItem(['awards'], i)} onAddBelow={() => addItem(['awards'], { title: '', awarder: '', date: '' })} />}
                 <div>
-                  <EditableText tag="div" value={String(a.title || '')} onChange={(v) => updateField(['awards', i, 'title'], v)} className="font-semibold text-gray-900" placeholder="Award Title" />
-                  <EditableText tag="div" value={String(a.awarder || '')} onChange={(v) => updateField(['awards', i, 'awarder'], v)} className="text-gray-600" placeholder="Awarder" />
+                  <EditableText tag="div" value={String(a.title || '')} onChange={(v) => updateField(['awards', i, 'title'], v)} className="font-semibold text-gray-900" placeholder="Award Title" annotations={fixAnnotations} fieldPath={`awards[${i}].title`} />
+                  <EditableText tag="div" value={String(a.awarder || '')} onChange={(v) => updateField(['awards', i, 'awarder'], v)} className="text-gray-600" placeholder="Awarder" annotations={fixAnnotations} fieldPath={`awards[${i}].awarder`} />
                 </div>
-                <EditableText value={String(a.date || '')} onChange={(v) => updateField(['awards', i, 'date'], v)} className="text-[10px] text-gray-400 flex-shrink-0" placeholder="2023" />
+                <EditableText value={String(a.date || '')} onChange={(v) => updateField(['awards', i, 'date'], v)} className="text-[10px] text-gray-400 flex-shrink-0" placeholder="2023" annotations={fixAnnotations} fieldPath={`awards[${i}].date`} />
               </div>
             ))}
           </div>

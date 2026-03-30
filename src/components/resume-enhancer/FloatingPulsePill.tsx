@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles, Zap, Eye, Target, Component, PenTool } from 'lucide-react';
@@ -18,6 +18,10 @@ import type { ValidationResult, ValidationWarning } from '@/lib/validation/cv-pr
 import { Issue, type IssueType, type IssueSeverity, type IssuePriority } from '@/lib/pill-engine/types';
 import { useContextToasts } from '@/hooks/useContextToasts';
 import { mergeIssues, surgicalFixesToIssues } from '@/lib/services/surgicalFixToIssueAdapter';
+
+export interface FloatingPulsePillHandle {
+    focusFix: (fixId: string) => void;
+}
 
 interface FloatingPulsePillProps {
     className?: string;
@@ -49,7 +53,7 @@ interface FloatingPulsePillProps {
     onAddJD?: () => void;
 }
 
-export default function FloatingPulsePill({
+export default forwardRef(function FloatingPulsePill({
     className = "",
     atsResult,
     isLoading = false,
@@ -68,10 +72,22 @@ export default function FloatingPulsePill({
     keywordAnalysis,
     onSetRole,
     onAddJD
-}: FloatingPulsePillProps) {
+}: FloatingPulsePillProps, ref: React.Ref<FloatingPulsePillHandle>) {
     const { state, dispatch } = useResumeEnhancer();
     const [showScorecard, setShowScorecard] = useState(true); // Default expanded
     const [showContextCard, setShowContextCard] = useState(false);
+    const [focusedFixId, setFocusedFixId] = useState<string | null>(null);
+
+    // Expose focusFix method to parent via ref
+    useImperativeHandle(ref, () => ({
+        focusFix: (fixId: string) => {
+            setShowContextCard(true);
+            setShowScorecard(false);
+            setFocusedFixId(fixId);
+            // Clear focused state after animation completes
+            setTimeout(() => setFocusedFixId(null), 2000);
+        }
+    }), []);
 
     // Pill Engine Integration (Command Center)
     const { issues, healthScore, masterScore, atsScore, isAnalyzing: isEngineAnalyzing, scoreResult } = usePillEngine(
@@ -385,6 +401,7 @@ export default function FloatingPulsePill({
                                     const fieldPath = issue?.meta?.field || issue?.deepLink?.field || null;
                                     onIssueHover?.(fieldPath);
                                 }}
+                                focusedIssueId={focusedFixId}
                                 onSetRole={onSetRole || undefined}
                                 onAddJD={onAddJD || undefined}
                                 showMissingContextWarning={analysisMode === 'insufficient-data'}
@@ -614,5 +631,5 @@ export default function FloatingPulsePill({
                 {panelsContent}
             </motion.div>
     );
-}
+})
 
