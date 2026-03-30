@@ -278,19 +278,15 @@ export default forwardRef(function FloatingPulsePill({
     };
 
     const handleIssueClick = (issue: Issue) => {
-        // Scroll to section and highlight it
+        // Scroll to section and highlight it in the preview
         if (issue.deepLink) {
-            // Attempt to find element by ID or Section ID
             const targetId = issue.deepLink.sectionId || issue.deepLink.section;
-            // Use broader selector search if exact ID fails
-            // Assuming sections act as anchors with IDs like 'work-experience' or 'section-work' or just the UUID
             let element = document.getElementById(targetId)
                 || document.getElementById(`section-${issue.deepLink.section}`)
                 || document.querySelector(`[data-section-id="${targetId}"]`);
 
             if (element) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Simple highlight effect
                 element.classList.add('ring-2', 'ring-[#80FF00]', 'transition-all', 'duration-500');
                 setTimeout(() => {
                     element?.classList.remove('ring-2', 'ring-[#80FF00]');
@@ -298,31 +294,46 @@ export default forwardRef(function FloatingPulsePill({
             }
         }
 
-        // Dispatch a custom event to open the floating form editor for this section
-        // This allows Step3BuilderSurgeon to handle opening the editor
-        const sectionId = issue.deepLink?.section || issue.section;
-        if (sectionId) {
-            // Map section names to editor-compatible IDs
-            const sectionMap: Record<string, string> = {
-                'work': 'work',
-                'work_experience': 'work',
-                'skills': 'skills',
-                'summary': 'personal', // Summary is part of personal info
-                'education': 'education',
-                'projects': 'projects',
-                'basics': 'personal',
-                'personal_header': 'personal'
-            };
-            const editorSectionId = sectionMap[sectionId] || sectionId;
+        // Highlight the specific field in the preview
+        const fieldPath = issue?.meta?.field || issue?.deepLink?.field || null;
+        if (fieldPath) {
+            onIssueHover?.(fieldPath);
+            setTimeout(() => onIssueHover?.(null), 3000);
+        }
+    };
 
-            // Dispatch event for the editor to open
-            window.dispatchEvent(new CustomEvent('openSectionEditor', {
-                detail: {
-                    sectionId: editorSectionId,
-                    issueId: issue.id,
-                    suggestedFixId: issue.suggestedFixId
-                }
-            }));
+    const handleAiAssist = (issue: Issue) => {
+        // Find the matching fix annotation for this issue
+        const matchingFix = (state.fixAnnotations || []).find(
+            f => f.status === 'open' && (f.id === issue.suggestedFixId || f.fieldPath === issue.deepLink?.field)
+        );
+
+        if (matchingFix && onApplyFixRef.current) {
+            // Apply the fix directly via the AI-recommended replacement
+            onApplyFixRef.current(matchingFix);
+        } else {
+            // If no direct fix match, open the section editor for manual AI assist
+            const sectionId = issue.deepLink?.section || issue.section;
+            if (sectionId) {
+                const sectionMap: Record<string, string> = {
+                    'work': 'work',
+                    'work_experience': 'work',
+                    'skills': 'skills',
+                    'summary': 'personal',
+                    'education': 'education',
+                    'projects': 'projects',
+                    'basics': 'personal',
+                    'personal_header': 'personal'
+                };
+                const editorSectionId = sectionMap[sectionId] || sectionId;
+                window.dispatchEvent(new CustomEvent('openSectionEditor', {
+                    detail: {
+                        sectionId: editorSectionId,
+                        issueId: issue.id,
+                        suggestedFixId: issue.suggestedFixId
+                    }
+                }));
+            }
         }
     };
 
@@ -334,8 +345,7 @@ export default forwardRef(function FloatingPulsePill({
             console.log('Issue dismissed:', issueId);
         },
         onAiAssist: (issue) => {
-            console.log('AI Assist Triggered from toast', issue);
-            // TODO: Implement AI Hook Call
+            handleAiAssist(issue);
         },
         enabled: true // Could make this conditional based on user preferences
     });
@@ -396,7 +406,7 @@ export default forwardRef(function FloatingPulsePill({
                                 issues={allIssues}
                                 onFix={handleIssueClick}
                                 onDismiss={(id) => { }}
-                                onAiAssist={(issue) => console.log('AI Assist Triggered', issue)}
+                                onAiAssist={handleAiAssist}
                                 onIssueHover={(issue) => {
                                     const fieldPath = issue?.meta?.field || issue?.deepLink?.field || null;
                                     onIssueHover?.(fieldPath);
