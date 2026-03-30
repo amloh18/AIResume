@@ -561,13 +561,13 @@ export default function CoverLetterEditorContainer({
             >
               <X className="w-5 h-5" />
             </button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+            <div className="flex flex-col">
+              <span className="text-base font-black tracking-tighter leading-none text-gray-900 dark:text-white">
+                CV<span className="text-lime-500">CIRCLE</span>
+              </span>
+              <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1">
                 Cover Letter Editor
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-200">
-                {state.coverLetterTitle}
-              </p>
+              </span>
             </div>
           </div>
 
