@@ -5,18 +5,16 @@ import { motion } from 'framer-motion';
 import { Check, ChevronRight } from 'lucide-react';
 
 interface StepIndicatorProps {
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2;
   completedSteps: number[];
-  onStepClick?: (step: 1 | 2 | 3 | 4) => void;
+  onStepClick?: (step: 1 | 2) => void;
   orientation?: 'horizontal' | 'vertical';
   className?: string;
 }
 
 const steps = [
-  { number: 1, label: 'Personal Info', description: 'Upload or add your resume details' },
-  { number: 2, label: 'Template', description: 'Pick a template for your CV' },
-  { number: 3, label: 'Builder & Surgeon', description: 'Edit and optimize with AI' },
-  { number: 4, label: 'Review', description: 'Preview and save to dashboard' }
+  { number: 1, label: 'Builder', description: 'Edit and optimize with AI' },
+  { number: 2, label: 'Review', description: 'Preview and save to dashboard' }
 ];
 
 export default function StepIndicator({
@@ -41,13 +39,13 @@ export default function StepIndicator({
               <React.Fragment key={step.number}>
                 <motion.button
                   type="button"
-                  onClick={() => isClickable && onStepClick?.(step.number as 1 | 2 | 3 | 4)}
+                  onClick={() => isClickable && onStepClick?.(step.number as 1 | 2)}
                   disabled={!isClickable}
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
                     ${isCompleted ? 'bg-[#80FF00] text-black cursor-pointer hover:bg-[#70e600] shadow-sm shadow-[#80FF00]/20' : ''}
-                    ${isActive && !isCompleted ? 'bg-[var(--bg-tertiary)] text-[color:var(--text-primary)] ring-2 ring-[#80FF00]/50 shadow-sm shadow-black/10 dark:shadow-black/30' : ''}
-                    ${!isActive && !isCompleted ? 'bg-black/5 dark:bg-white/5 text-[color:var(--text-tertiary)]' : ''}
+                    ${isActive && !isCompleted ? 'bg-white/5 text-white ring-2 ring-[#80FF00]/50 shadow-sm shadow-black/30' : ''}
+                    ${!isActive && !isCompleted ? 'bg-white/5 text-gray-500' : ''}
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}
                   `}
                   whileHover={isClickable ? { scale: 1.05 } : {}}
@@ -64,7 +62,7 @@ export default function StepIndicator({
                 {/* Connector line */}
                 {index < steps.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 rounded-full ${completedSteps.includes(step.number) ? 'bg-[#80FF00]' : 'bg-black/10 dark:bg-white/10'
+                    className={`flex-1 h-0.5 rounded-full ${completedSteps.includes(step.number) ? 'bg-[#80FF00]' : 'bg-white/10'
                       }`}
                   />
                 )}
@@ -75,10 +73,10 @@ export default function StepIndicator({
 
         {/* Current step label */}
         <div className="text-center">
-          <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+          <div className="text-sm font-semibold text-white">
             {steps.find(s => s.number === currentStep)?.label}
           </div>
-          <div className="text-[10px] text-[color:var(--text-tertiary)]">
+          <div className="text-[10px] text-gray-400">
             {steps.find(s => s.number === currentStep)?.description}
           </div>
         </div>
@@ -98,13 +96,13 @@ export default function StepIndicator({
             {/* Step Circle with Label */}
             <div className="flex items-center gap-2">
               <motion.button
-                onClick={() => isClickable && onStepClick(step.number as 1 | 2 | 3 | 4)}
+                onClick={() => isClickable && onStepClick(step.number as 1 | 2)}
                 disabled={!isClickable}
                 className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
                     ${isCompleted ? 'bg-[#80FF00] text-black cursor-pointer hover:bg-[#70e600] shadow-sm shadow-[#80FF00]/20' : ''}
-                    ${isActive && !isCompleted ? 'bg-black/5 dark:bg-white/5 text-[color:var(--text-primary)] shadow-sm shadow-black/10 dark:shadow-black/30' : ''}
-                    ${!isActive && !isCompleted ? 'bg-black/5 dark:bg-white/5 text-[color:var(--text-tertiary)]' : ''}
+                    ${isActive && !isCompleted ? 'bg-white/5 text-white shadow-sm shadow-black/30' : ''}
+                    ${!isActive && !isCompleted ? 'bg-white/5 text-gray-500' : ''}
                     ${isClickable ? 'cursor-pointer' : 'cursor-default'}
                   `}
                 whileHover={isClickable ? { scale: 1.05 } : {}}
@@ -118,9 +116,9 @@ export default function StepIndicator({
               </motion.button>
               <span className={`
                   text-sm font-medium whitespace-nowrap
-                  ${isCompleted ? 'text-[color:var(--text-primary)] dark:text-[#80FF00]' : ''}
-                  ${isActive && !isCompleted ? 'text-[color:var(--text-primary)]' : ''}
-                  ${!isActive && !isCompleted ? 'text-[color:var(--text-tertiary)]' : ''}
+                  ${isCompleted ? 'text-[#80FF00]' : ''}
+                  ${isActive && !isCompleted ? 'text-white' : ''}
+                  ${!isActive && !isCompleted ? 'text-gray-500' : ''}
                 `}>
                 {step.label}
               </span>
@@ -128,7 +126,7 @@ export default function StepIndicator({
 
             {/* Chevron Separator */}
             {index < steps.length - 1 && (
-              <ChevronRight className="w-5 h-5 text-[color:var(--text-tertiary)] flex-shrink-0 mx-1" />
+              <ChevronRight className="w-5 h-5 text-gray-600 flex-shrink-0 mx-1" />
             )}
           </React.Fragment>
         );
@@ -136,4 +134,3 @@ export default function StepIndicator({
     </div>
   );
 }
-

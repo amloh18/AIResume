@@ -3,6 +3,7 @@ import { Calendar, Heart, ExternalLink } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 import { parseFormattedText } from '@/lib/utils/textFormatting';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface VolunteerProps {
   data: UnifiedCVDataStructure['volunteer'];
@@ -49,11 +50,11 @@ const Volunteer: React.FC<VolunteerProps> = ({
         {sectionConfig.displayName || 'Volunteer Experience'}
       </h2>
       
-      <div className="volunteer-list">
+      <div className="volunteer-list entry-list">
         {volunteer.map((volunteerItem, index) => (
           <div 
             key={index} 
-            className="volunteer-item cv-entry-item"
+            className="volunteer-item cv-entry-item entry-block"
             data-entry-index={index}
           >
             <div className="item-header entry-header">
@@ -206,17 +207,30 @@ const Volunteer: React.FC<VolunteerProps> = ({
           }
         }
         
+        .volunteer-summary p {
+          orphans: 2;
+          widows: 2;
+        }
+
         @media print {
           .organization-link {
             color: inherit !important;
           }
           
-          .volunteer-item {
+          .volunteer-item,
+          .cv-entry-item {
             break-inside: avoid;
+            page-break-inside: avoid;
             border-left: 1px solid rgba(225, 29, 72, 0.5) !important;
             background: none !important;
           }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
+          }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </section>
   );

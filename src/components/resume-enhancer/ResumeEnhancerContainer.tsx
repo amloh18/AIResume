@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus } from 'lucide-react';
+import { gsap } from 'gsap';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
 import Step1Parser from './steps/Step1Parser';
@@ -77,7 +79,39 @@ export default function ResumeEnhancerContainer({
   const pathname = usePathname();
   const { state, dispatch, goToStep, loadCV, setRoleContext } = useResumeEnhancer();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [showTemplateOverlay, setShowTemplateOverlay] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
+
+  // Map internal steps (1-4) to display steps (1-2) for the step indicator
+  // Internal: 1=Dashboard (no step indicator), 2=Template selection, 3=Builder, 4=Review
+  // Display:  1=Builder (includes template selection), 2=Review
+  const displayStep = (state.currentStep <= 3 ? 1 : 2) as 1 | 2;
+  const displayCompletedSteps = completedSteps
+    .map(s => (s === 3 ? 1 : s === 4 ? 2 : -1))
+    .filter(s => s > 0);
+
+  // GSAP step transition animation
+  useEffect(() => {
+    if (!stepContentRef.current) return;
+    const el = stepContentRef.current;
+
+    gsap.fromTo(el,
+      { opacity: 0, x: 30 },
+      { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }
+    );
+  }, [state.currentStep]);
+
+  // GSAP template overlay animation
+  useEffect(() => {
+    if (!templateOverlayRef.current) return;
+    if (showTemplateOverlay) {
+      gsap.fromTo(templateOverlayRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.4, ease: 'power2.out' }
+      );
+    }
+  }, [showTemplateOverlay]);
+
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error' | 'offline'>('idle');
   const [hasOfflineBackup, setHasOfflineBackup] = useState(false);
@@ -89,6 +123,8 @@ export default function ResumeEnhancerContainer({
   const [isUserMenuExpanded, setIsUserMenuExpanded] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const step3Ref = useRef<Step3BuilderSurgeonRef>(null);
+  const stepContentRef = useRef<HTMLDivElement>(null);
+  const templateOverlayRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef<{ mode: string; cvId?: string } | null>(null);
   // Track initial CV data to detect unsaved changes
   const initialCVDataRef = useRef<UnifiedCVDataStructure | null>(null);
@@ -236,7 +272,7 @@ export default function ResumeEnhancerContainer({
   // Check if fixes have been applied (keywords that were missing are now present)
   const fixesApplied = useMemo(() => {
     const keywordFixes = (state.fixAnnotations || []).filter(
-      f => f.category === 'keywords' && f.status === 'resolved'
+      f => f.category === 'keywords' && (f.status === 'applied' || f.status === 'semantic_match')
     );
     return keywordFixes.length > 0;
   }, [state.fixAnnotations]);
@@ -513,9 +549,14 @@ export default function ResumeEnhancerContainer({
               dispatch({ type: 'SET_CV_DATA', payload: draft.cvData });
             }
 
-            // Restore step
+            // Restore step (step 2 was template overlay, go to step 1 and show overlay)
             if (draft.currentStep) {
-              goToStep(draft.currentStep as 1 | 2 | 3 | 4);
+              if (draft.currentStep === 2) {
+                goToStep(1);
+                setShowTemplateOverlay(true);
+              } else {
+                goToStep(draft.currentStep as 1 | 2 | 3 | 4);
+              }
             }
 
             // Restore completed steps
@@ -832,9 +873,7 @@ export default function ResumeEnhancerContainer({
           // 1. If mode is 'journey', force journey type
           // 2. Otherwise, prioritize cvType field, then infer from metadata/journeyId
           let resolvedCvType: 'master' | 'journey' | 'standalone' =
-            mode === 'journey'
-              ? 'journey'
-              : cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
+            cv.cvType || (cv.metadata?.isMaster ? 'master' : cv.journeyId ? 'journey' : 'standalone');
 
           // For journey CVs: ensure we have jobData to show journey-based interface
           if (resolvedCvType === 'journey') {
@@ -1210,7 +1249,7 @@ export default function ResumeEnhancerContainer({
         '';
 
       const inferredSeniority =
-        mapExperienceLevelToSeniority(state.cvData?.metadata?.aiAnalysis?.experienceLevel?.level) ||
+        mapExperienceLevelToSeniority((state.cvData as any)?.metadata?.aiAnalysis?.experienceLevel?.level) ||
         getSeniorityFromYears(calculateTotalWorkYears(cvData?.work || [])) ||
         '';
 
@@ -1218,8 +1257,8 @@ export default function ResumeEnhancerContainer({
         setRoleContext(inferredRole, inferredSeniority);
       }
 
-      // Proceed directly to template selection (Step 2) without showing role modal
-      goToStep(2);
+      // Proceed directly to builder (skip template overlay for existing CVs)
+      goToStep(3);
       return;
     }
 
@@ -1248,8 +1287,8 @@ export default function ResumeEnhancerContainer({
           }).catch(err => console.error('Failed to save draft:', err));
         }
 
-        // Proceed directly to template selection (Step 2) without showing role modal
-        goToStep(2);
+        // Proceed directly to template overlay (skip role modal) for new CVs
+        setShowTemplateOverlay(true);
         return;
       }
     }
@@ -1351,8 +1390,8 @@ export default function ResumeEnhancerContainer({
         }).catch(err => console.error('Failed to save draft:', err));
       }
 
-      // Proceed to template selection (only in create mode)
-      goToStep(2);
+      // Show template overlay for new CV (only in create mode)
+      setShowTemplateOverlay(true);
     }
   };
 
@@ -1671,8 +1710,8 @@ export default function ResumeEnhancerContainer({
             }
           });
 
-          // Proceed to template selection
-          goToStep(2);
+          // Show template overlay for new CV
+          setShowTemplateOverlay(true);
         } else {
           // Journey creation failed
           throw new Error('Journey creation failed');
@@ -1692,7 +1731,7 @@ export default function ResumeEnhancerContainer({
       alert(error instanceof Error ? error.message : 'Failed to create job. Please try again.');
       // Continue as standalone
       dispatch({ type: 'SET_CV_TYPE', payload: 'standalone' });
-      goToStep(2);
+      setShowTemplateOverlay(true);
     } finally {
       setShowJobParserDialog(false);
       setPendingRoleData(null);
@@ -1700,6 +1739,8 @@ export default function ResumeEnhancerContainer({
   };
 
   const handleStep2Complete = () => {
+    setShowTemplateOverlay(false);
+
     // Guest mode: Save draft after template selection
     if (isGuestMode) {
       guestCVService.saveGuestDraft({
@@ -2026,7 +2067,7 @@ export default function ResumeEnhancerContainer({
 
       // LAYER 1: UPSERT PATTERN - If Master CV has no ID, create instead of erroring
       // This fixes the "CV ID missing" error by automatically switching to CREATE mode
-      let shouldUpdate = isEditMode || effectiveCvId;
+      let shouldUpdate: string | boolean | undefined = isEditMode || effectiveCvId;
       let apiUrl = shouldUpdate && effectiveCvId ? `/api/cvs/${effectiveCvId}` : '/api/cvs';
       let apiMethod = shouldUpdate && effectiveCvId ? 'PUT' : 'POST';
 
@@ -2244,414 +2285,231 @@ export default function ResumeEnhancerContainer({
   }
 
   return (
-    <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex flex-col">
-      {/* Header */}
-      <header className="bg-white dark:bg-[#141810] sticky top-0 z-[100] shadow-sm shadow-black/10 dark:shadow-black/30 backdrop-blur-sm w-full border-b border-gray-200 dark:border-transparent">
-        <div className="w-full px-4 py-1.5">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={handleExit}
-                className="p-1.5 hover:bg-white/5 rounded-lg transition-colors"
-                title="Go back"
-              >
-                <Home className="w-5 h-5 text-[color:var(--text-primary)]" />
-              </button>
-              <h1 className="text-[color:var(--text-primary)] font-bold">
-                <span className="text-xl">Resume Enhancer</span>
-                <span className="text-sm">
-                  {' '}
-                  BY <span className="text-[color:var(--accent-primary)]">CV</span>
-                  <span className="text-[color:var(--text-primary)]">Circle</span>
-                </span>
-              </h1>
-            </div>
-
-
-            {/* Actions - Right side */}
-            <div className="flex items-center space-x-2">
-
-              {/* Save button - only show on step 3 and 4 */}
-              {(state.currentStep === 3 || state.currentStep === 4) && (
-                <motion.button
-                  onClick={handleSmartSave}
-                  disabled={saveStatus === 'saving'}
-                  className="px-3 py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-lg text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[85px] justify-center"
-                  whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <AnimatePresence mode="wait" initial={false}>
-                    {saveStatus === 'saving' ? (
-                      <motion.div
-                        key="saving"
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex items-center space-x-1.5"
-                      >
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Saving...</span>
-                      </motion.div>
-                    ) : saveStatus === 'success' ? (
-                      <motion.div
-                        key="success"
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
-                        className="flex items-center space-x-1.5"
-                      >
-                        <motion.div
-                          initial={{ scale: 0, rotate: -45 }}
-                          animate={{ scale: 1, rotate: 0 }}
-                          transition={{ delay: 0.1, type: "spring", stiffness: 400 }}
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        </motion.div>
-                        <span>Saved!</span>
-                      </motion.div>
-                    ) : saveStatus === 'offline' ? (
-                      <motion.div
-                        key="offline"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-center space-x-1.5"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>Saved Offline</span>
-                      </motion.div>
-                    ) : (
-                      <motion.div
-                        key="idle"
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        transition={{ duration: 0.2 }}
-                        className="flex items-center space-x-1.5"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        <span>Save</span>
-                      </motion.div>
+    <div className="dashboard-page resume-enhancer-page min-h-screen bg-[#0A0D08] text-white flex flex-col">
+      {/* HEADER - Top Bar */}
+      <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-[#141810] sticky top-0 z-[100] shadow-xl">
+        <div className="flex items-center gap-12 flex-1">
+          {/* Logo or Back to Dashboard if in deep editing */}
+          <div className="flex items-center">
+            <button
+              onClick={handleExit}
+              className="group flex items-center pr-12 hover:opacity-80 transition-all duration-300"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-black dark:bg-white/5 border border-white/10 shadow-xl group-hover:scale-110 group-hover:border-lime-500/50 transition-all duration-300">
+                  <Image 
+                    src="/images/logo.png" 
+                    alt="CVCircle" 
+                    width={24} 
+                    height={24} 
+                    className="object-contain"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-1.5 sm:gap-3">
+                  {/* Branding - Hidden on Mobile */}
+                  <div className="flex-col hidden sm:flex">
+                    <span className="text-base font-black tracking-tighter leading-none text-white">
+                      CV<span className="text-lime-500">CIRCLE</span>
+                    </span>
+                    {state.currentStep === 1 && (
+                      <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1">
+                        Resume Enhancer
+                      </span>
                     )}
-                  </AnimatePresence>
-                </motion.button>
-              )}
+                  </div>
 
-              {/* Continue to Review button - only show on Step 3 */}
-              {state.currentStep === 3 && (
-                <button
-                  onClick={handleStep3Complete}
-                  className="px-3 py-1.5 bg-white/10 hover:bg-white/15 border border-white/20 text-white rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Review</span>
-                </button>
-              )}
-
-
-
-              {/* Guest Mode Tag */}
-              {isGuestMode && (
-                <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium">
-                  Guest
-                </span>
-              )}
-
-              {/* Notification Center */}
-              <NotificationCenter />
-            </div>
+                  {/* Breadcrumb - Logo > Chevron > Builder */}
+                  {state.currentStep !== 1 && (
+                    <div className="flex items-center gap-1.5 sm:gap-3">
+                      <ChevronRight className="w-3.5 h-3.5 sm:w-4 h-4 text-gray-600" />
+                      <span className="text-[10px] sm:text-sm font-black text-lime-500 uppercase tracking-tighter italic whitespace-nowrap">
+                        {state.currentStep === 3 ? 'Builder' : 'Review'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </button>
           </div>
+
+          <div className="hidden lg:flex flex-1 justify-center">
+            {state.currentStep !== 1 && (
+              <div className="flex items-center gap-3">
+                <div className="h-px w-8 bg-gradient-to-r from-transparent to-lime-500/30" />
+                <span className="text-sm font-black text-white bg-lime-500/10 px-3 py-1 rounded-full border border-lime-500/20 shadow-sm shadow-lime-500/5 uppercase tracking-tighter italic">
+                  {state.cvTitle || 'Untitled Resume'}
+                </span>
+                <div className="h-px w-8 bg-gradient-to-l from-transparent to-lime-500/30" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Actions - Right side */}
+        <div className="flex items-center space-x-2">
+          {/* Add Section & Template - only show on step 3 (Builder) */}
+          {state.currentStep === 3 && (
+            <div className="flex items-center gap-1 sm:gap-2 mr-1 sm:mr-2">
+              <button
+                onClick={() => step3Ref.current?.openAddSection()}
+                className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
+                title="Add Section"
+              >
+                <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline">Add Section</span>
+              </button>
+              <button
+                onClick={() => step3Ref.current?.openTemplateSelector()}
+                className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
+                title="Select Template"
+              >
+                <Palette className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                <span className="hidden sm:inline">Template</span>
+              </button>
+            </div>
+          )}
+
+          {/* Save button - only show on step 3 and 4 */}
+          {(state.currentStep === 3 || state.currentStep === 4) && (
+            <motion.button
+              onClick={handleSmartSave}
+              disabled={saveStatus === 'saving'}
+              className="p-1.5 sm:px-4 sm:py-1.5 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] disabled:bg-gray-300 dark:disabled:bg-[var(--bg-tertiary)] disabled:cursor-not-allowed text-black disabled:text-gray-500 dark:disabled:text-[color:var(--text-tertiary)] rounded-full text-xs font-semibold transition-colors flex items-center space-x-1.5 shadow-md hover:shadow-lg overflow-hidden min-w-[36px] sm:min-w-[85px] justify-center"
+              title="Save"
+              whileHover={{ scale: saveStatus === 'saving' ? 1 : 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <AnimatePresence mode="wait" initial={false}>
+                {saveStatus === 'saving' ? (
+                  <motion.div
+                    key="saving"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center space-x-1.5"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span className="hidden sm:inline">Saving...</span>
+                  </motion.div>
+                ) : saveStatus === 'success' ? (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 1, scale: 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+                    className="flex items-center space-x-1.5"
+                  >
+                    <CheckCircle2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden sm:inline">Saved!</span>
+                  </motion.div>
+                ) : saveStatus === 'offline' ? (
+                  <motion.div
+                    key="offline"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center space-x-1.5"
+                  >
+                    <Save className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden sm:inline">Saved Offline</span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="idle"
+                    initial={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex items-center space-x-1.5"
+                  >
+                    <Save className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                    <span className="hidden sm:inline">Save</span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+          )}
+
+          {/* Continue to Review button - only show on Step 3 */}
+          {state.currentStep === 3 && (
+            <button
+              onClick={handleStep3Complete}
+              className="p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+              title="Review"
+            >
+              <Eye className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">Review</span>
+            </button>
+          )}
+
+          {/* Guest Mode Tag */}
+          {isGuestMode && (
+            <span className="px-2.5 py-1 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-full text-xs font-medium">
+              Guest
+            </span>
+          )}
+
+          {/* Notification Center */}
+          <NotificationCenter />
         </div>
 
         {/* Save Error (lightweight inline) */}
         {saveStatus === 'error' && saveError && (
-          <div className="px-4 pb-2">
-            <div className="text-xs text-red-700 dark:text-red-400 bg-red-500/10 rounded-lg px-3 py-2 shadow-sm shadow-black/10 dark:shadow-black/30">
+          <div className="absolute top-full left-0 right-0 px-4 py-2 bg-red-500/10 backdrop-blur-md border-b border-red-500/20 z-[90]">
+            <div className="text-xs text-red-700 dark:text-red-400 text-center">
               {saveError}
             </div>
           </div>
         )}
       </header>
 
-      {/* Content Area (Left Sticky Steps + Main Content) */}
-      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)] h-[calc(100vh-64px-80px)] mt-2">
-        {/* Floating / Sticky vertical steps panel (desktop) */}
-        <aside className="hidden lg:flex lg:flex-col w-72 flex-shrink-0 m-2 rounded-xl bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 h-auto max-h-[calc(100vh-80px)] overflow-hidden">
-          <div className="flex flex-col h-full p-3 overflow-hidden">
-            <div className="flex-1 space-y-3 overflow-y-auto overscroll-contain pr-1">
-              {/* Step Indicator Card */}
-              <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 border border-gray-200 dark:border-white/5 overflow-hidden">
-                <div className="p-3">
-                  <StepIndicator
-                    orientation="vertical"
-                    currentStep={state.currentStep}
-                    completedSteps={completedSteps}
-                    onStepClick={(step) => {
-                      if (completedSteps.includes(step)) {
-                        goToStep(step);
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Job Role Card - Show for master and standalone CVs (including guest mode) */}
-              {(state.cvType === 'master' || state.cvType === 'standalone' || (isGuestMode && !state.cvType)) && (
-                <JobRoleCard
-                  targetRole={state.targetRole}
-                  seniorityLevel={state.seniorityLevel}
-                  optimizationScore={analysisScore}
-                  cvType={state.cvType || (isGuestMode ? 'master' : 'standalone')}
-                  mode={mode}
-                  hasJD={isJDReferenced}
-                  onEditRole={() => {
-                    roleExplicitlySetRef.current = true;
-                    setShowRoleModal(true);
-                  }}
-                  onAddJD={() => setShowJobParserDialog(true)}
-                />
-              )}
-
-              {/* Job Card - Show for journey-based CVs on all steps */}
-              {state.cvType === 'journey' && state.jobData && (
-                <JobCard
-                  job={state.jobData}
-                  onClick={async () => {
-                    const jobId = state.jobData.id || state.jobData._id;
-                    if (!jobId || (userId === 'guest' ? false : !userId)) return;
-
-                    setSelectedJob(state.jobData);
-
-                    // Load journeys for this job (skip for guest users)
-                    if (userId !== 'guest') {
-                      try {
-                        const journeysResponse = await authenticatedFetchWithUserId(
-                          `/api/application-journey?jobId=${jobId}`,
-                          userId
-                        );
-                        const journeysData = await journeysResponse.json();
-                        setJourneysForJob(journeysData.success ? journeysData.data.journeys || [] : []);
-                      } catch (error) {
-                        console.error('Error loading journeys:', error);
-                        setJourneysForJob([]);
-                      }
-                    }
-
-                    setShowJobSidebar(true);
-                  }}
-                />
-              )}
-
-              {/* ATS Check Card - Redesigned (Step 3) */}
-              {/* ATS Check Card - Removed for Step 3 per user request */}
-              {state.currentStep === 3 && null}
-
-              {/* Vertical Step Indicator - Hidden on desktop since we have ribbon, shown on mobile if needed */}
-              <div className="bg-white dark:bg-[#1a230f] rounded-xl shadow-sm shadow-black/10 dark:shadow-black/30 p-2.5 border border-gray-200 dark:border-white/5 hidden">
-                <StepIndicator
-                  orientation="vertical"
-                  currentStep={state.currentStep}
-                  completedSteps={completedSteps}
-                  onStepClick={(step) => {
-                    if (completedSteps.includes(step)) {
-                      goToStep(step);
-                    }
-                  }}
-                />
-              </div>
-
-              {/* Membership Card (from dashboard sidebar concept) */}
-              <SidebarMembershipCard />
-            </div>
-
-            {/* User Profile Section - At the bottom */}
-            <div className="mt-auto border-t border-white/10 pt-3 flex-shrink-0">
-              {/* Menu Items - Above Avatar */}
-              <AnimatePresence>
-                {isUserMenuExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="overflow-hidden"
-                    onMouseEnter={handleMenuContentMouseEnter}
-                    onMouseLeave={handleMenuContentMouseLeave}
-                  >
-                    <div className="p-2 space-y-1">
-                      {/* View Profile - Hidden in guest mode */}
-                      {!isGuestMode && (
-                        <motion.button
-                          onClick={handleProfileClick}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <User className="w-5 h-5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">View Profile</div>
-                          </div>
-                        </motion.button>
-                      )}
-
-                      {/* Settings - Hidden in guest mode */}
-                      {!isGuestMode && (
-                        <motion.button
-                          onClick={handleSettingsClick}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          <Settings className="w-5 h-5 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">Settings</div>
-                          </div>
-                        </motion.button>
-                      )}
-
-                      {/* Theme Toggle */}
-                      <div className="flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                        <div className="flex items-center gap-3">
-                          {theme === 'dark' ? (
-                            <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                          ) : (
-                            <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                          )}
-                          <span className="text-sm text-gray-700 dark:text-gray-300">Theme</span>
-                        </div>
-                        <button
-                          onClick={toggleTheme}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2 cursor-pointer ${theme === 'dark'
-                            ? 'bg-lime-500'
-                            : 'bg-gray-200 dark:bg-gray-700'
-                            }`}
-                          type="button"
-                          aria-label="Toggle theme"
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-6' : 'translate-x-1'
-                              }`}
-                          />
-                        </button>
-                      </div>
-
-                      {/* Sign Out */}
-                      <motion.button
-                        onClick={handleSignOut}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <LogOut className="w-5 h-5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">Sign Out</div>
-                        </div>
-                      </motion.button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* User Avatar - At the bottom, clickable to toggle menu */}
-              <div className="p-2">
-                <motion.button
-                  onClick={() => setIsUserMenuExpanded(!isUserMenuExpanded)}
-                  onMouseEnter={handleUserMenuMouseEnter}
-                  onMouseLeave={handleUserMenuMouseLeave}
-                  className="w-full flex items-center gap-3 focus:outline-none rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors p-2"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <UserAvatar
-                    src={isGuestMode ? undefined : getUserAvatar(userData)}
-                    name={
-                      isGuestMode
-                        ? 'Guest'
-                        : getUserDisplayName(userData)
-                    }
-                    size="sm"
-                    className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0"
-                  />
-                  {/* User Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {isGuestMode
-                        ? 'Guest'
-                        : getUserDisplayName(userData)
-                      }
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {isGuestMode
-                        ? 'Not signed in'
-                        : (userData?.email || '')
-                      }
-                    </div>
-                  </div>
-                  {/* Chevron Icon */}
-                  <motion.div
-                    animate={{ rotate: isUserMenuExpanded ? 180 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-shrink-0"
-                  >
-                    <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                  </motion.div>
-                </motion.button>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-
-
+      {/* Content Area */}
+      <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)]">
         {/* Main Content */}
         <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
           <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={state.currentStep}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="h-full min-h-0 flex flex-col"
-              >
-                {state.currentStep === 1 && (
-                  <ErrorBoundary stepName="CV Parser" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
-                    <Step1Parser
-                      onComplete={handleStep1Complete}
-                      mode={mode}
-                      cvType={state.cvType}
-                    />
-                  </ErrorBoundary>
-                )}
-                {state.currentStep === 2 && (
-                  <ErrorBoundary stepName="Template Selection" onReset={() => dispatch({ type: 'SET_STEP', payload: 2 })}>
-                    <Step2Template onComplete={handleStep2Complete} />
-                  </ErrorBoundary>
-                )}
-                {state.currentStep === 3 && (
-                  <ErrorBoundary stepName="CV Builder" onReset={() => dispatch({ type: 'SET_STEP', payload: 3 })}>
-                    <Step3BuilderSurgeon
-                      ref={step3Ref}
-                      onComplete={handleStep3Complete}
-                      onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
-                    />
-                  </ErrorBoundary>
-                )}
-                {state.currentStep === 4 && (
-                  <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 4 })}>
-                    <Step4Review />
-                  </ErrorBoundary>
-                )}
-              </motion.div>
-            </AnimatePresence>
+            <div ref={stepContentRef} className="h-full min-h-0 flex flex-col">
+              {state.currentStep === 1 && (
+                <ErrorBoundary stepName="CV Parser" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
+                  <Step1Parser
+                    onComplete={handleStep1Complete}
+                    userHasMasterCV={state.hasMasterCV}
+                    mode={mode}
+                    cvType={state.cvType}
+                  />
+                </ErrorBoundary>
+              )}
+              {state.currentStep === 3 && (
+                <ErrorBoundary stepName="CV Builder" onReset={() => dispatch({ type: 'SET_STEP', payload: 3 })}>
+                  <Step3BuilderSurgeon
+                    ref={step3Ref}
+                    onComplete={handleStep3Complete}
+                    onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
+                  />
+                </ErrorBoundary>
+              )}
+              {state.currentStep === 4 && (
+                <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 4 })}>
+                  <Step4Review />
+                </ErrorBoundary>
+              )}
+            </div>
           </div>
         </main>
       </div>
+
+      {/* Template Overlay - shown for new CVs after step 1 */}
+      {showTemplateOverlay && (
+        <div
+          ref={templateOverlayRef}
+          className="fixed inset-0 z-[200] bg-[var(--bg-primary)] overflow-y-auto"
+        >
+          <Step2Template onComplete={handleStep2Complete} />
+        </div>
+      )}
 
       {/* Role Selector Modal */}
       <RoleSelectorModal
@@ -2674,7 +2532,6 @@ export default function ResumeEnhancerContainer({
           onClose={() => setShowAuthPrompt(false)}
           onContinueGuest={() => {
             setShowAuthPrompt(false);
-            // Allow continuing as guest with limitations
           }}
           currentStep={state.currentStep}
         />
@@ -2686,15 +2543,10 @@ export default function ResumeEnhancerContainer({
         onClose={() => {
           setShowJobParserDialog(false);
           setPendingRoleData(null);
-          // Reopen role modal if we don't have role data (only for non-standalone)
-          if (state.cvType !== 'standalone' && !state.targetRole || !state.seniorityLevel) {
+          if (state.cvType !== 'standalone' && (!state.targetRole || !state.seniorityLevel)) {
             setShowRoleModal(true);
           }
         }}
-        customDescription={state.cvType === 'standalone'
-          ? 'Add a Job Description for ATS check. This helps us provide more accurate analysis tailored to your target role by matching your CV against the job requirements.'
-          : undefined
-        }
         onParseComplete={handleJobParserComplete}
       />
 
@@ -2766,4 +2618,3 @@ export default function ResumeEnhancerContainer({
     </div>
   );
 }
-

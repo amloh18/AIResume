@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, ExternalLink, Award, AlertTriangle } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface CertificatesProps {
   data: UnifiedCVDataStructure['certificates'];
@@ -52,16 +53,16 @@ const Certificates: React.FC<CertificatesProps> = ({
   };
 
   return (
-    <section className="certificates-section">
-      <h2 className="section-header">
+    <section className="certificates-section section-content">
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Certifications'}
       </h2>
       
-      <div className="certificates-list">
+      <div className="certificates-list entry-list">
         {certificates.map((certificate, index) => (
           <div 
             key={index} 
-            className={`certificate-item ${
+            className={`certificate-item cv-entry-item entry-block ${
               isExpired(certificate.date) ? 'expired' : 
               isExpiringSoon(certificate.date) ? 'expiring-soon' : ''
             }`}
@@ -244,18 +245,26 @@ const Certificates: React.FC<CertificatesProps> = ({
             color: inherit !important;
           }
           
-          .certificate-item {
+          .certificate-item,
+          .cv-entry-item {
             break-inside: avoid;
+            page-break-inside: avoid;
             border: 1px solid rgba(0,0,0,0.2) !important;
             background: white !important;
             box-shadow: none !important;
             transform: none !important;
+          }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
           }
           
           .certificates-list {
             grid-template-columns: repeat(2, 1fr);
           }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </section>
   );

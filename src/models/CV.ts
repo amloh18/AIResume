@@ -1,10 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import { UnifiedCVDataStructure, UnifiedCVDocument } from '@/types/unified-cv-schema';
+import { EnhancedResumeJSON } from '@/types/enhanced-resume-schema';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId; // MongoDB ObjectId linking to User collection
   title: string;
-  cvData: UnifiedCVDataStructure; // Using unified schema
+  cvData: UnifiedCVDataStructure; // Using unified schema (legacy)
+  resumeData?: EnhancedResumeJSON; // NEW: Enhanced resume data with unique IDs
   templateId: mongoose.Types.ObjectId; // Reference to Template collection
   templateName?: string; // Template name for quick access
   templateData?: any; // Full template data stored for S3 backup and faster access
@@ -220,7 +222,17 @@ cvSchema.pre('save', async function (next) {
     );
   }
 
+  // Sync resumeData with cvData if resumeData is modified
+  if (this.isModified('resumeData') && this.resumeData) {
+    // Keep cvData in sync for backward compatibility
+    // This ensures existing components continue to work
+    const { migrateToLegacyFormat } = require('@/lib/migrations/enhanced-resume-migration');
+    this.cvData = migrateToLegacyFormat(this.resumeData);
+  }
+
   next();
 });
+
+
 
 export default mongoose.models.CV || mongoose.model<ICV>('CV', cvSchema);

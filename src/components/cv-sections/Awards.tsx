@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, Trophy, Award, ExternalLink } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface AwardsProps {
   data: UnifiedCVDataStructure['awards'];
@@ -33,14 +34,14 @@ const Awards: React.FC<AwardsProps> = ({
   };
 
   return (
-    <section className="awards-section">
-      <h2 className="section-header">
+    <section className="awards-section section-content">
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Awards & Recognition'}
       </h2>
       
-      <div className="awards-list">
+      <div className="awards-list entry-list">
         {awards.map((award, index) => (
-          <div key={index} className="award-item">
+          <div key={index} className="award-item cv-entry-item entry-block">
             <div className="item-header">
               <div className="item-title-group">
                 <h3 className="item-title">
@@ -183,15 +184,28 @@ const Awards: React.FC<AwardsProps> = ({
           }
         }
         
+        .award-summary p {
+          orphans: 2;
+          widows: 2;
+        }
+
         @media print {
-          .award-item {
+          .award-item,
+          .cv-entry-item {
             break-inside: avoid;
+            page-break-inside: avoid;
             border: 1px solid rgba(245, 158, 11, 0.3) !important;
             border-left: 2px solid #f59e0b !important;
             background: none !important;
             transform: none !important;
           }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
+          }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </section>
   );

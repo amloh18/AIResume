@@ -3,6 +3,7 @@ import { Calendar, GraduationCap, ExternalLink, Award } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface EducationProps {
   data: UnifiedCVDataStructure['education'];
@@ -19,7 +20,6 @@ const Education: React.FC<EducationProps> = ({
 }) => {
   if (!data || data.length === 0) return null;
 
-
   return (
     <section 
       className="education-section section-content"
@@ -30,11 +30,11 @@ const Education: React.FC<EducationProps> = ({
         {sectionConfig.displayName || 'Education'}
       </h2>
       
-      <div className="education-list">
+      <div className="education-list entry-list">
         {data.map((education, index) => (
           <div 
             key={index} 
-            className="education-item cv-entry-item"
+            className="education-item cv-entry-item entry-block"
             data-entry-index={index}
           >
             <div className="item-header entry-header">
@@ -43,8 +43,11 @@ const Education: React.FC<EducationProps> = ({
                   {education.studyType && education.area 
                     ? `${education.studyType} in ${education.area}`
                     : education.studyType || education.area || 'Degree Program'
-                  }, {education.institution || 'Institution Name'}
+                  }
                 </h3>
+                <div className="item-subtitle">
+                  {education.institution || 'Institution Name'}
+                </div>
               </div>
               
               <div className="item-date-group">
@@ -53,6 +56,12 @@ const Education: React.FC<EducationProps> = ({
                 </div>
               </div>
             </div>
+
+            {education.score && education.score.trim() && (
+              <div className="item-gpa">
+                GPA: {education.score}
+              </div>
+            )}
 
             {education.description && (
               <div className="education-description entry-content item-content">
@@ -85,31 +94,33 @@ const Education: React.FC<EducationProps> = ({
         .education-section {
           margin-bottom: ${template.globalStyles.spacing};
         }
-        
+
         .education-list {
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
-        
+
         .education-item {
           page-break-inside: avoid;
+          break-inside: avoid;
           margin-bottom: 10px;
         }
-        
+
         .item-header {
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 8px;
+          align-items: baseline;
+          margin-bottom: 4px;
           gap: 16px;
         }
-        
+
         .item-title-group {
           flex: 1;
           min-width: 0;
+          overflow: hidden;
         }
-        
+
         .item-title {
           font-size: ${template.globalStyles.fontSize};
           font-weight: 700;
@@ -117,93 +128,86 @@ const Education: React.FC<EducationProps> = ({
           margin: 0;
           line-height: ${template.globalStyles.lineHeight};
         }
-        
-        .institution-info {
-          display: inline;
-        }
-        
-        .institution-icon {
-          display: none;
-        }
-        
-        .institution-name {
+
+        .item-subtitle {
           font-size: ${template.globalStyles.fontSize};
-          color: ${template.globalStyles.primaryColor};
-          font-style: normal;
+          color: ${template.globalStyles.secondaryColor};
           font-weight: 400;
+          margin-top: 1px;
         }
-        
-        .institution-link {
-          display: none;
+
+        .item-gpa {
+          font-size: ${template.globalStyles.fontSize};
+          color: ${template.globalStyles.secondaryColor};
+          margin-top: 2px;
         }
-        
+
         .item-date-group {
           text-align: right;
           white-space: nowrap;
+          flex-shrink: 0;
         }
-        
-        .item-date, .score {
+
+        .item-date {
           font-size: ${template.globalStyles.fontSize};
           font-weight: 700;
           color: ${template.globalStyles.primaryColor};
           text-align: right;
         }
-        
-        .score {
-          display: none;
+
+        .education-description {
+          max-width: 75%;
         }
-        
+
+        .education-description p {
+          orphans: 2;
+          widows: 2;
+        }
+
         .courses-section {
           margin-top: 8px;
           padding-top: 8px;
           border-top: 1px solid rgba(0,0,0,0.05);
         }
-        
-        .courses-title {
-          font-size: 10pt;
-          font-weight: 600;
-          color: ${template.globalStyles.secondaryColor};
-          margin: 0 0 4px 0;
-        }
-        
+
         .courses-list {
           font-size: 10pt;
           color: ${template.globalStyles.primaryColor};
           line-height: ${template.globalStyles.lineHeight};
         }
-        
+
         .course-item {
           font-weight: 400;
         }
-        
+
         @media (max-width: 768px) {
           .item-header {
             flex-direction: column;
             align-items: flex-start;
             gap: 8px;
           }
-          
+
           .item-date-group {
             text-align: left;
             min-width: auto;
             flex-direction: row;
             gap: 12px;
           }
-          
-          .item-date, .score {
-            justify-content: flex-start;
-          }
         }
-        
+
         @media print {
-          .institution-link {
-            color: inherit !important;
-          }
-          
-          .education-item {
+          .education-item,
+          .cv-entry-item {
             break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
           }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </section>
   );

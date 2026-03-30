@@ -29,7 +29,8 @@ export function useWYSIWYGToolbarProps(value: string, onChange: (value: string) 
     handleUnderline,
     handleBulletList,
     handleUndo,
-    handleRedo
+    handleRedo,
+    applyFormatting
   } = useWYSIWYG(value, onChange);
 
   return {
@@ -44,6 +45,64 @@ export function useWYSIWYGToolbarProps(value: string, onChange: (value: string) 
         onBulletList={handleBulletList}
         onUndo={handleUndo}
         onRedo={handleRedo}
+        onStrikethrough={() => applyFormatting('strikeThrough')}
+        onHeading={(level) => {
+          const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+          if (editor) {
+            editor.focus();
+            requestAnimationFrame(() => {
+              document.execCommand('formatBlock', false, `h${level}`);
+            });
+          }
+        }}
+        onAlign={(alignment) => {
+          const cmd = alignment === 'left' ? 'justifyLeft' : alignment === 'center' ? 'justifyCenter' : alignment === 'right' ? 'justifyRight' : 'justifyFull';
+          applyFormatting(cmd);
+        }}
+        onOrderedList={() => applyFormatting('insertOrderedList')}
+        onBlockquote={() => {
+          const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+          if (editor) {
+            editor.focus();
+            requestAnimationFrame(() => {
+              document.execCommand('formatBlock', false, 'blockquote');
+            });
+          }
+        }}
+        onHorizontalRule={() => applyFormatting('insertHorizontalRule')}
+        onFontSize={(size) => {
+          const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+          if (editor) {
+            editor.focus();
+            requestAnimationFrame(() => {
+              document.execCommand('fontSize', false, size);
+            });
+          }
+        }}
+        onTextColor={(color) => {
+          const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+          if (editor) {
+            editor.focus();
+            requestAnimationFrame(() => {
+              document.execCommand('foreColor', false, color);
+            });
+          }
+        }}
+        onLink={() => {
+          const url = prompt('Enter URL:');
+          if (url) {
+            applyFormatting('createLink');
+            // execCommand createLink needs special handling
+            const editor = document.querySelector('[contenteditable="true"]:focus') as HTMLElement;
+            if (editor) {
+              editor.focus();
+              requestAnimationFrame(() => {
+                document.execCommand('createLink', false, url);
+              });
+            }
+          }
+        }}
+        onUnlink={() => applyFormatting('unlink')}
         showAIButton={showAIButton}
         fieldType={fieldType}
         onAIGenerate={onAIGenerate}

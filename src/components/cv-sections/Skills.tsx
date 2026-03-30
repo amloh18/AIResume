@@ -2,6 +2,7 @@ import React from 'react';
 import { Code2, Star, Zap } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { appendEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface SkillsProps {
   data: UnifiedCVDataStructure['skills'];
@@ -18,35 +19,9 @@ const Skills: React.FC<SkillsProps> = ({
 }) => {
   if (!data || data.length === 0) return null;
 
-  const getSkillLevelIcon = (level?: string) => {
-    if (!level) return null;
-    
-    const normalizedLevel = level.toLowerCase();
-    if (normalizedLevel.includes('expert') || normalizedLevel.includes('advanced')) {
-      return <Star size={12} className="skill-level-icon expert" />;
-    }
-    if (normalizedLevel.includes('intermediate') || normalizedLevel.includes('proficient')) {
-      return <Zap size={12} className="skill-level-icon intermediate" />;
-    }
-    return <Code2 size={12} className="skill-level-icon beginner" />;
-  };
-
-  const getSkillLevelColor = (level?: string) => {
-    if (!level) return template.globalStyles.secondaryColor;
-    
-    const normalizedLevel = level.toLowerCase();
-    if (normalizedLevel.includes('expert') || normalizedLevel.includes('advanced')) {
-      return '#059669'; // green
-    }
-    if (normalizedLevel.includes('intermediate') || normalizedLevel.includes('proficient')) {
-      return '#f59e0b'; // amber
-    }
-    return '#6b7280'; // gray
-  };
-
   return (
-    <section className="skills-section">
-      <h2 className="section-header">
+    <section className="skills-section section-content">
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Skills'}
       </h2>
       
@@ -59,7 +34,11 @@ const Skills: React.FC<SkillsProps> = ({
               </span>
               {skillGroup.skills && skillGroup.skills.length > 0 && (
                 <span className="skill-list">
-                  {skillGroup.skills.join(', ')}
+                  {skillGroup.skills.map((skill, skillIndex) => (
+                    <span key={skillIndex} className="skill-name">
+                      {skill}{skillIndex < skillGroup.skills.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
                 </span>
               )}
             </div>
@@ -67,7 +46,7 @@ const Skills: React.FC<SkillsProps> = ({
         ))}
       </div>
 
-      <style>{`
+      <style>{appendEnforcedCSS(`
         .skills-section {
           margin-bottom: ${template.globalStyles.spacing};
         }
@@ -80,6 +59,7 @@ const Skills: React.FC<SkillsProps> = ({
         
         .skill-group {
           page-break-inside: avoid;
+          break-inside: avoid;
           margin-bottom: 0;
         }
         
@@ -104,13 +84,21 @@ const Skills: React.FC<SkillsProps> = ({
           display: inline;
           line-height: ${template.globalStyles.lineHeight};
         }
+
+        .skill-name {
+          white-space: nowrap;
+        }
         
         @media print {
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
+          }
           .skill-group {
             break-inside: avoid;
           }
         }
-      `}</style>
+      `)}</style>
     </section>
   );
 };

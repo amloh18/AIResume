@@ -3,6 +3,7 @@ import { Calendar, ExternalLink, Github, FolderOpen } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface ProjectsProps {
   data: UnifiedCVDataStructure['projects'];
@@ -52,11 +53,11 @@ const Projects: React.FC<ProjectsProps> = ({
         {sectionConfig.displayName || 'Projects'}
       </h2>
       
-      <div className="projects-list">
+      <div className="projects-list entry-list">
         {data.map((project, index) => (
           <div 
             key={index} 
-            className="project-item cv-entry-item"
+            className="project-item cv-entry-item entry-block"
             data-entry-index={index}
           >
             <div className="item-header entry-header">
@@ -72,8 +73,10 @@ const Projects: React.FC<ProjectsProps> = ({
               </div>
               
               {(project.startDate || project.endDate) && (
-                <div className="item-date">
-                  {formatDateRange(project.startDate, project.endDate)}
+                <div className="item-date-group">
+                  <div className="item-date">
+                    {formatDateRange(project.startDate, project.endDate)}
+                  </div>
                 </div>
               )}
             </div>
@@ -84,6 +87,16 @@ const Projects: React.FC<ProjectsProps> = ({
                   dangerouslySetInnerHTML={{ __html: parseFormattedText(project.description) }}
                 />
               </div>
+            )}
+
+            {project.highlights && project.highlights.length > 0 && (
+              <ul className="item-highlights">
+                {project.highlights.map((highlight, hIndex) => (
+                  <li key={hIndex} className="bullet-point">
+                    {highlight}
+                  </li>
+                ))}
+              </ul>
             )}
 
             {project.keywords && project.keywords.length > 0 && (
@@ -228,16 +241,43 @@ const Projects: React.FC<ProjectsProps> = ({
           }
         }
         
+        .project-description p {
+          orphans: 2;
+          widows: 2;
+        }
+
+        .item-highlights {
+          max-width: 75%;
+          margin: 4px 0;
+          padding-left: 18px;
+          color: ${template.globalStyles.primaryColor};
+          font-size: ${template.globalStyles.fontSize};
+          line-height: ${template.globalStyles.lineHeight};
+        }
+
+        .bullet-point {
+          orphans: 2;
+          widows: 2;
+        }
+
         @media print {
           .project-link {
             color: inherit !important;
           }
           
-          .project-item {
+          .project-item,
+          .cv-entry-item {
             break-inside: avoid;
+            page-break-inside: avoid;
             border-left: 1px solid rgba(0,0,0,0.2) !important;
           }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
+          }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </section>
   );

@@ -71,7 +71,7 @@ interface ATSContextState {
 interface ATSContextValue extends ATSContextState {
   // ATS Score methods
   updateATSScore: (score: number, analysis: ATSAnalysis, cvId: string, journeyId?: string, jobId?: string) => Promise<void>;
-  refreshATSScore: (cvId: string, jobId?: string) => Promise<void>;
+  refreshATSScore: (cvId: string, jobId?: string, userId?: string) => Promise<void>;
 
   // Surgeon Analysis methods
   updateSurgeonAnalysis: (analysis: SurgeonAnalysis, cvId: string) => Promise<void>;

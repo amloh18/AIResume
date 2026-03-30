@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { X, AlertCircle, Check } from 'lucide-react';
+import React, { useEffect, useRef, useCallback, useState } from 'react';
+import { useDragControls } from 'framer-motion';
+import { gsap } from 'gsap';
+import { X, AlertCircle, Check, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import PersonalInfoForm from '@/components/forms/PersonalInfoForm';
 import WorkExperienceSection from '@/components/forms/WorkExperienceSection';
@@ -19,6 +20,7 @@ import ReferencesSection from '@/components/forms/ReferencesSection';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { CVSurgeonService } from '@/lib/services/cv-surgeon-service';
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
+import { WYSIWYGToolbar } from '@/components/ui/WYSIWYGToolbar';
 
 interface FloatingFormEditorProps {
     sectionId: string;
@@ -59,25 +61,77 @@ export default function FloatingFormEditor({
 }: ExtendedFloatingFormEditorProps) {
     const { state, dispatch } = useResumeEnhancer();
     const modalRef = useRef<HTMLDivElement>(null);
+    const backdropRef = useRef<HTMLDivElement>(null);
     const dragControls = useDragControls();
+    const [showFormatToolbar, setShowFormatToolbar] = useState(true);
+
+    // GSAP entrance animation (Always centered)
+    useEffect(() => {
+        if (!modalRef.current || !backdropRef.current) return;
+
+        const tl = gsap.timeline();
+
+        // Fade in backdrop
+        tl.fromTo(backdropRef.current,
+            { opacity: 0 },
+            { opacity: 1, duration: 0.3, ease: 'power2.out' }
+        );
+
+        // Slide in modal centered
+        tl.fromTo(modalRef.current,
+            { opacity: 0, scale: 0.95, y: 20 },
+            { opacity: 1, scale: 1, x: 0, y: 0, duration: 0.35, ease: 'back.out(1.1)' },
+            '-=0.2'
+        );
+
+        return () => {
+            tl.kill();
+        };
+    }, []);
 
     // Handle click outside
     const handleBackdropClick = useCallback((e: React.MouseEvent) => {
         if (e.target === e.currentTarget) {
-            onClose();
+            handleClose();
         }
+    }, [onClose]);
+
+    // GSAP exit animation then close
+    const handleClose = useCallback(() => {
+        if (!modalRef.current || !backdropRef.current) {
+            onClose();
+            return;
+        }
+
+        const tl = gsap.timeline({
+            onComplete: onClose
+        });
+
+        tl.to(modalRef.current, {
+            opacity: 0,
+            scale: 0.95,
+            y: 20,
+            duration: 0.2,
+            ease: 'power2.in'
+        });
+
+        tl.to(backdropRef.current, {
+            opacity: 0,
+            duration: 0.15,
+            ease: 'power2.in'
+        }, '-=0.1');
     }, [onClose]);
 
     // ESC key handler
     useEffect(() => {
         const handleEscape = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
-                onClose();
+                handleClose();
             }
         };
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
-    }, [onClose]);
+    }, [handleClose]);
 
     // Focus trap - Only if not using custom positioning (modal mode)
     useEffect(() => {
@@ -110,10 +164,8 @@ export default function FloatingFormEditor({
         return () => window.removeEventListener('keydown', handleTab);
     }, [position]);
 
-    // Auto-focus first input when opened (for custom positioned mode)
+    // Auto-focus first input when opened
     useEffect(() => {
-        if (!position) return;
-
         const modal = modalRef.current;
         if (!modal) return;
 
@@ -121,11 +173,9 @@ export default function FloatingFormEditor({
             const firstInput = modal.querySelector('input, textarea, select') as HTMLElement;
             if (firstInput) {
                 firstInput.focus();
-                // Scroll the modal into view if needed
-                modal.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         }, 100);
-    }, [sectionId, position]);
+    }, [sectionId]);
 
     // CV data update handlers
     const updateCVData = useCallback((data: Partial<typeof state.cvData>) => {
@@ -426,82 +476,58 @@ export default function FloatingFormEditor({
     } : undefined;
 
     return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className={position ? "fixed inset-0 z-50 pointer-events-none" : "fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"}
-                onClick={handleBackdropClick}
+        <div
+            ref={backdropRef}
+            className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={handleBackdropClick}
+        >
+            <div
+                ref={modalRef}
+                className="w-full max-w-2xl bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[90vh] z-[10001]"
+                onClick={(e) => e.stopPropagation()}
             >
-                <div
-                    className={position ? "absolute inset-0 pointer-events-auto" : "hidden"}
-                    onClick={handleBackdropClick} // Transparent backdrop for positioned mode to catch clicks
-                />
-                <motion.div
-                    ref={modalRef}
-                    // Drag props
-                    drag={!!position}
-                    dragListener={false}
-                    dragMomentum={false}
-                    dragControls={dragControls}
-                    // Animation
-                    initial={position ? { opacity: 0, scale: 0.95, x: alignment === 'left' ? 20 : -20 } : { opacity: 0, scale: 0.95, y: 20 }}
-                    animate={position ? { opacity: 1, scale: 1, x: 0 } : { opacity: 1, scale: 1, y: 0 }}
-                    exit={position ? { opacity: 0, scale: 0.95 } : { opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.2 }}
-                    style={containerStyle}
-                    className={`
-                        w-full max-w-2xl bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl flex flex-col pointer-events-auto overflow-hidden
-                        ${!position ? 'max-h-[90vh]' : ''}
-                    `}
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    {/* Header */}
-                    <div
-                        className={`flex items-center justify-between px-5 py-4 border-b border-white/10 ${position ? 'cursor-move' : ''}`}
-                        onPointerDown={(e) => {
-                            if (position) dragControls.start(e);
-                        }}
-                    >
-                        <div className="flex items-center gap-3">
-                            <h2 className="text-lg font-semibold text-white">
-                                {SECTION_TITLES[sectionId] || 'Edit Section'}
-                            </h2>
-                            {sectionAnnotations.length > 0 && (
-                                <span className="px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-300 rounded-full">
-                                    {sectionAnnotations.length} suggestion{sectionAnnotations.length !== 1 ? 's' : ''}
-                                </span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={onClose}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:-translate-y-0.5"
-                                aria-label="Cancel"
-                                title="Cancel"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={onClose}
-                                onPointerDown={(e) => e.stopPropagation()}
-                                className="p-2 rounded-lg bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:-translate-y-0.5"
-                                aria-label="Accept"
-                                title="Accept"
-                            >
-                                <Check className="w-5 h-5" />
-                            </button>
-                        </div>
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                        <h2 className="text-lg font-semibold text-white">
+                            {SECTION_TITLES[sectionId] || 'Edit Section'}
+                        </h2>
+                        {sectionAnnotations.length > 0 && (
+                            <span className="px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-300 rounded-full">
+                                {sectionAnnotations.length} suggestion{sectionAnnotations.length !== 1 ? 's' : ''}
+                            </span>
+                        )}
                     </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleClose}
+                            className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:-translate-y-0.5"
+                            aria-label="Cancel"
+                            title="Cancel"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                        <button
+                            onClick={handleClose}
+                            className="p-2 rounded-lg bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:-translate-y-0.5"
+                            aria-label="Accept"
+                            title="Accept"
+                        >
+                            <Check className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
 
-                    {/* Form Content */}
-                    <div className="flex-1 overflow-y-auto overscroll-contain p-5">
-                        {renderSectionForm()}
-                    </div>
-                </motion.div>
-            </motion.div>
-        </AnimatePresence>
+                {/* Formatting Toolbar */}
+                <div className="px-4 py-2 border-b border-white/5 bg-[#111]/80">
+                  <WYSIWYGToolbar showAIButton={false} />
+                </div>
+
+                {/* Form Content */}
+                <div className="flex-1 overflow-y-auto overscroll-contain p-5">
+                    {renderSectionForm()}
+                </div>
+            </div>
+        </div>
     );
 }

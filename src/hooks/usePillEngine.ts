@@ -33,6 +33,11 @@ export function usePillEngine(
     }, [cvData, keywordAnalysis, cvType]);
 
     const runAnalysis = useCallback(async () => {
+        if (!cvDataRef.current) {
+            setIsAnalyzing(false);
+            return;
+        }
+
         setIsAnalyzing(true);
         try {
             const manager = CentralScoreManager.getInstance();

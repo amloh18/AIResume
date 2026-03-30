@@ -16,7 +16,7 @@ interface RoleSelectorModalProps {
     jobDescription?: string;
     hasJD: boolean;
   }) => void;
-  onOpenJobParser?: () => void;
+  onOpenJobParser?: (roleData?: { targetRole: string; seniorityLevel: string }) => void;
   isOnboardingMode?: boolean;
   isGuestMode?: boolean;
   cvType?: 'master' | 'standalone' | 'journey';

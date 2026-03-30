@@ -2,6 +2,7 @@ import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 import { parseFormattedText, stripHtmlTags } from '@/lib/utils/textFormatting';
+import { appendEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface ProfileProps {
   data: { summary?: string } | string;
@@ -16,7 +17,6 @@ const Profile: React.FC<ProfileProps> = ({
   template, 
   cvData 
 }) => {
-  // Handle both object with summary property and direct string data
   let summaryText = '';
   if (typeof data === 'string') {
     summaryText = data;
@@ -24,7 +24,6 @@ const Profile: React.FC<ProfileProps> = ({
     summaryText = data.summary || '';
   }
 
-  // Fallback to basics.summary if no direct data
   if (!summaryText && cvData.basics?.summary) {
     summaryText = cvData.basics.summary;
   }
@@ -32,18 +31,18 @@ const Profile: React.FC<ProfileProps> = ({
   if (!summaryText) return null;
 
   return (
-    <section className="profile-section">
-      <h2 className="section-header">
+    <section className="profile-section section-content">
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Profile'}
       </h2>
       
-      <div className="profile-summary">
+      <div className="profile-summary entry-content item-content">
         <div 
           dangerouslySetInnerHTML={{ __html: parseFormattedText(stripHtmlTags(summaryText)) }}
         />
       </div>
 
-      <style>{`
+      <style>{appendEnforcedCSS(`
         .profile-section {
           margin-bottom: ${template.globalStyles.spacing};
         }
@@ -52,10 +51,13 @@ const Profile: React.FC<ProfileProps> = ({
           font-size: ${template.globalStyles.fontSize};
           line-height: ${template.globalStyles.lineHeight};
           color: ${template.globalStyles.secondaryColor};
+          max-width: 100%;
         }
 
         .profile-summary p {
           margin: 0 0 8px 0;
+          orphans: 2;
+          widows: 2;
         }
 
         .profile-summary p:last-child {
@@ -66,11 +68,14 @@ const Profile: React.FC<ProfileProps> = ({
           .profile-section {
             break-inside: avoid;
           }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
+          }
         }
-      `}</style>
+      `)}</style>
     </section>
   );
 };
 
 export default Profile;
-

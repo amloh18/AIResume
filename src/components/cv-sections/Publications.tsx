@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, BookOpen, ExternalLink, User } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface PublicationsProps {
   data: UnifiedCVDataStructure['publications'];
@@ -33,14 +34,14 @@ const Publications: React.FC<PublicationsProps> = ({
   };
 
   return (
-    <section className="publications-section">
-      <h2 className="section-header">
+    <section className="publications-section section-content">
+      <h2 className="section-header cv-section-header">
         {sectionConfig.displayName || 'Publications'}
       </h2>
       
-      <div className="publications-list">
+      <div className="publications-list entry-list">
         {publications.map((publication, index) => (
-          <div key={index} className="publication-item">
+          <div key={index} className="publication-item cv-entry-item entry-block">
             <div className="item-header">
               <div className="item-title-group">
                 <h3 className="item-title">
@@ -231,20 +232,33 @@ const Publications: React.FC<PublicationsProps> = ({
           }
         }
         
+        .publication-summary p {
+          orphans: 2;
+          widows: 2;
+        }
+
         @media print {
           .publication-link {
             color: inherit !important;
           }
           
-          .publication-item {
+          .publication-item,
+          .cv-entry-item {
             break-inside: avoid;
+            page-break-inside: avoid;
             border: 1px solid rgba(99, 102, 241, 0.3) !important;
             border-left: 2px solid #6366f1 !important;
             background: none !important;
             transform: none !important;
             box-shadow: none !important;
           }
+          .section-header,
+          .cv-section-header {
+            break-after: avoid;
+          }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </section>
   );

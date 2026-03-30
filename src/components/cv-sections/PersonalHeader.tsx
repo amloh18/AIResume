@@ -3,6 +3,7 @@ import { Mail, Phone, MapPin, Globe, Linkedin, Github } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
 import { parseFormattedText, stripHtmlTags } from '@/lib/utils/textFormatting';
+import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface PersonalHeaderProps {
   data: UnifiedCVDataStructure['basics'];
@@ -231,11 +232,17 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
         .contact-link {
           color: inherit;
           text-decoration: none;
+          white-space: nowrap;
         }
         
         .contact-link:hover {
           color: inherit;
           text-decoration: none;
+        }
+
+        .contact-link[href^="mailto:"],
+        .contact-link[href^="http"] {
+          white-space: nowrap;
         }
         
         .personal-summary {
@@ -256,6 +263,8 @@ const PersonalHeader: React.FC<PersonalHeaderProps> = ({
             text-decoration: none !important;
           }
         }
+
+        ${generateEnforcedCSS()}
       `}</style>
     </header>
   );
