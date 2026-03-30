@@ -36,14 +36,14 @@ const InterviewCoachHeader: React.FC<InterviewCoachHeaderProps> = ({
                         >
                             <Home className="w-5 h-5 text-gray-700 dark:text-white" />
                         </button>
-                        <h1 className="text-gray-900 dark:text-white font-bold">
-                            <span className="text-xl">{title}</span>
-                            <span className="text-sm">
-                                {' '}
-                                BY <span className="text-lime-500">CV</span>
-                                <span className="text-gray-900 dark:text-white">Circle</span>
+                        <div className="flex flex-col">
+                            <span className="text-base font-black tracking-tighter leading-none text-gray-900 dark:text-white">
+                                CV<span className="text-lime-500">CIRCLE</span>
                             </span>
-                        </h1>
+                            <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1">
+                                Interview Coach
+                            </span>
+                        </div>
                     </div>
 
                     {/* Actions */}

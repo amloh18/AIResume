@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
-import { renderFormattedText, stripHtmlTags, formatDateRangeWithStyle, formatDateWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
+import { stripHtmlTags, formatDateRangeWithStyle, formatDateWithStyle, type DateFormatStyle } from '@/lib/utils/textFormatting';
 
 interface ProfessionalExtendedTemplateProps {
   cvData: UnifiedCVDataStructure;
@@ -239,6 +239,25 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           color: #6b7280;
         }
 
+        .professional-extended-template .edu-description {
+          font-size: 10px;
+          color: #4b5563;
+          margin-top: 2px;
+          line-height: 1.4;
+        }
+
+        .professional-extended-template .edu-score {
+          font-size: 10px;
+          color: #6b7280;
+          font-style: italic;
+        }
+
+        .professional-extended-template .edu-courses {
+          font-size: 10px;
+          color: #6b7280;
+          margin-top: 2px;
+        }
+
         /* ── Skills (inline category: skills) ── */
         .professional-extended-template .skills-inline-list {
           font-size: 10.5px;
@@ -247,6 +266,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
 
         .professional-extended-template .skills-inline-row {
           margin-bottom: 3px;
+          display: block;
         }
 
         .professional-extended-template .skills-cat {
@@ -310,6 +330,10 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           font-size: 10.5px;
           color: #4b5563;
           margin: 0;
+          display: flex;
+          align-items: baseline;
+          flex-wrap: wrap;
+          gap: 0 4px;
         }
 
         .professional-extended-template .company-name {
@@ -319,6 +343,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
 
         .professional-extended-template .job-dates {
           color: #6b7280;
+          white-space: nowrap;
         }
 
         .professional-extended-template .job-description {
@@ -543,6 +568,11 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                     {(edu.startDate || edu.endDate) && (
                       <div className="edu-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                     )}
+                    {edu.score && <div className="edu-score">{edu.score}</div>}
+                    {edu.description && <div className="edu-description">{stripHtmlTags(edu.description)}</div>}
+                    {edu.courses && Array.isArray(edu.courses) && edu.courses.length > 0 && (
+                      <div className="edu-courses">Courses: {edu.courses.join(', ')}</div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -596,17 +626,19 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                       <div className="job-title">{job.position || 'Position'}</div>
                       <div className="company-line">
                         {job.name && <span className="company-name">{job.name}</span>}
-                        {job.name && (job.startDate || job.endDate) && <span> | </span>}
                         {(job.startDate || job.endDate) && (
-                          <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
+                          <span className="job-dates">
+                            {job.name ? ' | ' : ''}{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
+                          </span>
                         )}
                       </div>
                     </div>
                     {job.summary && (
-                      <div
-                        className="job-description"
-                        dangerouslySetInnerHTML={{ __html: renderFormattedText(job.summary, { stripBullets: true }) }}
-                      />
+                      <div className="job-description">
+                        {stripHtmlTags(job.summary).split('\n').filter(Boolean).map((line: string, li: number) => (
+                          <p key={li}>{line}</p>
+                        ))}
+                      </div>
                     )}
                     {job.highlights && Array.isArray(job.highlights) && job.highlights.length > 0 && (
                       <div className="job-description">
@@ -634,7 +666,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                       <div className="project-dates">{formatDateRangeWithStyle(p.startDate, p.endDate, dateFormat)}</div>
                     )}
                     {p.description && (
-                      <div className="project-desc" dangerouslySetInnerHTML={{ __html: renderFormattedText(p.description, { stripBullets: true }) }} />
+                      <div className="project-desc">{stripHtmlTags(p.description)}</div>
                     )}
                   </div>
                 ))}

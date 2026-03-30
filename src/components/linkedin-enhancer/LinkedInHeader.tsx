@@ -72,17 +72,13 @@ export default function LinkedInHeader({
 
                         {/* Branding */}
                         <div className="flex items-center gap-2">
-                            <div className="flex items-center gap-1">
-                                {/* LinkedIn Logo */}
-                                <div className="w-6 h-6 rounded flex items-center justify-center" style={{ backgroundColor: '#0a66c2' }}>
-                                    <span className="text-white text-xs font-bold">in</span>
-                                </div>
-                                <span className="text-lg font-semibold text-gray-900">LinkedIn Enhancer</span>
-                            </div>
-                            <span className="text-gray-400">by</span>
-                            <div className="flex items-center">
-                                <span className="text-lg font-bold" style={{ color: '#84cc16' }}>CV</span>
-                                <span className="text-lg font-bold text-gray-600">Circle</span>
+                            <div className="flex flex-col">
+                                <span className="text-base font-black tracking-tighter leading-none text-gray-900">
+                                    CV<span className="text-lime-500">CIRCLE</span>
+                                </span>
+                                <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1">
+                                    LinkedIn Enhancer
+                                </span>
                             </div>
                         </div>
                     </div>
