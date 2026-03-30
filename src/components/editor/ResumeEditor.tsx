@@ -326,7 +326,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
             {/* Highlight */}
             <button
               onClick={() => editor.chain().focus().toggleHighlight().run()}
-              className={`p-1.5 rounded transition-colors ${editor.isActive('highlight') ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
+              className={`p-1.5 rounded transition-colors ${editor.isActive('highlightMark') ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
               title="Highlight"
             >
               <Highlighter size={14} />

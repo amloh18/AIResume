@@ -70,6 +70,8 @@ export type IssueSeverity = 'info' | 'warning' | 'critical' | 'positive';
 
 export type IssueTier = 1 | 2 | 3;
 
+export type IssueScoreCategory = 'completeness' | 'impact' | 'metrics' | 'formatting' | 'keywords';
+
 export interface DeepLink {
     section: 'work' | 'skills' | 'summary' | 'education' | 'projects' | 'basics';
     sectionId?: string;
@@ -89,6 +91,7 @@ export interface Issue {
     meta?: Record<string, any>;
     suggestedFixId?: string;
     deepLink?: DeepLink; // For actionable CTA
+    scoreCategory?: IssueScoreCategory; // Maps to score breakdown type
 }
 
 export interface ResumeState {
