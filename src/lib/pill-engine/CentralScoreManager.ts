@@ -615,19 +615,181 @@ export class CentralScoreManager {
     private generateIssues(cvScore: CVScoreBreakdown, atsScore: ATSScoreBreakdown | undefined, recommendations: string[]): Issue[] {
         const issues: Issue[] = [];
 
-        recommendations.forEach((rec, idx) => {
+        // --- CV Score Breakdown Issues (5 categories) ---
+
+        // 1. Completeness (max 25)
+        if (cvScore.completeness < 18) {
             issues.push({
-                id: `rec-${idx}`,
-                type: 'IMPROVEMENT',
-                severity: 'warning',
-                priority: 'suggestion',
-                tier: 2,
+                id: 'cv-completeness-low',
+                type: 'EMPTY_SECTION',
+                severity: cvScore.completeness < 10 ? 'critical' : 'warning',
+                priority: cvScore.completeness < 10 ? 'critical' : 'suggestion',
+                tier: 1,
                 section: 'basics',
-                message: rec,
+                message: `Completeness score is ${cvScore.completeness}/25 — add more sections (skills, projects, certificates)`,
+                scoreCategory: 'completeness',
                 deepLink: { section: 'summary' }
             });
+        }
+
+        // 2. Impact Verbs (max 20)
+        if (cvScore.impactVerbs < 12) {
+            issues.push({
+                id: 'cv-impact-low',
+                type: 'WEAK_VERB',
+                severity: 'warning',
+                priority: 'suggestion',
+                tier: 1,
+                section: 'work',
+                message: `Impact score is ${cvScore.impactVerbs}/20 — start bullets with strong action verbs (Led, Developed, Built)`,
+                scoreCategory: 'impact',
+                deepLink: { section: 'work' }
+            });
+        }
+
+        // 3. Quantification (max 20)
+        if (cvScore.quantification < 12) {
+            issues.push({
+                id: 'cv-metrics-low',
+                type: 'MISSING_METRICS',
+                severity: 'warning',
+                priority: 'suggestion',
+                tier: 1,
+                section: 'work',
+                message: `Metrics score is ${cvScore.quantification}/20 — add numbers to show impact (%, $, counts)`,
+                scoreCategory: 'metrics',
+                deepLink: { section: 'work' }
+            });
+        }
+
+        // 4. Formatting (max 15)
+        if (cvScore.formatting < 10) {
+            issues.push({
+                id: 'cv-formatting-low',
+                type: 'VISUAL_DENSITY',
+                severity: 'warning',
+                priority: 'suggestion',
+                tier: 1,
+                section: 'basics',
+                message: `Formatting score is ${cvScore.formatting}/15 — fix date formats, trim long bullets, adjust summary length`,
+                scoreCategory: 'formatting',
+                deepLink: { section: 'work' }
+            });
+        }
+
+        // 5. Readability (max 20)
+        if (cvScore.readability < 14) {
+            issues.push({
+                id: 'cv-readability-low',
+                type: 'PASSIVE_VOICE',
+                severity: 'warning',
+                priority: 'suggestion',
+                tier: 1,
+                section: 'work',
+                message: `Readability score is ${cvScore.readability}/20 — reduce passive voice and long sentences`,
+                scoreCategory: 'keywords',
+                deepLink: { section: 'work' }
+            });
+        }
+
+        // --- ATS Score Breakdown Issues (merged into categories) ---
+        if (atsScore) {
+            // Keywords → 'keywords' category
+            if (atsScore.keywordMatch < 25) {
+                issues.push({
+                    id: 'ats-keywords-low',
+                    type: 'KEYWORD_GAP',
+                    severity: 'warning',
+                    priority: 'suggestion',
+                    tier: 2,
+                    section: 'skills',
+                    message: `Keyword match is ${atsScore.keywordMatch}/40 — add missing keywords from the job description`,
+                    scoreCategory: 'keywords',
+                    deepLink: { section: 'skills' }
+                });
+            }
+
+            // Section Alignment → 'completeness' category
+            if (atsScore.sectionAlignment < 10) {
+                issues.push({
+                    id: 'ats-sections-low',
+                    type: 'SECTION_ORDER',
+                    severity: 'warning',
+                    priority: 'suggestion',
+                    tier: 2,
+                    section: 'basics',
+                    message: `Section alignment is ${atsScore.sectionAlignment}/15 — ensure standard sections are present (name, education, work, skills)`,
+                    scoreCategory: 'completeness',
+                    deepLink: { section: 'summary' }
+                });
+            }
+
+            // Recency → 'formatting' category
+            if (atsScore.recency < 10) {
+                issues.push({
+                    id: 'ats-recency-low',
+                    type: 'EMPLOYMENT_GAP',
+                    severity: 'warning',
+                    priority: 'suggestion',
+                    tier: 2,
+                    section: 'work',
+                    message: `Recency score is ${atsScore.recency}/15 — add recent roles or current positions`,
+                    scoreCategory: 'formatting',
+                    deepLink: { section: 'work' }
+                });
+            }
+
+            // Contactability → 'completeness' category
+            if (atsScore.contactability < 7) {
+                issues.push({
+                    id: 'ats-contact-low',
+                    type: 'UNPROFESSIONAL_EMAIL',
+                    severity: 'warning',
+                    priority: 'suggestion',
+                    tier: 1,
+                    section: 'basics',
+                    message: `Contactability is ${atsScore.contactability}/10 — add email, phone, and LinkedIn`,
+                    scoreCategory: 'completeness',
+                    deepLink: { section: 'basics' }
+                });
+            }
+
+            // Parsability multiplier
+            if (atsScore.parsabilityMultiplier < 1.0) {
+                issues.push({
+                    id: 'ats-parsability-low',
+                    type: 'VISUAL_DENSITY',
+                    severity: 'critical',
+                    priority: 'critical',
+                    tier: 1,
+                    section: 'basics',
+                    message: 'CV lacks content for ATS parsing — add more experience and reduce skills-only entries',
+                    scoreCategory: 'formatting',
+                    deepLink: { section: 'work' }
+                });
+            }
+        }
+
+        // --- General recommendations ---
+        recommendations.forEach((rec, idx) => {
+            // Avoid duplicating messages already covered above
+            const isDuplicate = issues.some(i => i.message.includes(rec.substring(0, 20)));
+            if (!isDuplicate) {
+                issues.push({
+                    id: `rec-${idx}`,
+                    type: 'IMPROVEMENT',
+                    severity: 'warning',
+                    priority: 'suggestion',
+                    tier: 2,
+                    section: 'basics',
+                    message: rec,
+                    scoreCategory: 'completeness',
+                    deepLink: { section: 'summary' }
+                });
+            }
         });
 
+        // --- Penalties ---
         if (cvScore.validityMultiplier < 1.0) {
             cvScore.penaltyReasons.forEach((r, i) => {
                 issues.push({
@@ -638,6 +800,7 @@ export class CentralScoreManager {
                     tier: 1,
                     section: 'basics',
                     message: r,
+                    scoreCategory: 'completeness',
                     deepLink: { section: 'basics' }
                 });
             });

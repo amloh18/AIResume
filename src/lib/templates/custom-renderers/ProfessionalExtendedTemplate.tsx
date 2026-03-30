@@ -19,7 +19,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
 
   return (
     <div className={`professional-extended-template ${className}`}>
-      <style jsx>{`
+      <style dangerouslySetInnerHTML={{__html: `
         .professional-extended-template {
           font-family: 'Arial', 'Helvetica', sans-serif;
           font-size: 12px;
@@ -31,12 +31,12 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           padding: 0;
         }
         
-        .header {
+        .professional-extended-template .header {
           text-align: center;
           margin-bottom: 20px;
         }
         
-        .name {
+        .professional-extended-template .name {
           font-size: 28px;
           font-weight: bold;
           color: #000000;
@@ -44,25 +44,25 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           letter-spacing: 1px;
         }
         
-        .title {
+        .professional-extended-template .title {
           font-size: 14px;
           font-weight: normal;
           color: #000000;
           margin-bottom: 15px;
         }
         
-        .header-line {
+        .professional-extended-template .header-line {
           height: 1px;
           background: #000000;
           margin: 0 auto 20px;
           width: 100%;
         }
         
-        .profile-section {
+        .professional-extended-template .profile-section {
           margin-bottom: 20px;
         }
         
-        .profile-title {
+        .professional-extended-template .profile-title {
           font-size: 14px;
           font-weight: bold;
           text-transform: uppercase;
@@ -71,29 +71,29 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           padding-bottom: 5px;
         }
         
-        .profile-text {
+        .professional-extended-template .profile-text {
           font-size: 12px;
           line-height: 1.5;
           color: #333333;
         }
         
-        .main-content {
+        .professional-extended-template .main-content {
           display: grid;
           grid-template-columns: 1fr 1.5fr;
           gap: 20px;
           margin-top: 20px;
         }
         
-        .left-column {
+        .professional-extended-template .left-column {
           padding-right: 15px;
         }
         
-        .right-column {
+        .professional-extended-template .right-column {
           padding-left: 15px;
           position: relative;
         }
         
-        .timeline-line {
+        .professional-extended-template .timeline-line {
           position: absolute;
           left: 0;
           top: 0;
@@ -102,7 +102,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           background: #000000;
         }
         
-        .timeline-dot {
+        .professional-extended-template .timeline-dot {
           position: absolute;
           left: -4px;
           width: 10px;
@@ -112,11 +112,11 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           border: 2px solid #E5E7EB;
         }
         
-        .section {
+        .professional-extended-template .section {
           margin-bottom: 20px;
         }
         
-        .section-title {
+        .professional-extended-template .section-title {
           font-size: 14px;
           font-weight: bold;
           text-transform: uppercase;
@@ -125,65 +125,65 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           padding-bottom: 5px;
         }
         
-        .contact-info {
+        .professional-extended-template .contact-info {
           font-size: 11px;
           line-height: 1.4;
         }
         
-        .contact-item {
+        .professional-extended-template .contact-item {
           margin-bottom: 5px;
           display: flex;
           align-items: center;
         }
         
-        .contact-icon {
+        .professional-extended-template .contact-icon {
           width: 12px;
           height: 12px;
           margin-right: 8px;
           color: #666666;
         }
         
-        .education-item {
+        .professional-extended-template .education-item {
           margin-bottom: 12px;
         }
         
-        .education-header {
+        .professional-extended-template .education-header {
           margin-bottom: 3px;
         }
         
-        .degree {
+        .professional-extended-template .degree {
           font-size: 12px;
           font-weight: bold;
           color: #000000;
           margin-bottom: 2px;
         }
         
-        .university {
+        .professional-extended-template .university {
           font-size: 11px;
           color: #333333;
           margin-bottom: 2px;
         }
         
-        .education-dates {
+        .professional-extended-template .education-dates {
           font-size: 11px;
           color: #666666;
         }
         
-        .skills-list {
+        .professional-extended-template .skills-list {
           font-size: 11px;
           line-height: 1.4;
         }
         
-        .skill-item {
+        .professional-extended-template .skill-item {
           margin-bottom: 8px;
         }
         
-        .skill-name {
+        .professional-extended-template .skill-name {
           font-size: 11px;
           margin-bottom: 2px;
         }
         
-        .skill-bar {
+        .professional-extended-template .skill-bar {
           width: 100%;
           height: 6px;
           background: #ffffff;
@@ -192,59 +192,59 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           border: 1px solid #cccccc;
         }
         
-        .skill-fill {
+        .professional-extended-template .skill-fill {
           height: 100%;
           background: #000000;
           border-radius: 3px;
         }
         
-        .experience-item {
+        .professional-extended-template .experience-item {
           margin-bottom: 15px;
           position: relative;
         }
         
-        .experience-header {
+        .professional-extended-template .experience-header {
           margin-bottom: 5px;
         }
         
-        .job-title {
+        .professional-extended-template .job-title {
           font-size: 13px;
           font-weight: bold;
           color: #000000;
           margin-bottom: 2px;
         }
         
-        .company-info {
+        .professional-extended-template .company-info {
           font-size: 11px;
           color: #333333;
           margin-bottom: 5px;
         }
         
-        .company-name {
+        .professional-extended-template .company-name {
           font-weight: bold;
           font-style: italic;
         }
         
-        .job-dates {
+        .professional-extended-template .job-dates {
           color: #666666;
         }
         
-        .job-description {
+        .professional-extended-template .job-description {
           font-size: 11px;
           line-height: 1.4;
           color: #333333;
         }
         
-        .job-description ul {
+        .professional-extended-template .job-description ul {
           margin: 5px 0;
           padding-left: 15px;
         }
         
-        .job-description li {
+        .professional-extended-template .job-description li {
           margin-bottom: 3px;
         }
         
-        .footer {
+        .professional-extended-template .footer {
           margin-top: 30px;
           padding-top: 15px;
           border-top: 1px solid #000000;
@@ -255,18 +255,18 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           color: #666666;
         }
         
-        .social-links {
+        .professional-extended-template .social-links {
           display: flex;
           gap: 15px;
         }
         
-        .social-link {
+        .professional-extended-template .social-link {
           display: flex;
           align-items: center;
           gap: 5px;
         }
         
-        .social-icon {
+        .professional-extended-template .social-icon {
           width: 10px;
           height: 10px;
           color: #666666;
@@ -280,7 +280,7 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
             background: #ffffff;
           }
         }
-      `}</style>
+      `}} />
 
       {/* Header Section */}
       <div className="header" data-section-id="personal">

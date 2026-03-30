@@ -31,7 +31,7 @@ import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePan
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
-import FloatingPulsePill from '@/components/resume-enhancer/FloatingPulsePill';
+import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import AddSectionModal from '@/components/resume-enhancer/AddSectionModal';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -79,6 +79,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
+    const pillRef = useRef<FloatingPulsePillHandle>(null);
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -1013,6 +1014,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 initialZoom={1}
                 toolbarRightSlot={
                   <FloatingPulsePill
+                    ref={pillRef}
                     atsResult={atsAnalysis ? {
                       score: atsAnalysis.score,
                       atsScore: atsAnalysis.score,
@@ -1043,6 +1045,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 }
                 sidePanelRef={sidePanelRef}
                 highlightedField={highlightedField}
+                fixAnnotations={state.fixAnnotations || []}
+                onAnnotationClick={(fixId) => pillRef.current?.focusFix(fixId)}
                 onCVDataChange={(updatedData) => {
                   dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, ...updatedData } });
                 }}

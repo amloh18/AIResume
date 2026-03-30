@@ -31,7 +31,7 @@ export const HighlightMark = Mark.create<HighlightMarkOptions>({
                 renderHTML: attributes => {
                     return {
                         'data-color': attributes.color,
-                        style: `background-color: ${attributes.color}`,
+                        style: `background-color: ${attributes.color}; color: #000000;`,
                     };
                 },
             },

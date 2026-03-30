@@ -14,6 +14,7 @@ import { HeaderProfessionalTemplate } from './custom-renderers/HeaderProfessiona
 import { OnePagerProfessionalTemplate } from './custom-renderers/OnePagerProfessionalTemplate';
 import { MinimalProfessionalTemplate } from './custom-renderers/MinimalProfessionalTemplate';
 import { ProfessionalMinimalTemplate } from './custom-renderers/ProfessionalMinimalTemplate';
+import { ProfessionalExtendedTemplate } from './custom-renderers/ProfessionalExtendedTemplate';
 
 // Hardcoded template registry
 export const CustomTemplates = {
@@ -28,7 +29,8 @@ export const CustomTemplates = {
   HeaderProfessionalTemplate,
   OnePagerProfessionalTemplate,
   MinimalProfessionalTemplate,
-  ProfessionalMinimalTemplate
+  ProfessionalMinimalTemplate,
+  ProfessionalExtendedTemplate
 };
 
 /**
@@ -553,6 +555,43 @@ export const HARDCODED_TEMPLATES: ITemplate[] = [
     globalAccess: true,
     version: 1,
     customRenderer: 'ProfessionalMinimalTemplate'
+  },
+  {
+    id: 'professional-extended-template',
+    name: 'Professional Extended',
+    description: 'Extended professional template with timeline layout, skill bars, and two-column design',
+    thumbnail: 'Data Driven Pro.png',
+    category: 'cv',
+    categories: ['Professional', 'Extended'],
+    tier: 'free',
+    layoutType: 'two-column',
+    globalStyles: {
+      fontFamily: 'Arial, Helvetica, sans-serif',
+      primaryColor: '#000000',
+      secondaryColor: '#333333',
+      backgroundColor: '#E5E7EB',
+      fontSize: '12px',
+      lineHeight: '1.4',
+      spacing: '1.2rem',
+      borderRadius: '0px',
+      boxShadow: 'none',
+      customCSS: ''
+    },
+    columnLayout: {
+      main: {
+        width: '100%',
+        sections: ['personal_header', 'summary', 'work_experience', 'education', 'skills']
+      }
+    },
+    sectionStyling: {},
+    availableSections: [],
+    templateData: {},
+    isActive: true,
+    isDefault: false,
+    isPublished: true,
+    globalAccess: true,
+    version: 1,
+    customRenderer: 'ProfessionalExtendedTemplate'
   }
 ];
 
