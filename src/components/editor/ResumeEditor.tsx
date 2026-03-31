@@ -439,6 +439,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
           onAddEntry={handleAddEntry}
           onDeleteSection={handleDeleteSection}
           onOpenSnippets={handleOpenSnippets}
+          onOpenGallery={handleOpenGallery}
         />
 
         <AnimatePresence>
