@@ -840,7 +840,7 @@ const Canvas: React.FC = () => {
           if (format === 'pdf') {
             window.open(`/api/cvs/${selectedCVForDownload.id}/download?format=pdf`, '_blank');
           } else {
-            const response = await fetch(`/api/cvs/${selectedCVForDownload.id}/export?format=${format}`);
+            const response = await fetch(`/api/cvs/${selectedCVForDownload.id}/download?format=${format}`);
             if (response.ok) {
               const blob = await response.blob();
               const url = window.URL.createObjectURL(blob);

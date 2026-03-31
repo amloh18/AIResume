@@ -63,18 +63,18 @@ export class PDFService extends BaseService {
         options.format || 'pdf'
       );
 
-      // const cached = await pdfCacheService.get(cacheKey);
-      // if (cached) {
-      //   await metricsService.trackOperation(
-      //     this.serviceName,
-      //     'generatePDF',
-      //     0,
-      //     true,
-      //     undefined,
-      //     { cached: true }
-      //   );
-      //   return cached;
-      // }
+      const cached = await pdfCacheService.get(cacheKey);
+      if (cached) {
+        await metricsService.trackOperation(
+          this.serviceName,
+          'generatePDF',
+          0,
+          true,
+          undefined,
+          { cached: true }
+        );
+        return cached;
+      }
 
       // Generate PDF with retry logic
       return this.withRetry(

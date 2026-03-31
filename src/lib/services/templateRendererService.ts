@@ -287,22 +287,28 @@ export class ReactTemplateRenderer implements IRenderer {
     }
     
     /* Specific template padding removal */
+    .pdf-export .data-driven-pro-template,
     .pdf-export .designer-modern-template,
     .pdf-export .elegant-timeline-template,
     .pdf-export .executive-minimal-template,
     .pdf-export .executive-professional-layout-template,
     .pdf-export .executive-standard-template,
+    .pdf-export .header-professional-template,
     .pdf-export .minimal-professional-template,
     .pdf-export .one-pager-professional-template,
+    .pdf-export .professional-extended-template,
     .pdf-export .professional-minimal-template,
     .pdf-export .the-modern-cv-template,
+    .docx-export .data-driven-pro-template,
     .docx-export .designer-modern-template,
     .docx-export .elegant-timeline-template,
     .docx-export .executive-minimal-template,
     .docx-export .executive-professional-layout-template,
     .docx-export .executive-standard-template,
+    .docx-export .header-professional-template,
     .docx-export .minimal-professional-template,
     .docx-export .one-pager-professional-template,
+    .docx-export .professional-extended-template,
     .docx-export .professional-minimal-template,
     .docx-export .the-modern-cv-template {
       padding: 0 !important;
@@ -333,6 +339,24 @@ export class ReactTemplateRenderer implements IRenderer {
     .docx-export .hp-section-header {
       margin-left: 0 !important;
       margin-right: 0 !important;
+    }
+    
+    /* Data Driven Pro Template - remove internal padding */
+    .pdf-export .data-driven-pro-template,
+    .docx-export .data-driven-pro-template {
+      padding: 0 !important;
+    }
+    
+    /* Professional Extended Template - two-column layout adjustments */
+    .pdf-export .professional-extended-template,
+    .docx-export .professional-extended-template {
+      padding: 0 !important;
+    }
+    .pdf-export .professional-extended-template .left-column,
+    .pdf-export .professional-extended-template .right-column,
+    .docx-export .professional-extended-template .left-column,
+    .docx-export .professional-extended-template .right-column {
+      padding: 1rem !important;
     }
     
     /* Inject smart page break CSS */
