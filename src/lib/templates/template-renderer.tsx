@@ -6,6 +6,7 @@ import { generateTemplateCSS } from './default-template';
 import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
 import { generateEnforcedCSS } from './shared-layout-css';
 import * as CustomTemplates from './custom-renderers';
+import { useFormatStore } from '@/lib/stores/formatStore';
 
 // Component registry for dynamic section rendering
 import PersonalHeader from '@/components/cv-sections/PersonalHeader';
@@ -151,18 +152,27 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
     const CustomTemplateComponent = HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates] as React.ComponentType<{
       cvData: UnifiedCVDataStructure;
       className?: string;
-      enabledSections?: string[];
+      dateFormat?: string;
+      showContactIcons?: boolean;
+      snippetOverrides?: Record<string, string>;
     }>;
 
     console.log('✅ TemplateRenderer - Using custom renderer:', customRenderer);
 
-    // For custom renderers, pass full cvData and let CSS handle natural page breaks
-    // Don't filter by enabledSections - let content flow naturally across pages
     const enforcedCSS = generateEnforcedCSS();
     return (
       <>
         <style dangerouslySetInnerHTML={{ __html: enforcedCSS }} />
-        <CustomTemplateComponent cvData={cvData} className={className} />
+        <CustomTemplateComponent
+          cvData={cvData}
+          className={className}
+          dateFormat={cvData.snippetOverrides?.dates === 'date-mm-yyyy' ? 'MM_YYYY'
+            : cvData.snippetOverrides?.dates === 'date-full' ? 'FULL_MONTH'
+            : cvData.snippetOverrides?.dates === 'date-iso' ? 'MM_YYYY'
+            : 'MMM_YYYY'}
+          showContactIcons={true}
+          snippetOverrides={cvData.snippetOverrides}
+        />
       </>
     );
   } else if (customRenderer) {

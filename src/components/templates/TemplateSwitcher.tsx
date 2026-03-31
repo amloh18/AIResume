@@ -22,6 +22,9 @@ import {
   generateThemeCSS 
 } from '@/lib/templates/template-definition';
 import { ITemplate } from '@/types/template';
+import { useSnippetStore } from '@/lib/stores/snippetStore';
+import { SNIPPET_REGISTRY } from '@/lib/snippets/snippet-registry';
+import { getIncompatibleSnippets } from '@/lib/snippets/layout-compatibility';
 
 interface TemplateSwitcherProps {
   templates: TemplateDefinition[];
@@ -48,6 +51,21 @@ export const TemplateSwitcher: React.FC<TemplateSwitcherProps> = ({
   const [activeTab, setActiveTab] = useState<'templates' | 'theme' | 'sections'>('templates');
 
   const handleTemplateSelect = useCallback((template: TemplateDefinition) => {
+    // Check for incompatible snippets before switching
+    const snippetStore = useSnippetStore.getState();
+    const incompatible = getIncompatibleSnippets(
+      snippetStore.activeSnippets,
+      template.layout.type,
+      SNIPPET_REGISTRY
+    );
+
+    if (incompatible.length > 0) {
+      // Clear incompatible snippets
+      incompatible.forEach((category) => {
+        snippetStore.clearSnippet(category);
+      });
+    }
+
     onTemplateSelect(template);
     setIsOpen(false);
   }, [onTemplateSelect]);
