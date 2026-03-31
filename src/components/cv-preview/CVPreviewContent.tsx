@@ -355,39 +355,23 @@ const CVPreviewContent: React.FC<CVPreviewContentProps> = ({
         {/* Page Break CSS for custom templates */}
         <style dangerouslySetInnerHTML={{
           __html: `
-          /* Force black text on white background - prevent dark mode inheritance */
-          /* EXCLUDE ATS MODE (which needs green text on black bg) */
-          .cv-page-custom:not(.mode-ats),
-          .cv-page-custom:not(.mode-ats) * {
-            color: #000000 !important;
-          }
-          .cv-page-custom:not(.mode-ats) h1,
-          .cv-page-custom:not(.mode-ats) h2,
-          .cv-page-custom:not(.mode-ats) h3,
-          .cv-page-custom:not(.mode-ats) h4,
-          .cv-page-custom:not(.mode-ats) h5,
-          .cv-page-custom:not(.mode-ats) h6,
-          .cv-page-custom:not(.mode-ats) p,
-          .cv-page-custom:not(.mode-ats) span,
-          .cv-page-custom:not(.mode-ats) div,
-          .cv-page-custom:not(.mode-ats) li,
-          .cv-page-custom:not(.mode-ats) strong,
-          .cv-page-custom:not(.mode-ats) b,
-          .cv-page-custom:not(.mode-ats) em,
-          .cv-page-custom:not(.mode-ats) i {
-            color: #000000 !important;
+          /* Prevent dark mode from affecting template rendering */
+          /* Templates handle their own color schemes internally */
+          .cv-page-custom {
+            color-scheme: light;
+            background: #ffffff;
           }
           
-          /* ATS MODE - Force green text */
+          /* ATS MODE - Force green text on black bg */
           .mode-ats,
           .mode-ats * {
             color: #00ff00 !important;
           }
 
-          /* Allow gray for secondary text */
-          .cv-page-custom .text-gray-500,
-          .cv-page-custom .text-gray-600,
-          .cv-page-custom .text-gray-700 {
+          /* Allow gray for secondary text in non-ATS modes */
+          .cv-page-custom:not(.mode-ats) .text-gray-500,
+          .cv-page-custom:not(.mode-ats) .text-gray-600,
+          .cv-page-custom:not(.mode-ats) .text-gray-700 {
             color: #4b5563 !important;
           }
           

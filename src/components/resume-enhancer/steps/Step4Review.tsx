@@ -7,7 +7,7 @@ import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { downloadAsPDF } from '@/lib/utils/download';
+import { downloadAsPDF, downloadAsDOCX } from '@/lib/utils/download';
 import { CentralScoreManager, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/pill-engine/CentralScoreManager';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
@@ -195,7 +195,7 @@ export default function Step4Review() {
     router.push(`/cover-letter-editor?${params.toString()}`);
   };
 
-  const handleDownload = async () => {
+  const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
     if (!state.selectedTemplate) {
       alert('Please select a template before downloading');
       return;
@@ -203,27 +203,42 @@ export default function Step4Review() {
 
     setIsDownloading(true);
     try {
-      const filename = `${state.cvTitle || 'CV'}.pdf`;
+      const baseName = state.cvTitle || 'CV';
 
-      // Find the preview element for client-side fallback
-      let previewElement: HTMLElement | null = null;
-      if (previewRef.current) {
-        previewElement = previewRef.current.querySelector('.cv-preview-container') as HTMLElement ||
-          previewRef.current.querySelector('[class*="cv-preview"]') as HTMLElement ||
-          previewRef.current;
-      }
+      if (format === 'pdf') {
+        const filename = `${baseName}.pdf`;
 
-      // If cvId exists, use server-side API; otherwise use client-side generation
-      await downloadAsPDF(
-        previewElement || previewRef.current || document.body,
-        filename,
-        state.cvId || undefined,
-        {
-          paperSize: state.paperSize || 'A4',
-          orientation: 'portrait',
-          jobTitle: state.jobData?.title || state.targetRole
+        // Find the preview element for client-side fallback
+        let previewElement: HTMLElement | null = null;
+        if (previewRef.current) {
+          previewElement = previewRef.current.querySelector('.cv-preview-container') as HTMLElement ||
+            previewRef.current.querySelector('[class*="cv-preview"]') as HTMLElement ||
+            previewRef.current;
         }
-      );
+
+        // If cvId exists, use server-side API; otherwise use client-side generation
+        await downloadAsPDF(
+          previewElement || previewRef.current || document.body,
+          filename,
+          state.cvId || undefined,
+          {
+            paperSize: state.paperSize || 'A4',
+            orientation: 'portrait',
+            jobTitle: state.jobData?.title || state.targetRole
+          }
+        );
+      } else if (format === 'docx') {
+        const filename = `${baseName}.docx`;
+
+        await downloadAsDOCX(
+          state.cvData,
+          filename,
+          state.cvId || undefined,
+          {
+            paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4'
+          }
+        );
+      }
     } catch (error) {
       console.error('Download failed:', error);
       alert('Failed to download CV. Please try again.');
@@ -539,8 +554,8 @@ export default function Step4Review() {
         isOpen={showDownloadModal}
         onClose={() => setShowDownloadModal(false)}
         onDownload={async (documentType: DocumentType, format: FormatType) => {
-          if (documentType === 'cv' && format === 'pdf') {
-            await handleDownload();
+          if (documentType === 'cv') {
+            await handleDownload(format);
           }
           setShowDownloadModal(false);
         }}
