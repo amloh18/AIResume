@@ -27,6 +27,8 @@ interface FloatingPulsePillProps {
     className?: string;
     atsResult?: ATSResult | null;
     isLoading?: boolean;
+    /** When true, suppresses pill engine auto-analysis (during CV surgeon scan) */
+    isScanning?: boolean;
     analysisMode?: AnalysisMode;
     /** CV layout validation result — merged into smart context suggestions */
     validationResult?: ValidationResult | null;
@@ -57,6 +59,7 @@ export default forwardRef(function FloatingPulsePill({
     className = "",
     atsResult,
     isLoading = false,
+    isScanning = false,
     analysisMode = 'insufficient-data',
     validationResult,
     portalTarget,
@@ -90,11 +93,13 @@ export default forwardRef(function FloatingPulsePill({
     }), []);
 
     // Pill Engine Integration (Command Center)
+    // Suppress auto-analysis during CV surgeon scan to prevent loop
     const { issues, healthScore, masterScore, atsScore, isAnalyzing: isEngineAnalyzing, scoreResult } = usePillEngine(
         state.cvData,
         state.cvType,
-        keywordAnalysis || state.keywordGapAnalysis, // Use prop or state
-        { quietMode: true }
+        keywordAnalysis || state.keywordGapAnalysis,
+        { quietMode: true },
+        isScanning // Suppress pill engine during scan
     );
 
     // Mode-specific feature states
@@ -146,11 +151,11 @@ export default forwardRef(function FloatingPulsePill({
 
     // MERGE FIX ANNOTATIONS INTO ISSUES FOR SMART CONTEXT
     // Using the centralized SurgicalFixToIssueAdapter
+    // Deduplicates by ID to prevent issues from appearing twice when scan runs multiple times
     const allIssues = useMemo(() => {
         const engineIssues = issues || [];
         
-        // Convert fixAnnotations to SurgicalFix format if needed
-        // The adapter handles the conversion
+        // Convert fixAnnotations to SurgicalFix format
         const surgicalFixes = (state.fixAnnotations || [])
             .filter(f => f.status === 'open')
             .map(fix => ({
@@ -168,7 +173,6 @@ export default forwardRef(function FloatingPulsePill({
 
         // Convert validation warnings to issues
         const validationIssues = (validationResult?.warnings || []).map(w => {
-            // Map validation rule to IssueType
             const ruleToType: Record<string, IssueType> = {
                 'profile-max-lines': 'SUMMARY_TOO_LONG',
                 'profile-max-chars': 'SUMMARY_TOO_LONG',
@@ -201,7 +205,30 @@ export default forwardRef(function FloatingPulsePill({
 
         // Use the adapter to merge engine + surgical fixes, then append validation issues
         const merged = mergeIssues(engineIssues, surgicalFixes);
-        return [...merged, ...validationIssues] as Issue[];
+        const allRaw = [...merged, ...validationIssues] as Issue[];
+        
+        // Deduplicate by ID - surgical fixes take priority over engine issues
+        const seenIds = new Set<string>();
+        const deduplicated: Issue[] = [];
+        
+        // First pass: add surgical fixes (they have suggestedFixId)
+        for (const issue of allRaw) {
+            if (issue.suggestedFixId && !seenIds.has(issue.suggestedFixId)) {
+                seenIds.add(issue.suggestedFixId);
+                deduplicated.push(issue);
+            }
+        }
+        
+        // Second pass: add remaining issues that weren't deduplicated
+        for (const issue of allRaw) {
+            const checkId = issue.suggestedFixId || issue.id;
+            if (!seenIds.has(checkId)) {
+                seenIds.add(checkId);
+                deduplicated.push(issue);
+            }
+        }
+        
+        return deduplicated;
     }, [issues, state.fixAnnotations, validationResult]);
 
     // Auto-open smart context when suggestions are available - Only on initial load if needed

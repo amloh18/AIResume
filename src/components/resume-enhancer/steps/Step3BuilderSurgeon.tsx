@@ -1029,6 +1029,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                       }
                     } : null}
                     isLoading={isAnalyzing}
+                    isScanning={isAnalyzing}
                     analysisMode={analysisModeInfo.mode}
                     validationResult={validationResult}
                     onIssueHover={(fieldPath) => setHighlightedField(fieldPath)}
