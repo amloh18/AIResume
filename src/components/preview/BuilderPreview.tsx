@@ -9,13 +9,18 @@ import {
   List, ListOrdered, Undo2, Redo2,
   Heading1, Heading2,
   Type,
-  ChevronUp, ChevronDown, X
+  ChevronUp, ChevronDown, X,
+  GripVertical, Palette, Sparkles, Loader2,
+  Calendar, Eye, EyeOff
 } from 'lucide-react';
 import { ThemeConfig } from '@/lib/templates/template-definition';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { getHighlitHTML } from '@/components/resume-enhancer/annotations/highlitHtml';
+import { generateBullet } from '@/services/aiBulletService';
+import { useFormatStore } from '@/lib/stores/formatStore';
+import { DATE_FORMAT_OPTIONS } from '@/lib/utils/textFormatting';
 
 const A4_WIDTH_PX = 794;
 const A4_HEIGHT_PX = 1122;
@@ -58,6 +63,20 @@ const FormatToolbar = memo(() => {
     document.execCommand(cmd, false, val);
   }, []);
 
+  const dateFormat = useFormatStore((s) => s.dateFormat);
+  const setDateFormat = useFormatStore((s) => s.setDateFormat);
+  const showContactIcons = useFormatStore((s) => s.showContactIcons);
+  const setShowContactIcons = useFormatStore((s) => s.setShowContactIcons);
+  const sectionTitleStyle = useFormatStore((s) => s.sectionTitleStyle);
+  const setSectionTitleStyle = useFormatStore((s) => s.setSectionTitleStyle);
+
+  const cycleTitleStyle = useCallback(() => {
+    const styles: Array<'bordered' | 'minimal' | 'accent' | 'spaced'> = ['bordered', 'minimal', 'accent', 'spaced'];
+    const currentIdx = styles.indexOf(sectionTitleStyle);
+    const next = styles[(currentIdx + 1) % styles.length];
+    setSectionTitleStyle(next);
+  }, [sectionTitleStyle, setSectionTitleStyle]);
+
   return (
     <div className="flex items-center gap-0.5 overflow-x-auto">
       <div className="flex items-center gap-0.5 bg-gray-100 dark:bg-gray-800 rounded-full px-1 py-0.5 shadow-sm">
@@ -79,6 +98,41 @@ const FormatToolbar = memo(() => {
         <FmtBtn onClick={() => exec('undo')} title="Undo"><Undo2 size={14} /></FmtBtn>
         <FmtBtn onClick={() => exec('redo')} title="Redo"><Redo2 size={14} /></FmtBtn>
       </div>
+
+      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+      {/* Date format selector */}
+      <div className="relative group/date">
+        <FmtBtn onClick={() => {}} title="Date Format"><Calendar size={14} /></FmtBtn>
+        <div className="hidden group-hover/date:block absolute top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 py-1 min-w-[160px]">
+          {DATE_FORMAT_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setDateFormat(opt.value)}
+              className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                dateFormat === opt.value ? 'text-lime-600 dark:text-lime-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+              }`}
+            >
+              <div>{opt.label}</div>
+              <div className="text-[10px] text-gray-400">{opt.example}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Contact icons toggle */}
+      <FmtBtn
+        onClick={() => setShowContactIcons(!showContactIcons)}
+        title={showContactIcons ? 'Hide icons' : 'Show icons'}
+        active={showContactIcons}
+      >
+        {showContactIcons ? <Eye size={14} /> : <EyeOff size={14} />}
+      </FmtBtn>
+
+      {/* Title style cycle */}
+      <FmtBtn onClick={cycleTitleStyle} title={`Title: ${sectionTitleStyle}`}>
+        <span className="text-[10px] font-medium capitalize">{sectionTitleStyle[0]}</span>
+      </FmtBtn>
     </div>
   );
 });
@@ -105,6 +159,9 @@ const SectionToolbar = memo(({
   canDelete,
   onMoveUp,
   onMoveDown,
+  onSnippetClick,
+  hasSnippets,
+  onDragStart,
 }: {
   label: string;
   onAddEntry?: () => void;
@@ -112,28 +169,58 @@ const SectionToolbar = memo(({
   canDelete?: boolean;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  onSnippetClick?: () => void;
+  hasSnippets?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
 }) => {
   return (
-    <div className="flex items-center gap-0.5 absolute -top-3 left-1/2 -translate-x-1/2 z-30 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-700 px-2 py-1 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto">
-      <span className="text-[10px] font-semibold text-lime-400 px-1.5 whitespace-nowrap">{label}</span>
+    <div className="flex items-center gap-0.5 absolute -left-2 top-0 z-30 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto -translate-x-full">
+      {/* Drag handle */}
+      <button
+        draggable
+        onDragStart={onDragStart}
+        className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-grab active:cursor-grabbing"
+        title="Drag to reorder"
+      >
+        <GripVertical size={12} />
+      </button>
+
       <div className="w-px h-3.5 bg-gray-600 mx-0.5" />
+
+      {/* Section name */}
+      <span className="text-[10px] font-semibold text-lime-400 px-1 whitespace-nowrap">{label}</span>
+
+      <div className="w-px h-3.5 bg-gray-600 mx-0.5" />
+
+      {/* Move controls */}
       {onMoveUp && (
-        <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} className="p-1 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors" title="Move Up">
+        <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }} className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors" title="Move Up">
           <ChevronUp size={11} />
         </button>
       )}
       {onMoveDown && (
-        <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} className="p-1 rounded-full text-gray-400 hover:text-white hover:bg-white/10 transition-colors" title="Move Down">
+        <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors" title="Move Down">
           <ChevronDown size={11} />
         </button>
       )}
+
+      {/* Add entry */}
       {onAddEntry && (
-        <button onClick={(e) => { e.stopPropagation(); onAddEntry(); }} className="p-1 rounded-full text-gray-400 hover:text-lime-400 hover:bg-lime-400/10 transition-colors" title={`Add ${label}`}>
+        <button onClick={(e) => { e.stopPropagation(); onAddEntry(); }} className="p-1 rounded text-gray-400 hover:text-lime-400 hover:bg-lime-400/10 transition-colors" title={`Add ${label}`}>
           <Plus size={11} />
         </button>
       )}
+
+      {/* Snippet design change */}
+      {hasSnippets && onSnippetClick && (
+        <button onClick={(e) => { e.stopPropagation(); onSnippetClick(); }} className="p-1 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors" title="Change design">
+          <Palette size={11} />
+        </button>
+      )}
+
+      {/* Delete section */}
       {canDelete && onDeleteSection && (
-        <button onClick={(e) => { e.stopPropagation(); onDeleteSection(); }} className="p-1 rounded-full text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors" title="Remove">
+        <button onClick={(e) => { e.stopPropagation(); onDeleteSection(); }} className="p-1 rounded text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors" title="Remove">
           <Trash2 size={11} />
         </button>
       )}
@@ -146,22 +233,47 @@ SectionToolbar.displayName = 'SectionToolbar';
 const EntryToolbar = memo(({
   onDelete,
   onAddBelow,
+  onAIGenerate,
   label,
 }: {
   onDelete?: () => void;
   onAddBelow?: () => void;
+  onAIGenerate?: () => Promise<void>;
   label?: string;
 }) => {
+  const [generating, setGenerating] = useState(false);
+
+  const handleAIGenerate = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (generating || !onAIGenerate) return;
+    setGenerating(true);
+    try {
+      await onAIGenerate();
+    } finally {
+      setGenerating(false);
+    }
+  }, [generating, onAIGenerate]);
+
   return (
-    <div className="flex items-center gap-0.5 absolute -right-2 top-0 z-20 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-md border border-gray-700 px-1.5 py-0.5 opacity-0 group-hover/item:opacity-100 transition-all duration-150 pointer-events-none group-hover/item:pointer-events-auto">
+    <div className="flex items-center gap-0.5 absolute -right-2 top-0 z-20 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-md border border-gray-700 px-1.5 py-0.5 opacity-0 group-hover/item:opacity-100 transition-all duration-150 pointer-events-none group-hover/item:pointer-events-auto">
       {label && <span className="text-[8px] text-gray-500 px-1 max-w-[60px] truncate">{label}</span>}
       {onAddBelow && (
-        <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} className="p-0.5 rounded-full text-gray-400 hover:text-lime-400 hover:bg-lime-400/10 transition-colors" title="Add below">
+        <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} className="p-0.5 rounded text-gray-400 hover:text-lime-400 hover:bg-lime-400/10 transition-colors" title="Add below">
           <Plus size={10} />
         </button>
       )}
+      {onAIGenerate && (
+        <button
+          onClick={handleAIGenerate}
+          disabled={generating}
+          className={`p-0.5 rounded transition-colors ${generating ? 'text-lime-400 animate-pulse' : 'text-gray-400 hover:text-lime-400 hover:bg-lime-400/10'}`}
+          title="AI generate bullet point"
+        >
+          {generating ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+        </button>
+      )}
       {onDelete && (
-        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-0.5 rounded-full text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors" title="Delete">
+        <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-0.5 rounded text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors" title="Delete">
           <Trash2 size={10} />
         </button>
       )}
@@ -457,6 +569,27 @@ export const BuilderPreview: React.FC<BuilderPreviewProps> = ({
     }
   }, [cvData, onCVDataChange]);
 
+  // AI bullet generation handler
+  const handleAIBulletGenerate = useCallback(async (
+    sectionType: string,
+    entryIndex: number,
+    entryData: any,
+    existingBullets: string[]
+  ): Promise<string> => {
+    try {
+      const result = await generateBullet({
+        sectionType: sectionType as 'experience' | 'education' | 'project',
+        entryData,
+        existingBullets,
+        profileSummary: cvData?.basics?.summary,
+      });
+      return result.success ? result.bullet : '';
+    } catch (err) {
+      console.error('AI bullet generation failed:', err);
+      return '';
+    }
+  }, [cvData?.basics?.summary]);
+
   return (
     <div className={`builder-preview flex flex-col h-full ${className}`}>
       {/* TOP TOOLBAR — left: controls, right: pill */}
@@ -496,6 +629,7 @@ export const BuilderPreview: React.FC<BuilderPreviewProps> = ({
                     addItem={addItem}
                     removeItem={removeItem}
                     moveItem={moveItem}
+                    onAIBulletGenerate={handleAIBulletGenerate}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-64 text-gray-400">No CV data available</div>
@@ -552,6 +686,7 @@ function InlineCVDocument({
   addItem,
   removeItem,
   moveItem,
+  onAIBulletGenerate,
 }: {
   cvData: UnifiedCVDataStructure;
   primaryColor: string;
@@ -564,6 +699,7 @@ function InlineCVDocument({
   addItem: (path: (string | number)[], tpl: any) => void;
   removeItem: (path: (string | number)[], idx: number) => void;
   moveItem: (path: (string | number)[], from: number, to: number) => void;
+  onAIBulletGenerate?: (sectionType: string, entryIndex: number, entryData: any, existingBullets: string[]) => Promise<string>;
 }) {
   const b = cvData.basics || {};
   const work = cvData.work || [];
@@ -574,6 +710,51 @@ function InlineCVDocument({
   const langs = cvData.languages || [];
   const vol = cvData.volunteer || [];
   const awards = cvData.awards || [];
+
+  // Format store values
+  const showContactIcons = useFormatStore((s) => s.showContactIcons);
+  const sectionTitleStyle = useFormatStore((s) => s.sectionTitleStyle);
+
+  // Section title class based on style
+  const getTitleClass = () => {
+    switch (sectionTitleStyle) {
+      case 'minimal':
+        return 'text-sm font-bold uppercase tracking-wider pb-1 mb-3';
+      case 'accent':
+        return 'text-sm font-bold uppercase tracking-wider pl-2 mb-3 border-l-2';
+      case 'spaced':
+        return 'text-sm font-bold uppercase tracking-wider pb-1 mb-3 flex items-center gap-2 after:flex-1 after:h-px after:bg-gray-200';
+      case 'bordered':
+      default:
+        return 'text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3';
+    }
+  };
+
+  const getTitleStyle = (): React.CSSProperties => {
+    switch (sectionTitleStyle) {
+      case 'accent':
+        return { color: primaryColor, borderColor: primaryColor };
+      case 'minimal':
+        return { color: primaryColor };
+      case 'spaced':
+        return { color: primaryColor };
+      case 'bordered':
+      default:
+        return { color: primaryColor, borderColor: primaryColor + '40' };
+    }
+  };
+
+  // Inline contact icon SVGs
+  const ContactIcon = ({ type }: { type: string }) => {
+    if (!showContactIcons) return null;
+    const icons: Record<string, React.ReactNode> = {
+      email: <svg className="w-2.5 h-2.5 inline-block mr-1 opacity-60" fill="currentColor" viewBox="0 0 20 20"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" /><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" /></svg>,
+      phone: <svg className="w-2.5 h-2.5 inline-block mr-1 opacity-60" fill="currentColor" viewBox="0 0 20 20"><path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" /></svg>,
+      location: <svg className="w-2.5 h-2.5 inline-block mr-1 opacity-60" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" /></svg>,
+      url: <svg className="w-2.5 h-2.5 inline-block mr-1 opacity-60" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clipRule="evenodd" /></svg>,
+    };
+    return <>{icons[type]}</>;
+  };
 
   // Check if a field path matches the highlighted field
   const isHighlighted = (fieldPath: string) => {
@@ -599,24 +780,53 @@ function InlineCVDocument({
         {isEdit && <SectionToolbar label="Personal Info" />}
         <EditableText tag="h1" value={b.name || ''} onChange={(v) => updateField(['basics', 'name'], v)} className="text-2xl font-bold text-gray-900" placeholder="Your Name" annotations={fixAnnotations} fieldPath="basics.name" />
         <EditableText tag="p" value={b.label || ''} onChange={(v) => updateField(['basics', 'label'], v)} className="text-sm text-gray-600 mt-0.5" placeholder="Professional Title" annotations={fixAnnotations} fieldPath="basics.label" />
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[10px] text-gray-500">
-          <EditableText value={b.email || ''} onChange={(v) => updateField(['basics', 'email'], v)} placeholder="email@example.com" className="text-gray-500" annotations={fixAnnotations} fieldPath="basics.email" />
-          <EditableText value={b.phone || ''} onChange={(v) => updateField(['basics', 'phone'], v)} placeholder="+1 234 567 890" annotations={fixAnnotations} fieldPath="basics.phone" />
-          <EditableText value={b.location?.city || ''} onChange={(v) => updateField(['basics', 'location', 'city'], v)} placeholder="City, Country" annotations={fixAnnotations} fieldPath="basics.location.city" />
-          <EditableText value={b.url || ''} onChange={(v) => updateField(['basics', 'url'], v)} placeholder="website.com" className="text-lime-600" annotations={fixAnnotations} fieldPath="basics.url" />
+        <div className="flex flex-wrap items-center gap-x-1 mt-2 text-[10px] text-gray-500">
+          {b.email && (
+            <>
+              <span className="inline-flex items-center"><ContactIcon type="email" /><EditableText value={b.email || ''} onChange={(v) => updateField(['basics', 'email'], v)} placeholder="email@example.com" className="text-gray-500" annotations={fixAnnotations} fieldPath="basics.email" /></span>
+              {(b.phone || b.location?.city || b.url) && <span className="text-gray-300 mx-1">|</span>}
+            </>
+          )}
+          {b.phone && (
+            <>
+              <span className="inline-flex items-center"><ContactIcon type="phone" /><EditableText value={b.phone || ''} onChange={(v) => updateField(['basics', 'phone'], v)} placeholder="+1 234 567 890" className="text-gray-500" annotations={fixAnnotations} fieldPath="basics.phone" /></span>
+              {(b.location?.city || b.url) && <span className="text-gray-300 mx-1">|</span>}
+            </>
+          )}
+          {b.location?.city && (
+            <>
+              <span className="inline-flex items-center"><ContactIcon type="location" /><EditableText value={b.location?.city || ''} onChange={(v) => updateField(['basics', 'location', 'city'], v)} placeholder="City, Country" className="text-gray-500" annotations={fixAnnotations} fieldPath="basics.location.city" /></span>
+              {b.url && <span className="text-gray-300 mx-1">|</span>}
+            </>
+          )}
+          {b.url && (
+            <span className="inline-flex items-center"><ContactIcon type="url" /><EditableText value={b.url || ''} onChange={(v) => updateField(['basics', 'url'], v)} placeholder="website.com" className="text-lime-600" annotations={fixAnnotations} fieldPath="basics.url" /></span>
+          )}
         </div>
         <EditableText tag="p" value={b.summary || ''} onChange={(v) => updateField(['basics', 'summary'], v)} className="mt-3 text-gray-700 leading-relaxed" multiline placeholder="Professional summary..." annotations={fixAnnotations} fieldPath="basics.summary" />
       </div>
 
       {/* ===== WORK ===== */}
       {work.length > 0 && (
-        <div data-section-id="work" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'work' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('work')}`} onClick={() => isEdit && onSectionFocus('work')}>
-          {isEdit && <SectionToolbar label="Experience" onAddEntry={() => addItem(['work'], { name: '', position: '', startDate: '', endDate: '', summary: '', highlights: [] })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Experience</h2>
+        <div data-section-id="work" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'work' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('work')}`} onClick={() => isEdit && onSectionFocus('work')}>
+          {isEdit && <SectionToolbar label="Experience" onAddEntry={() => addItem(['work'], { name: '', position: '', startDate: '', endDate: '', summary: '', highlights: [] })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Experience</h2>
           <div className="space-y-4">
             {work.map((job: any, i: number) => (
               <div key={i} className="relative group/item pl-2">
-                {isEdit && <EntryToolbar onDelete={() => removeItem(['work'], i)} onAddBelow={() => addItem(['work'], { name: '', position: '', startDate: '', endDate: '', summary: '', highlights: [] })} label={job.position || 'Entry'} />}
+                {isEdit && (
+                  <EntryToolbar
+                    onDelete={() => removeItem(['work'], i)}
+                    onAddBelow={() => addItem(['work'], { name: '', position: '', startDate: '', endDate: '', summary: '', highlights: [] })}
+                    onAIGenerate={onAIBulletGenerate ? async () => {
+                      const bullet = await onAIBulletGenerate('experience', i, job, job.highlights || []);
+                      if (bullet) {
+                        updateField(['work', i, 'highlights'], [...(job.highlights || []), bullet]);
+                      }
+                    } : undefined}
+                    label={job.position || 'Entry'}
+                  />
+                )}
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <EditableText tag="div" value={String(job.position || '')} onChange={(v) => updateField(['work', i, 'position'], v)} className="font-semibold text-gray-900" placeholder="Position Title" annotations={fixAnnotations} fieldPath={`work[${i}].position`} />
@@ -638,9 +848,9 @@ function InlineCVDocument({
 
       {/* ===== EDUCATION ===== */}
       {edu.length > 0 && (
-        <div data-section-id="education" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'education' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('education')}`} onClick={() => isEdit && onSectionFocus('education')}>
-          {isEdit && <SectionToolbar label="Education" onAddEntry={() => addItem(['education'], { institution: '', studyType: '', area: '', startDate: '', endDate: '' })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Education</h2>
+        <div data-section-id="education" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'education' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('education')}`} onClick={() => isEdit && onSectionFocus('education')}>
+          {isEdit && <SectionToolbar label="Education" onAddEntry={() => addItem(['education'], { institution: '', studyType: '', area: '', startDate: '', endDate: '' })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Education</h2>
           <div className="space-y-3">
             {edu.map((e: any, i: number) => (
               <div key={i} className="relative group/item flex justify-between items-start pl-2">
@@ -665,9 +875,9 @@ function InlineCVDocument({
 
       {/* ===== SKILLS ===== */}
       {skills.length > 0 && (
-        <div data-section-id="skills" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'skills' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('skills')}`} onClick={() => isEdit && onSectionFocus('skills')}>
-          {isEdit && <SectionToolbar label="Skills" onAddEntry={() => addItem(['skills'], { category: '', skills: [] })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Skills</h2>
+        <div data-section-id="skills" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'skills' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('skills')}`} onClick={() => isEdit && onSectionFocus('skills')}>
+          {isEdit && <SectionToolbar label="Skills" onAddEntry={() => addItem(['skills'], { category: '', skills: [] })} hasSnippets={true} onSnippetClick={() => {}} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Skills</h2>
           <div className="space-y-2">
             {skills.map((sg: any, i: number) => (
               <div key={i} className="relative group/item pl-2">
@@ -682,13 +892,24 @@ function InlineCVDocument({
 
       {/* ===== PROJECTS ===== */}
       {proj.length > 0 && (
-        <div data-section-id="projects" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'projects' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('projects')}`} onClick={() => isEdit && onSectionFocus('projects')}>
-          {isEdit && <SectionToolbar label="Projects" onAddEntry={() => addItem(['projects'], { name: '', description: '', highlights: [] })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Projects</h2>
+        <div data-section-id="projects" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'projects' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('projects')}`} onClick={() => isEdit && onSectionFocus('projects')}>
+          {isEdit && <SectionToolbar label="Projects" onAddEntry={() => addItem(['projects'], { name: '', description: '', highlights: [] })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Projects</h2>
           <div className="space-y-3">
             {proj.map((p: any, i: number) => (
               <div key={i} className="relative group/item pl-2">
-                {isEdit && <EntryToolbar onDelete={() => removeItem(['projects'], i)} onAddBelow={() => addItem(['projects'], { name: '', description: '', highlights: [] })} />}
+                {isEdit && (
+                  <EntryToolbar
+                    onDelete={() => removeItem(['projects'], i)}
+                    onAddBelow={() => addItem(['projects'], { name: '', description: '', highlights: [] })}
+                    onAIGenerate={onAIBulletGenerate ? async () => {
+                      const bullet = await onAIBulletGenerate('project', i, p, p.highlights || []);
+                      if (bullet) {
+                        updateField(['projects', i, 'highlights'], [...(p.highlights || []), bullet]);
+                      }
+                    } : undefined}
+                  />
+                )}
                 <div className="flex justify-between items-start">
                   <EditableText tag="div" value={String(p.name || '')} onChange={(v) => updateField(['projects', i, 'name'], v)} className="font-semibold text-gray-900" placeholder="Project Name" annotations={fixAnnotations} fieldPath={`projects[${i}].name`} />
                   <div className="text-[10px] text-gray-400 flex items-center gap-1 flex-shrink-0">
@@ -707,9 +928,9 @@ function InlineCVDocument({
 
       {/* ===== CERTIFICATES ===== */}
       {certs.length > 0 && (
-        <div data-section-id="certificates" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'certificates' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('certificates')}`} onClick={() => isEdit && onSectionFocus('certificates')}>
-          {isEdit && <SectionToolbar label="Certificates" onAddEntry={() => addItem(['certificates'], { name: '', issuer: '', date: '' })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Certificates</h2>
+        <div data-section-id="certificates" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'certificates' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('certificates')}`} onClick={() => isEdit && onSectionFocus('certificates')}>
+          {isEdit && <SectionToolbar label="Certificates" onAddEntry={() => addItem(['certificates'], { name: '', issuer: '', date: '' })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Certificates</h2>
           <div className="space-y-2">
             {certs.map((c: any, i: number) => (
               <div key={i} className="relative group/item flex justify-between items-start pl-2">
@@ -727,9 +948,9 @@ function InlineCVDocument({
 
       {/* ===== LANGUAGES ===== */}
       {langs.length > 0 && (
-        <div data-section-id="languages" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'languages' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('languages')}`} onClick={() => isEdit && onSectionFocus('languages')}>
-          {isEdit && <SectionToolbar label="Languages" onAddEntry={() => addItem(['languages'], { language: '', fluency: '' })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Languages</h2>
+        <div data-section-id="languages" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'languages' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('languages')}`} onClick={() => isEdit && onSectionFocus('languages')}>
+          {isEdit && <SectionToolbar label="Languages" onAddEntry={() => addItem(['languages'], { language: '', fluency: '' })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Languages</h2>
           <div className="flex flex-wrap gap-x-4 gap-y-1">
             {langs.map((l: any, i: number) => (
               <div key={i} className="relative group/item">
@@ -744,9 +965,9 @@ function InlineCVDocument({
 
       {/* ===== VOLUNTEER ===== */}
       {vol.length > 0 && (
-        <div data-section-id="volunteer" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'volunteer' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('volunteer')}`} onClick={() => isEdit && onSectionFocus('volunteer')}>
-          {isEdit && <SectionToolbar label="Volunteer" onAddEntry={() => addItem(['volunteer'], { position: '', organization: '', startDate: '', endDate: '', summary: '' })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Volunteer</h2>
+        <div data-section-id="volunteer" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'volunteer' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('volunteer')}`} onClick={() => isEdit && onSectionFocus('volunteer')}>
+          {isEdit && <SectionToolbar label="Volunteer" onAddEntry={() => addItem(['volunteer'], { position: '', organization: '', startDate: '', endDate: '', summary: '' })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Volunteer</h2>
           <div className="space-y-3">
             {vol.map((v: any, i: number) => (
               <div key={i} className="relative group/item pl-2">
@@ -771,9 +992,9 @@ function InlineCVDocument({
 
       {/* ===== AWARDS ===== */}
       {awards.length > 0 && (
-        <div data-section-id="awards" className={`relative group overflow-visible rounded-md transition-all ${activeSection === 'awards' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('awards')}`} onClick={() => isEdit && onSectionFocus('awards')}>
-          {isEdit && <SectionToolbar label="Awards" onAddEntry={() => addItem(['awards'], { title: '', awarder: '', date: '' })} />}
-          <h2 className="text-sm font-bold uppercase tracking-wider border-b pb-1 mb-3" style={{ color: primaryColor, borderColor: primaryColor + '40' }}>Awards</h2>
+        <div data-section-id="awards" className={`relative group overflow-visible rounded-md transition-all hover:bg-black/[0.012] ${activeSection === 'awards' ? 'ring-2 ring-lime-400/40 bg-lime-50/20' : ''} ${hlClass('awards')}`} onClick={() => isEdit && onSectionFocus('awards')}>
+          {isEdit && <SectionToolbar label="Awards" onAddEntry={() => addItem(['awards'], { title: '', awarder: '', date: '' })} hasSnippets={false} />}
+          <h2 className={getTitleClass()} style={getTitleStyle()}>Awards</h2>
           <div className="space-y-2">
             {awards.map((a: any, i: number) => (
               <div key={i} className="relative group/item flex justify-between items-start pl-2">
