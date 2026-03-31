@@ -5,7 +5,7 @@
 /**
  * Date format style options for CV templates
  */
-export type DateFormatStyle = 'MMM_YYYY' | 'MM_YYYY' | 'DD_MM_YYYY' | 'MM_DD_YYYY';
+export type DateFormatStyle = 'MMM_YYYY' | 'MM_YYYY' | 'DD_MM_YYYY' | 'MM_DD_YYYY' | 'FULL_MONTH';
 
 /**
  * Date format display labels for UI
@@ -15,6 +15,7 @@ export const DATE_FORMAT_OPTIONS: { value: DateFormatStyle; label: string; examp
   { value: 'MM_YYYY', label: 'MM/YYYY', example: '12/2025 - 01/2026' },
   { value: 'DD_MM_YYYY', label: 'DD/MM/YYYY', example: '01/12/2025 - 01/01/2026' },
   { value: 'MM_DD_YYYY', label: 'MM/DD/YYYY (US)', example: '12/01/2025 - 01/01/2026' },
+  { value: 'FULL_MONTH', label: 'Full Month', example: 'December 2025 - January 2026' },
 ];
 
 /**
@@ -254,6 +255,7 @@ const parseDateParts = (dateString: string): { year: number; month: number; day:
 };
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 /**
  * Format a single date with the specified style
@@ -279,6 +281,8 @@ export const formatDateWithStyle = (dateString: string, style: DateFormatStyle =
       return `${paddedDay}/${paddedMonth}/${year}`;
     case 'MM_DD_YYYY':
       return `${paddedMonth}/${paddedDay}/${year}`;
+    case 'FULL_MONTH':
+      return `${FULL_MONTH_NAMES[month - 1]} ${year}`;
     default:
       return `${MONTH_NAMES[month - 1]} ${year}`;
   }

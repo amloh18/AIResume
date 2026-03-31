@@ -8,6 +8,8 @@
  * NO TRANSFORMATION LAYERS - Direct serialization/deserialization only.
  */
 
+import { SnippetOverrides } from './snippets';
+
 /**
  * Section structure entry defining order and visibility
  */
@@ -38,6 +40,9 @@ export interface UnifiedCVDataStructure {
 
   // Template ID
   templateId?: string;      // Template ID for structure initialization
+
+  // Snippet overrides for section design variants
+  snippetOverrides?: SnippetOverrides;
 
   // Personal Information
   basics: {

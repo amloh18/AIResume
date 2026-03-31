@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
+import React, { useState, useCallback, useRef } from 'react';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextAlign from '@tiptap/extension-text-align';
@@ -10,10 +11,18 @@ import { generateNodeId } from '@/lib/utils/nodeId';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, Heading3,
-  List, ListOrdered, Quote, Minus,
+  List, ListOrdered, Quote,
   AlignLeft, AlignCenter, AlignRight,
-  Highlighter, Link2
+  Highlighter, Eye, EyeOff, Calendar
 } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { useFormatStore } from '@/lib/stores/formatStore';
+import { useSnippetStore } from '@/lib/stores/snippetStore';
+import { DATE_FORMAT_OPTIONS } from '@/lib/utils/textFormatting';
+import { SnippetCategory } from '@/types/snippets';
+import { generateBullet } from '@/services/aiBulletService';
+import { SectionHoverChip } from './SectionHoverChip';
+import { SnippetPicker } from './SnippetPicker';
 
 import {
   ExperienceBlock,
@@ -57,6 +66,21 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
     itemId: null,
     fieldType: null,
   });
+
+  const [snippetPickerState, setSnippetPickerState] = useState<{
+    open: boolean;
+    category: SnippetCategory | null;
+  }>({ open: false, category: null });
+
+  const [generatingBullet, setGeneratingBullet] = useState(false);
+
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const dateFormat = useFormatStore((s) => s.dateFormat);
+  const setDateFormat = useFormatStore((s) => s.setDateFormat);
+  const showContactIcons = useFormatStore((s) => s.showContactIcons);
+  const setShowContactIcons = useFormatStore((s) => s.setShowContactIcons);
+  const sectionTitleStyle = useFormatStore((s) => s.sectionTitleStyle);
+  const setSectionTitleStyle = useFormatStore((s) => s.setSectionTitleStyle);
 
   const editor = useEditor({
     extensions: [
@@ -158,15 +182,109 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
     }).run();
   }, [editor]);
 
-  const addBulletPoint = useCallback(() => {
+  const addBulletPoint = useCallback(async (useAI = false) => {
     if (!editor) return;
-    editor.chain().focus().insertContent({
-      type: 'bulletNode',
-      attrs: {
-        id: generateNodeId(),
-      },
-    }).run();
+
+    if (useAI) {
+      setGeneratingBullet(true);
+      try {
+        const entryData: Record<string, any> = {};
+        const existingBullets: string[] = [];
+
+        const { state } = editor;
+        const { $from } = state.selection;
+
+        for (let d = $from.depth; d > 0; d--) {
+          const node = $from.node(d);
+          const dataType = node.attrs['data-type'];
+          if (dataType === 'experience-block') {
+            entryData.company = node.attrs.company;
+            entryData.position = node.attrs.position;
+          } else if (dataType === 'education-block') {
+            entryData.institution = node.attrs.institution;
+            entryData.studyType = node.attrs.studyType;
+            entryData.area = node.attrs.area;
+          } else if (dataType === 'projects-block') {
+            entryData.name = node.attrs.name;
+          }
+        }
+
+        const sectionType = (context.sectionType as 'experience' | 'education' | 'project') || 'experience';
+
+        const result = await generateBullet({
+          sectionType,
+          entryData,
+          existingBullets,
+          profileSummary: resumeData?.basics?.summary,
+        });
+
+        editor.chain().focus().insertContent({
+          type: 'bulletNode',
+          attrs: { id: generateNodeId() },
+        }).run();
+
+        if (result.success && result.bullet) {
+          editor.commands.insertContent(result.bullet);
+        }
+      } catch (err) {
+        console.error('AI bullet generation failed:', err);
+        editor.chain().focus().insertContent({
+          type: 'bulletNode',
+          attrs: { id: generateNodeId() },
+        }).run();
+      } finally {
+        setGeneratingBullet(false);
+      }
+    } else {
+      editor.chain().focus().insertContent({
+        type: 'bulletNode',
+        attrs: { id: generateNodeId() },
+      }).run();
+    }
+  }, [editor, context.sectionType, resumeData]);
+
+  const handleAddEntry = useCallback((sectionType: string) => {
+    const typeMap: Record<string, () => void> = {
+      'experience-block': addExperienceBlock,
+      'education-block': addEducationBlock,
+      'skills-block': addSkillsBlock,
+      'projects-block': addProjectsBlock,
+    };
+    typeMap[sectionType]?.();
+  }, [addExperienceBlock, addEducationBlock, addSkillsBlock, addProjectsBlock]);
+
+  const handleDeleteSection = useCallback((sectionId: string) => {
+    if (!editor) return;
+    const { state } = editor;
+    let found = false;
+    state.doc.descendants((node, pos) => {
+      if (found) return false;
+      if (node.attrs['data-id'] === sectionId) {
+        editor.chain().focus().deleteRange({ from: pos, to: pos + node.nodeSize }).run();
+        found = true;
+        return false;
+      }
+      return true;
+    });
   }, [editor]);
+
+  const handleOpenSnippets = useCallback((sectionType: string) => {
+    const categoryMap: Record<string, SnippetCategory> = {
+      'experience-block': 'sectionTitle',
+      'education-block': 'sectionTitle',
+      'skills-block': 'skills',
+      'projects-block': 'sectionTitle',
+    };
+    const category = categoryMap[sectionType] || 'sectionTitle';
+    setSnippetPickerState({ open: true, category });
+  }, []);
+
+  const cycleTitleStyle = useCallback(() => {
+    const styles: Array<'bordered' | 'minimal' | 'accent' | 'spaced'> = ['bordered', 'minimal', 'accent', 'spaced'];
+    const currentIdx = styles.indexOf(sectionTitleStyle);
+    const next = styles[(currentIdx + 1) % styles.length];
+    setSectionTitleStyle(next);
+  }, [sectionTitleStyle, setSectionTitleStyle]);
 
   if (!editor) {
     return <div className="animate-pulse h-96 bg-gray-100 dark:bg-gray-800 rounded-lg" />;
@@ -175,7 +293,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
   return (
     <div className="resume-editor-container">
       {/* Toolbar */}
-      <div className="toolbar flex flex-wrap gap-2 p-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="toolbar flex flex-wrap items-center gap-2 p-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <button
           onClick={addExperienceBlock}
           className="px-3 py-1.5 text-sm bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-300 rounded-md hover:bg-lime-200 dark:hover:bg-lime-900/50 transition-colors"
@@ -200,7 +318,56 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
         >
           + Projects
         </button>
+
+        <div className="w-px h-6 bg-gray-200 dark:bg-gray-700 mx-1" />
+
+        {/* Date format selector */}
+        <div className="relative group">
+          <button className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors">
+            <Calendar size={14} />
+            <span className="text-xs">Date</span>
+          </button>
+          <div className="hidden group-hover:block absolute top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50 py-1 min-w-[160px]">
+            {DATE_FORMAT_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => setDateFormat(opt.value)}
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                  dateFormat === opt.value ? 'text-lime-600 dark:text-lime-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                <div>{opt.label}</div>
+                <div className="text-xs text-gray-400">{opt.example}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Contact icons toggle */}
+        <button
+          onClick={() => setShowContactIcons(!showContactIcons)}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded-md transition-colors ${
+            showContactIcons
+              ? 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-300'
+              : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+          title={showContactIcons ? 'Hide contact icons' : 'Show contact icons'}
+        >
+          {showContactIcons ? <Eye size={14} /> : <EyeOff size={14} />}
+          <span className="text-xs">Icons</span>
+        </button>
+
+        {/* Section title style cycle */}
+        <button
+          onClick={cycleTitleStyle}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+          title={`Title style: ${sectionTitleStyle}`}
+        >
+          <span className="text-xs capitalize">Title: {sectionTitleStyle}</span>
+        </button>
+
         <div className="flex-1" />
+
         <div className="text-sm text-gray-500 dark:text-gray-400">
           {context.sectionType && (
             <span className="capitalize">{context.sectionType}</span>
@@ -208,15 +375,33 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
         </div>
       </div>
 
-      {/* Editor Content */}
-      <div className="editor-wrapper border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900">
+      {/* Editor Content with overlay */}
+      <div
+        ref={editorContainerRef}
+        className="editor-wrapper relative border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900"
+      >
+        <SectionHoverChip
+          editor={editor}
+          containerRef={editorContainerRef}
+          onAddEntry={handleAddEntry}
+          onDeleteSection={handleDeleteSection}
+          onOpenSnippets={handleOpenSnippets}
+        />
+
+        <AnimatePresence>
+          {snippetPickerState.open && snippetPickerState.category && (
+            <SnippetPicker
+              category={snippetPickerState.category}
+              onClose={() => setSnippetPickerState({ open: false, category: null })}
+            />
+          )}
+        </AnimatePresence>
+
         {editor && (
           <BubbleMenu
             editor={editor}
-            tippyOptions={{ duration: 100, placement: 'top' }}
             className="flex items-center gap-0.5 bg-gray-900 dark:bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-1"
           >
-            {/* Inline formatting */}
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
               className={`p-1.5 rounded transition-colors ${editor.isActive('bold') ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
@@ -248,7 +433,6 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
             <div className="w-px h-5 bg-gray-600 mx-0.5" />
 
-            {/* Headings */}
             <button
               onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
               className={`p-1.5 rounded transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
@@ -273,7 +457,6 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
             <div className="w-px h-5 bg-gray-600 mx-0.5" />
 
-            {/* Lists */}
             <button
               onClick={() => editor.chain().focus().toggleBulletList().run()}
               className={`p-1.5 rounded transition-colors ${editor.isActive('bulletList') ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
@@ -298,7 +481,6 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
             <div className="w-px h-5 bg-gray-600 mx-0.5" />
 
-            {/* Alignment */}
             <button
               onClick={() => editor.chain().focus().setTextAlign('left').run()}
               className={`p-1.5 rounded transition-colors ${editor.isActive({ textAlign: 'left' }) ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
@@ -323,7 +505,6 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
             <div className="w-px h-5 bg-gray-600 mx-0.5" />
 
-            {/* Highlight */}
             <button
               onClick={() => editor.chain().focus().toggleHighlight().run()}
               className={`p-1.5 rounded transition-colors ${editor.isActive('highlightMark') ? 'bg-[#80FF00]/20 text-[#80FF00]' : 'text-gray-300 hover:bg-white/10'}`}
@@ -338,15 +519,34 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
 
       {/* Status Bar */}
       <div className="status-bar flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 p-2 border-t border-gray-200 dark:border-gray-700">
-        <div>
+        <div className="flex items-center gap-3">
           {context.itemId && (
             <span className="text-lime-600 dark:text-lime-400">
               Editing: {context.fieldType}
             </span>
           )}
+          {generatingBullet && (
+            <span className="text-lime-600 dark:text-lime-400 flex items-center gap-1">
+              <span className="flex gap-0.5">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="w-1 h-1 rounded-full bg-lime-500 animate-pulse"
+                    style={{ animationDelay: `${i * 150}ms` }}
+                  />
+                ))}
+              </span>
+              Generating...
+            </span>
+          )}
         </div>
-        <div>
-          Press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">Tab</kbd> to indent bullets
+        <div className="flex items-center gap-3">
+          <span>
+            Date: <strong>{dateFormat.replace(/_/g, ' ')}</strong>
+          </span>
+          <span>
+            Press <kbd className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs">Tab</kbd> to indent bullets
+          </span>
         </div>
       </div>
     </div>
