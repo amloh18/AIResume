@@ -7,36 +7,51 @@ const DEFAULT_CONFIG: PillConfig = {
     quietMode: true,
 };
 
-const QUIET_MODE_DEBOUNCE_MS = 2000;
-const ACTIVE_MODE_DEBOUNCE_MS = 800;
+const QUIET_MODE_DEBOUNCE_MS = 3000;
+const ACTIVE_MODE_DEBOUNCE_MS = 1500;
 
 export function usePillEngine(
     cvData: UnifiedCVDataStructure,
     cvType: 'master' | 'journey' | 'standalone' = 'standalone',
-    keywordAnalysis?: any | null, // using any to avoid import loop or strict type check if types not exported, but preferably import KeywordGapAnalysisResult
-    config: PillConfig = DEFAULT_CONFIG
+    keywordAnalysis?: any | null,
+    config: PillConfig = DEFAULT_CONFIG,
+    /** When true, suppresses automatic re-analysis (e.g., during CV surgeon scan) */
+    suppressAutoAnalysis: boolean = false
 ) {
     const [issues, setIssues] = useState<Issue[]>([]);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [hasRunInitialAnalysis, setHasRunInitialAnalysis] = useState(false);
 
     // Full Score Result
-    const [scoreResult, setScoreResult] = useState<any>(null); // Type as ScoreResult
+    const [scoreResult, setScoreResult] = useState<any>(null);
 
     const cvDataRef = useRef(cvData);
     const analysisRef = useRef(keywordAnalysis);
     const typeRef = useRef(cvType);
+    const suppressRef = useRef(suppressAutoAnalysis);
+    const analysisCountRef = useRef(0);
 
     useEffect(() => {
         cvDataRef.current = cvData;
         analysisRef.current = keywordAnalysis;
         typeRef.current = cvType;
-    }, [cvData, keywordAnalysis, cvType]);
+        suppressRef.current = suppressAutoAnalysis;
+    }, [cvData, keywordAnalysis, cvType, suppressAutoAnalysis]);
 
     const runAnalysis = useCallback(async () => {
+        // Skip if auto-analysis is suppressed (e.g., during CV surgeon scan)
+        if (suppressRef.current) {
+            return;
+        }
+
         if (!cvDataRef.current) {
             setIsAnalyzing(false);
             return;
         }
+
+        // Prevent concurrent analyses
+        analysisCountRef.current++;
+        const currentRun = analysisCountRef.current;
 
         setIsAnalyzing(true);
         try {
@@ -47,21 +62,29 @@ export function usePillEngine(
                 analysisRef.current
             );
 
-            setScoreResult(result);
-            setIssues(result.issues);
+            // Only update state if this is still the latest analysis run
+            if (currentRun === analysisCountRef.current) {
+                setScoreResult(result);
+                setIssues(result.issues);
+                setHasRunInitialAnalysis(true);
+            }
         } catch (e) {
             console.error("Central Score Manager Analysis Failed", e);
         } finally {
-            setIsAnalyzing(false);
+            if (currentRun === analysisCountRef.current) {
+                setIsAnalyzing(false);
+            }
         }
     }, []);
 
-    // Trigger Logic
+    // Trigger Logic - only auto-run when NOT suppressed
     useEffect(() => {
+        if (suppressAutoAnalysis) return;
+        
         const timeoutMs = config.quietMode ? QUIET_MODE_DEBOUNCE_MS : ACTIVE_MODE_DEBOUNCE_MS;
         const timer = setTimeout(runAnalysis, timeoutMs);
         return () => clearTimeout(timer);
-    }, [cvData, keywordAnalysis, cvType, config.quietMode, runAnalysis]);
+    }, [cvData, keywordAnalysis, cvType, config.quietMode, suppressAutoAnalysis, runAnalysis]);
 
     const triggerAnalysis = useCallback(() => {
         runAnalysis();
@@ -74,6 +97,7 @@ export function usePillEngine(
         atsScore: scoreResult?.atsScore?.total || 0,
         healthScore: cvType === 'journey' ? (scoreResult?.atsScore?.total || 0) : (scoreResult?.cvScore?.total || 0),
         isAnalyzing,
+        hasRunInitialAnalysis,
         triggerAnalysis
     };
 }
