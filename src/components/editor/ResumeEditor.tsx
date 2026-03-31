@@ -13,16 +13,17 @@ import {
   Heading1, Heading2, Heading3,
   List, ListOrdered, Quote,
   AlignLeft, AlignCenter, AlignRight,
-  Highlighter, Eye, EyeOff, Calendar
+  Highlighter, Eye, EyeOff, Calendar, GalleryHorizontal, Sparkles
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { useFormatStore } from '@/lib/stores/formatStore';
 import { useSnippetStore } from '@/lib/stores/snippetStore';
 import { DATE_FORMAT_OPTIONS } from '@/lib/utils/textFormatting';
-import { SnippetCategory } from '@/types/snippets';
+import { SnippetCategory, GalleryItem } from '@/types/snippets';
 import { generateBullet } from '@/services/aiBulletService';
 import { SectionHoverChip } from './SectionHoverChip';
 import { SnippetPicker } from './SnippetPicker';
+import { SnippetGallery } from './SnippetGallery';
 
 import {
   ExperienceBlock,
@@ -72,6 +73,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
     category: SnippetCategory | null;
   }>({ open: false, category: null });
 
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [generatingBullet, setGeneratingBullet] = useState(false);
 
   const editorContainerRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,7 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
   const setShowContactIcons = useFormatStore((s) => s.setShowContactIcons);
   const sectionTitleStyle = useFormatStore((s) => s.sectionTitleStyle);
   const setSectionTitleStyle = useFormatStore((s) => s.setSectionTitleStyle);
+  const { startDragging, stopDragging } = useSnippetStore();
 
   const editor = useEditor({
     extensions: [
@@ -279,6 +282,46 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
     setSnippetPickerState({ open: true, category });
   }, []);
 
+  const handleOpenGallery = useCallback(() => {
+    setGalleryOpen(true);
+  }, []);
+
+  const handleCloseGallery = useCallback(() => {
+    setGalleryOpen(false);
+  }, []);
+
+  const handleGallerySnippetSelect = useCallback((snippet: GalleryItem) => {
+    if (!editor) return;
+    
+    if (snippet.isSection && snippet.sectionType) {
+      // Insert section snippet
+      const sectionMap: Record<string, () => void> = {
+        experience: addExperienceBlock,
+        education: addEducationBlock,
+        skills: addSkillsBlock,
+        projects: addProjectsBlock,
+      };
+      
+      const addFn = sectionMap[snippet.sectionType];
+      if (addFn) {
+        addFn();
+      }
+    } else if (snippet.category) {
+      // Apply style snippet
+      setSnippetPickerState({ open: true, category: snippet.category });
+    }
+    
+    handleCloseGallery();
+  }, [editor, addExperienceBlock, addEducationBlock, addSkillsBlock, addProjectsBlock, handleCloseGallery]);
+
+  const handleGalleryDragStart = useCallback((snippet: GalleryItem) => {
+    startDragging(snippet);
+  }, [startDragging]);
+
+  const handleGalleryDragEnd = useCallback(() => {
+    stopDragging();
+  }, [stopDragging]);
+
   const cycleTitleStyle = useCallback(() => {
     const styles: Array<'bordered' | 'minimal' | 'accent' | 'spaced'> = ['bordered', 'minimal', 'accent', 'spaced'];
     const currentIdx = styles.indexOf(sectionTitleStyle);
@@ -366,6 +409,16 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
           <span className="text-xs capitalize">Title: {sectionTitleStyle}</span>
         </button>
 
+        {/* Snippet Gallery button */}
+        <button
+          onClick={handleOpenGallery}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm bg-gradient-to-r from-lime-500 to-emerald-500 text-white rounded-md hover:from-lime-600 hover:to-emerald-600 transition-all shadow-sm"
+          title="Open Snippet Gallery"
+        >
+          <GalleryHorizontal size={14} />
+          <span className="text-xs font-medium">Gallery</span>
+        </button>
+
         <div className="flex-1" />
 
         <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -393,6 +446,16 @@ export const ResumeEditor: React.FC<ResumeEditorProps> = ({
             <SnippetPicker
               category={snippetPickerState.category}
               onClose={() => setSnippetPickerState({ open: false, category: null })}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {galleryOpen && (
+            <SnippetGallery
+              onClose={handleCloseGallery}
+              onSnippetSelect={handleGallerySnippetSelect}
+              onSnippetDragStart={handleGalleryDragStart}
             />
           )}
         </AnimatePresence>
