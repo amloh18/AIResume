@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GripVertical, Trash2, Plus, Palette } from 'lucide-react';
+import { GripVertical, Trash2, Plus, Palette, GalleryHorizontal } from 'lucide-react';
 import type { Editor } from '@tiptap/core';
 
 interface SectionInfo {
@@ -19,6 +19,7 @@ interface SectionHoverChipProps {
   onAddEntry: (sectionType: string) => void;
   onDeleteSection: (sectionId: string) => void;
   onOpenSnippets?: (sectionType: string) => void;
+  onOpenGallery?: () => void;
   snippetCategories?: string[];
 }
 
@@ -29,12 +30,16 @@ const SECTION_LABELS: Record<string, string> = {
   'projects-block': 'Projects',
 };
 
+// Tolerance zone in pixels around section bounds for hover detection
+const HOVER_TOLERANCE = 24;
+
 export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
   editor,
   containerRef,
   onAddEntry,
   onDeleteSection,
   onOpenSnippets,
+  onOpenGallery,
   snippetCategories = ['skills', 'dates', 'sectionTitle'],
 }) => {
   const [hoveredSection, setHoveredSection] = useState<SectionInfo | null>(null);
@@ -43,6 +48,7 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
     sectionId: null,
   });
   const chipRef = useRef<HTMLDivElement>(null);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Inject hover/selected CSS styles
   useEffect(() => {
@@ -91,6 +97,40 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
       .section-hover-chip button:active {
         transform: scale(0.92);
       }
+      /* Always-visible drag handle on the left edge of sections */
+      .section-drag-handle-zone {
+        position: absolute;
+        left: -28px;
+        top: 0;
+        bottom: 0;
+        width: 28px;
+        z-index: 90;
+        cursor: grab;
+        display: flex;
+        align-items: flex-start;
+        padding-top: 8px;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 150ms ease;
+        pointer-events: auto;
+      }
+      .section-drag-handle-zone:hover,
+      .section-wrapper:hover .section-drag-handle-zone {
+        opacity: 1;
+      }
+      .section-wrapper {
+        position: relative;
+      }
+      /* Wider hover zone for drag handle */
+      .section-drag-handle-hitbox {
+        position: absolute;
+        left: -40px;
+        top: 0;
+        bottom: 0;
+        width: 52px;
+        z-index: 89;
+        cursor: grab;
+      }
     `;
     document.head.appendChild(style);
 
@@ -126,7 +166,7 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
     return sections;
   }, [containerRef]);
 
-  // Handle mouse movement to detect hover
+  // Handle mouse movement to detect hover with tolerance zone
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -140,18 +180,40 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
       const mouseX = e.clientX;
       const mouseY = e.clientY;
 
-      // Find section under mouse
+      // Find section under mouse with tolerance zone
       let found: SectionInfo | null = null;
+      let closestDist = Infinity;
+
       for (const section of sections) {
         const { rect } = section;
-        if (
+        
+        // Check if within expanded bounds (with tolerance)
+        const inExpandedBounds =
+          mouseX >= rect.left - HOVER_TOLERANCE &&
+          mouseX <= rect.right + HOVER_TOLERANCE &&
+          mouseY >= rect.top - HOVER_TOLERANCE &&
+          mouseY <= rect.bottom + HOVER_TOLERANCE;
+
+        // Check if within exact bounds
+        const inExactBounds =
           mouseX >= rect.left &&
           mouseX <= rect.right &&
           mouseY >= rect.top &&
-          mouseY <= rect.bottom
-        ) {
+          mouseY <= rect.bottom;
+
+        // Prioritize exact bounds, but keep section active in tolerance zone
+        if (inExactBounds) {
           found = section;
           break;
+        } else if (inExpandedBounds && !found) {
+          // Calculate distance to section center for tie-breaking
+          const centerX = (rect.left + rect.right) / 2;
+          const centerY = (rect.top + rect.bottom) / 2;
+          const dist = Math.sqrt((mouseX - centerX) ** 2 + (mouseY - centerY) ** 2);
+          if (dist < closestDist) {
+            closestDist = dist;
+            found = section;
+          }
         }
       }
 
@@ -188,6 +250,32 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
       }
     };
   }, [containerRef, findSections, dragState.dragging]);
+
+  // Ensure section elements have the wrapper class for persistent drag handles
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const addWrapperClass = () => {
+      const elements = container.querySelectorAll('[data-type]');
+      elements.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const dataType = htmlEl.getAttribute('data-type');
+        if (dataType && SECTION_LABELS[dataType] && !htmlEl.classList.contains('section-wrapper')) {
+          htmlEl.classList.add('section-wrapper');
+          htmlEl.style.position = 'relative';
+        }
+      });
+    };
+
+    addWrapperClass();
+
+    // Re-run when DOM changes
+    const observer = new MutationObserver(addWrapperClass);
+    observer.observe(container, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, [containerRef]);
 
   // Track selection changes for selected overlay
   useEffect(() => {
@@ -260,10 +348,10 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
     setDragState({ dragging: false, sectionId: null });
   }, [containerRef, dragState.sectionId]);
 
-  // Calculate chip position
+  // Calculate chip position - position above the section with some offset
   const chipPosition = hoveredSection
     ? {
-        top: hoveredSection.rect.top - (containerRef.current?.getBoundingClientRect().top || 0) - 32,
+        top: hoveredSection.rect.top - (containerRef.current?.getBoundingClientRect().top || 0) - 36,
         left: hoveredSection.rect.left - (containerRef.current?.getBoundingClientRect().left || 0),
       }
     : null;
@@ -326,6 +414,17 @@ export const SectionHoverChip: React.FC<SectionHoverChipProps> = ({
                   title="Change section design"
                 >
                   <Palette size={14} />
+                </button>
+              )}
+
+              {/* Gallery */}
+              {onOpenGallery && (
+                <button
+                  onClick={onOpenGallery}
+                  className="p-1 rounded hover:bg-emerald-600/30 text-gray-400 hover:text-emerald-400 transition-colors"
+                  title="Browse snippet gallery"
+                >
+                  <GalleryHorizontal size={14} />
                 </button>
               )}
 
