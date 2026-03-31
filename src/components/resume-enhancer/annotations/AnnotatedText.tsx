@@ -2,9 +2,20 @@
 'use client';
 
 import React from 'react';
-import type { FixAnnotation } from './fix-annotation';
+import type { FixAnnotation, FixCategory } from './fix-annotation';
 
 type AsTag = 'span' | 'p' | 'div';
+
+// Category-based color system for inline markers
+const CATEGORY_COLORS: Record<FixCategory, { bg: string; text: string; border: string; label: string }> = {
+  impact: { bg: 'bg-amber-500/10', text: 'text-amber-700 dark:text-amber-300', border: 'border-amber-500/70', label: 'Impact' },
+  keywords: { bg: 'bg-red-500/10', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/70', label: 'Keywords' },
+  clarity: { bg: 'bg-sky-500/10', text: 'text-sky-700 dark:text-sky-300', border: 'border-sky-500/60', label: 'Clarity' },
+  formatting: { bg: 'bg-violet-500/10', text: 'text-violet-700 dark:text-violet-300', border: 'border-violet-500/60', label: 'Format' },
+  grammar: { bg: 'bg-rose-500/10', text: 'text-rose-700 dark:text-rose-300', border: 'border-rose-500/60', label: 'Grammar' },
+  structure: { bg: 'bg-teal-500/10', text: 'text-teal-700 dark:text-teal-300', border: 'border-teal-500/60', label: 'Structure' },
+  other: { bg: 'bg-blue-500/10', text: 'text-blue-700 dark:text-blue-300', border: 'border-blue-500/60', label: 'General' },
+};
 
 interface AnnotatedTextProps {
   as?: AsTag;
@@ -19,7 +30,7 @@ interface AnnotatedTextProps {
   onDismissFix?: (fixId: string) => void;
   /**
    * When false, do not render the inline suggestion card (used by the contextual report,
-   * where the right-side panel owns the “Fix it” UI).
+   * where the right-side panel owns the "Fix it" UI).
    */
   inlineCard?: boolean;
 }
@@ -56,28 +67,31 @@ export default function AnnotatedText({
     onSelectFix?.(active.id);
   };
 
-  // Determine visual style based on category and severity
-  // Keywords category with found matches = blue (positive), missing = red/yellow
-  const isKeywordCategory = active.category === 'keywords';
-  const isFoundKeyword = isKeywordCategory && active.severity === 'low'; // Low severity for keywords often means "found"
+  // Get category-based color styling
+  const categoryColor = CATEGORY_COLORS[active.category] || CATEGORY_COLORS.other;
   
-  const severityClasses =
-    isFoundKeyword
-      ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/50'
-      : active.severity === 'high'
-        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-b-2 border-red-500/70'
-        : active.severity === 'medium'
-          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-b-2 border-amber-500/70'
-          : 'bg-sky-500/10 text-sky-700 dark:text-sky-300 border-b border-sky-500/60';
+  // Determine visual style based on category and severity
+  const isKeywordCategory = active.category === 'keywords';
+  const isFoundKeyword = isKeywordCategory && active.severity === 'low';
+  
+  const severityClasses = isFoundKeyword
+    ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/50'
+    : `${categoryColor.bg} ${categoryColor.text} border-b-2 ${categoryColor.border}`;
 
   const isActive = activeFixId === active.id;
 
-  // Accessibility icons for color blindness
-  const getAccessibilityIcon = () => {
-    if (isFoundKeyword) return '✓'; // Found keyword
-    if (active.severity === 'high') return '🛑'; // Critical
-    if (active.severity === 'medium') return '⚠️'; // Warning
-    return 'ℹ️'; // Info
+  // Accessibility icons for category and severity
+  const getCategoryIcon = () => {
+    if (isFoundKeyword) return '✓';
+    switch (active.category) {
+      case 'impact': return '⚡';
+      case 'keywords': return '🔍';
+      case 'clarity': return '💡';
+      case 'formatting': return '📐';
+      case 'grammar': return '✏️';
+      case 'structure': return '🏗️';
+      default: return active.severity === 'high' ? '🛑' : active.severity === 'medium' ? '⚠️' : 'ℹ️';
+    }
   };
 
   return (
@@ -89,14 +103,18 @@ export default function AnnotatedText({
           isActive ? 'ring-2 ring-[#80FF00]/50 ring-offset-2 ring-offset-transparent' : 'ring-0',
         ].join(' ')}
         onClick={handleSelect}
-        title="Click to select suggestion"
+        title={`${categoryColor.label}: Click to select suggestion`}
         data-field-path={fieldPath}
         data-fix-id={active.id}
         data-fix-severity={active.severity}
+        data-fix-category={active.category}
       >
-        {/* Accessibility icon in margin */}
-        <span className="text-[10px] opacity-70" aria-label={active.severity === 'high' ? 'Critical issue' : active.severity === 'medium' ? 'Warning' : 'Info'}>
-          {getAccessibilityIcon()}
+        {/* Category icon in margin */}
+        <span 
+          className="text-[10px] opacity-70" 
+          aria-label={`${categoryColor.label} - ${active.severity === 'high' ? 'Critical issue' : active.severity === 'medium' ? 'Warning' : 'Info'}`}
+        >
+          {getCategoryIcon()}
         </span>
         <span>
           {hasExactSpan ? (
@@ -121,7 +139,31 @@ export default function AnnotatedText({
       {inlineCard && activeFixId === active.id && (
         <span className="mt-2 block">
           <span className="block bg-[var(--bg-tertiary)] rounded-xl p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-            <span className="block text-[11px] text-[color:var(--text-tertiary)] mb-2">Suggested fix</span>
+            {/* Category badge */}
+            <span className="flex items-center gap-2 mb-2">
+              <span 
+                className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+                style={{ 
+                  color: categoryColor.text.includes('amber') ? '#f59e0b' : 
+                         categoryColor.text.includes('red') ? '#ef4444' :
+                         categoryColor.text.includes('sky') ? '#0ea5e9' :
+                         categoryColor.text.includes('violet') ? '#8b5cf6' :
+                         categoryColor.text.includes('rose') ? '#f43f5e' :
+                         categoryColor.text.includes('teal') ? '#14b8a6' : '#3b82f6',
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}
+              >
+                {categoryColor.label}
+              </span>
+              <span className="text-[9px] text-white/40">
+                {active.severity === 'high' ? 'Critical' : active.severity === 'medium' ? 'Warning' : 'Suggestion'}
+              </span>
+            </span>
+
+            <span className="block text-[11px] text-[color:var(--text-tertiary)] mb-2">
+              {active.issue || 'Suggested fix'}
+            </span>
             <span className="block text-sm text-white font-medium">
               {active.replacementText}
             </span>
@@ -155,5 +197,3 @@ export default function AnnotatedText({
     </Tag>
   );
 }
-
-

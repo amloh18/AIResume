@@ -58,8 +58,16 @@ export function getDefaultSnippetComponent(category: SnippetCategory): React.Com
     sectionTitle: 'title-bordered',
     summary: 'summary-justified',
     basic: 'basic-inline-bar',
+    // Section snippets don't have style components - they use block extensions
+    experience: '',
+    education: '',
+    projects: '',
+    certificates: '',
+    languages: '',
   };
-  return SNIPPET_COMPONENT_MAP[defaults[category]] || SkillsInlineSnippet;
+  
+  const snippetId = defaults[category];
+  return snippetId ? SNIPPET_COMPONENT_MAP[snippetId] || SkillsInlineSnippet : SkillsInlineSnippet;
 }
 
 /**

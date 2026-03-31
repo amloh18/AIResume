@@ -12,6 +12,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Inline List',
       description: 'Category: skill1, skill2, skill3',
       compatibleLayouts: ['two-column', 'single-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'skills-tags',
@@ -19,6 +20,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Tags',
       description: 'Pill-shaped tags grouped by category',
       compatibleLayouts: ['single-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'single',
     },
     {
       id: 'skills-bars',
@@ -26,6 +28,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Progress Bars',
       description: 'Category with progress bars',
       compatibleLayouts: ['two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'double',
     },
     {
       id: 'skills-columns',
@@ -33,6 +36,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Multi-Column',
       description: 'Grid layout with categories',
       compatibleLayouts: ['single-column', 'two-column'],
+      columnSupport: 'both',
     },
   ],
 
@@ -43,6 +47,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Month Year',
       description: 'Jan 2024 - Present',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'date-mm-yyyy',
@@ -50,6 +55,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'MM/YYYY',
       description: '01/2024 - Present',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'date-full',
@@ -57,6 +63,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Full Month',
       description: 'January 2024 - Present',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'date-iso',
@@ -64,6 +71,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'ISO Format',
       description: '2024-01 - Present',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
   ],
 
@@ -74,6 +82,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Bordered',
       description: 'Uppercase with bottom border',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'title-minimal',
@@ -81,6 +90,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Minimal',
       description: 'Plain uppercase, no border',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'title-accent',
@@ -88,6 +98,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Accent Bar',
       description: 'With left accent bar',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'title-spaced',
@@ -95,6 +106,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Spaced',
       description: 'With decorative line after text',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
   ],
 
@@ -105,6 +117,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Justified',
       description: 'Full-width justified text block',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'summary-spaced',
@@ -112,6 +125,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Spaced',
       description: 'With paragraph spacing',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'summary-highlighted',
@@ -119,6 +133,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Highlighted',
       description: 'With highlighted key phrases',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
   ],
 
@@ -129,6 +144,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Inline Bar',
       description: 'email | phone | location with icons',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
     {
       id: 'basic-stacked',
@@ -136,6 +152,7 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Stacked',
       description: 'Vertical list with icons',
       compatibleLayouts: ['single-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'single',
     },
     {
       id: 'basic-minimal',
@@ -143,8 +160,16 @@ export const SNIPPET_REGISTRY: Record<SnippetCategory, SnippetDefinition[]> = {
       name: 'Minimal',
       description: 'Text only, no icons',
       compatibleLayouts: ['single-column', 'two-column', 'sidebar-left', 'sidebar-right'],
+      columnSupport: 'both',
     },
   ],
+
+  // Extended categories for section snippets
+  experience: [],
+  education: [],
+  projects: [],
+  certificates: [],
+  languages: [],
 };
 
 /**
@@ -157,6 +182,11 @@ export function getDefaultSnippetId(category: SnippetCategory): string {
     sectionTitle: 'title-bordered',
     summary: 'summary-justified',
     basic: 'basic-inline-bar',
+    experience: 'exp-standard',
+    education: 'edu-standard',
+    projects: 'proj-standard',
+    certificates: 'cert-standard',
+    languages: 'lang-standard',
   };
   return defaults[category];
 }

@@ -9,6 +9,7 @@ interface SmartContextCardProps {
     onFix: (issue: Issue) => void;
     onDismiss: (issueId: string) => void;
     onAiAssist?: (issue: Issue) => void;
+    onRegenerate?: (issue: Issue) => void;
     /** Called when an issue is hovered — for highlighting affected text in preview */
     onIssueHover?: (issue: Issue | null) => void;
     activeSection?: string;
@@ -36,6 +37,7 @@ export default function SmartContextCard({
     onFix,
     onDismiss,
     onAiAssist,
+    onRegenerate,
     onIssueHover,
     activeSection,
     focusedIssueId,
@@ -177,6 +179,7 @@ export default function SmartContextCard({
                                         onFix={onFix}
                                         onDismiss={onDismiss}
                                         onAiAssist={onAiAssist}
+                                        onRegenerate={onRegenerate}
                                     />
                                 </div>
                             );
