@@ -6,7 +6,7 @@ import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import ProductVideo from '@/components/landing/ProductVideo';
 import ChromeExtension from '@/components/landing/ChromeExtension';
-import PremiumTemplates from '@/components/landing/PremiumTemplates';
+import InteractiveTemplateShowcase from '@/components/landing/InteractiveTemplateShowcase';
 import Testimonials from '@/components/landing/Testimonials';
 import HowItWorks from '@/components/landing/HowItWorks';
 import Pricing from '@/components/landing/Pricing';
@@ -179,8 +179,8 @@ function LandingPageContent() {
 
 
 
-          {/* Premium Templates Section */}
-          <PremiumTemplates />
+          {/* Interactive Template Showcase Section */}
+          <InteractiveTemplateShowcase />
 
 
 

@@ -339,27 +339,42 @@ export default forwardRef(function FloatingPulsePill({
             // Apply the fix directly via the AI-recommended replacement
             onApplyFixRef.current(matchingFix);
         } else {
-            // If no direct fix match, open the section editor for manual AI assist
+            // Scroll to the section in the WYSIWYG canvas for inline editing
             const sectionId = issue.deepLink?.section || issue.section;
             if (sectionId) {
                 const sectionMap: Record<string, string> = {
-                    'work': 'work',
-                    'work_experience': 'work',
+                    'work': 'experience',
+                    'work_experience': 'experience',
                     'skills': 'skills',
-                    'summary': 'personal',
+                    'summary': 'summary',
                     'education': 'education',
                     'projects': 'projects',
-                    'basics': 'personal',
-                    'personal_header': 'personal'
+                    'basics': 'header',
+                    'personal_header': 'header',
+                    'personal': 'header',
+                    'certificates': 'certifications',
+                    'certifications': 'certifications',
                 };
-                const editorSectionId = sectionMap[sectionId] || sectionId;
-                window.dispatchEvent(new CustomEvent('openSectionEditor', {
-                    detail: {
-                        sectionId: editorSectionId,
-                        issueId: issue.id,
-                        suggestedFixId: issue.suggestedFixId
-                    }
-                }));
+                const canvasCategory = sectionMap[sectionId] || sectionId;
+
+                // Try to scroll to the section in the canvas via data attribute
+                const sectionEl = document.querySelector(`[data-snippet-category="${canvasCategory}"]`);
+                if (sectionEl) {
+                    sectionEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    sectionEl.classList.add('ring-2', 'ring-[#80FF00]', 'transition-all', 'duration-500');
+                    setTimeout(() => {
+                        sectionEl?.classList.remove('ring-2', 'ring-[#80FF00]');
+                    }, 2000);
+                } else {
+                    // Fallback: dispatch event for backward compatibility
+                    window.dispatchEvent(new CustomEvent('openSectionEditor', {
+                        detail: {
+                            sectionId: canvasCategory,
+                            issueId: issue.id,
+                            suggestedFixId: issue.suggestedFixId
+                        }
+                    }));
+                }
             }
         }
     };
