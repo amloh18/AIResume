@@ -14,7 +14,6 @@ import {
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
-import { BuilderPreview } from '@/components/preview/BuilderPreview';
 import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
 import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
@@ -30,13 +29,15 @@ import type { RecruiterFeatures } from '@/components/resume-enhancer/panels/Recr
 import type { ATSFeatures } from '@/components/resume-enhancer/panels/ATSModePanel';
 import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
-import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import AddSectionModal from '@/components/resume-enhancer/AddSectionModal';
-import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
 import { gsap } from 'gsap';
+
+// NEW: WYSIWYG Canvas Editor
+import SnippetCanvas, { type SnippetCanvasRef } from '@/components/resume-enhancer/canvas/SnippetCanvas';
+import '@/styles/cv-canvas-editor.css';
 
 type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
 
@@ -73,17 +74,11 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [showAddSectionModal, setShowAddSectionModal] = useState(false);
     const [showTemplateModal, setShowTemplateModal] = useState(false);
-    const templateModalRef = useRef<HTMLDivElement>(null);
-    const templateModalContentRef = useRef<HTMLDivElement>(null);
-    const [totalPages, setTotalPages] = useState(1);
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const pillRef = useRef<FloatingPulsePillHandle>(null);
-
-    // Floating Editor State
-    const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
-    const [editorPosition, setEditorPosition] = useState<{ top: number; left: number; height: number; alignment: 'left' | 'right' } | null>(null);
+    const canvasRef = useRef<SnippetCanvasRef>(null);
 
     const [viewMode, setViewMode] = useState<ViewMode>('edit'); // New View Mode State
     const [pageFormat, setPageFormat] = useState<'a4' | 'letter'>('a4');
@@ -105,59 +100,15 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       setShowTemplateModal(false);
     };
 
-    // GSAP template modal animation
-    useEffect(() => {
-      if (!showTemplateModal || !templateModalRef.current || !templateModalContentRef.current) return;
-
-      const tl = gsap.timeline();
-      tl.fromTo(templateModalRef.current,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.3, ease: 'power2.out' }
-      );
-      tl.fromTo(templateModalContentRef.current,
-        { scale: 0.95, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.1)' },
-        '-=0.15'
-      );
-    }, [showTemplateModal]);
+    // Template modal is now handled by the SnippetCanvas component's TemplateModal
 
     // Listen for openSectionEditor event from SmartContextCard Fix Now button
+    // With the new WYSIWYG canvas, inline editing handles this directly
     useEffect(() => {
       const handleOpenSectionEditor = (event: CustomEvent<{ sectionId: string; issueId?: string; suggestedFixId?: string }>) => {
         const { sectionId } = event.detail;
         if (sectionId) {
-          // Find a section element to get position for the editor
-          const sectionElement = document.querySelector(`[data-section-id="${sectionId}"]`);
-          if (sectionElement) {
-            const rect = sectionElement.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const editorWidth = 480;
-            const gap = 24;
-
-            let left = rect.right + gap;
-            let alignment: 'left' | 'right' = 'left';
-
-            if (left + editorWidth > viewportWidth - 20) {
-              left = rect.left - editorWidth - gap;
-              alignment = 'right';
-            }
-
-            setEditorPosition({
-              top: Math.max(88, rect.top),
-              left: left,
-              height: rect.height,
-              alignment
-            });
-          } else {
-            // Fallback: position editor in center-right of viewport
-            setEditorPosition({
-              top: 120,
-              left: window.innerWidth - 520,
-              height: 400,
-              alignment: 'left'
-            });
-          }
-          setActiveEditorSectionId(sectionId);
+          canvasRef.current?.scrollToSection(sectionId);
         }
       };
 
@@ -195,45 +146,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       toast.success(`Added "${keyword}" to skills`);
     };
 
-    const handleSectionClick = (sectionId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      const target = e.currentTarget as HTMLElement;
-      const rect = target.getBoundingClientRect();
-
-      const viewportWidth = window.innerWidth;
-      const editorWidth = 480; // Approximate width of editor
-      const gap = 24;
-      const sidebarWidth = 0; // Sidebar removed
-
-      // Default to right side
-      let left = rect.right + gap;
-      let alignment: 'left' | 'right' = 'left'; // "left" alignment means content originates/aligns to left
-
-      // Check if right side has space
-      if (left + editorWidth > viewportWidth - 20) {
-        // Not enough space on right, try left
-        left = rect.left - editorWidth - gap;
-        alignment = 'right';
-
-        // If also not enough space on left (mobile/tablet), center it or cap it?
-        // For now, if no space on left, we might fall back to centered overlay style (handled by Editor if position is null?)
-        // Or specific mobile logic. 
-      }
-
-      // Ensure it doesn't clip top/bottom - adding max-height constraint logic if needed by component, 
-      // but primarily we pass top/left. The component should handle scrolling if max-h is set.
-      // We will adjust 'top' if it's too low? No, usually side-by-side relies on aligning tops.
-      // Let's passed a restricted height if implicit.
-
-      // For now, standard side-by-side logic:
-      setEditorPosition({
-        top: Math.max(88, rect.top), // Ensure not above header
-        left: left,
-        height: rect.height,
-        alignment
-      });
-      setActiveEditorSectionId(sectionId);
-    };
+    // handleSectionClick removed -- inline WYSIWYG editing handles this
 
     // ATS Context for scores
     const { atsScore, atsAnalysis, isATSLoading, refreshATSScore, updateATSScore } = useATS();
@@ -808,36 +721,9 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
         // Show success toast
         toast.success(`Added ${sectionType.replace(/_/g, ' ')} section`);
 
-        // Auto-open the floating editor for the new section
-        // Use setTimeout to ensure the DOM has updated and the section is rendered
+        // Scroll to the new section in the canvas
         setTimeout(() => {
-          const sectionElement = document.querySelector(`[data-section-id="${sectionType}"]`);
-          if (sectionElement) {
-            const rect = sectionElement.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const editorWidth = 480;
-            const gap = 24;
-
-            // Calculate position
-            let left = rect.right + gap;
-            let alignment: 'left' | 'right' = 'left';
-
-            if (left + editorWidth > viewportWidth - 20) {
-              left = rect.left - editorWidth - gap;
-              alignment = 'right';
-            }
-
-            setEditorPosition({
-              top: Math.max(88, rect.top),
-              left: left,
-              height: rect.height,
-              alignment
-            });
-            setActiveEditorSectionId(sectionType);
-
-            // Scroll the section into view
-            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
+          canvasRef.current?.scrollToSection(sectionType);
         }, 100);
       }
     };
@@ -975,13 +861,19 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     // Expose functions to parent via ref
     useImperativeHandle(ref, () => ({
-      scrollToSection: (sectionId: string) => { console.log('scrollToSection not implemented in optimisation view', sectionId); },
+      scrollToSection: (sectionId: string) => {
+        canvasRef.current?.scrollToSection(sectionId);
+      },
       handleAddSection: () => { console.log('handleAddSection deprecated - use addNewSection instead'); },
       addNewSection,
       handleDeleteSectionFromSidebar,
       handleSectionReorder,
-      openAddSection: () => setShowAddSectionModal(true),
-      openTemplateSelector: () => setShowTemplateModal(true),
+      openAddSection: () => {
+        canvasRef.current?.openAddSection();
+      },
+      openTemplateSelector: () => {
+        canvasRef.current?.openTemplateSelector();
+      },
       activeSection: 'personal'
     }));
 
@@ -1000,108 +892,55 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     return (
       <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
-        {/* Main Container */}
-        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3">
-          {/* CV Preview — pill is rendered inside the toolbar */}
-          <div className="flex-1 min-h-0 relative flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-            <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
-              <BuilderPreview
-                cvData={state.cvData}
-                template={state.selectedTemplate as any}
-                mode="edit"
-                pageFormat={pageFormat}
-                showToolbar={true}
-                initialZoom={1}
-                toolbarRightSlot={
-                  <FloatingPulsePill
-                    ref={pillRef}
-                    atsResult={atsAnalysis ? {
-                      score: atsAnalysis.score,
-                      atsScore: atsAnalysis.score,
-                      audit_report: atsAnalysis.audit_report,
-                      suggestions: atsAnalysis.suggestions,
-                      details: {
-                        matchedKeywords: atsAnalysis.matchedKeywords || [],
-                        missingKeywords: atsAnalysis.missingKeywords || [],
-                        experienceYears: atsAnalysis.factorBreakdown?.experienceLength?.years || 0,
-                        educationLevel: '',
-                        formatIssues: atsAnalysis.factorBreakdown?.formatting?.issues || []
-                      }
-                    } : null}
-                    isLoading={isAnalyzing}
-                    isScanning={isAnalyzing}
-                    analysisMode={analysisModeInfo.mode}
-                    validationResult={validationResult}
-                    onIssueHover={(fieldPath) => setHighlightedField(fieldPath)}
-                    className=""
-                    isSidebarOpen={false}
-                    onToggleSidebar={() => dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay })}
-                    onFixATS={() => handleRunAnalysis()}
-                    onOpenReport={() => console.log("Open Report Clicked")}
-                    viewMode={viewMode}
-                    onViewModeChange={handleViewModeChange}
-                    onAddKeyword={handleAddKeyword}
-                    onApplyFix={applyAnnotation}
-                  />
-                }
-                sidePanelRef={sidePanelRef}
-                highlightedField={highlightedField}
-                fixAnnotations={state.fixAnnotations || []}
-                onAnnotationClick={(fixId) => pillRef.current?.focusFix(fixId)}
-                onCVDataChange={(updatedData) => {
-                  dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, ...updatedData } });
-                }}
-                onSectionClick={(sectionId) => {
-                  console.log('Opening editor for section:', sectionId);
-                  const sectionElement = document.querySelector(`[data-section-id="${sectionId}"]`);
-                  const target = sectionElement || document.querySelector('.builder-preview');
-                  const rect = target?.getBoundingClientRect();
-                  const viewportWidth = window.innerWidth;
-                  const editorWidth = 500;
-                  const gap = 24;
-
-                  let left = (rect?.right || viewportWidth * 0.6) + gap;
-                  let alignment: 'left' | 'right' = 'left';
-
-                  if (left + editorWidth > viewportWidth - 20) {
-                    left = (rect?.left || 80) - editorWidth - gap;
-                    alignment = 'right';
-                  }
-
-                  setEditorPosition({
-                    top: Math.max(88, rect?.top || 120),
-                    left,
-                    height: rect?.height || 400,
-                    alignment
-                  });
-                  setActiveEditorSectionId(sectionId);
-                }}
-              />
-            </div>
-
-          </div>
-
-        </div >
-        {/* AI Analysis Chatbot Card - Bottom Right - Only in builder mode */}
-
-
-        {/* Floating Form Editor */}
-        {
-          activeEditorSectionId && editorPosition && (
-            <FloatingFormEditor
-              sectionId={activeEditorSectionId!}
-              onClose={() => {
-                setActiveEditorSectionId(null);
-                setEditorPosition(null);
+        {/* Main Container -- WYSIWYG Canvas Editor */}
+        <div className="flex-1 h-full flex overflow-hidden relative">
+          <div className="flex-1 min-h-0 relative flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30 mx-3 mb-3 mt-3">
+            <SnippetCanvas
+              ref={canvasRef}
+              cvData={state.cvData}
+              template={state.selectedTemplate}
+              fixAnnotations={state.fixAnnotations || []}
+              onCVDataChange={(updatedData) => {
+                dispatch({ type: 'SET_CV_DATA', payload: updatedData });
               }}
-              position={editorPosition!}
-              alignment={editorPosition!.alignment}
-              annotations={state.fixAnnotations}
-              onApplyAnnotation={applyAnnotation}
-              onDismissAnnotation={dismissAnnotation}
+              toolbarRightSlot={
+                <FloatingPulsePill
+                  ref={pillRef}
+                  atsResult={atsAnalysis ? {
+                    score: atsAnalysis.score,
+                    atsScore: atsAnalysis.score,
+                    audit_report: atsAnalysis.audit_report,
+                    suggestions: atsAnalysis.suggestions,
+                    details: {
+                      matchedKeywords: atsAnalysis.matchedKeywords || [],
+                      missingKeywords: atsAnalysis.missingKeywords || [],
+                      experienceYears: atsAnalysis.factorBreakdown?.experienceLength?.years || 0,
+                      educationLevel: '',
+                      formatIssues: atsAnalysis.factorBreakdown?.formatting?.issues || []
+                    }
+                  } : null}
+                  isLoading={isAnalyzing}
+                  isScanning={isAnalyzing}
+                  analysisMode={analysisModeInfo.mode}
+                  validationResult={validationResult}
+                  onIssueHover={(fieldPath) => setHighlightedField(fieldPath)}
+                  className=""
+                  isSidebarOpen={false}
+                  onToggleSidebar={() => dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay })}
+                  onFixATS={() => handleRunAnalysis()}
+                  onOpenReport={() => console.log("Open Report Clicked")}
+                  viewMode={viewMode}
+                  onViewModeChange={handleViewModeChange}
+                  onAddKeyword={handleAddKeyword}
+                  onApplyFix={applyAnnotation}
+                />
+              }
+              onRunAnalysis={handleRunAnalysis}
+              highlightedField={highlightedField}
+              onAnnotationClick={(fixId: string) => pillRef.current?.focusFix(fixId)}
             />
-          )
-        }
+          </div>
+        </div>
 
         {/* Report modal */}
         <SurgeonReportModal
@@ -1172,7 +1011,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
               let effectiveCvId: string | undefined | null = state.cvId;
 
               if (!effectiveCvId) {
-                console.log('💾 CV not saved yet, saving CV first before saving job...');
+                console.log('CV not saved yet, saving CV first before saving job...');
                 try {
                   // Calculate completion percentage
                   const hasPersonalInfo = !!(state.cvData?.basics?.name || state.cvData?.basics?.email);
@@ -1209,7 +1048,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   effectiveCvId = cvResult?.data?.cv?.id || cvResult?.data?.cv?._id || cvResult?.cv?.id || cvResult?.cv?._id || cvResult?.id || null;
 
                   if (effectiveCvId) {
-                    console.log('✅ CV saved successfully with ID:', effectiveCvId);
+                    console.log('CV saved successfully with ID:', effectiveCvId);
                     dispatch({ type: 'SET_CV_ID', payload: effectiveCvId });
                   } else {
                     throw new Error('CV saved but no ID returned');
@@ -1352,7 +1191,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     params.set('journeyId', journeyId);
                     router.replace(`${pathname}?${params.toString()}`);
 
-                    console.log('✅ CV reloaded with journey context dynamically');
+                    console.log('CV reloaded with journey context dynamically');
                   }
                 } catch (reloadError) {
                   console.error('Failed to reload CV with journey context:', reloadError);
@@ -1392,41 +1231,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           }
         />
 
-        {/* Template Selector Modal */}
-        {showTemplateModal && (
-          <div
-            ref={templateModalRef}
-            className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4"
-            onClick={() => setShowTemplateModal(false)}
-          >
-            <div
-              ref={templateModalContentRef}
-              className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-[color:var(--text-primary)]">
-                  Select Template
-                </h2>
-                <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-[color:var(--text-primary)]" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                <TemplateSelector
-                  selectedTemplate={state.selectedTemplate}
-                  onTemplateSelect={handleTemplateSelect}
-                  cvData={state.cvData}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div >
+      </div>
     );
   });
 

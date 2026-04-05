@@ -1,0 +1,204 @@
+/**
+ * Canvas Editor Styles
+ * 
+ * Styles for the WYSIWYG snippet canvas editor. Uses CSS custom properties
+ * (set by SnippetCanvas via inline styles) for dynamic typography and spacing.
+ */
+
+/* ========== Canvas Wrapper ========== */
+
+.snippet-canvas-root {
+  --cv-accent: #2563eb;
+  --cv-font: 'Inter', system-ui, sans-serif;
+  --cv-font-size: 10pt;
+  --cv-line-height: 1.4;
+  --cv-margin: 20mm;
+  --cv-header-size: 24pt;
+  --cv-section-size: 13pt;
+}
+
+/* ========== CV Document ========== */
+
+.cv-document {
+  color: #1a1a1a;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.cv-document h1,
+.cv-document h2,
+.cv-document h3 {
+  color: inherit;
+}
+
+.cv-document [contenteditable="true"] {
+  outline: none;
+  transition: box-shadow 0.15s ease;
+  border-radius: 2px;
+}
+
+.cv-document [contenteditable="true"]:focus {
+  box-shadow: 0 0 0 1px var(--cv-accent, #2563eb);
+  background-color: rgba(37, 99, 235, 0.02);
+}
+
+.cv-document [contenteditable="true"]:hover:not(:focus) {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ========== Snippet Hover Controls ========== */
+
+.canvas-snippet {
+  position: relative;
+  transition: outline 0.15s ease;
+}
+
+.canvas-snippet:hover {
+  outline: 1px dashed rgba(0, 0, 0, 0.1);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ========== Drop Indicators ========== */
+
+.canvas-zone [draggable="true"] {
+  cursor: grab;
+}
+
+.canvas-zone [draggable="true"]:active {
+  cursor: grabbing;
+}
+
+/* ========== AI Highlight Marks ========== */
+
+.cv-document mark {
+  background-color: #fef08a;
+  padding: 0 2px;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cv-document mark:hover {
+  background-color: #fde047;
+}
+
+.cv-document mark.mark-active {
+  background-color: #facc15;
+  box-shadow: 0 0 0 2px #eab308;
+}
+
+/* ========== Scrollbar Styling ========== */
+
+.snippet-canvas-root ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.snippet-canvas-root ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.snippet-canvas-root ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.snippet-canvas-root ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* ========== Print Styles ========== */
+
+@media print {
+  .snippet-canvas-root {
+    overflow: visible !important;
+  }
+
+  .snippet-canvas-root > div:first-child {
+    /* Hide toolbar on print */
+    display: none !important;
+  }
+
+  .cv-canvas-wrapper {
+    transform: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .cv-document {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    page-break-inside: auto;
+  }
+
+  .canvas-snippet {
+    outline: none !important;
+    page-break-inside: avoid;
+  }
+
+  .canvas-snippet > div:first-child {
+    /* Hide hover controls on print */
+    display: none !important;
+  }
+
+  /* Hide add section buttons */
+  .canvas-zone > button:last-child {
+    display: none !important;
+  }
+
+  /* Hide drop indicators */
+  .canvas-zone > .h-1 {
+    display: none !important;
+  }
+
+  /* Page breaks for multi-page CVs */
+  .cv-document .page-break {
+    page-break-before: always;
+  }
+}
+
+/* ========== Animations ========== */
+
+@keyframes snippetFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.canvas-snippet {
+  animation: snippetFadeIn 0.3s ease;
+}
+
+/* ========== Dark Mode Adjustments ========== */
+
+.dark .cv-document {
+  color: #e5e5e5;
+}
+
+.dark .cv-document [contenteditable="true"]:focus {
+  background-color: rgba(37, 99, 235, 0.05);
+}
+
+.dark .cv-document [contenteditable="true"]:hover:not(:focus) {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.dark .canvas-snippet:hover {
+  outline-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .cv-document mark {
+  background-color: rgba(254, 240, 138, 0.3);
+  color: inherit;
+}
+
+.dark .cv-document mark:hover {
+  background-color: rgba(253, 224, 71, 0.4);
+}
