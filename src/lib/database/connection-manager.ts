@@ -326,31 +326,44 @@ class DatabaseConnectionManager {
   }
 }
 
-// Export singleton instance
-export const dbManager = DatabaseConnectionManager.getInstance();
+// Lazy singleton accessor -- getInstance() is NOT called at module-eval time so
+// the build can succeed without MONGODB_URI being present in the environment.
+function getDbManager(): DatabaseConnectionManager {
+  return DatabaseConnectionManager.getInstance();
+}
+
+/** @deprecated Use getDbManager() internally; kept for backward compat */
+export const dbManager = {
+  get getMongooseConnection() { return getDbManager().getMongooseConnection.bind(getDbManager()); },
+  get healthCheck() { return getDbManager().healthCheck.bind(getDbManager()); },
+  get isConnected() { return getDbManager().isConnected.bind(getDbManager()); },
+  get getConnectionStatus() { return getDbManager().getConnectionStatus.bind(getDbManager()); },
+  get closeConnection() { return getDbManager().closeConnection.bind(getDbManager()); },
+  get gracefulShutdown() { return getDbManager().gracefulShutdown.bind(getDbManager()); },
+};
 
 // Export convenience methods
 export async function getConnection() {
-  return await dbManager.getMongooseConnection();
+  return await getDbManager().getMongooseConnection();
 }
 
 export async function healthCheck() {
-  return await dbManager.healthCheck();
+  return await getDbManager().healthCheck();
 }
 
 export function isConnected() {
-  return dbManager.isConnected();
+  return getDbManager().isConnected();
 }
 
 export function getConnectionStatus() {
-  return dbManager.getConnectionStatus();
+  return getDbManager().getConnectionStatus();
 }
 
 export async function closeConnection() {
-  return await dbManager.closeConnection();
+  return await getDbManager().closeConnection();
 }
 
 export async function gracefulShutdown() {
-  return await dbManager.gracefulShutdown();
+  return await getDbManager().gracefulShutdown();
 }
 
