@@ -14,6 +14,11 @@ export interface ICV extends Document {
   cvType: 'master' | 'journey' | 'standalone'; // NEW: Type of CV for Resume Enhancer
   status: 'draft' | 'published' | 'archived';
 
+  // V2: Three-Layer Architecture Fields
+  schemaVersion: 1 | 2; // 1 = legacy (cvData), 2 = new (slotBindings + snippets)
+  slotBindings?: Array<{ slotId: string; snippetId: string; order: number; visible: boolean }>;
+  styleOverrides?: Record<string, any>;
+
   // Central Score Manager Fields
   cv_score_master?: number; // Structural + Industry (Local)
   cv_score_ats?: number; // Master + Semantic + Keyword Match (Journey)
@@ -105,6 +110,25 @@ const cvSchema = new Schema<ICV>({
     type: String,
     enum: ['draft', 'published', 'archived'],
     default: 'draft'
+  },
+  // V2: Three-Layer Architecture
+  schemaVersion: {
+    type: Number,
+    enum: [1, 2],
+    default: 1
+  },
+  slotBindings: {
+    type: [{
+      slotId: { type: String, required: true },
+      snippetId: { type: String, required: true },
+      order: { type: Number, default: 0 },
+      visible: { type: Boolean, default: true },
+    }],
+    default: undefined
+  },
+  styleOverrides: {
+    type: Schema.Types.Mixed,
+    default: undefined
   },
   // Central Score Manager Fields
   cv_score_master: {
