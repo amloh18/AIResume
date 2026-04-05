@@ -1,37 +1,48 @@
 import { MongoClient } from 'mongodb';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
-}
-
-const uri = process.env.MONGODB_URI;
 const options = {};
 
-let client;
-let clientPromise: Promise<MongoClient>;
-
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    global._mongoClientPromise = client.connect();
+// Lazily initialise the MongoClient promise so the module can be imported
+// during Next.js build even when MONGODB_URI is not set.
+function getClientPromise(): Promise<MongoClient> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
   }
-  clientPromise = global._mongoClientPromise;
-} else {
+
+  if (process.env.NODE_ENV === 'development') {
+    // In development mode, use a global variable so that the value
+    // is preserved across module reloads caused by HMR (Hot Module Replacement).
+    if (!global._mongoClientPromise) {
+      const client = new MongoClient(uri, options);
+      global._mongoClientPromise = client.connect();
+    }
+    return global._mongoClientPromise;
+  }
+
   // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  const client = new MongoClient(uri, options);
+  return client.connect();
 }
+
+// Re-export a proxy promise that defers initialisation to first await.
+// This keeps the existing default-import API (`import clientPromise from './mongodb'`)
+// while avoiding module-level side-effects that break `next build`.
+const clientPromise: Promise<MongoClient> = new Proxy({} as Promise<MongoClient>, {
+  get(_target, prop) {
+    const real = getClientPromise();
+    return Reflect.get(real, prop, real);
+  },
+});
 
 export default clientPromise;
 
 // Export function for backward compatibility
 export const connectToDatabase = async () => {
-  return await clientPromise;
+  return await getClientPromise();
 };
 
 // Export connectDB function for mongoose compatibility
 export const connectDB = async () => {
-  return await clientPromise;
+  return await getClientPromise();
 };

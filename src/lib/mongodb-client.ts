@@ -1,40 +1,44 @@
 import { MongoClient } from 'mongodb'
 
-const uri = process.env.MONGODB_URI
 const options = {}
 
-if (!uri) {
-  throw new Error('Please add your MongoDB URI to .env.local')
-}
-
-// Ensure the URI includes the cvcircle database
-let mongoUri = uri;
-if (mongoUri && typeof mongoUri === 'string' && !mongoUri.includes('/cvcircle') && !mongoUri.includes('/test')) {
-  if (mongoUri.endsWith('/') || mongoUri.includes('?')) {
-    mongoUri = mongoUri.replace(/(\?.*)$/, '/cvcircle$1');
-  } else {
-    mongoUri = mongoUri + '/cvcircle';
+// Lazily build and cache the MongoClient promise so the module can be
+// imported during `next build` without MONGODB_URI being present.
+function getClientPromise(): Promise<MongoClient> {
+  const uri = process.env.MONGODB_URI
+  if (!uri) {
+    throw new Error('Please add your MongoDB URI to .env.local')
   }
-  console.log('🔧 MongoDB client: Added cvcircle database to URI');
-}
 
-let client: MongoClient
-let clientPromise: Promise<MongoClient>
-
-if (process.env.NODE_ENV === 'development') {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  if (!global._mongoClientPromise) {
-    client = new MongoClient(mongoUri, options)
-    global._mongoClientPromise = client.connect()
+  // Ensure the URI includes the cvcircle database
+  let mongoUri = uri
+  if (typeof mongoUri === 'string' && !mongoUri.includes('/cvcircle') && !mongoUri.includes('/test')) {
+    if (mongoUri.endsWith('/') || mongoUri.includes('?')) {
+      mongoUri = mongoUri.replace(/(\?.*)$/, '/cvcircle$1')
+    } else {
+      mongoUri = mongoUri + '/cvcircle'
+    }
+    console.log('MongoDB client: Added cvcircle database to URI')
   }
-  clientPromise = global._mongoClientPromise
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(mongoUri, options)
-  clientPromise = client.connect()
+
+  if (process.env.NODE_ENV === 'development') {
+    if (!global._mongoClientPromise) {
+      const client = new MongoClient(mongoUri, options)
+      global._mongoClientPromise = client.connect()
+    }
+    return global._mongoClientPromise
+  }
+
+  const client = new MongoClient(mongoUri, options)
+  return client.connect()
 }
 
-// Export a module-scoped MongoClient promise. By doing this in a
-// separate module, the client can be shared across functions.
+// Proxy keeps the existing default-import API while deferring initialisation.
+const clientPromise: Promise<MongoClient> = new Proxy({} as Promise<MongoClient>, {
+  get(_target, prop) {
+    const real = getClientPromise()
+    return Reflect.get(real, prop, real)
+  },
+})
+
 export default clientPromise
