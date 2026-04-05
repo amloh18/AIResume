@@ -14,7 +14,7 @@ import {
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
-import { CVBuilderProAdapter } from '@/components/cv-canvas/CVBuilderProAdapter';
+import CVCanvasBuilder, { type CVCanvasBuilderRef } from '@/components/cv-canvas/CVCanvasBuilder';
 import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
 import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
@@ -80,6 +80,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const pillRef = useRef<FloatingPulsePillHandle>(null);
+    const canvasBuilderRef = useRef<CVCanvasBuilderRef>(null);
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -980,8 +981,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       addNewSection,
       handleDeleteSectionFromSidebar,
       handleSectionReorder,
-      openAddSection: () => setShowAddSectionModal(true),
-      openTemplateSelector: () => setShowTemplateModal(true),
+      openAddSection: () => canvasBuilderRef.current?.openAddSection() || setShowAddSectionModal(true),
+      openTemplateSelector: () => canvasBuilderRef.current?.openTemplateSelector() || setShowTemplateModal(true),
       activeSection: 'personal'
     }));
 
@@ -1002,82 +1003,18 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
         {/* Main Container */}
         <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3">
-          {/* CV Preview — pill is rendered inside the toolbar */}
-          <div className="flex-1 min-h-0 relative flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
+          {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
+          <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
-              <CVBuilderProAdapter
+              <CVCanvasBuilder
+                ref={canvasBuilderRef}
                 cvData={state.cvData}
-                template={state.selectedTemplate as any}
-                mode="edit"
-                pageFormat={pageFormat}
-                showToolbar={true}
-                initialZoom={1}
-                toolbarRightSlot={
-                  <FloatingPulsePill
-                    ref={pillRef}
-                    atsResult={atsAnalysis ? {
-                      score: atsAnalysis.score,
-                      atsScore: atsAnalysis.score,
-                      audit_report: atsAnalysis.audit_report,
-                      suggestions: atsAnalysis.suggestions,
-                      details: {
-                        matchedKeywords: atsAnalysis.matchedKeywords || [],
-                        missingKeywords: atsAnalysis.missingKeywords || [],
-                        experienceYears: atsAnalysis.factorBreakdown?.experienceLength?.years || 0,
-                        educationLevel: '',
-                        formatIssues: atsAnalysis.factorBreakdown?.formatting?.issues || []
-                      }
-                    } : null}
-                    isLoading={isAnalyzing}
-                    isScanning={isAnalyzing}
-                    analysisMode={analysisModeInfo.mode}
-                    validationResult={validationResult}
-                    onIssueHover={(fieldPath) => setHighlightedField(fieldPath)}
-                    className=""
-                    isSidebarOpen={false}
-                    onToggleSidebar={() => dispatch({ type: 'SET_SHOW_SURGEON_OVERLAY', payload: !state.showSurgeonOverlay })}
-                    onFixATS={() => handleRunAnalysis()}
-                    onOpenReport={() => console.log("Open Report Clicked")}
-                    viewMode={viewMode}
-                    onViewModeChange={handleViewModeChange}
-                    onAddKeyword={handleAddKeyword}
-                    onApplyFix={applyAnnotation}
-                  />
-                }
-                highlightedField={highlightedField}
-                fixAnnotations={state.fixAnnotations || []}
-                onAnnotationClick={(fixId) => pillRef.current?.focusFix(fixId)}
-                onCVDataChange={(updatedData) => {
-                  dispatch({ type: 'SET_CV_DATA', payload: { ...state.cvData, ...updatedData } });
+                onDataChange={(updatedData: any) => {
+                  dispatch({ type: 'SET_CV_DATA', payload: updatedData });
                 }}
-                onSectionClick={(sectionId) => {
-                  console.log('Opening editor for section:', sectionId);
-                  const sectionElement = document.querySelector(`[data-section-id="${sectionId}"]`);
-                  const target = sectionElement || document.querySelector('.cv-builder-pro-adapter');
-                  const rect = target?.getBoundingClientRect();
-                  const viewportWidth = window.innerWidth;
-                  const editorWidth = 500;
-                  const gap = 24;
-
-                  let left = (rect?.right || viewportWidth * 0.6) + gap;
-                  let alignment: 'left' | 'right' = 'left';
-
-                  if (left + editorWidth > viewportWidth - 20) {
-                    left = (rect?.left || 80) - editorWidth - gap;
-                    alignment = 'right';
-                  }
-
-                  setEditorPosition({
-                    top: Math.max(88, rect?.top || 120),
-                    left,
-                    height: rect?.height || 400,
-                    alignment
-                  });
-                  setActiveEditorSectionId(sectionId);
-                }}
+                theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
               />
             </div>
-
           </div>
 
         </div >
