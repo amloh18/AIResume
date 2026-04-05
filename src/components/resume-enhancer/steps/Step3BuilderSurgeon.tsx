@@ -14,7 +14,7 @@ import {
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
-import { BuilderPreview } from '@/components/preview/BuilderPreview';
+import { CVBuilderProAdapter } from '@/components/cv-canvas/CVBuilderProAdapter';
 import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
 import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
@@ -1005,7 +1005,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           {/* CV Preview — pill is rendered inside the toolbar */}
           <div className="flex-1 min-h-0 relative flex flex-col bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
-              <BuilderPreview
+              <CVBuilderProAdapter
                 cvData={state.cvData}
                 template={state.selectedTemplate as any}
                 mode="edit"
@@ -1044,7 +1044,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                     onApplyFix={applyAnnotation}
                   />
                 }
-                sidePanelRef={sidePanelRef}
                 highlightedField={highlightedField}
                 fixAnnotations={state.fixAnnotations || []}
                 onAnnotationClick={(fixId) => pillRef.current?.focusFix(fixId)}
@@ -1054,7 +1053,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 onSectionClick={(sectionId) => {
                   console.log('Opening editor for section:', sectionId);
                   const sectionElement = document.querySelector(`[data-section-id="${sectionId}"]`);
-                  const target = sectionElement || document.querySelector('.builder-preview');
+                  const target = sectionElement || document.querySelector('.cv-builder-pro-adapter');
                   const rect = target?.getBoundingClientRect();
                   const viewportWidth = window.innerWidth;
                   const editorWidth = 500;
