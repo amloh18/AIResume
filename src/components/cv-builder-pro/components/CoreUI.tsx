@@ -7,7 +7,18 @@ import { getNestedValue, escapeRegExp } from '../helpers';
 // CORE UI COMPONENTS
 // ==========================================
 
-export const EditableField = ({ data, path, multiline, onChange, setFocusedRef, readOnly, nowrap, breakAll, aiIssues = [], activeIssueId, onIssueClick }: any) => {
+export const CanvasContext = React.createContext<any>(null);
+
+export const EditableField = ({ data: explicitData, path, multiline, onChange: explicitOnChange, setFocusedRef: explicitSetFocusedRef, readOnly, nowrap, breakAll, aiIssues: explicitAiIssues, activeIssueId: explicitActiveIssueId, onIssueClick: explicitOnIssueClick }: any) => {
+  const ctx = React.useContext(CanvasContext);
+  
+  const data = explicitData || (readOnly ? ctx?.cvData : ctx?.cvData);
+  const onChange = explicitOnChange || ctx?.handleDataChange;
+  const setFocusedRef = explicitSetFocusedRef || ctx?.setFocusedNode;
+  const aiIssues = explicitAiIssues || ctx?.aiIssues || [];
+  const activeIssueId = explicitActiveIssueId || ctx?.activeIssueId;
+  const onIssueClick = explicitOnIssueClick || ctx?.onIssueClick;
+
   const contentRef = useRef<HTMLSpanElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const value = getNestedValue(data, path) || '';
@@ -65,7 +76,7 @@ export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
 
   if (!targetNode) return null;
   return (
-    <div className="fixed z-50 bg-white shadow-2xl border border-gray-200 rounded-lg flex items-center p-1.5 gap-1 transform -translate-x-1/2 transition-all duration-200 animate-fade-in-up" style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
+    <div className="fixed z-50 bg-white shadow-2xl border border-gray-200 rounded-lg flex items-center p-1.5 gap-1 transform -translate-x-1/2 transition-all duration-200 animate-fade-in-up font-sans" style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
       {canSuggest && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Contextual Point"><Wand2 size={14}/> ✨ Suggest</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
       <button onClick={(e) => execCmd(e, 'bold')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Bold"><Bold size={16}/></button>
       <button onClick={(e) => execCmd(e, 'italic')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Italic"><Italic size={16}/></button>
@@ -122,18 +133,18 @@ export const CanvasSnippet = ({ instance, index, zoneId, cvData, EditableWrapper
     const styleKey = isSidebar && activeTemplate?.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate?.titleStyle;
     const Renderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
     if (overrideClass) return <h3 className={overrideClass}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3>;
-    return <Renderer isDark={isDark}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
+    return <Renderer isDark={isDark} showIcons={ctx?.design?.showIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
   };
 
   if (!SnippetComponent) return null;
 
-  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry });
+  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showIcons ?? true });
 
   return (
-    <div draggable={!isHeader} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group transition-all duration-300 ease-in-out ${!isHeader ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`}>
+    <div draggable={!isHeader} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`}>
       {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
         <div className={`ring-[1.5px] ring-transparent hover:ring-[#3b82f6] hover:shadow-sm rounded-sm transition-all`}>
-          <div className="absolute right-0 -top-[36px] opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-gray-200 shadow-sm rounded-t-md rounded-b-none flex items-center z-20 no-print">
+          <div className="absolute right-0 -top-[36px] opacity-0 group-hover/snippet:opacity-100 transition-opacity bg-white border border-gray-200 shadow-sm rounded-t-md rounded-b-none flex items-center z-20 no-print font-sans">
           {isHeader && <button onClick={onTogglePhoto} className="flex items-center gap-1.5 px-3 py-2 hover:bg-gray-50 text-blue-600 font-medium text-[13px] border-r border-gray-200" title="Toggle Photo"><ImageIcon size={14}/> Photo</button>}
           
           {SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category) && (
@@ -148,8 +159,8 @@ export const CanvasSnippet = ({ instance, index, zoneId, cvData, EditableWrapper
             <div className="p-2 cursor-grab text-gray-400 bg-gray-50 hover:bg-gray-100 transition-colors"><GripVertical size={16}/></div>
           </>)}
         </div>
-        <div className={`p-2 pointer-events-auto snippet-content relative pb-2 group-hover:bg-[#eff6ff]/30 ${!content ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
-            <div className="absolute left-0 top-0 w-full h-full border-[1.5px] border-[#3b82f6] opacity-0 group-hover:opacity-100 pointer-events-none rounded-sm z-10 transition-opacity rounded-tr-none rounded-tl-none"></div>
+        <div className={`p-2 pointer-events-auto snippet-content relative pb-2 group-hover/snippet:bg-[#eff6ff]/30 ${!content ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
+            <div className="absolute left-0 top-0 w-full h-full border-[1.5px] border-[#3b82f6] opacity-0 group-hover/snippet:opacity-100 pointer-events-none rounded-sm z-10 transition-opacity rounded-tr-none rounded-tl-none"></div>
           {content || (
             <div className="text-center opacity-40 select-none">
               <Title titleKey={SnippetComponent.category.toLowerCase()} />
@@ -171,21 +182,21 @@ export const CanvasZone = ({ zoneId, blocks, cvData, EditableWrapper, handleDrop
   const showAppendLine = isAppendTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
 
   return (
-    <div className="relative group h-full flex flex-col">
+    <div className="relative group/zone h-full flex flex-col">
       <div className={`flex-1 min-h-[150px] transition-colors pb-10 ${isOverZone ? 'bg-gray-50/50' : ''} ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         {blocks.length === 0 && <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 italic pointer-events-none border-2 border-dashed border-gray-200 rounded-lg m-2 no-print">Empty Zone</div>}
         {blocks.map((instance: any, index: number) => <CanvasSnippet key={instance.id} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} isDark={isDark} />)}
         {showAppendLine && <div className="w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded mt-4 pointer-events-none"></div>}
       </div>
-      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex justify-center py-4 relative z-10 -mt-8 no-print">
-        <button onClick={() => onAddSnippet(zoneId)} className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm text-gray-700 hover:text-black font-bold px-5 py-2.5 rounded-full text-[13px] transition-all transform hover:shadow-md"><PlusCircle size={16} className="text-gray-500" /> Add Section</button>
+      <div className="opacity-0 group-hover/zone:opacity-100 transition-opacity flex justify-center py-4 relative z-10 -mt-8 no-print">
+        <button onClick={() => onAddSnippet(zoneId)} className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm text-gray-700 hover:text-black font-bold px-5 py-2.5 rounded-full text-[13px] transition-all transform hover:shadow-md font-sans"><PlusCircle size={16} className="text-gray-500" /> Add Section</button>
       </div>
     </div>
   );
 };
 
-export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper }: any) => {
-  const defaultDesign = { font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40 };
+export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design }: any) => {
+  const defaultDesign = { font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showIcons: true, ...design };
   const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px` } as React.CSSProperties;
 
   const renderZone = (zoneId: string, className: string, isDark = false) => {
@@ -198,8 +209,8 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper }: any)
           const isSidebar = ['sidebar', 'left', 'right'].includes(zoneId);
           const styleKey = isSidebar && template.sidebarTitleStyle ? template.sidebarTitleStyle : template.titleStyle;
           const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-          const Title = ({ titleKey, overrideClass }: any) => overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3> : <TitleRenderer isDark={isDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>;
-          return <div key={index} className="pointer-events-none mb-2"><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} /></div>;
+          const Title = ({ titleKey, overrideClass }: any) => overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3> : <TitleRenderer isDark={isDark} showIcons={defaultDesign.showIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>;
+          return <div key={index} className="pointer-events-none mb-2"><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showIcons} /></div>;
         })}
       </div>
     );

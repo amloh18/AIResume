@@ -22,6 +22,7 @@ export const initialData = {
         phone: "+91 9876543210",
         location: "Ahmedabad, Gujarat",
         website: "cvcircle.com",
+        linkedin: "linkedin.com/in/amarjot",
         summary: "Results-driven Data Scientist with a Master's degree in Data Science and 5+ years of experience translating complex datasets into significant business impact. Proven expertise in scoping and deploying end-to-end machine learning models, leveraging advanced techniques in Python, R, and SQL to drive multi-million dollar revenue growth and operational efficiency.",
         avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80",
         showAvatar: true

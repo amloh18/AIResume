@@ -2,9 +2,12 @@
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES } from './registry';
-import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar } from './components/CoreUI';
+import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import ListEntry from './components/ListEntry';
 import { generateId, setNestedValue, getNestedValue } from './helpers';
+
+const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
+const EditableWrapper = EditableField;
 
 // PROPS AND REF INTERFACE
 // ==========================================
@@ -30,7 +33,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>({});
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
-  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40 });
+  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showIcons: true });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
@@ -89,9 +92,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const updated = setNestedValue(cvData, path, value);
     onDataChange(updated);
   };
-
-  const EditableWrapper = useMemo(() => function Editable(props: any) { return <EditableField {...props} data={cvData} onChange={handleDataChange} setFocusedRef={setFocusedNode} aiIssues={aiIssues} activeIssueId={activeIssueId} onIssueClick={(id: string) => { setActiveIssueId(id); setActiveSidebar('ai'); }} />; }, [cvData, aiIssues, activeIssueId]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ReadOnlyWrapper = useMemo(() => function Editable(props: any) { return <EditableField {...props} data={cvData} readOnly={true} />; }, [cvData]);
 
   const handleSuggestPoint = () => {
     if (!focusedNode) return;
@@ -202,8 +202,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   };
 
   return (
-    <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${bgApp}`}>
-      <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />
+    <CanvasContext.Provider value={{ cvData, design, handleDataChange, setFocusedNode, aiIssues, activeIssueId, onIssueClick: (id: string) => { setActiveIssueId(id); setActiveSidebar('ai'); } }}>
+      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${bgApp}`}>
+        <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />
 
       {/* LEFT VERTICAL TOOLBAR */}
       <div className={`w-16 border-r flex flex-col items-center py-4 gap-4 z-30 shrink-0 transition-colors ${bgNav}`}>
@@ -230,6 +231,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+              <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Show Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showIcons: !design.showIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
             </div>
           </div>
         )}
@@ -368,12 +370,22 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
       {/* Global CSS Variables */}
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,800;1,400&family=Roboto+Mono:wght@400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap');
         :root { --cv-font: ${design.font}; --cv-base-size: ${design.fontSize}px; --cv-spacing: ${design.spacing}; --cv-accent: ${design.accentColor}; --cv-page-margin: ${design.pageMargin}px; }
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
-        .cv-document { font-family: var(--cv-font), sans-serif; color: #1f2937; font-size: var(--cv-base-size); }
+        .cv-document { font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); }
+        .cv-document .text-gray-900 { color: #111827 !important; }
+        .cv-document .text-gray-800 { color: #1f2937 !important; }
+        .cv-document .text-gray-700 { color: #374151 !important; }
+        .cv-document .text-gray-600 { color: #4b5563 !important; }
+        .cv-document .text-gray-500 { color: #6b7280 !important; }
+        .cv-document .text-gray-400 { color: #9ca3af !important; }
+        .cv-document .text-gray-300 { color: #d1d5db !important; }
+        .cv-document .text-gray-200 { color: #e5e7eb !important; }
+        .cv-document .text-gray-100 { color: #f3f4f6 !important; }
+        .cv-document .text-white { color: #ffffff !important; }
         .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
         .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
         .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
@@ -412,7 +424,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         @keyframes snippetEntrance { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .snippet-anim { animation: snippetEntrance 0.4s ease-out forwards; }
       `}} />
-    </div>
+      </div>
+    </CanvasContext.Provider>
   );
 });
 

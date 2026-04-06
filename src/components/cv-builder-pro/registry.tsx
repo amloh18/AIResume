@@ -1,33 +1,70 @@
 
 import React from 'react';
-import { Quote, AlignJustify, Columns, LayoutTemplate, Sidebar } from 'lucide-react';
+import { Quote, AlignJustify, Columns, LayoutTemplate, Sidebar, User, Briefcase, GraduationCap, FolderOpen, Award, Trophy, Code2, Globe, Heart, BookOpen, Users, MapPin, Phone, Mail, Linkedin, Link as LinkIcon } from 'lucide-react';
 import ListEntry from './components/ListEntry';
 
 // UNIFIED TYPOGRAPHY SYSTEM
 // ==========================================
 const TYPOGRAPHY = {
-  name: "cv-name font-bold leading-tight tracking-tight",
-  nameNarrow: "cv-name-narrow font-bold leading-tight tracking-tight",
+  name: "cv-name font-bold leading-tight tracking-tight text-gray-900",
+  nameNarrow: "cv-name-narrow font-bold leading-tight tracking-tight text-gray-900",
   role: "cv-role font-semibold tracking-widest uppercase cv-accent-text",
-  contact: "cv-contact font-medium tracking-wide",
-  sectionTitle: "cv-heading font-extrabold uppercase tracking-[0.15em]",
-  itemTitle: "cv-title font-bold",
-  itemSubtitle: "cv-subtitle font-semibold italic",
+  contact: "cv-contact font-medium tracking-wide text-gray-600",
+  sectionTitle: "cv-heading font-extrabold uppercase tracking-[0.15em] text-gray-900",
+  itemTitle: "cv-title font-bold text-gray-900",
+  itemSubtitle: "cv-subtitle font-semibold italic text-gray-600",
   date: "cv-date font-bold tracking-widest uppercase cv-accent-text",
-  body: "cv-body cv-prose",
+  body: "cv-body cv-prose text-gray-700",
 };
 
 // ==========================================
 // TITLE STYLES REGISTRY
 // ==========================================
-export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; isDark: boolean }>> = {
-  'standard': ({ children, isDark }) => <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-item-avoid ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'}`}>{children}</h3>,
-  'minimal': ({ children, isDark }) => <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 cv-item-avoid ${isDark ? 'text-white' : 'cv-accent-text'}`}>{children}</h3>,
-  'accent': ({ children, isDark }) => <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-item-avoid ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'}`}>{children}</h3>,
-  'boxed': ({ children, isDark }) => <div className={`inline-block border px-2 py-1 mb-3 ${TYPOGRAPHY.date} cv-item-avoid ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{children}</div>,
-  'sidebar-default': ({ children, isDark }) => <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 border-b pb-1 cv-item-avoid ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'}`}>{children}</h3>,
-  'designer': ({ children, isDark }) => <h3 className={`${TYPOGRAPHY.sectionTitle} mb-4 cv-item-avoid ${isDark ? 'text-white' : 'text-gray-800'}`}>{children}</h3>,
-  'lines': ({ children, isDark }) => <div className="flex items-center gap-4 mb-4 cv-item-avoid"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'}`}>{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>,
+const SECTION_ICONS: any = {
+  summary: User,
+  experience: Briefcase,
+  education: GraduationCap,
+  projects: FolderOpen,
+  certifications: Award,
+  awards: Trophy,
+  skills: Code2,
+  languages: Globe,
+  interests: Heart,
+  publications: BookOpen,
+  volunteer: Users,
+  references: Users,
+  contact: Phone,
+};
+
+export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; isDark: boolean; showIcons?: boolean; titleKey?: string }>> = {
+  'standard': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-item-avoid ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+  },
+  'minimal': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 cv-item-avoid ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
+  },
+  'accent': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-item-avoid ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+  },
+  'boxed': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <div className={`inline-flex items-center gap-2 border px-2 py-1 mb-3 ${TYPOGRAPHY.date} cv-item-avoid ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
+  },
+  'sidebar-default': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 border-b pb-1 cv-item-avoid ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
+  },
+  'designer': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-4 cv-item-avoid ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+  },
+  'lines': ({ children, isDark, showIcons, titleKey }) => {
+    const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
+    return <div className="flex items-center gap-4 mb-4 cv-item-avoid"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
+  },
 };
 
 // ==========================================
@@ -35,20 +72,24 @@ export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; 
 // ==========================================
 export const SNIPPETS: Record<string, { id: string; name: string; category: string; render: (props: any) => React.ReactNode }> = {
   // === HEADERS (7) ===
-  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark }: any) => {
+  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`text-center pb-4 border-b ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'} mb-4 snippet-anim cv-keep-with-next`}>
         {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`mx-auto rounded-full object-cover shadow-md mb-3 ${isNarrow ? 'w-24 h-24' : 'w-20 h-20'} ${isDark ? 'border-2 border-slate-700' : ''}`} />}
         <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest`}><Editable path="basics.name" /></h1>
         <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3`}><Editable path="basics.title" /></h2>
-        <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : 'gap-4'} ${TYPOGRAPHY.contact}`}>
-          <span><Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} <span><Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} <span><Editable path="basics.location" nowrap /></span>
+        <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5 items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact}`}>
+          <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
         </div>
       </div>
     );
   }},
-  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark }: any) => {
+  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`flex ${isNarrow ? 'flex-col gap-4 text-center items-center' : 'justify-between items-end'} pb-4 border-b-[1.5px] ${isDark ? 'border-slate-600' : 'border-slate-800'} mb-4 snippet-anim w-full cv-keep-with-next`}>
@@ -59,13 +100,17 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
             <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-slate-400' : 'text-slate-600'}`}><Editable path="basics.title" /></h2>
           </div>
         </div>
-        <div className={`${isNarrow ? 'text-center w-full mt-2' : 'text-right'} ${TYPOGRAPHY.contact} flex flex-col gap-1 ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0`}>
-          <span><Editable path="basics.email" breakAll /></span><span><Editable path="basics.phone" nowrap /></span><span><Editable path="basics.website" breakAll /></span>
+        <div className={`${isNarrow ? 'text-center w-full mt-2 flex-col items-center' : 'text-right flex-row justify-end flex-wrap gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} flex ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0 max-w-[60%]`}>
+          <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span>
+          <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span>
+          <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span>
+          <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>
+          <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
         </div>
       </div>
     );
   }},
-  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark }: any) => {
+  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-5 mb-5 snippet-anim w-full cv-keep-with-next`}>
@@ -73,14 +118,18 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <div className="min-w-0 w-full">
           <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5`}><Editable path="basics.name" /></h1>
           <h2 className={`${TYPOGRAPHY.role} mb-3`}><Editable path="basics.title" /></h2>
-          <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center' : 'gap-3'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-            <span><Editable path="basics.email" breakAll /></span> {!isNarrow && <span>|</span>} <span><Editable path="basics.location" nowrap /></span>
+          <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+            <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
+            <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
+            <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
+            <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
+            <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
           </div>
         </div>
       </div>
     );
   }},
-  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark }: any) => {
+  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className="text-center pb-5 mb-5 snippet-anim w-full flex flex-col items-center cv-keep-with-next">
@@ -89,20 +138,29 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         </div>
         <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''}`}><Editable path="basics.title" /></h2>
         {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`mx-auto rounded-full object-cover shadow-xl mb-4 ${isNarrow ? 'w-28 h-28' : 'w-24 h-24'} ${isDark ? 'border-2 border-slate-700' : 'border-[4px] border-white'}`} />}
+        <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact}`}>
+          <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
+          <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+        </div>
       </div>
     );
   }},
-  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark }: any) => {
+  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`pb-4 mb-5 border-b-[1.5px] ${isDark ? 'border-slate-700' : 'border-gray-900'} snippet-anim w-full cv-keep-with-next`}>
         <div className={`flex ${isNarrow ? 'flex-col gap-4' : 'justify-between items-start'} w-full`}>
           <div className="min-w-0 w-full">
             <h1 className={`${isNarrow ? 'text-2xl text-center' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" /></h1>
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : 'gap-3'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
-              <span><Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>/</span>}
-              <span><Editable path="basics.email" breakAll /></span> {!isNarrow && <span>/</span>}
-              <span><Editable path="basics.website" breakAll /></span>
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
+              <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
             </div>
           </div>
           {data?.basics?.showAvatar && !isNarrow && <img src={data.basics.avatar} alt="Avatar" className={`rounded object-cover shadow-md shrink-0 w-20 h-24 ${isDark ? 'border border-slate-600' : ''}`} />}
@@ -110,7 +168,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title }: any) => {
+  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className="snippet-anim w-full mb-8 cv-keep-with-next">
@@ -123,14 +181,18 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
             {!isNarrow && <div className="flex flex-col justify-center"><Title titleKey="contact" overrideClass={`${TYPOGRAPHY.contact} tracking-widest uppercase mb-0 ${isDark ? 'text-gray-400' : 'text-gray-800'}`} /></div>}
             <div className="w-1.5 cv-accent-bg shrink-0 rounded-full"></div>
             <div className={`${TYPOGRAPHY.contact} flex flex-col justify-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              <span><Editable path="basics.phone" nowrap /></span><span><Editable path="basics.email" breakAll /></span><span><Editable path="basics.location" nowrap /></span>
+              <span className="flex items-center gap-1.5 justify-end">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span>
+              <span className="flex items-center gap-1.5 justify-end">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span>
+              <span className="flex items-center gap-1.5 justify-end">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span>
+              <span className="flex items-center gap-1.5 justify-end">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>
+              <span className="flex items-center gap-1.5 justify-end">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
             </div>
           </div>
         </div>
       </div>
     );
   }},
-  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark }: any) => {
+  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`p-6 rounded-xl mb-6 snippet-anim cv-keep-with-next cv-accent-bg text-white shadow-lg`}>
@@ -138,10 +200,12 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
           <div className="min-w-0 w-full">
             <h1 className={`${isNarrow ? 'text-2xl' : 'text-4xl'} font-black tracking-tight mb-1`}><Editable path="basics.name" /></h1>
             <h2 className={`text-sm font-semibold tracking-widest uppercase opacity-90 mb-4`}><Editable path="basics.title" /></h2>
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1' : 'gap-4'} text-xs font-medium opacity-90`}>
-              <span><Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>}
-              <span><Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>}
-              <span><Editable path="basics.location" nowrap /></span>
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} text-xs font-medium opacity-90`}>
+              <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>}
+              <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
             </div>
           </div>
           {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`rounded-full object-cover shrink-0 shadow-2xl border-4 border-white/20 ${isNarrow ? 'w-24 h-24 mx-auto mt-4' : 'w-24 h-24'}`} />}
@@ -374,8 +438,8 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
 
   // === SIDEBAR SPECIFIC ===
-  'sidebar-contact': { id: 'sidebar-contact', name: 'Contact List', category: 'Sidebar', render: ({ Editable, isDark, Title }: any) => (
-    <div className={`mb-6 snippet-anim cv-section ${isDark ? 'text-white' : 'text-gray-900'} w-full min-w-0 cv-item-avoid`}><Title titleKey="contact" /><div className={`flex flex-col gap-2.5 cv-gap-sm ${TYPOGRAPHY.body} ${isDark ? 'text-slate-300' : 'text-gray-700'} break-all`}><div><Editable path="basics.email" breakAll /></div><div><Editable path="basics.phone" nowrap /></div><div><Editable path="basics.location" nowrap /></div><div><Editable path="basics.website" breakAll /></div></div></div>
+  'sidebar-contact': { id: 'sidebar-contact', name: 'Contact List', category: 'Sidebar', render: ({ Editable, isDark, Title, showIcons }: any) => (
+    <div className={`mb-6 snippet-anim cv-section ${isDark ? 'text-white' : 'text-gray-900'} w-full min-w-0 cv-item-avoid`}><Title titleKey="contact" /><div className={`flex flex-col gap-2.5 cv-gap-sm ${TYPOGRAPHY.body} ${isDark ? 'text-slate-300' : 'text-gray-700'} break-all`}><div className="flex items-center gap-2">{showIcons && <MapPin size={14} /> }<Editable path="basics.location" nowrap /></div><div className="flex items-center gap-2">{showIcons && <Phone size={14} /> }<Editable path="basics.phone" nowrap /></div><div className="flex items-center gap-2">{showIcons && <Mail size={14} /> }<Editable path="basics.email" breakAll /></div><div className="flex items-center gap-2">{showIcons && <Linkedin size={14} /> }<Editable path="basics.linkedin" breakAll /></div><div className="flex items-center gap-2">{showIcons && <LinkIcon size={14} /> }<Editable path="basics.website" breakAll /></div></div></div>
   )}
 };
 
