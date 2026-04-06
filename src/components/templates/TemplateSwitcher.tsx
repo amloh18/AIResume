@@ -22,6 +22,7 @@ import {
   generateThemeCSS 
 } from '@/lib/templates/template-definition';
 import { ITemplate } from '@/types/template';
+
 import { useSnippetStore } from '@/lib/stores/snippetStore';
 import { SNIPPET_REGISTRY } from '@/lib/snippets/snippet-registry';
 import { getIncompatibleSnippets } from '@/lib/snippets/layout-compatibility';

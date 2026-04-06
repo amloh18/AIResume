@@ -1,0 +1,422 @@
+
+import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X } from 'lucide-react';
+import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES } from './registry';
+import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar } from './components/CoreUI';
+import ListEntry from './components/ListEntry';
+import { generateId, setNestedValue, getNestedValue } from './helpers';
+
+// PROPS AND REF INTERFACE
+// ==========================================
+export interface CVCanvasBuilderProps {
+  cvData: any;
+  onDataChange: (data: any) => void;
+  theme?: 'dark' | 'light';
+  template?: any;
+  onTemplateChange?: (template: any) => void;
+}
+
+export interface CVCanvasBuilderRef {
+  openTemplateSelector: () => void;
+  openAddSection: () => void;
+}
+
+// ==========================================
+
+// MAIN CANVAS BUILDER COMPONENT
+// ==========================================
+const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange }, ref) => {
+  const [activeTemplate, setActiveTemplate] = useState(template || CANVAS_TEMPLATES[0]);
+  const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
+  const [zones, setZones] = useState<Record<string, any[]>>({});
+  const [templateAnimKey, setTemplateAnimKey] = useState(0);
+  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40 });
+  const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
+  const [dragState, setDragState] = useState<any>({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
+  const [scanning, setScanning] = useState(false);
+
+  useEffect(() => {
+    if (template && template.id !== activeTemplate.id) {
+      loadTemplate(template);
+    }
+  }, [template]);
+  const [aiIssues, setAiIssues] = useState<any[]>([]);
+  const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
+  const [cvScore, setCvScore] = useState(100);
+  const [pointSuggestion, setPointSuggestion] = useState<any>(null);
+
+  const isDarkUI = theme === 'dark';
+  const bgApp = isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100';
+  const bgNav = isDarkUI ? 'bg-[#111111] border-[#2a2a2a]' : 'bg-white border-gray-200 shadow-sm';
+  const bgPanel = isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200';
+  const bgWorkspace = isDarkUI ? 'bg-[#1a1a1a]' : 'bg-gray-200';
+  const textPrimary = isDarkUI ? 'text-gray-100' : 'text-gray-900';
+  const textMuted = isDarkUI ? 'text-gray-400' : 'text-gray-500';
+  const brandGreen = isDarkUI ? 'text-[#7EE787]' : 'text-emerald-600';
+  const brandGreenBg = isDarkUI ? 'bg-[#7EE787] text-black' : 'bg-emerald-600 text-white';
+  const btnSecondary = isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333] border-[#333]' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200';
+
+  useEffect(() => {
+    loadTemplate(CANVAS_TEMPLATES[0]);
+    const handleDragStart = (e: any) => setDragState((prev: any) => ({ ...prev, isDragging: true, sourceZoneId: e.detail.zoneId, sourceIndex: e.detail.index }));
+    const handleDragOver = (e: any) => setDragState((prev: any) => ({ ...prev, overZoneId: e.detail.zoneId, overIndex: e.detail.index }));
+    const handleDragEnd = () => setDragState({ isDragging: false, sourceZoneId: null, sourceIndex: null, overZoneId: null, overIndex: null });
+    document.addEventListener('snippet-drag-start', handleDragStart);
+    document.addEventListener('snippet-drag-over', handleDragOver);
+    document.addEventListener('snippet-drag-end', handleDragEnd);
+    return () => { document.removeEventListener('snippet-drag-start', handleDragStart); document.removeEventListener('snippet-drag-over', handleDragOver); document.removeEventListener('snippet-drag-end', handleDragEnd); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    openTemplateSelector: () => setIsTemplateModalOpen(true),
+    openAddSection: () => setReplacingSnippet({ zoneId: Object.keys(zones)[0] || 'main', isAdd: true }),
+  }));
+
+  const loadTemplate = (template: any) => {
+    setActiveTemplate(template);
+    const initialZones: Record<string, any[]> = {};
+    Object.keys(template.zones).forEach((zoneId: string) => { initialZones[zoneId] = template.zones[zoneId].map((type: string) => ({ id: generateId(), type })); });
+    setZones(initialZones);
+    setIsTemplateModalOpen(false);
+    setTemplateAnimKey(prev => prev + 1);
+    if (onTemplateChange) onTemplateChange(template);
+  };
+
+  const handleDataChange = (path: string, value: any) => {
+    const updated = setNestedValue(cvData, path, value);
+    onDataChange(updated);
+  };
+
+  const EditableWrapper = useMemo(() => function Editable(props: any) { return <EditableField {...props} data={cvData} onChange={handleDataChange} setFocusedRef={setFocusedNode} aiIssues={aiIssues} activeIssueId={activeIssueId} onIssueClick={(id: string) => { setActiveIssueId(id); setActiveSidebar('ai'); }} />; }, [cvData, aiIssues, activeIssueId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ReadOnlyWrapper = useMemo(() => function Editable(props: any) { return <EditableField {...props} data={cvData} readOnly={true} />; }, [cvData]);
+
+  const handleSuggestPoint = () => {
+    if (!focusedNode) return;
+    let path = focusedNode.getAttribute('data-path');
+    if (!path) { const parentWithPath = focusedNode.closest('[data-path]'); if (parentWithPath) path = parentWithPath.getAttribute('data-path'); }
+    if (!path || !path.includes('description')) return;
+    const rect = focusedNode.getBoundingClientRect();
+    setPointSuggestion({ path, text: "Spearheaded key initiatives yielding a 25% increase in operational efficiency across multiple cross-functional teams.", rect: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX } });
+  };
+
+  const runAIScan = () => {
+    setScanning(true);
+    setTimeout(() => {
+      setAiIssues([
+        { id: 'ai1', type: 'Impact', path: 'experience.0.description', targetText: 'enhancing front-end data presentation capabilities', suggestion: 'Weak impact statement. Highlight specific performance improvements or business value created by this pipeline.', points: 15 },
+        { id: 'ai2', type: 'Formatting', path: 'skills.languages', targetText: 'HTML/CSS', suggestion: 'Group HTML/CSS under Frontend tools rather than core analytical languages to better match Data Analyst roles.', points: 5 }
+      ]);
+      setCvScore(80); setScanning(false);
+    }, 1500);
+  };
+
+  const applyAIFix = (issue: any) => {
+    const currentValue = getNestedValue(cvData, issue.path);
+    let fixedValue = currentValue;
+    if (issue.id === 'ai1') fixedValue = currentValue.replace(issue.targetText, 'enhancing front-end data presentation capabilities and reducing load times by 40%');
+    if (issue.id === 'ai2') fixedValue = currentValue.replace(issue.targetText, '');
+    handleDataChange(issue.path, fixedValue); setAiIssues(prev => prev.filter((i: any) => i.id !== issue.id)); setCvScore(prev => prev + issue.points); if (activeIssueId === issue.id) setActiveIssueId(null);
+  };
+
+  const handleZoneDrop = (targetZoneId: string, dragData: any, targetIndex: number) => {
+    setZones(prev => {
+      const newZones = { ...prev }; if (!newZones[targetZoneId]) newZones[targetZoneId] = [];
+      const insertIndex = targetIndex !== undefined && targetIndex !== null ? targetIndex : newZones[targetZoneId].length;
+      if (dragData.source === 'canvas') {
+        const { zoneId: sourceZoneId, index: sourceIndex, instance } = dragData;
+        newZones[sourceZoneId].splice(sourceIndex, 1);
+        let finalInsertIndex = insertIndex;
+        if (sourceZoneId === targetZoneId && sourceIndex < insertIndex) finalInsertIndex -= 1;
+        newZones[targetZoneId].splice(finalInsertIndex, 0, instance);
+      }
+      return newZones;
+    });
+  };
+
+  const moveSnippet = (zoneId: string, index: number, dir: number) => { setZones(prev => { const newZones = { ...prev }; const list = newZones[zoneId]; if (index + dir < 0 || index + dir >= list.length) return prev; const item = list[index]; list.splice(index, 1); list.splice(index + dir, 0, item); return newZones; }); };
+  const removeSnippet = (zoneId: string, index: number) => { setZones(prev => { const newZones = { ...prev }; newZones[zoneId].splice(index, 1); return newZones; }); };
+
+  const moveEntry = (collection: string, index: number, dir: number) => {
+    const arr = [...(cvData[collection] || [])];
+    if (index + dir < 0 || index + dir >= arr.length) return;
+    const item = arr[index]; arr.splice(index, 1); arr.splice(index + dir, 0, item);
+    onDataChange({ ...cvData, [collection]: arr });
+  };
+
+  const deleteEntry = (collection: string, index: number) => {
+    const arr = [...(cvData[collection] || [])]; arr.splice(index, 1);
+    onDataChange({ ...cvData, [collection]: arr });
+  };
+
+  const handleReplaceClick = (zoneId: string, index: number, currentType: string) => { const category = SNIPPETS[currentType]?.category; setReplacingSnippet({ zoneId, index, currentType, category, isAdd: false }); };
+  const handleAddClick = (zoneId: string) => setReplacingSnippet({ zoneId, isAdd: true });
+
+  const handleAddListEntry = (type: string) => {
+    const l = type.toLowerCase();
+    const updated = { ...cvData };
+    if (l === 'experience') updated.experience = [...(updated.experience || []), { id: generateId(), company: 'New Company', role: 'Job Title', date: 'Date', description: '<ul><li>Describe your responsibilities and achievements here.</li></ul>' }];
+    else if (l === 'education') updated.education = [...(updated.education || []), { id: generateId(), institution: 'Institution Name', degree: 'Degree', date: 'Date', description: 'Additional details.' }];
+    else if (l === 'projects') updated.projects = [...(updated.projects || []), { id: generateId(), name: 'Project Name', role: 'Role', date: 'Date', description: '<ul><li>Project details.</li></ul>' }];
+    else if (l === 'certifications') updated.certifications = [...(updated.certifications || []), { id: generateId(), name: 'Certification Name', issuer: 'Issuer', date: 'Date' }];
+    else if (l === 'awards') updated.awards = [...(updated.awards || []), { id: generateId(), name: 'Award Name', issuer: 'Issuer', date: 'Date' }];
+    else if (l === 'publications') updated.publications = [...(updated.publications || []), { id: generateId(), title: 'Publication Title', publisher: 'Publisher', date: 'Date', description: 'Brief summary.' }];
+    else if (l === 'volunteer') updated.volunteer = [...(updated.volunteer || []), { id: generateId(), organization: 'Org Name', role: 'Role', date: 'Date', description: '<ul><li>Duties here.</li></ul>' }];
+    else if (l === 'references') updated.references = [...(updated.references || []), { id: generateId(), name: 'Ref Name', role: 'Role', contact: 'Contact Info' }];
+    onDataChange(updated);
+  };
+
+  const executeReplaceOrAdd = (newType: string) => {
+    if (!replacingSnippet) return;
+    setZones(prev => {
+      const newZones = { ...prev };
+      if (replacingSnippet.isAdd) newZones[replacingSnippet.zoneId].push({ id: generateId(), type: newType });
+      else newZones[replacingSnippet.zoneId][replacingSnippet.index] = { id: generateId(), type: newType };
+      return newZones;
+    });
+    setReplacingSnippet(null);
+  };
+
+  const handleTogglePhoto = () => handleDataChange('basics.showAvatar', !cvData.basics?.showAvatar);
+
+  const renderCanvasLayout = () => {
+    const layoutType = activeTemplate.type;
+    const safeZones = zones || {};
+    const renderZone = (zoneId: string, className: string, isDark = false) => (
+      <CanvasZone zoneId={zoneId} blocks={safeZones[zoneId] || []} cvData={cvData} EditableWrapper={EditableWrapper} handleDrop={handleZoneDrop} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={handleReplaceClick} onAddSnippet={handleAddClick} onTogglePhoto={handleTogglePhoto} onAddListEntry={handleAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} className={className} isDark={isDark} />
+    );
+
+    switch (layoutType) {
+      case '1-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}><div className="flex-1" style={{ padding: 'var(--cv-page-margin)' }}>{renderZone('main', 'w-full min-w-0')}</div></div>;
+      case '2-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
+      case 'sidebar-left': return <div className="w-full shadow-2xl mx-auto flex cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 bg-slate-50 border-r border-slate-200" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-full')}</div></div>;
+      case 'sidebar-left-dark': return <div className="w-full shadow-2xl mx-auto flex cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}><div className="w-[32%] min-w-0 bg-slate-800" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-full', true)}</div><div className="w-[68%] min-w-0" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-full')}</div></div>;
+      case 'sidebar-right': return <div className="w-full shadow-2xl mx-auto flex cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}><div className="w-[68%] min-w-0" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 bg-slate-50 border-l border-slate-200" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-full', false)}</div></div>;
+      case 'top-sidebar-left': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="w-[32%] min-w-0 border-r border-slate-200" style={{ paddingRight: '5mm' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
+      case 'top-sidebar-right': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className="w-[32%] min-w-0 border-l border-slate-200" style={{ paddingLeft: '5mm' }}>{renderZone('sidebar', 'h-full', false)}</div></div></div>;
+      case 'hybrid-split': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: '210mm', minHeight: '297mm', backgroundColor: '#ffffff' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: '6mm', paddingBottom: 0 }}>{renderZone('main', 'w-full min-w-0')}</div><div className="flex flex-1 gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '2mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
+      default: return <div>Layout not found</div>;
+    }
+  };
+
+  return (
+    <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${bgApp}`}>
+      <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />
+
+      {/* LEFT VERTICAL TOOLBAR */}
+      <div className={`w-16 border-r flex flex-col items-center py-4 gap-4 z-30 shrink-0 transition-colors ${bgNav}`}>
+        <div className={`p-2 rounded-xl mb-2 ${brandGreenBg} shadow-lg`} title="CVCIRCLE Builder"><FileText size={20} /></div>
+        <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'design' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Design & Layout"><Palette size={20}/></button>
+        <button onClick={() => setIsTemplateModalOpen(true)} className={`p-3 rounded-2xl transition-all ${isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100'}`} title="Templates"><LayoutTemplate size={20}/></button>
+        <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'data' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Raw Data JSON"><FileJson size={20}/></button>
+        <button onClick={() => { setActiveSidebar(activeSidebar === 'ai' ? null : 'ai'); if (activeSidebar !== 'ai') runAIScan(); }} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'ai' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="AI Review"><Wand2 size={20}/></button>
+        <div className="flex-1"></div>
+        <button onClick={() => window.print()} className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} title="Save to PDF"><Download size={20}/></button>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* DESIGN SIDEBAR */}
+        {activeSidebar === 'design' && (
+          <div className={`w-[320px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
+            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
+              <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
+              <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button>
+            </div>
+            <div className="p-5 flex flex-col gap-6 overflow-y-auto custom-scrollbar">
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Typography</label><div className="grid grid-cols-2 gap-2">{['Inter', 'Merriweather', 'Roboto Mono', 'Playfair Display'].map(f => (<button key={f} onClick={() => setDesign({...design, font: f})} className={`py-2 px-1 text-xs rounded border transition-colors ${design.font === f ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`} style={{ fontFamily: f }}>{f.split(' ')[0]}</button>))}</div></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Font Size</span><span className={brandGreen}>{design.fontSize}px</span></label><input type="range" min="10" max="16" step="0.5" value={design.fontSize} onChange={(e) => setDesign({...design, fontSize: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+            </div>
+          </div>
+        )}
+
+        {/* DATA SIDEBAR */}
+        {activeSidebar === 'data' && (
+          <div className={`w-[400px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
+            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}><h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><FileJson size={18} className={brandGreen}/> Raw JSON</h3><button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button></div>
+            <textarea className={`flex-1 w-full p-4 text-sm font-mono outline-none resize-none custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a] text-emerald-400' : 'bg-gray-50 text-gray-800'}`} value={JSON.stringify(cvData, null, 2)} onChange={(e) => { try { onDataChange(JSON.parse(e.target.value)); } catch {} }} spellCheck={false} />
+          </div>
+        )}
+
+        {/* AI SIDEBAR */}
+        {activeSidebar === 'ai' && (
+          <div className={`w-[360px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
+            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
+              <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border-2 ${cvScore >= 80 ? 'bg-green-500/20 border-green-500 text-green-500' : 'bg-yellow-500/20 border-yellow-500 text-yellow-500'}`}>{cvScore}</div><div><span className={`font-bold text-sm uppercase ${textPrimary}`}>AI Review</span><div className={`text-xs ${textMuted}`}>{aiIssues.length} issues</div></div></div>
+              <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
+              {scanning && <div className="text-center py-12 text-emerald-500 animate-pulse"><Wand2 size={40} className="mx-auto mb-3 opacity-80" /><span className="text-xs font-bold uppercase tracking-widest">Analyzing...</span></div>}
+              {!scanning && aiIssues.length === 0 && <div className={`text-center py-12 ${textMuted}`}><div className="text-5xl mb-3">&#10024;</div><p className="text-sm font-medium">No issues found.</p></div>}
+              {!scanning && aiIssues.map((issue: any) => (
+                <div key={issue.id} onMouseEnter={() => setActiveIssueId(issue.id)} onMouseLeave={() => setActiveIssueId(null)} className={`border rounded-xl p-4 transition-all ${activeIssueId === issue.id ? 'border-emerald-500' : (isDarkUI ? 'border-[#333] bg-[#1a1a1a]' : 'border-gray-200 bg-gray-50')}`}>
+                  <div className="flex items-start gap-2 mb-2"><span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${issue.type === 'Impact' ? 'bg-yellow-500/20 text-yellow-600' : 'bg-red-500/20 text-red-500'}`}>{issue.type}</span></div>
+                  <p className={`text-sm mb-4 leading-relaxed ${textPrimary}`}>{issue.suggestion}</p>
+                  <button onClick={() => applyAIFix(issue)} className={`w-full py-2 rounded-lg text-xs font-bold ${brandGreenBg}`}>APPLY FIX</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* MAIN CANVAS */}
+        <div className={`flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
+          <div className={`fixed bottom-5 right-5 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border text-xs font-medium flex items-center gap-2 z-40 no-print ${isDarkUI ? 'bg-[#111]/80 border-[#333] text-white' : 'bg-white/80 border-gray-200 text-gray-800'}`}><Plus size={14} className={brandGreen}/> Click text to edit</div>
+          <div key={templateAnimKey} className="transform origin-top transition-transform scale-[0.85] lg:scale-100 xl:scale-105 h-max pb-20 text-gray-900">
+            <div className="cv-document-wrapper relative shadow-2xl" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px` } as React.CSSProperties}>
+              <div className="cv-page-visualizer"></div>
+              {renderCanvasLayout()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI SUGGESTION POPUP */}
+      {pointSuggestion && (
+        <div className={`fixed z-50 border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111]`} style={{ top: pointSuggestion.rect.top + 15, left: pointSuggestion.rect.left }}>
+          <div className="flex items-center justify-between mb-4 text-[#7EE787]">
+            <div className="flex items-center gap-2">
+              <Wand2 size={16}/>
+              <span className="text-[11px] font-bold uppercase tracking-widest">AI Contextual Suggestion</span>
+            </div>
+            <button onClick={() => setPointSuggestion(null)} className="text-gray-400 hover:text-white transition-colors"><X size={16}/></button>
+          </div>
+          <p className="text-sm mb-6 leading-relaxed text-gray-100">{pointSuggestion.text}</p>
+          <div className="flex justify-end gap-3">
+            <button onClick={() => setPointSuggestion(null)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#222] text-gray-300 hover:bg-[#333] hover:text-white transition-colors">Reject</button>
+            <button onClick={() => { const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; let newHtml = currentHtml; if (newHtml.includes('</ul>')) { newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); } else { newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; } handleDataChange(pointSuggestion.path, newHtml); setPointSuggestion(null); }} className="px-4 py-2 text-sm font-semibold rounded-lg shadow-lg bg-[#7EE787] text-black hover:bg-[#68d171] transition-colors">Accept & Add Bullet</button>
+          </div>
+        </div>
+      )}
+
+      {/* TEMPLATE MODAL */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col h-[90vh] border ${bgPanel}`}>
+            <div className={`p-5 border-b flex justify-between items-center shrink-0 ${bgNav}`}>
+              <div className="flex items-center gap-3"><LayoutTemplate size={24} className="text-emerald-500"/><div><h3 className={`font-black text-xl ${textPrimary}`}>Template Library</h3><p className={`text-xs ${textMuted}`}>Select a layout. All sections can be customized.</p></div></div>
+              <button onClick={() => setIsTemplateModalOpen(false)} className={`p-2 rounded-full ${btnSecondary}`}><X size={20}/></button>
+            </div>
+            <div className={`p-6 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
+              <div className="max-w-6xl mx-auto space-y-10">
+                {TEMPLATE_CATEGORIES.map(cat => {
+                  const catTemplates = CANVAS_TEMPLATES.filter(tpl => cat.types.includes(tpl.type));
+                  if (catTemplates.length === 0) return null;
+                  return (<div key={cat.id}><div className={`sticky top-0 z-10 backdrop-blur-md py-3 mb-5 flex items-center gap-3 border-b ${isDarkUI ? 'border-[#222] bg-[#0a0a0a]/80 text-white' : 'border-gray-200 bg-gray-100/80 text-gray-900'}`}><span className="text-emerald-500">{cat.icon}</span><h2 className="text-lg font-bold">{cat.name}</h2><span className={`text-xs ${textMuted}`}>- {cat.desc}</span></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">{catTemplates.map(tpl => {
+                      const isActive = activeTemplate.id === tpl.id;
+                      return (<div key={tpl.id} onClick={() => loadTemplate(tpl)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-2xl ${bgPanel} ${isActive ? 'border-emerald-500 ring-4 ring-emerald-500/20' : (isDarkUI ? 'border-[#333]' : 'border-gray-200')}`}>
+                        <div className={`p-2.5 border-b flex justify-between items-center z-10 shrink-0 ${bgNav}`}><div className={`font-bold text-xs ${textPrimary}`}>{tpl.name}</div>{isActive && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-1.5 py-0.5 rounded font-bold">ACTIVE</span>}</div>
+                        <div className={`relative w-full flex justify-center items-center p-4 flex-1 overflow-hidden pointer-events-none ${isDarkUI ? 'bg-[#141414]' : 'bg-gray-50'}`}><div className="relative w-[180px] h-[255px] bg-white shadow-md overflow-hidden rounded-sm ring-1 ring-gray-300"><div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left text-gray-900" style={{ transform: 'scale(0.2265)' }}><StaticLayoutRenderer template={tpl} cvData={cvData} ReadOnlyWrapper={ReadOnlyWrapper} /></div></div></div>
+                      </div>);
+                    })}</div>
+                  </div>);
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REPLACE / ADD SNIPPET MODAL */}
+      {replacingSnippet && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className={`rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+            <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+              <h3 className={`font-bold text-base flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
+              <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
+            </div>
+            {replacingSnippet.isAdd && (
+              <div className={`px-5 pt-4 pb-2 flex flex-wrap gap-2 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'}`}>
+                {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar'].map(cat => (
+                  <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
+                ))}
+              </div>
+            )}
+            <div className={`p-5 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {Object.values(SNIPPETS).filter(s => replacingSnippet.isAdd ? (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory) : s.category === replacingSnippet.category).map(snippet => {
+                  if (!snippet) return null;
+                  const targetZoneId = replacingSnippet.zoneId;
+                  const isTargetDark = activeTemplate.type.includes('dark') && targetZoneId === 'sidebar';
+                  const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
+                  const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
+                  const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                  const isCurrent = snippet.id === replacingSnippet.currentType;
+                  return (
+                    <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400')}`}>
+                      <div className={`p-4 flex justify-between items-center z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}><div><div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div><div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div></div>{isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}</div>
+                      
+                      {/* Live Thumbnail Preview logic from snippet render inside modal */}
+                      <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height: '220px', backgroundColor: '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor } as React.CSSProperties}>
+                        <div className="absolute top-0 left-0 w-[200%] h-[200%] origin-top-left pointer-events-none px-8 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ transform: 'scale(0.5)' }}>
+                          <snippet.render data={cvData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global CSS Variables */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,600;0,800;1,400&family=Roboto+Mono:wght@400;600&display=swap');
+        :root { --cv-font: ${design.font}; --cv-base-size: ${design.fontSize}px; --cv-spacing: ${design.spacing}; --cv-accent: ${design.accentColor}; --cv-page-margin: ${design.pageMargin}px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
+        .cv-document { font-family: var(--cv-font), sans-serif; color: #1f2937; font-size: var(--cv-base-size); }
+        .cv-name { font-size: calc(var(--cv-base-size) * 2.5); line-height: 1.1; }
+        .cv-name-narrow { font-size: calc(var(--cv-base-size) * 2.0); line-height: 1.1; }
+        .cv-role { font-size: calc(var(--cv-base-size) * 1.15); }
+        .cv-heading { font-size: calc(var(--cv-base-size) * 1.1); }
+        .cv-title { font-size: calc(var(--cv-base-size) * 1.05); }
+        .cv-subtitle { font-size: calc(var(--cv-base-size) * 0.95); }
+        .cv-date { font-size: calc(var(--cv-base-size) * 0.85); }
+        .cv-contact { font-size: calc(var(--cv-base-size) * 0.85); }
+        .cv-body { font-size: inherit; line-height: calc(1.6 * var(--cv-spacing)); }
+        .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
+        .cv-prose p { margin-bottom: calc(0.3em * var(--cv-spacing)) !important; }
+        .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
+        .cv-prose li { margin-bottom: calc(0.15em * var(--cv-spacing)) !important; }
+        [contenteditable]:empty:before { content: attr(placeholder); color: #9ca3af; pointer-events: none; display: block; }
+        .cv-accent-text { color: var(--cv-accent) !important; }
+        .cv-accent-bg { background-color: var(--cv-accent) !important; }
+        .cv-accent-border { border-color: var(--cv-accent) !important; }
+        .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
+        .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
+        .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 30; background-image: repeating-linear-gradient(to bottom, transparent, transparent calc(297mm - 12px), ${isDarkUI ? '#2a2b2e' : '#e5e7eb'} calc(297mm - 12px), ${isDarkUI ? '#2a2b2e' : '#e5e7eb'} calc(297mm + 12px)); }
+        @media print {
+          @page { margin: var(--cv-page-margin); size: A4; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
+          .no-print { display: none !important; }
+          .cv-document-wrapper { transform: none !important; padding: 0 !important; box-shadow: none !important; margin: 0 !important; overflow: visible !important; }
+          .cv-document { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; display: block !important; }
+          .cv-section { break-inside: auto !important; page-break-inside: auto !important; display: block !important; width: 100% !important; }
+          .cv-item { break-inside: avoid !important; page-break-inside: avoid !important; display: block !important; width: 100% !important; }
+          .cv-keep-with-next { break-inside: avoid !important; page-break-inside: avoid !important; break-after: avoid !important; display: block !important; width: 100% !important; }
+          .cv-item-avoid { break-inside: avoid !important; page-break-inside: avoid !important; display: block !important; }
+          .cv-page-visualizer { display: none !important; }
+        }
+        @keyframes fadeInUp { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.2s ease-out forwards; }
+        @keyframes snippetEntrance { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .snippet-anim { animation: snippetEntrance 0.4s ease-out forwards; }
+      `}} />
+    </div>
+  );
+});
+
+CVCanvasEngine.displayName = 'CVCanvasEngine';
+
+export default CVCanvasEngine;
+

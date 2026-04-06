@@ -14,7 +14,7 @@ import {
 import RoleProfilerModal from '@/components/resume-enhancer/RoleProfilerModal';
 import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal';
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
-import CVCanvasBuilder, { type CVCanvasBuilderRef } from '@/components/cv-canvas/CVCanvasBuilder';
+import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
 import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
@@ -80,7 +80,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const pillRef = useRef<FloatingPulsePillHandle>(null);
-    const canvasBuilderRef = useRef<CVCanvasBuilderRef>(null);
+    const canvasBuilderRef = useRef<any>(null);
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -1006,11 +1006,16 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
-              <CVCanvasBuilder
+              <CVBuilderProAdapter
                 ref={canvasBuilderRef}
                 cvData={state.cvData}
+                template={state.selectedTemplate}
                 onDataChange={(updatedData: any) => {
                   dispatch({ type: 'SET_CV_DATA', payload: updatedData });
+                }}
+                onTemplateChange={(newTemplate: any) => {
+                  setTemplate(newTemplate);
+                  dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: newTemplate });
                 }}
                 theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
               />
