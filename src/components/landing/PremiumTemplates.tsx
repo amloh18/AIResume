@@ -1,224 +1,219 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import CardSwap, { Card } from '@/components/CardSwap';
+import { SNIPPETS, TITLE_STYLES, CANVAS_TEMPLATES, TEMPLATE_CATEGORIES } from '@/components/cv-builder-pro/registry';
+import { EditableField, StaticLayoutRenderer } from '@/components/cv-builder-pro/components/CoreUI';
+import { initialData } from '@/lib/templates/canvas-initial-data';
+import { Sparkles, Blocks, LayoutTemplate } from 'lucide-react';
 
-interface Template {
-  id: string;
-  name: string;
-  thumbnail: string;
-  preview: string;
-}
+const FLOAT_POSITIONS = [
+  { x: -500, y: -250, rotation: -6, delay: 0.1, z: 10 },
+  { x: 500, y: -200, rotation: 5, delay: 0.15, z: 10 },
+  { x: -550, y: 50, rotation: -3, delay: 0.2, z: 20 },
+  { x: 550, y: 100, rotation: 4, delay: 0.25, z: 20 },
+  { x: -400, y: 350, rotation: -5, delay: 0.3, z: 30 },
+  { x: 400, y: 400, rotation: 6, delay: 0.35, z: 30 },
+  { x: -450, y: -100, rotation: 2, delay: 0.4, z: 15 },
+  { x: 450, y: 250, rotation: -4, delay: 0.45, z: 25 },
+  { x: -250, y: -350, rotation: -2, delay: 0.5, z: 5 },
+  { x: 250, y: 450, rotation: 3, delay: 0.55, z: 35 }
+];
 
-/**
- * Helper function to get template image URL
- */
-const getTemplateImageUrl = (filename: string): string => {
-  return `/templates/${encodeURIComponent(filename)}`;
-};
-
-const templates: Template[] = [
-  {
-    id: 'designer-modern',
-    name: 'Designer Modern',
-    thumbnail: getTemplateImageUrl('Designer Modern.png'),
-    preview: getTemplateImageUrl('Designer Modern.png')
-  },
-  {
-    id: 'executive-professional',
-    name: 'Executive Professional',
-    thumbnail: getTemplateImageUrl('Executive Professional.png'),
-    preview: getTemplateImageUrl('Executive Professional.png')
-  },
-  {
-    id: 'minimal-professional',
-    name: 'Minimal Professional',
-    thumbnail: getTemplateImageUrl('Minimal Professional.png'),
-    preview: getTemplateImageUrl('Minimal Professional.png')
-  },
-  {
-    id: 'executive-minimal',
-    name: 'Executive Minimal',
-    thumbnail: getTemplateImageUrl('Executive minimal.png'),
-    preview: getTemplateImageUrl('Executive minimal.png')
-  },
-  {
-    id: 'data-driven-pro',
-    name: 'Data Driven Pro',
-    thumbnail: getTemplateImageUrl('Data Driven Pro.png'),
-    preview: getTemplateImageUrl('Data Driven Pro.png')
-  },
-  {
-    id: 'elegant-timeline',
-    name: 'Elegant Timeline',
-    thumbnail: getTemplateImageUrl('Elegant Timeline.png'),
-    preview: getTemplateImageUrl('Elegant Timeline.png')
-  },
-  {
-    id: 'executive-standard',
-    name: 'Executive Standard',
-    thumbnail: getTemplateImageUrl('Executive Standard.png'),
-    preview: getTemplateImageUrl('Executive Standard.png')
-  },
-  {
-    id: 'header-professional',
-    name: 'Header Professional',
-    thumbnail: getTemplateImageUrl('Header Professional.png'),
-    preview: getTemplateImageUrl('Header Professional.png')
-  },
-  {
-    id: 'one-pager-professional',
-    name: 'One Pager Professional',
-    thumbnail: getTemplateImageUrl('One pager Professional.jpg'),
-    preview: getTemplateImageUrl('One pager Professional.jpg')
-  },
-  {
-    id: 'professional-minimal',
-    name: 'Professional Minimal',
-    thumbnail: getTemplateImageUrl('Professinal Minimal.png'),
-    preview: getTemplateImageUrl('Professinal Minimal.png')
-  },
-  {
-    id: 'tech-pro-blue',
-    name: 'Tech Pro Blue',
-    thumbnail: getTemplateImageUrl('Tech Pro Blue.png'),
-    preview: getTemplateImageUrl('Tech Pro Blue.png')
-  },
-  {
-    id: 'classic-minimal',
-    name: 'Classic Minimal',
-    thumbnail: getTemplateImageUrl('Minimal Professional.png'),
-    preview: getTemplateImageUrl('Minimal Professional.png')
-  }
+const TARGET_TEMPLATES = [
+  'tpl-1', 'tpl-6', 'tpl-7', 'tpl-8', 'tpl-14', 
+  'tpl-2', 'tpl-5', 
+  'tpl-10', 'tpl-11', 'tpl-12',
+  'tpl-3', 'tpl-4', 'tpl-9', 'tpl-15',
+  'tpl-13'
 ];
 
 const PremiumTemplates = () => {
   const router = useRouter();
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const cardSwapDelay = 4000; // Match the delay prop in CardSwap
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
-  const handleCtaClick = () => {
-    router.push('/sign-up');
-  };
+  const [templateIndex, setTemplateIndex] = useState(0);
 
-  const handleCardClick = (index: number) => {
-    setCurrentIndex(index);
-  };
-
-  // Track automatic card cycling to update the active template name
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % templates.length);
-    }, cardSwapDelay);
-
+      setTemplateIndex((prev) => (prev + 1) % TARGET_TEMPLATES.length);
+    }, 5000); // Give enough time for reading and animations
     return () => clearInterval(interval);
   }, []);
 
+  const activeTemplate = CANVAS_TEMPLATES.find(t => t.id === TARGET_TEMPLATES[templateIndex]) || CANVAS_TEMPLATES[0];
+
+  // Extract unique snippet IDs from the active template's zones
+  const activeSnippets = useMemo(() => {
+    const ids = Object.values(activeTemplate.zones).flat();
+    return Array.from(new Set(ids)).slice(0, 10); // max 10 to fit positions
+  }, [activeTemplate]);
+
+  // Memoize the editable field so it behaves as readOnly inside the showcase
+  const ReadOnlyWrapper = useMemo(() => function Editable(props: any) { 
+    return <EditableField {...props} data={initialData} readOnly={true} />; 
+  }, []);
+
   return (
-    <section
-      id="premium-templates"
-      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-[#141810]"
-    >
-      {/* Background Effects - Subtle dark glow */}
+    <section id="premium-templates" className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden bg-[#141810] py-32" ref={ref}>
+      {/* Background Effects */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#603a86]/20 rounded-full blur-[150px]"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#603a86]/20 rounded-full blur-[150px]"></div>
       </div>
 
-      <div className="relative z-10 w-full max-w-[1500px] mx-auto px-4 tablet:px-6 desktop:px-8 pt-8 pb-20">
-        {/* Main Container with Luxury Design - Matching Landing Page Theme */}
+      <div className="relative z-40 text-center mb-16 px-6">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6 }} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lime-400/10 border border-lime-400/20 text-lime-400 mb-6">
+          <Blocks className="w-4 h-4" />
+          <span className="text-sm font-semibold tracking-wide uppercase">Template Library</span>
+        </motion.div>
+        <motion.h2 initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, delay: 0.1 }} className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+          Select a foundation layout. <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">All snippets can be fully customized inside.</span>
+        </motion.h2>
+        <motion.p initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, delay: 0.2 }} className="text-gray-400 text-lg max-w-2xl mx-auto">
+          From traditional top-to-bottom flow to modern sidebar aesthetics. We have everything tailored for ATS compatibility and human readability.
+        </motion.p>
+      </div>
+
+      {/* Showcase Canvas Container */}
+      <div className="relative w-full max-w-6xl mx-auto h-[800px] flex items-center justify-center pointer-events-none mt-10">
+        
+        {/* Floating Snippets (Blast Effect) */}
+        {activeSnippets.map((snippetId, i) => {
+          const SnippetComponent = SNIPPETS[snippetId as string];
+          if (!SnippetComponent) return null;
+
+          const pos = FLOAT_POSITIONS[i % FLOAT_POSITIONS.length];
+          const isSidebar = activeTemplate.zones?.sidebar?.includes(snippetId as string) || 
+                            activeTemplate.zones?.left?.includes(snippetId as string) || 
+                            activeTemplate.zones?.right?.includes(snippetId as string);
+          
+          const styleKey = isSidebar && activeTemplate.sidebarTitleStyle 
+            ? activeTemplate.sidebarTitleStyle 
+            : activeTemplate.titleStyle;
+
+          const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+          const isDarkTarget = activeTemplate.type.includes('dark') && isSidebar;
+
+          const Title = ({ titleKey }: any) => (
+            <TitleRenderer isDark={isDarkTarget}>
+              <ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap />
+            </TitleRenderer>
+          );
+
+          return (
+            <AnimatePresence key={`${activeTemplate.id}-${snippetId}`} mode="wait">
+              <motion.div
+                initial={{ x: '-50%', y: '-50%', scale: 0, opacity: 0, rotate: 0 }}
+                animate={isInView ? { 
+                  x: `calc(-50% + ${pos.x}px)`, 
+                  y: `calc(-50% + ${pos.y}px)`, 
+                  scale: 0.65, 
+                  opacity: 0.9, 
+                  rotate: pos.rotation 
+                } : {}}
+                exit={{ x: '-50%', y: '-50%', scale: 0, opacity: 0, rotate: 0 }}
+                transition={{ 
+                  delay: pos.delay, 
+                  type: 'spring', 
+                  stiffness: 60, 
+                  damping: 12,
+                  mass: 1 
+                }}
+                style={{ zIndex: pos.z }}
+                className={`absolute top-1/2 left-1/2 w-[400px] ${isDarkTarget ? 'bg-[#1a1a1a] border-slate-700' : 'bg-white border-white/20'} rounded-xl shadow-2xl overflow-hidden cv-document border-4 ring-1 ring-black/5`}
+              >
+                {/* Highlight overlay for snippets to emphasize modularity */}
+                <div className={`absolute inset-0 ${isDarkTarget ? 'bg-emerald-500/5' : 'bg-lime-400/5'} z-0`} />
+                <div className={`absolute left-2 top-2 z-10 ${isDarkTarget ? 'text-emerald-400 bg-[#222] border-slate-600' : 'text-lime-500 bg-lime-50 border-lime-100'} rounded p-1.5 shadow-sm border flex items-center gap-1.5`}>
+                  <LayoutTemplate className="w-3 h-3" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">{SnippetComponent.name}</span>
+                </div>
+                <div className="p-6 pt-12 relative z-10 pointer-events-none">
+                  <SnippetComponent.render 
+                    data={initialData} 
+                    Editable={ReadOnlyWrapper} 
+                    zoneId={isSidebar ? 'sidebar' : 'main'} 
+                    isDark={isDarkTarget} 
+                    Title={Title} 
+                    moveEntry={() => {}} 
+                    deleteEntry={() => {}} 
+                  />
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          );
+        })}
+
+        {/* Center Main Resume Canvas */}
         <motion.div
-          className="relative backdrop-blur-2xl rounded-3xl border border-white/10 overflow-hidden min-h-[700px] pt-4 tablet:pt-0 bg-[#603a86]"
-          style={{
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-            backgroundColor: '#603a86'
-          }}
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={isInView ? { scale: 1, opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          className="relative z-50 w-[550px] h-[777px] bg-white rounded-xl shadow-[0_0_80px_rgba(129,255,0,0.15)] overflow-hidden border border-white/20 ring-1 ring-black/50"
         >
-          <div className="relative w-full h-full flex flex-col desktop:flex-row items-center justify-between min-h-[700px] pl-8 tablet:pl-12 desktop:pl-16 pb-4 tablet:pb-6 desktop:pb-8">
-            {/* Left Side - Text Content */}
-            <div className="flex-1 flex flex-col justify-center space-y-6 desktop:space-y-8 z-10">
-              {/* Badge */}
-              <div className="text-lime-400 uppercase tracking-wider text-xs tablet:text-xs font-semibold">
-                CRAFTED FOR SUCCESS
-              </div>
-
-              {/* Title - Shows active template name */}
-              <motion.h2
-                key={currentIndex}
-                initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 50 }}
-                transition={{ duration: 0.5, ease: "easeInOut" }}
-                className="text-3xl tablet:text-4xl desktop:text-6xl font-bold text-white leading-tight"
-              >
-                {templates[currentIndex].name.split(' ').map((word, i) => (
-                  <React.Fragment key={i}>
-                    {word}
-                    {i < templates[currentIndex].name.split(' ').length - 1 && <br />}
-                  </React.Fragment>
-                ))}
-              </motion.h2>
-
-              {/* Description */}
-              <p className="text-white/70 text-sm tablet:text-base desktop:text-lg leading-relaxed max-w-lg">
-                A clean, modern, and straightforward design that lets your experience speak for itself. Perfect for any industry.
-              </p>
-
-              {/* CTA Button */}
-              <motion.button
-                onClick={handleCtaClick}
-                className="bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold px-8 py-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg shadow-[rgb(129,255,0)]/30 w-fit"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                View Templates
-              </motion.button>
+          {/* Top Navbar Simulation */}
+          <div className="absolute top-0 inset-x-0 h-10 bg-gray-100 border-b flex items-center px-4 gap-2 z-50">
+            <div className="w-3 h-3 rounded-full bg-red-400" />
+            <div className="w-3 h-3 rounded-full bg-yellow-400" />
+            <div className="w-3 h-3 rounded-full bg-green-400" />
+            <div className="ml-auto text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-lime-500" /> Live Preview
             </div>
+          </div>
 
-            {/* Right Side - CardSwap Component */}
-            <div className="flex-1 flex items-center justify-end relative w-full desktop:w-auto h-full overflow-visible p-0">
-              <div className="mt-8 tablet:mt-12 desktop:mt-16 mr-4 tablet:mr-6 desktop:mr-8">
-                <CardSwap
-                  width={450}
-                  height={550}
-                  cardDistance={60}
-                  verticalDistance={70}
-                  delay={cardSwapDelay}
-                  pauseOnHover={true}
-                  onCardClick={handleCardClick}
-                  skewAmount={6}
-                  easing="elastic"
+          <div className="absolute inset-0 pt-10 overflow-hidden bg-gray-50 flex justify-center items-start pointer-events-none">
+            {/* The Actual Rendered CV */}
+            <div className="relative w-[794px] h-[1123px] origin-top-left shadow-sm bg-white" style={{ transform: 'scale(0.65)', marginTop: '20px', marginLeft: '16px' }}>
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={activeTemplate.id}
+                  initial={{ opacity: 0, filter: 'blur(4px)' }}
+                  animate={{ opacity: 1, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, filter: 'blur(4px)' }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0 w-full h-full cv-document"
                 >
-                  {templates.map((template) => (
-                    <Card
-                      key={template.id}
-                      customClass="bg-white rounded-2xl overflow-hidden shadow-2xl"
-                    >
-                      <div className="relative w-full h-full p-4">
-                        <Image
-                          src={template.preview}
-                          alt={template.name}
-                          fill
-                          className="object-contain rounded-lg"
-                          quality={80}
-                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                          loading="lazy"
-                        />
-                      </div>
-                    </Card>
-                  ))}
-                </CardSwap>
-              </div>
+                  <StaticLayoutRenderer 
+                    template={activeTemplate} 
+                    cvData={initialData} 
+                    ReadOnlyWrapper={ReadOnlyWrapper} 
+                  />
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
         </motion.div>
       </div>
+
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, delay: 0.8 }} className="relative z-50 mt-16 text-center">
+        <button onClick={() => router.push('/sign-up')} className="bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-bold text-xl px-12 py-5 rounded-full transition-all shadow-[0_0_40px_rgba(129,255,0,0.3)] hover:shadow-[0_0_60px_rgba(129,255,0,0.5)] hover:-translate-y-1 inline-flex items-center gap-3">
+          Start Building Free <Sparkles className="w-5 h-5" />
+        </button>
+      </motion.div>
+
+      {/* Global CSS required to render snippets properly in landing page */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+        .cv-document { font-family: 'Inter', sans-serif; color: #1f2937; font-size: 12px; }
+        .cv-name { font-size: calc(12px * 2.5); line-height: 1.1; }
+        .cv-name-narrow { font-size: calc(12px * 2.0); line-height: 1.1; }
+        .cv-role { font-size: calc(12px * 1.15); }
+        .cv-heading { font-size: calc(12px * 1.1); }
+        .cv-title { font-size: calc(12px * 1.05); }
+        .cv-subtitle { font-size: calc(12px * 0.95); }
+        .cv-date { font-size: calc(12px * 0.85); }
+        .cv-contact { font-size: calc(12px * 0.85); }
+        .cv-body { font-size: inherit; line-height: calc(1.6 * 1.0); }
+        .cv-document p, .cv-document ul, .cv-document li { font-size: inherit !important; line-height: inherit !important; margin: 0; padding: 0; }
+        .cv-prose p { margin-bottom: calc(0.3em * 1.0) !important; }
+        .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * 1.0) !important; margin-bottom: calc(0.25em * 1.0) !important; }
+        .cv-prose li { margin-bottom: calc(0.15em * 1.0) !important; }
+        .cv-accent-text { color: #22c55e !important; }
+        .cv-accent-bg { background-color: #22c55e !important; }
+        .cv-accent-border { border-color: #22c55e !important; }
+      `}} />
     </section>
   );
 };
