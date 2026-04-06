@@ -26,6 +26,10 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       if (!translated.basics.title && translated.basics.label) {
         translated.basics.title = translated.basics.label;
       }
+      if (Array.isArray(translated.basics.profiles)) {
+        const linkedin = translated.basics.profiles.find((p: any) => p.network?.toLowerCase() === 'linkedin');
+        if (linkedin) translated.basics.linkedin = linkedin.url;
+      }
     }
 
     // Map work -> experience
@@ -100,9 +104,46 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
   }, [cvData]);
 
   const handleDataChange = useCallback((updatedCanvasData: any) => {
+    if (!updatedCanvasData) return;
+
     // Reverse map the changes back to UnifiedCVDataStructure
-    const newCvData = { ...updatedCanvasData };
+    // We deep copy the original cvData to avoid destroying unmapped nested structures (like basics.location object)
+    const newCvData = JSON.parse(JSON.stringify(cvData));
     
+    // Copy simple scalar fields back from updatedCanvasData.basics to newCvData.basics
+    if (updatedCanvasData.basics) {
+      Object.keys(updatedCanvasData.basics).forEach(key => {
+        // Skip location and linkedin because they might be special in UnifiedCVDataStructure
+        if (key === 'location') {
+          if (!newCvData.basics.location) newCvData.basics.location = {};
+          newCvData.basics.location.city = updatedCanvasData.basics.location;
+        } else if (key === 'linkedin') {
+          // If profiles array doesn't exist, create it
+          if (!newCvData.basics.profiles) newCvData.basics.profiles = [];
+          const linkedinProfile = newCvData.basics.profiles.find((p: any) => p.network?.toLowerCase() === 'linkedin');
+          if (linkedinProfile) {
+            linkedinProfile.url = updatedCanvasData.basics.linkedin;
+          } else {
+            newCvData.basics.profiles.push({ network: 'LinkedIn', url: updatedCanvasData.basics.linkedin });
+          }
+        } else {
+          newCvData.basics[key] = updatedCanvasData.basics[key];
+        }
+      });
+    }
+
+    // Copy sectionTitles
+    if (updatedCanvasData.sectionTitles) {
+      newCvData.sectionTitles = updatedCanvasData.sectionTitles;
+    }
+
+    const copyDirectly = ['projects', 'certifications', 'awards', 'publications', 'volunteer', 'references'];
+    copyDirectly.forEach(key => {
+      if (updatedCanvasData[key]) {
+        newCvData[key] = updatedCanvasData[key];
+      }
+    });
+
     if (updatedCanvasData?.experience) {
       newCvData.work = updatedCanvasData.experience.map((exp: any) => {
         let summary = '';
@@ -177,7 +218,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
     }
 
     onDataChange(newCvData);
-  }, [onDataChange]);
+  }, [cvData, onDataChange]);
 
   if (!canvasData) return null;
 
