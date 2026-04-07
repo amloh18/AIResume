@@ -39,7 +39,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
         role: w.position,
         company: w.name,
         date: w.startDate && w.endDate ? `${w.startDate} - ${w.endDate}` : w.startDate || w.endDate || '',
-        description: w.summary ? `<p>${w.summary}</p>` + (w.highlights?.length ? `<ul>${w.highlights.map((h: string) => `<li>${h}</li>`).join('')}</ul>` : '') : '',
+        description: w.summary ? `<p>${w.summary}</p>` + (Array.isArray(w.highlights) && w.highlights.length ? `<ul>${w.highlights.map((h: string) => `<li>${h}</li>`).join('')}</ul>` : '') : (Array.isArray(w.highlights) && w.highlights.length ? `<ul>${w.highlights.map((h: string) => `<li>${h}</li>`).join('')}</ul>` : ''),
       }));
     }
     
@@ -58,8 +58,17 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
     if (Array.isArray(cvData.skills)) {
       const skillsObj: any = { languages: '', frameworks: '', tools: '' };
       cvData.skills.forEach((skillGrp: any) => {
+        if (typeof skillGrp === 'string') {
+          // If it's just an array of strings, dump them all into languages for now
+          skillsObj.languages = skillsObj.languages ? skillsObj.languages + ', ' + skillGrp : skillGrp;
+          return;
+        }
+        
         const name = (skillGrp.name || '').toLowerCase();
-        const keywordsStr = Array.isArray(skillGrp.keywords) ? skillGrp.keywords.join(', ') : '';
+        const keywordsStr = Array.isArray(skillGrp.keywords) ? skillGrp.keywords.join(', ') : (typeof skillGrp.keywords === 'string' ? skillGrp.keywords : '');
+        
+        if (!keywordsStr) return; // don't add empty strings with commas
+
         if (name.includes('language') || name.includes('core')) {
           skillsObj.languages = skillsObj.languages ? skillsObj.languages + ', ' + keywordsStr : keywordsStr;
         } else if (name.includes('framework') || name.includes('library')) {
@@ -70,7 +79,10 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       });
       // Fallback if no specific categories were found but skills exist
       if (!skillsObj.languages && !skillsObj.frameworks && !skillsObj.tools && cvData.skills.length > 0) {
-        skillsObj.languages = cvData.skills.map((s: any) => Array.isArray(s.keywords) ? s.keywords.join(', ') : s.name).filter(Boolean).join(', ');
+        skillsObj.languages = cvData.skills.map((s: any) => {
+          if (typeof s === 'string') return s;
+          return Array.isArray(s.keywords) ? s.keywords.join(', ') : s.name;
+        }).filter(Boolean).join(', ');
       }
       translated.skills = skillsObj;
     }
@@ -197,13 +209,13 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
 
     if (updatedCanvasData?.skills && typeof updatedCanvasData.skills === 'object' && !Array.isArray(updatedCanvasData.skills)) {
       const newSkills: any[] = [];
-      if (updatedCanvasData.skills.languages) {
+      if (updatedCanvasData.skills.languages && typeof updatedCanvasData.skills.languages === 'string') {
         newSkills.push({ name: 'Core Languages', keywords: updatedCanvasData.skills.languages.split(',').map((s: string) => s.trim()).filter(Boolean) });
       }
-      if (updatedCanvasData.skills.frameworks) {
+      if (updatedCanvasData.skills.frameworks && typeof updatedCanvasData.skills.frameworks === 'string') {
         newSkills.push({ name: 'Frameworks', keywords: updatedCanvasData.skills.frameworks.split(',').map((s: string) => s.trim()).filter(Boolean) });
       }
-      if (updatedCanvasData.skills.tools) {
+      if (updatedCanvasData.skills.tools && typeof updatedCanvasData.skills.tools === 'string') {
         newSkills.push({ name: 'Tools & Tech', keywords: updatedCanvasData.skills.tools.split(',').map((s: string) => s.trim()).filter(Boolean) });
       }
       newCvData.skills = newSkills;
