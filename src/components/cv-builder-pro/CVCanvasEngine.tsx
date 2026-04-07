@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, us
 import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
+import { JSONSidebarViewer } from './components/JSONSidebarViewer';
 import ListEntry from './components/ListEntry';
 import { generateId, setNestedValue, getNestedValue } from './helpers';
 
@@ -267,7 +268,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         {activeSidebar === 'data' && (
           <div className={`w-[400px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
             <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}><h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><FileJson size={18} className={brandGreen}/> Raw JSON</h3><button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button></div>
-            <textarea className={`flex-1 w-full p-4 text-sm font-mono outline-none resize-none custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a] text-emerald-400' : 'bg-gray-50 text-gray-800'}`} value={JSON.stringify(cvData, null, 2)} onChange={(e) => { try { onDataChange(JSON.parse(e.target.value)); } catch {} }} spellCheck={false} />
+            <div className="flex-1 overflow-hidden relative">
+              <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} />
+            </div>
           </div>
         )}
 
