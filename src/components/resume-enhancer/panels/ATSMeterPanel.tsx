@@ -22,8 +22,14 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
       return atsAnalysis.extractedKeywords.slice(0, 10) as string[];
     }
     // Fallback based on CV Data
-    const skills = state.cvData?.skills?.flatMap((s: any) => s.skills) || [];
-    if (skills.length > 0) return skills.slice(0, 10) as string[];
+    try {
+      if (Array.isArray(state.cvData?.skills)) {
+        const skills = state.cvData.skills.flatMap((s: any) => s.keywords || s.skills || []);
+        if (skills && skills.length > 0) return skills.filter(Boolean).slice(0, 10) as string[];
+      }
+    } catch (e) {
+      console.warn("Failed to extract skills for ATS meter", e);
+    }
     return ['JavaScript', 'React', 'Node.js', 'Python', 'Git', 'Agile', 'REST APIs', 'SQL'];
   }, [atsAnalysis, state.cvData]);
 
@@ -153,7 +159,9 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
           <div className="flex items-center justify-center gap-1.5 text-sm text-gray-400 mt-1">
             <FileText className="w-4 h-4 text-blue-400" />
             <span className="truncate max-w-[200px] text-blue-400/90 font-medium">
-              {state.cvData?.basics?.name ? `${state.cvData.basics.name.replace(/\s+/g, '_')}_CV` : 'My_Resume'}.pdf
+              {typeof state.cvData?.basics?.name === 'string' && state.cvData.basics.name 
+                ? `${state.cvData.basics.name.replace(/\s+/g, '_')}_CV` 
+                : 'My_Resume'}.pdf
             </span>
           </div>
         </div>

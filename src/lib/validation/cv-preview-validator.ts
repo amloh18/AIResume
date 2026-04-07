@@ -155,7 +155,7 @@ function validateWorkExperience(
   sectionFormats: Record<string, SectionFormatRule>
 ): void {
   const work = cvData.work;
-  if (!work?.length) return;
+  if (!Array.isArray(work) || !work.length) return;
 
   const formatRule = sectionFormats.work_experience;
 
@@ -176,7 +176,7 @@ function validateWorkExperience(
     }
 
     // Action verb check on highlights
-    if (formatRule?.constraints.requireActionVerb && job.highlights) {
+    if (formatRule?.constraints.requireActionVerb && Array.isArray(job.highlights)) {
       job.highlights.forEach((highlight, j) => {
         if (highlight.trim() && !startsWithActionVerb(highlight)) {
           const firstWord = highlight.trim().split(/\s+/)[0];
@@ -194,7 +194,7 @@ function validateWorkExperience(
     }
 
     // Max bullets check
-    if (formatRule?.constraints.maxBullets && job.highlights) {
+    if (formatRule?.constraints.maxBullets && Array.isArray(job.highlights)) {
       if (job.highlights.length > formatRule.constraints.maxBullets) {
         warnings.push({
           id: `work-max-bullets-${i}`,
@@ -229,7 +229,7 @@ function validateEducation(
   edgeCases: CVLayoutRules['edgeCases']
 ): void {
   const education = cvData.education;
-  if (!education?.length) return;
+  if (!Array.isArray(education) || !education.length) return;
 
   education.forEach((edu, i) => {
     const prefix = `education[${i}]`;
@@ -261,18 +261,20 @@ function validateSkills(
   edgeCases: CVLayoutRules['edgeCases']
 ): void {
   const skills = cvData.skills;
-  if (!skills?.length) return;
+  if (!Array.isArray(skills) || !skills.length) return;
 
   const maxWords = edgeCases.skillsFormatting.maxWordsPerSkill;
 
-  skills.forEach((group, i) => {
-    if (group.skills) {
-      group.skills.forEach((skill, j) => {
+  skills.forEach((group: any, i) => {
+    const skillList = group.keywords || group.skills;
+    if (Array.isArray(skillList)) {
+      skillList.forEach((skill, j) => {
+        if (typeof skill !== 'string') return;
         const wordCount = skill.trim().split(/\s+/).length;
         if (wordCount > maxWords) {
           warnings.push({
             id: `skill-max-words-${i}-${j}`,
-            field: `skills[${i}].skills[${j}]`,
+            field: `skills[${i}].keywords[${j}]`,
             section: 'skills',
             type: 'warning',
             message: `"${skill}" is ${wordCount} words. Keep skill tags to ${maxWords} words or fewer for ATS scanning.`,
@@ -292,7 +294,7 @@ function validateProjects(
   sectionFormats: Record<string, SectionFormatRule>
 ): void {
   const projects = cvData.projects;
-  if (!projects?.length) return;
+  if (!Array.isArray(projects) || !projects.length) return;
 
   const formatRule = sectionFormats.projects;
 
@@ -312,7 +314,7 @@ function validateProjects(
     }
 
     // Action verb check on highlights
-    if (formatRule?.constraints.requireActionVerb && project.highlights) {
+    if (formatRule?.constraints.requireActionVerb && Array.isArray(project.highlights)) {
       project.highlights.forEach((highlight, j) => {
         if (highlight.trim() && !startsWithActionVerb(highlight)) {
           const firstWord = highlight.trim().split(/\s+/)[0];
