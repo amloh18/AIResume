@@ -5,17 +5,22 @@ import Image from 'next/image';
 import { Menu, X } from 'lucide-react';
 import './CardNav.css';
 
+interface SubmenuItem {
+  label: string;
+  href: string;
+  description?: string;
+  icon?: React.ReactNode;
+  snapshot?: string;
+  ariaLabel?: string;
+  isExternal?: boolean;
+}
+
 interface NavLink {
   label: string;
   href: string;
   ariaLabel?: string;
   isExternal?: boolean;
-  submenu?: Array<{
-    label: string;
-    href: string;
-    ariaLabel?: string;
-    isExternal?: boolean;
-  }>;
+  submenu?: SubmenuItem[];
 }
 
 interface CardNavProps {
@@ -215,7 +220,22 @@ const CardNav = ({
                           onClick={() => scrollToSection(subLink.href, subLink.isExternal)}
                           aria-label={subLink.ariaLabel}
                         >
-                          {subLink.label}
+                          {subLink.snapshot && subLink.icon && (
+                            <div className={`submenu-link-icon border ${subLink.snapshot}`}>
+                              {subLink.icon}
+                            </div>
+                          )}
+                          {!subLink.snapshot && subLink.icon && (
+                            <div className="submenu-link-icon bg-white/5 border border-white/10">
+                              {subLink.icon}
+                            </div>
+                          )}
+                          <div className="submenu-link-content">
+                            <span className="submenu-link-title">{subLink.label}</span>
+                            {subLink.description && (
+                              <span className="submenu-link-desc">{subLink.description}</span>
+                            )}
+                          </div>
                         </button>
                       ))}
                     </div>
@@ -226,6 +246,14 @@ const CardNav = ({
           </div>
 
           <div className="nav-actions">
+            <button
+              type="button"
+              className="card-nav-business-button hidden md:flex"
+              onClick={() => scrollToSection('/business', true)}
+            >
+              Business
+            </button>
+
             <button
               type="button"
               className="card-nav-cta-button"
@@ -270,6 +298,14 @@ const CardNav = ({
                 </button>
               );
             })}
+            <button
+              type="button"
+              className="mobile-cta-button mb-4"
+              onClick={() => scrollToSection('/business', true)}
+            >
+              Business
+            </button>
+
             <button
               type="button"
               className="mobile-cta-button"

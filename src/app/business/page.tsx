@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, Code2, Database, Zap, Shield, CheckCircle2, ChevronRight, BarChart } from 'lucide-react';
+import { ArrowRight, Code2, Database, Zap, Shield, CheckCircle2, ChevronRight, BarChart, Layout, CheckCircle, FileText, Globe } from 'lucide-react';
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
 
@@ -11,10 +11,23 @@ import Footer from '@/components/landing/Footer';
 
 export default function BusinessPage() {
   const navLinks = [
-    { label: 'API Docs', href: '#docs' },
-    { label: 'Features', href: '#features' },
+    { 
+      label: 'API Docs', 
+      href: '#docs',
+      submenu: [
+        { label: 'CV Parsing API', description: 'Extract JSON from PDF/DOCX', href: '#docs', icon: <FileText className="w-5 h-5 text-blue-400" />, snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30' },
+        { label: 'ATS Engine API', description: 'Score resumes against JDs', href: '#docs', icon: <CheckCircle className="w-5 h-5 text-green-400" />, snapshot: 'bg-gradient-to-br from-green-500/20 to-lime-600/20 border-green-500/30' }
+      ]
+    },
+    { 
+      label: 'Features', 
+      href: '#features',
+      submenu: [
+        { label: 'Multilingual Parsing', description: 'Supports 90+ languages natively', href: '#features', icon: <Globe className="w-5 h-5 text-purple-400" /> },
+        { label: 'Webhooks', description: 'Real-time processing events', href: '#features', icon: <Zap className="w-5 h-5 text-yellow-400" /> }
+      ]
+    },
     { label: 'Pricing', href: '#pricing' },
-    { label: 'Back to Home', href: '/', isExternal: false }
   ];
 
   return (
