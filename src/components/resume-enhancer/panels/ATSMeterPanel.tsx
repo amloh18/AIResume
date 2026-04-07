@@ -118,16 +118,26 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
 
       {/* Circular Gauge */}
       <div className="flex flex-col items-center justify-center mb-8 relative">
-        <div className="relative w-40 h-40 flex items-center justify-center">
+        <div className="relative w-48 h-48 flex items-center justify-center rounded-full shadow-[inset_0_4px_12px_rgba(0,0,0,0.6),0_8px_20px_rgba(0,0,0,0.4)] bg-gradient-to-b from-[#1a1e16] to-[#0f120c] border border-white/5">
           {/* Background circle */}
-          <svg className="w-full h-full transform -rotate-90 absolute inset-0 drop-shadow-[0_0_15px_rgba(129,255,0,0.15)]">
+          <svg className="w-40 h-40 transform -rotate-90 absolute">
             <circle
               cx="80"
               cy="80"
               r={radius}
-              stroke="rgba(255,255,255,0.1)"
-              strokeWidth="12"
+              stroke="rgba(0,0,0,0.8)"
+              strokeWidth="16"
               fill="transparent"
+            />
+            {/* Inner track bevel */}
+            <circle
+              cx="80"
+              cy="80"
+              r={radius}
+              stroke="rgba(255,255,255,0.03)"
+              strokeWidth="16"
+              fill="transparent"
+              className="drop-shadow-[inset_0_2px_4px_rgba(0,0,0,0.8)]"
             />
             {/* Progress circle */}
             <circle
@@ -135,22 +145,24 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
               cy="80"
               r={radius}
               stroke={strokeColor}
-              strokeWidth="12"
+              strokeWidth="14"
               fill="transparent"
               strokeDasharray={circumference}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
               className="transition-all duration-1000 ease-out"
-              style={{ filter: `drop-shadow(0 0 8px ${strokeColor}60)` }}
+              style={{ filter: `drop-shadow(0 0 10px ${strokeColor}80)` }}
             />
           </svg>
-          <div className="flex flex-col items-center justify-center z-10">
+          
+          {/* Inner raised circle */}
+          <div className="absolute w-32 h-32 rounded-full bg-gradient-to-tr from-[#1a1e16] to-[#252b1e] shadow-[0_6px_12px_rgba(0,0,0,0.5),inset_0_1px_2px_rgba(255,255,255,0.1)] flex flex-col items-center justify-center z-10 border border-white/5">
             <AnimatedScore 
               value={score} 
               size="lg" 
-              className="text-5xl font-black tracking-tighter" 
+              className="text-5xl font-black tracking-tighter drop-shadow-md text-white" 
             />
-            <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">ATS Score</span>
+            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">ATS Score</span>
           </div>
         </div>
         
