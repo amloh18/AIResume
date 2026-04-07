@@ -9,16 +9,16 @@ import { initialData } from '@/lib/templates/canvas-initial-data';
 import { Sparkles, Blocks, LayoutTemplate } from 'lucide-react';
 
 const FLOAT_POSITIONS = [
-  { x: -500, y: -250, rotation: -6, delay: 0.1, z: 10 },
-  { x: 500, y: -200, rotation: 5, delay: 0.15, z: 10 },
-  { x: -550, y: 50, rotation: -3, delay: 0.2, z: 20 },
-  { x: 550, y: 100, rotation: 4, delay: 0.25, z: 20 },
-  { x: -400, y: 350, rotation: -5, delay: 0.3, z: 30 },
-  { x: 400, y: 400, rotation: 6, delay: 0.35, z: 30 },
-  { x: -450, y: -100, rotation: 2, delay: 0.4, z: 15 },
-  { x: 450, y: 250, rotation: -4, delay: 0.45, z: 25 },
-  { x: -250, y: -350, rotation: -2, delay: 0.5, z: 5 },
-  { x: 250, y: 450, rotation: 3, delay: 0.55, z: 35 }
+  { x: -350, y: -200, rotation: -6, delay: 0.1, z: 60 },
+  { x: 350, y: -150, rotation: 5, delay: 0.15, z: 60 },
+  { x: -400, y: 50, rotation: -3, delay: 0.2, z: 70 },
+  { x: 400, y: 100, rotation: 4, delay: 0.25, z: 70 },
+  { x: -300, y: 300, rotation: -5, delay: 0.3, z: 80 },
+  { x: 300, y: 350, rotation: 6, delay: 0.35, z: 80 },
+  { x: -350, y: -100, rotation: 2, delay: 0.4, z: 65 },
+  { x: 350, y: 250, rotation: -4, delay: 0.45, z: 75 },
+  { x: -200, y: -300, rotation: -2, delay: 0.5, z: 55 },
+  { x: 200, y: 400, rotation: 3, delay: 0.55, z: 85 }
 ];
 
 const TARGET_TEMPLATES = [
@@ -35,11 +35,19 @@ const PremiumTemplates = () => {
   const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   const [templateIndex, setTemplateIndex] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    handleResize(); // Initial check
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setTemplateIndex((prev) => (prev + 1) % TARGET_TEMPLATES.length);
-    }, 5000); // Give enough time for reading and animations
+    }, 8000); // Increased time for reading and animations
     return () => clearInterval(interval);
   }, []);
 
@@ -77,7 +85,7 @@ const PremiumTemplates = () => {
       </div>
 
       {/* Showcase Canvas Container */}
-      <div className="relative w-full max-w-6xl mx-auto h-[800px] flex items-center justify-center pointer-events-none mt-10">
+      <div className="relative w-full max-w-6xl mx-auto h-[600px] md:h-[800px] flex items-center justify-center pointer-events-none mt-10 overflow-hidden md:overflow-visible">
         
         {/* Floating Snippets (Blast Effect) */}
         {activeSnippets.map((snippetId, i) => {
@@ -102,27 +110,43 @@ const PremiumTemplates = () => {
             </TitleRenderer>
           );
 
+          // For mobile, reduce the spread of snippets so they don't go out of bounds completely
+          const mobileScaleX = isMobile ? 0.4 : 1;
+          const mobileScaleY = isMobile ? 0.6 : 1;
+
           return (
             <AnimatePresence key={`${activeTemplate.id}-${snippetId}`} mode="wait">
               <motion.div
-                initial={{ x: '-50%', y: '-50%', scale: 0, opacity: 0, rotate: 0 }}
+                initial={{ 
+                  x: pos.x < 0 ? 'calc(-50% - 50vw)' : 'calc(-50% + 50vw)', 
+                  y: 'calc(-50% - 50vh)', 
+                  scale: 0.2, 
+                  opacity: 0, 
+                  rotate: pos.x < 0 ? -20 : 20 
+                }}
                 animate={isInView ? { 
-                  x: `calc(-50% + ${pos.x}px)`, 
-                  y: `calc(-50% + ${pos.y}px)`, 
-                  scale: 0.65, 
+                  x: `calc(-50% + ${pos.x * mobileScaleX}px)`, 
+                  y: `calc(-50% + ${pos.y * mobileScaleY}px)`, 
+                  scale: isMobile ? 0.45 : 0.65, 
                   opacity: 0.9, 
                   rotate: pos.rotation 
                 } : {}}
-                exit={{ x: '-50%', y: '-50%', scale: 0, opacity: 0, rotate: 0 }}
+                exit={{ 
+                  x: pos.x < 0 ? 'calc(-50% - 50vw)' : 'calc(-50% + 50vw)', 
+                  y: 'calc(-50% + 50vh)', 
+                  scale: 0.2, 
+                  opacity: 0, 
+                  rotate: pos.x < 0 ? -20 : 20 
+                }}
                 transition={{ 
                   delay: pos.delay, 
                   type: 'spring', 
-                  stiffness: 60, 
-                  damping: 12,
+                  stiffness: 40, 
+                  damping: 15,
                   mass: 1 
                 }}
                 style={{ zIndex: pos.z, '--cv-font': 'Inter', '--cv-base-size': '12px', '--cv-spacing': 1.0, '--cv-accent': '#22c55e' } as React.CSSProperties}
-                className={`absolute top-1/2 left-1/2 w-[400px] ${isDarkTarget ? 'bg-[#1a1a1a] border-slate-700' : 'bg-white border-white/20'} rounded-xl shadow-2xl overflow-hidden cv-document text-gray-900 border-4 ring-1 ring-black/5`}
+                className={`absolute top-1/2 left-1/2 w-[350px] md:w-[400px] ${isDarkTarget ? 'bg-[#1a1a1a] border-slate-700' : 'bg-white border-white/20'} rounded-xl shadow-2xl overflow-hidden cv-document text-gray-900 border-4 ring-1 ring-black/5`}
               >
                 {/* Highlight overlay for snippets to emphasize modularity */}
                 <div className={`absolute inset-0 ${isDarkTarget ? 'bg-emerald-500/5' : 'bg-lime-400/5'} z-0`} />
@@ -151,7 +175,7 @@ const PremiumTemplates = () => {
           initial={{ scale: 0.8, opacity: 0, y: 50 }}
           animate={isInView ? { scale: 1, opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className="relative z-50 w-[550px] h-[777px] bg-white rounded-xl shadow-[0_0_80px_rgba(129,255,0,0.15)] overflow-hidden border border-white/20 ring-1 ring-black/50"
+          className="relative z-40 w-[95%] max-w-[550px] h-[600px] md:h-[777px] bg-white rounded-xl shadow-[0_0_80px_rgba(129,255,0,0.15)] overflow-hidden border border-white/20 ring-1 ring-black/50"
         >
           {/* Top Navbar Simulation */}
           <div className="absolute top-0 inset-x-0 h-10 bg-gray-100 border-b flex items-center px-4 gap-2 z-50">
@@ -159,13 +183,13 @@ const PremiumTemplates = () => {
             <div className="w-3 h-3 rounded-full bg-yellow-400" />
             <div className="w-3 h-3 rounded-full bg-green-400" />
             <div className="ml-auto text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-lime-500" /> Live Preview
+              <Sparkles className="w-3 h-3 text-lime-500" />
             </div>
           </div>
 
-          <div className="absolute inset-0 pt-10 overflow-hidden bg-gray-50 flex justify-center items-start pointer-events-none">
+          <div className="absolute inset-0 pt-10 overflow-hidden bg-gray-50 flex justify-center items-start pointer-events-none" style={{ containerType: 'inline-size' }}>
             {/* The Actual Rendered CV */}
-            <div className="relative w-[794px] h-[1123px] origin-top-left shadow-sm bg-white" style={{ transform: 'scale(0.65)', marginTop: '20px', marginLeft: '16px' }}>
+            <div className="relative w-[794px] origin-top-left shadow-sm bg-white" style={{ transform: 'scale(calc(100cqw / 794))', minHeight: '1123px' }}>
               <AnimatePresence mode="wait">
                 <motion.div 
                   key={activeTemplate.id}
