@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Quote, AlignJustify, Columns, LayoutTemplate, Sidebar, User, Briefcase, GraduationCap, FolderOpen, Award, Trophy, Code2, Globe, Heart, BookOpen, Users, MapPin, Phone, Mail, Linkedin, Link as LinkIcon } from 'lucide-react';
+import { Quote, AlignJustify, Columns, LayoutTemplate, Sidebar, User, Briefcase, GraduationCap, FolderOpen, Award, Trophy, Code2, Globe, Heart, BookOpen, Users, MapPin, Phone, Mail, Linkedin, Link as LinkIcon, Github, Twitter, Facebook, Instagram, Youtube, Dribbble, Twitch, Figma, Gitlab } from 'lucide-react';
 import ListEntry from './components/ListEntry';
 
 // UNIFIED TYPOGRAPHY SYSTEM
@@ -20,6 +20,57 @@ const TYPOGRAPHY = {
 // ==========================================
 // TITLE STYLES REGISTRY
 // ==========================================
+export const getNetworkIcon = (network: string) => {
+  const n = (network || '').toLowerCase();
+  if (n.includes('linkedin')) return Linkedin;
+  if (n.includes('github')) return Github;
+  if (n.includes('twitter')) return Twitter;
+  if (n.includes('facebook')) return Facebook;
+  if (n.includes('instagram')) return Instagram;
+  if (n.includes('youtube')) return Youtube;
+  if (n.includes('dribbble')) return Dribbble;
+  if (n.includes('twitch')) return Twitch;
+  if (n.includes('figma')) return Figma;
+  if (n.includes('gitlab')) return Gitlab;
+  return LinkIcon;
+};
+
+export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, align = 'justify-center' }: any) => {
+  const links: React.ReactNode[] = [];
+  const headerLinks = design?.headerLinks || {};
+  const isVisible = (key: string) => headerLinks[key] !== false;
+  
+  if (isVisible('location')) links.push(<span className={`flex items-center gap-1.5 ${align}`} key="loc">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span>);
+  if (isVisible('phone')) links.push(<span className={`flex items-center gap-1.5 ${align}`} key="phone">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span>);
+  if (isVisible('email')) links.push(<span className={`flex items-center gap-1.5 ${align}`} key="email">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span>);
+  
+  // Legacy root fields
+  if (isVisible('linkedin') && data?.basics?.linkedin) links.push(<span className={`flex items-center gap-1.5 ${align}`} key="li">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>);
+  if (isVisible('website') && data?.basics?.website) links.push(<span className={`flex items-center gap-1.5 ${align}`} key="web">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>);
+  
+  // Profiles array
+  if (data?.basics?.profiles && Array.isArray(data.basics.profiles)) {
+    data.basics.profiles.forEach((profile: any, index: number) => {
+      const net = profile.network?.toLowerCase() || `link-${index}`;
+      if (isVisible(net)) {
+         const Icon = getNetworkIcon(net);
+         links.push(<span className={`flex items-center gap-1.5 ${align}`} key={`prof-${index}`}>{showIcons && <Icon size={13} /> }<Editable path={`basics.profiles.${index}.url`} breakAll /></span>);
+      }
+    });
+  }
+
+  return (
+    <>
+      {links.map((link, i) => (
+        <React.Fragment key={i}>
+          {link}
+          {!isNarrow && i < links.length - 1 && <span>&bull;</span>}
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
 const SECTION_ICONS: any = {
   summary: User,
   experience: Briefcase,
@@ -72,7 +123,7 @@ export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; 
 // ==========================================
 export const SNIPPETS: Record<string, { id: string; name: string; category: string; render: (props: any) => React.ReactNode }> = {
   // === HEADERS (7) ===
-  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
+  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`text-center pb-4 border-b ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'} mb-4 snippet-anim cv-keep-with-next`}>
@@ -80,16 +131,12 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest`}><Editable path="basics.name" /></h1>
         <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3`}><Editable path="basics.title" /></h2>
         <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5 items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact}`}>
-          <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+          <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
         </div>
       </div>
     );
   }},
-  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
+  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`flex ${isNarrow ? 'flex-col gap-4 text-center items-center' : 'justify-between items-end'} pb-4 border-b-[1.5px] ${isDark ? 'border-slate-600' : 'border-slate-800'} mb-4 snippet-anim w-full cv-keep-with-next`}>
@@ -101,16 +148,12 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
           </div>
         </div>
         <div className={`${isNarrow ? 'text-center w-full mt-2 flex-col items-center' : 'text-right flex-row justify-end flex-wrap gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} flex ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0 max-w-[60%]`}>
-          <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span>
-          <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span>
-          <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span>
-          <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>
-          <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+          <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
         </div>
       </div>
     );
   }},
-  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
+  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-5 mb-5 snippet-anim w-full cv-keep-with-next`}>
@@ -119,17 +162,13 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
           <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5`}><Editable path="basics.name" /></h1>
           <h2 className={`${TYPOGRAPHY.role} mb-3`}><Editable path="basics.title" /></h2>
           <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-            <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
-            <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
-            <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
-            <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
-            <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
           </div>
         </div>
       </div>
     );
   }},
-  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
+  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className="text-center pb-5 mb-5 snippet-anim w-full flex flex-col items-center cv-keep-with-next">
@@ -139,16 +178,12 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''}`}><Editable path="basics.title" /></h2>
         {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`mx-auto rounded-full object-cover shadow-xl mb-4 ${isNarrow ? 'w-28 h-28' : 'w-24 h-24'} ${isDark ? 'border-2 border-slate-700' : 'border-[4px] border-white'}`} />}
         <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact}`}>
-          <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>} 
-          <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+          <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
         </div>
       </div>
     );
   }},
-  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
+  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`pb-4 mb-5 border-b-[1.5px] ${isDark ? 'border-slate-700' : 'border-gray-900'} snippet-anim w-full cv-keep-with-next`}>
@@ -156,11 +191,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
           <div className="min-w-0 w-full">
             <h1 className={`${isNarrow ? 'text-2xl text-center' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" /></h1>
             <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
-              <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
             </div>
           </div>
           {data?.basics?.showAvatar && !isNarrow && <img src={data.basics.avatar} alt="Avatar" className={`rounded object-cover shadow-md shrink-0 w-20 h-24 ${isDark ? 'border border-slate-600' : ''}`} />}
@@ -168,7 +199,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
       </div>
     );
   }},
-  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons }: any) => {
+  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className="snippet-anim w-full mb-8 cv-keep-with-next">
@@ -181,18 +212,14 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
             {!isNarrow && <div className="flex flex-col justify-center"><Title titleKey="contact" overrideClass={`${TYPOGRAPHY.contact} tracking-widest uppercase mb-0 ${isDark ? 'text-gray-400' : 'text-gray-800'}`} /></div>}
             <div className="w-1.5 cv-accent-bg shrink-0 rounded-full"></div>
             <div className={`${TYPOGRAPHY.contact} flex flex-col justify-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              <span className="flex items-center gap-1.5 justify-end">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span>
-              <span className="flex items-center gap-1.5 justify-end">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span>
-              <span className="flex items-center gap-1.5 justify-end">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span>
-              <span className="flex items-center gap-1.5 justify-end">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span>
-              <span className="flex items-center gap-1.5 justify-end">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+              <ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : 'justify-end'} />
             </div>
           </div>
         </div>
       </div>
     );
   }},
-  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons }: any) => {
+  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
     return (
       <div className={`p-6 rounded-xl mb-6 snippet-anim cv-keep-with-next cv-accent-bg text-white shadow-lg`}>
@@ -201,11 +228,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
             <h1 className={`${isNarrow ? 'text-2xl' : 'text-4xl'} font-black tracking-tight mb-1`}><Editable path="basics.name" /></h1>
             <h2 className={`text-sm font-semibold tracking-widest uppercase opacity-90 mb-4`}><Editable path="basics.title" /></h2>
             <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} text-xs font-medium opacity-90`}>
-              <span className="flex items-center gap-1.5">{showIcons && <MapPin size={13} /> }<Editable path="basics.location" nowrap /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <Phone size={13} /> }<Editable path="basics.phone" nowrap /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <Mail size={13} /> }<Editable path="basics.email" breakAll /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <Linkedin size={13} /> }<Editable path="basics.linkedin" breakAll /></span> {!isNarrow && <span>&bull;</span>}
-              <span className="flex items-center gap-1.5">{showIcons && <LinkIcon size={13} /> }<Editable path="basics.website" breakAll /></span>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
             </div>
           </div>
           {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`rounded-full object-cover shrink-0 shadow-2xl border-4 border-white/20 ${isNarrow ? 'w-24 h-24 mx-auto mt-4' : 'w-24 h-24'}`} />}
