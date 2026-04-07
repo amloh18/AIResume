@@ -84,13 +84,23 @@ function LandingPageContent() {
       ]
     },
     { 
+      label: 'Business', 
+      href: '/business', 
+      ariaLabel: 'View Business API and SDK solutions',
+      isExternal: true,
+      submenu: [
+        { label: 'CV Parsing API', href: '/business', ariaLabel: 'CV Parsing API' },
+        { label: 'ATS SDK', href: '/business', ariaLabel: 'ATS Scoring SDK' },
+      ]
+    },
+    { 
       label: 'Pricing', 
       href: '#pricing', 
       ariaLabel: 'View pricing section',
       submenu: [
         { label: 'Free Plan', href: '#pricing', ariaLabel: 'Free plan details' },
         { label: 'Premium', href: '#pricing', ariaLabel: 'Premium plan details' },
-        { label: 'Enterprise', href: '#pricing', ariaLabel: 'Enterprise plan details' },
+        { label: 'Enterprise', href: '/business', ariaLabel: 'Enterprise plan details', isExternal: true },
       ]
     },
   ];

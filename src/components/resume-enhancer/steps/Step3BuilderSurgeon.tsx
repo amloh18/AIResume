@@ -34,6 +34,7 @@ import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor'
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import AddSectionModal from '@/components/resume-enhancer/AddSectionModal';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
+import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
 import { gsap } from 'gsap';
@@ -1002,7 +1003,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     return (
       <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
         {/* Main Container */}
-        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3">
+        <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
           <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
             <div ref={cvPreviewRef} className="flex-1 min-h-0 overflow-hidden">
@@ -1020,6 +1021,11 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 theme={typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
               />
             </div>
+          </div>
+          
+          {/* ATS Meter Panel on the right */}
+          <div className="hidden lg:block w-80 shrink-0 h-full relative z-10">
+             <ATSMeterPanel onOpenJobParser={() => setShowJobParserDialog(true)} />
           </div>
 
         </div >

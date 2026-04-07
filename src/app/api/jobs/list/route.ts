@@ -35,8 +35,15 @@ export async function GET(request: NextRequest) {
     const { getDb } = await import('@/lib/db');
     const db = await getDb();
 
+    let userObjId;
+    try {
+      userObjId = new ObjectId(userId);
+    } catch (e) {
+      userObjId = userId;
+    }
+
     const matchQuery: any = {
-      userId: new ObjectId(userId),
+      userId: userObjId,
       score: { $gte: filters.matchScoreMin, $lte: filters.matchScoreMax },
     };
 
@@ -86,7 +93,7 @@ export async function GET(request: NextRequest) {
     const applications = await db
       .collection<Application>('applications')
       .find({
-        userId: new ObjectId(userId),
+        userId: userObjId,
         jobId: { $in: jobIds },
       })
       .toArray();
