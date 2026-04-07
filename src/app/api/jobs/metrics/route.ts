@@ -16,14 +16,21 @@ export async function GET(request: NextRequest) {
     const { getDb } = await import('@/lib/db');
     const db = await getDb();
 
+    let userObjId;
+    try {
+      userObjId = new ObjectId(userId);
+    } catch (e) {
+      userObjId = userId;
+    }
+
     const [matches, applications] = await Promise.all([
       db
         .collection<JobMatch>('job_matches')
-        .find({ userId: new ObjectId(userId) })
+        .find({ userId: userObjId })
         .toArray(),
       db
         .collection<Application>('applications')
-        .find({ userId: new ObjectId(userId) })
+        .find({ userId: userObjId })
         .toArray(),
     ]);
 
@@ -74,13 +81,13 @@ export async function GET(request: NextRequest) {
     const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
     const appliedThisWeek = applications.filter(
-      (app) => app.createdAt >= oneWeekAgo && ['applied', 'interview', 'offer'].includes(app.status)
+      (app) => app.createdAt && new Date(app.createdAt) >= oneWeekAgo && ['applied', 'interview', 'offer'].includes(app.status)
     ).length;
 
     const appliedLastWeek = applications.filter(
       (app) =>
-        app.createdAt >= twoWeeksAgo &&
-        app.createdAt < oneWeekAgo &&
+        app.createdAt && new Date(app.createdAt) >= twoWeeksAgo &&
+        new Date(app.createdAt) < oneWeekAgo &&
         ['applied', 'interview', 'offer'].includes(app.status)
     ).length;
 
@@ -153,8 +160,8 @@ export async function GET(request: NextRequest) {
     }
 
     applications.forEach((app) => {
-      if (app.createdAt >= thirtyDaysAgo) {
-        const dateStr = app.createdAt.toISOString().split('T')[0];
+      if (app.createdAt && new Date(app.createdAt) >= thirtyDaysAgo) {
+        const dateStr = new Date(app.createdAt).toISOString().split('T')[0];
         const data = dailyData.get(dateStr);
         if (data) {
           data.applications++;
@@ -163,8 +170,8 @@ export async function GET(request: NextRequest) {
     });
 
     matches.forEach((match) => {
-      if (match.createdAt >= thirtyDaysAgo) {
-        const dateStr = match.createdAt.toISOString().split('T')[0];
+      if (match.createdAt && new Date(match.createdAt) >= thirtyDaysAgo) {
+        const dateStr = new Date(match.createdAt).toISOString().split('T')[0];
         const data = dailyData.get(dateStr);
         if (data) {
           data.matches++;

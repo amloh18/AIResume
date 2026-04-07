@@ -9,10 +9,12 @@ interface NavLink {
   label: string;
   href: string;
   ariaLabel?: string;
+  isExternal?: boolean;
   submenu?: Array<{
     label: string;
     href: string;
     ariaLabel?: string;
+    isExternal?: boolean;
   }>;
 }
 
@@ -50,7 +52,7 @@ const CardNav = ({
   };
 
 
-  const scrollToSection = (href: string) => {
+  const scrollToSection = (href: string, isExternal?: boolean) => {
     if (typeof window === 'undefined') return;
     
     // Close mobile menu when clicking a link
@@ -62,7 +64,11 @@ const CardNav = ({
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      window.location.href = href;
+      if (isExternal) {
+        window.open(href, '_blank', 'noopener,noreferrer');
+      } else {
+        window.location.href = href;
+      }
     }
   };
 
@@ -190,7 +196,7 @@ const CardNav = ({
                 >
                   <button
                     className="nav-link"
-                    onClick={() => scrollToSection(link.href)}
+                    onClick={() => scrollToSection(link.href, link.isExternal)}
                     aria-label={link.ariaLabel}
                     style={{
                       display: shouldHide ? 'none' : 'block'
@@ -206,7 +212,7 @@ const CardNav = ({
                         <button
                           key={`sub-${link.label}-${subIndex}`}
                           className="submenu-link"
-                          onClick={() => scrollToSection(subLink.href)}
+                          onClick={() => scrollToSection(subLink.href, subLink.isExternal)}
                           aria-label={subLink.ariaLabel}
                         >
                           {subLink.label}
@@ -254,7 +260,7 @@ const CardNav = ({
                 <button
                   key={`mobile-${link.label}-${index}`}
                   className="mobile-nav-link"
-                  onClick={() => scrollToSection(link.href)}
+                  onClick={() => scrollToSection(link.href, link.isExternal)}
                   aria-label={link.ariaLabel}
                   style={{
                     display: shouldHide ? 'none' : 'block'
