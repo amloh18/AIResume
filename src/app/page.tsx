@@ -165,6 +165,9 @@ function LandingPageContent() {
           {/* Hero Section */}
           <Hero />
 
+          {/* Premium Templates Section */}
+          <PremiumTemplates />
+
           {/* How It Works Section */}
           <HowItWorks />
 
@@ -176,13 +179,6 @@ function LandingPageContent() {
 
           {/* Chrome Extension Section */}
           <ChromeExtension />
-
-
-
-          {/* Premium Templates Section */}
-          <PremiumTemplates />
-
-
 
           {/* Testimonials Section */}
           <Testimonials />
