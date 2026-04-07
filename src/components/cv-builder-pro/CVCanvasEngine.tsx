@@ -267,7 +267,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         {/* MAIN CANVAS */}
         <div className={`flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
-          <div className={`fixed bottom-5 right-5 backdrop-blur px-3 py-1.5 rounded-full shadow-lg border text-xs font-medium flex items-center gap-2 z-40 no-print ${isDarkUI ? 'bg-[#111]/80 border-[#333] text-white' : 'bg-white/80 border-gray-200 text-gray-800'}`}><Plus size={14} className={brandGreen}/> Click text to edit</div>
           <div key={templateAnimKey} className="transform origin-top transition-transform scale-[0.85] lg:scale-100 xl:scale-105 h-max pb-20 text-gray-900">
             <div className="cv-document-wrapper relative shadow-2xl" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px` } as React.CSSProperties}>
               <div className="cv-page-visualizer"></div>
