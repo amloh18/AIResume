@@ -94,6 +94,7 @@ export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
 
 export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate }: any) => {
   const ctx = React.useContext(CanvasContext);
+  if (!instance || !instance.type) return null;
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
   if (!SnippetComponent) return null; // Safe guard if fallback fails
   const isDropTarget = dragState?.overZoneId === zoneId && dragState?.overIndex === index;
@@ -186,7 +187,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
     <div className="relative group/zone h-full flex flex-col">
       <div className={`flex-1 min-h-[150px] transition-colors pb-10 ${isOverZone && !readOnly ? 'bg-gray-50/50' : ''} ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 italic pointer-events-none border-2 border-dashed border-gray-200 rounded-lg m-2 no-print">Empty Zone</div>}
-        {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance.id} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} isDark={isDark} />)}
+        {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} isDark={isDark} />)}
         {showAppendLine && <div className="w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded mt-4 pointer-events-none"></div>}
       </div>
       {!readOnly && (

@@ -80,9 +80,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   }));
 
   const loadTemplate = (template: any) => {
+    if (!template) return;
     setActiveTemplate(template);
     const initialZones: Record<string, any[]> = {};
-    Object.keys(template.zones).forEach((zoneId: string) => { initialZones[zoneId] = template.zones[zoneId].map((type: string) => ({ id: generateId(), type })); });
+    if (template?.zones) {
+      Object.keys(template.zones).forEach((zoneId: string) => {
+        initialZones[zoneId] = template.zones[zoneId].map((type: string) => ({ id: generateId(), type }));
+      });
+    }
     setZones(initialZones);
     setIsTemplateModalOpen(false);
     setTemplateAnimKey(prev => prev + 1);
@@ -128,6 +133,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       const insertIndex = targetIndex !== undefined && targetIndex !== null ? targetIndex : newZones[targetZoneId].length;
       if (dragData.source === 'canvas') {
         const { zoneId: sourceZoneId, index: sourceIndex, instance } = dragData;
+        
+        // Safety check to ensure the source zone exists and has the index
+        if (!newZones[sourceZoneId] || !newZones[sourceZoneId][sourceIndex]) return prev;
+        
         newZones[sourceZoneId].splice(sourceIndex, 1);
         let finalInsertIndex = insertIndex;
         if (sourceZoneId === targetZoneId && sourceIndex < insertIndex) finalInsertIndex -= 1;
@@ -137,8 +146,25 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     });
   };
 
-  const moveSnippet = (zoneId: string, index: number, dir: number) => { setZones(prev => { const newZones = { ...prev }; const list = newZones[zoneId]; if (index + dir < 0 || index + dir >= list.length) return prev; const item = list[index]; list.splice(index, 1); list.splice(index + dir, 0, item); return newZones; }); };
-  const removeSnippet = (zoneId: string, index: number) => { setZones(prev => { const newZones = { ...prev }; newZones[zoneId].splice(index, 1); return newZones; }); };
+  const moveSnippet = (zoneId: string, index: number, dir: number) => { 
+    setZones(prev => { 
+      const newZones = { ...prev }; 
+      const list = newZones[zoneId]; 
+      if (!list || index + dir < 0 || index + dir >= list.length) return prev; 
+      const item = list[index]; 
+      list.splice(index, 1); 
+      list.splice(index + dir, 0, item); 
+      return newZones; 
+    }); 
+  };
+  
+  const removeSnippet = (zoneId: string, index: number) => { 
+    setZones(prev => { 
+      const newZones = { ...prev }; 
+      if (newZones[zoneId]) newZones[zoneId].splice(index, 1); 
+      return newZones; 
+    }); 
+  };
 
   const moveEntry = (collection: string, index: number, dir: number) => {
     const arr = [...(cvData[collection] || [])];
