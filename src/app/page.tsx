@@ -2,6 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import { FileText, Sparkles, Layout, PenTool, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import ProductVideo from '@/components/landing/ProductVideo';
@@ -54,23 +55,34 @@ function LandingPageContent() {
 
   const navLinks = [
     { 
-      label: 'How to', 
-      href: '#how-it-works', 
-      ariaLabel: 'View how it works section',
-      submenu: [
-        { label: 'Create Resume', href: '#how-it-works', ariaLabel: 'Learn how to create a resume' },
-        { label: 'Cover Letters', href: '#how-it-works', ariaLabel: 'Learn about cover letters' },
-        { label: 'Career Tips', href: '#features', ariaLabel: 'View career tips' },
-      ]
-    },
-    { 
-      label: 'Features', 
+      label: 'Products', 
       href: '#features', 
-      ariaLabel: 'View features section',
+      ariaLabel: 'View products section',
       submenu: [
-        { label: 'AI Builder', href: '#features', ariaLabel: 'AI-powered resume builder' },
-        { label: 'ATS Check', href: '#features', ariaLabel: 'ATS compatibility check' },
-        { label: 'Templates', href: '#premium-templates', ariaLabel: 'View premium templates' },
+        { 
+          label: 'AI Resume Builder', 
+          description: 'Create ATS-friendly resumes in minutes with AI assistance.', 
+          href: '#features', 
+          ariaLabel: 'AI-powered resume builder',
+          icon: <Sparkles className="w-6 h-6 text-lime-400" />,
+          snapshot: 'bg-gradient-to-br from-lime-500/20 to-green-600/20 border-lime-500/30'
+        },
+        { 
+          label: 'ATS Scanner', 
+          description: 'Test your resume against job descriptions for better match rates.', 
+          href: '#features', 
+          ariaLabel: 'ATS compatibility check',
+          icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
+          snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30'
+        },
+        { 
+          label: 'Premium Templates', 
+          description: 'Beautiful, professional templates designed by experts.', 
+          href: '#premium-templates', 
+          ariaLabel: 'View premium templates',
+          icon: <Layout className="w-6 h-6 text-orange-400" />,
+          snapshot: 'bg-gradient-to-br from-orange-500/20 to-red-600/20 border-orange-500/30'
+        },
       ]
     },
     { 
@@ -78,19 +90,41 @@ function LandingPageContent() {
       href: '#chrome-extension', 
       ariaLabel: 'View browser extension section',
       submenu: [
-        { label: 'Chrome', href: '#chrome-extension', ariaLabel: 'Chrome extension' },
-        { label: 'Edge', href: '#chrome-extension', ariaLabel: 'Edge extension' },
-        { label: 'Firefox', href: '#chrome-extension', ariaLabel: 'Firefox extension' },
+        { 
+          label: 'Chrome Add-on', 
+          description: 'Analyze jobs and sync data directly from Google Chrome.', 
+          href: '#chrome-extension', 
+          ariaLabel: 'Chrome extension',
+          icon: <Chrome className="w-6 h-6 text-yellow-400" />
+        },
+        { 
+          label: 'Edge Add-on', 
+          description: 'Native support for Microsoft Edge browser.', 
+          href: '#chrome-extension', 
+          ariaLabel: 'Edge extension',
+          icon: <Globe className="w-6 h-6 text-blue-400" />
+        },
       ]
     },
     { 
-      label: 'Business', 
-      href: '/business', 
-      ariaLabel: 'View Business API and SDK solutions',
-      isExternal: true,
+      label: 'Resources', 
+      href: '#how-it-works', 
+      ariaLabel: 'View resources',
       submenu: [
-        { label: 'CV Parsing API', href: '/business', ariaLabel: 'CV Parsing API' },
-        { label: 'ATS SDK', href: '/business', ariaLabel: 'ATS Scoring SDK' },
+        { 
+          label: 'How it Works', 
+          description: 'Step-by-step guide to landing your dream job.', 
+          href: '#how-it-works', 
+          ariaLabel: 'Learn how to create a resume',
+          icon: <LayoutDashboard className="w-5 h-5 text-gray-400" />
+        },
+        { 
+          label: 'FAQ', 
+          description: 'Common questions and support.', 
+          href: '#faq', 
+          ariaLabel: 'View FAQ',
+          icon: <Briefcase className="w-5 h-5 text-gray-400" />
+        },
       ]
     },
     { 
@@ -98,9 +132,8 @@ function LandingPageContent() {
       href: '#pricing', 
       ariaLabel: 'View pricing section',
       submenu: [
-        { label: 'Free Plan', href: '#pricing', ariaLabel: 'Free plan details' },
-        { label: 'Premium', href: '#pricing', ariaLabel: 'Premium plan details' },
-        { label: 'Enterprise', href: '/business', ariaLabel: 'Enterprise plan details', isExternal: true },
+        { label: 'Free Plan', description: 'Get started for free', href: '#pricing', ariaLabel: 'Free plan details', icon: <CheckCircle className="w-5 h-5 text-gray-400" /> },
+        { label: 'Premium', description: 'Unlock all pro features', href: '#pricing', ariaLabel: 'Premium plan details', icon: <Sparkles className="w-5 h-5 text-gray-400" /> },
       ]
     },
   ];
