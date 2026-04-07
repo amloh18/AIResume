@@ -329,6 +329,7 @@ html:not(.dark) .cover-letter-editor-page {
 .cv-page-custom,
 .builder-preview,
 .cv-container,
+.cv-document,
 .live-preview-container {
   color: #111827 !important;
 }
@@ -337,6 +338,7 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .cv-page-custom,
 .dark .builder-preview,
 .dark .cv-container,
+.dark .cv-document,
 .dark .live-preview-container {
   color: #111827 !important;
 }
@@ -350,6 +352,8 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .builder-preview h4, .dark .builder-preview h5, .dark .builder-preview h6,
 .dark .cv-container h1, .dark .cv-container h2, .dark .cv-container h3,
 .dark .cv-container h4, .dark .cv-container h5, .dark .cv-container h6,
+.dark .cv-document h1, .dark .cv-document h2, .dark .cv-document h3,
+.dark .cv-document h4, .dark .cv-document h5, .dark .cv-document h6,
 .dark .live-preview-container h1, .dark .live-preview-container h2, .dark .live-preview-container h3,
 .dark .live-preview-container h4, .dark .live-preview-container h5, .dark .live-preview-container h6,
 .dark .dashboard-page .cv-page h1, .dark .dashboard-page .cv-page h2, .dark .dashboard-page .cv-page h3,
@@ -360,6 +364,8 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .dashboard-page .builder-preview h4, .dark .dashboard-page .builder-preview h5, .dark .dashboard-page .builder-preview h6,
 .dark .dashboard-page .cv-container h1, .dark .dashboard-page .cv-container h2, .dark .dashboard-page .cv-container h3,
 .dark .dashboard-page .cv-container h4, .dark .dashboard-page .cv-container h5, .dark .dashboard-page .cv-container h6,
+.dark .dashboard-page .cv-document h1, .dark .dashboard-page .cv-document h2, .dark .dashboard-page .cv-document h3,
+.dark .dashboard-page .cv-document h4, .dark .dashboard-page .cv-document h5, .dark .dashboard-page .cv-document h6,
 .dark .dashboard-page .live-preview-container h1, .dark .dashboard-page .live-preview-container h2, .dark .dashboard-page .live-preview-container h3,
 .dark .dashboard-page .live-preview-container h4, .dark .dashboard-page .live-preview-container h5, .dark .dashboard-page .live-preview-container h6 {
   color: #111827 !important;
@@ -369,11 +375,13 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .cv-page-custom .text-gray-900,
 .dark .builder-preview .text-gray-900,
 .dark .cv-container .text-gray-900,
+.dark .cv-document .text-gray-900,
 .dark .live-preview-container .text-gray-900,
 .dark .dashboard-page .cv-page .text-gray-900,
 .dark .dashboard-page .cv-page-custom .text-gray-900,
 .dark .dashboard-page .builder-preview .text-gray-900,
 .dark .dashboard-page .cv-container .text-gray-900,
+.dark .dashboard-page .cv-document .text-gray-900,
 .dark .dashboard-page .live-preview-container .text-gray-900 {
   color: #111827 !important;
 }
@@ -382,11 +390,13 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .cv-page-custom .text-gray-600,
 .dark .builder-preview .text-gray-600,
 .dark .cv-container .text-gray-600,
+.dark .cv-document .text-gray-600,
 .dark .live-preview-container .text-gray-600,
 .dark .dashboard-page .cv-page .text-gray-600,
 .dark .dashboard-page .cv-page-custom .text-gray-600,
 .dark .dashboard-page .builder-preview .text-gray-600,
 .dark .dashboard-page .cv-container .text-gray-600,
+.dark .dashboard-page .cv-document .text-gray-600,
 .dark .dashboard-page .live-preview-container .text-gray-600 {
   color: #4b5563 !important;
 }
@@ -395,11 +405,13 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .cv-page-custom .text-gray-500,
 .dark .builder-preview .text-gray-500,
 .dark .cv-container .text-gray-500,
+.dark .cv-document .text-gray-500,
 .dark .live-preview-container .text-gray-500,
 .dark .dashboard-page .cv-page .text-gray-500,
 .dark .dashboard-page .cv-page-custom .text-gray-500,
 .dark .dashboard-page .builder-preview .text-gray-500,
 .dark .dashboard-page .cv-container .text-gray-500,
+.dark .dashboard-page .cv-document .text-gray-500,
 .dark .dashboard-page .live-preview-container .text-gray-500 {
   color: #6b7280 !important;
 }
@@ -408,11 +420,13 @@ html:not(.dark) .cover-letter-editor-page {
 .dark .cv-page-custom .text-gray-400,
 .dark .builder-preview .text-gray-400,
 .dark .cv-container .text-gray-400,
+.dark .cv-document .text-gray-400,
 .dark .live-preview-container .text-gray-400,
 .dark .dashboard-page .cv-page .text-gray-400,
 .dark .dashboard-page .cv-page-custom .text-gray-400,
 .dark .dashboard-page .builder-preview .text-gray-400,
 .dark .dashboard-page .cv-container .text-gray-400,
+.dark .dashboard-page .cv-document .text-gray-400,
 .dark .dashboard-page .live-preview-container .text-gray-400 {
   color: #9ca3af !important;
 }
