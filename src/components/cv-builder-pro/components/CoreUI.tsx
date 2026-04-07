@@ -93,6 +93,7 @@ export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
 };
 
 export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate }: any) => {
+  const ctx = React.useContext(CanvasContext);
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
   if (!SnippetComponent) return null; // Safe guard if fallback fails
   const isDropTarget = dragState?.overZoneId === zoneId && dragState?.overIndex === index;
@@ -135,8 +136,6 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     if (overrideClass) return <h3 className={overrideClass}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3>;
     return <Renderer isDark={isDark} showIcons={ctx?.design?.showIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
   };
-
-  if (!SnippetComponent) return null;
 
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showIcons ?? true });
 
