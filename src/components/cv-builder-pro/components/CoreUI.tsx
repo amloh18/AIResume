@@ -25,7 +25,15 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
 
   useEffect(() => {
     if (!isEditing && contentRef.current) {
-      let displayValue = value;
+      let displayValue = typeof value === 'string' ? value : '';
+      
+      // Fix pasted white text issues by removing bad tags and inline styles
+      if (displayValue) {
+        displayValue = displayValue.replace(/<\/?(?:span|div|font|label)[^>]*>/gi, '');
+        displayValue = displayValue.replace(/\s*style="[^"]*"/gi, '');
+        displayValue = displayValue.replace(/\s*style='[^']*'/gi, '');
+      }
+
       const relevantIssues = aiIssues.filter((i: any) => i.path === path);
       if (relevantIssues.length > 0) {
         relevantIssues.forEach((issue: any) => {
@@ -45,6 +53,14 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const handleFocus = () => { if (readOnly) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
   const handleBlur = () => { if (readOnly) return; setIsEditing(false); if (setFocusedRef) setTimeout(() => setFocusedRef(null), 200); };
   const handleClick = (e: React.MouseEvent) => { if ((e.target as HTMLElement).tagName === 'MARK' && onIssueClick) onIssueClick((e.target as HTMLElement).getAttribute('data-issue')); };
+  const handlePaste = (e: React.ClipboardEvent) => {
+    if (readOnly) return;
+    e.preventDefault();
+    const text = e.clipboardData.getData('text/plain');
+    // Ensure we don't paste line breaks if not multiline
+    const cleanText = multiline ? text : text.replace(/[\r\n]+/g, ' ');
+    document.execCommand('insertText', false, cleanText);
+  };
 
   let wrapClass = 'whitespace-normal';
   if (nowrap) wrapClass = 'whitespace-nowrap';
@@ -52,7 +68,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   if (multiline) wrapClass = 'break-words whitespace-pre-wrap';
 
   return (
-    <span ref={contentRef} data-path={path} contentEditable={!readOnly} suppressContentEditableWarning onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-colors inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-blue-50/50 focus:bg-blue-50 focus:ring-2 focus:ring-blue-300 rounded px-1 -mx-1' : ''}`} style={{ minHeight: '1em' }} />
+    <span ref={contentRef} data-path={path} contentEditable={!readOnly} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-colors inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-blue-50/50 focus:bg-blue-50 focus:ring-2 focus:ring-blue-300 rounded px-1 -mx-1' : ''}`} style={{ minHeight: '1em' }} />
   );
 };
 
