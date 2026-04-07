@@ -17,6 +17,7 @@ export interface CVCanvasBuilderProps {
   theme?: 'dark' | 'light';
   template?: any;
   onTemplateChange?: (template: any) => void;
+  readOnly?: boolean;
 }
 
 export interface CVCanvasBuilderRef {
@@ -28,7 +29,7 @@ export interface CVCanvasBuilderRef {
 
 // MAIN CANVAS BUILDER COMPONENT
 // ==========================================
-const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange }, ref) => {
+const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false }, ref) => {
   const [activeTemplate, setActiveTemplate] = useState(template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>({});
@@ -185,7 +186,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const layoutType = activeTemplate.type;
     const safeZones = zones || {};
     const renderZone = (zoneId: string, className: string, isDark = false) => (
-      <CanvasZone zoneId={zoneId} blocks={safeZones[zoneId] || []} cvData={cvData} EditableWrapper={EditableWrapper} handleDrop={handleZoneDrop} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={handleReplaceClick} onAddSnippet={handleAddClick} onTogglePhoto={handleTogglePhoto} onAddListEntry={handleAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} className={className} isDark={isDark} />
+      <CanvasZone readOnly={readOnly} zoneId={zoneId} blocks={safeZones[zoneId] || []} cvData={cvData} EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper} handleDrop={handleZoneDrop} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={handleReplaceClick} onAddSnippet={handleAddClick} onTogglePhoto={handleTogglePhoto} onAddListEntry={handleAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} className={className} isDark={isDark} />
     );
 
     switch (layoutType) {

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen } from 'lucide-react';
-import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
+import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
@@ -11,6 +11,7 @@ import { downloadAsPDF, downloadAsDOCX } from '@/lib/utils/download';
 import { CentralScoreManager, type CVScoreBreakdown, type ATSScoreBreakdown } from '@/lib/pill-engine/CentralScoreManager';
 import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
+import html2canvas from 'html2canvas';
 import ScorecardPanel from '@/components/resume-enhancer/panels/ScorecardPanel';
 import DateFormatSelector from '@/components/resume-enhancer/DateFormatSelector';
 import { getDefaultPaperSize } from '@/lib/services/paperSizeService';
@@ -211,7 +212,8 @@ export default function Step4Review() {
         // Find the preview element for client-side fallback
         let previewElement: HTMLElement | null = null;
         if (previewRef.current) {
-          previewElement = previewRef.current.querySelector('.cv-preview-container') as HTMLElement ||
+          previewElement = previewRef.current.querySelector('.cv-document') as HTMLElement ||
+            previewRef.current.querySelector('.cv-preview-container') as HTMLElement ||
             previewRef.current.querySelector('[class*="cv-preview"]') as HTMLElement ||
             previewRef.current;
         }
@@ -463,6 +465,7 @@ export default function Step4Review() {
           <div className="flex-1 overflow-y-auto" ref={previewRef}>
             {state.selectedTemplate ? (
               <div
+                className="w-full flex justify-center"
                 style={{
                   // PREVIEW ZOOM: This transform is for UI preview only
                   // It does NOT affect PDF/DOCX export which uses fixed viewport (794px for A4, 816px for Letter)
@@ -470,27 +473,16 @@ export default function Step4Review() {
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top center',
                   transition: 'transform 0.2s ease-out',
-                  width: 'fit-content',
-                  margin: '0 auto'
                 }}
               >
-                <CVPreviewContent
-                  cvData={state.cvData}
-                  templateName={state.selectedTemplate.name}
-                  templateStyles={{
-                    primaryColor: state.selectedTemplate.globalStyles?.primaryColor,
-                    secondaryColor: state.selectedTemplate.globalStyles?.secondaryColor,
-                    backgroundColor: state.selectedTemplate.globalStyles?.backgroundColor,
-                    fontFamily: state.selectedTemplate.globalStyles?.fontFamily,
-                    fontSize: state.selectedTemplate.globalStyles?.fontSize,
-                    lineHeight: state.selectedTemplate.globalStyles?.lineHeight,
-                  }}
-                  customCSS={state.selectedTemplate.globalStyles?.customCSS}
-                  jobData={state.jobData}
-                  currentZoom={zoom}
-                  dateFormat={state.dateFormat}
-                  pageFormat={state.paperSize === 'Letter' ? 'letter' : 'a4'}
-                />
+                <div className="w-[794px] pointer-events-none">
+                  <CVBuilderProAdapter
+                    cvData={state.cvData}
+                    template={state.selectedTemplate}
+                    theme="light"
+                    readOnly={true}
+                  />
+                </div>
               </div>
             ) : (
               <div className="flex items-center justify-center h-full">
