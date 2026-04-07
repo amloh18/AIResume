@@ -50,7 +50,6 @@ import {
   BarChart3
 } from 'lucide-react';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
-import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
 import PageHeader from './PageHeader';
 import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
 import { authenticatedFetch } from '@/lib/utils/apiUtils';

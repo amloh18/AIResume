@@ -6,12 +6,13 @@ import { ITemplate } from '@/types/template';
 interface CVBuilderProAdapterProps {
   cvData: UnifiedCVDataStructure;
   template: ITemplate | null;
-  onDataChange: (updatedData: UnifiedCVDataStructure) => void;
+  onDataChange?: (updatedData: UnifiedCVDataStructure) => void;
   onTemplateChange?: (newTemplate: ITemplate) => void;
   theme?: 'dark' | 'light';
+  readOnly?: boolean;
 }
 
-const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemplateChange, theme }: CVBuilderProAdapterProps, ref) => {
+const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false }: CVBuilderProAdapterProps, ref) => {
   // Bridge the data format if needed. Currently, UnifiedCVDataStructure might have .work instead of .experience.
   const canvasData = useMemo(() => {
     if (!cvData) return null;
@@ -116,7 +117,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
   }, [cvData]);
 
   const handleDataChange = useCallback((updatedCanvasData: any) => {
-    if (!updatedCanvasData) return;
+    if (!updatedCanvasData || !onDataChange) return;
 
     // Reverse map the changes back to UnifiedCVDataStructure
     // We deep copy the original cvData to avoid destroying unmapped nested structures (like basics.location object)
@@ -236,12 +237,13 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
 
   return (
     <CVCanvasEngine
-      ref={ref as any}
+      ref={ref}
       cvData={canvasData}
       template={template}
       onDataChange={handleDataChange}
       onTemplateChange={onTemplateChange}
       theme={theme}
+      readOnly={readOnly}
     />
   );
 });
