@@ -3,16 +3,18 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
+import Logo from '@/components/ui/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette } from 'lucide-react';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
 import Step1Parser from './steps/Step1Parser';
 import Step2Template from './steps/Step2Template';
 import Step3BuilderSurgeon from './steps/Step3BuilderSurgeon';
+import Step4CoverLetter from './steps/Step4CoverLetter';
 import Step4Review from './steps/Step4Review';
-import RoleSelectorModal from './RoleSelectorModal';
+import SmartJDModal from './SmartJDModal';
 import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
@@ -41,7 +43,7 @@ import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScor
 import JobCard from './JobCard';
 import JobRoleCard from './JobRoleCard';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
+// import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import AuthPromptModal from './AuthPromptModal';
 import { CVJourney } from '@/types/cv';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -59,8 +61,9 @@ import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type Analysis
 
 interface ResumeEnhancerContainerProps {
   userId: string;
-  mode?: 'create' | 'edit' | 'edit-master' | 'journey';
+  mode?: 'create' | 'edit' | 'edit-master' | 'journey' | 'edit-cover-letter' | 'create-cover-letter';
   cvId?: string;
+  clId?: string;
   journeyId?: string;
   isGuestMode?: boolean;
   restoreDraft?: boolean;
@@ -70,6 +73,7 @@ export default function ResumeEnhancerContainer({
   userId,
   mode = 'create',
   cvId,
+  clId,
   journeyId,
   isGuestMode = false,
   restoreDraft = false
@@ -82,35 +86,9 @@ export default function ResumeEnhancerContainer({
   const [showTemplateOverlay, setShowTemplateOverlay] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
 
-  // Map internal steps (1-4) to display steps (1-2) for the step indicator
-  // Internal: 1=Dashboard (no step indicator), 2=Template selection, 3=Builder, 4=Review
-  // Display:  1=Builder (includes template selection), 2=Review
-  const displayStep = (state.currentStep <= 3 ? 1 : 2) as 1 | 2;
-  const displayCompletedSteps = completedSteps
-    .map(s => (s === 3 ? 1 : s === 4 ? 2 : -1))
-    .filter(s => s > 0);
-
-  // GSAP step transition animation
-  useEffect(() => {
-    if (!stepContentRef.current) return;
-    const el = stepContentRef.current;
-
-    gsap.fromTo(el,
-      { opacity: 0, x: 30 },
-      { opacity: 1, x: 0, duration: 0.4, ease: 'power3.out' }
-    );
-  }, [state.currentStep]);
-
-  // GSAP template overlay animation
-  useEffect(() => {
-    if (!templateOverlayRef.current) return;
-    if (showTemplateOverlay) {
-      gsap.fromTo(templateOverlayRef.current,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.4, ease: 'power2.out' }
-      );
-    }
-  }, [showTemplateOverlay]);
+  // Map internal steps (1-5) to display steps (1-5) for the step indicator
+  const displayStep = state.currentStep;
+  const displayCompletedSteps = completedSteps;
 
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error' | 'offline'>('idle');
@@ -677,7 +655,7 @@ export default function ResumeEnhancerContainer({
 
           if (result.success && result.cvId) {
             // Reload page to switch to authenticated mode
-            window.location.href = `/resume-enhancer?cvId=${result.cvId}&mode=edit&step=${result.step || 3}`;
+            window.location.href = `/editor?cvId=${result.cvId}&mode=edit&step=${result.step || 3}`;
           } else {
             // Check for specific error indicating draft not found or already transferred
             if (result.error?.includes('Draft not found') || result.error?.includes('already transferred')) {
@@ -834,6 +812,24 @@ export default function ResumeEnhancerContainer({
     }
   }, [state.cvType, state.targetRole, state.seniorityLevel, jdText, state.jobData, dispatch]);
 
+  // Intercept browser back button for graceful internal navigation
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (state.currentStep > 1) {
+        // Prevent default back behavior
+        e.preventDefault();
+        // Force the URL back to what it was to keep them on the page
+        window.history.pushState(null, '', window.location.href);
+        // Navigate internally
+        goToStep(1);
+      }
+    };
+
+    window.history.pushState(null, '', window.location.href);
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [state.currentStep, goToStep]);
+
   // Initialize based on mode
   useEffect(() => {
     // CRITICAL FIX: Skip re-initialization if we just saved and got a new cvId
@@ -855,15 +851,30 @@ export default function ResumeEnhancerContainer({
     }
 
     const initializeEnhancer = async () => {
-      if (mode === 'edit' || mode === 'edit-master') {
-        // Load existing CV
-        if (!cvId) {
-          return;
-        }
-
+      if (mode === 'edit' || mode === 'edit-master' || mode === 'edit-cover-letter') {
+        let actualCvId = cvId;
+        let coverLetterData: any = null;
+        
         setIsLoading(true);
         try {
-          const response = await fetch(`/api/cvs/${cvId}`);
+          if (mode === 'edit-cover-letter' && clId) {
+             const clResponse = await fetch(`/api/cover-letters/${clId}?userId=${userId === 'guest' ? '' : userId}`);
+             if (clResponse.ok) {
+                 const clResult = await clResponse.json();
+                 if (clResult.success && clResult.coverLetter) {
+                    coverLetterData = clResult.coverLetter;
+                    actualCvId = coverLetterData.cvId || actualCvId;
+                 }
+             }
+          }
+          
+          if (!actualCvId) {
+             console.error("Failed to determine CV ID for editing.");
+             setIsLoading(false);
+             return;
+          }
+
+          const response = await fetch(`/api/cvs/${actualCvId}`);
           if (!response.ok) throw new Error('Failed to load CV');
 
           const result = await response.json();
@@ -925,6 +936,13 @@ export default function ResumeEnhancerContainer({
             initialCVDataRef.current = JSON.parse(JSON.stringify(cv.cvData));
             initialCVTitleRef.current = cv.title;
             initialTemplateRef.current = cv.template || null;
+          }
+          
+          if (coverLetterData) {
+            dispatch({
+              type: 'SET_AUTO_COVER_LETTER',
+              payload: { draft: coverLetterData.content || coverLetterData.body || '', coverLetterId: clId }
+            });
           } else {
             // Load CV with resolved type and jobData (for journey CVs)
             loadCV({
@@ -964,13 +982,19 @@ export default function ResumeEnhancerContainer({
           // They will use jobData.jobDescription for ATS and other analysis
 
           dispatch({ type: 'SET_MODE', payload: 'edit' });
-          // Skip to Step 3 for editing
-          goToStep(3);
-          setCompletedSteps([1, 2]);
+          
+          if (mode === 'edit-cover-letter') {
+            goToStep(4);
+            setCompletedSteps([1, 2, 3]);
+          } else {
+            // Skip to Step 3 for editing
+            goToStep(3);
+            setCompletedSteps([1, 2]);
+          }
 
           // Update URL to include mode parameter
           // For master CVs, use 'edit-master' mode in URL
-          const urlMode = resolvedCvType === 'master' ? 'edit-master' : 'edit';
+          const urlMode = mode === 'edit-cover-letter' ? 'edit-cover-letter' : (resolvedCvType === 'master' ? 'edit-master' : 'edit');
           const currentParams = new URLSearchParams(window.location.search);
           if (!currentParams.has('mode')) {
             currentParams.set('mode', urlMode);
@@ -1041,6 +1065,7 @@ export default function ResumeEnhancerContainer({
             initialTemplateRef.current = cv.template || null;
 
             dispatch({ type: 'SET_MODE', payload: 'edit' });
+            
             goToStep(3);
             setCompletedSteps([1, 2]);
 
@@ -1333,7 +1358,8 @@ export default function ResumeEnhancerContainer({
       // In edit mode, preserve the existing CV type
       // Don't allow changing master CVs to standalone/journey via role modal
       // No cvType change - just update role context
-      // Do not proceed to step 2 - we're just updating the role
+      // Proceed directly to step 3, bypassing step 2 template selector
+      goToStep(3);
     } else {
       // Create mode logic (existing behavior)
       // Guest mode: First CV = Master CV (no JD allowed)
@@ -1786,6 +1812,26 @@ export default function ResumeEnhancerContainer({
     goToStep(4);
   };
 
+  const handleStep4Complete = () => {
+    setCompletedSteps([...completedSteps, 4]);
+
+    // Guest mode: Save draft before moving to Step 5
+    if (isGuestMode) {
+      guestCVService.saveGuestDraft({
+        cvData: state.cvData,
+        currentStep: 5,
+        completedSteps: [...completedSteps, 4],
+        targetRole: state.targetRole,
+        seniorityLevel: state.seniorityLevel,
+        templateId: state.selectedTemplate?.id || state.selectedTemplate?._id,
+        template: state.selectedTemplate,
+        cvTitle: state.cvTitle
+      }).catch(err => console.error('Failed to save draft:', err));
+    }
+
+    goToStep(5);
+  };
+
   // Check if there are unsaved changes
   const hasUnsavedChanges = useMemo(() => {
     // For new CVs (create mode), check if any data has been entered after Step 1
@@ -1832,6 +1878,17 @@ export default function ResumeEnhancerContainer({
   }, [mode, state.cvData, state.cvTitle, state.selectedTemplate]);
 
   const handleExit = () => {
+    if (state.currentStep > 1) {
+      if (hasUnsavedChanges) {
+        if (confirm('Are you sure you want to go back? Unsaved changes will be lost.')) {
+          goToStep(1);
+        }
+      } else {
+        goToStep(1);
+      }
+      return;
+    }
+
     // Determine where to navigate back based on how user arrived
     let returnPath = '/dashboard'; // Default
 
@@ -2038,8 +2095,8 @@ export default function ResumeEnhancerContainer({
       }
     }
 
-    const isFinishing = state.currentStep === 4;
-    const isContinuing = state.currentStep === 3;
+    const isFinishing = state.currentStep === 5;
+    const isContinuing = state.currentStep === 3 || state.currentStep === 4;
     const completionPercentage = calculateCompletionPercentage();
 
     const payload = {
@@ -2131,7 +2188,7 @@ export default function ResumeEnhancerContainer({
             const newPath = `/studio/${savedCvId}`;
             router.replace(newPath);
             console.log('✅ Layer 1 Defense: Updated URL with new CV ID:', savedCvId);
-          } else if (pathname.includes('/resume-enhancer')) {
+          } else if (pathname.includes('/editor')) {
             // Update resume-enhancer URL to include cvId
             const currentSearchParams = new URLSearchParams(window.location.search);
             currentSearchParams.set('cvId', savedCvId);
@@ -2172,6 +2229,40 @@ export default function ResumeEnhancerContainer({
       initialCVDataRef.current = JSON.parse(JSON.stringify(state.cvData));
       initialCVTitleRef.current = state.cvTitle;
       initialTemplateRef.current = state.selectedTemplate;
+
+      // SAVE COVER LETTER
+      if (state.autoGeneratedCoverLetter && !isGuestMode) {
+          const existingClId = state.coverLetterId || clId;
+          const clApiUrl = existingClId ? `/api/cover-letters/${existingClId}` : '/api/cover-letters';
+          const clApiMethod = existingClId ? 'PUT' : 'POST';
+          
+          const clPayload = {
+              userId,
+              cvId: effectiveCvId,
+              title: state.cvTitle ? `${state.cvTitle} - Cover Letter` : 'Cover Letter',
+              content: state.autoGeneratedCoverLetter,
+              status: isFinishing ? 'final' : 'draft',
+              jobId: state.jobData?.id || state.jobData?._id,
+              journeyId: state.journeyId || undefined
+          };
+          
+          try {
+             const clResponse = await fetch(clApiUrl, {
+                method: clApiMethod,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(clPayload)
+             });
+             if (clResponse.ok && !existingClId) {
+                 const clResult = await clResponse.json();
+                 const newClId = clResult.data?.id || clResult.coverLetter?._id;
+                 if (newClId) {
+                     dispatch({ type: 'SET_AUTO_COVER_LETTER', payload: { draft: state.autoGeneratedCoverLetter, coverLetterId: newClId } });
+                 }
+             }
+          } catch (clErr) {
+             console.error("Failed to save cover letter:", clErr);
+          }
+      }
 
       setSaveStatus('success');
 
@@ -2278,16 +2369,16 @@ export default function ResumeEnhancerContainer({
       <div className="dashboard-page resume-enhancer-page flex items-center justify-center min-h-screen bg-[var(--bg-primary)]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-[color:var(--accent-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[color:var(--text-secondary)]">Loading Resume Enhancer...</p>
+          <p className="text-[color:var(--text-secondary)]">Loading Editor...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-page resume-enhancer-page min-h-screen bg-[#0A0D08] text-white flex flex-col">
+    <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex flex-col">
       {/* HEADER - Top Bar */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-[#141810] sticky top-0 z-[100] shadow-xl">
+      <header className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#141810] sticky top-0 z-[100] shadow-sm dark:shadow-xl">
         <div className="flex items-center gap-12 flex-1">
           {/* Logo or Back to Dashboard if in deep editing */}
           <div className="flex items-center">
@@ -2296,35 +2387,20 @@ export default function ResumeEnhancerContainer({
               className="group flex items-center pr-12 hover:opacity-80 transition-all duration-300"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-black dark:bg-white/5 border border-white/10 shadow-xl group-hover:scale-110 group-hover:border-lime-500/50 transition-all duration-300">
-                  <Image 
-                    src="/images/logo.png" 
-                    alt="CVCircle" 
-                    width={24} 
-                    height={24} 
-                    className="object-contain"
-                  />
-                </div>
+                <Logo size="sm" showText={true} theme="dark" />
                 
                 <div className="flex items-center gap-1.5 sm:gap-3">
-                  {/* Branding - Hidden on Mobile */}
-                  <div className="flex-col hidden sm:flex">
-                    <span className="text-base font-black tracking-tighter leading-none text-white">
-                      CV<span className="text-lime-500">CIRCLE</span>
+                  {state.currentStep === 1 && (
+                    <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1 hidden sm:block">
+                      Editor
                     </span>
-                    {state.currentStep === 1 && (
-                      <span className="text-[8px] uppercase tracking-[0.2em] font-bold text-lime-500/60 leading-none mt-1">
-                        Resume Enhancer
-                      </span>
-                    )}
-                  </div>
-
+                  )}
                   {/* Breadcrumb - Logo > Chevron > Builder */}
                   {state.currentStep !== 1 && (
                     <div className="flex items-center gap-1.5 sm:gap-3">
                       <ChevronRight className="w-3.5 h-3.5 sm:w-4 h-4 text-gray-600" />
                       <span className="text-[10px] sm:text-sm font-black text-lime-500 uppercase tracking-tighter italic whitespace-nowrap">
-                        {state.currentStep === 3 ? 'Builder' : 'Review'}
+                        {state.currentStep === 3 ? 'Editor' : state.currentStep === 4 ? 'Cover Letter Editor' : 'Review'}
                       </span>
                     </div>
                   )}
@@ -2370,8 +2446,8 @@ export default function ResumeEnhancerContainer({
             </div>
           )}
 
-          {/* Save button - only show on step 3 and 4 */}
-          {(state.currentStep === 3 || state.currentStep === 4) && (
+          {/* Save button - only show on step 3, 4, and 5 */}
+          {(state.currentStep === 3 || state.currentStep === 4 || state.currentStep === 5) && (
             <motion.button
               onClick={handleSmartSave}
               disabled={saveStatus === 'saving'}
@@ -2433,10 +2509,22 @@ export default function ResumeEnhancerContainer({
             </motion.button>
           )}
 
-          {/* Continue to Review button - only show on Step 3 */}
+          {/* Continue to Cover Letter button - only show on Step 3 */}
           {state.currentStep === 3 && (
             <button
               onClick={handleStep3Complete}
+              className="p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
+              title="Cover Letter"
+            >
+              <FileText className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">Cover Letter</span>
+            </button>
+          )}
+          
+          {/* Continue to Review button - only show on Step 4 */}
+          {state.currentStep === 4 && (
+            <button
+              onClick={handleStep4Complete}
               className="p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"
               title="Review"
             >
@@ -2469,60 +2557,118 @@ export default function ResumeEnhancerContainer({
       {/* Content Area */}
       <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)]">
         {/* Main Content */}
-        <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
+        <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
           <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
-            <div ref={stepContentRef} className="h-full min-h-0 flex flex-col">
-              {state.currentStep === 1 && (
-                <ErrorBoundary stepName="CV Parser" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
-                  <Step1Parser
-                    onComplete={handleStep1Complete}
-                    userHasMasterCV={state.hasMasterCV}
-                    mode={mode}
-                    cvType={state.cvType}
-                  />
-                </ErrorBoundary>
-              )}
-              {state.currentStep === 3 && (
-                <ErrorBoundary stepName="CV Builder" onReset={() => dispatch({ type: 'SET_STEP', payload: 3 })}>
-                  <Step3BuilderSurgeon
-                    ref={step3Ref}
-                    onComplete={handleStep3Complete}
-                    onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
-                  />
-                </ErrorBoundary>
-              )}
-              {state.currentStep === 4 && (
-                <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 4 })}>
-                  <Step4Review />
-                </ErrorBoundary>
-              )}
+            <div ref={stepContentRef} className="h-full min-h-0 flex flex-col relative">
+              <AnimatePresence mode="wait">
+                {state.currentStep === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full min-h-0 flex flex-col w-full"
+                  >
+                    <ErrorBoundary stepName="CV Parser" onReset={() => dispatch({ type: 'SET_STEP', payload: 1 })}>
+                      <Step1Parser
+                        onComplete={handleStep1Complete}
+                        userHasMasterCV={state.hasMasterCV}
+                        mode={mode as any}
+                        cvType={state.cvType}
+                      />
+                    </ErrorBoundary>
+                  </motion.div>
+                )}
+                {state.currentStep === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full min-h-0 flex flex-col w-full"
+                  >
+                    <ErrorBoundary stepName="CV Builder" onReset={() => dispatch({ type: 'SET_STEP', payload: 3 })}>
+                      <Step3BuilderSurgeon
+                        ref={step3Ref}
+                        onComplete={handleStep3Complete}
+                        onActiveSectionChange={(sectionId) => setActiveSection(sectionId)}
+                      />
+                    </ErrorBoundary>
+                  </motion.div>
+                )}
+                {state.currentStep === 4 && (
+                  <motion.div
+                    key="step4"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full min-h-0 flex flex-col w-full"
+                  >
+                    <ErrorBoundary stepName="Cover Letter" onReset={() => dispatch({ type: 'SET_STEP', payload: 4 })}>
+                      <Step4CoverLetter onComplete={handleStep4Complete} />
+                    </ErrorBoundary>
+                  </motion.div>
+                )}
+                {state.currentStep === 5 && (
+                  <motion.div
+                    key="step5"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full min-h-0 flex flex-col w-full"
+                  >
+                    <ErrorBoundary stepName="Review & Download" onReset={() => dispatch({ type: 'SET_STEP', payload: 5 })}>
+                      <Step4Review />
+                    </ErrorBoundary>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </main>
       </div>
 
       {/* Template Overlay - shown for new CVs after step 1 */}
-      {showTemplateOverlay && (
-        <div
-          ref={templateOverlayRef}
-          className="fixed inset-0 z-[200] bg-[var(--bg-primary)] overflow-y-auto"
-        >
-          <Step2Template onComplete={handleStep2Complete} />
-        </div>
-      )}
+      <AnimatePresence>
+        {showTemplateOverlay && (
+          <motion.div
+            key="step2-template"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
+            ref={templateOverlayRef}
+            className="fixed inset-0 z-[200] bg-[var(--bg-primary)] overflow-y-auto"
+          >
+            <Step2Template onComplete={handleStep2Complete} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Role Selector Modal */}
-      <RoleSelectorModal
-        isOpen={showRoleModal}
-        onClose={() => setShowRoleModal(false)}
-        cvData={state.cvData}
-        onSubmit={handleRoleModalSubmit}
-        onOpenJobParser={(roleData) => {
-          handleOpenJobParser(roleData);
+      {/* Unified Smart JD Modal */}
+      <SmartJDModal
+        isOpen={showRoleModal || showJobParserDialog}
+        onClose={() => {
+          setShowRoleModal(false);
+          setShowJobParserDialog(false);
+          setPendingRoleData(null);
         }}
-        isOnboardingMode={false}
-        isGuestMode={isGuestMode}
-        cvType={state.cvType}
+        onSubmit={(data) => {
+          handleRoleModalSubmit({
+            targetRole: data.title,
+            seniorityLevel: data.experienceLevel,
+            jobDescription: data.jobDescription,
+            hasJD: !!data.jobDescription.trim()
+          });
+        }}
+        initialData={{
+           title: state.targetRole || '',
+           experienceLevel: state.seniorityLevel || '',
+        }}
       />
 
       {/* Auth Prompt Modal - For guest users at Step 3 */}
@@ -2536,19 +2682,6 @@ export default function ResumeEnhancerContainer({
           currentStep={state.currentStep}
         />
       )}
-
-      {/* Job Parser Dialog (Magic Paste) */}
-      <JobParserDialog
-        isOpen={showJobParserDialog}
-        onClose={() => {
-          setShowJobParserDialog(false);
-          setPendingRoleData(null);
-          if (state.cvType !== 'standalone' && (!state.targetRole || !state.seniorityLevel)) {
-            setShowRoleModal(true);
-          }
-        }}
-        onParseComplete={handleJobParserComplete}
-      />
 
       {/* Upgrade Card - shown after first standalone CV creation */}
       {showUpgradePopupState && shouldShowUpgradePopup && userId && (

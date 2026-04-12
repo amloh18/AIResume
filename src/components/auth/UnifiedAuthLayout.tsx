@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Logo from '@/components/ui/Logo';
 import { motion } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -45,21 +46,8 @@ export default function UnifiedAuthLayout({
         {/* Content Container */}
         <div className="relative z-10 flex flex-col w-full p-12">
           {/* Logo in Top Left */}
-          <div className="flex items-center gap-3 mb-auto">
-            <img
-              src="/images/logo.png"
-              alt="CVCircle Logo"
-              className="w-12 h-12 object-contain drop-shadow-lg"
-              loading="eager"
-              decoding="async"
-              onError={(e) => {
-                console.error('Logo image failed to load in auth layout');
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-            <div className="text-4xl font-bold">
-              <span className="text-black">CV</span><span className="text-white">Circle</span>
-            </div>
+          <div className="flex items-center gap-3 mb-auto drop-shadow-lg">
+            <Logo size="lg" showText={true} theme="dark" />
           </div>
 
           {/* Center Text Highlight Heading */}
@@ -113,23 +101,8 @@ export default function UnifiedAuthLayout({
             className="bg-[#222B22] rounded-2xl border border-white/10 shadow-2xl p-8"
           >
             {/* Card Header with Logo - Only show on mobile */}
-            <div className="mb-8 lg:hidden">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <img
-                  src="/images/logo.png"
-                  alt="CVCircle Logo"
-                  className="w-10 h-10 object-contain"
-                  loading="eager"
-                  decoding="async"
-                  onError={(e) => {
-                    console.error('Logo image failed to load in auth layout');
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
-                <div className="text-3xl font-bold">
-                  <span className="text-[#80FF00]">CV</span><span className="text-white">Circle</span>
-                </div>
-              </div>
+            <div className="mb-8 lg:hidden flex justify-center">
+              <Logo size="md" showText={true} theme="dark" />
             </div>
 
             {/* Card Content */}

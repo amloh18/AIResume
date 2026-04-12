@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
                 'Please create your Master CV on the web app first before adding jobs.',
                 {
                   requiresMasterCV: true,
-                  redirectTo: '/resume-enhancer?mode=create&type=master'
+                  redirectTo: '/editor?mode=create&type=master'
                 }
               ),
               { status: 409 }
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: 'Please create your Master CV first before adding jobs',
             requiresMasterCV: true,
-            redirectTo: '/resume-enhancer?mode=create&type=master',
+            redirectTo: '/editor?mode=create&type=master',
             suggestedAction: 'Create Master CV',
             cvCount: 0
           },

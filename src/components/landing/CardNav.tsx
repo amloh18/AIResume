@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
+import Logo from '@/components/ui/Logo';
 import { Menu, X } from 'lucide-react';
 import './CardNav.css';
 
@@ -161,22 +162,7 @@ const CardNav = ({
             type="button"
           >
             <div className="logo-image-wrapper">
-              <Image 
-                src="/images/logo.png" 
-                alt="CVCircle Logo" 
-                width={32}
-                height={32}
-                className="logo-image"
-                priority
-                quality={85}
-                sizes="32px"
-                onError={() => {
-                  console.error('Logo image failed to load');
-                }}
-                onLoad={() => {
-                  console.log('Logo image loaded successfully');
-                }}
-              />
+              <Logo size="md" showText={false} />
             </div>
             <span className="logo-text" aria-label={logo}>
               <span className="logo-cv">CV</span>

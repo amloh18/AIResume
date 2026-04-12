@@ -274,7 +274,7 @@ function LinkedInEnhancerContent() {
                             To enhance your LinkedIn profile, you'll need to create a Master CV or standalone CV first.
                         </p>
                         <motion.button
-                            onClick={() => router.push('/resume-enhancer')}
+                            onClick={() => router.push('/editor')}
                             className="px-6 py-2.5 rounded-lg text-white font-medium"
                             style={{ backgroundColor: LINKEDIN_COLORS.PRIMARY_BLUE }}
                             whileHover={{ scale: 1.02 }}

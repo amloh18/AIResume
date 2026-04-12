@@ -36,3 +36,6 @@ export { default as TemporaryCVDraft, type ITemporaryCVDraft } from './Temporary
 // Sponsorship registry models
 export { default as UKSponsor, type IUKSponsor } from './UKSponsor';
 export { default as USH1BEmployer, type IUSH1BEmployer } from './USH1BEmployer'; 
+
+// Feedback model
+export { default as Feedback, type IFeedback } from './Feedback';

@@ -17,9 +17,11 @@ import DateFormatSelector from '@/components/resume-enhancer/DateFormatSelector'
 import { getDefaultPaperSize } from '@/lib/services/paperSizeService';
 import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
+import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
 
 export default function Step4Review() {
-  const { state, setTemplate, dispatch } = useResumeEnhancer();
+  const { state, setTemplate, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
   const [zoom, setZoom] = useState(0.5); // Will be recalculated on mount
@@ -27,6 +29,7 @@ export default function Step4Review() {
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [showCoverLetterPreview, setShowCoverLetterPreview] = useState(false);
+  const [coverLetterData, setCoverLetterData] = useState<any>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +50,39 @@ export default function Step4Review() {
     window.addEventListener('resize', calculateFitZoom);
     return () => window.removeEventListener('resize', calculateFitZoom);
   }, []);
+
+  // Fetch cover letter data for preview if needed
+  useEffect(() => {
+    const fetchCoverLetterData = async () => {
+      if (showCoverLetterPreview && state.coverLetterId && !coverLetterData) {
+        try {
+          // If we have a journey CV, we can get the userId from the journey
+          if (state.journeyId) {
+            const response = await fetch(`/api/application-journey/${state.journeyId}`);
+            if (response.ok) {
+              const result = await response.json();
+              const journey = result.data?.journey || result.journey;
+              const userId = journey?.userId;
+              
+              if (userId) {
+                const clResponse = await fetch(`/api/cover-letters/${state.coverLetterId}?userId=${userId}`);
+                if (clResponse.ok) {
+                  const clResult = await clResponse.json();
+                  if (clResult.success && clResult.coverLetter) {
+                    setCoverLetterData(clResult.coverLetter);
+                  }
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('Failed to fetch cover letter data:', err);
+        }
+      }
+    };
+    fetchCoverLetterData();
+  }, [showCoverLetterPreview, state.coverLetterId, state.journeyId, coverLetterData]);
+
   // Fetch cover letter status for journey CVs if not already loaded
   useEffect(() => {
     const fetchCoverLetterStatus = async () => {
@@ -176,24 +212,7 @@ export default function Step4Review() {
   };
 
   const handleEditCoverLetter = () => {
-    const params = new URLSearchParams();
-
-    // If CV is a journey CV, use 'journey' mode (which will edit if cover letter exists, otherwise create)
-    // If CV is standalone, use 'create' mode
-    if (state.cvType === 'journey' && state.journeyId) {
-      params.set('mode', 'journey');
-      params.set('journeyId', state.journeyId);
-      if (state.cvId) params.set('cvId', state.cvId);
-      if (state.jobData?.id || state.jobData?._id) {
-        params.set('jobId', state.jobData.id || state.jobData._id);
-      }
-    } else {
-      // Standalone CV - create new cover letter
-      params.set('mode', 'create');
-      if (state.cvId) params.set('cvId', state.cvId);
-    }
-
-    router.push(`/cover-letter-editor?${params.toString()}`);
+    goToStep(4);
   };
 
   const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
@@ -275,7 +294,7 @@ export default function Step4Review() {
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden">
       {/* Split View: Preview Left, Info Right */}
-      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden pt-3 px-3">
+      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden pt-3 px-3 bg-gray-50 dark:bg-[var(--bg-primary)]">
         {/* Right Panel - Info (50%) */}
         <div className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
           <div className="p-4">
@@ -287,7 +306,7 @@ export default function Step4Review() {
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
             {/* Scorecard Panel - replaces custom score cards */}
             <ScorecardPanel
               atsResult={null}
@@ -438,8 +457,31 @@ export default function Step4Review() {
         {/* Left Panel - Preview (50%) */}
         <div ref={containerRef} className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
           {/* Preview Header with Controls */}
-          <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between">
-            <h3 className="text-base font-bold text-[color:var(--text-primary)]">Preview</h3>
+          <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between border-b border-black/5 dark:border-white/5">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setShowCoverLetterPreview(false)}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  !showCoverLetterPreview 
+                    ? 'bg-[var(--accent-primary)] text-black' 
+                    : 'text-[color:var(--text-secondary)] hover:bg-[var(--hover-bg)]'
+                }`}
+              >
+                Resume
+              </button>
+              {((state.autoGeneratedCoverLetter) || (state.cvType === 'journey' && state.coverLetterId)) && (
+                <button
+                  onClick={() => setShowCoverLetterPreview(true)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    showCoverLetterPreview 
+                      ? 'bg-[var(--accent-primary)] text-black' 
+                      : 'text-[color:var(--text-secondary)] hover:bg-[var(--hover-bg)]'
+                  }`}
+                >
+                  Cover Letter
+                </button>
+              )}
+            </div>
             <div className="flex items-center space-x-3">
               <div className="h-6 w-px bg-black/10 dark:bg-white/10" />
               <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
@@ -462,14 +504,34 @@ export default function Step4Review() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto" ref={previewRef}>
-            {state.selectedTemplate ? (
+          <div className="flex-1 overflow-y-auto custom-scrollbar" ref={previewRef}>
+            {showCoverLetterPreview ? (
               <div
                 className="w-full flex justify-center"
                 style={{
-                  // PREVIEW ZOOM: This transform is for UI preview only
-                  // It does NOT affect PDF/DOCX export which uses fixed viewport (794px for A4, 816px for Letter)
-                  // Export services render at 100% scale with exact viewport matching @page CSS dimensions
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'top center',
+                  transition: 'transform 0.2s ease-out',
+                }}
+              >
+                <div className="w-[794px] pointer-events-none">
+                  <CoverLetterPreview
+                    content={state.autoGeneratedCoverLetter || coverLetterData?.content || ''}
+                    header={coverLetterData?.header}
+                    body={coverLetterData?.body}
+                    footer={coverLetterData?.footer}
+                    cvData={state.cvData}
+                    jobData={state.jobData}
+                    selectedCVData={state.cvData}
+                    template={COVER_LETTER_TEMPLATES[0]}
+                    pageSize={state.paperSize === 'Letter' ? 'Letter' : 'A4'}
+                  />
+                </div>
+              </div>
+            ) : state.selectedTemplate ? (
+              <div
+                className="w-full flex justify-center"
+                style={{
                   transform: `scale(${zoom})`,
                   transformOrigin: 'top center',
                   transition: 'transform 0.2s ease-out',

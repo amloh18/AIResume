@@ -16,10 +16,11 @@ import SurgeonReportModal from '@/components/resume-enhancer/SurgeonReportModal'
 import FieldFixOverlay from '@/components/resume-enhancer/annotations/FieldFixOverlay';
 import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { validateCVPreview } from '@/lib/validation/cv-preview-validator';
-import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 import { AnimatedScore } from '@/components/ui/AnimatedScore';
 import { useATS } from '@/contexts/ATSContext';
+import ATSUnlockCard from '@/components/resume-enhancer/ATSUnlockCard';
+import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 
 // CV Surgeon service
 import { CVSurgeonService, SurgicalFix } from '@/lib/services/cv-surgeon-service';
@@ -73,9 +74,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [showAddSectionModal, setShowAddSectionModal] = useState(false);
-    const [showTemplateModal, setShowTemplateModal] = useState(false);
-    const templateModalRef = useRef<HTMLDivElement>(null);
-    const templateModalContentRef = useRef<HTMLDivElement>(null);
+    const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
@@ -100,28 +99,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const handleViewModeChange = (mode: ViewMode) => {
       setViewMode(mode);
     };
-
-    const handleTemplateSelect = (template: ITemplate) => {
-      setTemplate(template);
-      dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: template });
-      setShowTemplateModal(false);
-    };
-
-    // GSAP template modal animation
-    useEffect(() => {
-      if (!showTemplateModal || !templateModalRef.current || !templateModalContentRef.current) return;
-
-      const tl = gsap.timeline();
-      tl.fromTo(templateModalRef.current,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.3, ease: 'power2.out' }
-      );
-      tl.fromTo(templateModalContentRef.current,
-        { scale: 0.95, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(1.1)' },
-        '-=0.15'
-      );
-    }, [showTemplateModal]);
 
     // Listen for openSectionEditor event from SmartContextCard Fix Now button
     useEffect(() => {
@@ -983,7 +960,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       handleDeleteSectionFromSidebar,
       handleSectionReorder,
       openAddSection: () => canvasBuilderRef.current?.openAddSection() || setShowAddSectionModal(true),
-      openTemplateSelector: () => canvasBuilderRef.current?.openTemplateSelector() || setShowTemplateModal(true),
+      openTemplateSelector: () => canvasBuilderRef.current?.openTemplateSelector(),
       activeSection: 'personal'
     }));
 
@@ -991,7 +968,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     if (!state.cvData) {
       return (
-        <div className="flex flex-col h-[calc(100vh-64px)] items-center justify-center bg-gray-50 dark:bg-[#1a230f]">
+        <div className="flex flex-col h-[calc(100vh-64px)] items-center justify-center bg-gray-50 dark:bg-[var(--bg-primary)]">
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-[#80FF00] border-t-transparent rounded-full animate-spin" />
             <p className="text-gray-500 dark:text-gray-400 font-medium">Initializing Builder...</p>
@@ -1001,7 +978,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     }
 
     return (
-      <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[#1a230f]">
+      <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 relative overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
         {/* Main Container */}
         <div className="flex-1 h-full flex overflow-hidden relative px-3 pb-3 pt-3 gap-3">
           {/* CV Canvas Builder — full drag-drop snippet-based builder with inline editing */}
@@ -1072,73 +1049,46 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           }}
         />
 
-        {/* Job Parser Dialog (Magic Paste) for standalone CVs */}
-        <JobParserDialog
+        {/* Smart JD Modal for standalone CVs */}
+        <SmartJDModal
           isOpen={showJobParserDialog}
           onClose={() => setShowJobParserDialog(false)}
-          customDescription="Add a Job Description for ATS check. This helps us provide more accurate analysis tailored to your target role by matching your CV against the job requirements."
-          showSaveAndTrack={state.cvType === 'standalone'} // Show "Save and Track" only for standalone CVs
-          onParseComplete={(parsedData) => {
-            // Extract job description from parsed data
-            const jobDescription = parsedData.jobDescription || parsedData.jobDescriptionRaw || '';
-
-            if (jobDescription) {
-              setJdText(jobDescription);
-              setShowJobParserDialog(true);
-
-              // Update jobData in state with the parsed information
-              dispatch({
-                type: 'SET_JOB_DATA',
-                payload: {
-                  ...state.jobData,
-                  jobTitle: parsedData.jobTitle || state.targetRole,
-                  title: parsedData.jobTitle || state.targetRole,
-                  company: parsedData.company || 'Unknown Company',
-                  description: jobDescription,
-                  jobDescription: jobDescription,
-                  location: parsedData.location || ''
-                }
-              });
-            }
-
-            setShowJobParserDialog(false);
+          initialData={{
+            title: state.targetRole || '',
+            experienceLevel: state.seniorityLevel || '',
           }}
-          onSaveAndTrack={async (parsedData) => {
-            // Handle "Save and Track" - Save job and link CV to journey
-            try {
-              const jobDescription = parsedData.jobDescription || parsedData.jobDescriptionRaw || '';
-
-              // EDGE CASE 2: Verify CV is standalone before proceeding
-              if (!jobDescription) {
-                alert('Missing job description. Please provide a job description to save and track.');
-                return;
+          onSubmit={async (data) => {
+            const jobDescription = data.jobDescription;
+            if (!jobDescription) {
+              toast.error('Missing job description.');
+              return;
+            }
+            
+            setJdText(jobDescription);
+            dispatch({
+              type: 'SET_JOB_DATA',
+              payload: {
+                ...state.jobData,
+                jobTitle: data.title || state.targetRole,
+                title: data.title || state.targetRole,
+                company: 'Unknown Company',
+                description: jobDescription,
+                jobDescription: jobDescription,
               }
+            });
+            setShowJobParserDialog(false);
 
-              // WORKAROUND: Ensure CV is saved first if cvId is missing
-              // This handles the case where CV was parsed but not saved yet
-              let effectiveCvId: string | undefined | null = state.cvId;
-
-              if (!effectiveCvId) {
-                console.log('💾 CV not saved yet, saving CV first before saving job...');
-                try {
-                  // Calculate completion percentage
-                  const hasPersonalInfo = !!(state.cvData?.basics?.name || state.cvData?.basics?.email);
-                  const hasWorkExperience = (state.cvData?.work?.length || 0) > 0;
-                  const hasEducation = (state.cvData?.education?.length || 0) > 0;
-                  const hasSkills = (state.cvData?.skills?.length || 0) > 0;
-                  const completionPercentage = [hasPersonalInfo, hasWorkExperience, hasEducation, hasSkills].filter(Boolean).length * 25;
-
+            if (state.cvType === 'standalone') {
+              try {
+                let effectiveCvId = state.cvId;
+                if (!effectiveCvId) {
                   const payload = {
                     title: state.cvTitle || 'My CV',
                     cvData: state.cvData,
                     templateId: state.selectedTemplate?.id || (state.selectedTemplate as any)?._id,
                     cvType: state.cvType || 'standalone',
                     status: 'draft',
-                    metadata: {
-                      isMaster: state.cvType === 'master',
-                      completionPercentage,
-                      createdVia: 'resume-enhancer'
-                    }
+                    metadata: { isMaster: state.cvType === 'master', completionPercentage: 100, createdVia: 'resume-enhancer' }
                   };
 
                   const cvResponse = await fetch('/api/cvs', {
@@ -1148,181 +1098,57 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                   });
 
                   const cvResult = await cvResponse.json().catch(() => ({}));
-
-                  if (!cvResponse.ok) {
-                    throw new Error(cvResult?.error || 'Failed to save CV');
-                  }
+                  if (!cvResponse.ok) throw new Error(cvResult?.error || 'Failed to save CV');
 
                   effectiveCvId = cvResult?.data?.cv?.id || cvResult?.data?.cv?._id || cvResult?.cv?.id || cvResult?.cv?._id || cvResult?.id || null;
-
-                  if (effectiveCvId) {
-                    console.log('✅ CV saved successfully with ID:', effectiveCvId);
-                    dispatch({ type: 'SET_CV_ID', payload: effectiveCvId });
-                  } else {
-                    throw new Error('CV saved but no ID returned');
-                  }
-                } catch (saveError: any) {
-                  console.error('Failed to save CV before creating job:', saveError);
-                  const message = sanitizeErrorMessage(saveError, 'Failed to save CV. Please try again.');
-                  alert(message);
-                  return;
+                  if (effectiveCvId) dispatch({ type: 'SET_CV_ID', payload: effectiveCvId });
+                  else throw new Error('CV saved but no ID returned');
                 }
-              }
 
-              // EDGE CASE 10: Set timeout for request (30 seconds)
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-              try {
-                // Step 1: Save the job with cvId - this will link CV before document creation
                 const jobResponse = await fetch('/api/jobs', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    jobTitle: parsedData.jobTitle || state.targetRole || 'Software Engineer',
-                    company: parsedData.company || 'Unknown Company',
+                    jobTitle: data.title || state.targetRole,
+                    company: 'Unknown Company',
                     jobDescription: jobDescription,
-                    location: parsedData.location || '',
-                    jobUrl: parsedData.jobUrl || '',
-                    salary: parsedData.salary,
-                    status: 'created', // Start at 'created' stage
-                    cvId: effectiveCvId // Pass effectiveCvId to link CV before journey auto-creates CV
-                  }),
-                  signal: controller.signal
+                    status: 'created',
+                    cvId: effectiveCvId || undefined
+                  })
                 });
 
-                clearTimeout(timeoutId);
-
-                if (!jobResponse.ok) {
-                  const errorData = await jobResponse.json().catch(() => ({}));
-                  const errorMessage = errorData.error || errorData.message || 'Failed to save job';
-
-                  // EDGE CASE 9: Check for tier/plan errors
-                  if (errorMessage.includes('credit') || errorMessage.includes('limit')) {
-                    throw new Error('This feature requires a Pro membership. Please upgrade your plan to continue.');
-                  }
-                  throw new Error(errorMessage);
-                }
+                if (!jobResponse.ok) throw new Error('Failed to save job');
 
                 const jobResult = await jobResponse.json();
                 const jobId = jobResult.data?.jobApplication?._id || jobResult.data?.id;
                 const journeyId = jobResult.data?.journey?._id;
 
-                // EDGE CASE 6: Only proceed if journey was created successfully
-                if (!jobId) {
-                  throw new Error('Job saved but no job ID returned');
-                }
+                if (!jobId || !journeyId) throw new Error('Job or Journey creation failed');
 
-                if (!journeyId) {
-                  throw new Error('Journey creation failed');
-                }
-
-                // Step 2: Update context with journey information
-                // CV is already linked by the job creation API, so we just update context
                 convertToJourney(journeyId, {
                   description: jobDescription,
-                  title: parsedData.jobTitle || state.targetRole,
-                  jobTitle: parsedData.jobTitle || state.targetRole,
-                  company: parsedData.company || 'Unknown Company',
+                  title: data.title || state.targetRole,
+                  jobTitle: data.title || state.targetRole,
+                  company: 'Unknown Company',
                   id: jobId,
-                  _id: jobId,
-                  location: parsedData.location
+                  _id: jobId
                 });
 
-                // Keep the URL in sync so refresh/share preserves journey context
-                try {
-                  const params = new URLSearchParams(searchParams.toString());
-                  params.set('mode', 'journey');
-                  if (state.cvId) params.set('cvId', state.cvId);
-                  params.set('journeyId', journeyId);
-                  router.replace(`${pathname}?${params.toString()}`);
-                } catch (urlError) {
-                  console.warn('Failed to update URL with journey details (non-critical):', urlError);
+                toast.success('Job saved and tracking started!');
+                
+                const cvResponse = await fetch(`/api/cvs/${state.cvId || effectiveCvId}`);
+                if (cvResponse.ok) {
+                  const cvResult = await cvResponse.json();
+                  const updatedCV = cvResult.data.cv;
+                  loadCV({
+                    cvId: updatedCV.id, cvType: 'journey', cvTitle: updatedCV.title, cvData: updatedCV.cvData,
+                    template: updatedCV.template, journeyId: updatedCV.journeyId, jobData: updatedCV.jobData
+                  });
                 }
-
-                // Update jobData in state
-                dispatch({
-                  type: 'SET_JOB_DATA',
-                  payload: {
-                    ...state.jobData,
-                    jobTitle: parsedData.jobTitle || state.targetRole,
-                    title: parsedData.jobTitle || state.targetRole,
-                    company: parsedData.company || 'Unknown Company',
-                    description: jobDescription,
-                    jobDescription: jobDescription,
-                    location: parsedData.location
-                  }
-                });
-
-                setJdText(jobDescription);
-                setShowJobParserDialog(false);
-
-                // Show success message using toast instead of alert
-                toast.success(`Job saved and tracking started! Now tracking: ${parsedData.jobTitle || state.targetRole} at ${parsedData.company || 'Unknown Company'}`);
-
-                // Reload CV with journey context dynamically (without navigating away)
-                try {
-                  // Fetch the updated CV with journey data
-                  const cvResponse = await fetch(`/api/cvs/${state.cvId || effectiveCvId}`);
-                  if (cvResponse.ok) {
-                    const cvResult = await cvResponse.json();
-                    const updatedCV = cvResult.data.cv;
-
-                    // Reload CV with journey context using loadCV function
-                    const finalJobData = updatedCV.jobData || {
-                      id: jobId,
-                      _id: jobId,
-                      jobTitle: parsedData.jobTitle || state.targetRole,
-                      title: parsedData.jobTitle || state.targetRole,
-                      company: parsedData.company || 'Unknown Company',
-                      description: jobDescription,
-                      jobDescription: jobDescription,
-                      location: parsedData.location
-                    };
-
-                    loadCV({
-                      cvId: updatedCV.id,
-                      cvType: 'journey',
-                      cvTitle: updatedCV.title,
-                      cvData: updatedCV.cvData,
-                      template: updatedCV.template,
-                      journeyId: journeyId,
-                      jobData: finalJobData
-                    });
-
-                    // Journey CVs use job description for analysis - no need to set targetRole/seniorityLevel
-
-                    // Update URL params to reflect journey mode
-                    const params = new URLSearchParams(searchParams.toString());
-                    params.set('mode', 'journey');
-                    if (state.cvId || effectiveCvId) params.set('cvId', state.cvId || effectiveCvId);
-                    params.set('journeyId', journeyId);
-                    router.replace(`${pathname}?${params.toString()}`);
-
-                    console.log('✅ CV reloaded with journey context dynamically');
-                  }
-                } catch (reloadError) {
-                  console.error('Failed to reload CV with journey context:', reloadError);
-                  // Fallback: just update the state we have
-                  dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
-                  dispatch({ type: 'SET_JOURNEY_ID', payload: journeyId });
-                }
-
-              } catch (fetchError: any) {
-                clearTimeout(timeoutId);
-
-                // EDGE CASE 10: Handle network timeout
-                if (fetchError.name === 'AbortError') {
-                  throw new Error('Operation timed out. Please try again.');
-                }
-                throw fetchError;
+              } catch (error: any) {
+                console.error('Failed to save and track:', error);
+                toast.error(error.message || 'Failed to save and track.');
               }
-            } catch (error) {
-              // EDGE CASE 3: Job creation failure - don't update state
-              console.error('Failed to save and track:', error);
-              const message = sanitizeErrorMessage(error, 'Failed to save and track. Please try again.');
-              alert(message);
-              // Don't update local state if operation fails - CV remains standalone
             }
           }}
         />

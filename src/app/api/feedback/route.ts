@@ -8,6 +8,8 @@ import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth-config';
 import { z } from 'zod';
 import { withValidation, successResponse, errorResponse } from '@/lib/validation/api-validator';
+import { getConnection } from '@/lib/database';
+import Feedback from '@/models/Feedback';
 
 // Feedback validation schema
 const feedbackSchema = z.object({
@@ -55,10 +57,9 @@ export const POST = withValidation(feedbackSchema, async (request, validatedData
       timestamp: feedbackData.timestamp,
     });
 
-    // TODO: Save to database when Feedback model is ready
-    // await getConnection();
-    // const Feedback = mongoose.model('Feedback', feedbackSchema);
-    // await new Feedback(feedbackData).save();
+    // Save to database
+    await getConnection();
+    await new Feedback(feedbackData).save();
 
     return successResponse(
       { received: true },

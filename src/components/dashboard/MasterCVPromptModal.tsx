@@ -32,7 +32,7 @@ const MasterCVPromptModal: React.FC<MasterCVPromptModalProps> = ({
 
     const handleCreateMasterCV = () => {
         // Navigate to Resume Enhancer in Master CV creation mode
-        router.push('/resume-enhancer?mode=create&type=master&source=job-tracker');
+        router.push('/editor?mode=create&type=master&source=job-tracker');
         onCreateMasterCV();
     };
 

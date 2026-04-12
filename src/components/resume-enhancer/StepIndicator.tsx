@@ -5,16 +5,17 @@ import { motion } from 'framer-motion';
 import { Check, ChevronRight } from 'lucide-react';
 
 interface StepIndicatorProps {
-  currentStep: 1 | 2;
+  currentStep: 1 | 2 | 3;
   completedSteps: number[];
-  onStepClick?: (step: 1 | 2) => void;
+  onStepClick?: (step: 1 | 2 | 3) => void;
   orientation?: 'horizontal' | 'vertical';
   className?: string;
 }
 
 const steps = [
-  { number: 1, label: 'Builder', description: 'Edit and optimize with AI' },
-  { number: 2, label: 'Review', description: 'Preview and save to dashboard' }
+  { number: 1, label: 'Editor', description: 'Edit and optimize with AI' },
+  { number: 2, label: 'Cover Letter Editor', description: 'Generate AI cover letter' },
+  { number: 3, label: 'Review', description: 'Preview and save' }
 ];
 
 export default function StepIndicator({
@@ -39,7 +40,7 @@ export default function StepIndicator({
               <React.Fragment key={step.number}>
                 <motion.button
                   type="button"
-                  onClick={() => isClickable && onStepClick?.(step.number as 1 | 2)}
+                  onClick={() => isClickable && onStepClick?.(step.number as 1 | 2 | 3)}
                   disabled={!isClickable}
                   className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0
@@ -96,7 +97,7 @@ export default function StepIndicator({
             {/* Step Circle with Label */}
             <div className="flex items-center gap-2">
               <motion.button
-                onClick={() => isClickable && onStepClick(step.number as 1 | 2)}
+                onClick={() => isClickable && onStepClick?.(step.number as 1 | 2 | 3)}
                 disabled={!isClickable}
                 className={`
                     w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-300 flex-shrink-0

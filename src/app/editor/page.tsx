@@ -19,14 +19,20 @@ function ResumeEnhancerPageContent() {
   const [restoreDraft, setRestoreDraft] = useState(false);
 
   // Get parameters from URL
+  const typeParam = searchParams.get('type');
   const modeParam = searchParams.get('mode');
-  const mode: 'create' | 'edit' | 'edit-master' | 'journey' =
-    (modeParam === 'edit' || modeParam === 'edit-master' || modeParam === 'journey')
+  let mode: 'create' | 'edit' | 'edit-master' | 'journey' | 'edit-cover-letter' | 'create-cover-letter' =
+    (modeParam === 'edit' || modeParam === 'edit-master' || modeParam === 'journey' || modeParam === 'edit-cover-letter' || modeParam === 'create-cover-letter')
       ? modeParam
       : 'create';
+  const clId = searchParams.get('clId') || searchParams.get('coverLetterId') || undefined;
   const cvId = searchParams.get('cvId') || undefined;
   const journeyId = searchParams.get('journeyId') || undefined;
   const restoreDraftParam = searchParams.get('restoreDraft') === 'true';
+
+  // Automatically determine mode if type or ids are present
+  if (typeParam === 'cv' && cvId && mode === 'create') mode = 'edit';
+  if ((typeParam === 'cl' || clId) && mode === 'create') mode = 'edit-cover-letter';
 
   // Check if user has CVs to determine guest mode
   useEffect(() => {
@@ -77,6 +83,7 @@ if (isGuestMode) {
             userId="guest"
             mode={mode}
             cvId={cvId}
+            clId={clId}
             journeyId={journeyId}
             isGuestMode={true}
             restoreDraft={restoreDraft}
@@ -97,7 +104,7 @@ if (!isAuthenticated || !user?.id) {
           Authentication Required
         </h2>
         <p className="text-[color:var(--text-secondary)] mb-4">
-          Please log in to access the Resume Enhancer.
+          Please log in to access the Editor.
         </p>
         <button
           onClick={() => window.location.href = '/sign-in'}
@@ -119,6 +126,7 @@ return (
             userId={user.id}
             mode={mode}
             cvId={cvId}
+            clId={clId}
             journeyId={journeyId}
             isGuestMode={false}
           />

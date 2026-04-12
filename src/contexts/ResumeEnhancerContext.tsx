@@ -14,7 +14,7 @@ import { type PaperSize } from '@/lib/services/paperSizeService';
 export interface ResumeEnhancerState {
   // Mode and navigation
   mode: 'create' | 'edit';
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3 | 4 | 5;
 
   // CV identification
   cvId?: string;
@@ -124,9 +124,9 @@ export interface ResumeEnhancerState {
 // Action Types
 type ResumeEnhancerAction =
   | { type: 'SET_MODE'; payload: 'create' | 'edit' }
-  | { type: 'SET_STEP'; payload: 1 | 2 | 3 | 4 }
+  | { type: 'SET_STEP'; payload: 1 | 2 | 3 | 4 | 5 }
   // Back-compat aliases used by older ResumeEnhancerClient implementation
-  | { type: 'SET_CURRENT_STEP'; payload: 1 | 2 | 3 | 4 }
+  | { type: 'SET_CURRENT_STEP'; payload: 1 | 2 | 3 | 4 | 5 }
   | { type: 'SET_CV_ID'; payload: string }
   | { type: 'SET_CV_TYPE'; payload: 'master' | 'journey' | 'standalone' }
   | { type: 'SET_CV_TITLE'; payload: string }
@@ -666,7 +666,7 @@ interface ResumeEnhancerContextType {
   dispatch: React.Dispatch<ResumeEnhancerAction>;
 
   // Helper functions
-  goToStep: (step: 1 | 2 | 3 | 4) => void;
+  goToStep: (step: 1 | 2 | 3 | 4 | 5) => void;
   nextStep: () => void;
   prevStep: () => void;
   runCVSurgeon: () => Promise<{ score: number; fixes: SurgicalFix[]; annotations: FixAnnotation[] } | null>;
@@ -701,17 +701,17 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(resumeEnhancerReducer, initialState);
 
   // Helper functions
-  const goToStep = (step: 1 | 2 | 3 | 4) => {
+  const goToStep = (step: 1 | 2 | 3 | 4 | 5) => {
     dispatch({ type: 'SET_STEP', payload: step });
   };
 
   const nextStep = () => {
-    const next = Math.min(4, (state.currentStep + 1)) as 1 | 2 | 3 | 4;
+    const next = Math.min(5, (state.currentStep + 1)) as 1 | 2 | 3 | 4 | 5;
     dispatch({ type: 'SET_STEP', payload: next });
   };
 
   const prevStep = () => {
-    const prev = Math.max(1, (state.currentStep - 1)) as 1 | 2 | 3 | 4;
+    const prev = Math.max(1, (state.currentStep - 1)) as 1 | 2 | 3 | 4 | 5;
     dispatch({ type: 'SET_STEP', payload: prev });
   };
 

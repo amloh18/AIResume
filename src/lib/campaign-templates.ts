@@ -329,7 +329,7 @@ const templates: CampaignTemplate[] = [
      <p>Getting interviews? Use our AI Coach to simulate questions for your target roles.</p>`,
     'Start Practicing', '/interview-prep'),
 
-  createTemplate('32-resume-score', '32. Resume Enhancer Score', 'trigger', 'Gamification',
+  createTemplate('32-resume-score', '32. Editor Score', 'trigger', 'Gamification',
     'Your CV Scored 72/100', 'Let\'s Aim for 90+',
     `<p>Hi {{firstName}},</p>
      <p>Our analyzer rates your current CV at 72. Fix 3 key issues to reach a "Strong" score.</p>`,
@@ -724,7 +724,7 @@ const templates: CampaignTemplate[] = [
   createTemplate('99-audit-offer', '99. Free Audit Offer', 'retention', 'Offer',
     'Free Resume Audit', 'One Time Gift',
     `<p>Hi {{firstName}},</p>
-     <p>Use our Resume Enhancer for free once to check your current CV.</p>`,
+     <p>Use our Editor for free once to check your current CV.</p>`,
     'Audit My CV', '/resumes'),
 
   createTemplate('100-farewell', '100. Final Farewell', 'retention', 'Goodbye',

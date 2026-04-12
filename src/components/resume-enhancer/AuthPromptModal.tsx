@@ -25,20 +25,20 @@ export default function AuthPromptModal({
   const handleSignUp = () => {
     setIsRedirecting(true);
     // Save current state before redirect
-    const callbackUrl = `/resume-enhancer?restoreDraft=true&step=${currentStep}`;
+    const callbackUrl = `/editor?restoreDraft=true&step=${currentStep}`;
     router.push(`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   };
 
   const handleSignIn = () => {
     setIsRedirecting(true);
     // Save current state before redirect
-    const callbackUrl = `/resume-enhancer?restoreDraft=true&step=${currentStep}`;
+    const callbackUrl = `/editor?restoreDraft=true&step=${currentStep}`;
     router.push(`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   };
 
   const handleGoogleSignIn = async () => {
     setIsRedirecting(true);
-    const callbackUrl = `/resume-enhancer?restoreDraft=true&step=${currentStep}`;
+    const callbackUrl = `/editor?restoreDraft=true&step=${currentStep}`;
     await signIn('google', {
       callbackUrl: callbackUrl,
       redirect: true

@@ -276,14 +276,14 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
             } else {
               console.log('📝 User has CVs but no master CV, redirecting to resume enhancer');
               // Redirect to resume enhancer to create master CV
-              router.push('/resume-enhancer?master=true');
+              router.push('/editor?master=true');
               setIsChecking(false);
               return;
             }
           } else {
             console.log('📝 User has no CVs, redirecting to resume enhancer');
             // Redirect to resume enhancer to create master CV
-            router.push('/resume-enhancer?master=true');
+            router.push('/editor?master=true');
             setIsChecking(false);
             return;
           }
@@ -296,7 +296,7 @@ export default function CVCheckRedirect({ children }: CVCheckRedirectProps) {
             message: result.message
           });
           // Fallback: redirect to resume enhancer if we can't check
-          router.push('/resume-enhancer?master=true');
+          router.push('/editor?master=true');
           setIsChecking(false);
           return;
         }

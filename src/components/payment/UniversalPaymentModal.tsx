@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import Logo from '@/components/ui/Logo';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
@@ -1207,18 +1208,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-l-2xl">
                 {/* Logo */}
                 <div className="mb-8 flex items-center gap-3">
-                  <img
-                    src="/images/logo.png"
-                    alt="CVCircle Logo"
-                    className="w-10 h-10 object-contain"
-                    loading="eager"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="text-2xl font-bold">
-                    <span className="text-[#80FF00]">CV</span><span className="text-gray-900">Circle</span>
-                  </div>
+                  <Logo size="md" showText={true} />
                 </div>
 
                 {/* Main Heading */}

@@ -179,10 +179,10 @@ const CVManagementSection: React.FC<{
   const handleEditMasterCV = () => {
     if (masterCV) {
       // Navigate to master CV mode for editing in Resume Enhancer
-      router.push(`/resume-enhancer?mode=edit-master&cvId=${masterCV.id}`);
+      router.push(`/editor?mode=edit-master&cvId=${masterCV.id}`);
     } else {
       // If no master CV, navigate to Resume Enhancer to create one
-      router.push('/resume-enhancer');
+      router.push('/editor');
     }
   };
 
@@ -311,7 +311,7 @@ const CVManagementSection: React.FC<{
         sessionStorage.setItem('fromOnboarding', 'true');
         sessionStorage.setItem('welcomeDismissed', 'true');
       }
-      router.push('/resume-enhancer');
+      router.push('/editor');
     };
 
     return (

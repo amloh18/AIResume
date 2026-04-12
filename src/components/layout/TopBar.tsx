@@ -11,6 +11,7 @@ import { useUserData } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
 import GlobalSearchBar from './GlobalSearchBar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import Logo from '@/components/ui/Logo';
 
 interface TopBarProps {
   onMenuToggle?: () => void;
@@ -55,34 +56,25 @@ const TopBar: React.FC<TopBarProps> = ({
 
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white dark:bg-[#1a2015] p-1 shadow-sm">
-              <Image
-                src="/images/logo.png"
-                alt="CVCircle Logo"
-                width={32}
-                height={32}
-                className="w-full h-full object-contain"
-                priority
-                quality={85}
-                sizes="32px"
-              />
+            <div className="tablet:hidden">
+              <Logo size="md" showText={false} />
             </div>
-            <span className="text-white dark:text-gray-100 font-semibold text-lg hidden tablet:block">
-              <span className="text-lime-400 dark:text-[rgb(129,255,0)]">CV</span><span className="text-gray-300 dark:text-gray-200">Circle</span>
-            </span>
+            <div className="hidden tablet:block">
+              <Logo size="md" showText={true} theme="dark" />
+            </div>
           </div>
 
-          {/* Resume Enhancer Quick Link */}
-          {!isAdminRoute && (
-            <motion.button
-              onClick={() => router.push('/resume-enhancer')}
-              className="hidden desktop:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-400/10 to-lime-500/10 border border-lime-400/30 hover:border-lime-400/50 text-lime-400 rounded-lg transition-all duration-200 hover:from-lime-400/20 hover:to-lime-500/20"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <span className="text-sm font-medium">✨ Resume Enhancer</span>
-            </motion.button>
-          )}
+          {/* Editor Quick Link */}
+        {!isAdminRoute && (
+          <motion.button
+            onClick={() => router.push('/editor')}
+            className="hidden desktop:flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-lime-400/10 to-lime-500/10 border border-lime-400/30 hover:border-lime-400/50 text-lime-400 rounded-lg transition-all duration-200 hover:from-lime-400/20 hover:to-lime-500/20"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <span className="text-sm font-medium">✨ Editor</span>
+          </motion.button>
+        )}
         </div>
 
         {/* Center Section - Navigation breadcrumbs could go here */}

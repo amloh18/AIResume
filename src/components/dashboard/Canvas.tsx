@@ -1179,7 +1179,7 @@ const Canvas: React.FC = () => {
   const handleEditMasterCV = async (masterCV: any) => {
     try {
       // Route Master CV edit into Resume Enhancer (replaces legacy studio edit flow)
-      router.push(`/resume-enhancer?mode=edit&cvId=${masterCV.id}`);
+      router.push(`/editor?mode=edit&cvId=${masterCV.id}`);
     } catch (error) {
       console.error('Failed to route to ai-career-report for master CV editing:', error);
     }
@@ -1201,7 +1201,7 @@ const Canvas: React.FC = () => {
 
       if (duplicateCV && duplicateCV.id) {
         // Navigate to resume-enhancer with duplicated CV (standalone mode, ready for job linking)
-        router.push(`/resume-enhancer?mode=edit&cvId=${duplicateCV.id}`);
+        router.push(`/editor?mode=edit&cvId=${duplicateCV.id}`);
       } else {
         throw new Error('Failed to duplicate master CV');
       }
@@ -1389,11 +1389,11 @@ const Canvas: React.FC = () => {
   const handleCVClick = async (cv: CV) => {
     try {
       // All CV edits should open Resume Enhancer (replaces legacy studio)
-      router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
+      router.push(`/editor?mode=edit&cvId=${cv.id}`);
     } catch (error) {
       console.error('Error navigating to resume-enhancer:', error);
       // Fallback: still attempt to open resume-enhancer
-      router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
+      router.push(`/editor?mode=edit&cvId=${cv.id}`);
     }
   };
 
@@ -2451,7 +2451,7 @@ const Canvas: React.FC = () => {
                   onEdit={(cv) => {
                     if (cv.isMaster) {
                       // Handle Master CV edit redirect
-                      router.push(`/resume-enhancer?mode=edit&cvId=${cv.id}`);
+                      router.push(`/editor?mode=edit&cvId=${cv.id}`);
                     } else {
                       handleCVClick(cv as any);
                     }
@@ -2624,12 +2624,12 @@ const Canvas: React.FC = () => {
               coverLetters={filteredAndSortedCoverLetters}
               onEdit={(cl) => {
                 const params = new URLSearchParams();
-                params.set('mode', cl.journeyId ? 'journey' : 'edit');
+                params.set('mode', 'edit-cover-letter');
                 params.set('coverLetterId', cl.id);
                 if (cl.journeyId) params.set('journeyId', cl.journeyId);
                 if (cl.cvId) params.set('cvId', cl.cvId);
                 if (cl.jobId) params.set('jobId', cl.jobId);
-                router.push(`/cover-letter-editor?${params.toString()}`);
+                router.push(`/editor?${params.toString()}`);
               }}
               onDownload={handleDownloadCoverLetter}
               onDelete={handleDeleteCoverLetter}
@@ -2668,12 +2668,12 @@ const Canvas: React.FC = () => {
                       }}
                       onEdit={(cl) => {
                         const params = new URLSearchParams();
-                        params.set('mode', cl.journeyId ? 'journey' : 'edit');
+                        params.set('mode', 'edit-cover-letter');
                         params.set('coverLetterId', cl.id);
                         if (cl.journeyId) params.set('journeyId', cl.journeyId);
                         if (cl.cvId) params.set('cvId', cl.cvId);
                         if (cl.jobId) params.set('jobId', cl.jobId);
-                        router.push(`/cover-letter-editor?${params.toString()}`);
+                        router.push(`/editor?${params.toString()}`);
                       }}
                       onDownload={handleDownloadCoverLetter}
                       onDelete={handleDeleteCoverLetter}

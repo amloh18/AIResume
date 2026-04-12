@@ -2,38 +2,44 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, User, Palette, Sparkles, Eye } from 'lucide-react';
+import { Check, User, Palette, Sparkles, Eye, FileText } from 'lucide-react';
 
 interface RibbonStepIndicatorProps {
-  currentStep: 1 | 2 | 3 | 4;
+  currentStep: 1 | 2 | 3 | 4 | 5;
   completedSteps: number[];
-  onStepClick?: (step: 1 | 2 | 3 | 4) => void;
+  onStepClick?: (step: 1 | 2 | 3 | 4 | 5) => void;
   className?: string;
 }
 
 const steps = [
   {
     number: 1,
-    label: 'Personal Info',
+    label: 'Dashboard',
     description: 'Upload or add your resume details',
     icon: User
   },
   {
     number: 2,
     label: 'Template',
-    description: 'Pick a template for your CV',
+    description: 'Pick a template for your CV and CL',
     icon: Palette
   },
   {
     number: 3,
-    label: 'Builder & Surgeon',
+    label: 'Editor',
     description: 'Edit and optimize with AI',
     icon: Sparkles
   },
   {
     number: 4,
+    label: 'Cover Letter Editor',
+    description: 'Generate AI cover letter',
+    icon: FileText
+  },
+  {
+    number: 5,
     label: 'Review',
-    description: 'Preview and save to dashboard',
+    description: 'Preview and save',
     icon: Eye
   }
 ];
@@ -94,7 +100,7 @@ export default function RibbonStepIndicator({
               <React.Fragment key={step.number}>
                 {/* Ribbon Step Box */}
                 <motion.div
-                  onClick={() => isClickable && onStepClick?.(step.number as 1 | 2 | 3 | 4)}
+                  onClick={() => isClickable && onStepClick?.(step.number as 1 | 2 | 3 | 4 | 5)}
                   className={`
                     relative flex items-center gap-2 min-w-[160px] px-4 py-2 transition-all duration-300
                     ${isActive

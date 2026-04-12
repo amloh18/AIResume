@@ -2464,7 +2464,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             You need to create a master CV first before creating job-specific CVs.
                           </p>
                           <motion.button
-                            onClick={() => router.push('/resume-enhancer')}
+                            onClick={() => router.push('/editor')}
                             className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -2497,7 +2497,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                   if (journey.cvId) {
                                     params.set('cvId', journey.cvId);
                                   }
-                                  router.push(`/resume-enhancer?${params.toString()}`);
+                                  router.push(`/editor?${params.toString()}`);
                                 }}
                                 className="text-xs text-lime-400 hover:text-lime-300 flex items-center gap-1"
                               >
@@ -2539,7 +2539,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                         You need to create a master CV first before creating job-specific CVs.
                       </p>
                       <motion.button
-                        onClick={() => router.push('/resume-enhancer')}
+                        onClick={() => router.push('/editor')}
                         className="w-full px-2 py-1 bg-lime-500 hover:bg-lime-600 text-black text-xs font-medium rounded transition-colors flex items-center gap-1 justify-center"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -2624,7 +2624,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                               if (journey.jobId) {
                                 params.set('jobId', journey.jobId);
                               }
-                              router.push(`/resume-enhancer?${params.toString()}`);
+                              router.push(`/editor?${params.toString()}`);
                             }}
                             className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 text-xs font-medium rounded transition-colors border border-purple-500/30"
                             whileHover={{ scale: 1.02 }}
@@ -2692,9 +2692,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             <div className="flex items-center gap-2 mt-1">
                               <motion.button
                                 onClick={() => {
-                                  // Navigate to cover-letter-editor in journey mode
+                                  // Navigate to resume-enhancer in edit-cover-letter mode
                                   const params = new URLSearchParams();
-                                  params.set('mode', 'journey');
+                                  params.set('mode', 'edit-cover-letter');
                                   params.set('journeyId', journey.id);
                                   if (journey.coverLetterId) {
                                     params.set('coverLetterId', journey.coverLetterId);
@@ -2705,7 +2705,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                   if (journey.jobId) {
                                     params.set('jobId', journey.jobId);
                                   }
-                                  router.push(`/cover-letter-editor?${params.toString()}`);
+                                  router.push(`/editor?${params.toString()}`);
                                 }}
                                 className={`text-xs flex items-center gap-1 ${liveProgress.status === 'completed'
                                   ? 'text-blue-400 hover:text-blue-300'

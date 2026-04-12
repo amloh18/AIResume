@@ -136,14 +136,14 @@ function buildCTARoute(
     
     case 'ats-analysis-job':
       if (cvId && jobId) {
-        return `/resume-enhancer?mode=edit&cvId=${cvId}&jobId=${jobId}`;
+        return `/editor?mode=edit&cvId=${cvId}&jobId=${jobId}`;
       } else if (cvId) {
-        return `/resume-enhancer?mode=edit&cvId=${cvId}`;
+        return `/editor?mode=edit&cvId=${cvId}`;
       }
-      return '/resume-enhancer';
+      return '/editor';
     
     case 'cv-creation-no-cv':
-      return '/resume-enhancer?mode=create';
+      return '/editor?mode=create';
     
     case 'upgrade-credit-low':
     case 'upgrade-credit-exhausted':

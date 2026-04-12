@@ -950,9 +950,9 @@ const JobsTracker: React.FC = () => {
       // Use the most recent journey or the one with the highest update time
       const journey = jobJourneys[0]; // Assuming filtered/sorted or taking the first one
       if (journey.cvId) {
-        router.push(`/resume-enhancer?journeyId=${journey.id}&cvId=${journey.cvId}&mode=edit`);
+        router.push(`/editor?journeyId=${journey.id}&cvId=${journey.cvId}&mode=edit`);
       } else {
-        router.push(`/resume-enhancer?journeyId=${journey.id}&mode=edit`);
+        router.push(`/editor?journeyId=${journey.id}&mode=edit`);
       }
     } else {
       // If no journey exists (shouldn't happen in Created stage), create one or alert

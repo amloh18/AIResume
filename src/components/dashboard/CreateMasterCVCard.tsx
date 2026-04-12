@@ -36,7 +36,7 @@ const CreateMasterCVCard: React.FC<CreateMasterCVCardProps> = ({ userId, onClose
       sessionStorage.setItem('fromOnboarding', 'true');
       sessionStorage.setItem('welcomeDismissed', 'true');
     }
-    router.push('/resume-enhancer');
+    router.push('/editor');
   };
 
   const features = [
