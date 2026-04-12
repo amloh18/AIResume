@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { verifyAdminAuth } from '@/lib/utils/adminAuth';
 import { getConnection } from '@/lib/database';
 import TaxRate from '@/models/TaxRate';
 
@@ -10,12 +11,11 @@ import TaxRate from '@/models/TaxRate';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const adminAuth = await verifyAdminAuth();
     
-    // TODO: Add admin role check
-    if (!session?.user?.email) {
+    if (!adminAuth.success) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized: Admin access required' },
         { status: 401 }
       );
     }
@@ -61,12 +61,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const adminAuth = await verifyAdminAuth();
     
-    // TODO: Add admin role check
-    if (!session?.user?.email) {
+    if (!adminAuth.success) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Unauthorized: Admin access required' },
         { status: 401 }
       );
     }

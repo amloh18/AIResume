@@ -1,20 +1,41 @@
 import React from 'react';
+import Image from 'next/image';
 
 interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
+  showText?: boolean;
+  theme?: 'light' | 'dark' | 'auto';
 }
 
-const Logo = ({ className = '', size = 'md' }: LogoProps) => {
-  const sizeClasses = {
-    tablet: 'text-lg',
-    tablet: 'text-2xl',
-    desktop: 'text-4xl'
+const Logo = ({ className = '', size = 'md', showText = true, theme = 'auto' }: LogoProps) => {
+  const sizeMap = {
+    sm: { img: 24, text: 'text-lg' },
+    md: { img: 32, text: 'text-2xl' },
+    lg: { img: 48, text: 'text-4xl' }
   };
 
+  const textColor = theme === 'light' 
+    ? 'text-gray-900' 
+    : theme === 'dark' 
+      ? 'text-white' 
+      : 'text-gray-900 dark:text-gray-100';
+
   return (
-    <div className={`font-black font-sans ${sizeClasses[size]} ${className}`} style={{ fontWeight: 900 }}>
-      <span className="text-lime-400">CV</span><span className="text-gray-600 dark:text-gray-300">Circle.io</span>
+    <div className={`flex items-center gap-2 ${className}`}>
+      <Image
+        src="/images/logo.png"
+        alt="CVCircle Logo"
+        width={sizeMap[size].img}
+        height={sizeMap[size].img}
+        className="object-contain"
+        priority
+      />
+      {showText && (
+        <span className={`font-black font-sans ${sizeMap[size].text}`} style={{ fontWeight: 900 }}>
+          <span className="text-lime-500">CV</span><span className={textColor}>Circle</span>
+        </span>
+      )}
     </div>
   );
 };

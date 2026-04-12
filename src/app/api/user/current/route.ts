@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import CV from '@/models/CV';
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,6 +31,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check if user has a master CV
+    const masterCVCount = await CV.countDocuments({
+      userId: user._id,
+      $or: [
+        { 'metadata.isMaster': true },
+        { 'metadata.isMaster': 'true' },
+        { cvType: 'master' },
+        { 'metadata.createdVia': 'ai-career-report' }
+      ]
+    });
+
     // Format user data for frontend
     const userData = {
       id: user._id.toString(),
@@ -44,7 +56,7 @@ export async function GET(request: NextRequest) {
       currentPlanKey: user.currentPlanKey,
       subscription: user.subscription,
       settings: user.settings,
-      hasMasterCV: false, // TODO: Check if user has master CV
+      hasMasterCV: masterCVCount > 0,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
     };

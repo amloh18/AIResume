@@ -512,7 +512,7 @@ export async function POST(request: NextRequest) {
             success: false,
             error: 'Please create your Master CV first before creating journey or standalone CVs',
             requiresMasterCV: true,
-            redirectTo: '/resume-enhancer?mode=create&type=master',
+            redirectTo: '/editor?mode=create&type=master',
             suggestedAction: 'Create Master CV'
           },
           { status: 409 } // 409 Conflict

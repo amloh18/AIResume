@@ -79,7 +79,7 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
       'Generate tailored cover letters',
     ],
     ctaText: 'Create CV',
-    ctaRoute: '/resume-enhancer?mode=create',
+    ctaRoute: '/editor?mode=create',
     imageUrl: IMAGE_URLS.cvCreation,
     contexts: ['job-tracking', 'dashboard'],
     priority: 7,

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import Logo from '@/components/ui/Logo';
 import {
   BarChart3, Target, FileText,
   Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin
@@ -272,8 +273,8 @@ const OptimizedNavigation: React.FC = () => {
       'jobs': '/dashboard/jobs',
       'jobs-dashboard': '/dashboard/jobs',
       'settings': '/dashboard/settings',
-      'resume-enhancer': '/resume-enhancer',
-      'cover-letter-generator': '/cover-letter-editor?mode=create',
+      'resume-enhancer': '/editor',
+      'cover-letter-generator': '/editor?mode=create-cover-letter',
       'interview-coach': '/interview-coach',
       'linkedin-enhancer': '/linkedin-enhancer'
     };
@@ -332,17 +333,17 @@ const OptimizedNavigation: React.FC = () => {
   const toolSections = [
     {
       id: 'resume-enhancer',
-      name: 'Resume Enhancer',
+      name: 'Editor',
       icon: Target,
       description: 'AI-powered CV optimization',
-      route: '/resume-enhancer'
+      route: '/editor'
     },
     {
       id: 'cover-letter-generator',
       name: 'Cover Letter Generator',
       icon: PenTool,
       description: 'Create custom cover letters',
-      route: '/cover-letter-editor?mode=create'
+      route: '/editor?mode=create-cover-letter'
     },
     {
       id: 'interview-coach',
@@ -384,22 +385,14 @@ const OptimizedNavigation: React.FC = () => {
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          {/* Logo Icon */}
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-lg bg-white dark:bg-[#1a2015] p-1">
-            <Image
-              src="/images/logo.png"
-              alt="CVCircle Logo"
-              width={32}
-              height={32}
-              className="w-full h-full object-contain"
-              priority
-              quality={85}
-              sizes="32px"
-            />
-          </div>
-          {/* Logo Text - Hidden on lg/xl, visible on sm/md (hamburger) and 2xl+ */}
-          <div className="flex items-center lg:hidden 2xl:flex">
-            <span className="text-2xl font-bold text-lime-500 dark:text-[rgb(129,255,0)]">CV</span><span className="text-2xl font-bold text-gray-600 dark:text-gray-300">Circle</span>
+          {/* Logo Icon & Text */}
+          <div className="flex items-center">
+            <div className="lg:hidden 2xl:flex">
+              <Logo size="md" showText={true} />
+            </div>
+            <div className="hidden lg:flex 2xl:hidden">
+              <Logo size="md" showText={false} />
+            </div>
           </div>
         </motion.button>
 

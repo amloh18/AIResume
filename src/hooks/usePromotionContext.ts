@@ -49,7 +49,7 @@ export function usePromotionContext(): PromotionContextData {
 
     // Detect route-based contexts
     if (pathname) {
-      if (pathname.includes('/resume-enhancer')) {
+      if (pathname.includes('/editor')) {
         const mode = searchParams?.get('mode');
         if (mode === 'edit' || mode === 'edit-master' || mode === 'journey') {
           contexts.push('cv-editing');

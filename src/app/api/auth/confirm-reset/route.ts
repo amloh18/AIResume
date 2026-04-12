@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
-// Firebase admin imports removed - using NextAuth password reset
+import VerificationToken from '@/models/VerificationToken';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ Database connected');
     
     const body = await request.json();
-    const { code, newPassword } = body;
+    const { code, newPassword, email } = body;
     
     console.log('🔐 Processing password reset confirmation');
     
@@ -44,16 +45,48 @@ export async function POST(request: NextRequest) {
     }
     
     try {
-      // Verify the reset code and get the email
-      // TODO: Implement NextAuth password reset verification
-      // For now, we'll skip Firebase verification
-      const email = null; // This needs to be implemented with NextAuth
-      console.log('✅ Reset code verified for email:', email);
+      // Find the token first to get the email if not provided
+      let targetEmail = email;
+      let tokenDoc;
+      
+      if (targetEmail) {
+        tokenDoc = await VerificationToken.findOne({ code, email: targetEmail, type: 'password-reset' });
+      } else {
+        tokenDoc = await VerificationToken.findOne({ code, type: 'password-reset' });
+        if (tokenDoc) {
+          targetEmail = tokenDoc.email;
+        }
+      }
+
+      if (!tokenDoc) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Invalid or expired reset code. Please request a new password reset.',
+            error: 'INVALID_CODE'
+          },
+          { status: 400 }
+        );
+      }
+
+      if (tokenDoc.expiresAt < new Date()) {
+        await VerificationToken.deleteOne({ _id: tokenDoc._id });
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Reset code has expired. Please request a new password reset.',
+            error: 'EXPIRED_CODE'
+          },
+          { status: 400 }
+        );
+      }
+      
+      console.log('✅ Reset code verified for email:', targetEmail);
       
       // Find user in our database
-      const user = await User.findOne({ email }).select('+password');
+      const user = await User.findOne({ email: targetEmail }).select('+password');
       if (!user) {
-        console.log('❌ User not found in database:', email);
+        console.log('❌ User not found in database:', targetEmail);
         return NextResponse.json(
           {
             success: false,
@@ -70,19 +103,18 @@ export async function POST(request: NextRequest) {
         firstName: user.firstName
       });
       
-      // Confirm the password reset in Firebase
-      // TODO: Implement NextAuth password reset confirmation
-      // For now, we'll skip Firebase confirmation
-      console.log('Password reset confirmation skipped - needs NextAuth implementation');
-      console.log('✅ Password reset confirmed in Firebase');
+      // Hash the new password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      // Update password in our database
+      user.password = hashedPassword;
+      user.lastPasswordChange = new Date();
+      await user.save();
+      console.log('✅ Password updated in database');
       
-      // Update password in our database (for users who also have local passwords)
-      if (user.password) {
-        user.password = newPassword;
-        user.lastPasswordChange = new Date();
-        await user.save();
-        console.log('✅ Password updated in database');
-      }
+      // Delete the token
+      await VerificationToken.deleteOne({ _id: tokenDoc._id });
       
       return NextResponse.json(
         {
@@ -92,47 +124,16 @@ export async function POST(request: NextRequest) {
         { status: 200 }
       );
       
-    } catch (firebaseError: any) {
-      console.error('❌ Firebase password reset error:', firebaseError);
-      
-      // Handle specific Firebase errors
-      if (firebaseError.code === 'auth/invalid-action-code') {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Invalid or expired reset code. Please request a new password reset.',
-            error: 'INVALID_CODE'
-          },
-          { status: 400 }
-        );
-      } else if (firebaseError.code === 'auth/expired-action-code') {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Reset code has expired. Please request a new password reset.',
-            error: 'EXPIRED_CODE'
-          },
-          { status: 400 }
-        );
-      } else if (firebaseError.code === 'auth/weak-password') {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Password is too weak. Please choose a stronger password.',
-            field: 'newPassword'
-          },
-          { status: 400 }
-        );
-      } else {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Failed to reset password. Please try again.',
-            error: 'FIREBASE_ERROR'
-          },
-          { status: 500 }
-        );
-      }
+    } catch (dbError: any) {
+      console.error('❌ Database operation error:', dbError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Failed to reset password. Please try again.',
+          error: 'DATABASE_ERROR'
+        },
+        { status: 500 }
+      );
     }
     
   } catch (error: any) {
