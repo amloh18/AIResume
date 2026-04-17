@@ -18,6 +18,7 @@ import { Session } from 'next-auth';
 import ClientErrorBoundary from './ClientErrorBoundary';
 import { FeedbackPrompt } from '@/components/feedback/FeedbackPrompt';
 import FeaturePromotionProvider from '@/components/promotions/FeaturePromotionProvider';
+import AuthModal from '@/components/auth/AuthModal';
 
 interface ClientProvidersProps {
   children: ReactNode;
@@ -36,6 +37,7 @@ function ConditionalProviders({ children }: ClientProvidersProps) {
               <SessionCleanup />
               <Toaster />
               <FeedbackPrompt />
+              <AuthModal />
               {children}
             </FeaturePromotionProvider>
           </ConsoleLoggerProvider>

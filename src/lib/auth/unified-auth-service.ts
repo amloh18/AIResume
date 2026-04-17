@@ -2,6 +2,7 @@ import 'server-only';
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import AppleProvider from 'next-auth/providers/apple';
 import { getCache, setCache, invalidateCache } from '@/lib/cache';
 import { UserService, AuthenticatedUser } from './user-service';
 import VerificationToken from '@/models/VerificationToken';
@@ -69,6 +70,11 @@ export class UnifiedAuthService {
           clientSecret: GOOGLE_CLIENT_SECRET,
         }),
 
+        AppleProvider({
+          clientId: process.env.APPLE_ID || '',
+          clientSecret: process.env.APPLE_SECRET || '',
+        }),
+
         CredentialsProvider({
           id: 'credentials',
           name: 'Email',
@@ -121,145 +127,7 @@ export class UnifiedAuthService {
           },
         }),
 
-        // Admin Credentials Provider
-        CredentialsProvider({
-          id: 'admin-credentials',
-          name: 'Admin Login',
-          credentials: {
-            email: { type: 'email' },
-            password: { type: 'password' },
-          },
-          async authorize(credentials, req) {
-            const email = credentials?.email?.toLowerCase()?.trim();
-            const password = credentials?.password;
-
-            console.log('🔐 Admin auth attempt:', { email, hasPassword: !!password });
-
-            if (!email || !password) {
-              console.error('❌ Admin auth: Missing credentials', { 
-                hasEmail: !!email, 
-                hasPassword: !!password 
-              });
-              return null;
-            }
-
-            try {
-              console.log('📡 Connecting to database...');
-              // Get database connection
-              await getConnection();
-              console.log('✅ Database connected');
-
-              // Dynamically import AdminAuth model to avoid circular dependencies
-              const AdminAuth = (await import('@/models/AdminAuth')).default;
-              console.log('✅ AdminAuth model loaded');
-
-              // Find admin user by email
-              console.log('🔍 Searching for admin user:', email);
-              const adminUser = await AdminAuth.findOne({
-                email: email
-              }).select('+password');
-
-              if (!adminUser) {
-                console.error('❌ Admin user not found:', email);
-                // Check if any admin users exist at all
-                const adminCount = await AdminAuth.countDocuments({});
-                console.log(`ℹ️  Total admin users in database: ${adminCount}`);
-                
-                // Log failed login attempt
-                try {
-                  const { ActivityLogService } = await import('@/lib/services/activityLogService');
-                  await ActivityLogService.logAdminAction({
-                    adminUserId: 'unknown',
-                    adminEmail: email,
-                    action: 'admin_login_failed',
-                    actionType: 'authentication',
-                    status: 'failed',
-                    metadata: {
-                      reason: 'user_not_found',
-                      provider: 'admin-credentials',
-                      totalAdmins: adminCount
-                    }
-                  });
-                } catch (logError) {
-                  console.error('Failed to log admin login failure:', logError);
-                }
-                return null;
-              }
-
-              console.log('✅ Admin user found:', {
-                id: adminUser._id.toString(),
-                email: adminUser.email,
-                role: adminUser.role,
-                hasPassword: !!adminUser.password
-              });
-
-              // Verify password
-              console.log('🔑 Verifying password...');
-              const isPasswordValid = await adminUser.comparePassword(password);
-
-              if (!isPasswordValid) {
-                console.error('❌ Invalid password for admin:', email);
-                // Log failed login attempt
-                try {
-                  const { ActivityLogService } = await import('@/lib/services/activityLogService');
-                  await ActivityLogService.logAdminAction({
-                    adminUserId: adminUser._id.toString(),
-                    adminEmail: email,
-                    action: 'admin_login_failed',
-                    actionType: 'authentication',
-                    status: 'failed',
-                    metadata: {
-                      reason: 'invalid_password',
-                      provider: 'admin-credentials'
-                    }
-                  });
-                } catch (logError) {
-                  console.error('Failed to log admin login failure:', logError);
-                }
-                return null;
-              }
-
-              console.log('✅ Password verified successfully');
-
-              // Update last login (don't fail if this fails)
-              try {
-                adminUser.lastLogin = new Date();
-                await adminUser.save();
-                console.log('✅ Last login updated');
-              } catch (saveError) {
-                console.warn('⚠️  Failed to update admin last login:', saveError);
-                // Continue anyway - this is not critical
-              }
-
-              // Return admin user with role
-              const userData = {
-                id: adminUser._id.toString(),
-                email: adminUser.email,
-                name: adminUser.email.split('@')[0],
-                role: adminUser.role || 'admin',
-                type: 'admin',
-              };
-              console.log('✅ Admin authentication successful:', userData.email);
-              return userData;
-            } catch (error: any) {
-              // Log error with full details for debugging
-              console.error('❌ Admin authentication error:', {
-                message: error?.message || 'Unknown error',
-                name: error?.name || 'Error',
-                code: error?.code,
-                email: email,
-                // Always log stack in development
-                ...(process.env.NODE_ENV === 'development' && { 
-                  stack: error?.stack,
-                  fullError: error
-                })
-              });
-              // Always return null on error - never throw
-              return null;
-            }
-          },
-        }),
-
+        // Passwordless Provider
         CredentialsProvider({
           id: 'passwordless',
           name: 'Passwordless Login',
@@ -450,27 +318,26 @@ export class UnifiedAuthService {
             }
           },
         }),
-        // NOTE: admin-credentials provider is defined above (line 101)
-        // Removed duplicate provider that was using UserService.authenticateAdmin
       ],
 
       callbacks: {
         async signIn({ user, account, profile }) {
-          // Handle Google OAuth sign-in
-          if (account?.provider === 'google') {
+          // Handle OAuth sign-in
+          if (account?.provider === 'google' || account?.provider === 'apple') {
             try {
-              const googleUser = await UserService.findOrCreateGoogleUser({
+              const oauthUser = await UserService.findOrCreateOAuthUser({
                 email: user.email || '',
                 name: user.name || '',
                 image: user.image || undefined,
-                googleId: account.providerAccountId || (account.id ? String(account.id) : '') || '',
+                providerId: account.providerAccountId || (account.id ? String(account.id) : '') || '',
+                provider: account.provider,
               });
 
-              if (googleUser) {
-                user.id = googleUser.id;
+              if (oauthUser) {
+                user.id = oauthUser.id;
               }
 
-              return !!googleUser;
+              return !!oauthUser;
             } catch (error: any) {
               console.error('❌ Sign-in callback error:', error);
               return false;
@@ -491,16 +358,17 @@ export class UnifiedAuthService {
             token.id = String(user.id || '').substring(0, 100);
             token.email = String(user.email || '').substring(0, 255);
 
-            // Preserve admin type and role from authorize function (minimal)
-            if ((user as any).type === 'admin') {
-              token.type = 'admin';
-              token.role = String((user as any).role || 'admin').substring(0, 50);
-              // Only store name if it's short (admin emails can be long)
+            // Capture role from the user object (set by authorize or OAuth callback)
+            const userRole = (user as any).role || 'user';
+            const userType = (user as any).type || (userRole === 'admin' || userRole === 'superadmin' ? 'admin' : 'user');
+            
+            token.type = String(userType).substring(0, 50);
+            token.role = String(userRole).substring(0, 50);
+
+            // If it's an admin, we can optionally store the name
+            if (userType === 'admin') {
               const name = user.name || (user.email as string)?.split('@')[0] || 'Admin';
               token.name = String(name).substring(0, 100); // Limit name length
-            } else {
-              // Regular users - don't store name in token, fetch in session callback
-              token.type = 'user';
             }
 
             // Explicitly remove image from token - it can be large

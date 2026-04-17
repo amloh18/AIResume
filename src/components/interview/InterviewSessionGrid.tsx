@@ -43,7 +43,7 @@ const InterviewSessionGrid: React.FC<{ sessions: Session[] }> = ({ sessions }) =
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05 }}
-                    onClick={() => router.push(`/interview-coach/${session.jobId._id}`)}
+                    onClick={() => router.push(`/dashboard/interview/${session.jobId._id}`)}
                     className="group relative bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 hover:shadow-xl transition-all cursor-pointer overflow-hidden"
                 >
                     {/* Hover Effect Border */}

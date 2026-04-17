@@ -85,14 +85,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       
       // Use NextAuth's signOut with redirect
       await signOut({
-        callbackUrl: '/sign-in',
+        callbackUrl: '/',
         redirect: true,
       });
       
     } catch (error) {
       console.error('❌ Logout error:', error);
       // Fallback: navigate manually
-      router.push('/sign-in');
+      window.location.href = '/';
     }
   };
 

@@ -23,6 +23,8 @@ import { ATSDeepDiveProvider, useATSDeepDive } from '@/contexts/ATSDeepDiveConte
 // import StrategistPanel from '@/components/studio/ats-deep-dive/StrategistPanel';
 import { useAIStore } from '@/lib/stores/aiStore';
 import { useATS } from '@/contexts/ATSContext';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 // ScorecardPanel - Shows ATS score breakdown and knockout factors
 const ScorecardPanel = ({ atsResult, isLoading }: { atsResult: any; isLoading: boolean }) => {
@@ -313,6 +315,8 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
   const { state } = useResumeEnhancer();
   const { state: deepDiveState, activateDeepDive, deactivateDeepDive, toggleLayer } = useATSDeepDive();
   const { setATSScore } = useAIStore();
+  const { openPaymentModal } = usePaymentModal();
+  const { userData } = useUserData();
   const {
     atsScore,
     atsAnalysis,
@@ -369,6 +373,11 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
   const runATSAnalysis = useCallback(async () => {
     if (!jobId || !state.cvData || !cvId) {
       setApiError('Job description and CV are required for ATS analysis');
+      return;
+    }
+
+    if (userData?.currentPlanKey === 'free' || !userData?.subscription || userData.subscription.status !== 'active') {
+      openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
       return;
     }
 
@@ -487,7 +496,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
       isAnalyzingRef.current = false;
       setIsLoading(false);
     }
-  }, [jobId, state.cvData, cvId, userId, calculateYearsOfExperience, updateATSScore, journeyId]);
+  }, [jobId, state.cvData, cvId, userId, calculateYearsOfExperience, updateATSScore, journeyId, userData, openPaymentModal]);
 
   // Auto-run analysis when modal opens and has required data
   useEffect(() => {

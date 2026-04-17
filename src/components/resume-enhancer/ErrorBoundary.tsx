@@ -60,7 +60,7 @@ class ResumeEnhancerErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
-    window.location.href = '/dashboard';
+    window.location.href = '/editor';
   };
 
   handleGoBack = () => {
@@ -131,7 +131,7 @@ class ResumeEnhancerErrorBoundary extends Component<Props, State> {
                 className="flex items-center justify-center gap-2 px-4 py-2 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[var(--text-primary)] rounded-lg font-medium transition-colors"
               >
                 <Home className="w-4 h-4" />
-                Dashboard
+                Start Over
               </button>
             </div>
           </div>

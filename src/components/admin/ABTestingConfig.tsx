@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface ABTestVariant {
     id: string;
@@ -111,18 +112,18 @@ export default function ABTestingConfig({
 
     if (!config.enabled) {
         return (
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className={ADMIN_THEME.card.base}>
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <h4 className="text-white font-semibold">A/B Testing</h4>
-                            <p className="text-sm text-gray-400 mt-1">
+                            <h4 className={`${ADMIN_THEME.text.primary} font-semibold`}>A/B Testing</h4>
+                            <p className={`text-sm ${ADMIN_THEME.text.muted} mt-1`}>
                                 Test different subject lines or CTA buttons to optimize performance
                             </p>
                         </div>
                         <Button
                             onClick={() => handleToggleEnabled(true)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className={ADMIN_THEME.button.primary}
                         >
                             <Plus className="w-4 h-4 mr-2" />
                             Enable A/B Testing
@@ -135,17 +136,17 @@ export default function ABTestingConfig({
 
     return (
         <div className="space-y-4">
-            <Card className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30">
+            <Card className={`border-emerald-500/30 bg-emerald-50/50`}>
                 <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-blue-400" />
-                            <h4 className="text-white font-semibold">A/B Testing Configuration</h4>
+                            <TrendingUp className="w-5 h-5 text-emerald-600" />
+                            <h4 className={`${ADMIN_THEME.text.primary} font-semibold`}>A/B Testing Configuration</h4>
                         </div>
                         <Button
                             onClick={() => handleToggleEnabled(false)}
                             variant="ghost"
-                            className="text-gray-400 hover:text-white px-2 py-1 text-sm"
+                            className={`${ADMIN_THEME.text.muted} hover:${ADMIN_THEME.text.primary} px-2 py-1 text-sm`}
                         >
                             <X className="w-4 h-4" />
                         </Button>
@@ -154,19 +155,19 @@ export default function ABTestingConfig({
                     <div className="space-y-4">
                         {/* Test Type */}
                         <div>
-                            <Label className="text-gray-300">What to Test *</Label>
+                            <Label className={ADMIN_THEME.text.secondary}>What to Test *</Label>
                             <Select value={config.testType} onValueChange={(value: any) => handleTestTypeChange(value)}>
-                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                                <SelectTrigger className={`${ADMIN_THEME.input.base} mt-1`}>
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                                    <SelectItem value="subject" className="text-white focus:bg-gray-800">
+                                <SelectContent className={ADMIN_THEME.background.primary}>
+                                    <SelectItem value="subject" className={ADMIN_THEME.text.primary}>
                                         Subject Line Only
                                     </SelectItem>
-                                    <SelectItem value="cta" className="text-white focus:bg-gray-800">
+                                    <SelectItem value="cta" className={ADMIN_THEME.text.primary}>
                                         CTA Button Text Only
                                     </SelectItem>
-                                    <SelectItem value="both" className="text-white focus:bg-gray-800">
+                                    <SelectItem value="both" className={ADMIN_THEME.text.primary}>
                                         Both Subject Line & CTA
                                     </SelectItem>
                                 </SelectContent>
@@ -176,14 +177,14 @@ export default function ABTestingConfig({
                         {/* Variants */}
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <Label className="text-gray-300">
+                                <Label className={ADMIN_THEME.text.secondary}>
                                     Test Variants ({config.variants.length}/3)
                                 </Label>
                                 {config.variants.length < 3 && (
                                     <Button
                                         onClick={handleAddVariant}
                                         variant="outline"
-                                        className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 px-3 py-1.5 text-sm"
+                                        className={`${ADMIN_THEME.button.outline} px-3 py-1.5 text-sm`}
                                     >
                                         <Plus className="w-3 h-3 mr-1" />
                                         Add Variant
@@ -193,17 +194,17 @@ export default function ABTestingConfig({
 
                             <div className="space-y-3">
                                 {config.variants.map((variant, index) => (
-                                    <Card key={variant.id} className="bg-gray-800 border-gray-700">
+                                    <Card key={variant.id} className={ADMIN_THEME.card.base}>
                                         <CardContent className="p-3">
                                             <div className="flex items-start justify-between mb-2">
-                                                <span className="text-sm font-semibold text-blue-400">
+                                                <span className="text-sm font-semibold text-emerald-600">
                                                     Variant {String.fromCharCode(65 + index)}
                                                 </span>
                                                 {config.variants.length > 2 && (
                                                     <Button
                                                         onClick={() => handleRemoveVariant(variant.id)}
                                                         variant="ghost"
-                                                        className="text-gray-400 hover:text-red-400 h-6 w-6 p-0"
+                                                        className={`${ADMIN_THEME.text.muted} hover:text-red-600 h-6 w-6 p-0`}
                                                     >
                                                         <Trash2 className="w-3 h-3" />
                                                     </Button>
@@ -213,14 +214,14 @@ export default function ABTestingConfig({
                                             <div className="space-y-2">
                                                 {(config.testType === 'subject' || config.testType === 'both') && (
                                                     <div>
-                                                        <Label className="text-gray-400 text-xs">Subject Line</Label>
+                                                        <Label className={`text-xs ${ADMIN_THEME.text.muted}`}>Subject Line</Label>
                                                         <Input
                                                             value={variant.subjectLine || ''}
                                                             onChange={(e) => handleUpdateVariant(variant.id, 'subjectLine', e.target.value)}
                                                             placeholder={`Subject line for variant ${String.fromCharCode(65 + index)}...`}
-                                                            className="bg-gray-900 border-gray-700 text-white mt-1 text-sm"
+                                                            className={`${ADMIN_THEME.input.base} mt-1 text-sm`}
                                                         />
-                                                        <p className="text-xs text-gray-500 mt-1">
+                                                        <p className={`text-xs mt-1 ${ADMIN_THEME.text.tertiary}`}>
                                                             {variant.subjectLine?.length || 0} chars (optimal: 40-50)
                                                         </p>
                                                     </div>
@@ -228,12 +229,12 @@ export default function ABTestingConfig({
 
                                                 {(config.testType === 'cta' || config.testType === 'both') && (
                                                     <div>
-                                                        <Label className="text-gray-400 text-xs">CTA Button Text</Label>
+                                                        <Label className={`text-xs ${ADMIN_THEME.text.muted}`}>CTA Button Text</Label>
                                                         <Input
                                                             value={variant.ctaText || ''}
                                                             onChange={(e) => handleUpdateVariant(variant.id, 'ctaText', e.target.value)}
                                                             placeholder={`CTA text for variant ${String.fromCharCode(65 + index)}...`}
-                                                            className="bg-gray-900 border-gray-700 text-white mt-1 text-sm"
+                                                            className={`${ADMIN_THEME.input.base} mt-1 text-sm`}
                                                         />
                                                     </div>
                                                 )}
@@ -247,84 +248,84 @@ export default function ABTestingConfig({
                         {/* Test Configuration */}
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <Label className="text-gray-300">Sample Size *</Label>
+                                <Label className={ADMIN_THEME.text.secondary}>Sample Size *</Label>
                                 <Select
                                     value={config.sampleSize.toString()}
                                     onValueChange={(value) => onChange({ ...config, sampleSize: parseInt(value) })}
                                 >
-                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                                    <SelectTrigger className={`${ADMIN_THEME.input.base} mt-1`}>
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                                        <SelectItem value="10" className="text-white focus:bg-gray-800">10% of audience</SelectItem>
-                                        <SelectItem value="20" className="text-white focus:bg-gray-800">20% of audience</SelectItem>
-                                        <SelectItem value="30" className="text-white focus:bg-gray-800">30% of audience</SelectItem>
-                                        <SelectItem value="50" className="text-white focus:bg-gray-800">50% of audience</SelectItem>
+                                    <SelectContent className={ADMIN_THEME.background.primary}>
+                                        <SelectItem value="10" className={ADMIN_THEME.text.primary}>10% of audience</SelectItem>
+                                        <SelectItem value="20" className={ADMIN_THEME.text.primary}>20% of audience</SelectItem>
+                                        <SelectItem value="30" className={ADMIN_THEME.text.primary}>30% of audience</SelectItem>
+                                        <SelectItem value="50" className={ADMIN_THEME.text.primary}>50% of audience</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className={`text-xs mt-1 ${ADMIN_THEME.text.muted}`}>
                                     Portion of audience to test on
                                 </p>
                             </div>
 
                             <div>
-                                <Label className="text-gray-300">Test Duration *</Label>
+                                <Label className={ADMIN_THEME.text.secondary}>Test Duration *</Label>
                                 <Select
                                     value={config.testDuration.toString()}
                                     onValueChange={(value) => onChange({ ...config, testDuration: parseInt(value) })}
                                 >
-                                    <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                                    <SelectTrigger className={`${ADMIN_THEME.input.base} mt-1`}>
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                                        <SelectItem value="2" className="text-white focus:bg-gray-800">2 hours</SelectItem>
-                                        <SelectItem value="4" className="text-white focus:bg-gray-800">4 hours</SelectItem>
-                                        <SelectItem value="8" className="text-white focus:bg-gray-800">8 hours</SelectItem>
-                                        <SelectItem value="24" className="text-white focus:bg-gray-800">24 hours</SelectItem>
-                                        <SelectItem value="48" className="text-white focus:bg-gray-800">48 hours</SelectItem>
+                                    <SelectContent className={ADMIN_THEME.background.primary}>
+                                        <SelectItem value="2" className={ADMIN_THEME.text.primary}>2 hours</SelectItem>
+                                        <SelectItem value="4" className={ADMIN_THEME.text.primary}>4 hours</SelectItem>
+                                        <SelectItem value="8" className={ADMIN_THEME.text.primary}>8 hours</SelectItem>
+                                        <SelectItem value="24" className={ADMIN_THEME.text.primary}>24 hours</SelectItem>
+                                        <SelectItem value="48" className={ADMIN_THEME.text.primary}>48 hours</SelectItem>
                                     </SelectContent>
                                 </Select>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className={`text-xs mt-1 ${ADMIN_THEME.text.muted}`}>
                                     Before sending to remainder
                                 </p>
                             </div>
                         </div>
 
                         <div>
-                            <Label className="text-gray-300">Winning Metric *</Label>
+                            <Label className={ADMIN_THEME.text.secondary}>Winning Metric *</Label>
                             <Select
                                 value={config.winningMetric}
                                 onValueChange={(value: any) => onChange({ ...config, winningMetric: value })}
                             >
-                                <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                                <SelectTrigger className={`${ADMIN_THEME.input.base} mt-1`}>
                                     <SelectValue />
                                 </SelectTrigger>
-                                <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                                    <SelectItem value="opens" className="text-white focus:bg-gray-800">
+                                <SelectContent className={ADMIN_THEME.background.primary}>
+                                    <SelectItem value="opens" className={ADMIN_THEME.text.primary}>
                                         Highest Open Rate
                                     </SelectItem>
-                                    <SelectItem value="clicks" className="text-white focus:bg-gray-800">
+                                    <SelectItem value="clicks" className={ADMIN_THEME.text.primary}>
                                         Highest Click-Through Rate
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className={`text-xs mt-1 ${ADMIN_THEME.text.muted}`}>
                                 How to determine the winning variant
                             </p>
                         </div>
                     </div>
 
                     {!isValidConfig() && (
-                        <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg flex items-start gap-2">
-                            <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-red-300">
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-red-700">
                                 Please fill in all variant fields before proceeding.
                             </p>
                         </div>
                     )}
 
-                    <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                        <p className="text-sm text-blue-300">
+                    <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <p className="text-sm text-emerald-700">
                             <strong>How it works:</strong> The test will send {config.sampleSize}% of emails split equally among variants.
                             After {config.testDuration} hours, the variant with the highest {config.winningMetric === 'opens' ? 'open rate' : 'click-through rate'}
                             will be sent to the remaining {100 - config.sampleSize}% of recipients.

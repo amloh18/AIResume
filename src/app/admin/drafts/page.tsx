@@ -16,24 +16,24 @@ export default function AdminDraftsPage() {
   useEffect(() => {
     // Redirect if not authenticated or not an admin
     if (status === 'unauthenticated') {
-      router.push('/admin/signin');
+      window.location.href = '/sign-in';
       return;
     }
 
     if (status === 'authenticated' && !isAdmin) {
       console.error('User is not an admin');
-      router.push('/sign-in');
+      window.location.href = '/sign-in';
       return;
     }
-  }, [status, isAdmin, router]);
+  }, [status, isAdmin]);
 
   // Show loading state while checking authentication
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-gray-400">Loading admin drafts...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading drafts...</p>
         </div>
       </div>
     );
@@ -45,11 +45,10 @@ export default function AdminDraftsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
         <DraftManagement />
       </div>
     </div>
   );
 }
-

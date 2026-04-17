@@ -14,6 +14,7 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 
 
 function LandingPageContent() {
@@ -139,7 +140,7 @@ function LandingPageContent() {
   ];
 
   const handleCtaClick = () => {
-    window.location.href = '/sign-in';
+    useAuthModalStore.getState().openModal({ view: 'signin' });
   };
 
   // Structured data for main landing page

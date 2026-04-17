@@ -724,15 +724,14 @@ ${userName}`
   };
 
   const handleContinueJourney = (journey: any) => {
-    // Navigate to studio with journey context (new architecture)
-    // The studio will automatically determine document type and load appropriate data
+    // Navigate to editor with journey context
     const returnUrl = `/dashboard/tracker?journeyId=${journey.id}`;
     if (journey.atsScore && journey.atsScore >= 80 && journey.coverLetterId) {
       // If ATS score is good and cover letter exists, open cover letter
-      router.push(`/studio?journeyId=${journey.id}&documentType=cl&mode=cledit&returnUrl=${encodeURIComponent(returnUrl)}`);
+      router.push(`/editor?journeyId=${journey.id}&documentType=cl&mode=cledit&returnUrl=${encodeURIComponent(returnUrl)}`);
     } else {
       // Default to CV editing
-      router.push(`/studio?journeyId=${journey.id}&documentType=cv&mode=cvedit&returnUrl=${encodeURIComponent(returnUrl)}`);
+      router.push(`/editor?journeyId=${journey.id}&documentType=cv&mode=cvedit&returnUrl=${encodeURIComponent(returnUrl)}`);
     }
   };
 

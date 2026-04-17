@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatCurrency, convertToINR } from '@/lib/utils/currencyConverter';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface RevenueData {
   period: string;
@@ -148,13 +149,13 @@ export default function RevenueManager() {
       {/* Header with Period Selector */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Revenue Analytics</h2>
-          <p className="text-gray-400 mt-1">Track revenue across different time periods</p>
+          <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>Revenue Analytics</h2>
+          <p className={`${ADMIN_THEME.text.muted} mt-1`}>Track revenue across different time periods</p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={handleExportCSV}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${ADMIN_THEME.button.outline}`}
           >
             <Download className="h-4 w-4" />
             Export CSV
@@ -183,7 +184,7 @@ export default function RevenueManager() {
           </a>
 
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
-            <SelectTrigger className="w-48 bg-gray-700 border-gray-600 text-white">
+            <SelectTrigger className={`w-48 ${ADMIN_THEME.input.base}`}>
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
@@ -200,46 +201,46 @@ export default function RevenueManager() {
 
       {/* Revenue Summary Cards */}
       <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={ADMIN_THEME.card.base}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Total Revenue (INR)</p>
-                <p className="text-3xl font-bold text-white mt-2">
+                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>Total Revenue (INR)</p>
+                <p className={`text-3xl font-bold mt-2 ${ADMIN_THEME.text.primary}`}>
                   ₹{revenueData.totalInINR.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                 </p>
               </div>
-              <DollarSign className="h-12 w-12 text-green-400" />
+              <DollarSign className="h-12 w-12 text-emerald-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={ADMIN_THEME.card.base}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Total Purchases</p>
-                <p className="text-3xl font-bold text-white mt-2">
+                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>Total Purchases</p>
+                <p className={`text-3xl font-bold mt-2 ${ADMIN_THEME.text.primary}`}>
                   {revenueData.totalPurchases}
                 </p>
               </div>
-              <Users className="h-12 w-12 text-blue-400" />
+              <Users className="h-12 w-12 text-emerald-600" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800 border-gray-700">
+        <Card className={ADMIN_THEME.card.base}>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Average Order Value</p>
-                <p className="text-3xl font-bold text-white mt-2">
+                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>Average Order Value</p>
+                <p className={`text-3xl font-bold mt-2 ${ADMIN_THEME.text.primary}`}>
                   ₹{revenueData.totalPurchases > 0
                     ? (revenueData.totalInINR / revenueData.totalPurchases).toLocaleString('en-IN', { maximumFractionDigits: 2 })
                     : '0.00'}
                 </p>
               </div>
-              <TrendingUp className="h-12 w-12 text-purple-400" />
+              <TrendingUp className="h-12 w-12 text-emerald-600" />
             </div>
           </CardContent>
         </Card>
@@ -248,20 +249,20 @@ export default function RevenueManager() {
       {/* Revenue by Currency */}
       {
         Object.keys(revenueData.revenueByCurrency).length > 0 && (
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={ADMIN_THEME.card.base}>
             <CardContent className="p-6">
-              <h3 className="text-xl font-bold text-white mb-4">Revenue by Currency</h3>
+              <h3 className={`text-xl font-bold mb-4 ${ADMIN_THEME.text.primary}`}>Revenue by Currency</h3>
               <div className="grid grid-cols-2 tablet:grid-cols-4 gap-4">
                 {Object.entries(revenueData.revenueByCurrency).map(([currency, data]) => (
-                  <div key={currency} className="bg-gray-700 p-4 rounded-lg">
-                    <p className="text-gray-400 text-sm">{currency}</p>
-                    <p className="text-2xl font-bold text-white mt-1">
+                  <div key={currency} className={`p-4 rounded-xl border ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
+                    <p className={`text-sm ${ADMIN_THEME.text.secondary}`}>{currency}</p>
+                    <p className={`text-2xl font-bold mt-1 ${ADMIN_THEME.text.primary}`}>
                       {formatCurrency(data.amount, currency)}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className={`text-xs mt-1 ${ADMIN_THEME.text.tertiary}`}>
                       {data.count} {data.count === 1 ? 'purchase' : 'purchases'}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className={`text-xs mt-1 ${ADMIN_THEME.text.muted}`}>
                       ₹{convertToINR(data.amount, currency).toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
                     </p>
                   </div>
@@ -273,27 +274,27 @@ export default function RevenueManager() {
       }
 
       {/* User Purchases Table */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className={ADMIN_THEME.card.base}>
         <CardContent className="p-0">
-          <div className="p-6 border-b border-gray-700">
-            <h3 className="text-xl font-bold text-white">User Purchases</h3>
+          <div className={`p-6 border-b ${ADMIN_THEME.border.primary}`}>
+            <h3 className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>User Purchases</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-700">
-                  <th className="text-left p-4 text-sm font-semibold text-gray-300">User</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-300">Plan</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-300">Amount</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-300">Location</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-300">Date</th>
-                  <th className="text-left p-4 text-sm font-semibold text-gray-300">Actions</th>
+                <tr className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.header}`}>
+                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>User</th>
+                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Plan</th>
+                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Amount</th>
+                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Location</th>
+                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Date</th>
+                  <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {revenueData.userPurchases.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="p-8 text-center text-gray-400">
+                    <td colSpan={6} className={`p-8 text-center ${ADMIN_THEME.text.muted}`}>
                       No purchases found for this period
                     </td>
                   </tr>
@@ -301,41 +302,41 @@ export default function RevenueManager() {
                   revenueData.userPurchases.map((purchase, index) => (
                     <tr
                       key={index}
-                      className="border-b border-gray-700 hover:bg-gray-750 transition-colors"
+                      className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.row} transition-colors`}
                     >
                       <td className="p-4">
                         <div>
-                          <div className="font-medium text-white">{purchase.userName}</div>
-                          <div className="text-xs text-gray-400">{purchase.userEmail}</div>
+                          <div className={`font-medium ${ADMIN_THEME.text.primary}`}>{purchase.userName}</div>
+                          <div className={`text-xs ${ADMIN_THEME.text.muted}`}>{purchase.userEmail}</div>
                         </div>
                       </td>
-                      <td className="p-4 text-gray-300">{purchase.planName}</td>
+                      <td className={`p-4 ${ADMIN_THEME.text.secondary}`}>{purchase.planName}</td>
                       <td className="p-4">
                         <div>
-                          <div className="text-white font-medium">
+                          <div className={`font-medium ${ADMIN_THEME.text.primary}`}>
                             {formatCurrency(purchase.amount, purchase.currency)}
                           </div>
-                          <div className="text-xs text-gray-400">
+                          <div className={`text-xs ${ADMIN_THEME.text.muted}`}>
                             ₹{purchase.amountInINR.toLocaleString('en-IN', { maximumFractionDigits: 2 })} INR
                           </div>
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-1 text-gray-300">
+                        <div className={`flex items-center gap-1 ${ADMIN_THEME.text.secondary}`}>
                           <MapPin className="w-4 h-4" />
                           {purchase.location}
                         </div>
                       </td>
-                      <td className="p-4 text-gray-300">
+                      <td className={`p-4 ${ADMIN_THEME.text.secondary}`}>
                         {new Date(purchase.purchaseDate).toLocaleDateString()}
                       </td>
                       <td className="p-4">
                         <button
                           onClick={() => handleSendInvoice(purchase.userId, purchase.invoiceUrl)}
-                          className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                          className={`p-2 rounded-lg transition-colors ${ADMIN_THEME.button.ghost}`}
                           title="Send Invoice"
                         >
-                          <Mail className="w-4 h-4 text-blue-400" />
+                          <Mail className="w-4 h-4 text-emerald-600" />
                         </button>
                       </td>
                     </tr>
@@ -348,12 +349,12 @@ export default function RevenueManager() {
       </Card>
 
       {/* Globe-based Revenue Map (Future Enhancement) */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className={ADMIN_THEME.card.base}>
         <CardContent className="p-6">
-          <h3 className="text-xl font-bold text-white mb-4">Revenue by Location</h3>
-          <div className="bg-gray-700 rounded-lg p-8 text-center">
-            <Globe className="h-16 w-16 text-gray-500 mx-auto mb-4" />
-            <p className="text-gray-400">
+          <h3 className={`text-xl font-bold mb-4 ${ADMIN_THEME.text.primary}`}>Revenue by Location</h3>
+          <div className={`rounded-lg p-8 text-center ${ADMIN_THEME.background.tertiary}`}>
+            <Globe className={`h-16 w-16 mx-auto mb-4 ${ADMIN_THEME.text.muted}`} />
+            <p className={ADMIN_THEME.text.muted}>
               Interactive map visualization coming soon.
               Ensure user location tracking is enabled.
             </p>
@@ -363,4 +364,3 @@ export default function RevenueManager() {
     </div >
   );
 }
-

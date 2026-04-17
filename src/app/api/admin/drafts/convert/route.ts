@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find drafts
-    const drafts = await TemporaryCVDraft.find(query);
+    const drafts = await TemporaryCVDraft.find(query).lean();
 
     if (drafts.length === 0) {
       return NextResponse.json({

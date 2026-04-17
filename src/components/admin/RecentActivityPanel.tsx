@@ -52,11 +52,11 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
 
   const getStatusColor = (status?: string) => {
     switch (status) {
-      case 'success': return 'text-green-400';
-      case 'error': return 'text-red-400';
-      case 'warning': return 'text-yellow-400';
-      case 'info': return 'text-blue-400';
-      default: return 'text-gray-400';
+      case 'success': return 'text-emerald-700';
+      case 'error': return 'text-red-700';
+      case 'warning': return 'text-amber-800';
+      case 'info': return 'text-slate-700';
+      default: return 'text-slate-600';
     }
   };
 
@@ -84,48 +84,48 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
 
   return (
     <div
-      className="fixed right-0 top-0 h-screen w-96 bg-gray-800 border-l border-gray-700 shadow-2xl z-[9999] flex flex-col"
+      className="fixed right-0 top-0 h-screen w-96 bg-white border-l border-slate-200 shadow-2xl z-[9999] flex flex-col"
       style={{ zIndex: 9999 }}
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-700">
+      <div className="p-6 border-b border-slate-200">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center">
-            <Activity className="h-5 w-5 text-blue-500 mr-2" />
-            <h2 className="text-lg font-semibold text-white">Recent Activity</h2>
+            <Activity className="h-5 w-5 text-emerald-700 mr-2" />
+            <h2 className="text-lg font-semibold text-slate-900">Recent Activity</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            <X className="h-4 w-4 text-gray-400" />
+            <X className="h-4 w-4 text-slate-500" />
           </button>
         </div>
         
         {/* Consolidated Notifications */}
         <div className="space-y-2">
-          <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-3">
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-2 h-2 bg-blue-400 rounded-full mr-2 animate-pulse"></div>
-                <span className="text-sm font-medium text-blue-300">Live Updates</span>
+                <div className="w-2 h-2 bg-emerald-600 rounded-full mr-2 animate-pulse"></div>
+                <span className="text-sm font-medium text-emerald-700">Live Updates</span>
               </div>
-              <span className="text-xs text-blue-400">{activities.length} activities</span>
+              <span className="text-xs text-slate-500">{activities.length} activities</span>
             </div>
-            <p className="text-xs text-gray-300 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Real-time monitoring of system events, user actions, and application activities
             </p>
           </div>
           
-          <div className="bg-green-900/30 border border-green-700 rounded-lg p-3">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
-                <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
-                <span className="text-sm font-medium text-green-300">System Health</span>
+                <div className="w-2 h-2 bg-emerald-600 rounded-full mr-2"></div>
+                <span className="text-sm font-medium text-emerald-700">System Health</span>
               </div>
-              <span className="text-xs text-green-400">All systems operational</span>
+              <span className="text-xs text-emerald-700">All systems operational</span>
             </div>
-            <p className="text-xs text-gray-300 mt-1">
+            <p className="text-xs text-slate-600 mt-1">
               Database, API, and services running normally with optimal performance
             </p>
           </div>
@@ -139,10 +139,10 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
             {[...Array(5)].map((_, i) => (
               <div key={i} className="animate-pulse">
                 <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 bg-gray-700 rounded-full"></div>
+                  <div className="w-8 h-8 bg-slate-200 rounded-full"></div>
                   <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-700 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                    <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                    <div className="h-3 bg-slate-200 rounded w-1/2"></div>
                   </div>
                 </div>
               </div>
@@ -151,10 +151,10 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
         ) : error ? (
           <div className="text-center py-8">
             <div className="h-8 w-8 text-red-500 mx-auto mb-2">⚠️</div>
-            <p className="text-red-400 text-sm">{error}</p>
+            <p className="text-red-700 text-sm">{error}</p>
             <button
               onClick={onRefresh}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+              className="mt-4 px-4 py-2 bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors text-sm"
             >
               Retry
             </button>
@@ -164,7 +164,7 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className={`border-l-4 ${getPriorityColor(activity.priority)} bg-gray-750 p-4 rounded-r-lg hover:bg-gray-700 transition-colors`}
+                className={`border-l-4 ${getPriorityColor(activity.priority)} bg-white p-4 rounded-r-lg hover:bg-slate-50 transition-colors border border-slate-200/60`}
               >
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 mt-1">
@@ -172,14 +172,14 @@ const RecentActivityPanel: React.FC<RecentActivityPanelProps> = ({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-white truncate">
+                      <p className="text-sm font-medium text-slate-900 truncate">
                         {activity.title}
                       </p>
-                      <span className="text-xs text-gray-400 ml-2">
+                      <span className="text-xs text-slate-500 ml-2">
                         {formatTimeAgo(activity.timestamp)}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-300 mt-1 line-clamp-2">
+                    <p className="text-xs text-slate-600 mt-1 line-clamp-2">
                       {activity.description}
                     </p>
                     {activity.status && (

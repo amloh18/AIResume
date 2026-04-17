@@ -2,11 +2,43 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
 
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
+
 // Force dynamic rendering to prevent caching issues
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate Limiting
+    const rateLimitResult = await rateLimiter.checkLimit(
+      session.user.id,
+      rateLimitConfigs.ai
+    );
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Too many AI requests. Please wait ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.` 
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': rateLimitConfigs.ai.maxRequests.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+          }
+        }
+      );
+    }
+
     console.log('🚀 Starting career analysis...');
     
     // Add CORS headers

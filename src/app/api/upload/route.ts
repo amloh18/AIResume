@@ -30,6 +30,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Strict content type validation to prevent malicious uploads
+    const allowedContentTypes = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/avif',
+      'text/plain'
+    ];
+
+    if (!allowedContentTypes.includes(contentType)) {
+      return NextResponse.json(
+        { error: "Invalid file type. Only PDF, Word documents, and images are allowed." },
+        { status: 400 }
+      );
+    }
+
     // Validate upload type and set appropriate S3 key prefix
     const userId = session.user.id;
     const timestamp = Date.now();

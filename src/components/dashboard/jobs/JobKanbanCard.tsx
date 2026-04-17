@@ -134,7 +134,7 @@ const JobKanbanCard: React.FC<JobKanbanCardProps> = ({
 
     const handlePracticeClick = (e: React.MouseEvent) => {
         e.stopPropagation();
-        router.push(`/interview-coach/${job._id}`);
+        router.push(`/dashboard/interview/${job._id}`);
     };
 
     // Helper to format currency

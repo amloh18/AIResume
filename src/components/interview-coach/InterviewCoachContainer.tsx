@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Filter, Plus, Briefcase, MapPin, Play, Info, ChevronDown } from 'lucide-react';
+import { Crown, Search, Filter, Plus, Briefcase, MapPin, Play, Info, ChevronDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InterviewCoachHeader from './InterviewCoachHeader';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 interface Job {
     _id: string;
@@ -22,6 +24,8 @@ interface InterviewCoachContainerProps {
 
 const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userId }) => {
     const router = useRouter();
+    const { openPaymentModal } = usePaymentModal();
+    const { userData, loading: userLoading } = useUserData();
     const [jobs, setJobs] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +56,11 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
     };
 
     const handleStartPractice = (jobId: string) => {
-        router.push(`/interview-coach/${jobId}`);
+        if (userData?.currentPlanKey === 'free' || !userData?.subscription || userData.subscription.status !== 'active') {
+            openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'interview-coach' });
+            return;
+        }
+        router.push(`/dashboard/interview/${jobId}`);
     };
 
     const handleAddNewRole = () => {

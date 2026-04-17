@@ -146,22 +146,27 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
-        <div className="sticky top-0 bg-gray-900 border-b border-gray-700 p-6 flex justify-between items-center">
-          <h2 className="text-2xl font-bold text-white">Draft Details</h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${ADMIN_THEME.modal.overlay}`}>
+      <div className={`w-full max-w-4xl max-h-[90vh] overflow-y-auto ${ADMIN_THEME.modal.container} shadow-xl`}>
+        <div className={`flex justify-between items-center p-6 sticky top-0 ${ADMIN_THEME.modal.header}`}>
+          <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>Draft Details</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className={ADMIN_THEME.text.secondary}
+          >
             <X className="w-5 h-5" />
           </Button>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className={`p-6 space-y-6 ${ADMIN_THEME.background.primary}`}>
           {loading && (
-            <div className="text-center py-8 text-gray-400">Loading...</div>
+            <div className={`text-center py-8 ${ADMIN_THEME.text.muted}`}>Loading...</div>
           )}
 
           {error && (
-            <div className="p-4 bg-red-900 border border-red-700 rounded text-red-200">
+            <div className={`p-4 ${ADMIN_THEME.badge.error} border ${ADMIN_THEME.border.primary} rounded`}>
               {error}
             </div>
           )}
@@ -169,9 +174,9 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
           {draft && (
             <>
               {/* User Information */}
-              <Card className="bg-gray-800 border-gray-700">
+              <Card className={`border ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className={`${ADMIN_THEME.text.primary} flex items-center gap-2`}>
                     <User className="w-5 h-5" />
                     User Information
                   </CardTitle>
@@ -180,27 +185,27 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
                   {draft.user ? (
                     <div className="space-y-2">
                       <div>
-                        <span className="text-gray-400">Name:</span>{' '}
-                        <span className="text-white">{draft.user.name}</span>
+                        <span className={ADMIN_THEME.text.muted}>Name:</span>{' '}
+                        <span className={ADMIN_THEME.text.primary}>{draft.user.name}</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">Email:</span>{' '}
-                        <span className="text-white">{draft.user.email}</span>
+                        <span className={ADMIN_THEME.text.muted}>Email:</span>{' '}
+                        <span className={ADMIN_THEME.text.primary}>{draft.user.email}</span>
                       </div>
                       <div>
-                        <span className="text-gray-400">User ID:</span>{' '}
-                        <span className="text-white font-mono text-sm">{draft.user.id}</span>
+                        <span className={ADMIN_THEME.text.muted}>User ID:</span>{' '}
+                        <span className={`${ADMIN_THEME.text.primary} font-mono text-sm`}>{draft.user.id}</span>
                       </div>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <div>
-                        <span className="text-gray-400">Status:</span>{' '}
-                        <Badge className="bg-gray-600">Anonymous</Badge>
+                        <span className={ADMIN_THEME.text.muted}>Status:</span>{' '}
+                        <Badge className={ADMIN_THEME.badge.inactive}>Anonymous</Badge>
                       </div>
                       <div>
-                        <span className="text-gray-400">Session ID:</span>{' '}
-                        <span className="text-white font-mono text-sm">{draft.sessionId}</span>
+                        <span className={ADMIN_THEME.text.muted}>Session ID:</span>{' '}
+                        <span className={`${ADMIN_THEME.text.primary} font-mono text-sm`}>{draft.sessionId}</span>
                       </div>
                     </div>
                   )}
@@ -208,9 +213,9 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
               </Card>
 
               {/* Draft Information */}
-              <Card className="bg-gray-800 border-gray-700">
+              <Card className={`border ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
                 <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
+                  <CardTitle className={`${ADMIN_THEME.text.primary} flex items-center gap-2`}>
                     <FileText className="w-5 h-5" />
                     Draft Information
                   </CardTitle>
@@ -218,46 +223,46 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-gray-400">Current Step:</span>{' '}
-                      <span className="text-white">Step {draft.currentStep}</span>
+                      <span className={ADMIN_THEME.text.muted}>Current Step:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>Step {draft.currentStep}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Status:</span>{' '}
+                      <span className={ADMIN_THEME.text.muted}>Status:</span>{' '}
                       {draft.convertedAt ? (
-                        <Badge className="bg-green-600">
+                        <Badge className={ADMIN_THEME.badge.success}>
                           <CheckCircle className="w-3 h-3 mr-1" />
                           Converted
                         </Badge>
                       ) : (
-                        <Badge className={draft.userId ? 'bg-blue-600' : 'bg-gray-600'}>
+                        <Badge className={draft.userId ? ADMIN_THEME.badge.active : ADMIN_THEME.badge.inactive}>
                           {draft.userId ? 'Linked' : 'Anonymous'}
                         </Badge>
                       )}
                     </div>
                     <div>
-                      <span className="text-gray-400">Created:</span>{' '}
-                      <span className="text-white">{new Date(draft.createdAt).toLocaleString()}</span>
+                      <span className={ADMIN_THEME.text.muted}>Created:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{new Date(draft.createdAt).toLocaleString()}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Last Updated:</span>{' '}
-                      <span className="text-white">{new Date(draft.updatedAt).toLocaleString()}</span>
+                      <span className={ADMIN_THEME.text.muted}>Last Updated:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{new Date(draft.updatedAt).toLocaleString()}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Expires:</span>{' '}
-                      <span className="text-white">{new Date(draft.expiresAt).toLocaleString()}</span>
+                      <span className={ADMIN_THEME.text.muted}>Expires:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{new Date(draft.expiresAt).toLocaleString()}</span>
                     </div>
                     {draft.convertedAt && (
                       <div>
-                        <span className="text-gray-400">Converted:</span>{' '}
-                        <span className="text-white">{new Date(draft.convertedAt).toLocaleString()}</span>
+                        <span className={ADMIN_THEME.text.muted}>Converted:</span>{' '}
+                        <span className={ADMIN_THEME.text.primary}>{new Date(draft.convertedAt).toLocaleString()}</span>
                       </div>
                     )}
                   </div>
 
                   {draft.convertedBy && (
-                    <div className="pt-2 border-t border-gray-700">
-                      <span className="text-gray-400">Converted by:</span>{' '}
-                      <span className="text-white">{draft.convertedBy.name} ({draft.convertedBy.email})</span>
+                    <div className={`pt-2 border-t ${ADMIN_THEME.border.primary}`}>
+                      <span className={ADMIN_THEME.text.muted}>Converted by:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{draft.convertedBy.name} ({draft.convertedBy.email})</span>
                       {draft.conversionMethod && (
                         <Badge className="ml-2">{draft.conversionMethod}</Badge>
                       )}
@@ -267,34 +272,34 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
               </Card>
 
               {/* CV Data Preview */}
-              <Card className="bg-gray-800 border-gray-700">
+              <Card className={`border ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
                 <CardHeader>
-                  <CardTitle className="text-white">CV Data Preview</CardTitle>
+                  <CardTitle className={ADMIN_THEME.text.primary}>CV Data Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
                     <div>
-                      <span className="text-gray-400">Name:</span>{' '}
-                      <span className="text-white">{draft.cvData?.basics?.name || 'N/A'}</span>
+                      <span className={ADMIN_THEME.text.muted}>Name:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{draft.cvData?.basics?.name || 'N/A'}</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Work Experience:</span>{' '}
-                      <span className="text-white">{draft.cvData?.work?.length || 0} entries</span>
+                      <span className={ADMIN_THEME.text.muted}>Work Experience:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{draft.cvData?.work?.length || 0} entries</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Education:</span>{' '}
-                      <span className="text-white">{draft.cvData?.education?.length || 0} entries</span>
+                      <span className={ADMIN_THEME.text.muted}>Education:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{draft.cvData?.education?.length || 0} entries</span>
                     </div>
                     <div>
-                      <span className="text-gray-400">Projects:</span>{' '}
-                      <span className="text-white">{draft.cvData?.projects?.length || 0} entries</span>
+                      <span className={ADMIN_THEME.text.muted}>Projects:</span>{' '}
+                      <span className={ADMIN_THEME.text.primary}>{draft.cvData?.projects?.length || 0} entries</span>
                     </div>
                   </div>
                   <details className="mt-4">
-                    <summary className="cursor-pointer text-blue-400 hover:text-blue-300">
+                    <summary className="cursor-pointer text-blue-600 hover:text-blue-500">
                       View Full CV Data (JSON)
                     </summary>
-                    <pre className="mt-2 p-4 bg-gray-900 rounded text-xs overflow-auto max-h-96 text-gray-300">
+                    <pre className={`mt-2 p-4 ${ADMIN_THEME.background.primary} rounded text-xs overflow-auto max-h-96 ${ADMIN_THEME.text.secondary}`}>
                       {JSON.stringify(draft.cvData, null, 2)}
                     </pre>
                   </details>
@@ -303,19 +308,19 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
 
               {/* AI Analysis */}
               {draft.aiAnalysis && (
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className={`border ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
                   <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
+                    <CardTitle className={`${ADMIN_THEME.text.primary} flex items-center gap-2`}>
                       <Sparkles className="w-5 h-5" />
                       AI Analysis
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <details>
-                      <summary className="cursor-pointer text-blue-400 hover:text-blue-300">
+                      <summary className="cursor-pointer text-blue-600 hover:text-blue-500">
                         View AI Analysis (JSON)
                       </summary>
-                      <pre className="mt-2 p-4 bg-gray-900 rounded text-xs overflow-auto max-h-96 text-gray-300">
+                      <pre className={`mt-2 p-4 ${ADMIN_THEME.background.primary} rounded text-xs overflow-auto max-h-96 ${ADMIN_THEME.text.secondary}`}>
                         {JSON.stringify(draft.aiAnalysis, null, 2)}
                       </pre>
                     </details>
@@ -324,12 +329,12 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
               )}
 
               {/* Actions */}
-              <div className="flex gap-4 pt-4 border-t border-gray-700">
+              <div className={`flex gap-4 pt-4 border-t ${ADMIN_THEME.border.primary}`}>
                 {!draft.convertedAt && draft.userId && (
                   <Button
                     onClick={handleConvert}
                     disabled={converting}
-                    className="bg-blue-600 hover:bg-blue-700"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
                     {converting ? 'Converting...' : 'Convert to Master CV'}
                   </Button>
@@ -337,11 +342,12 @@ const DraftDetailModal: React.FC<DraftDetailModalProps> = ({ draftId, isOpen, on
                 <Button
                   variant="destructive"
                   onClick={handleDelete}
+                  className="bg-red-600 hover:bg-red-700 text-white"
                 >
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Draft
                 </Button>
-                <Button variant="outline" onClick={onClose}>
+                <Button variant="outline" onClick={onClose} className="border-gray-300 text-gray-700 hover:bg-gray-50">
                   Close
                 </Button>
               </div>

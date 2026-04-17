@@ -1,0 +1,6 @@
+- [x] Legacy cover letter directories and contexts are successfully removed.
+- [x] Cover letter editing links route directly to the Editor (Resume Enhancer) Step 4.
+- [x] Step 4 layout reflects a split-panel design (Canvas on the left, tools/AI options on the right).
+- [x] Step 5 displays previews for both the CV and the Cover Letter.
+- [x] Transitions between the 5 Editor steps feature smooth animations.
+- [x] Editing a Cover Letter directly loads the Editor with `goToStep(4)` seamlessly.

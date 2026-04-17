@@ -207,19 +207,19 @@ export default function LogsViewer() {
   const getLogTypeColor = (logType: LogType) => {
     switch (logType) {
       case 'api':
-        return 'text-blue-400 bg-blue-500/20';
+        return 'text-blue-700 bg-blue-50';
       case 'ai':
-        return 'text-purple-400 bg-purple-500/20';
+        return 'text-purple-700 bg-purple-50';
       case 'user_action':
-        return 'text-green-400 bg-green-500/20';
+        return 'text-emerald-700 bg-emerald-50';
       case 'admin_action':
-        return 'text-orange-400 bg-orange-500/20';
+        return 'text-amber-800 bg-amber-50';
       case 'payment':
-        return 'text-yellow-400 bg-yellow-500/20';
+        return 'text-yellow-800 bg-yellow-50';
       case 'export':
-        return 'text-cyan-400 bg-cyan-500/20';
+        return 'text-cyan-700 bg-cyan-50';
       default:
-        return 'text-gray-400 bg-gray-500/20';
+        return 'text-slate-700 bg-slate-100';
     }
   };
 
@@ -227,21 +227,21 @@ export default function LogsViewer() {
     switch (status) {
       case 'success':
         return (
-          <span className="px-2 py-1 rounded text-xs bg-green-500/20 text-green-400 flex items-center gap-1">
+          <span className="px-2 py-1 rounded text-xs bg-emerald-50 text-emerald-700 flex items-center gap-1 border border-emerald-200">
             <CheckCircle className="w-3 h-3" />
             Success
           </span>
         );
       case 'failed':
         return (
-          <span className="px-2 py-1 rounded text-xs bg-red-500/20 text-red-400 flex items-center gap-1">
+          <span className="px-2 py-1 rounded text-xs bg-red-50 text-red-700 flex items-center gap-1 border border-red-200">
             <AlertCircle className="w-3 h-3" />
             Failed
           </span>
         );
       case 'warning':
         return (
-          <span className="px-2 py-1 rounded text-xs bg-yellow-500/20 text-yellow-400 flex items-center gap-1">
+          <span className="px-2 py-1 rounded text-xs bg-amber-50 text-amber-800 flex items-center gap-1 border border-amber-200">
             <AlertCircle className="w-3 h-3" />
             Warning
           </span>
@@ -261,8 +261,8 @@ export default function LogsViewer() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Activity Logs</h1>
-          <p className="text-gray-400 text-sm mt-1">Monitor system activity and user actions</p>
+          <h1 className="text-2xl font-bold text-slate-900">Activity Logs</h1>
+          <p className="text-slate-600 text-sm mt-1">Monitor system activity and user actions</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -270,7 +270,7 @@ export default function LogsViewer() {
               fetchLogs();
               fetchMetrics();
             }}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg transition-colors flex items-center gap-2 border border-slate-200"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -281,31 +281,31 @@ export default function LogsViewer() {
       {/* Metrics Cards */}
       {metrics && (
         <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-4">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-400 mb-1">Total Logs</div>
-              <div className="text-2xl font-bold text-white">{metrics.totalLogs.toLocaleString()}</div>
+              <div className="text-sm text-slate-600 mb-1">Total Logs</div>
+              <div className="text-2xl font-bold text-slate-900">{metrics.totalLogs.toLocaleString()}</div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-400 mb-1">Error Rate</div>
-              <div className="text-2xl font-bold text-white">{metrics.errorRate.toFixed(2)}%</div>
+              <div className="text-sm text-slate-600 mb-1">Error Rate</div>
+              <div className="text-2xl font-bold text-slate-900">{metrics.errorRate.toFixed(2)}%</div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-400 mb-1">Avg Response Time</div>
-              <div className="text-2xl font-bold text-white">{metrics.avgResponseTime}ms</div>
+              <div className="text-sm text-slate-600 mb-1">Avg Response Time</div>
+              <div className="text-2xl font-bold text-slate-900">{metrics.avgResponseTime}ms</div>
             </CardContent>
           </Card>
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-white border-slate-200">
             <CardContent className="p-4">
-              <div className="text-sm text-gray-400 mb-1">AI Usage</div>
-              <div className="text-lg font-bold text-white">
+              <div className="text-sm text-slate-600 mb-1">AI Usage</div>
+              <div className="text-lg font-bold text-slate-900">
                 {metrics.totalAIUsage.tokens.toLocaleString()} tokens
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-slate-500 mt-1">
                 ${metrics.totalAIUsage.cost.toFixed(4)} / {metrics.totalAIUsage.requests} requests
               </div>
             </CardContent>
@@ -314,58 +314,58 @@ export default function LogsViewer() {
       )}
 
       {/* Filters */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
         <div className="grid grid-cols-1 tablet:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Log Type</label>
+            <label className="block text-sm text-slate-600 mb-2">Log Type</label>
             <Select value={logTypeFilter} onValueChange={setLogTypeFilter}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+              <SelectTrigger className="bg-white border-slate-200 text-slate-900">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                <SelectItem value="all" className="text-white focus:bg-gray-800">All Types</SelectItem>
-                <SelectItem value="api" className="text-white focus:bg-gray-800">API</SelectItem>
-                <SelectItem value="ai" className="text-white focus:bg-gray-800">AI</SelectItem>
-                <SelectItem value="user_action" className="text-white focus:bg-gray-800">User Actions</SelectItem>
-                <SelectItem value="admin_action" className="text-white focus:bg-gray-800">Admin Actions</SelectItem>
-                <SelectItem value="payment" className="text-white focus:bg-gray-800">Payments</SelectItem>
-                <SelectItem value="export" className="text-white focus:bg-gray-800">Exports</SelectItem>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="all" className="text-slate-900 focus:bg-slate-50">All Types</SelectItem>
+                <SelectItem value="api" className="text-slate-900 focus:bg-slate-50">API</SelectItem>
+                <SelectItem value="ai" className="text-slate-900 focus:bg-slate-50">AI</SelectItem>
+                <SelectItem value="user_action" className="text-slate-900 focus:bg-slate-50">User Actions</SelectItem>
+                <SelectItem value="admin_action" className="text-slate-900 focus:bg-slate-50">Admin Actions</SelectItem>
+                <SelectItem value="payment" className="text-slate-900 focus:bg-slate-50">Payments</SelectItem>
+                <SelectItem value="export" className="text-slate-900 focus:bg-slate-50">Exports</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Status</label>
+            <label className="block text-sm text-slate-600 mb-2">Status</label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+              <SelectTrigger className="bg-white border-slate-200 text-slate-900">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                <SelectItem value="all" className="text-white focus:bg-gray-800">All Status</SelectItem>
-                <SelectItem value="success" className="text-white focus:bg-gray-800">Success</SelectItem>
-                <SelectItem value="failed" className="text-white focus:bg-gray-800">Failed</SelectItem>
-                <SelectItem value="warning" className="text-white focus:bg-gray-800">Warning</SelectItem>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="all" className="text-slate-900 focus:bg-slate-50">All Status</SelectItem>
+                <SelectItem value="success" className="text-slate-900 focus:bg-slate-50">Success</SelectItem>
+                <SelectItem value="failed" className="text-slate-900 focus:bg-slate-50">Failed</SelectItem>
+                <SelectItem value="warning" className="text-slate-900 focus:bg-slate-50">Warning</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Time Range</label>
+            <label className="block text-sm text-slate-600 mb-2">Time Range</label>
             <Select value={timeRange} onValueChange={(value: any) => setTimeRange(value)}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+              <SelectTrigger className="bg-white border-slate-200 text-slate-900">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-gray-900 border-gray-700 text-white">
-                <SelectItem value="today" className="text-white focus:bg-gray-800">Today</SelectItem>
-                <SelectItem value="7d" className="text-white focus:bg-gray-800">Last 7 Days</SelectItem>
-                <SelectItem value="30d" className="text-white focus:bg-gray-800">Last 30 Days</SelectItem>
-                <SelectItem value="90d" className="text-white focus:bg-gray-800">Last 90 Days</SelectItem>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="today" className="text-slate-900 focus:bg-slate-50">Today</SelectItem>
+                <SelectItem value="7d" className="text-slate-900 focus:bg-slate-50">Last 7 Days</SelectItem>
+                <SelectItem value="30d" className="text-slate-900 focus:bg-slate-50">Last 30 Days</SelectItem>
+                <SelectItem value="90d" className="text-slate-900 focus:bg-slate-50">Last 90 Days</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-2">Search</label>
+            <label className="block text-sm text-slate-600 mb-2">Search</label>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -373,11 +373,11 @@ export default function LogsViewer() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Search action..."
-                className="flex-1 px-3 py-2 bg-gray-900 border border-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 bg-white border border-slate-200 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
               />
               <button
                 onClick={handleSearch}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg transition-colors"
               >
                 <Search className="w-4 h-4" />
               </button>
@@ -387,30 +387,30 @@ export default function LogsViewer() {
       </div>
 
       {/* Logs Table */}
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-slate-200">
         <CardContent className="p-0">
           {loading ? (
-            <div className="p-12 text-center text-gray-400">Loading logs...</div>
+            <div className="p-12 text-center text-slate-600">Loading logs...</div>
           ) : logs.length === 0 ? (
-            <div className="p-12 text-center text-gray-400">No logs found</div>
+            <div className="p-12 text-center text-slate-600">No logs found</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">Type</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">Timestamp</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">User</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">Action</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">Status</th>
-                    <th className="text-left p-4 text-sm font-semibold text-gray-300">Details</th>
+                  <tr className="border-b border-slate-200 bg-slate-50">
+                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Type</th>
+                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Timestamp</th>
+                    <th className="text-left p-4 text-xs font-semibold text-slate-600">User</th>
+                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Action</th>
+                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Status</th>
+                    <th className="text-left p-4 text-xs font-semibold text-slate-600">Details</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map((log) => (
                     <React.Fragment key={log._id}>
                       <tr 
-                        className="border-b border-gray-700 hover:bg-gray-750 cursor-pointer transition-colors"
+                        className="border-b border-slate-200 hover:bg-slate-50 cursor-pointer transition-colors"
                         onClick={() => setExpandedLog(expandedLog === log._id ? null : log._id)}
                       >
                         <td className="p-4">
@@ -419,20 +419,20 @@ export default function LogsViewer() {
                             <span className="text-xs capitalize">{log.logType.replace('_', ' ')}</span>
                           </div>
                         </td>
-                        <td className="p-4 text-gray-300 text-sm">
+                        <td className="p-4 text-slate-700 text-sm">
                           {formatDate(log.timestamp)}
                         </td>
-                        <td className="p-4 text-gray-300 text-sm">
+                        <td className="p-4 text-slate-700 text-sm">
                           {log.userEmail || log.adminMetadata?.adminEmail || 'System'}
                         </td>
-                        <td className="p-4 text-gray-300 text-sm">
+                        <td className="p-4 text-slate-700 text-sm">
                           {log.action}
                         </td>
                         <td className="p-4">
                           {getStatusBadge(log.status)}
                         </td>
                         <td className="p-4">
-                          <button className="text-blue-400 hover:text-blue-300">
+                          <button className="text-emerald-700 hover:text-emerald-800">
                             {expandedLog === log._id ? (
                               <ChevronUp className="w-4 h-4" />
                             ) : (
@@ -443,68 +443,68 @@ export default function LogsViewer() {
                       </tr>
                       {expandedLog === log._id && (
                         <tr>
-                          <td colSpan={6} className="p-4 bg-gray-900">
+                          <td colSpan={6} className="p-4 bg-slate-50">
                             <div className="space-y-2 text-sm">
                               {log.endpoint && (
                                 <div>
-                                  <span className="text-gray-400">Endpoint:</span>
-                                  <span className="text-white ml-2">{log.method} {log.endpoint}</span>
+                                  <span className="text-slate-600">Endpoint:</span>
+                                  <span className="text-slate-900 ml-2">{log.method} {log.endpoint}</span>
                                 </div>
                               )}
                               {log.responseTime && (
                                 <div>
-                                  <span className="text-gray-400">Response Time:</span>
-                                  <span className="text-white ml-2">{log.responseTime}ms</span>
+                                  <span className="text-slate-600">Response Time:</span>
+                                  <span className="text-slate-900 ml-2">{log.responseTime}ms</span>
                                 </div>
                               )}
                               {log.statusCode && (
                                 <div>
-                                  <span className="text-gray-400">Status Code:</span>
-                                  <span className="text-white ml-2">{log.statusCode}</span>
+                                  <span className="text-slate-600">Status Code:</span>
+                                  <span className="text-slate-900 ml-2">{log.statusCode}</span>
                                 </div>
                               )}
                               {log.resource && (
                                 <div>
-                                  <span className="text-gray-400">Resource:</span>
-                                  <span className="text-white ml-2">
+                                  <span className="text-slate-600">Resource:</span>
+                                  <span className="text-slate-900 ml-2">
                                     {log.resource.type} {log.resource.name ? `(${log.resource.name})` : ''}
                                   </span>
                                 </div>
                               )}
                               {log.aiMetadata && (
                                 <div>
-                                  <span className="text-gray-400">AI:</span>
-                                  <span className="text-white ml-2">
+                                  <span className="text-slate-600">AI:</span>
+                                  <span className="text-slate-900 ml-2">
                                     {log.aiMetadata.model} - {log.aiMetadata.tokensUsed} tokens - ${log.aiMetadata.cost?.toFixed(4)}
                                   </span>
                                 </div>
                               )}
                               {log.paymentMetadata && (
                                 <div>
-                                  <span className="text-gray-400">Payment:</span>
-                                  <span className="text-white ml-2">
+                                  <span className="text-slate-600">Payment:</span>
+                                  <span className="text-slate-900 ml-2">
                                     {log.paymentMetadata.currency} {log.paymentMetadata.amount} via {log.paymentMetadata.provider}
                                   </span>
                                 </div>
                               )}
                               {log.exportMetadata && (
                                 <div>
-                                  <span className="text-gray-400">Export:</span>
-                                  <span className="text-white ml-2">
+                                  <span className="text-slate-600">Export:</span>
+                                  <span className="text-slate-900 ml-2">
                                     {log.exportMetadata.format} - {(log.exportMetadata.fileSize || 0) / 1024}KB
                                   </span>
                                 </div>
                               )}
                               {log.errorMessage && (
                                 <div>
-                                  <span className="text-red-400">Error:</span>
-                                  <span className="text-red-300 ml-2">{log.errorMessage}</span>
+                                  <span className="text-red-700">Error:</span>
+                                  <span className="text-red-600 ml-2">{log.errorMessage}</span>
                                 </div>
                               )}
                               {log.tags && log.tags.length > 0 && (
                                 <div>
-                                  <span className="text-gray-400">Tags:</span>
-                                  <span className="text-white ml-2">{log.tags.join(', ')}</span>
+                                  <span className="text-slate-600">Tags:</span>
+                                  <span className="text-slate-900 ml-2">{log.tags.join(', ')}</span>
                                 </div>
                               )}
                             </div>
@@ -523,24 +523,24 @@ export default function LogsViewer() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-slate-600">
             Showing {(currentPage - 1) * pageSize + 1} to {Math.min(currentPage * pageSize, totalLogs)} of {totalLogs} logs
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200"
             >
               Previous
             </button>
-            <span className="text-gray-400">
+            <span className="text-slate-600">
               Page {currentPage} of {totalPages}
             </span>
             <button
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-slate-200"
             >
               Next
             </button>
@@ -550,4 +550,3 @@ export default function LogsViewer() {
     </div>
   );
 }
-

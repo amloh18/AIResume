@@ -4,8 +4,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 
 const Hero = () => {
+  const openModal = useAuthModalStore(state => state.openModal);
+
   return (
     <section
       id="hero"
@@ -65,13 +68,13 @@ const Hero = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
         >
-          <a
-            href="/sign-up?callbackUrl=/dashboard"
+          <button
+            onClick={() => openModal({ view: 'signup', callbackUrl: '/dashboard' })}
             className="inline-flex items-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-8 py-4 tablet:px-10 tablet:py-5 rounded-full font-bold text-sm tablet:text-base shadow-lg transition-all hover:scale-105 uppercase tracking-wide"
           >
             START FREE
             <ArrowRight className="w-5 h-5" />
-          </a>
+          </button>
         </motion.div>
 
         {/* App Preview Image - Simplified Container */}

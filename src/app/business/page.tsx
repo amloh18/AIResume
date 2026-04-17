@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { ArrowRight, Code2, Database, Zap, Shield, CheckCircle2, ChevronRight, BarChart, Layout, CheckCircle, FileText, Globe } from 'lucide-react';
 import CardNav from '@/components/landing/CardNav';
 import Footer from '@/components/landing/Footer';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 
 // Note: metadata cannot be used with 'use client', moved to layout or removed for simplicity
 // export const metadata = { ... };
 
 export default function BusinessPage() {
+  const openModal = useAuthModalStore((state) => state.openModal);
+
   const navLinks = [
     { 
       label: 'API Docs', 
@@ -35,7 +38,7 @@ export default function BusinessPage() {
       <CardNav 
         logo="CVCircle"
         links={navLinks}
-        onCtaClick={() => window.location.href = '/sign-in'}
+        onCtaClick={() => openModal({ view: 'signin' })}
       />
       
       <main className="pt-32">

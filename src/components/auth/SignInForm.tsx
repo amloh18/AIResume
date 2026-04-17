@@ -41,8 +41,10 @@ export default function SignInForm() {
       if (result?.error) {
         setError(result.error);
       } else if (result?.ok) {
-        // Redirect to dashboard
-        window.location.href = '/dashboard';
+        // Redirect to callback URL or dashboard
+        const urlParams = new URLSearchParams(window.location.search);
+        const callbackUrl = urlParams.get('callbackUrl') || '/dashboard';
+        window.location.href = callbackUrl;
       } else {
         setError('Authentication failed. Please try again.');
       }
@@ -60,8 +62,11 @@ export default function SignInForm() {
 
     try {
       // Use NextAuth Google provider directly
+      const urlParams = new URLSearchParams(window.location.search);
+      const callbackUrl = urlParams.get('callbackUrl') || '/dashboard';
+      
       const result = await signIn('google', {
-        callbackUrl: '/dashboard',
+        callbackUrl,
         redirect: true, // Let NextAuth handle the redirect
       });
 

@@ -261,15 +261,15 @@ const PricingPlanManager: React.FC = () => {
     const validUntil = new Date(offer.validUntil);
 
     if (!offer.isActive) {
-      return { text: 'Inactive', color: 'bg-gray-700 text-gray-400', badge: 'Inactive' };
+      return { text: 'Inactive', color: ADMIN_THEME.badge.inactive, badge: 'Inactive' };
     }
     if (now < validFrom) {
-      return { text: 'Scheduled', color: 'bg-blue-900 text-blue-300', badge: 'Scheduled' };
+      return { text: 'Scheduled', color: ADMIN_THEME.badge.scheduled, badge: 'Scheduled' };
     }
     if (now > validUntil) {
-      return { text: 'Expired', color: 'bg-red-900 text-red-300', badge: 'Expired' };
+      return { text: 'Expired', color: ADMIN_THEME.badge.cancelled, badge: 'Expired' };
     }
-    return { text: 'Active', color: 'bg-green-900 text-green-300', badge: 'Active' };
+    return { text: 'Active', color: ADMIN_THEME.badge.active, badge: 'Active' };
   };
 
   const formatOfferDiscount = (offer: any) => {
@@ -431,38 +431,38 @@ const PricingPlanManager: React.FC = () => {
     <div className="space-y-6">
       {/* Tabs Navigation */}
       <Tabs defaultValue="pricing" className="w-full" key="pricing-manager-tabs">
-        <TabsList className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 rounded-none p-0 h-auto w-full justify-start">
+        <TabsList className={`inline-flex h-10 items-center justify-center rounded-xl p-1 text-muted-foreground ${ADMIN_THEME.background.secondary} border ${ADMIN_THEME.border.primary} mb-6`}>
           <TabsTrigger
             value="pricing"
-            className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className={`data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm rounded-lg px-4 py-2 hover:text-emerald-600`}
           >
             <CreditCard className="h-4 w-4 mr-2" />
             Current Pricing
           </TabsTrigger>
           <TabsTrigger
             value="regional"
-            className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className={`data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm rounded-lg px-4 py-2 hover:text-emerald-600`}
           >
             <Globe className="h-4 w-4 mr-2" />
             Regional Settings
           </TabsTrigger>
           <TabsTrigger
             value="promotions"
-            className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className={`data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm rounded-lg px-4 py-2 hover:text-emerald-600`}
           >
             <Gift className="h-4 w-4 mr-2" />
             Promotional Offers
           </TabsTrigger>
           <TabsTrigger
             value="coupons"
-            className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className={`data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm rounded-lg px-4 py-2 hover:text-emerald-600`}
           >
             <Tag className="h-4 w-4 mr-2" />
             Coupon Management
           </TabsTrigger>
           <TabsTrigger
             value="revenue"
-            className="data-[state=active]:bg-transparent data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 dark:data-[state=active]:border-blue-400 rounded-none px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className={`data-[state=active]:bg-emerald-50 data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm rounded-lg px-4 py-2 hover:text-emerald-600`}
           >
             <DollarSign className="h-4 w-4 mr-2" />
             Revenue
@@ -475,56 +475,56 @@ const PricingPlanManager: React.FC = () => {
             {/* Dashboard Overview Section */}
             <div className="mb-8">
               <div>
-                <h2 className="text-2xl font-bold text-white">Dashboard Overview</h2>
-                <p className="text-gray-400 mt-1">A summary of key pricing metrics.</p>
+                <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>Dashboard Overview</h2>
+                <p className={`${ADMIN_THEME.text.muted} mt-1`}>A summary of key pricing metrics.</p>
               </div>
 
-              <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6">
-                <Card className="bg-gray-800 border-gray-700">
+              <div className="grid grid-cols-1 tablet:grid-cols-3 gap-6 mt-6">
+                <Card className={ADMIN_THEME.card.base}>
                   <CardContent className="p-6">
-                    <div className="text-3xl font-bold text-white mb-2">{activePlans}</div>
+                    <div className={`text-3xl font-bold ${ADMIN_THEME.text.primary} mb-2`}>{activePlans}</div>
                     <div className="flex items-center gap-2 text-sm">
                       {activePlansChange > 0 ? (
-                        <span className="text-green-400">↑+{activePlansChange} this month</span>
+                        <span className="text-emerald-600">↑+{activePlansChange} this month</span>
                       ) : activePlansChange < 0 ? (
-                        <span className="text-red-400">↓{activePlansChange} this month</span>
+                        <span className="text-red-600">↓{activePlansChange} this month</span>
                       ) : (
-                        <span className="text-gray-500">— No change</span>
+                        <span className={ADMIN_THEME.text.muted}>— No change</span>
                       )}
                     </div>
-                    <div className="text-gray-400 text-sm mt-1">Active Plans</div>
+                    <div className={`${ADMIN_THEME.text.muted} text-sm mt-1`}>Active Plans</div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className={ADMIN_THEME.card.base}>
                   <CardContent className="p-6">
-                    <div className="text-3xl font-bold text-white mb-2">{activePromotions}</div>
+                    <div className={`text-3xl font-bold ${ADMIN_THEME.text.primary} mb-2`}>{activePromotions}</div>
                     <div className="flex items-center gap-2 text-sm">
                       {activePromotionsChange > 0 ? (
-                        <span className="text-green-400">↑+{activePromotionsChange} this month</span>
+                        <span className="text-emerald-600">↑+{activePromotionsChange} this month</span>
                       ) : activePromotionsChange < 0 ? (
-                        <span className="text-red-400">↓{activePromotionsChange} this month</span>
+                        <span className="text-red-600">↓{activePromotionsChange} this month</span>
                       ) : (
-                        <span className="text-gray-500">— No change</span>
+                        <span className={ADMIN_THEME.text.muted}>— No change</span>
                       )}
                     </div>
-                    <div className="text-gray-400 text-sm mt-1">Active Promotions</div>
+                    <div className={`${ADMIN_THEME.text.muted} text-sm mt-1`}>Active Promotions</div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className={ADMIN_THEME.card.base}>
                   <CardContent className="p-6">
-                    <div className="text-3xl font-bold text-white mb-2">{regionsWithCustomPricing}</div>
+                    <div className={`text-3xl font-bold ${ADMIN_THEME.text.primary} mb-2`}>{regionsWithCustomPricing}</div>
                     <div className="flex items-center gap-2 text-sm">
                       {regionsChange > 0 ? (
-                        <span className="text-green-400">↑+{regionsChange} this month</span>
+                        <span className="text-emerald-600">↑+{regionsChange} this month</span>
                       ) : regionsChange < 0 ? (
-                        <span className="text-red-400">↓{regionsChange} this month</span>
+                        <span className="text-red-600">↓{regionsChange} this month</span>
                       ) : (
-                        <span className="text-gray-500">— No change</span>
+                        <span className={ADMIN_THEME.text.muted}>— No change</span>
                       )}
                     </div>
-                    <div className="text-gray-400 text-sm mt-1">Regions with Custom Pricing</div>
+                    <div className={`${ADMIN_THEME.text.muted} text-sm mt-1`}>Regions with Custom Pricing</div>
                   </CardContent>
                 </Card>
               </div>
@@ -533,29 +533,29 @@ const PricingPlanManager: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-white">Pricing Plans</h2>
-                <p className="text-gray-400 mt-1">Manage subscription plans and pricing</p>
+                <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>Pricing Plans</h2>
+                <p className={`${ADMIN_THEME.text.muted} mt-1`}>Manage subscription plans and pricing</p>
               </div>
               <div className="flex items-center gap-3">
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2">
+                <Button className={`${ADMIN_THEME.button.primary} rounded-lg`} onClick={() => setIsAddCountryModalOpen(true)}>
                   <Plus size={16} />
                   Add Plan
-                </button>
+                </Button>
               </div>
             </div>
 
             {/* Plans Table View */}
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className={ADMIN_THEME.card.base}>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
-                      <tr className="border-b border-gray-700">
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">PLAN NAME</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">BASE PRICE</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">BILLING CYCLE</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">STATUS</th>
-                        <th className="text-left p-4 text-sm font-semibold text-gray-300">ACTIONS</th>
+                      <tr className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.header}`}>
+                        <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>PLAN NAME</th>
+                        <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>BASE PRICE</th>
+                        <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>BILLING CYCLE</th>
+                        <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>STATUS</th>
+                        <th className={`text-left p-4 text-sm font-semibold ${ADMIN_THEME.text.secondary}`}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -571,18 +571,18 @@ const PricingPlanManager: React.FC = () => {
                         return (
                           <tr
                             key={plan._id}
-                            className="border-b border-gray-700 hover:bg-gray-750 cursor-pointer transition-colors"
+                            className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.row} cursor-pointer transition-colors`}
                             onClick={() => handleRowClick(plan)}
                           >
                             <td className="p-4">
-                              <div className="font-medium text-white">{plan.name}</div>
+                              <div className={`font-medium ${ADMIN_THEME.text.primary}`}>{plan.name}</div>
                             </td>
-                            <td className="p-4 text-gray-300">{priceDisplay}</td>
-                            <td className="p-4 text-gray-300">{billingCycle}</td>
+                            <td className={`p-4 ${ADMIN_THEME.text.secondary}`}>{priceDisplay}</td>
+                            <td className={`p-4 ${ADMIN_THEME.text.secondary}`}>{billingCycle}</td>
                             <td className="p-4">
                               <span className={`px-2 py-1 rounded-full text-xs ${plan.status === 'active'
-                                ? 'bg-green-900 text-green-300'
-                                : 'bg-gray-700 text-gray-400'
+                                ? ADMIN_THEME.badge.active
+                                : ADMIN_THEME.badge.inactive
                                 }`}>
                                 {plan.status === 'active' ? 'Active' : 'Archived'}
                               </span>
@@ -593,7 +593,7 @@ const PricingPlanManager: React.FC = () => {
                                   e.stopPropagation();
                                   handleEditPlan(plan);
                                 }}
-                                className="text-blue-400 hover:text-blue-300 text-sm"
+                                className="text-emerald-700 hover:text-emerald-800 text-sm font-medium"
                               >
                                 Edit
                               </button>
@@ -610,13 +610,13 @@ const PricingPlanManager: React.FC = () => {
             {/* Promotional Offers Section */}
             <div className="mt-8">
               <div className="mb-4">
-                <h2 className="text-2xl font-bold text-white">Promotional Offers</h2>
-                <p className="text-gray-400 mt-1">Active and expired promotional offers</p>
+                <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>Promotional Offers</h2>
+                <p className={`${ADMIN_THEME.text.muted} mt-1`}>Active and expired promotional offers</p>
               </div>
 
               {loadingOffersState ? (
                 <div className="flex items-center justify-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${ADMIN_THEME.loading.spinner}`}></div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
@@ -629,7 +629,7 @@ const PricingPlanManager: React.FC = () => {
                       : formatDate(offer.validUntil);
 
                     return (
-                      <Card key={offer._id} className="bg-gray-800 border-gray-700 hover:shadow-lg transition-shadow">
+                      <Card key={offer._id} className={`${ADMIN_THEME.card.base} hover:shadow-lg transition-shadow`}>
                         <CardContent className="p-6 relative">
                           <div className="absolute top-4 right-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
@@ -637,17 +637,17 @@ const PricingPlanManager: React.FC = () => {
                             </span>
                           </div>
 
-                          <div className="mb-4">
-                            <div className="text-sm text-gray-400 mb-1">Code: {offer.title?.toUpperCase() || 'N/A'}</div>
-                            <div className="text-2xl font-bold text-white mb-2">{discountText}</div>
-                            <div className="text-sm text-gray-300">{offer.description || 'No description'}</div>
+                          <div className="mb-4 mt-2">
+                            <div className={`text-sm ${ADMIN_THEME.text.muted} mb-1`}>Code: {offer.title?.toUpperCase() || 'N/A'}</div>
+                            <div className={`text-2xl font-bold ${ADMIN_THEME.text.primary} mb-2`}>{discountText}</div>
+                            <div className={`text-sm ${ADMIN_THEME.text.secondary}`}>{offer.description || 'No description'}</div>
                           </div>
 
-                          <div className="mt-4 pt-4 border-t border-gray-700 flex items-center justify-between">
-                            <div className="text-sm text-gray-400">
+                          <div className={`mt-4 pt-4 border-t ${ADMIN_THEME.border.primary} flex items-center justify-between`}>
+                            <div className={`text-sm ${ADMIN_THEME.text.muted}`}>
                               {isExpired ? `Expired: ${expiryDate}` : `Expires: ${expiryDate}`}
                             </div>
-                            <button className="text-blue-400 hover:text-blue-300 text-sm font-medium">
+                            <button className="text-emerald-600 hover:text-emerald-700 text-sm font-medium">
                               Details
                             </button>
                           </div>
@@ -657,7 +657,7 @@ const PricingPlanManager: React.FC = () => {
                   })}
 
                   {promotionalOffersState.length === 0 && (
-                    <div className="col-span-full text-center py-8 text-gray-400">
+                    <div className={`col-span-full text-center py-8 ${ADMIN_THEME.text.muted}`}>
                       No promotional offers found
                     </div>
                   )}
@@ -671,15 +671,15 @@ const PricingPlanManager: React.FC = () => {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white">Pricing by Region</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <h2 className={`text-lg font-medium ${ADMIN_THEME.text.primary}`}>Pricing by Region</h2>
+                <p className={`text-sm ${ADMIN_THEME.text.muted}`}>
                   Manage regional pricing for all plans.
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button
                   onClick={() => setIsAddCountryModalOpen(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className={ADMIN_THEME.button.primary}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Country
@@ -692,14 +692,14 @@ const PricingPlanManager: React.FC = () => {
                         setEditedPrices({});
                       }}
                       variant="outline"
-                      className="border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      className="border-red-500 text-red-500 hover:bg-red-50"
                     >
                       Cancel
                     </Button>
                     <Button
                       onClick={handleSaveRegionalPricing}
                       disabled={savingPricing}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className={ADMIN_THEME.button.success}
                     >
                       {savingPricing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                       Save Changes
@@ -721,7 +721,7 @@ const PricingPlanManager: React.FC = () => {
                       setEditedPrices(initialEdits);
                       setIsEditing(true);
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className={ADMIN_THEME.button.primary}
                   >
                     <Edit className="w-4 h-4 mr-2" />
                     Manage Regional Pricing
@@ -730,26 +730,26 @@ const PricingPlanManager: React.FC = () => {
               </div>
             </div>
 
-            <Card className="bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+            <Card className={ADMIN_THEME.card.base}>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
+                    <thead className={ADMIN_THEME.table.header}>
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">Country</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Currency</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Day Pass</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Monthly</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quarterly</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Yearly</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider sticky left-0 ${ADMIN_THEME.background.tertiary} z-10 ${ADMIN_THEME.text.secondary}`}>Country</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Currency</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Day Pass</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Monthly</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Quarterly</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Yearly</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                    <tbody className={`divide-y ${ADMIN_THEME.border.primary}`}>
                       {loadingPricing || loading ? (
                         <tr>
                           <td colSpan={6} className="px-6 py-8 text-center">
                             <div className="flex items-center justify-center">
-                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                              <div className={`animate-spin rounded-full h-8 w-8 border-b-2 ${ADMIN_THEME.loading.spinner}`}></div>
                             </div>
                           </td>
                         </tr>
@@ -761,26 +761,26 @@ const PricingPlanManager: React.FC = () => {
                               const edits = editedPrices[countryCode] || {};
 
                               return (
-                                <tr key={pricing._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                  <td className="px-6 py-4 whitespace-nowrap sticky left-0 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <tr key={pricing._id} className={`${ADMIN_THEME.table.row}`}>
+                                  <td className={`px-6 py-4 whitespace-nowrap sticky left-0 ${ADMIN_THEME.background.primary} ${ADMIN_THEME.background.hover}`}>
                                     <div className="flex items-center gap-3">
                                       <span className="text-2xl" role="img" aria-label={pricing.countryName}>
                                         {getCountryFlag(pricing.countryCode)}
                                       </span>
                                       <div>
-                                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                        <div className={`text-sm font-medium ${ADMIN_THEME.text.primary}`}>
                                           {getCountryName(pricing.countryCode)}
                                         </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        <div className={`text-xs ${ADMIN_THEME.text.muted}`}>
                                           {pricing.countryCode}
                                         </div>
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${ADMIN_THEME.text.secondary}`}>
                                     <div className="flex items-center gap-1">
-                                      <span className="font-semibold text-gray-700 dark:text-gray-300">{pricing.currency}</span>
-                                      <span className="text-xs text-gray-500">({pricing.currencySymbol})</span>
+                                      <span className={`font-semibold ${ADMIN_THEME.text.primary}`}>{pricing.currency}</span>
+                                      <span className={`text-xs ${ADMIN_THEME.text.muted}`}>({pricing.currencySymbol})</span>
                                     </div>
                                   </td>
                                   {/* Price Columns */}
@@ -788,7 +788,7 @@ const PricingPlanManager: React.FC = () => {
                                     <td key={planKey} className="px-6 py-4 whitespace-nowrap">
                                       {isEditing ? (
                                         <div className="relative">
-                                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
+                                          <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-xs ${ADMIN_THEME.text.muted}`}>
                                             {pricing.currencySymbol}
                                           </span>
                                           <Input
@@ -806,11 +806,11 @@ const PricingPlanManager: React.FC = () => {
                                                 }
                                               }));
                                             }}
-                                            className="w-24 pl-5 h-8 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-600 border-gray-300 dark:border-gray-500"
+                                            className={`w-24 pl-5 h-8 text-sm ${ADMIN_THEME.input.base} ${ADMIN_THEME.input.focus}`}
                                           />
                                         </div>
                                       ) : (
-                                        <span className="text-sm text-gray-900 dark:text-white font-medium">
+                                        <span className={`text-sm font-medium ${ADMIN_THEME.text.primary}`}>
                                           {pricing.currencySymbol}{pricing.planPrices?.[planKey]?.price?.toLocaleString() || '0'}
                                         </span>
                                       )}
@@ -822,8 +822,8 @@ const PricingPlanManager: React.FC = () => {
                           ) : (
                             <tr>
                               <td colSpan={6} className="px-6 py-12 text-center">
-                                <div className="text-gray-500 dark:text-gray-400 flex flex-col items-center">
-                                  <Globe className="h-12 w-12 text-gray-300 mb-3" />
+                                <div className={`flex flex-col items-center ${ADMIN_THEME.text.muted}`}>
+                                  <Globe className="h-12 w-12 text-slate-300 mb-3" />
                                   <p className="text-lg font-medium mb-1">No regional pricing configured.</p>
                                   <p className="text-sm">Click "Manage Regional Pricing" to verify configuration.</p>
                                 </div>
@@ -887,22 +887,22 @@ const PricingPlanManager: React.FC = () => {
       {
         selectedPlanForDetails && (
           <div
-            className={`fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'}`}
+            className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isPlanDetailsModalOpen ? 'block' : 'hidden'} ${ADMIN_THEME.modal.overlay}`}
             onClick={() => setIsPlanDetailsModalOpen(false)}
           >
             <Card
-              className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              className={`${ADMIN_THEME.modal.container} max-w-2xl w-full max-h-[90vh] overflow-y-auto`}
               onClick={(e) => e.stopPropagation()}
             >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-6">
                   <div>
-                    <h3 className="text-2xl font-bold text-white mb-2">{selectedPlanForDetails.name}</h3>
-                    <p className="text-gray-400">{selectedPlanForDetails.description}</p>
+                    <h3 className={`text-2xl font-bold ${ADMIN_THEME.text.primary} mb-2`}>{selectedPlanForDetails.name}</h3>
+                    <p className={ADMIN_THEME.text.muted}>{selectedPlanForDetails.description}</p>
                   </div>
                   <button
                     onClick={() => setIsPlanDetailsModalOpen(false)}
-                    className="text-gray-400 hover:text-white"
+                    className={`${ADMIN_THEME.text.muted} hover:${ADMIN_THEME.text.primary}`}
                   >
                     <X size={24} />
                   </button>
@@ -911,36 +911,36 @@ const PricingPlanManager: React.FC = () => {
                 <div className="space-y-6">
                   {/* Pricing */}
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Pricing</h4>
+                    <h4 className={`text-lg font-semibold ${ADMIN_THEME.text.primary} mb-3`}>Pricing</h4>
                     <div className="grid grid-cols-2 gap-4">
                       {selectedPlanForDetails.price_monthly && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                          <div className="text-sm text-gray-400">Monthly</div>
-                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_monthly.toFixed(2)}</div>
+                        <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                          <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Monthly</div>
+                          <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>${selectedPlanForDetails.price_monthly.toFixed(2)}</div>
                         </div>
                       )}
                       {selectedPlanForDetails.price_quarterly && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                          <div className="text-sm text-gray-400">Quarterly</div>
-                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_quarterly.toFixed(2)}</div>
+                        <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                          <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Quarterly</div>
+                          <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>${selectedPlanForDetails.price_quarterly.toFixed(2)}</div>
                         </div>
                       )}
                       {selectedPlanForDetails.price_yearly && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                          <div className="text-sm text-gray-400">Yearly</div>
-                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_yearly.toFixed(2)}</div>
+                        <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                          <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Yearly</div>
+                          <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>${selectedPlanForDetails.price_yearly.toFixed(2)}</div>
                         </div>
                       )}
                       {selectedPlanForDetails.price_one_time && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                          <div className="text-sm text-gray-400">One-time</div>
-                          <div className="text-xl font-bold text-white">${selectedPlanForDetails.price_one_time.toFixed(2)}</div>
+                        <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                          <div className={`text-sm ${ADMIN_THEME.text.muted}`}>One-time</div>
+                          <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>${selectedPlanForDetails.price_one_time.toFixed(2)}</div>
                         </div>
                       )}
                       {selectedPlanForDetails.key === DEFAULT_PLAN_KEY && (
-                        <div className="bg-gray-700 p-4 rounded-lg">
-                          <div className="text-sm text-gray-400">Price</div>
-                          <div className="text-xl font-bold text-white">Free</div>
+                        <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                          <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Price</div>
+                          <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>Free</div>
                         </div>
                       )}
                     </div>
@@ -948,12 +948,12 @@ const PricingPlanManager: React.FC = () => {
 
                   {/* Features */}
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Features</h4>
-                    <div className="bg-gray-700 p-4 rounded-lg">
+                    <h4 className={`text-lg font-semibold ${ADMIN_THEME.text.primary} mb-3`}>Features</h4>
+                    <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
                       <ul className="space-y-2">
                         {selectedPlanForDetails.features.map((feature, index) => (
-                          <li key={index} className="text-gray-300 flex items-start gap-2">
-                            <CheckCircle size={16} className="text-green-400 mt-1 flex-shrink-0" />
+                          <li key={index} className={`${ADMIN_THEME.text.secondary} flex items-start gap-2`}>
+                            <CheckCircle size={16} className="text-emerald-600 mt-1 flex-shrink-0" />
                             <span>{feature}</span>
                           </li>
                         ))}
@@ -963,29 +963,29 @@ const PricingPlanManager: React.FC = () => {
 
                   {/* Limits */}
                   <div>
-                    <h4 className="text-lg font-semibold text-white mb-3">Limits</h4>
+                    <h4 className={`text-lg font-semibold ${ADMIN_THEME.text.primary} mb-3`}>Limits</h4>
                     <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Max CVs</div>
-                        <div className="text-xl font-bold text-white">{selectedPlanForDetails.maxCVs === -1 ? 'Unlimited' : selectedPlanForDetails.maxCVs}</div>
+                      <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                        <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Max CVs</div>
+                        <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>{selectedPlanForDetails.maxCVs === -1 ? 'Unlimited' : selectedPlanForDetails.maxCVs}</div>
                       </div>
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Max Exports</div>
-                        <div className="text-xl font-bold text-white">{selectedPlanForDetails.maxExports === -1 ? 'Unlimited' : selectedPlanForDetails.maxExports}</div>
+                      <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                        <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Max Exports</div>
+                        <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>{selectedPlanForDetails.maxExports === -1 ? 'Unlimited' : selectedPlanForDetails.maxExports}</div>
                       </div>
-                      <div className="bg-gray-700 p-4 rounded-lg">
-                        <div className="text-sm text-gray-400">Storage</div>
-                        <div className="text-xl font-bold text-white">{selectedPlanForDetails.storageLimit === -1 ? 'Unlimited' : `${selectedPlanForDetails.storageLimit}GB`}</div>
+                      <div className={`${ADMIN_THEME.background.tertiary} p-4 rounded-lg`}>
+                        <div className={`text-sm ${ADMIN_THEME.text.muted}`}>Storage</div>
+                        <div className={`text-xl font-bold ${ADMIN_THEME.text.primary}`}>{selectedPlanForDetails.storageLimit === -1 ? 'Unlimited' : `${selectedPlanForDetails.storageLimit}GB`}</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Status */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-700">
+                  <div className={`flex items-center justify-between pt-4 border-t ${ADMIN_THEME.border.primary}`}>
                     <div>
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${selectedPlanForDetails.status === 'active'
-                        ? 'bg-green-900 text-green-300'
-                        : 'bg-gray-700 text-gray-400'
+                        ? ADMIN_THEME.badge.active
+                        : ADMIN_THEME.badge.inactive
                         }`}>
                         {selectedPlanForDetails.status === 'active' ? 'Active' : 'Inactive'}
                       </span>
@@ -996,7 +996,7 @@ const PricingPlanManager: React.FC = () => {
                           setIsPlanDetailsModalOpen(false);
                           handlePreviewPlan(selectedPlanForDetails);
                         }}
-                        className="bg-gray-700 text-gray-200 px-4 py-2 rounded-lg hover:bg-gray-600 flex items-center gap-2"
+                        className={`${ADMIN_THEME.button.outline} px-4 py-2 rounded-lg flex items-center gap-2`}
                       >
                         <Eye size={16} />
                         Preview
@@ -1006,7 +1006,7 @@ const PricingPlanManager: React.FC = () => {
                           setIsPlanDetailsModalOpen(false);
                           handleEditPlan(selectedPlanForDetails);
                         }}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                        className={`${ADMIN_THEME.button.primary} px-4 py-2 rounded-lg flex items-center gap-2`}
                       >
                         <Edit size={16} />
                         Edit

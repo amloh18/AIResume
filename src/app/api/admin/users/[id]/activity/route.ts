@@ -55,7 +55,7 @@ export async function GET(
 
     // Calculate total time spent using ActivityLog
     // We'll group logs into sessions. A new session starts if there's a gap of > 30 minutes.
-    const logs = await ActivityLog.find({ userId: user._id })
+    const logs = await ActivityLog.find({ userId: user._id }).lean()
       .sort({ timestamp: 1 })
       .select('timestamp')
       .lean();
@@ -93,13 +93,13 @@ export async function GET(
     }
 
     // Get recent activity (last 10 CVs, journeys, etc.)
-    const recentCVs = await CV.find({ userId: user._id })
+    const recentCVs = await CV.find({ userId: user._id }).lean()
       .sort({ updatedAt: -1 })
       .limit(10)
       .select('title metadata.isMaster updatedAt')
       .lean();
 
-    const recentJourneys = await ApplicationJourney.find({ userId })
+    const recentJourneys = await ApplicationJourney.find({ userId }).lean()
       .sort({ lastWorkedOn: -1 })
       .limit(10)
       .select('jobTitle company status lastWorkedOn')

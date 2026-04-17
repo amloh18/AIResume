@@ -34,22 +34,24 @@ function ResumeEnhancerPageContent() {
   if (typeParam === 'cv' && cvId && mode === 'create') mode = 'edit';
   if ((typeParam === 'cl' || clId) && mode === 'create') mode = 'edit-cover-letter';
 
-  // Check if user has CVs to determine guest mode
+// Check if user has CVs to determine guest mode
   useEffect(() => {
     const checkGuestMode = async () => {
       if (authLoading) return;
 
       try {
-        // If authenticated, check if user has any CVs
         if (isAuthenticated && user?.id) {
-          // data.success && data.data?.cvs?.length > 0 check removed to ensure auth users act as auth
-
-          // Guest mode: ONLY if not authenticated
-          // We used to check (!hasCVs && mode === 'create' && !cvId) but this caused auth users to see "Guest" UI
-          setIsGuestMode(!isAuthenticated);
+          setIsGuestMode(false);
         } else {
-          // Not authenticated - allow guest mode for new CV creation
-          setIsGuestMode(mode === 'create' && !cvId);
+          // STRICT SECURITY CHECK:
+          // A user can ONLY be a guest if they are explicitly trying to create a NEW CV from scratch.
+          // If they pass a cvId, clId, or journeyId, it implies they are trying to access existing data.
+          // In that case, they MUST authenticate, so we do NOT allow guest mode.
+          if (mode === 'create' && !cvId && !clId && !journeyId) {
+            setIsGuestMode(true);
+          } else {
+            setIsGuestMode(false); // Force authentication via RouteGuard
+          }
         }
 
         // Check for restore draft param
@@ -59,14 +61,14 @@ function ResumeEnhancerPageContent() {
 
         setIsCheckingGuestMode(false);
       } catch (error) {
-        console.error('Error checking CVs:', error);
-        setIsGuestMode(!isAuthenticated);
+        console.error('Error checking guest mode:', error);
+        setIsGuestMode(false);
         setIsCheckingGuestMode(false);
       }
     };
 
     checkGuestMode();
-  }, [authLoading, isAuthenticated, user?.id, mode, cvId, restoreDraftParam]);
+  }, [authLoading, isAuthenticated, user?.id, mode, cvId, clId, journeyId, restoreDraftParam]);
 
 // Show loading while checking guest mode or authenticating
 if (authLoading || isCheckingGuestMode) {
@@ -95,35 +97,14 @@ if (isGuestMode) {
 }
 
 // For authenticated users or editing existing CVs, require auth
-if (!isAuthenticated || !user?.id) {
-  return (
-    <div className="dashboard-page resume-enhancer-page min-h-screen bg-[var(--bg-primary)] text-[color:var(--text-primary)] flex items-center justify-center">
-      <div className="text-center">
-        <div className="text-red-500 dark:text-red-400 text-6xl mb-4">⚠️</div>
-        <h2 className="text-2xl font-semibold text-[color:var(--text-primary)] mb-2">
-          Authentication Required
-        </h2>
-        <p className="text-[color:var(--text-secondary)] mb-4">
-          Please log in to access the Editor.
-        </p>
-        <button
-          onClick={() => window.location.href = '/sign-in'}
-          className="px-4 py-2 bg-[var(--accent-primary)] text-black rounded-lg hover:bg-[var(--accent-hover)] transition-colors font-semibold"
-        >
-          Go to Login
-        </button>
-      </div>
-    </div>
-  );
-}
-
+// We let RouteGuard handle the unauthenticated state so it pops the Auth Modal
 return (
   <RouteGuard requireAuth={true}>
     <JobJourneyProvider>
       <ResumeEnhancerProvider>
         <ATSProvider>
           <ResumeEnhancerContainer
-            userId={user.id}
+            userId={user?.id || ''}
             mode={mode}
             cvId={cvId}
             clId={clId}

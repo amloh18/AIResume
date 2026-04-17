@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       query.isActive = isActive === 'true';
     }
 
-    const taxRates = await TaxRate.find(query).sort({ countryCode: 1, effectiveFrom: -1 });
+    const taxRates = await TaxRate.find(query).sort({ countryCode: 1, effectiveFrom: -1 }).lean();
 
     return NextResponse.json({
       success: true,

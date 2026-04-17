@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { signIn, useSession } from 'next-auth/react';
 import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,23 +11,25 @@ import UnifiedAuthForm, { emailValidation, passwordValidation, nameValidation, c
 import SocialAuthButtons from './SocialAuthButtons';
 import CodeVerificationScreen from './CodeVerificationScreen';
 
-type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-code';
+export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-code';
 
-interface AuthPageProps {
+export interface AuthPageProps {
   initialMode?: AuthMode;
+  isModal?: boolean;
 }
 
-function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false }: AuthPageProps) {
   const { data: session, status } = useSession();
-  // const { messages, clearMessages } = useConsoleLoggerContext();
+  const globalCallbackUrl = useAuthModalStore(state => state.callbackUrl);
 
   // Get callbackUrl from search params, default to dashboard
   const callbackUrl = useMemo(() => {
-    const url = searchParams.get('callbackUrl');
-    return url || '/dashboard';
-  }, [searchParams]);
+    if (typeof window !== 'undefined') {
+      const url = new URLSearchParams(window.location.search).get('callbackUrl');
+      return globalCallbackUrl || url || '/dashboard';
+    }
+    return globalCallbackUrl || '/dashboard';
+  }, [globalCallbackUrl]);
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,21 +50,25 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   // Check if user is already signed in
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      // Use window.location for reliable redirect that preserves callbackUrl
-      window.location.href = callbackUrl;
+      if (!isModal) {
+        // Use window.location for reliable redirect that preserves callbackUrl
+        window.location.href = callbackUrl;
+      }
     }
-  }, [status, session?.user, callbackUrl]);
+  }, [status, session?.user, callbackUrl, isModal]);
 
   // Handle redirect after successful sign-in
   useEffect(() => {
     if (success && status === 'authenticated' && session?.user) {
-      // Use window.location for reliable redirect that preserves callbackUrl
-      const timer = setTimeout(() => {
-        window.location.href = callbackUrl;
-      }, 1000);
-      return () => clearTimeout(timer);
+      if (!isModal) {
+        // Use window.location for reliable redirect that preserves callbackUrl
+        const timer = setTimeout(() => {
+          window.location.href = callbackUrl;
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [success, status, session?.user, callbackUrl]);
+  }, [success, status, session?.user, callbackUrl, isModal]);
 
   const handleFormSubmit = async (formData: Record<string, string>) => {
     setIsLoading(true);
@@ -151,7 +157,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
         setTimeout(() => {
-          window.location.href = callbackUrl;
+          if (!isModal) {
+            window.location.href = callbackUrl;
+          }
         }, 1000);
       } else {
         let errorMessage = 'Invalid email or password.';
@@ -309,7 +317,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
         // Success - redirect
         setSuccess('Sign in successful! Redirecting...');
         setTimeout(() => {
-          window.location.href = callbackUrl;
+          if (!isModal) {
+            window.location.href = callbackUrl;
+          }
         }, 1000);
         return;
       }
@@ -336,7 +346,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             if ((signInResult as any)?.ok) {
               setSuccess('Authentication successful, redirecting...');
               setTimeout(() => {
-                window.location.href = callbackUrl;
+                if (!isModal) {
+                  window.location.href = callbackUrl;
+                }
               }, 800);
             } else {
               // If sign-in fails, try to verify via API to get better error message
@@ -500,7 +512,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 // Force a page reload to pick up the new session cookie
                 // This ensures NextAuth recognizes the session
                 setTimeout(() => {
-                  window.location.href = callbackUrl;
+                  if (!isModal) {
+                    window.location.href = callbackUrl;
+                  }
                 }, 500);
               } else {
                 setError('Failed to create session. Please try signing in manually.');
@@ -542,7 +556,9 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
             setSuccess(result.message || 'Code verified successfully!');
             // Redirect to callbackUrl
             setTimeout(() => {
-              window.location.href = callbackUrl;
+              if (!isModal) {
+                window.location.href = callbackUrl;
+              }
             }, 1500);
           } else {
             setError(result.message || 'Invalid verification code.');
@@ -686,10 +702,23 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     setError('');
 
     try {
-      await signIn('google', { callbackUrl: '/dashboard' });
+      await signIn('google', { callbackUrl: callbackUrl });
     } catch (error: any) {
       console.error('Google auth error:', error);
       setError('Failed to sign in with Google. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleAppleAuth = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await signIn('apple', { callbackUrl: callbackUrl });
+    } catch (error: any) {
+      console.error('Apple auth error:', error);
+      setError('Failed to sign in with Apple. Please try again.');
       setIsLoading(false);
     }
   };
@@ -818,15 +847,15 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const getTitle = () => {
     switch (mode) {
       case 'signin':
-        return 'Sign In';
+        return isModal ? 'Sign in to CVCircle' : 'Sign In';
       case 'signup':
-        return 'Create your account';
+        return isModal ? 'Join CVCircle' : 'Create your account';
       case 'reset':
         return 'Reset Password';
       case 'magic-link':
         return 'Sign In with Code';
       default:
-        return 'Sign In';
+        return isModal ? 'Sign in to CVCircle' : 'Sign In';
     }
   };
 
@@ -963,6 +992,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
   const socialButtons = (mode !== 'magic-link' && mode !== 'verify-code') ? (
     <SocialAuthButtons
       onGoogleAuth={handleGoogleAuth}
+      onAppleAuth={handleAppleAuth}
       onMagicLinkAuth={mode === 'signin' ? () => switchMode('magic-link') : undefined}
       isLoading={isLoading}
       mode={mode === 'signup' ? 'signup' : 'signin'}
@@ -975,9 +1005,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       <UnifiedAuthLayout
         title="Set New Password"
         subtitle="Enter your new password"
-        showBackButton={true}
+        showBackButton={!isModal}
         backHref="/sign-in"
         backText="Back to Sign In"
+        isModal={isModal}
       >
         <UnifiedAuthForm
           fields={[
@@ -1020,9 +1051,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       <UnifiedAuthLayout
         title="Verify Your Code"
         subtitle="Enter the 4-digit code sent to your email"
-        showBackButton={true}
+        showBackButton={!isModal}
         backHref="/sign-in"
         backText="Back to Sign In"
+        isModal={isModal}
       >
         <CodeVerificationScreen
           email={email}
@@ -1049,9 +1081,10 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
     <UnifiedAuthLayout
       title={getTitle()}
       subtitle={getSubtitle()}
-      showBackButton={mode !== 'signin'}
+      showBackButton={!isModal && mode !== 'signin'}
       backHref="/"
       backText="Back to Home"
+      isModal={isModal}
     >
       {/* Mode Toggle Switch - Only show for signin/signup */}
       {(mode === 'signin' || mode === 'signup') && (
@@ -1100,17 +1133,19 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
       )}
 
       {/* Icon */}
-      {getIcon()}
+      {!isModal && getIcon()}
 
       {/* Title */}
-      <h2 className="text-2xl font-bold text-white mb-2">
+      <h2 className="text-2xl font-bold text-white mb-2 text-center">
         {getTitle()}
       </h2>
 
       {/* Subtitle */}
-      <p className="text-white/70 text-base mb-6">
-        {getSubtitle()}
-      </p>
+      {!isModal && (
+        <p className="text-white/70 text-base mb-6 text-center">
+          {getSubtitle()}
+        </p>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div
@@ -1168,6 +1203,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
               <div className="flex justify-center space-x-4 text-xs text-gray-400">
                 <a
                   href="/legal#privacy"
+                  target="_blank"
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Privacy Policy
@@ -1175,6 +1211,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 <span className="text-gray-500">•</span>
                 <a
                   href="/legal#terms"
+                  target="_blank"
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Terms of Service
@@ -1182,6 +1219,7 @@ function UnifiedAuthPageContent({ initialMode = 'signin' }: AuthPageProps) {
                 <span className="text-gray-500">•</span>
                 <a
                   href="/legal#support"
+                  target="_blank"
                   className="hover:text-[#88E03F] transition-colors duration-200"
                 >
                   Support

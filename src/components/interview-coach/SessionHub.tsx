@@ -124,12 +124,12 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
             } else {
                 console.error('Session init failed:', data.error);
                 toast.error(data.error || 'Failed to create session');
-                setLoading(false);
+                router.push('/dashboard/interview');
             }
         } catch (error) {
             console.error('Failed to init session:', error);
             toast.error('Failed to initialize session');
-            setLoading(false);
+            router.push('/dashboard/interview');
         } finally {
             // setPreparing(false);
             setLoading(false);
@@ -158,7 +158,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     };
 
     const handleBack = () => {
-        router.push('/interview-coach');
+        router.push('/dashboard/interview');
     };
 
     // Show preparing loader

@@ -22,8 +22,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
 
-    // Only job creation requires credit check
-    const finalAction: 'job_create' = action || 'job_create';
+    const finalAction: 'job_create' | 'ai_generation' = action || 'job_create';
 
     // Check time-based access first
     const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);

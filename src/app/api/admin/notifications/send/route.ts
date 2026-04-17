@@ -53,7 +53,7 @@ export const POST = withAdminAuth(
       userQuery.currentPlanKey = planFilter;
     }
 
-    const users = await User.find(userQuery).select('_id');
+    const users = await User.find(userQuery).select('_id').lean();
 
     // Enqueue notification for each user
     let enqueued = 0;

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Get drafts with user population
-    const drafts = await TemporaryCVDraft.find(query)
+    const drafts = await TemporaryCVDraft.find(query).lean()
       .populate('userId', 'email firstName lastName')
       .populate('convertedBy', 'email firstName lastName')
       .sort({ updatedAt: -1 })

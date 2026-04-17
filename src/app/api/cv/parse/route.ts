@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
 
 // ============================================================================
 // TEXT CLEANING UTILITY - ATS Compatible
@@ -1245,6 +1246,26 @@ export async function POST(request: NextRequest) {
 
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please sign in to parse CVs.' },
+        { status: 401 }
+      );
+    }
+
+    // Rate Limiting (using AI config since parsing is heavy)
+    const rateLimitResult = await rateLimiter.checkLimit(
+      userId,
+      rateLimitConfigs.ai
+    );
+    
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { error: `Too many parse requests. Please wait ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.` },
+        { status: 429 }
+      );
+    }
 
     const formData = await request.formData();
     const file = formData.get('file') as File;

@@ -1012,7 +1012,7 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                     {["now", "scheduled", "recurring"].map((type) => (
                       <label
                         key={type}
-                        className="flex items-center gap-3 p-3 bg-gray-800 border border-gray-700 rounded-lg cursor-pointer hover:bg-gray-750"
+                        className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50"
                       >
                         <input
                           type="radio"
@@ -1022,9 +1022,9 @@ export default function CampaignEditor({ campaign, onClose, onSave }: Props) {
                           onChange={(e) =>
                             handleInputChange("sendType", e.target.value)
                           }
-                          className="w-4 h-4 text-blue-600"
+                          className="w-4 h-4 text-emerald-700"
                         />
-                        <span className="text-white capitalize">
+                        <span className="text-slate-900 capitalize">
                           {type === "now"
                             ? "Send Now"
                             : type === "scheduled"

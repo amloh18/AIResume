@@ -128,7 +128,7 @@ const PremiumTemplates = () => {
                   x: `calc(-50% + ${pos.x * mobileScaleX}px)`, 
                   y: `calc(-50% + ${pos.y * mobileScaleY}px)`, 
                   scale: isMobile ? 0.45 : 0.65, 
-                  opacity: 0.9, 
+                  opacity: 1, 
                   rotate: pos.rotation 
                 } : {}}
                 exit={{ 

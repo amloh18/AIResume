@@ -82,63 +82,14 @@ export class UserService {
   }
 
   /**
-   * Authenticate admin user
+   * Find or create OAuth user (Google, Apple, etc.)
    */
-  static async authenticateAdmin(
-    email: string,
-    password: string
-  ): Promise<AuthenticationResult> {
-    try {
-      await getConnection();
-
-      // Find admin user by email
-      const user = await userRepository.findByEmailWithPassword(email);
-
-      if (!user || !['admin', 'superadmin'].includes(user.role as string)) {
-        return { user: null, error: 'Invalid credentials' };
-      }
-
-      // Check if user has a password
-      if (!user.password) {
-        return { user: null, error: 'Invalid credentials' };
-      }
-
-      // Verify password using repository method
-      const userId = (user as any)._id.toString();
-      const isPasswordValid = await userRepository.verifyPassword(userId, password);
-
-      if (!isPasswordValid) {
-        return { user: null, error: 'Invalid credentials' };
-      }
-
-      // Update last login using repository
-      await userRepository.updateLastLogin(userId);
-
-      return {
-        user: {
-          id: userId,
-          email: user.email,
-          name: `${user.firstName} ${user.lastName}`,
-          image: user.avatar || null,
-          role: user.role || 'user',
-          planKey: user.currentPlanKey || 'free',
-          subscriptionStatus: user.subscription?.status || 'inactive',
-        },
-      };
-    } catch (error: any) {
-      console.error('❌ Admin authentication error:', error.message);
-      return { user: null, error: 'Authentication failed' };
-    }
-  }
-
-  /**
-   * Find or create Google OAuth user
-   */
-  static async findOrCreateGoogleUser(data: {
+  static async findOrCreateOAuthUser(data: {
     email: string;
     name: string;
     image?: string;
-    googleId: string;
+    providerId: string;
+    provider: string;
   }): Promise<AuthenticatedUser | null> {
     try {
       await getConnection();
@@ -160,7 +111,7 @@ export class UserService {
         if (updated) {
           existingUser = updated;
         }
-        console.log('✅ Existing Google user updated:', userId);
+        console.log(`✅ Existing ${data.provider} user updated:`, userId);
       } else {
         // Create new user using repository
         const userName = data.name || '';
@@ -168,14 +119,14 @@ export class UserService {
         const firstName = nameParts[0] || 'User';
         const lastName = nameParts.slice(1).join(' ') || '';
 
-        existingUser = await userRepository.createGoogleUser({
+        existingUser = await userRepository.createGoogleUser({ // Assuming createGoogleUser just creates an OAuth user
           email: userEmail,
           firstName,
           lastName,
           avatar: data.image,
-          authProviderId: data.googleId || `google_${data.googleId}`,
+          authProviderId: data.providerId || `${data.provider}_${data.providerId}`,
         });
-        console.log('✅ New Google user created:', existingUser._id);
+        console.log(`✅ New ${data.provider} user created:`, existingUser._id);
       }
 
       return {
@@ -188,7 +139,7 @@ export class UserService {
         subscriptionStatus: existingUser.subscription?.status || 'inactive',
       };
     } catch (error: any) {
-      console.error('❌ Error finding/creating Google user:', error);
+      console.error(`❌ Error finding/creating ${data.provider} user:`, error);
       return null;
     }
   }

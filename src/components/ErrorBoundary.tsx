@@ -69,7 +69,17 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
-    window.location.href = '/';
+    const currentPath = window.location.pathname;
+
+    if (currentPath.includes('/editor') || currentPath.includes('/resume-enhancer')) {
+      window.location.href = '/editor';
+    } else if (currentPath.includes('/dashboard')) {
+      window.location.href = '/dashboard';
+    } else if (currentPath.includes('/ai-career-report')) {
+      window.location.href = '/ai-career-report?step=1';
+    } else {
+      window.location.href = '/';
+    }
   };
 
   handleExitWithoutSaving = () => {
