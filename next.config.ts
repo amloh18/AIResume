@@ -218,7 +218,6 @@ const nextConfig: NextConfig = {
         'canvas': 'commonjs canvas',
         'puppeteer': 'commonjs puppeteer',
         'pdf2pic': 'commonjs pdf2pic',
-        'jose': 'commonjs jose',
       });
     }
 
