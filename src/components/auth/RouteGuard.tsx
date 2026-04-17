@@ -2,66 +2,59 @@
 
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 
 interface RouteGuardProps {
   children: React.ReactNode;
   requireAuth?: boolean;
-  redirectTo?: string;
 }
 
 const RouteGuard: React.FC<RouteGuardProps> = ({
   children,
   requireAuth = true,
-  redirectTo = '/sign-in'
 }) => {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const pathname = usePathname();
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasRedirected, setHasRedirected] = useState(false);
+  const openModal = useAuthModalStore((state) => state.openModal);
+  const isOpen = useAuthModalStore((state) => state.isOpen);
+  const [hasPrompted, setHasPrompted] = useState(false);
 
   useEffect(() => {
-    // Don't process if still loading
     if (status === 'loading') return;
 
-    // Don't redirect multiple times
-    if (hasRedirected) return;
-
-    if (requireAuth) {
-      // Check NextAuth session (Firebase-based authentication)
-      const isNextAuthAuthenticated = status === 'authenticated' && session;
-      
-      if (isNextAuthAuthenticated) {
-        setIsAuthorized(true);
-        setIsLoading(false);
-      } else if (status === 'unauthenticated') {
-        // Not authenticated, redirect to login
-        setHasRedirected(true);
-        const callbackUrl = encodeURIComponent(pathname);
-        router.push(`${redirectTo}?callbackUrl=${callbackUrl}`);
-      }
-    } else {
-      // Public route - allow access regardless of authentication status
-      // Remove the automatic redirect to dashboard for authenticated users
-      // This allows users to visit the landing page even when logged in
-      setIsAuthorized(true);
-      setIsLoading(false);
+    if (requireAuth && status === 'unauthenticated' && !hasPrompted) {
+      setHasPrompted(true);
+      // Trigger the auth modal and preserve the URL intent
+      openModal({ view: 'signin', callbackUrl: pathname });
     }
-  }, [status, session, requireAuth, pathname, redirectTo, router, hasRedirected]);
+  }, [status, requireAuth, pathname, openModal, hasPrompted]);
 
-  // Don't show loading state - render children immediately
-  // Pages will handle their own loading states
-  // Only block if we're definitely redirecting (not authorized and not still checking)
-  
-  // If we're redirecting (unauthenticated and not still loading), return null
-  // Otherwise, render children immediately - don't block with loading state
-  if (requireAuth && status === 'unauthenticated' && !isLoading && hasRedirected) {
-    return null; // Will redirect or already redirected
+  // If authentication is required and user is unauthenticated,
+  // we render the children but add a blur/lock overlay.
+  // The AuthModal will appear on top because it's at the root level.
+  if (requireAuth && status === 'unauthenticated') {
+    return (
+      <div className="relative min-h-screen">
+        <div className="pointer-events-none select-none blur-sm opacity-50 transition-all duration-300">
+          {children}
+        </div>
+        {/* If the modal is somehow closed without logging in, we can show a fallback or just keep it blurred */}
+        {!isOpen && (
+          <div className="absolute inset-0 flex items-center justify-center z-40">
+            <button 
+              onClick={() => openModal({ view: 'signin', callbackUrl: pathname })}
+              className="px-6 py-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 transition-colors font-medium"
+            >
+              Sign In to Continue
+            </button>
+          </div>
+        )}
+      </div>
+    );
   }
 
-  // Render children immediately - don't block with loading state
+  // Render children normally for authenticated or public routes
   return <>{children}</>;
 };
 

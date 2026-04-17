@@ -33,9 +33,9 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
   const router = useRouter();
 
   // OAuth providers are configured server-side via NextAuth
-  // We assume Google is available if NextAuth is configured
+  // We assume Google and Apple are available if NextAuth is configured
   const hasGoogle = true; // NextAuth Google provider is configured server-side
-  const hasApple = false; // Apple provider not yet configured
+  const hasApple = true; // NextAuth Apple provider is configured server-side
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -98,7 +98,9 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
         setRegistrationSuccess(true);
         setTimeout(() => {
           onClose();
-          router.push('/dashboard');
+          const urlParams = new URLSearchParams(window.location.search);
+          const callbackUrl = urlParams.get('callbackUrl') || '/dashboard';
+          window.location.href = callbackUrl;
         }, 2000);
       } else {
         setError(result.message || 'Registration failed. Please try again.');
@@ -151,8 +153,11 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
 
     try {
       // Use NextAuth signIn for OAuth providers
+      const urlParams = new URLSearchParams(window.location.search);
+      const callbackUrl = urlParams.get('callbackUrl') || '/dashboard';
+      
       const result = await signIn(provider, {
-        callbackUrl: '/dashboard',
+        callbackUrl,
         redirect: false
       });
 
@@ -166,7 +171,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
         // Sign in successful, close modal and redirect
         onClose();
         // NextAuth will handle the redirect via callbackUrl
-        router.push('/dashboard');
+        window.location.href = callbackUrl;
       }
     } catch (error: any) {
       setError(error.message || `Failed to sign in with ${provider}. Please try again.`);
@@ -303,7 +308,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           </motion.button>
                         )}
 
-                        {hasAppleCredentials && (
+                        {hasApple && (
                           <motion.button
                             onClick={() => handleOAuthSignIn('apple')}
                             disabled={isLoading}

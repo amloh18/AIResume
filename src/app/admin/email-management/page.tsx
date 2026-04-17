@@ -293,7 +293,7 @@ export default function EmailManagementPage() {
           <div className="p-6">
             <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-6">
               {filteredTemplates.map((template) => (
-                <div key={template.id} className="border border-gray-700 bg-gray-800 rounded-lg p-6 hover:bg-gray-750 transition-colors">
+                <div key={template.id} className="border border-gray-700 bg-gray-800 rounded-lg p-6 hover:bg-gray-700/60 transition-colors">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex-1">
                       <h3 className="font-semibold text-white">{template.name}</h3>
@@ -395,7 +395,7 @@ export default function EmailManagementPage() {
                 </thead>
                 <tbody>
                   {campaigns.map((campaign) => (
-                    <tr key={campaign.id} className="border-b border-gray-700 hover:bg-gray-750">
+                    <tr key={campaign.id} className="border-b border-gray-700 hover:bg-gray-700/60">
                       <td className="py-3 px-4">
                         <div>
                           <p className="font-medium text-white">{campaign.name}</p>
@@ -442,7 +442,7 @@ export default function EmailManagementPage() {
         <div className="mt-8 bg-gray-800 border-gray-700 rounded-lg shadow-sm border p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
           <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
-            <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-750 transition-colors">
+            <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-700/60 transition-colors">
               <Send className="w-5 h-5 text-blue-400" />
               <div className="text-left">
                 <p className="font-medium text-white">Send Test Email</p>
@@ -450,7 +450,7 @@ export default function EmailManagementPage() {
               </div>
             </button>
             
-            <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-750 transition-colors">
+            <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-700/60 transition-colors">
               <Users className="w-5 h-5 text-blue-400" />
               <div className="text-left">
                 <p className="font-medium text-white">Create Campaign</p>
@@ -458,7 +458,7 @@ export default function EmailManagementPage() {
               </div>
             </button>
             
-            <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-750 transition-colors">
+            <button className="flex items-center gap-3 p-4 border border-gray-700 rounded-lg hover:bg-gray-700/60 transition-colors">
               <TrendingUp className="w-5 h-5 text-blue-400" />
               <div className="text-left">
                 <p className="font-medium text-white">View Analytics</p>

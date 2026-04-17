@@ -8,6 +8,7 @@ import { PricingData } from '@/lib/payment/locationService';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 
 interface PricingProps {
   onPlanSelect?: (plan: DatabasePricingPlan, pricingData: PricingData) => void;
@@ -54,8 +55,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     const isAuthenticated = status === 'authenticated' && !!session?.user;
 
     if (!isAuthenticated) {
-      // Route to signin page with plan preselected
-      window.location.href = `/sign-in?plan=${plan.key}&returnUrl=/dashboard`;
+      // Open signin modal with plan preselected
+      useAuthModalStore.getState().openModal({ view: 'signin', callbackUrl: `/dashboard?plan=${plan.key}` });
       return;
     }
 

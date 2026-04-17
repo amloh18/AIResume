@@ -145,7 +145,7 @@ export default function CustomSignInForm() {
                 <span className="text-blue-400">user@cvcircle.io</span> / <span className="text-blue-400">user123</span>
               </p>
               <p className="text-sm text-gray-300 mt-2">
-                Admin access? <a href="/admin/signin" className="font-medium text-red-400 hover:text-red-300">Admin sign in</a>
+                Admin access? <a href="/sign-in" className="font-medium text-red-400 hover:text-red-300">Admin sign in</a>
               </p>
             </div>
           </div>

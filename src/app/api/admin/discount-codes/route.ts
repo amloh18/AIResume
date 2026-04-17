@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch coupons (unified model)
-    const coupons = await Coupon.find(query)
+    const coupons = await Coupon.find(query).lean()
       .sort({ createdAt: -1 })
       .lean();
 

@@ -1007,8 +1007,8 @@ export default function ResumeEnhancerContainer({
           initializedRef.current = { mode, cvId };
         } catch (error) {
           console.error('Failed to load CV:', error);
-          alert('Failed to load CV. Redirecting to dashboard.');
-          router.push('/dashboard?tab=cvs');
+          alert('Failed to load CV. Redirecting to Editor.');
+          router.push('/editor');
         } finally {
           setIsLoading(false);
         }
@@ -1072,8 +1072,8 @@ export default function ResumeEnhancerContainer({
             initializedRef.current = { mode, cvId };
           } catch (error) {
             console.error('Failed to load CV:', error);
-            alert('Failed to load CV. Redirecting to dashboard.');
-            router.push('/dashboard?tab=cvs');
+            alert('Failed to load CV. Redirecting to Editor.');
+            router.push('/editor');
           } finally {
             setIsLoading(false);
           }

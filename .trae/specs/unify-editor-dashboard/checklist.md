@@ -1,0 +1,5 @@
+- [x] UI correctly displays "Editor" instead of "Resume Enhancer" in navigation and headers.
+- [x] Step 1 dashboard fetches and lists both existing CVs and Cover Letters.
+- [x] Users can edit/create CVs and Cover Letters directly from the Step 1 dashboard.
+- [x] Editing an existing CV bypasses the Step 2 Template Selector.
+- [x] Clicking "Template" in Step 3 opens exactly one Template Selector modal.

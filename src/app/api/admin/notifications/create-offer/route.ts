@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       userQuery.currentPlanKey = planFilter;
     }
 
-    const users = await User.find(userQuery).select('_id');
+    const users = await User.find(userQuery).select('_id').lean();
 
     // Create discount offer notification for each user
     let enqueued = 0;

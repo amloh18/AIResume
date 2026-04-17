@@ -128,10 +128,12 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
             } else {
                 console.error('Session init failed:', sessionData.error);
                 toast.error(sessionData.error || 'Failed to load session');
+                router.push('/dashboard/interview');
             }
         } catch (error) {
             console.error('Failed to fetch data:', error);
             toast.error('Failed to load questions');
+            router.push('/dashboard/interview');
         } finally {
             setLoading(false);
         }
@@ -296,7 +298,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
             if (nextModuleId) {
                 router.push(`/interview-coach/${jobId}/practice?moduleId=${nextModuleId}`);
             } else {
-                router.push(`/interview-coach/${jobId}`);
+                router.push(`/dashboard/interview/${jobId}`);
                 toast.success('All modules completed! Great job!');
             }
         }
@@ -329,7 +331,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
 
 
     const handleBack = () => {
-        router.push(`/interview-coach/${jobId}`);
+        router.push(`/dashboard/interview/${jobId}`);
     };
 
     const copySampleScript = () => {

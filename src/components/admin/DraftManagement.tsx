@@ -164,7 +164,7 @@ const DraftManagement: React.FC = () => {
       <Card className={ADMIN_THEME.card.base}>
         <CardHeader>
           <CardTitle className={ADMIN_THEME.text.primary}>CV Draft Management</CardTitle>
-          <CardDescription className={ADMIN_THEME.text.secondary}>Loading drafts...</CardDescription>
+          <CardDescription className={ADMIN_THEME.text.muted}>Loading drafts...</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -178,16 +178,16 @@ const DraftManagement: React.FC = () => {
             <FileText className="w-5 h-5" />
             CV Draft Management
           </CardTitle>
-          <CardDescription className={ADMIN_THEME.text.secondary}>
+          <CardDescription className={ADMIN_THEME.text.muted}>
             Manage temporary CV drafts from AI Career Report flow
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           {/* Filters */}
           <div className="flex gap-4 mb-6">
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${ADMIN_THEME.text.muted} w-4 h-4`} />
                 <Input
                   placeholder="Search by email or session ID..."
                   value={searchTerm}
@@ -197,7 +197,7 @@ const DraftManagement: React.FC = () => {
                       fetchDrafts();
                     }
                   }}
-                  className="pl-10"
+                  className={`pl-10 ${ADMIN_THEME.input.base} ${ADMIN_THEME.input.focus}`}
                 />
               </div>
             </div>
@@ -207,7 +207,7 @@ const DraftManagement: React.FC = () => {
                 setFilterStatus(e.target.value);
                 setPage(1);
               }}
-              className={`px-4 py-2 ${ADMIN_THEME.input.base} ${ADMIN_THEME.border.primary} rounded-md ${ADMIN_THEME.input.focus}`}
+              className={`px-4 py-2 border rounded-lg ${ADMIN_THEME.input.base} ${ADMIN_THEME.input.focus} ${ADMIN_THEME.border.primary}`}
             >
               <option value="all">All Status</option>
               {DRAFT_STATUSES.map((status) => (
@@ -216,14 +216,14 @@ const DraftManagement: React.FC = () => {
                 </option>
               ))}
             </select>
-            <Button onClick={fetchDrafts} variant="outline" size="sm">
+            <Button onClick={fetchDrafts} variant="outline" className={ADMIN_THEME.button.outline}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
           </div>
 
           {error && (
-            <div className={`mb-4 p-3 ${ADMIN_THEME.badge.error} border ${ADMIN_THEME.border.primary} rounded`}>
+            <div className={`mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded`}>
               {error}
             </div>
           )}
@@ -232,7 +232,7 @@ const DraftManagement: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className={`border-b ${ADMIN_THEME.border.primary}`}>
+                <tr className={`border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.table.header}`}>
                   <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>User</th>
                   <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>CV Preview</th>
                   <th className={`text-left p-3 ${ADMIN_THEME.text.secondary}`}>Step</th>
@@ -261,7 +261,7 @@ const DraftManagement: React.FC = () => {
                       <div className={ADMIN_THEME.text.primary}>{draft.cvDataPreview.name}</div>
                       <div className={`text-sm ${ADMIN_THEME.text.tertiary}`}>
                         {draft.cvDataPreview.workCount} work, {draft.cvDataPreview.educationCount} edu
-                        {draft.hasAiAnalysis && <span className="ml-2 text-blue-400">• AI Analysis</span>}
+                        {draft.hasAiAnalysis && <span className="ml-2 text-emerald-600">• AI Analysis</span>}
                       </div>
                     </td>
                     <td className={`p-3 ${ADMIN_THEME.text.secondary}`}>Step {draft.currentStep}</td>
@@ -283,7 +283,7 @@ const DraftManagement: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleDelete(draft.id)}
-                          className="text-red-400 hover:text-red-300"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -303,10 +303,11 @@ const DraftManagement: React.FC = () => {
                 size="sm"
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
+                className={ADMIN_THEME.button.outline}
               >
                 Previous
               </Button>
-              <span className="text-gray-400">
+              <span className={ADMIN_THEME.text.muted}>
                 Page {page} of {totalPages}
               </span>
               <Button
@@ -314,6 +315,7 @@ const DraftManagement: React.FC = () => {
                 size="sm"
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
+                className={ADMIN_THEME.button.outline}
               >
                 Next
               </Button>
@@ -321,7 +323,7 @@ const DraftManagement: React.FC = () => {
           )}
 
           {drafts.length === 0 && !loading && (
-            <div className={`text-center py-8 ${ADMIN_THEME.text.tertiary}`}>
+            <div className={`text-center py-8 ${ADMIN_THEME.text.muted}`}>
               No drafts found
             </div>
           )}

@@ -1355,6 +1355,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   };
 
   const fetchATSScore = async (cvId: string, jobId: string, forceRecalculate: boolean = false) => {
+    if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
+        openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
+        return;
+    }
+
     if (!cvId || !jobId || atsScoreLoading) {
       console.log('🚫 JourneyTimelineCard - ATS calculation skipped:', {
         hasCvId: !!cvId,
@@ -2692,6 +2697,10 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             <div className="flex items-center gap-2 mt-1">
                               <motion.button
                                 onClick={() => {
+                                  if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
+                                      openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'cover-letter-edit' });
+                                      return;
+                                  }
                                   // Navigate to resume-enhancer in edit-cover-letter mode
                                   const params = new URLSearchParams();
                                   params.set('mode', 'edit-cover-letter');

@@ -70,7 +70,7 @@ function VerifyEmailContent() {
         
         // Redirect to sign-in page after 3 seconds
         setTimeout(() => {
-          router.push('/sign-in?verified=true');
+          window.location.href = '/?verified=true'; // Fallback to landing, auth modal opens
         }, 3000);
       } else {
         if (result.message.includes('expired')) {

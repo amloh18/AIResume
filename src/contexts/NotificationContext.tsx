@@ -48,7 +48,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
     '/sign-in',
     '/custom-signin',
     '/sign-up',
-    '/admin/signin',
+    '/sign-in',
     '/auth/verify-email',
     '/auth/error',
     '/auth/reset-password',

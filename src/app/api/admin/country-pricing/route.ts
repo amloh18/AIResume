@@ -13,7 +13,7 @@ import { z } from 'zod';
 export const GET = withAdminAuth(async (request: NextRequest) => {
   await getConnection();
 
-  const countryPricing = await CountryPricing.find({}).sort({ countryCode: 1 });
+  const countryPricing = await CountryPricing.find({}).sort({ countryCode: 1 }).lean();
 
   return successResponse({ countryPricing });
 });

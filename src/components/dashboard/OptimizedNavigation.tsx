@@ -273,10 +273,11 @@ const OptimizedNavigation: React.FC = () => {
       'jobs': '/dashboard/jobs',
       'jobs-dashboard': '/dashboard/jobs',
       'settings': '/dashboard/settings',
-      'resume-enhancer': '/editor',
-      'cover-letter-generator': '/editor?mode=create-cover-letter',
-      'interview-coach': '/interview-coach',
-      'linkedin-enhancer': '/linkedin-enhancer'
+      'resume-enhancer': '/dashboard/vault',
+      'cover-letter-generator': '/dashboard/vault',
+      'interview-coach': '/dashboard/interview',
+      'linkedin-enhancer': '/linkedin-enhancer',
+      'ats-resume-checker': '/ats-resume-checker'
     };
 
     const targetRoute = routes[sectionId as keyof typeof routes];
@@ -336,21 +337,21 @@ const OptimizedNavigation: React.FC = () => {
       name: 'Editor',
       icon: Target,
       description: 'AI-powered CV optimization',
-      route: '/editor'
+      route: '/dashboard/vault'
     },
     {
       id: 'cover-letter-generator',
       name: 'Cover Letter Generator',
       icon: PenTool,
       description: 'Create custom cover letters',
-      route: '/editor?mode=create-cover-letter'
+      route: '/dashboard/vault'
     },
     {
       id: 'interview-coach',
       name: 'Interview Coach',
       icon: Mic,
       description: 'AI interview preparation',
-      route: '/interview-coach'
+      route: '/dashboard/interview'
     },
     {
       id: 'linkedin-enhancer',

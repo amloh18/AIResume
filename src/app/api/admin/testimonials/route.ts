@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch testimonials
-    const testimonials = await Testimonial.find(query)
+    const testimonials = await Testimonial.find(query).lean()
       .sort({ createdAt: -1 })
       .lean();
 

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyToken, isAdmin, isAuthenticated, getUserId, getUserRole } from '@/lib/edge-auth'
+import { getToken } from 'next-auth/jwt'
 import { log } from '@/lib/edge-logger'
 
 // Middleware automatically runs on Edge Runtime - no runtime export needed
@@ -20,7 +20,6 @@ const publicRoutes = [
   '/sign-in',
   '/custom-signin', // Custom sign-in page
   '/sign-up',
-  '/admin/signin', // Allow access to admin sign-in page
   '/auth/verify-email',
   '/auth/error',
   '/auth/reset-password',
@@ -79,7 +78,8 @@ export default async function middleware(req: NextRequest) {
   }
 
   // Get and verify the token from the request
-  const token = verifyToken(req)
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const isAuth = !!token;
 
   // Check API routes for authentication
   if (pathname.startsWith('/api/')) {
@@ -92,20 +92,32 @@ export default async function middleware(req: NextRequest) {
     // Allow public API routes
     const publicApiRoutes = [
       '/api/cvs/onboarding',
-      '/api/cv/parse',
       '/api/public',
       '/api/webhooks',
       '/api/health',
-      '/api/ai/career-analysis',
     ];
     
     if (publicApiRoutes.some(route => pathname.startsWith(route))) {
       log.debug('Public API route accessed', { pathname, method });
       return NextResponse.next()
     }
+
+    // Explicitly protect all /api/admin routes
+    if (pathname.startsWith('/api/admin/')) {
+      if (!isAuth) {
+        return NextResponse.json({ error: 'Unauthorized', message: 'Please sign in to access this resource' }, { status: 401 })
+      }
+      
+      const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+      if (!isUserAdmin) {
+        log.warn('Unauthorized admin API access attempt', { pathname, method, userId: token.id });
+        return NextResponse.json({ error: 'Forbidden', message: 'Admin access required' }, { status: 403 })
+      }
+      return NextResponse.next();
+    }
     
-    // Check authentication for protected API routes
-    if (!isAuthenticated(token)) {
+    // Check authentication for other protected API routes
+    if (!isAuth) {
       log.warn('Unauthorized API access attempt', { 
         pathname, 
         method,
@@ -120,47 +132,49 @@ export default async function middleware(req: NextRequest) {
     log.debug('Authenticated API access', { 
       pathname, 
       method, 
-      userId: getUserId(token),
-      role: getUserRole(token)
+      userId: token.id,
+      role: token.role
     });
     return NextResponse.next()
   }
 
   // Protect admin routes with special authorization
   if (isAdminRoute(req)) {
-    if (!isAuthenticated(token)) {
+    if (!isAuth) {
       log.warn('Unauthorized admin access attempt', { 
         pathname,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
       });
-      return NextResponse.redirect(new URL('/admin/signin', req.url))
+      // Pass through so the client-side AuthGuard can pop up the modal
+      return NextResponse.next();
     }
 
     // Check if user has admin role
-    if (!isAdmin(token)) {
+    const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+    if (!isUserAdmin) {
       log.warn('Insufficient permissions for admin access', { 
         pathname, 
-        userId: getUserId(token),
-        role: getUserRole(token),
-        type: token?.type || 'none',
-        tokenPayload: token ? { id: token.id, email: token.email, role: token.role, type: token.type } : null
+        userId: token.id,
+        role: token.role,
+        type: token.type || 'none',
       });
-      return NextResponse.redirect(new URL('/admin/signin', req.url))
+      return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
     log.debug('Admin access granted', { 
       pathname, 
-      userId: getUserId(token),
-      role: getUserRole(token)
+      userId: token.id,
+      role: token.role
     });
     return NextResponse.next()
   }
 
   // Protect routes that require authentication
   if (isProtectedRoute(req)) {
-    if (!isAuthenticated(token)) {
-      log.debug('Redirecting to sign-in', { pathname });
-      return NextResponse.redirect(new URL('/sign-in', req.url))
+    if (!isAuth) {
+      log.debug('Unauthenticated access to protected route, passing to client Auth Modal', { pathname });
+      // Pass through to let client-side Auth Modal handle it
+      return NextResponse.next()
     }
 
     // For dashboard routes, check for expired subscription context
@@ -177,8 +191,8 @@ export default async function middleware(req: NextRequest) {
 
     log.debug('Protected route accessed', { 
       pathname, 
-      userId: getUserId(token),
-      role: getUserRole(token)
+      userId: token.id,
+      role: token.role
     });
     return NextResponse.next()
   }
@@ -195,36 +209,19 @@ export default async function middleware(req: NextRequest) {
 /**
  * Middleware Configuration
  * 
- * IMPORTANT: The matcher only includes specific API routes, but the middleware
- * logic also checks protected page routes (dashboard, admin, profile, studio).
- * 
- * This is intentional:
- * - Matcher limits middleware execution to specific API routes for performance
- * - However, Next.js middleware runs on ALL routes by default when exported
- * - The middleware function itself checks both API and page routes
- * - Page route protection happens inline (lines 118-171)
- * 
- * If you need to protect additional routes:
- * 1. Add them to protectedRoutes array (line 8) or adminRoutes array (line 14)
- * 2. The middleware will automatically check them
- * 3. No need to add page routes to the matcher - they're handled by the middleware function
- * 
- * To add API route protection:
- * 1. Add the route pattern to the matcher array below
- * 2. The middleware will check authentication for that route
+ * IMPORTANT: By explicitly setting the matcher, the middleware will ONLY run
+ * on these paths.
  */
 export const config = {
   matcher: [
-    // API routes that need authentication checking
-    '/api/dashboard/(.*)',
-    '/api/profile/(.*)',
-    '/api/cv/create',
-    '/api/cv/update',
-    '/api/cv/delete',
-    '/api/cv/list',
-    '/api/jobs/(.*)',
-    '/api/cover-letters/(.*)',
-    // Note: Page routes (dashboard, admin, profile, studio) are protected
-    // by the middleware function itself, not by the matcher
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images (public images)
+     * - public (public folder)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|images|public).*)',
   ],
 }

@@ -76,11 +76,21 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   handleGoHome = () => {
-    // Check if we're on the ai-career-report page
     const currentPath = window.location.pathname;
+    
+    // Route to the tool's specific dashboard/entry point if it fails
     if (currentPath.includes('/ai-career-report')) {
-      // Route to step 1 of ai-career-report
       window.location.href = '/ai-career-report?step=1';
+    } else if (currentPath.includes('/editor') || currentPath.includes('/resume-enhancer')) {
+      window.location.href = '/editor'; // The CV list / step 1
+    } else if (currentPath.includes('/interview-coach')) {
+      window.location.href = '/dashboard/interview'; // Interview Hub
+    } else if (currentPath.includes('/linkedin-enhancer')) {
+      window.location.href = '/linkedin-enhancer'; // Refresh without params
+    } else if (currentPath.includes('/ats-resume-checker')) {
+      window.location.href = '/ats-resume-checker'; // Refresh without params
+    } else if (currentPath.includes('/dashboard/tracker')) {
+      window.location.href = '/dashboard/tracker'; // Reset tracker state
     } else {
       // Default to dashboard for other pages
       window.location.href = '/dashboard';

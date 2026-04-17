@@ -25,7 +25,7 @@ export interface TimeBasedAccessResult {
 
 export interface ActionContext {
   userId: string;
-  action: 'job_create';
+  action: 'job_create' | 'ai_generation';
   deviceFingerprint?: string;
   ipAddress?: string;
 }
@@ -304,8 +304,18 @@ class UsageLimitsService {
    * Spend credit for job creation (replaces incrementUsage)
    */
   async incrementUsage(context: ActionContext): Promise<boolean> {
-    // Use credit service to spend credit for job creation
-    return await creditService.spendCredit(context.userId, 'job_create');
+    try {
+      await connectToDatabase();
+
+      if (context.action === 'job_create' || context.action === 'ai_generation') {
+        return await creditService.spendCredit(context.userId, context.action);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error incrementing usage:', error);
+      return false;
+    }
   }
 
   /**

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const subscriptions = await Subscription.find({
       status: 'active',
       createdAt: { $gte: startDate }
-    })
+    }).lean()
       .populate('planId', 'name key')
       .lean();
 

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { rateLimiter, rateLimitConfigs } from '@/lib/rate-limiter';
+import usageLimitsService from '@/lib/services/usageLimitsService';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +10,47 @@ export async function POST(request: NextRequest) {
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Rate Limiting
+    const rateLimitResult = await rateLimiter.checkLimit(
+      session.user.id,
+      rateLimitConfigs.ai
+    );
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        { 
+          error: `Too many AI requests. Please wait ${Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000)} seconds.` 
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000).toString(),
+            'X-RateLimit-Limit': rateLimitConfigs.ai.maxRequests.toString(),
+            'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+            'X-RateLimit-Reset': new Date(rateLimitResult.resetTime).toISOString()
+          }
+        }
+      );
+    }
+
+    // Check AI Credits usage
+    const usageCheck = await usageLimitsService.checkUsageLimit({
+      userId: session.user.id,
+      action: 'ai_generation'
+    });
+
+    if (!usageCheck.allowed) {
+      return NextResponse.json(
+        { error: 'AI credits exhausted. Please upgrade to Pro for unlimited AI.' },
+        { status: 402 } // Payment Required
+      );
+    }
+
+    // Consume AI credit
+    await usageLimitsService.incrementUsage({
+      userId: session.user.id,
+      action: 'ai_generation'
+    });
 
     const { userId, jobData, workItem, projectItem, educationItem, certificateItem, type } = await request.json();
 

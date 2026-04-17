@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch templates
-    const templates = await Template.find(query)
+    const templates = await Template.find(query).lean()
       .populate('createdBy', 'firstName lastName email')
       .sort({ isDefault: -1, createdAt: -1 })
       .lean();

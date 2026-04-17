@@ -28,6 +28,7 @@ import CampaignFilters from './CampaignFilters';
 import { formatDate } from '@/lib/utils';
 import { CAMPAIGN_STATUSES } from '@/lib/config/adminConstants';
 import { useToast } from '@/hooks/use-toast';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import {
   Dialog,
   DialogContent,
@@ -292,16 +293,16 @@ export default function EmailCampaignManager() {
 
   const getStatusBadge = (status: string) => {
     const styles = {
-      draft: 'bg-gray-500/20 text-gray-300 border-gray-500/30',
-      scheduled: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      sent: 'bg-green-500/20 text-green-400 border-green-500/30',
-      cancelled: 'bg-red-500/20 text-red-400 border-red-500/30',
-      recurring: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      archived: 'bg-gray-500/10 text-gray-400 border-gray-500/20',
-    };
+      draft: ADMIN_THEME.badge.draft,
+      scheduled: ADMIN_THEME.badge.scheduled,
+      sent: ADMIN_THEME.badge.sent,
+      cancelled: ADMIN_THEME.badge.cancelled,
+      recurring: 'bg-purple-50 text-purple-700 border border-purple-200',
+      archived: 'bg-slate-50 text-slate-600 border border-slate-200',
+    } as const;
 
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${styles[status as keyof typeof styles] || styles.draft}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status as keyof typeof styles] || styles.draft}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
@@ -360,25 +361,25 @@ export default function EmailCampaignManager() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-white mb-2">Email Campaigns</h1>
-              <span className="px-3 py-1 bg-blue-500/25 text-blue-400 text-sm font-medium rounded-full mb-2">
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">Email Campaigns</h1>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-sm font-medium rounded-full mb-2 border border-emerald-200">
                 Total Users: {metrics.totalUsers.toLocaleString()}
               </span>
             </div>
-            <p className="text-gray-300">Create and manage marketing campaigns</p>
+            <p className="text-slate-600">Create and manage marketing campaigns</p>
           </div>
 
           {/* Search, Filters, and Action Buttons inline */}
           <div className="flex items-center gap-3">
             {/* Search */}
             <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search campaigns..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400/50"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 text-slate-900 placeholder-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
               />
             </div>
 
@@ -386,7 +387,7 @@ export default function EmailCampaignManager() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2.5 bg-white/5 border border-white/10 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+              className="px-4 py-2.5 bg-white border border-slate-200 text-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600/20 focus:border-emerald-600"
             >
               <option value="all">All Status</option>
               {CAMPAIGN_STATUSES.map((status) => (
@@ -401,7 +402,7 @@ export default function EmailCampaignManager() {
               variant="outline"
               onClick={handleSyncUsers}
               disabled={syncing}
-              className="flex items-center gap-2 bg-blue-500/20 hover:bg-blue-500/30 border-blue-500/30 text-blue-400 border-0"
+              className="flex items-center gap-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
             >
               {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}
               {syncing ? 'Syncing...' : 'Sync Users'}
@@ -410,7 +411,7 @@ export default function EmailCampaignManager() {
             {/* Create Campaign Button */}
             <Button
               onClick={handleCreateCampaign}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="flex items-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white"
             >
               <Plus className="w-4 h-4" />
               New Campaign
@@ -420,19 +421,19 @@ export default function EmailCampaignManager() {
       </div>
 
       {/* Campaigns Table */}
-      <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Loading campaigns...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-700 mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading campaigns...</p>
           </div>
         ) : filteredCampaigns.length === 0 ? (
           <div className="p-12 text-center">
-            <Mail className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-400 mb-2">No campaigns found</p>
+            <Mail className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-600 mb-2">No campaigns found</p>
             <button
               onClick={handleCreateCampaign}
-              className="text-blue-400 hover:text-blue-300 text-sm"
+              className="text-emerald-700 hover:text-emerald-800 text-sm font-medium"
             >
               Create your first campaign
             </button>
@@ -440,13 +441,13 @@ export default function EmailCampaignManager() {
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="border-b border-white/10 bg-white/5">
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">CAMPAIGN NAME</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">SUBJECT</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">DATE</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">STATUS</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">PERFORMANCE</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-300">ACTIONS</th>
+              <tr className="border-b border-slate-200 bg-slate-50">
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600">CAMPAIGN NAME</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600">SUBJECT</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600">DATE</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600">STATUS</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600">PERFORMANCE</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600">ACTIONS</th>
               </tr>
             </thead>
             <tbody>
@@ -458,7 +459,7 @@ export default function EmailCampaignManager() {
                 return (
                   <tr
                     key={campaign._id}
-                    className="bg-gray-800 border border-gray-700 rounded-lg p-5 hover:border-neon-green transition-colors cursor-pointer"
+                    className="border-b border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
                     onClick={() => {
                       if (['sent', 'sending', 'cancelled', 'archived'].includes(campaign.status)) {
                         setViewingCampaign(campaign);
@@ -468,16 +469,16 @@ export default function EmailCampaignManager() {
                     }}
                   >
                     <td className="px-6 py-4">
-                      <div className="text-white font-medium">{campaign.campaignName}</div>
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-slate-900 font-medium">{campaign.campaignName}</div>
+                      <div className="text-xs text-slate-500 mt-1">
                         <Users className="w-3 h-3 inline mr-1" />
                         {campaign.targetedUserCount} users
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-gray-300">
+                    <td className="px-6 py-4 text-slate-700">
                       {campaign.subject}
                     </td>
-                    <td className="px-6 py-4 text-gray-400 text-sm">
+                    <td className="px-6 py-4 text-slate-500 text-sm">
                       {campaign.sentAt
                         ? formatDate(campaign.sentAt)
                         : campaign.scheduledAt
@@ -491,7 +492,7 @@ export default function EmailCampaignManager() {
                       {campaign.status === 'sent' ? (
                         getPriorityBadge(openRate)
                       ) : (
-                        <span className="text-gray-500 text-sm">-</span>
+                        <span className="text-slate-400 text-sm">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -502,7 +503,7 @@ export default function EmailCampaignManager() {
                               e.stopPropagation();
                               handleEditCampaign(campaign);
                             }}
-                            className="text-blue-400 hover:text-blue-300 transition-colors"
+                            className="text-emerald-700 hover:text-emerald-800 transition-colors"
                             title="Edit"
                           >
                             <Edit className="w-4 h-4" />
@@ -510,16 +511,22 @@ export default function EmailCampaignManager() {
                         )}
                         {['sent', 'sending', 'recurring'].includes(campaign.status) ? (
                           <button
-                            onClick={() => handleArchiveClick(campaign)}
-                            className="text-yellow-400 hover:text-yellow-300 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleArchiveClick(campaign);
+                            }}
+                            className="text-amber-700 hover:text-amber-800 transition-colors"
                             title="Archive"
                           >
                             <Archive className="w-4 h-4" />
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleDeleteClick(campaign)}
-                            className="text-red-400 hover:text-red-300 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(campaign);
+                            }}
+                            className="text-red-600 hover:text-red-700 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -537,13 +544,13 @@ export default function EmailCampaignManager() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-gray-900 border-gray-700 text-white">
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-400">
+            <DialogTitle className="flex items-center gap-2 text-red-700">
               <AlertTriangle className="w-5 h-5" />
               Delete Campaign
             </DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-slate-600">
               Are you sure you want to delete "{campaignToDelete?.campaignName}"? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -551,47 +558,10 @@ export default function EmailCampaignManager() {
             <Button
               variant="ghost"
               onClick={() => setDeleteDialogOpen(false)}
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
+              className="text-slate-600 hover:text-slate-900 hover:bg-slate-50"
             >
               Cancel
             </Button>
-            {/* Archive Confirmation Dialog */}
-            <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
-              <DialogContent className="bg-gray-900 border-gray-700 text-white">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 text-yellow-400">
-                    <Archive className="w-5 h-5" />
-                    Archive Campaign
-                  </DialogTitle>
-                  <DialogDescription className="text-gray-400">
-                    Are you sure you want to archive "{campaignToArchive?.campaignName}"? It will be moved to the archived list but statistics will be preserved.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter className="gap-2 sm:gap-0">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setArchiveDialogOpen(false)}
-                    className="text-gray-400 hover:text-white hover:bg-gray-800"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={confirmArchive}
-                    disabled={isArchiving}
-                    className="bg-yellow-600 hover:bg-yellow-700 text-white"
-                  >
-                    {isArchiving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Archiving...
-                      </>
-                    ) : (
-                      'Archive Campaign'
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
             <Button
               variant="destructive"
               onClick={confirmDelete}
@@ -605,6 +575,44 @@ export default function EmailCampaignManager() {
                 </>
               ) : (
                 'Delete Campaign'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent className="bg-white border-slate-200 text-slate-900">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-700">
+              <Archive className="w-5 h-5" />
+              Archive Campaign
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Are you sure you want to archive "{campaignToArchive?.campaignName}"? It will be moved to the archived list but statistics will be preserved.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setArchiveDialogOpen(false)}
+              className="text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmArchive}
+              disabled={isArchiving}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              {isArchiving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Archiving...
+                </>
+              ) : (
+                'Archive Campaign'
               )}
             </Button>
           </DialogFooter>

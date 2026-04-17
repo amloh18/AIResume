@@ -28,8 +28,20 @@ export default function UnifiedAuthLayout({
   subtitle,
   showBackButton = false,
   backHref = '/',
-  backText = 'Back to Home'
-}: UnifiedAuthLayoutProps) {
+  backText = 'Back to Home',
+  isModal = false
+}: UnifiedAuthLayoutProps & { isModal?: boolean }) {
+  if (isModal) {
+    return (
+      <div className="w-full p-6 sm:p-8 bg-[#141810]">
+        <div className="mb-8 flex justify-center">
+          <Logo size="lg" showText={true} theme="light" />
+        </div>
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-[#141810]">
       {/* Left Side - 50% - Bright Color Panel */}

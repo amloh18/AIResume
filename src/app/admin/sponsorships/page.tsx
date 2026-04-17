@@ -7,7 +7,7 @@ export default async function SponsorshipsPage() {
     const user = await getAuthenticatedUser();
 
     if (!user || user.user.role !== 'admin') {
-        redirect('/admin/signin');
+        redirect('/sign-in');
     }
 
     return (

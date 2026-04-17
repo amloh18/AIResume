@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { Menu, X } from 'lucide-react';
+import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import './CardNav.css';
 
 interface SubmenuItem {
@@ -50,10 +51,8 @@ const CardNav = ({
     if (onCtaClick) {
       onCtaClick();
     } else {
-      // Default action - redirect to sign-in
-      if (typeof window !== 'undefined') {
-        window.location.href = '/sign-in';
-      }
+      // Default action - open sign in modal
+      useAuthModalStore.getState().openModal({ view: 'signin' });
     }
   };
 

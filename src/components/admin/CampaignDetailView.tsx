@@ -11,6 +11,7 @@ import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { Card, CardContent } from '@/components/ui/card';
 import CampaignPerformancePanel from './CampaignPerformancePanel';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 
 interface CampaignDetailViewProps {
     campaign: any;
@@ -30,11 +31,11 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
     };
 
     const statusColors = {
-        draft: 'bg-gray-500/10 text-gray-500 border-gray-500/20',
-        scheduled: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-        sending: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-        sent: 'bg-green-500/10 text-green-500 border-green-500/20',
-        cancelled: 'bg-red-500/10 text-red-500 border-red-500/20',
+        draft: ADMIN_THEME.badge.draft,
+        scheduled: ADMIN_THEME.badge.scheduled,
+        sending: ADMIN_THEME.badge.warning,
+        sent: ADMIN_THEME.badge.sent,
+        cancelled: ADMIN_THEME.badge.cancelled,
     };
 
     const statusColor = statusColors[campaign.status as keyof typeof statusColors] || statusColors.draft;
@@ -43,7 +44,7 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex justify-end"
+            className={`fixed inset-0 z-50 flex justify-end ${ADMIN_THEME.modal.overlay}`}
             onClick={onClose}
         >
             <motion.div
@@ -52,26 +53,26 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
                 exit={{ x: '100%' }}
                 transition={{ type: 'spring', damping: 20 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-4xl h-full flex flex-col bg-gray-900 border-l border-gray-700 shadow-2xl overflow-hidden"
+                className={`w-full max-w-4xl h-full flex flex-col border-l shadow-2xl overflow-hidden ${ADMIN_THEME.background.primary} ${ADMIN_THEME.border.primary}`}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-700">
+                <div className={`flex items-center justify-between p-6 border-b ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.secondary}`}>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h2 className="text-2xl font-bold text-white">{campaign.campaignName}</h2>
-                            <span className={`px-2 py-0.5 text-xs font-medium rounded border ${statusColor}`}>
+                            <h2 className={`text-2xl font-bold ${ADMIN_THEME.text.primary}`}>{campaign.campaignName}</h2>
+                            <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusColor}`}>
                                 {campaign.status.toUpperCase()}
                             </span>
                         </div>
-                        <p className="text-gray-400 text-sm mt-1">
-                            Subject: <span className="text-gray-300">"{campaign.subject}"</span>
+                        <p className={`text-sm mt-1 ${ADMIN_THEME.text.muted}`}>
+                            Subject: <span className={ADMIN_THEME.text.primary}>"{campaign.subject}"</span>
                         </p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
+                        className={`p-2 rounded-lg transition-colors ${ADMIN_THEME.button.ghost}`}
                     >
-                        <X className="w-6 h-6 text-gray-400" />
+                        <X className="w-6 h-6 text-slate-400 hover:text-slate-600" />
                     </button>
                 </div>
 
@@ -87,62 +88,62 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
                     {/* Campaign Details Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Sending Info */}
-                        <Card className="bg-gray-800 border-gray-700">
+                        <Card className={ADMIN_THEME.card.base}>
                             <CardContent className="p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                    <Send className="w-5 h-5 text-blue-400" />
+                                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${ADMIN_THEME.text.primary}`}>
+                                    <Send className="w-5 h-5 text-emerald-600" />
                                     Sending Details
                                 </h3>
 
                                 <div className="space-y-4">
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">Sent Date</span>
-                                        <span className="text-white font-mono">{formatDate(campaign.sentAt)}</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>Sent Date</span>
+                                        <span className={`font-mono ${ADMIN_THEME.text.primary}`}>{formatDate(campaign.sentAt)}</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">Created By</span>
-                                        <span className="text-white">{campaign.createdByName}</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>Created By</span>
+                                        <span className={ADMIN_THEME.text.primary}>{campaign.createdByName}</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">Target Audience</span>
-                                        <span className="text-white">{campaign.targetedUserCount?.toLocaleString() || 0} Users</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>Target Audience</span>
+                                        <span className={ADMIN_THEME.text.primary}>{campaign.targetedUserCount?.toLocaleString() || 0} Users</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">From Name</span>
-                                        <span className="text-white">{campaign.fromName}</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>From Name</span>
+                                        <span className={ADMIN_THEME.text.primary}>{campaign.fromName}</span>
                                     </div>
                                     <div className="flex justify-between pb-2">
-                                        <span className="text-gray-400">From Email</span>
-                                        <span className="text-white">{campaign.fromEmail}</span>
+                                        <span className={ADMIN_THEME.text.muted}>From Email</span>
+                                        <span className={ADMIN_THEME.text.primary}>{campaign.fromEmail}</span>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* Configuration */}
-                        <Card className="bg-gray-800 border-gray-700">
+                        <Card className={ADMIN_THEME.card.base}>
                             <CardContent className="p-6">
-                                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                                    <BarChart2 className="w-5 h-5 text-purple-400" />
+                                <h3 className={`text-lg font-semibold mb-4 flex items-center gap-2 ${ADMIN_THEME.text.primary}`}>
+                                    <BarChart2 className="w-5 h-5 text-emerald-600" />
                                     Configuration
                                 </h3>
 
                                 <div className="space-y-4">
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">Goal</span>
-                                        <span className="text-white capitalize">{campaign.campaignGoal || 'Clicks'}</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>Goal</span>
+                                        <span className={`capitalize ${ADMIN_THEME.text.primary}`}>{campaign.campaignGoal || 'Clicks'}</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">UTM Source</span>
-                                        <span className="text-white">{campaign.utmSource || '-'}</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>UTM Source</span>
+                                        <span className={ADMIN_THEME.text.primary}>{campaign.utmSource || '-'}</span>
                                     </div>
-                                    <div className="flex justify-between border-b border-gray-700 pb-2">
-                                        <span className="text-gray-400">UTM Medium</span>
-                                        <span className="text-white">{campaign.utmMedium || '-'}</span>
+                                    <div className={`flex justify-between border-b pb-2 ${ADMIN_THEME.border.primary}`}>
+                                        <span className={ADMIN_THEME.text.muted}>UTM Medium</span>
+                                        <span className={ADMIN_THEME.text.primary}>{campaign.utmMedium || '-'}</span>
                                     </div>
                                     <div className="flex justify-between pb-2">
-                                        <span className="text-gray-400">Template ID</span>
-                                        <span className="text-white font-mono text-xs">{campaign.templateId || 'None'}</span>
+                                        <span className={ADMIN_THEME.text.muted}>Template ID</span>
+                                        <span className={`font-mono text-xs ${ADMIN_THEME.text.primary}`}>{campaign.templateId || 'None'}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -150,14 +151,14 @@ export default function CampaignDetailView({ campaign, onClose }: CampaignDetail
                     </div>
 
                     {/* Email Preview (Read Only) */}
-                    <Card className="bg-gray-800 border-gray-700 overflow-hidden">
-                        <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800/50">
-                            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                                <Eye className="w-5 h-5 text-green-400" />
+                    <Card className={`${ADMIN_THEME.card.base} overflow-hidden`}>
+                        <div className={`p-4 border-b flex justify-between items-center ${ADMIN_THEME.border.primary} ${ADMIN_THEME.background.tertiary}`}>
+                            <h3 className={`text-lg font-semibold flex items-center gap-2 ${ADMIN_THEME.text.primary}`}>
+                                <Eye className="w-5 h-5 text-emerald-600" />
                                 Content Preview
                             </h3>
                         </div>
-                        <div className="bg-white p-4 max-h-[500px] overflow-y-auto">
+                        <div className="bg-white p-4 max-h-[500px] overflow-y-auto text-slate-900 border border-slate-200">
                             <div dangerouslySetInnerHTML={{ __html: campaign.htmlContent }} />
                         </div>
                     </Card>

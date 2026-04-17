@@ -2,11 +2,12 @@ import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
 
-export type CreditActionType = 'job_create';
+export type CreditActionType = 'job_create' | 'ai_generation';
 export type CreditResetSchedule = 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
 
 export interface CreditStatus {
   jobCredits: number;
+  aiCredits: number;
   lastResetDate: Date;
   nextResetDate?: Date;
   resetSchedule: CreditResetSchedule;
@@ -15,6 +16,7 @@ export interface CreditStatus {
 
 export interface PlanCreditAllocation {
   jobCredits: number;
+  aiCredits: number;
 }
 
 class CreditService {
@@ -33,31 +35,34 @@ class CreditService {
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findOne({ key: planKey, status: 'active' }).lean();
 
-      if (plan && plan.credits && plan.credits.jobCredits !== undefined) {
-        return { jobCredits: plan.credits.jobCredits };
+      if (plan && plan.credits) {
+        return { 
+          jobCredits: plan.credits.jobCredits !== undefined ? plan.credits.jobCredits : 1,
+          aiCredits: plan.credits.aiCredits !== undefined ? plan.credits.aiCredits : 3
+        };
       }
 
       // Fallback to hardcoded values if plan not found in database
       switch (planKey) {
         case 'free':
-          return { jobCredits: 1 }; // 1 credit per month
+          return { jobCredits: 1, aiCredits: 3 }; // 1 job credit, 3 AI credits for free
         case 'day_pass':
-          return { jobCredits: -1 }; // Unlimited for 24 hours
+          return { jobCredits: -1, aiCredits: -1 }; // Unlimited for 24 hours
         case 'pro_monthly':
         case 'pro_quarterly':
+        case 'pro_yearly':
         case 'pro_lifetime':
-        case 'pro_lifetime':
-          return { jobCredits: -1 }; // Unlimited
+          return { jobCredits: -1, aiCredits: -1 }; // Unlimited
         default:
-          return { jobCredits: 1 }; // Default to free plan
+          return { jobCredits: 1, aiCredits: 3 }; // Default to free plan
       }
     } catch (error) {
       console.error('Error getting plan credits:', error);
       // Fallback on error
       if (planKey === 'day_pass') {
-        return { jobCredits: -1 }; // Unlimited for day pass
+        return { jobCredits: -1, aiCredits: -1 }; // Unlimited for day pass
       }
-      return { jobCredits: 1 }; // Default to free plan on error
+      return { jobCredits: 1, aiCredits: 3 }; // Default to free plan on error
     }
   }
 
@@ -75,6 +80,7 @@ class CreditService {
       await User.findByIdAndUpdate(userId, {
         $set: {
           'credits.jobCredits': planCredits.jobCredits,
+          'credits.aiCredits': planCredits.aiCredits,
           'credits.lastResetDate': now,
           'credits.resetSchedule': resetSchedule
         }
@@ -157,9 +163,27 @@ class CreditService {
         };
       }
 
-      // For free plan, check job credits
+      // For free plan, check credits based on action type
+      const planCredits = await this.getPlanCredits(user.currentPlanKey || 'free');
+
+      if (actionType === 'ai_generation') {
+        const limit = planCredits.aiCredits;
+        
+        if (limit === -1) {
+          return { available: true, creditsRemaining: -1, limit };
+        }
+        
+        const currentCredits = user.credits?.aiCredits ?? limit;
+        return {
+          available: currentCredits > 0,
+          creditsRemaining: currentCredits,
+          limit
+        };
+      }
+
+      // Default to job_create logic
       const currentCredits = user.credits?.jobCredits ?? 0;
-      const limit = (await this.getPlanCredits(user.currentPlanKey || 'free')).jobCredits;
+      const limit = planCredits.jobCredits;
 
       // -1 means unlimited
       const available = limit === -1 || currentCredits > 0;
@@ -196,7 +220,13 @@ class CreditService {
         return false;
       }
 
-      const currentCreditsBefore = user.credits?.jobCredits ?? 0;
+      const creditField = actionType === 'ai_generation' ? 'credits.aiCredits' : 'credits.jobCredits';
+      const totalField = actionType === 'ai_generation' ? 'credits.totalCreated.aiGenerations' : 'credits.totalCreated.jobs';
+
+      const currentCreditsBefore = actionType === 'ai_generation' 
+        ? (user.credits?.aiCredits ?? 0) 
+        : (user.credits?.jobCredits ?? 0);
+        
       console.log(`💳 CreditService.spendCredit - User found. Plan: ${user.currentPlanKey}, Current credits BEFORE: ${currentCreditsBefore}`);
 
       // Check if credits are available
@@ -214,22 +244,24 @@ class CreditService {
 
       // Get plan to check if unlimited
       const planCredits = await this.getPlanCredits(user.currentPlanKey || 'free');
-      const isUnlimited = planCredits.jobCredits === -1;
+      const isUnlimited = actionType === 'ai_generation' 
+        ? planCredits.aiCredits === -1 
+        : planCredits.jobCredits === -1;
 
-      console.log(`💳 CreditService.spendCredit - Plan credits: ${planCredits.jobCredits}, Is unlimited: ${isUnlimited}`);
+      console.log(`💳 CreditService.spendCredit - Plan credits limit: ${check.limit}, Is unlimited: ${isUnlimited}`);
 
       // Build update operation - ensure nested structure exists and increment/decrement
       const updateData: any = {
         $inc: {
-          'credits.totalCreated.jobs': 1
+          [totalField]: 1
         }
       };
 
       if (!isUnlimited) {
-        updateData.$inc['credits.jobCredits'] = -1;
-        console.log(`💳 CreditService.spendCredit - Will decrement jobCredits by 1`);
+        updateData.$inc[creditField] = -1;
+        console.log(`💳 CreditService.spendCredit - Will decrement ${creditField} by 1`);
       } else {
-        console.log(`💳 CreditService.spendCredit - Unlimited plan, skipping jobCredits decrement`);
+        console.log(`💳 CreditService.spendCredit - Unlimited plan, skipping ${creditField} decrement`);
       }
 
       // Ensure the nested structure exists if it doesn't already
@@ -238,15 +270,18 @@ class CreditService {
         // Use $set to initialize the structure if it doesn't exist
         // This ensures MongoDB can perform the $inc operation
         const currentJobs = user.credits?.totalCreated?.jobs ?? 0;
+        const currentAiGenerations = user.credits?.totalCreated?.aiGenerations ?? 0;
+        
         updateData.$set = {
-          'credits.totalCreated.jobs': currentJobs + 1,
+          'credits.totalCreated.jobs': actionType === 'job_create' ? currentJobs + 1 : currentJobs,
+          'credits.totalCreated.aiGenerations': actionType === 'ai_generation' ? currentAiGenerations + 1 : currentAiGenerations,
           'credits.totalCreated.cvs': user.credits?.totalCreated?.cvs ?? 0,
           'credits.totalCreated.exports': user.credits?.totalCreated?.exports ?? 0,
           'credits.totalCreated.atsChecks': user.credits?.totalCreated?.atsChecks ?? 0
         };
-        // Remove $inc for jobs since we're using $set
-        if (updateData.$inc && 'credits.totalCreated.jobs' in updateData.$inc) {
-          delete updateData.$inc['credits.totalCreated.jobs'];
+        // Remove $inc since we're using $set
+        if (updateData.$inc && totalField in updateData.$inc) {
+          delete updateData.$inc[totalField];
           // Clean up $inc if it's now empty
           if (Object.keys(updateData.$inc).length === 0) {
             delete updateData.$inc;
@@ -268,16 +303,24 @@ class CreditService {
       }
 
       // Verify the update actually worked
-      const updatedCredits = updateResult.credits?.jobCredits ?? 0;
+      const updatedCredits = actionType === 'ai_generation' 
+        ? (updateResult.credits?.aiCredits ?? 0)
+        : (updateResult.credits?.jobCredits ?? 0);
       const expectedCredits = isUnlimited ? currentCreditsBefore : currentCreditsBefore - 1;
-      const updatedTotalCreated = updateResult.credits?.totalCreated?.jobs ?? 0;
-      const expectedTotalCreated = (user.credits?.totalCreated?.jobs ?? 0) + 1;
+      
+      const updatedTotalCreated = actionType === 'ai_generation'
+        ? (updateResult.credits?.totalCreated?.aiGenerations ?? 0)
+        : (updateResult.credits?.totalCreated?.jobs ?? 0);
+        
+      const expectedTotalCreated = (actionType === 'ai_generation' 
+        ? (user.credits?.totalCreated?.aiGenerations ?? 0) 
+        : (user.credits?.totalCreated?.jobs ?? 0)) + 1;
 
       console.log(`💳 CreditService.spendCredit - Update result:`, {
-        jobCreditsBefore: currentCreditsBefore,
-        jobCreditsAfter: updatedCredits,
+        creditsBefore: currentCreditsBefore,
+        creditsAfter: updatedCredits,
         expectedCredits: expectedCredits,
-        totalCreatedBefore: user.credits?.totalCreated?.jobs ?? 0,
+        totalCreatedBefore: expectedTotalCreated - 1,
         totalCreatedAfter: updatedTotalCreated,
         expectedTotalCreated: expectedTotalCreated
       });
@@ -289,14 +332,14 @@ class CreditService {
       // Verify jobCredits was decremented (for non-unlimited plans)
       if (!isUnlimited && updatedCredits !== expectedCredits) {
         console.error(`❌ CreditService.spendCredit - Credit decrement verification failed! Expected: ${expectedCredits}, Got: ${updatedCredits}`);
-        fixUpdates['credits.jobCredits'] = expectedCredits;
+        fixUpdates[creditField] = expectedCredits;
         needsFix = true;
       }
 
-      // Verify totalCreated.jobs was incremented
+      // Verify totalCreated was incremented
       if (updatedTotalCreated !== expectedTotalCreated) {
-        console.error(`❌ CreditService.spendCredit - Total created jobs increment failed! Expected: ${expectedTotalCreated}, Got: ${updatedTotalCreated}`);
-        fixUpdates['credits.totalCreated.jobs'] = expectedTotalCreated;
+        console.error(`❌ CreditService.spendCredit - Total created increment failed! Expected: ${expectedTotalCreated}, Got: ${updatedTotalCreated}`);
+        fixUpdates[totalField] = expectedTotalCreated;
         needsFix = true;
       }
 

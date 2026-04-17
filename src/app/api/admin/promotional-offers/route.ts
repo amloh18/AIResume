@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch promotional offers
-    const offers = await PromotionalOffer.find(query)
+    const offers = await PromotionalOffer.find(query).lean()
       .populate('applicablePlans', 'name key')
       .populate('promotionalPricing.planId', 'name key')
       .sort({ priority: -1, createdAt: -1 })
