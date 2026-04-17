@@ -38,15 +38,19 @@ const fallbackPlans = [
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      'Create your first CV',
-      'Access to basic templates',
-      'Basic spelling & grammar check',
-      'PDF download'
+      'Access to ALL templates and snippets',
+      'Application Tracker (Full Kanban access)',
+      'Basic Chrome Extension functionality',
+      'Basic AI Writing (Grammar & rephrasing)',
+      'Limited Free AI Credits'
     ],
     notIncludedFeatures: [
-      'DOCX export',
-      'Cover Letter generator',
-      'Interview Coach'
+      'Unlimited AI Generation',
+      'ATS Scoring & Editing',
+      'Advanced Sentence Structuring (STAR method)',
+      'AI Cover Letter Generator',
+      'LinkedIn Enhancer',
+      'Interview Coach Simulator'
     ],
     isPopular: false,
     isBestValue: false,
@@ -69,18 +73,16 @@ const fallbackPlans = [
     price_one_time: 5,
     currency: 'GBP',
     features: [
-      'Unlimited CV creation',
-      'All premium templates',
-      'PDF & DOCX export',
-      'Manual Cover Letter editor',
-      'Deep ATS optimization',
-      'Standard support'
+      'Unlimited AI Generation',
+      'ATS Scoring & Editing (Real-time feedback)',
+      'Advanced Sentence Structuring (STAR method)',
+      'Unlimited AI Cover Letter Generator',
+      'LinkedIn Enhancer (Profile suggestions)',
+      'Interview Coach (Mock simulator)',
+      'Access to ALL templates and snippets',
+      'Application Tracker (Full Kanban access)'
     ],
-    notIncludedFeatures: [
-      'Interview Coach',
-      'Job Application Tracker',
-      'Advanced analytics'
-    ],
+    notIncludedFeatures: [],
     isPopular: false,
     isBestValue: false,
     displayOnLanding: true,
@@ -105,15 +107,14 @@ const fallbackPlans = [
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      'Unlimited CV creation',
-      'All premium templates',
-      'AI-powered Cover Letter generator',
-      'Job Application Tracker',
-      'Deep ATS optimization',
-      'Chrome Extension for job saving',
-      'Interview Coach with AI feedback',
-      'Advanced career analytics',
-      'Standard support'
+      'Unlimited AI Generation',
+      'ATS Scoring & Editing (Real-time feedback)',
+      'Advanced Sentence Structuring (STAR method)',
+      'Unlimited AI Cover Letter Generator',
+      'LinkedIn Enhancer (Profile suggestions)',
+      'Interview Coach (Mock simulator)',
+      'Access to ALL templates and snippets',
+      'Application Tracker (Full Kanban access)'
     ],
     notIncludedFeatures: [],
     isPopular: false,
@@ -139,8 +140,14 @@ const fallbackPlans = [
     price_one_time: 0,
     currency: 'GBP',
     features: [
-      'Everything in Monthly plan',
-      'Priority support'
+      'Unlimited AI Generation',
+      'ATS Scoring & Editing (Real-time feedback)',
+      'Advanced Sentence Structuring (STAR method)',
+      'Unlimited AI Cover Letter Generator',
+      'LinkedIn Enhancer (Profile suggestions)',
+      'Interview Coach (Mock simulator)',
+      'Access to ALL templates and snippets',
+      'Application Tracker (Full Kanban access)'
     ],
     notIncludedFeatures: [],
     isPopular: true,
@@ -166,9 +173,15 @@ const fallbackPlans = [
     price_one_time: 179,
     currency: 'GBP',
     features: [
-      'All Professional features forever',
-      'Priority support',
-      'Early access to new features'
+      'Unlimited AI Generation',
+      'ATS Scoring & Editing (Real-time feedback)',
+      'Advanced Sentence Structuring (STAR method)',
+      'Unlimited AI Cover Letter Generator',
+      'LinkedIn Enhancer (Profile suggestions)',
+      'Interview Coach (Mock simulator)',
+      'Access to ALL templates and snippets',
+      'Application Tracker (Full Kanban access)',
+      'Career Vault (Permanent Archive)'
     ],
     notIncludedFeatures: [],
     isPopular: false,
