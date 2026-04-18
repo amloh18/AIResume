@@ -14,20 +14,6 @@ export interface AIImprovement {
 }
 
 export class AIService {
-  // ATS score calculation - requires AI service integration
-  static async calculateATSScore(cvData: UnifiedCVDataStructure, jobData: Job | null): Promise<ATSAnalysis> {
-    try {
-      // AI service integration will be implemented when needed
-      // This should call your preferred AI provider (OpenAI, Anthropic, etc.)
-      
-      throw new Error('AI service not configured. Please set up your preferred AI provider for ATS score calculation.');
-      
-    } catch (error) {
-      console.error('ATS score calculation error:', error);
-      throw new Error('Failed to calculate ATS score');
-    }
-  }
-  
   // Description improvement - requires AI service integration
   static async improveDescription(
     currentText: string, 

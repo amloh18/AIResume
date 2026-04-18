@@ -489,6 +489,7 @@ const FullCareerReport: React.FC<FullCareerReportProps> = ({
                   transition={{ duration: 0.6, delay: 0.1 }}
                 >
                   <ATSCompatibilityMeter
+                    cvData={selectedCV?.cvData || cvData}
                     impactScore={careerAnalysis.impactScore}
                     cvOptimization={careerAnalysis.cvOptimization}
                     industrySpecialization={careerAnalysis.industrySpecialization}
@@ -549,6 +550,7 @@ const FullCareerReport: React.FC<FullCareerReportProps> = ({
                   transition={{ duration: 0.6 }}
                 >
                   <ATSCompatibilityMeter
+                    cvData={selectedCV?.cvData || cvData}
                     impactScore={careerAnalysis.impactScore}
                     cvOptimization={careerAnalysis.cvOptimization}
                     industrySpecialization={careerAnalysis.industrySpecialization}

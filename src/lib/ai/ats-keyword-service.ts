@@ -1,4 +1,5 @@
 import { AIService } from '@/lib/ai-service';
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 export interface KeywordGapResult {
   missingKeywords: string[];
@@ -86,14 +87,37 @@ Return a JSON array of keywords. Include:
   ): Promise<ATSAnalysisResult> {
     const gaps = await this.detectKeywordGaps(resumeData, jobDescription);
     
-    const score = Math.round(gaps.relevanceScore);
+    // We now use CentralScoreManager to get the accurate score based on CV structure and gaps.
+    const keywordAnalysisResult = {
+        gaps: gaps.missingKeywords.map(k => ({
+            keyword: k,
+            category: 'skill' as const,
+            frequency: 1,
+            importance: 'preferred' as const
+        })),
+        matchScore: gaps.relevanceScore,
+        matchedKeywords: gaps.presentKeywords,
+        stats: {
+            totalJDKeywords: gaps.missingKeywords.length + gaps.presentKeywords.length,
+            matchedCount: gaps.presentKeywords.length,
+            gapCount: gaps.missingKeywords.length,
+            criticalGaps: 0,
+            preferredGaps: gaps.missingKeywords.length,
+            niceToHaveGaps: 0
+        },
+        analyzedAt: new Date(),
+        jdContentHash: ''
+    };
+
+    const scoreResult = CentralScoreManager.getInstance().getScoreSync(resumeData, keywordAnalysisResult);
+    const atsScore = scoreResult.atsScore?.total ?? 0;
     
     let formattedScore: 'excellent' | 'good' | 'fair' | 'poor';
-    if (score >= 80) {
+    if (atsScore >= 80) {
       formattedScore = 'excellent';
-    } else if (score >= 60) {
+    } else if (atsScore >= 60) {
       formattedScore = 'good';
-    } else if (score >= 40) {
+    } else if (atsScore >= 40) {
       formattedScore = 'fair';
     } else {
       formattedScore = 'poor';
@@ -108,12 +132,12 @@ Return a JSON array of keywords. Include:
 
     const recommendations = [
       ...gaps.suggestions,
-      score < 60 ? 'Consider reformatting your resume for better ATS parsing' : '',
+      atsScore < 60 ? 'Consider reformatting your resume for better ATS parsing' : '',
       resumeData.skills?.length < 5 ? 'Add more relevant skills to improve keyword matching' : '',
     ].filter(Boolean);
 
     return {
-      score,
+      score: atsScore,
       issues,
       recommendations,
       formattedScore,

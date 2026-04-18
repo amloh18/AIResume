@@ -71,7 +71,7 @@ interface ATSContextState {
 interface ATSContextValue extends ATSContextState {
   // ATS Score methods
   updateATSScore: (score: number, analysis: ATSAnalysis, cvId: string, journeyId?: string, jobId?: string) => Promise<void>;
-  refreshATSScore: (cvId: string, jobId?: string, userId?: string) => Promise<void>;
+  refreshATSScore: (cvId: string, jobId?: string, userId?: string) => Promise<number | null>;
 
   // Surgeon Analysis methods
   updateSurgeonAnalysis: (analysis: SurgeonAnalysis, cvId: string) => Promise<void>;
@@ -158,7 +158,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
               cvId,
               jobId: jobId || prev.jobId,
             }));
-            return;
+            return score;
           }
         }
       } else {
@@ -192,12 +192,13 @@ export function ATSProvider({ children }: { children: ReactNode }) {
               cvId,
               jobId,
             }));
-            return;
+            return score;
           }
         }
       }
 
       setState(prev => ({ ...prev, isATSLoading: false }));
+      return null;
     } catch (error) {
       console.error('❌ ATSContext - Error refreshing ATS score:', error);
       setState(prev => ({
@@ -205,6 +206,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
         isATSLoading: false,
         atsError: error instanceof Error ? error.message : 'Failed to refresh ATS score',
       }));
+      return null;
     }
   }, []);
 

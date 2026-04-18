@@ -43,6 +43,7 @@ import { JourneyAnalyticsService } from '@/lib/utils/journeyAnalytics';
 import { defaultCoverLetterService } from '@/lib/services/defaultCoverLetterService';
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { useATS } from '@/contexts/ATSContext';
 
 interface Journey {
   id: string;
@@ -1354,6 +1355,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     }
   };
 
+  const { refreshATSScore } = useATS();
+
   const fetchATSScore = async (cvId: string, jobId: string, forceRecalculate: boolean = false) => {
     if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
         openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'ats-score' });
@@ -1413,72 +1416,34 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       // No cached score found - calculate new score
       console.log('🔄 JourneyTimelineCard - No cached score found, calculating new score...');
 
-      // Generate idempotency key for race condition prevention
-      const idempotencyKey = `ats-${cvId}-${jobId}-${Date.now()}`;
+      // Call global refreshATSScore which hits the unified API and updates ATSContext
+      const score = await refreshATSScore(cvId, jobId, mongoDBUserId || undefined);
 
-      // Use real ATS API endpoint (will check content hash and return cached if unchanged)
-      const response = await fetch('/api/ats/calculate-score', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cvId,
-          jobId,
-          userId: mongoDBUserId,
-          idempotencyKey: forceRecalculate ? undefined : idempotencyKey // Only use key if not forcing
-        }),
-      });
+      if (score !== null && score !== undefined) {
+        setAtsScore(score);
+        updateAtsScore(score);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+        // Score is already saved to database by API endpoint (atomic operation)
+        // Just update parent component if needed
+        if (onUpdateJourney) {
+          onUpdateJourney(journey.id, {
+            atsScore: score,
+            currentStep: score >= 80 ? 4 : 3
+          });
+        }
 
-      const result = await response.json();
-      console.log('✅ JourneyTimelineCard - ATS score fetched:', result);
-
-      if (result.success && result.data) {
-        const score = result.data.score || result.data.atsScore;
-        const isCached = result.data.cached === true;
-
-        if (score !== undefined && score !== null) {
-          setAtsScore(score);
-
-          // Update journey context
-          updateAtsScore(score);
-
-          // Score is already saved to database by API endpoint (atomic operation)
-          // Just update parent component if needed
-          if (onUpdateJourney) {
-            onUpdateJourney(journey.id, {
-              atsScore: score,
-              currentStep: score >= 80 ? 4 : 3
-            });
-          }
-
-          // Update journey status based on score
-          if (score >= 80) {
-            updateJourneyStatus('ats-checked');
-            updateCurrentStep(4);
-            toast.success(
-              isCached
-                ? `ATS score: ${score}% (cached)`
-                : `ATS score calculated: ${score}% - Great match!`
-            );
-          } else {
-            updateJourneyStatus('ats-checked');
-            updateCurrentStep(3);
-            toast.success(
-              isCached
-                ? `ATS score: ${score}% (cached)`
-                : `ATS score calculated: ${score}% - Consider optimizing for better match`
-            );
-          }
+        // Update journey status based on score
+        if (score >= 80) {
+          updateJourneyStatus('ats-checked');
+          updateCurrentStep(4);
+          toast.success(`ATS score calculated: ${score}% - Great match!`);
         } else {
-          throw new Error('Invalid score in response');
+          updateJourneyStatus('ats-checked');
+          updateCurrentStep(3);
+          toast.success(`ATS score calculated: ${score}% - Consider optimizing for better match`);
         }
       } else {
-        throw new Error(result.error || 'Failed to calculate ATS score');
+        throw new Error('Invalid score in response');
       }
 
     } catch (error) {

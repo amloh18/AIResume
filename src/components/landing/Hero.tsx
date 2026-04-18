@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { motion, useAnimation } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
-import { useAuthModalStore } from '@/lib/stores/authModalStore';
+import { useRouter } from 'next/navigation';
 
 const Hero = () => {
-  const openModal = useAuthModalStore(state => state.openModal);
+  const router = useRouter();
 
   return (
     <section
@@ -69,7 +69,7 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
         >
           <button
-            onClick={() => openModal({ view: 'signup', callbackUrl: '/dashboard' })}
+            onClick={() => router.push('/sign-in')}
             className="inline-flex items-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-8 py-4 tablet:px-10 tablet:py-5 rounded-full font-bold text-sm tablet:text-base shadow-lg transition-all hover:scale-105 uppercase tracking-wide"
           >
             START FREE

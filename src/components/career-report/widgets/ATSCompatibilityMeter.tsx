@@ -1,13 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-
-// Note: This component receives pre-calculated scores from parent components.
-// The actual scoring calculation is done via CentralScoreManager in the backend/API layer.
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
+import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 interface ATSCompatibilityMeterProps {
+  cvData?: UnifiedCVDataStructure;
   impactScore?: {
     quantifiableStatements?: number;
     highImpactVerbs?: number;
@@ -25,63 +25,22 @@ interface ATSCompatibilityMeterProps {
 }
 
 const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
+  cvData,
   impactScore,
   cvOptimization,
   industrySpecialization
 }) => {
-  // Calculate ATS score based on multiple factors
-  const calculateATSScore = (): number => {
-    let score = 0;
-    let maxScore = 0;
-
-    // Quantifiable statements (30 points)
-    maxScore += 30;
-    const quantifiableScore = Math.min(
-      ((impactScore?.quantifiableStatements || 0) / 15) * 30,
-      30
-    );
-    score += quantifiableScore;
-
-    // Industry keywords (25 points)
-    maxScore += 25;
-    const keywordScore = Math.min(
-      ((impactScore?.industryKeywords || 0) / 100) * 25,
-      25
-    );
-    score += keywordScore;
-
-    // CV structure (20 points)
-    maxScore += 20;
-    let structureScore = 0;
-    if (cvOptimization?.totalLength === '1 Page' || cvOptimization?.totalLength?.includes('1')) {
-      structureScore += 10;
-    } else if (cvOptimization?.totalLength === '2 Pages') {
-      structureScore += 7;
+  // Use CentralScoreManager to get the actual ATS score if cvData is available
+  const scoreResult = useMemo(() => {
+    if (cvData) {
+      return CentralScoreManager.getInstance().getScoreSync(cvData);
     }
-    if (cvOptimization?.bulletPointLength?.includes('2.') || cvOptimization?.bulletPointLength?.includes('Max 2')) {
-      structureScore += 10;
-    } else {
-      structureScore += 5;
-    }
-    score += structureScore;
+    return null;
+  }, [cvData]);
 
-    // High-impact verbs (15 points)
-    maxScore += 15;
-    const verbScore = Math.min(
-      ((impactScore?.highImpactVerbs || 0) / 30) * 15,
-      15
-    );
-    score += verbScore;
+  // Fallback to a default if cvData is not available, but prefer CentralScoreManager
+  const atsScore = scoreResult?.atsScore?.total ?? 0;
 
-    // Contact info quality (10 points)
-    maxScore += 10;
-    const contactScore = (industrySpecialization?.contactIssues?.length || 0) === 0 ? 10 : 5;
-    score += contactScore;
-
-    return Math.round((score / maxScore) * 100);
-  };
-
-  const atsScore = calculateATSScore();
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-[#80FF00]';

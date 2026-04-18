@@ -14,10 +14,12 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
-import { useAuthModalStore } from '@/lib/stores/authModalStore';
+import { useRouter } from 'next/navigation';
 
 
 function LandingPageContent() {
+  const router = useRouter();
+  
   // Handle logout cleanup - client-side only
   // Using window.location.search instead of useSearchParams to avoid hook issues
   useEffect(() => {
