@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 import { useAIStore, AISuggestion } from '@/lib/stores/aiStore';
-import { useJobStore } from '@/lib/stores/jobStore';
+import { useJobStore, Job } from '@/lib/stores/jobStore';
 import { AIAssistantService } from '@/lib/services/aiAssistantService';
 import { debounce } from 'lodash';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 export const useAIAssistant = (
   cvId: string | null, 
@@ -59,22 +60,24 @@ export const useAIAssistant = (
       
       try {
         setATSUpdating(true);
-        const analysis = await AIAssistantService.calculateATSScore(cvData, jobData);
+        // Use CentralScoreManager to get consistent ATS scores
+        const analysisResult = CentralScoreManager.getInstance().getScoreSync(cvData, null);
+        const atsScoreBreakdown = analysisResult.atsScore;
+        const score = atsScoreBreakdown?.total ?? 0;
+        
         const isBaseline = !jobData;
         
         console.log('📊 ATS calculation result:', {
-          score: analysis.score,
-          missingKeywords: analysis.missingKeywords?.length || 0,
-          strengths: analysis.strengths?.length || 0,
+          score,
           isBaseline
         });
         
-        setATSScore(analysis.score, {
-          score: analysis.score,
-          missingKeywords: analysis.missingKeywords || [],
+        setATSScore(score, {
+          score,
+          missingKeywords: [], // Since we don't have deep keyword analysis synchronously
           weakKeywords: [],
-          strengths: analysis.strengths || [],
-          suggestions: analysis.suggestions || []
+          strengths: analysisResult.recommendations.filter(r => r.toLowerCase().includes('good') || r.toLowerCase().includes('great')),
+          suggestions: analysisResult.issues.map(i => i.message)
         }, isBaseline);
       } catch (error) {
         console.error('ATS calculation error:', error);

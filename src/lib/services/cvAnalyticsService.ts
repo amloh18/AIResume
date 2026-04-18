@@ -62,48 +62,6 @@ export class CVAnalyticsService {
     }
   }
 
-  static async calculateHealthScore(cvId: string): Promise<CVHealthMetrics> {
-    const response = await fetch(`/api/ai/ats-score`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ cvId }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to calculate health score');
-    }
-    
-    const data = await response.json();
-    return data.healthMetrics;
-  }
-
-  static async getKeywordsAnalysis(cvId: string, jobId?: string): Promise<{
-    strengths: string[];
-    gaps: string[];
-    atsScore: number;
-  }> {
-    const response = await fetch(`/api/ai/ats-score`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ cvId, jobId }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get keywords analysis');
-    }
-    
-    const data = await response.json();
-    return {
-      strengths: data.strengths || [],
-      gaps: data.gaps || [],
-      atsScore: data.atsScore || 0
-    };
-  }
-
   // Dashboard-specific methods
   static async getDashboardAnalytics(userId: string): Promise<{
     totalViews: number;
@@ -137,33 +95,6 @@ export class CVAnalyticsService {
   }
 
   // Studio-specific methods
-  static async getRealTimeATSScore(cvId: string, jobId?: string): Promise<{
-    atsScore: number;
-    strengths: string[];
-    gaps: string[];
-    suggestions: string[];
-  }> {
-    const response = await fetch(`/api/ai/ats-score`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ cvId, jobId, realTime: true }),
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get real-time ATS score');
-    }
-    
-    const data = await response.json();
-    return {
-      atsScore: data.atsScore || 0,
-      strengths: data.strengths || [],
-      gaps: data.gaps || [],
-      suggestions: data.suggestions || []
-    };
-  }
-
   static async cacheATSResults(cvId: string, results: any): Promise<void> {
     const response = await fetch(`/api/analytics/cache-ats`, {
       method: 'POST',

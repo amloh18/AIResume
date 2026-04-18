@@ -384,111 +384,13 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
     if (isAnalyzingRef.current || isATSLoading) {
       return;
     }
+    
     isAnalyzingRef.current = true;
     setIsLoading(true);
     setApiError(null);
 
     try {
-      const response = await fetch('/api/ats/calculate-score', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cvId,
-          jobId: jobId,
-          userId: userId
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const apiResult = await response.json();
-
-      if (!apiResult.success || !apiResult.data) {
-        throw new Error(apiResult.error || 'Failed to calculate ATS score');
-      }
-
-      const data = apiResult.data;
-      const analysis = data.analysis || data;
-
-      const yearsExp = analysis.factorBreakdown?.experienceLength?.years || calculateYearsOfExperience();
-
-      let profileLevel = {
-        title: 'Entry Level',
-        yearsExperience: yearsExp,
-        description: 'Early career professional'
-      };
-
-      if (yearsExp >= 7) {
-        profileLevel = {
-          title: 'Senior Professional',
-          yearsExperience: yearsExp,
-          description: 'Experienced professional with extensive background'
-        };
-      } else if (yearsExp >= 3) {
-        profileLevel = {
-          title: 'Mid-Level Professional',
-          yearsExperience: yearsExp,
-          description: 'Experienced professional with solid track record'
-        };
-      }
-
-      const result: ATSResult = {
-        score: analysis.score || data.score || 0,
-        profileLevel,
-        factorBreakdown: analysis.factorBreakdown || data.factorBreakdown,
-        knockOutFactors: analysis.knockOutFactors || data.knockOutFactors,
-        details: {
-          matchedKeywords: analysis.strengths || [],
-          missingKeywords: analysis.missingKeywords || [],
-          experienceYears: yearsExp,
-          educationLevel: 'Not specified',
-          formatIssues: analysis.factorBreakdown?.formatting?.issues || []
-        },
-        suggestions: analysis.suggestions || [],
-        cached: data.cached === true
-      };
-
-      setAtsResult(result);
-
-      // Update ATS Context - this syncs with database and notifies other components
-      const atsAnalysisData = {
-        score: result.score,
-        missingKeywords: result.details?.missingKeywords || [],
-        strengths: result.details?.matchedKeywords || [],
-        suggestions: result.suggestions || [],
-        factorBreakdown: result.factorBreakdown,
-        knockOutFactors: result.knockOutFactors,
-        updatedAt: new Date().toISOString(),
-      };
-
-      await updateATSScore(
-        result.score,
-        atsAnalysisData,
-        cvId!,
-        journeyId,
-        jobId || undefined
-      );
-
-      // Update AI Store so ScorecardPanel can access the data
-      setATSScore(
-        result.score,
-        {
-          score: result.score,
-          missingKeywords: result.details?.missingKeywords || [],
-          weakKeywords: [],
-          strengths: result.details?.matchedKeywords || [],
-          suggestions: result.suggestions || [],
-          updatedAt: new Date().toISOString(),
-          // Include factorBreakdown for ScorecardPanel
-          factorBreakdown: result.factorBreakdown as any
-        } as any,
-        false // Not baseline - this is job-specific
-      );
+      await refreshATSScore(cvId, jobId, userId);
     } catch (error) {
       console.error('❌ ATS Deep Dive - Error running ATS analysis:', error);
       setApiError(error instanceof Error ? error.message : 'Failed to calculate ATS score. Please try again.');
@@ -496,7 +398,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
       isAnalyzingRef.current = false;
       setIsLoading(false);
     }
-  }, [jobId, state.cvData, cvId, userId, calculateYearsOfExperience, updateATSScore, journeyId, userData, openPaymentModal]);
+  }, [jobId, state.cvData, cvId, userId, refreshATSScore, userData, openPaymentModal, isATSLoading]);
 
   // Auto-run analysis when modal opens and has required data
   useEffect(() => {
@@ -507,7 +409,7 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
 
   // Sync with context data when available
   useEffect(() => {
-    if (atsAnalysis && atsScore !== null && !atsResult) {
+    if (atsAnalysis && atsScore !== null) {
       const yearsExp = atsAnalysis.factorBreakdown?.experienceLength?.years || calculateYearsOfExperience();
 
       let profileLevel = {
@@ -545,8 +447,23 @@ function ATSDeepDiveContent({ isOpen, onClose, userId }: ATSDeepDiveModalProps) 
         suggestions: atsAnalysis.suggestions || [],
         cached: false
       });
+      
+      // Update AI Store so ScorecardPanel can access the data
+      setATSScore(
+        atsScore,
+        {
+          score: atsScore,
+          missingKeywords: atsAnalysis.missingKeywords || [],
+          weakKeywords: [],
+          strengths: atsAnalysis.strengths || [],
+          suggestions: atsAnalysis.suggestions || [],
+          updatedAt: atsAnalysis.updatedAt || new Date().toISOString(),
+          factorBreakdown: atsAnalysis.factorBreakdown as any
+        } as any,
+        false
+      );
     }
-  }, [atsAnalysis, atsScore, calculateYearsOfExperience]);
+  }, [atsAnalysis, atsScore, calculateYearsOfExperience, setATSScore]);
 
   // Calculate scale to fit CV preview in container
   useEffect(() => {

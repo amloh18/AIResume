@@ -277,15 +277,7 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       let strengths: string[] = [];
       let gaps: string[] = [];
       
-      if (latestCVs.length > 0) {
-        try {
-          const analysis = await CVAnalyticsService.getKeywordsAnalysis(latestCVs[0].id);
-          strengths = analysis.strengths;
-          gaps = analysis.gaps;
-        } catch (error) {
-          console.error('Error getting keywords analysis:', error);
-        }
-      }
+      // Removed call to CVAnalyticsService.getKeywordsAnalysis to fix phantom endpoint
 
       setData(prev => ({
         ...prev,
@@ -329,8 +321,8 @@ export function useDashboardData(userId: string, selectedPeriod: string = 'week'
       const latestCVs = await UnifiedCVService.getCVs(userId, { projection: 'summary' });
       if (latestCVs.length > 0) {
         try {
-          const healthMetrics = await CVAnalyticsService.calculateHealthScore(latestCVs[0].id);
-          setData(prev => ({ ...prev, cvHealthScore: healthMetrics.overallScore }));
+          // Temporarily stubbed due to phantom endpoint
+          setData(prev => ({ ...prev, cvHealthScore: 0 }));
         } catch (error) {
           console.error('Error calculating CV health score:', error);
         }

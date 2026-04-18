@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { Menu, X } from 'lucide-react';
-import { useAuthModalStore } from '@/lib/stores/authModalStore';
+import { useRouter } from 'next/navigation';
 import './CardNav.css';
 
 interface SubmenuItem {
@@ -43,6 +43,7 @@ const CardNav = ({
   const [isAtHero, setIsAtHero] = useState(true);
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
+  const router = useRouter();
 
   // Determine if any submenu is currently open
   const isAnySubmenuOpen = hoveredLink !== null;
@@ -51,8 +52,8 @@ const CardNav = ({
     if (onCtaClick) {
       onCtaClick();
     } else {
-      // Default action - open sign in modal
-      useAuthModalStore.getState().openModal({ view: 'signin' });
+      // Default action - route to sign in page
+      router.push('/sign-in');
     }
   };
 

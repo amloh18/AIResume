@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Briefcase, FileText, CheckCircle, Download, X, Settings, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 import { useJobJourney } from '@/contexts/JobJourneyContext';
 import { useSession } from 'next-auth/react';
+import { useATS } from '@/contexts/ATSContext';
 
 interface JourneyStatusBannerProps {
   journey?: {
@@ -56,6 +57,8 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
   const [atsScoreLoading, setAtsScoreLoading] = useState<boolean>(false);
   const hasAttemptedATSCalculation = React.useRef(false);
   
+  const { atsScore: contextAtsScore, refreshATSScore, isATSLoading: contextAtsLoading } = useATS();
+
   // Scroll direction detection for hide/show banner
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -100,32 +103,9 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
     console.log('🔍 JourneyStatusBanner - Fetching ATS score for CV:', cvId, 'Job:', jobId);
 
     try {
-      const response = await fetch('/api/ats/calculate-score', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          cvId,
-          jobId,
-          userId: user?.id
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ JourneyStatusBanner - ATS score fetched:', result);
-      
-      if (result.success && result.data) {
-        const score = result.data.score || result.data.atsScore;
-        if (score !== undefined) {
-          setAtsScoreState(score);
-          console.log('✅ JourneyStatusBanner - ATS score set to:', score);
-        }
-      }
+      await refreshATSScore(cvId, jobId, user?.id);
+      // Wait a short tick for context to update
+      await new Promise(resolve => setTimeout(resolve, 100));
     } catch (error) {
       console.error('❌ JourneyStatusBanner - Error fetching ATS score:', error);
       setAtsScoreState(-1); // Mark as failed
@@ -133,6 +113,13 @@ const JourneyStatusBanner: React.FC<JourneyStatusBannerProps> = ({ journey }) =>
       setAtsScoreLoading(false);
     }
   };
+
+  // Keep local score in sync with context score if this is the active journey's CV
+  useEffect(() => {
+    if (contextAtsScore !== null && activeJourney.cvId && contextAtsScore > 0) {
+      setAtsScoreState(contextAtsScore);
+    }
+  }, [contextAtsScore, activeJourney.cvId]);
 
   // Load linked documents data
   useEffect(() => {

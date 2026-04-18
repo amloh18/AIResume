@@ -28,8 +28,6 @@ import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 import { logResumeEnhancerEvent } from '@/lib/services/resumeEnhancerLogClient';
 import { inferRoleContextFromCVData } from '@/lib/utils/resumeEnhancerRoleInference';
-import ATSFactorsList from '@/components/resume-enhancer/ATSFactorsList';
-import { computeATSFactorScores } from '@/lib/utils/resumeEnhancerFactors';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { comprehensiveSignOut } from '@/lib/utils/signout';
 

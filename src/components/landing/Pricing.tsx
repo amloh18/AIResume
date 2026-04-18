@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Star, ArrowRight, Brain, Users, Crown, Globe, CreditCard, Shield, Clock, Gift } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { PricingData } from '@/lib/payment/locationService';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
@@ -16,6 +17,7 @@ interface PricingProps {
 
 const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('professional'); // 'essential' or 'professional'
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<DatabasePricingPlan | null>(null);
@@ -55,8 +57,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     const isAuthenticated = status === 'authenticated' && !!session?.user;
 
     if (!isAuthenticated) {
-      // Open signin modal with plan preselected
-      useAuthModalStore.getState().openModal({ view: 'signin', callbackUrl: `/dashboard?plan=${plan.key}` });
+      // Route to sign in page with plan preselected
+      router.push(`/sign-in?callbackUrl=/dashboard?plan=${plan.key}`);
       return;
     }
 
