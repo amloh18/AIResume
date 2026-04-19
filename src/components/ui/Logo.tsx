@@ -33,7 +33,7 @@ const Logo = ({ className = '', size = 'md', showText = true, theme = 'auto' }: 
       />
       {showText && (
         <span className={`font-black font-sans ${sizeMap[size].text}`} style={{ fontWeight: 900 }}>
-          <span className="text-lime-500">CV</span><span className={textColor}>Circle</span>
+          <span className="text-white">CV</span><span className={textColor}>Circle</span>
         </span>
       )}
     </div>
