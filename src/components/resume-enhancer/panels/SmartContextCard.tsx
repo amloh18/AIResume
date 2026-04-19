@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Issue, IssueScoreCategory } from '@/lib/pill-engine/types';

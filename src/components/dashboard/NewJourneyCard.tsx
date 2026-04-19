@@ -450,7 +450,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-white/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-white/40" />
                   <input
                     type="text"
                     placeholder="Search jobs..."
@@ -524,7 +524,7 @@ const NewJourneyCard: React.FC<NewJourneyCardProps> = ({
 
                 {/* Search */}
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-white/40" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-white/40" />
                   <input
                     type="text"
                     placeholder="Search CVs..."

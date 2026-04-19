@@ -1,4 +1,5 @@
 'use client';
+import toast from 'react-hot-toast';
 
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -1005,7 +1006,7 @@ export default function ResumeEnhancerContainer({
           initializedRef.current = { mode, cvId };
         } catch (error) {
           console.error('Failed to load CV:', error);
-          alert('Failed to load CV. Redirecting to Editor.');
+          toast.error('Failed to load CV. Redirecting to Editor.');
           router.push('/editor');
         } finally {
           setIsLoading(false);
@@ -1070,7 +1071,7 @@ export default function ResumeEnhancerContainer({
             initializedRef.current = { mode, cvId };
           } catch (error) {
             console.error('Failed to load CV:', error);
-            alert('Failed to load CV. Redirecting to Editor.');
+            toast.error('Failed to load CV. Redirecting to Editor.');
             router.push('/editor');
           } finally {
             setIsLoading(false);

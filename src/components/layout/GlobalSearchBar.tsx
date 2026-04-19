@@ -481,7 +481,7 @@ const GlobalSearchBar: React.FC = () => {
       {/* Desktop/Tablet Search Bar */}
       <div ref={searchRef} className="relative hidden tablet:block shrink min-w-[220px] max-w-full">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 z-10" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 z-10" />
           <input
             ref={inputRef}
             type="text"
@@ -512,7 +512,7 @@ const GlobalSearchBar: React.FC = () => {
                 setQuery('');
                 setIsOpen(false);
               }}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
             >
               <X size={16} />
             </button>
@@ -559,7 +559,7 @@ const GlobalSearchBar: React.FC = () => {
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <input
                     type="text"
                     placeholder="Search jobs, CVs, cover letters..."
@@ -590,7 +590,7 @@ const GlobalSearchBar: React.FC = () => {
                       setIsOpen(false);
                       setQuery('');
                     }}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   >
                     <X size={20} />
                   </button>

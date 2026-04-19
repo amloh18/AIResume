@@ -1,3 +1,5 @@
+'use client';
+
 
 import React, { useRef, useEffect, useState } from 'react';
 import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, GripVertical, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';

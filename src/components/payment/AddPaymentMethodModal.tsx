@@ -243,7 +243,7 @@ const AddPaymentMethodModal: React.FC<AddPaymentMethodModalProps> = ({
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-lime-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   maxLength={19}
                 />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-lg">
                   {getCardIcon()}
                 </div>
               </div>
@@ -315,7 +315,7 @@ const AddPaymentMethodModal: React.FC<AddPaymentMethodModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCvv(!showCvv)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     {showCvv ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>

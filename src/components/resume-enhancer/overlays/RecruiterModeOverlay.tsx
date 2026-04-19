@@ -229,7 +229,7 @@ const RedFlagMarker = ({
         style={{ top: top, height: Math.max(20, height) }}
     >
         {/* Line across the content */}
-        <div className={`w-full h-px absolute top-1/2 transform -translate-y-1/2 border-t border-dashed ${type === 'gap' ? 'border-red-500/50 bg-red-500/30' : 'border-orange-500/50 bg-orange-500/30'}`} />
+        <div className={`w-full h-px absolute top-1/2 -translate-y-1/2 border-t border-dashed ${type === 'gap' ? 'border-red-500/50 bg-red-500/30' : 'border-orange-500/50 bg-orange-500/30'}`} />
 
         {/* Badge */}
         <div className={`absolute left-4 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg flex items-center gap-1 hover:scale-105 transition-transform cursor-help ${type === 'gap' ? 'bg-red-500' : 'bg-orange-500'}`}>

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, FileText, Briefcase, Award, X, Download, AlertCircle } from 'lucide-react';
