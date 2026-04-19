@@ -6,6 +6,9 @@ interface MobileSidebarContextType {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   toggleSidebar: () => void;
+  isDesktopExpanded: boolean;
+  setIsDesktopExpanded: (isExpanded: boolean) => void;
+  toggleDesktopSidebar: () => void;
 }
 
 const MobileSidebarContext = createContext<MobileSidebarContextType | undefined>(undefined);
@@ -16,13 +19,21 @@ interface MobileSidebarProviderProps {
 
 export const MobileSidebarProvider: React.FC<MobileSidebarProviderProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
 
   const toggleSidebar = () => {
     setIsOpen(prev => !prev);
   };
 
+  const toggleDesktopSidebar = () => {
+    setIsDesktopExpanded(prev => !prev);
+  };
+
   return (
-    <MobileSidebarContext.Provider value={{ isOpen, setIsOpen, toggleSidebar }}>
+    <MobileSidebarContext.Provider value={{ 
+      isOpen, setIsOpen, toggleSidebar,
+      isDesktopExpanded, setIsDesktopExpanded, toggleDesktopSidebar
+    }}>
       {children}
     </MobileSidebarContext.Provider>
   );

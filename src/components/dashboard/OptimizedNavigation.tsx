@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -25,7 +25,7 @@ const OptimizedNavigation: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const { isOpen: isMobileMenuOpen, toggleSidebar, setIsOpen } = useMobileSidebar();
+  const { isOpen: isMobileMenuOpen, toggleSidebar, setIsOpen, isDesktopExpanded, toggleDesktopSidebar } = useMobileSidebar();
   const { userData } = useUserData();
   const { data: billingData, refetch: refetchBillingData } = useBillingData();
   const { preloadOnHover } = useRoutePreloader();
@@ -372,30 +372,37 @@ const OptimizedNavigation: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-full m-0 lg:m-1 2xl:m-2 bg-white dark:bg-[#141810] rounded-none lg:rounded-2xl shadow-none lg:shadow-lg overflow-visible pointer-events-auto relative">
+    <div className={`flex flex-col h-full m-0 lg:m-1 ${isDesktopExpanded ? 'lg:m-2' : ''} bg-white dark:bg-[#141810] rounded-none lg:rounded-2xl shadow-none lg:shadow-lg overflow-visible pointer-events-auto relative`}>
       {/* Header */}
-      <div className="flex items-center justify-between p-6 lg:p-4 lg:justify-center 2xl:p-6 2xl:justify-start border-b border-gray-200 dark:border-gray-700 lg:border-b-0">
+      <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
         <motion.button
           onClick={() => {
-            if (isMobileMenuOpen) {
-              setIsOpen(false);
-            }
-            router.push('/dashboard');
+            handleNavigation('analytics');
           }}
           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
+          aria-label="Home Dashboard"
         >
           {/* Logo Icon & Text */}
           <div className="flex items-center">
-            <div className="lg:hidden 2xl:flex">
+            <div className={`lg:hidden ${isDesktopExpanded ? 'lg:flex' : ''}`}>
               <Logo size="md" showText={true} />
             </div>
-            <div className="hidden lg:flex 2xl:hidden">
+            <div className={`hidden lg:flex ${isDesktopExpanded ? 'lg:hidden' : ''}`}>
               <Logo size="md" showText={false} />
             </div>
           </div>
         </motion.button>
+
+        {/* Desktop Toggle Button */}
+        <button
+          onClick={toggleDesktopSidebar}
+          className="hidden lg:flex absolute -right-3 top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm"
+          aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {isDesktopExpanded ? <ChevronLeft className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+        </button>
 
         {/* Close Button - Only visible on mobile */}
         <motion.button
@@ -410,7 +417,7 @@ const OptimizedNavigation: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-6 space-y-2 lg:p-2 lg:space-y-1 2xl:p-4 2xl:space-y-1 overflow-y-auto">
+      <nav className={`flex-1 p-6 space-y-2 overflow-y-auto ${isDesktopExpanded ? 'lg:p-4 lg:space-y-1' : 'lg:p-2 lg:space-y-1'}`}>
         {sections.map((section) => {
           const Icon = section.icon;
           const isActive = activeSection === section.id;
@@ -443,7 +450,7 @@ const OptimizedNavigation: React.FC = () => {
             <Component
               key={section.id}
               {...componentProps}
-              className={`w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start ${isActive
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
                 ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] text-black dark:text-black'
                 : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
@@ -451,7 +458,7 @@ const OptimizedNavigation: React.FC = () => {
               whileTap={{ scale: 0.98 }}
             >
               <Icon className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
-              <div className="flex-1 min-w-0 lg:hidden 2xl:block">
+              <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
                 <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                   {section.name}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
@@ -470,12 +477,12 @@ const OptimizedNavigation: React.FC = () => {
 
         {/* Tools Section */}
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-2">
-          <div className="px-3 mb-2 hidden 2xl:block">
+          <div className={`px-3 mb-2 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Tools
             </h3>
           </div>
-          <div className="grid grid-cols-1 2xl:grid-cols-2 gap-2">
+          <div className={`grid grid-cols-1 gap-2 ${isDesktopExpanded ? 'lg:grid-cols-2' : ''}`}>
             {toolSections.map((section) => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
@@ -521,7 +528,7 @@ const OptimizedNavigation: React.FC = () => {
                     </span>
                   )}
                   <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' ? 'text-[var(--accent-primary)]' : ''}`} />
-                  <div className="hidden 2xl:block">
+                  <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
                     <div className="text-xs font-medium leading-tight line-clamp-2">
                       {section.name}
                     </div>
@@ -535,7 +542,7 @@ const OptimizedNavigation: React.FC = () => {
 
       {/* Admin Button - Only show for admin users */}
       {isAdmin && (
-        <div className="px-6 pb-4 lg:px-2 2xl:px-4">
+        <div className={`px-6 pb-4 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
           <motion.button
             onClick={() => {
               if (isMobileMenuOpen) {
@@ -543,12 +550,12 @@ const OptimizedNavigation: React.FC = () => {
               }
               router.push('/admin');
             }}
-            className="w-full flex items-center gap-4 px-5 py-4 lg:px-3 lg:py-3 rounded-xl transition-all duration-200 text-left lg:justify-center 2xl:px-4 2xl:justify-start bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50"
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <Shield className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
-            <div className="flex-1 min-w-0 lg:hidden 2xl:block">
+            <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
               <div className="text-base lg:text-sm font-medium truncate">Switch to Admin</div>
               <div className="text-sm lg:text-xs text-purple-600 dark:text-purple-300 truncate mt-0.5">
                 Access admin dashboard
@@ -577,7 +584,7 @@ const OptimizedNavigation: React.FC = () => {
         return null;
       })()}
 
-      {/* Membership Card - Show for all users on 2xl+ screens */}
+      {/* Membership Card - Show for all users on expanded desktop */}
       {!showSubscriptionModal && !isAnyPaymentModalOpen && (
         <div className="px-4 pb-3">
           {(() => {
@@ -648,7 +655,7 @@ const OptimizedNavigation: React.FC = () => {
               const canCreateStandaloneCV = true; // Standalone CVs are free (unlimited for free tier)
 
               return (
-                <div className="hidden 2xl:block rounded-2xl p-3 text-white border-2 border-white/20" style={{ backgroundColor: '#603a86' }}>
+                <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 text-white border-2 border-white/20`} style={{ backgroundColor: '#603a86' }}>
                   <div className="text-sm font-semibold mb-2">
                     Your Free Plan
                   </div>
@@ -743,7 +750,7 @@ const OptimizedNavigation: React.FC = () => {
             if (currentPlan === 'day_pass') {
               return (
                 <motion.div
-                  className={`hidden 2xl:block bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
+                  className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
                   animate={isUrgent ? {
                     boxShadow: ['0 0 0px rgba(239, 68, 68, 0.4)', '0 0 12px rgba(239, 68, 68, 0.6)', '0 0 0px rgba(239, 68, 68, 0.4)']
                   } : {}}
@@ -821,7 +828,7 @@ const OptimizedNavigation: React.FC = () => {
             // Monthly plan card (with upsell)
             if (currentPlan === 'pro_monthly') {
               return (
-                <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-2 border-white/20">
+                <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-blue-500 to-blue-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <div className="text-sm font-semibold">Monthly Plan</div>
@@ -866,7 +873,7 @@ const OptimizedNavigation: React.FC = () => {
             // Quarterly plan card (no upsell)
             if (currentPlan === 'pro_quarterly') {
               return (
-                <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white border-2 border-white/20">
+                <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-green-500 to-green-600 text-white border-2 border-white/20`}>
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <div className="text-sm font-semibold">Quarterly Plan</div>
@@ -901,7 +908,7 @@ const OptimizedNavigation: React.FC = () => {
             // Yearly plan card (no upsell, best value badge)
             if (currentPlan === 'pro_lifetime') {
               return (
-                <div className="hidden 2xl:block rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-2 border-amber-300/50 relative overflow-hidden">
+                <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} rounded-2xl p-3 bg-gradient-to-br from-amber-500 to-amber-600 text-white border-2 border-amber-300/50 relative overflow-hidden`}>
                   {/* Best Value Badge */}
                   <div className="absolute -right-8 top-2 bg-white/20 text-white text-[9px] font-bold px-8 py-0.5 rotate-45 transform">
                     BEST VALUE
@@ -1017,11 +1024,11 @@ const OptimizedNavigation: React.FC = () => {
                 onMouseEnter={handleMenuContentMouseEnter}
                 onMouseLeave={handleMenuContentMouseLeave}
               >
-                <div className="p-2 xl:p-3 2xl:p-4 space-y-1">
-                  {/* View Profile - Only show on 2xl+ */}
+                <div className={`p-2 xl:p-3 ${isDesktopExpanded ? 'lg:p-4' : ''} space-y-1`}>
+                  {/* View Profile - Only show on expanded desktop */}
                   <motion.button
                     onClick={handleProfileClick}
-                    className="hidden 2xl:flex w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    className={`hidden ${isDesktopExpanded ? 'lg:flex' : ''} w-full items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -1034,21 +1041,21 @@ const OptimizedNavigation: React.FC = () => {
                   {/* Settings */}
                   <motion.button
                     onClick={handleSettingsClick}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 xl:justify-center 2xl:justify-start rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 ${isDesktopExpanded ? 'lg:justify-start' : 'lg:justify-center'} rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <Settings className="w-5 h-5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 hidden 2xl:block">
+                    <div className={`flex-1 min-w-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
                       <div className="text-sm font-medium truncate">Settings</div>
                     </div>
                   </motion.button>
 
-                  {/* Theme - Icon button for xl, toggle for 2xl+ */}
+                  {/* Theme - Icon button for xl, toggle for expanded desktop */}
                   {/* xl: Icon button only */}
                   <motion.button
                     onClick={toggleTheme}
-                    className="xl:flex 2xl:hidden w-full items-center gap-3 px-3 py-2.5 xl:justify-center rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    className={`lg:flex ${isDesktopExpanded ? 'lg:hidden' : ''} w-full items-center gap-3 px-3 py-2.5 lg:justify-center rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     aria-label="Toggle theme"
@@ -1060,8 +1067,8 @@ const OptimizedNavigation: React.FC = () => {
                     )}
                   </motion.button>
 
-                  {/* 2xl+: Toggle switch */}
-                  <div className="hidden 2xl:flex items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                  {/* expanded desktop: Toggle switch */}
+                  <div className={`hidden ${isDesktopExpanded ? 'lg:flex' : ''} items-center justify-between px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}>
                     <div className="flex items-center gap-3">
                       {theme === 'dark' ? (
                         <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
@@ -1089,12 +1096,12 @@ const OptimizedNavigation: React.FC = () => {
                   {/* Sign Out */}
                   <motion.button
                     onClick={handleSignOut}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 xl:justify-center 2xl:justify-start rounded-xl transition-all duration-200 text-left text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 ${isDesktopExpanded ? 'lg:justify-start' : 'lg:justify-center'} rounded-xl transition-all duration-200 text-left text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20`}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
                     <LogOut className="w-5 h-5 flex-shrink-0" />
-                    <div className="flex-1 min-w-0 hidden 2xl:block">
+                    <div className={`flex-1 min-w-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
                       <div className="text-sm font-medium truncate">Sign Out</div>
                     </div>
                   </motion.button>
@@ -1104,12 +1111,12 @@ const OptimizedNavigation: React.FC = () => {
           </AnimatePresence>
 
           {/* User Avatar - At the bottom, clickable to toggle menu */}
-          <div className="p-4 xl:p-3 2xl:p-4">
+          <div className={`p-4 xl:p-3 ${isDesktopExpanded ? 'lg:p-4' : ''}`}>
             <motion.button
               onClick={() => setIsUserMenuExpanded(!isUserMenuExpanded)}
               onMouseEnter={handleUserMenuMouseEnter}
               onMouseLeave={handleUserMenuMouseLeave}
-              className="w-full flex items-center gap-3 lg:justify-center lg:gap-0 2xl:justify-start 2xl:gap-3 focus:outline-none rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors p-2"
+              className={`w-full flex items-center focus:outline-none rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors p-2 ${isDesktopExpanded ? 'lg:justify-start lg:gap-3 gap-3' : 'lg:justify-center lg:gap-0 gap-3'}`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -1117,10 +1124,10 @@ const OptimizedNavigation: React.FC = () => {
                 src={getUserAvatar(userData)}
                 name={getUserDisplayName(userData)}
                 size="sm"
-                className="cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0 lg:mx-auto 2xl:mx-0"
+                className={`cursor-pointer hover:ring-2 hover:ring-lime-500 transition-all flex-shrink-0 ${isDesktopExpanded ? 'lg:mx-0' : 'lg:mx-auto'}`}
               />
-              {/* User Info - Only show when sidebar is fully expanded (2xl) */}
-              <div className="flex-1 min-w-0 hidden 2xl:block">
+              {/* User Info - Only show when sidebar is fully expanded */}
+              <div className={`flex-1 min-w-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
                 <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {getUserDisplayName(userData)}
                 </div>
@@ -1128,11 +1135,11 @@ const OptimizedNavigation: React.FC = () => {
                   {userData?.email || ''}
                 </div>
               </div>
-              {/* Chevron Icon - Only show when sidebar is fully expanded (2xl) */}
+              {/* Chevron Icon - Only show when sidebar is fully expanded */}
               <motion.div
                 animate={{ rotate: isUserMenuExpanded ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
-                className="flex-shrink-0 hidden 2xl:block"
+                className={`flex-shrink-0 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}
               >
                 <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               </motion.div>

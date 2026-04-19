@@ -464,7 +464,7 @@ const CVManagementSection: React.FC<{
 };
 
 // 2. Application Calendar Widget (3 Weeks)
-const ApplicationCalendarWidget: React.FC<{
+export const ApplicationCalendarWidget: React.FC<{
   jobs: any[];
 }> = ({ jobs }) => {
   const [weekOffset, setWeekOffset] = useState(0);
@@ -825,7 +825,7 @@ const ApplicationCalendarWidget: React.FC<{
 };
 
 // 3. The "Intelligence Dashboard" - Enhanced Market Intelligence + AI Insights
-const IntelligenceDashboard: React.FC<{
+export const IntelligenceDashboard: React.FC<{
   predictions: any;
   marketIntelligence: any;
   jobs: any[];
