@@ -179,13 +179,13 @@ export default function UnifiedAuthForm({
 
     return (
       <div key={field.name}>
-        <div className="flex items-center gap-4">
-          <label htmlFor={field.name} className="text-sm font-medium text-white/80 w-24 flex-shrink-0">
+        <div className="flex flex-col gap-2">
+          <label htmlFor={field.name} className="text-sm font-medium text-white/80 w-full flex-shrink-0">
             {field.label}
           </label>
-          <div className="relative flex-1">
+          <div className="relative w-full flex items-center">
             {field.icon && (
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4">
+              <div className="absolute left-4 text-gray-400 w-5 h-5 flex items-center justify-center pointer-events-none">
                 {field.icon}
               </div>
             )}
@@ -200,7 +200,7 @@ export default function UnifiedAuthForm({
               placeholder={field.placeholder}
               autoComplete={field.autoComplete}
               required={field.required}
-              className={`w-full ${field.icon ? 'pl-10' : 'pl-4'} ${
+              className={`w-full ${field.icon ? 'pl-11' : 'pl-4'} ${
                 isPasswordField ? 'pr-12' : 'pr-4'
               } py-3 bg-[#232f1c] text-white placeholder-white/50 transition-all duration-200 rounded-xl outline-none focus:outline-none ${
                 fieldError 
@@ -213,13 +213,13 @@ export default function UnifiedAuthForm({
                 type="button"
                 onClick={() => togglePasswordVisibility(field.name)}
                 tabIndex={-1}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
+                className="absolute right-3 text-white/60 hover:text-white transition-colors flex items-center justify-center w-8 h-full z-10"
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             )}
             {isValidating[field.name] && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="absolute right-4 flex items-center justify-center w-5 h-5 pointer-events-none">
                 <div className="w-4 h-4 border-2 border-gray-400 border-t-lime-400 rounded-full animate-spin"></div>
               </div>
             )}
