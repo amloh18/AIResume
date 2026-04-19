@@ -19,7 +19,7 @@ interface OptimizedDashboardLayoutProps {
 const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
   const { user, loading: authLoading } = useUnifiedAuth();
   const { userData, loading: userLoading } = useUserData();
-  const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
+  const { isOpen: isMobileMenuOpen, toggleSidebar, isDesktopExpanded } = useMobileSidebar();
 
   // App Shell Pattern: Render layout structure immediately, regardless of data loading
   // This provides instant visual feedback and prevents layout shifts
@@ -27,10 +27,12 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
     <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] layout-stable">
       <div className="flex h-screen">
         {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
-        {/* Always render sidebar shell for layout stability */}
+        {/* Render sidebar as a standard flex child on desktop so it pushes content naturally */}
         <div
           data-dashboard-sidebar
-          className="hidden lg:flex lg:flex-col lg:fixed lg:inset-y-0 lg:z-40 lg:py-0.5 lg:px-0.5 lg:w-[108px] xl:w-[108px] 2xl:w-[335px] overflow-visible pointer-events-auto transition-all duration-300"
+          className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-40 lg:py-0.5 lg:px-0.5 ${
+            isDesktopExpanded ? 'lg:w-[335px]' : 'lg:w-[108px]'
+          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0`}
         >
           <OptimizedNavigation />
         </div>
@@ -51,10 +53,10 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
         </AnimatePresence>
 
         {/* Main Content - Always render shell to prevent CLS */}
-        {/* pointer-events-none allows clicks to pass through to sidebar, pointer-events-auto on children restores interactivity */}
-        <div className="flex flex-col flex-1 lg:pl-[108px] xl:pl-[108px] 2xl:pl-[335px] layout-stable relative z-0 pointer-events-none">
+        {/* Removed padding-left hacks since the sticky sidebar naturally pushes this flex-1 container */}
+        <div className="flex flex-col flex-1 layout-stable relative z-0 transition-all duration-300 min-w-0">
           {/* Page Content */}
-          <main className="flex-1 overflow-auto relative z-0 pointer-events-auto">
+          <main className="flex-1 overflow-auto relative z-0">
             <div className="px-6 pb-[10px] h-full flex flex-col">
               <CVCheckRedirect>
                 {children}
