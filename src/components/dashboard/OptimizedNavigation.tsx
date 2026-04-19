@@ -372,7 +372,7 @@ const OptimizedNavigation: React.FC = () => {
   ];
 
   return (
-    <div className={`flex flex-col h-full m-0 lg:m-1 ${isDesktopExpanded ? 'lg:m-2' : ''} bg-white dark:bg-[#141810] rounded-none lg:rounded-2xl shadow-none lg:shadow-lg overflow-visible pointer-events-auto relative`}>
+    <div className={`flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative`}>
       {/* Header */}
       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
         <motion.button
@@ -398,7 +398,7 @@ const OptimizedNavigation: React.FC = () => {
         {/* Desktop Toggle Button */}
         <button
           onClick={toggleDesktopSidebar}
-          className="hidden lg:flex absolute -right-3 top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm"
+          className="hidden lg:flex absolute -right-3.5 top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
           aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
         >
           {isDesktopExpanded ? <ChevronLeft className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
