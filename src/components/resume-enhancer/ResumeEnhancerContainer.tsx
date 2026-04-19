@@ -824,7 +824,8 @@ export default function ResumeEnhancerContainer({
       }
     };
 
-    window.history.pushState(null, '', window.location.href);
+    // Only push state once on mount to establish the history entry for capturing back button
+    window.history.replaceState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, [state.currentStep, goToStep]);

@@ -558,7 +558,7 @@ export const ApplicationCalendarWidget: React.FC<{
 
   return (
     <div
-      className="glass-widget-premium rounded-xl p-5 h-full flex flex-col w-full"
+      className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full"
       data-analytics-widget="application-calendar"
     >
       {/* Header with Navigation */}
@@ -997,7 +997,7 @@ export const IntelligenceDashboard: React.FC<{
 
 
   return (
-    <div className="glass-widget-premium rounded-xl p-5 h-full flex flex-col w-full" data-analytics-widget="intelligence-dashboard">
+    <div className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full" data-analytics-widget="intelligence-dashboard">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center">
