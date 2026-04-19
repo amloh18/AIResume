@@ -320,20 +320,20 @@ function DashboardContent() {
 
       {/* Middle Row: Progress & Stats Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-        <div className="lg:col-span-7 min-h-[360px] h-full">
+        <div className="lg:col-span-7 min-h-[300px] h-full">
           <ProgressTrackingWidget userId={userId || ''} />
         </div>
-        <div className="lg:col-span-3 min-h-[360px] h-full">
+        <div className="lg:col-span-3 min-h-[300px] h-full">
           <ApplicationStatsWidget userId={userId || ''} />
         </div>
       </div>
 
       {/* Legacy Widgets Row: Calendar & Intelligence */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-8">
+        <div className="lg:col-span-8 min-h-[300px]">
           <ApplicationCalendarWidget jobs={jobs || []} />
         </div>
-        <div className="lg:col-span-4">
+        <div className="lg:col-span-4 min-h-[300px]">
           <IntelligenceDashboard 
             predictions={analytics?.predictions || { monthlyGoal: 20, projectedApplications: jobs?.length || 0 }} 
             marketIntelligence={analytics?.marketIntelligence || { score: 85, trend: 'up' }} 

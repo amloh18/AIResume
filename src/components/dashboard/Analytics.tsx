@@ -4,10 +4,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   FileText, Briefcase, PenTool, TrendingUp, Target, Sparkles, Zap,
   Lightbulb, Plus, Edit, Eye, Trash2, Calendar, CheckCircle, Heart,
-  MessageSquare, User, BarChart3, SearchX, Clock, ChevronRight, ChevronLeft
+  MessageSquare, User, BarChart3, SearchX, Clock, ChevronRight, ChevronLeft, Check, X, Edit2
 } from 'lucide-react';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useCreateCV } from '@/lib/utils/cvCreationUtils';
@@ -557,7 +558,7 @@ export const ApplicationCalendarWidget: React.FC<{
 
   return (
     <div
-      className="glass-widget-premium rounded-xl p-6 h-full flex flex-col w-full"
+      className="glass-widget-premium rounded-xl p-5 h-full flex flex-col w-full"
       data-analytics-widget="application-calendar"
     >
       {/* Header with Navigation */}
@@ -569,12 +570,12 @@ export const ApplicationCalendarWidget: React.FC<{
           whileTap={{ scale: 0.95 }}
           aria-label="Previous weeks"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-white/60" />
+          <ChevronLeft className="w-4 h-4 text-gray-600 dark:text-white/60" />
         </motion.button>
 
         <div className="text-center">
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Calendar</h2>
-          <p className="text-xs text-gray-500 dark:text-white/50">{dateRange.start} - {dateRange.end}</p>
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">Application Calendar</h2>
+          <p className="text-[11px] text-gray-500 dark:text-white/50">{dateRange.start} - {dateRange.end}</p>
         </div>
 
         <motion.button
@@ -584,7 +585,7 @@ export const ApplicationCalendarWidget: React.FC<{
           whileTap={{ scale: 0.95 }}
           aria-label="Next weeks"
         >
-          <ChevronRight className="w-5 h-5 text-gray-600 dark:text-white/60" />
+          <ChevronRight className="w-4 h-4 text-gray-600 dark:text-white/60" />
         </motion.button>
       </div>
 
@@ -996,12 +997,71 @@ export const IntelligenceDashboard: React.FC<{
 
 
   return (
-    <div className="glass-widget-premium rounded-xl p-6 min-h-[400px]">
-      <div className="space-y-4 h-full">
+    <div className="glass-widget-premium rounded-xl p-5 h-full flex flex-col w-full" data-analytics-widget="intelligence-dashboard">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-bold text-gray-900 dark:text-white">AI Insights</h2>
+          <p className="text-xs text-gray-500 dark:text-white/50">Market & Application Goals</p>
+        </div>
+        <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+          <TrendingUp size={16} />
+        </div>
+      </div>
 
+      <div className="flex-1 flex flex-col justify-center space-y-5">
+        {/* Monthly Goal Progress */}
+        <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Monthly Goal</span>
+            {isEditingGoal ? (
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  value={newGoal}
+                  onChange={(e) => setNewGoal(Number(e.target.value))}
+                  className="w-12 text-xs p-1 bg-transparent border border-gray-300 dark:border-gray-600 rounded text-center text-gray-900 dark:text-white"
+                />
+                <button onClick={handleUpdateGoal} className="text-green-500 hover:text-green-600"><Check size={14} /></button>
+                <button onClick={() => setIsEditingGoal(false)} className="text-red-500 hover:text-red-600"><X size={14} /></button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-gray-900 dark:text-white">
+                  {predictions?.projectedApplications || jobs.length} / {predictions?.monthlyGoal || 20}
+                </span>
+                <button onClick={() => setIsEditingGoal(true)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
+                  <Edit2 size={12} />
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-blue-400 to-blue-600"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, ((predictions?.projectedApplications || jobs.length) / (predictions?.monthlyGoal || 20)) * 100)}%` }}
+              transition={{ duration: 1, ease: "easeOut" }}
+            />
+          </div>
+        </div>
 
+        {/* Market Data Snippets */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center text-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">Response Rate</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{competitiveData.metrics.responseRate}%</span>
+          </div>
+          <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center text-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400 mb-1">Time to Offer</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-white">{competitiveData.metrics.timeToOffer}d</span>
+          </div>
+        </div>
+      </div>
 
-
+      <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+        <Link href="/dashboard/tracker" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-sm font-medium">
+          <Briefcase size={16} /> Track New Application
+        </Link>
       </div>
     </div>
   );

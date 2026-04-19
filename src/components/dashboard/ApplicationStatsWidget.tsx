@@ -167,17 +167,17 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
 
   return (
     <div
-      className="glass-widget-premium rounded-xl p-6 h-full flex flex-col"
+      className="glass-widget-premium rounded-xl p-5 h-full flex flex-col"
       data-analytics-widget="application-stats"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-xl flex items-center justify-center">
-            <Target className="h-5 w-5 text-purple-400" />
+          <div className="w-8 h-8 bg-gradient-to-br from-purple-400/20 to-purple-500/20 rounded-xl flex items-center justify-center">
+            <Target className="h-4 w-4 text-purple-400" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Application Stats</h2>
-            <p className="text-gray-600 dark:text-white/60 text-sm">Track your application success metrics</p>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white">Application Stats</h2>
+            <p className="text-[11px] text-gray-600 dark:text-white/60">Success metrics</p>
           </div>
         </div>
 
@@ -199,11 +199,11 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
       </div>
 
       {/* Spider/Radar Chart */}
-      <div className="bg-white/5 dark:bg-gray-800/30 rounded-lg flex flex-col p-4">
-        <div className="flex items-center justify-center" style={{ height: '280px', minHeight: '280px', maxHeight: '280px' }}>
+      <div className="bg-white/5 dark:bg-gray-800/30 rounded-lg flex flex-col p-2 flex-1 justify-center">
+        <div className="flex items-center justify-center w-full h-[220px]">
           {loading ? (
             <div className="flex items-center justify-center h-full">
-              <div className="w-8 h-8 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
