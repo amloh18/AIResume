@@ -8,6 +8,7 @@ import { getCVWithTemplate } from '@/lib/cv-template-utils';
 import mongoose from 'mongoose';
 import { ApplicationJourney } from '@/models/ApplicationJourney';
 import JobApplication from '@/models/JobApplication';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 /**
  * Sanitize and validate CV data to ensure correct structure
@@ -118,35 +119,49 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    console.log('🔍 CV GET API - Starting GET request');
+
+    // Ensure database is connected first
+    await getConnection();
+    console.log('🔍 CV GET API - Database connected');
+
+    // Use getAuthenticatedUser for consistent user ID resolution
+    // This does a database lookup by email to get the canonical _id,
+    // matching the pattern used by the list route (/api/cvs)
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      console.log('❌ CV GET API - No valid authentication found');
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    await getConnection();
+    const userId = authResult.userId;
+    console.log('🔍 CV GET API - Auth check:', { hasAuth: true, email: authResult.userEmail, userId });
 
     const { id } = await params;
     const cvId = toObjectId(id);
+    console.log('🔍 CV GET API - Looking up CV:', { cvId: id, userId });
 
-    // Build query using session user ID
+    // Build query using canonical user ID from database lookup
     const query: Record<string, any> = {
       _id: cvId,
-      userId: new mongoose.Types.ObjectId(session.user.id)
+      userId: new mongoose.Types.ObjectId(userId)
     };
 
     // First, find the CV with user ownership check
     const cvDoc = await CV.findOne(query);
 
     if (!cvDoc) {
+      console.log('❌ CV GET API - CV not found for user:', { cvId: id, userId });
       return NextResponse.json(
         { success: false, error: 'CV not found' },
         { status: 404 }
       );
     }
+
+    console.log('✅ CV GET API - CV found:', { cvId: id, title: cvDoc.title });
 
     // Use utility function to get CV with template data
     const cv = await getCVWithTemplate(id);
@@ -170,14 +185,14 @@ export async function GET(
         // Try finding journey by journeyId first, then by cvId as fallback
         let foundJourney = await ApplicationJourney.findOne({
           _id: journeyId,
-          userId: session.user.id
+          userId: userId
         }).lean();
 
         if (!foundJourney) {
           // Fallback: try finding by cvId
           foundJourney = await ApplicationJourney.findOne({
             cvId: cvId.toString(),
-            userId: session.user.id
+            userId: userId
           }).lean();
         }
 
@@ -185,7 +200,7 @@ export async function GET(
           const jobResult = await Promise.allSettled([
             JobApplication.findOne({
               _id: foundJourney.jobId,
-              userId: new mongoose.Types.ObjectId(session.user.id)
+              userId: new mongoose.Types.ObjectId(userId)
             }).lean()
           ]);
 
