@@ -372,9 +372,12 @@ class UsageLimitsService {
 
       const PricingPlan = await getAdminPricingPlan();
       const plan = await PricingPlan.findOne({ key: user.currentPlanKey });
-      if (!plan) {
-        return null;
-      }
+      
+      // Fallback defaults if plan is missing in database
+      const maxCVs = plan ? plan.maxCVs : (user.currentPlanKey === 'free' ? 1 : -1);
+      const maxExports = plan ? plan.maxExports : (user.currentPlanKey === 'free' ? 5 : -1);
+      const storageLimit = plan ? plan.storageLimit : (user.currentPlanKey === 'free' ? 50 : -1);
+      const dayPassDuration = plan ? plan.dayPassDuration : (user.currentPlanKey === 'day_pass' ? 24 : null);
 
       const result = {
         cvJourneyCount: user.usage.cvJourneyCount,
@@ -382,15 +385,15 @@ class UsageLimitsService {
         exportCount: user.usage.exportCount,
         atsCheckCount: user.usage.atsCheckCount,
         planLimits: {
-          maxCVs: plan.maxCVs,
-          maxExports: plan.maxExports,
-          storageLimit: plan.storageLimit
+          maxCVs,
+          maxExports,
+          storageLimit
         }
       };
 
       // Add day pass expiry if applicable
-      if (user.currentPlanKey === 'day_pass' && plan.dayPassDuration) {
-        const dayPassExpiry = new Date(user.usage.lastResetDate.getTime() + (plan.dayPassDuration * 60 * 60 * 1000));
+      if (user.currentPlanKey === 'day_pass' && dayPassDuration) {
+        const dayPassExpiry = new Date(user.usage.lastResetDate.getTime() + (dayPassDuration * 60 * 60 * 1000));
         return { ...result, dayPassExpiry };
       }
 
