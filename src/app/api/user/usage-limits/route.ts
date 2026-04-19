@@ -6,19 +6,21 @@ import creditService from '@/lib/services/creditService';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use getAuthenticatedUser for consistent user ID resolution
+    // This does a database lookup by email to get the canonical _id
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return createErrorNextResponse(
         ErrorCode.AUTH_REQUIRED,
         'Authentication required. Please sign in to access usage limits.'
       );
     }
 
-    // Get user ID from session
-    const userId = session.user.id;
+    const userId = authResult.userId;
     if (!userId) {
       return createErrorNextResponse(
         ErrorCode.MISSING_REQUIRED_FIELD,
@@ -164,15 +166,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    // Use getAuthenticatedUser for consistent user ID resolution
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
       return createErrorNextResponse(
         ErrorCode.AUTH_REQUIRED,
         'Authentication required. Please sign in to check usage limits.'
       );
     }
 
-    const userId = session.user.id;
+    const userId = authResult.userId;
     if (!userId) {
       return createErrorNextResponse(
         ErrorCode.MISSING_REQUIRED_FIELD,

@@ -123,16 +123,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     return cv.cvType === filterType;
   });
 
-  // Handle editing an existing CV
+  // Handle editing an existing CV - navigate to editor with full fetch
   const handleEditExistingCV = (cv: ExistingCV) => {
-    if (cv.cvData) {
-      dispatch({ type: 'SET_CV_DATA', payload: cv.cvData });
-      dispatch({ type: 'SET_CV_ID', payload: cv._id });
-      dispatch({ type: 'SET_CV_TITLE', payload: cv.title });
-      dispatch({ type: 'SET_CV_TYPE', payload: cv.cvType });
-      // Pass isExistingCV = true to skip template overlay
-      completeParsing(cv.cvData, true);
-    }
+    const editMode = cv.cvType === 'master' ? 'edit-master' : 'edit';
+    window.location.href = `/editor?mode=${editMode}&cvId=${cv._id}`;
   };
 
   /**
