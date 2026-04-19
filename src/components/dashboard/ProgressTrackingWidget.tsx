@@ -280,7 +280,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
 
   return (
     <div
-      className="glass-widget-premium rounded-xl p-4 sm:p-5 h-full flex flex-col"
+      className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full"
       data-analytics-widget="progress-tracking"
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">

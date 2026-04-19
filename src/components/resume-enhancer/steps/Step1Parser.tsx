@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
@@ -14,7 +15,8 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 
 interface ExistingCV {
-  _id: string;
+  _id?: string;
+  id?: string;
   title: string;
   cvType: 'master' | 'standalone' | 'journey';
   createdAt: string;
@@ -34,6 +36,7 @@ interface Step1ParserProps {
 }
 
 export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType }: Step1ParserProps) {
+  const router = useRouter();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | null>(null);
@@ -126,7 +129,12 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   // Handle editing an existing CV - navigate to editor with full fetch
   const handleEditExistingCV = (cv: ExistingCV) => {
     const editMode = cv.cvType === 'master' ? 'edit-master' : 'edit';
-    window.location.href = `/editor?mode=${editMode}&cvId=${cv._id}`;
+    const originalCvId = cv.id || cv._id;
+    if (originalCvId) {
+      router.push(`/editor?mode=${editMode}&cvId=${originalCvId}`);
+    } else {
+      console.error('Failed to enter edit mode: Missing CV ID on object', cv);
+    }
   };
 
   /**
@@ -303,13 +311,19 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     );
   }
 
-  if (parseMethod === null) {
-    return (
-      <div 
-        ref={scrollContainerRef}
-        className="flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-[var(--bg-primary)] snap-y snap-mandatory scroll-smooth"
-        onScroll={handleScroll}
-      >
+  return (
+    <AnimatePresence mode="wait">
+      {/* Main Content Area */}
+      {parseMethod === null && (
+        <motion.div 
+          key="options"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          ref={scrollContainerRef}
+          className="flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-[var(--bg-primary)] snap-y snap-mandatory scroll-smooth"
+          onScroll={handleScroll}
+        >
         {/* Sticky Small Header on Scroll */}
         <AnimatePresence>
           {isScrolled && (
@@ -593,7 +607,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 {filteredCVs.map((cv, index) => (
                   <motion.div
-                    key={cv._id}
+                    key={cv.id || cv._id}
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                     viewport={{ once: true }}
@@ -670,7 +684,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         key={cl.id || cl._id}
                         whileHover={{ y: -8, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => window.location.href = `/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`}
+                        onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
                         className="group cursor-pointer"
                       >
                         <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-gray-200 dark:border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.1)] dark:group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40 group-hover:-translate-y-4">
@@ -724,21 +738,25 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 )
               )}
             </motion.div>
+            </div>
           </div>
-        </div>
-      </div>
-    );
-  }
+        </motion.div>
+      )}
 
-  if (parseMethod === 'upload') {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[calc(100vh-200px)]">
-        <div className="w-full max-w-2xl px-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-white dark:bg-[#141810] rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 p-12 border border-gray-200 dark:border-transparent"
-          >
+      {parseMethod === 'upload' && (
+        <motion.div 
+          key="upload"
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          className="flex items-center justify-center h-full min-h-[calc(100vh-200px)]"
+        >
+          <div className="w-full max-w-2xl px-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-[#141810] rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 p-12 border border-gray-200 dark:border-transparent"
+            >
             {uploadStatus === 'idle' && (
               <div className="text-center">
                 <div className="w-20 h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -867,10 +885,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
             )}
           </motion.div>
         </div>
-      </div>
-    );
-  }
-
-  return null;
+      </motion.div>
+      )}
+    </AnimatePresence>
+  );
 }
 

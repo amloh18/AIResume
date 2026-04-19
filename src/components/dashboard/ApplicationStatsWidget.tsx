@@ -167,7 +167,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
 
   return (
     <div
-      className="glass-widget-premium rounded-xl p-5 h-full flex flex-col"
+      className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full"
       data-analytics-widget="application-stats"
     >
       <div className="flex items-center justify-between mb-4">

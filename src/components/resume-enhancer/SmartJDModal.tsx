@@ -31,8 +31,6 @@ export default function SmartJDModal({ isOpen, onClose, onSubmit, initialData, i
   const [experienceLevel, setExperienceLevel] = useState(initialData?.experienceLevel || EXPERIENCE_LEVELS[0]);
   const [jobDescription, setJobDescription] = useState(initialData?.jobDescription || '');
 
-  if (!isOpen) return null;
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({ title, experienceLevel, jobDescription });
@@ -40,11 +38,12 @@ export default function SmartJDModal({ isOpen, onClose, onSubmit, initialData, i
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+      {isOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
           className="w-full max-w-2xl bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         >
           {/* Header */}
@@ -205,6 +204,7 @@ export default function SmartJDModal({ isOpen, onClose, onSubmit, initialData, i
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 }
