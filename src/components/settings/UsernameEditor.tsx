@@ -187,7 +187,7 @@ const UsernameEditor: React.FC<UsernameEditorProps> = ({
         </label>
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
               @
             </span>
             <input
@@ -198,7 +198,7 @@ const UsernameEditor: React.FC<UsernameEditorProps> = ({
               placeholder="Enter username"
               maxLength={30}
             />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
               {getAvailabilityIcon()}
             </div>
           </div>

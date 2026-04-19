@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useRef } from 'react';
 
 const isObject = (value: any) => value !== null && typeof value === 'object';

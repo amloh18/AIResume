@@ -1224,7 +1224,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             placeholder="Enter location"
                           />
                           {locationFlag && (
-                            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-lg pointer-events-none">
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
                               {locationFlag}
                             </span>
                           )}
@@ -1295,7 +1295,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                             className="w-full px-3 py-2 bg-white dark:bg-[#232f1c] border border-gray-300 dark:border-white/20 rounded-md text-gray-900 dark:text-white text-sm focus:border-lime-500 dark:focus:border-lime-400/50 focus:outline-none"
                             placeholder="Select date"
                           />
-                          <Calendar size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
+                          <Calendar size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-white/50 pointer-events-none" />
                         </div>
 
                         <div className="flex-shrink-0">
@@ -1343,7 +1343,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Min Salary</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
                             {getCurrencySymbol(formData.salary?.currency || userCurrency || 'USD')}
                           </span>
                           <input
@@ -1359,7 +1359,7 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
                       <div>
                         <label className="block text-gray-700 dark:text-white/80 text-sm font-medium mb-1">Max Salary</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 text-sm pointer-events-none">
                             {getCurrencySymbol(formData.salary?.currency || userCurrency || 'USD')}
                           </span>
                           <input

@@ -365,7 +365,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           First Name
                         </label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 z-10" size={20} />
                           <input
                             type="text"
                             value={formData.firstName}
@@ -382,7 +382,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           Last Name
                         </label>
                         <div className="relative">
-                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 z-10" size={20} />
                           <input
                             type="text"
                             value={formData.lastName}
@@ -402,7 +402,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         Email Address
                       </label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 z-10" size={20} />
                         <input
                           type="email"
                           value={formData.email}
@@ -421,7 +421,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         Password
                       </label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 z-10" size={20} />
                         <input
                           type={showPassword ? 'text' : 'password'}
                           value={formData.password}
@@ -434,7 +434,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         <motion.button
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white transition-colors z-10"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors z-10"
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           disabled={isLoading}
@@ -450,7 +450,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         Confirm Password
                       </label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 z-10" size={20} />
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 z-10" size={20} />
                         <input
                           type={showConfirmPassword ? 'text' : 'password'}
                           value={formData.confirmPassword}
@@ -463,7 +463,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                         <motion.button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/40 hover:text-white transition-colors z-10"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors z-10"
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           disabled={isLoading}
