@@ -142,7 +142,7 @@ function LandingPageContent() {
   ];
 
   const handleCtaClick = () => {
-    useAuthModalStore.getState().openModal({ view: 'signin' });
+    router.push('/sign-in');
   };
 
   // Structured data for main landing page
