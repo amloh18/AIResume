@@ -1,0 +1,7 @@
+- [x] Sidebar is collapsed to icons-only by default on desktop screens, utilizing the existing tablet screen behavior.
+- [x] Dashboard shows personalized greeting (e.g., "Welcome back, [Name]") and Resume Health score.
+- [x] Dashboard Primary Hub contains 3 glass-morphic cards (CV Editor, Job Tracker, Doc Center) with correct micro-copy and CTAs.
+- [x] Pressing `Cmd + K` or `Ctrl + K` focuses the global search bar.
+- [x] Deep work views (Tracker, Editor) display a subtle breadcrumb trail (e.g., `Dashboard > Tracker`) in the top header.
+- [x] Clicking the CVCircle logo returns the user to the Analytics Dashboard.
+- [x] Top "Tracker | Documents | Analytics" tabs are removed from the Analytics page.

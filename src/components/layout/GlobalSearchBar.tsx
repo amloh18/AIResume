@@ -56,11 +56,29 @@ const GlobalSearchBar: React.FC = () => {
   const [selectedCoverLetterData, setSelectedCoverLetterData] = useState<any>(null);
   const [coverLetterCVData, setCoverLetterCVData] = useState<any>(null);
   const [coverLetterJobData, setCoverLetterJobData] = useState<any>(null);
+  const [isMac, setIsMac] = useState(false);
 
   const searchRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const { user } = useUnifiedAuth();
+
+  useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform));
+  }, []);
+
+  // Keyboard shortcut Cmd/Ctrl + K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Debounce search
   useEffect(() => {
@@ -504,8 +522,13 @@ const GlobalSearchBar: React.FC = () => {
                 e.preventDefault();
               }
             }}
-            className="w-[clamp(220px,28vw,450px)] max-w-full pl-10 pr-10 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all text-sm"
+            className="w-[clamp(220px,28vw,450px)] max-w-full pl-10 pr-12 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all text-sm"
           />
+          {!query && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden desktop:flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 font-medium px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 pointer-events-none">
+              <span className="text-[10px] mr-0.5">{isMac ? '⌘' : 'Ctrl'}</span>K
+            </div>
+          )}
           {query && (
             <button
               onClick={() => {

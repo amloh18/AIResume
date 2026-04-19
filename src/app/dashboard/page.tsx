@@ -17,6 +17,11 @@ import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { useUserData, getUserDisplayName } from '@/lib/hooks/useUserData';
 import { useDashboardData } from '@/contexts/DashboardDataContext';
 
+import { 
+  ApplicationCalendarWidget, 
+  IntelligenceDashboard 
+} from '@/components/dashboard/Analytics';
+
 const ProgressTrackingWidget = dynamic(() => import('@/components/dashboard/ProgressTrackingWidget'), { ssr: false });
 const ApplicationStatsWidget = dynamic(() => import('@/components/dashboard/ApplicationStatsWidget'), { ssr: false });
 
@@ -136,7 +141,7 @@ function DashboardContent() {
   const router = useRouter();
   const { user } = useUnifiedAuth();
   const { userData } = useUserData();
-  const { cvs } = useDashboardData();
+  const { cvs, jobs, coverLetters, analytics } = useDashboardData();
   const userId = getUserIdForAPI(user);
 
   const getGreeting = () => {
@@ -171,32 +176,35 @@ function DashboardContent() {
       {/* Top Row: Z-Pattern Start - Greeting & Primary Hub */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Top-Left: Greeting & Resume Health Score */}
-        <div className="lg:col-span-4 glass-widget-premium rounded-xl p-6 flex flex-col items-center text-center justify-center relative overflow-hidden">
+        {/* Top-Left: Greeting & Resume Health Score (Inline Layout) */}
+        <div className="lg:col-span-4 glass-widget-premium rounded-xl p-6 flex flex-row items-center justify-between relative overflow-hidden gap-4">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-lime-400 to-lime-600"></div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            {getGreeting()}, {getUserDisplayName(userData)}!
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">Here is your career overview.</p>
           
-          <div className="relative w-28 h-28 mb-3">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
-              <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="8" fill="none"
-                strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-                className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
+          <div className="flex-1">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
+              {getGreeting()},<br />{getUserDisplayName(userData)}!
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Here is your career overview.</p>
+          </div>
+          
+          <div className="flex flex-col items-center shrink-0">
+            <div className="relative w-20 h-20 mb-2">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
+                <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="8" fill="none"
+                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                  className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-xl font-bold text-gray-900 dark:text-white">{cvHealthScore}%</span>
+              </div>
             </div>
+            <p className="text-gray-600 dark:text-white/60 font-medium text-[11px] text-center uppercase tracking-wide">Master CV</p>
+            <p className={`text-[10px] font-semibold text-center ${status.color}`}>{status.label}</p>
           </div>
-          <div className="flex items-center gap-2 mb-1">
-            <p className="text-gray-600 dark:text-white/60 font-medium text-sm">Master CV Health</p>
-          </div>
-          <p className={`text-xs font-semibold ${status.color}`}>{status.label}</p>
         </div>
 
-        {/* Top-Right: Primary Hub (3 Cards) */}
+        {/* Top-Right: Primary Hub (3 Cards with dynamic mini-lists) */}
         <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
           
           {/* CV Editor */}
@@ -206,13 +214,31 @@ function DashboardContent() {
               className="glass-card-premium rounded-xl p-5 cursor-pointer border border-transparent hover:border-lime-500/30 transition-all flex flex-col h-full relative overflow-hidden group bg-white/5 dark:bg-white/5"
             >
               <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mb-4 text-blue-600 dark:text-blue-400">
-                <FileText size={24} />
+              
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400">
+                  <FileText size={20} />
+                </div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">CV Editor</h3>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">CV Editor</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm flex-1">Create and tailor your professional resumes.</p>
-              <div className="mt-4 flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-                Open Editor <ChevronRight size={16} className="ml-1" />
+              
+              <div className="flex-1 space-y-2 mb-4 relative z-10">
+                {cvs?.slice(0, 2).map((cv: any) => (
+                  <div key={cv.id || cv._id} className="flex items-center gap-2 p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{cv.title || 'Untitled CV'}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{cv.metadata?.isMaster ? 'Master CV' : 'Targeted CV'}</p>
+                    </div>
+                  </div>
+                ))}
+                {(!cvs || cvs.length === 0) && (
+                  <div className="text-xs text-gray-500 italic py-2">No CVs yet. Create one!</div>
+                )}
+              </div>
+              
+              <div className="mt-auto flex items-center text-blue-600 dark:text-blue-400 text-xs font-medium relative z-10">
+                Open Editor <ChevronRight size={14} className="ml-1" />
               </div>
             </motion.a>
           </Link>
@@ -224,13 +250,31 @@ function DashboardContent() {
               className="glass-card-premium rounded-xl p-5 cursor-pointer border border-transparent hover:border-lime-500/30 transition-all flex flex-col h-full relative overflow-hidden group bg-white/5 dark:bg-white/5"
             >
               <div className="absolute -right-4 -top-4 w-24 h-24 bg-lime-500/10 rounded-full blur-2xl group-hover:bg-lime-500/20 transition-all"></div>
-              <div className="w-12 h-12 bg-lime-100 dark:bg-lime-900/30 rounded-lg flex items-center justify-center mb-4 text-lime-600 dark:text-lime-400">
-                <Briefcase size={24} />
+              
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="w-10 h-10 bg-lime-100 dark:bg-lime-900/30 rounded-lg flex items-center justify-center text-lime-600 dark:text-lime-400">
+                  <Briefcase size={20} />
+                </div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">Job Tracker</h3>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Job Tracker</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm flex-1">Manage applications and monitor your pipeline.</p>
-              <div className="mt-4 flex items-center text-lime-600 dark:text-lime-400 text-sm font-medium">
-                View Tracker <ChevronRight size={16} className="ml-1" />
+              
+              <div className="flex-1 space-y-2 mb-4 relative z-10">
+                {jobs?.slice(0, 2).map((job: any) => (
+                  <div key={job.id || job._id} className="flex items-center gap-2 p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-lime-400 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{job.jobTitle || job.title || 'Untitled Role'}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{job.company || 'Unknown Company'}</p>
+                    </div>
+                  </div>
+                ))}
+                {(!jobs || jobs.length === 0) && (
+                  <div className="text-xs text-gray-500 italic py-2">No saved jobs. Add one!</div>
+                )}
+              </div>
+              
+              <div className="mt-auto flex items-center text-lime-600 dark:text-lime-400 text-xs font-medium relative z-10">
+                View Tracker <ChevronRight size={14} className="ml-1" />
               </div>
             </motion.a>
           </Link>
@@ -242,13 +286,31 @@ function DashboardContent() {
               className="glass-card-premium rounded-xl p-5 cursor-pointer border border-transparent hover:border-lime-500/30 transition-all flex flex-col h-full relative overflow-hidden group bg-white/5 dark:bg-white/5"
             >
               <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all"></div>
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center mb-4 text-purple-600 dark:text-purple-400">
-                <LayoutDashboard size={24} />
+              
+              <div className="flex items-center justify-between mb-4 relative z-10">
+                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-purple-600 dark:text-purple-400">
+                  <LayoutDashboard size={20} />
+                </div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">Doc Center</h3>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Doc Center</h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm flex-1">Organize cover letters and career documents.</p>
-              <div className="mt-4 flex items-center text-purple-600 dark:text-purple-400 text-sm font-medium">
-                Go to Docs <ChevronRight size={16} className="ml-1" />
+              
+              <div className="flex-1 space-y-2 mb-4 relative z-10">
+                {coverLetters?.slice(0, 2).map((doc: any) => (
+                  <div key={doc.id || doc._id} className="flex items-center gap-2 p-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{doc.title || doc.jobTitle || 'Cover Letter'}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">Cover Letter</p>
+                    </div>
+                  </div>
+                ))}
+                {(!coverLetters || coverLetters.length === 0) && (
+                  <div className="text-xs text-gray-500 italic py-2">No documents yet.</div>
+                )}
+              </div>
+              
+              <div className="mt-auto flex items-center text-purple-600 dark:text-purple-400 text-xs font-medium relative z-10">
+                Go to Docs <ChevronRight size={14} className="ml-1" />
               </div>
             </motion.a>
           </Link>
@@ -263,6 +325,22 @@ function DashboardContent() {
         </div>
         <div className="lg:col-span-3 min-h-[360px] h-full">
           <ApplicationStatsWidget userId={userId || ''} />
+        </div>
+      </div>
+
+      {/* Legacy Widgets Row: Calendar & Intelligence */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-8">
+          <ApplicationCalendarWidget jobs={jobs || []} />
+        </div>
+        <div className="lg:col-span-4">
+          <IntelligenceDashboard 
+            predictions={analytics?.predictions || { monthlyGoal: 20, projectedApplications: jobs?.length || 0 }} 
+            marketIntelligence={analytics?.marketIntelligence || { score: 85, trend: 'up' }} 
+            jobs={jobs || []} 
+            cvs={cvs || []} 
+            userAvatar={userData?.image} 
+          />
         </div>
       </div>
 
