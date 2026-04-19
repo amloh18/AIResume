@@ -273,10 +273,10 @@ const OptimizedNavigation: React.FC = () => {
       'jobs': '/dashboard/jobs',
       'jobs-dashboard': '/dashboard/jobs',
       'settings': '/dashboard/settings',
-      'resume-enhancer': '/dashboard/vault',
-      'cover-letter-generator': '/dashboard/vault',
+      'resume-enhancer': '/editor',
+      'cover-letter-generator': '/dashboard/canvas',
       'interview-coach': '/dashboard/interview',
-      'linkedin-enhancer': '/linkedin-enhancer',
+      'linkedin-enhancer': '/dashboard/linkedin',
       'ats-resume-checker': '/ats-resume-checker'
     };
 
@@ -337,14 +337,14 @@ const OptimizedNavigation: React.FC = () => {
       name: 'Editor',
       icon: Target,
       description: 'AI-powered CV optimization',
-      route: '/dashboard/vault'
+      route: '/editor'
     },
     {
       id: 'cover-letter-generator',
       name: 'Cover Letter Generator',
       icon: PenTool,
       description: 'Create custom cover letters',
-      route: '/dashboard/vault'
+      route: '/dashboard/canvas'
     },
     {
       id: 'interview-coach',
@@ -358,7 +358,7 @@ const OptimizedNavigation: React.FC = () => {
       name: 'LinkedIn Enhancer',
       icon: Linkedin,
       description: 'Optimize your LinkedIn profile',
-      route: '/linkedin-enhancer',
+      route: '/dashboard/linkedin',
       badge: 'NEW'
     },
     {
