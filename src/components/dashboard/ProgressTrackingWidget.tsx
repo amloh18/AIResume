@@ -280,17 +280,17 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
 
   return (
     <div
-      className="glass-widget-premium rounded-xl p-4 sm:p-6 h-full flex flex-col"
+      className="glass-widget-premium rounded-xl p-4 sm:p-5 h-full flex flex-col"
       data-analytics-widget="progress-tracking"
     >
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 md:mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="h-4 w-4 text-blue-400" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">Progress Tracking</h2>
-            <p className="text-gray-600 dark:text-white/60 text-xs sm:text-sm truncate">Track your application progress over time</p>
+            <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">Progress Tracking</h2>
+            <p className="text-gray-600 dark:text-white/60 text-[11px] truncate">Activity over time</p>
           </div>
         </div>
 
@@ -304,7 +304,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
                 { value: 'all', label: 'All' },
                 { value: 'jobs', label: 'Jobs' },
                 { value: 'cvs', label: 'CVs' },
-                { value: 'coverLetters', label: 'Cover Letters' },
+                { value: 'coverLetters', label: 'Docs' },
               ]}
               theme="blue"
               size="sm"
@@ -327,26 +327,26 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       </div>
 
       {/* Chart */}
-      <div className="h-64 sm:h-72 bg-white/5 rounded-lg p-2 sm:p-4 relative" style={{ minHeight: '256px', maxHeight: '288px' }}>
+      <div className="flex-1 min-h-[220px] bg-white/5 rounded-lg p-2 sm:p-4 relative">
         {/* Labels in upper right corner */}
-        <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-xs font-medium max-w-[calc(100%-1rem)] sm:max-w-none">
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#EF4444] flex-shrink-0"></div>
+        <div className="absolute top-2 right-2 z-10 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-[11px] font-medium max-w-[calc(100%-1rem)] sm:max-w-none">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-[#EF4444] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">CVs</span>
           </div>
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#10B981] flex-shrink-0"></div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-[#10B981] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap hidden sm:inline">Cover Letters</span>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap sm:hidden">CL</span>
           </div>
-          <div className="flex items-center gap-1 sm:gap-1.5">
-            <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-[#3B82F6] flex-shrink-0"></div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded-full bg-[#3B82F6] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Jobs</span>
           </div>
         </div>
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <div className="w-8 h-8 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+            <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
           renderChart()
