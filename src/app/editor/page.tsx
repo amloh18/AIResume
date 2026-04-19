@@ -18,16 +18,23 @@ function ResumeEnhancerPageContent() {
   const [isCheckingGuestMode, setIsCheckingGuestMode] = useState(true);
   const [restoreDraft, setRestoreDraft] = useState(false);
 
-  // Get parameters from URL
+  // Get parameters from URL and sanitize them (avoid literal 'undefined' strings)
   const typeParam = searchParams.get('type');
   const modeParam = searchParams.get('mode');
   let mode: 'create' | 'edit' | 'edit-master' | 'journey' | 'edit-cover-letter' | 'create-cover-letter' =
     (modeParam === 'edit' || modeParam === 'edit-master' || modeParam === 'journey' || modeParam === 'edit-cover-letter' || modeParam === 'create-cover-letter')
       ? modeParam
       : 'create';
-  const clId = searchParams.get('clId') || searchParams.get('coverLetterId') || undefined;
-  const cvId = searchParams.get('cvId') || undefined;
-  const journeyId = searchParams.get('journeyId') || undefined;
+  
+  const rawClId = searchParams.get('clId') || searchParams.get('coverLetterId');
+  const clId = (rawClId && rawClId !== 'undefined') ? rawClId : undefined;
+  
+  const rawCvId = searchParams.get('cvId');
+  const cvId = (rawCvId && rawCvId !== 'undefined') ? rawCvId : undefined;
+  
+  const rawJourneyId = searchParams.get('journeyId');
+  const journeyId = (rawJourneyId && rawJourneyId !== 'undefined') ? rawJourneyId : undefined;
+  
   const restoreDraftParam = searchParams.get('restoreDraft') === 'true';
 
   // Automatically determine mode if type or ids are present
