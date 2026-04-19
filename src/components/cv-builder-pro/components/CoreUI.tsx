@@ -2,7 +2,7 @@
 
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, GripVertical, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify } from 'lucide-react';
+import { ImageIcon, Plus, RefreshCw, ChevronUp, ChevronDown, Trash2, GripVertical, PlusCircle, Wand2, Bold, Italic, Underline, List, AlignLeft, AlignCenter, AlignRight, AlignJustify, FolderOpen } from 'lucide-react';
 import { SNIPPETS, TITLE_STYLES } from '../registry';
 import { getNestedValue, escapeRegExp } from '../helpers';
 

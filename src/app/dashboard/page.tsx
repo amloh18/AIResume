@@ -208,8 +208,8 @@ function DashboardContent() {
         <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
           
           {/* CV Editor */}
-          <Link href="/editor" passHref legacyBehavior>
-            <motion.a 
+          <Link href="/editor">
+            <motion.div 
               whileHover={{ y: -4 }}
               className="glass-card-premium rounded-xl p-5 cursor-pointer border border-transparent hover:border-lime-500/30 transition-all flex flex-col h-full relative overflow-hidden group bg-white/5 dark:bg-white/5"
             >
@@ -240,12 +240,12 @@ function DashboardContent() {
               <div className="mt-auto flex items-center text-blue-600 dark:text-blue-400 text-xs font-medium relative z-10">
                 Open Editor <ChevronRight size={14} className="ml-1" />
               </div>
-            </motion.a>
+            </motion.div>
           </Link>
 
           {/* Job Tracker */}
-          <Link href="/dashboard/tracker" passHref legacyBehavior>
-            <motion.a 
+          <Link href="/dashboard/tracker">
+            <motion.div 
               whileHover={{ y: -4 }}
               className="glass-card-premium rounded-xl p-5 cursor-pointer border border-transparent hover:border-lime-500/30 transition-all flex flex-col h-full relative overflow-hidden group bg-white/5 dark:bg-white/5"
             >
@@ -276,12 +276,12 @@ function DashboardContent() {
               <div className="mt-auto flex items-center text-lime-600 dark:text-lime-400 text-xs font-medium relative z-10">
                 View Tracker <ChevronRight size={14} className="ml-1" />
               </div>
-            </motion.a>
+            </motion.div>
           </Link>
 
           {/* Doc Center */}
-          <Link href="/dashboard/canvas" passHref legacyBehavior>
-            <motion.a 
+          <Link href="/dashboard/canvas">
+            <motion.div 
               whileHover={{ y: -4 }}
               className="glass-card-premium rounded-xl p-5 cursor-pointer border border-transparent hover:border-lime-500/30 transition-all flex flex-col h-full relative overflow-hidden group bg-white/5 dark:bg-white/5"
             >
@@ -312,7 +312,7 @@ function DashboardContent() {
               <div className="mt-auto flex items-center text-purple-600 dark:text-purple-400 text-xs font-medium relative z-10">
                 Go to Docs <ChevronRight size={14} className="ml-1" />
               </div>
-            </motion.a>
+            </motion.div>
           </Link>
 
         </div>
@@ -348,8 +348,8 @@ function DashboardContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* LinkedIn Enhancer */}
-        <Link href="/dashboard/linkedin" passHref legacyBehavior>
-          <motion.a 
+        <Link href="/dashboard/linkedin">
+          <motion.div 
             whileHover={{ scale: 1.01 }}
             className="glass-card-premium rounded-xl p-6 cursor-pointer border border-gray-200 dark:border-gray-800 hover:border-blue-500/50 transition-all flex items-center gap-5 bg-white/5 dark:bg-white/5"
           >
@@ -363,12 +363,12 @@ function DashboardContent() {
             <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500">
               <ChevronRight size={18} />
             </div>
-          </motion.a>
+          </motion.div>
         </Link>
 
         {/* Interview Coach */}
-        <Link href="/dashboard/interview" passHref legacyBehavior>
-          <motion.a 
+        <Link href="/dashboard/interview">
+          <motion.div 
             whileHover={{ scale: 1.01 }}
             className="glass-card-premium rounded-xl p-6 cursor-pointer border border-gray-200 dark:border-gray-800 hover:border-orange-500/50 transition-all flex items-center gap-5 bg-white/5 dark:bg-white/5"
           >
@@ -382,7 +382,7 @@ function DashboardContent() {
             <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500">
               <ChevronRight size={18} />
             </div>
-          </motion.a>
+          </motion.div>
         </Link>
 
       </div>
