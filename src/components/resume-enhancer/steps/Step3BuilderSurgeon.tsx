@@ -77,6 +77,10 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
 
+    const [showTemplateModal, setShowTemplateModal] = useState(false);
+    const templateModalRef = useRef<HTMLDivElement>(null);
+    const templateModalContentRef = useRef<HTMLDivElement>(null);
+
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const pillRef = useRef<FloatingPulsePillHandle>(null);
@@ -960,7 +964,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       handleDeleteSectionFromSidebar,
       handleSectionReorder,
       openAddSection: () => canvasBuilderRef.current?.openAddSection() || setShowAddSectionModal(true),
-      openTemplateSelector: () => canvasBuilderRef.current?.openTemplateSelector(),
+      openTemplateSelector: () => canvasBuilderRef.current?.openTemplateSelector() || setShowTemplateModal(true),
       activeSection: 'personal'
     }));
 
