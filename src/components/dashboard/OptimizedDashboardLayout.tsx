@@ -31,7 +31,7 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
         <div
           data-dashboard-sidebar
           className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-40 lg:py-0 lg:px-0 ${
-            isDesktopExpanded ? 'lg:w-[260px]' : 'lg:w-[88px]'
+            isDesktopExpanded ? 'lg:w-[230px]' : 'lg:w-[88px]'
           } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
         >
           <OptimizedNavigation />

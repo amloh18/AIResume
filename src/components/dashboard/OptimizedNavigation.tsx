@@ -373,6 +373,15 @@ const OptimizedNavigation: React.FC = () => {
 
   return (
     <div className={`flex flex-col h-full m-0 bg-transparent rounded-none shadow-none overflow-visible pointer-events-auto relative`}>
+      {/* Desktop Toggle Button - Positioned exactly on the right border */}
+      <button
+        onClick={toggleDesktopSidebar}
+        className="hidden lg:flex absolute -right-[13px] top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
+        aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
+      >
+        {isDesktopExpanded ? <ChevronLeft className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
+      </button>
+
       {/* Header */}
       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
         <motion.button
@@ -395,15 +404,6 @@ const OptimizedNavigation: React.FC = () => {
           </div>
         </motion.button>
 
-        {/* Desktop Toggle Button */}
-        <button
-          onClick={toggleDesktopSidebar}
-          className="hidden lg:flex absolute -right-3.5 top-6 bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 rounded-full p-1 z-50 hover:bg-gray-50 dark:hover:bg-gray-800 shadow-sm transition-transform hover:scale-110"
-          aria-label={isDesktopExpanded ? "Collapse sidebar" : "Expand sidebar"}
-        >
-          {isDesktopExpanded ? <ChevronLeft className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
-        </button>
-
         {/* Close Button - Only visible on mobile */}
         <motion.button
           onClick={() => setIsOpen(false)}
@@ -417,7 +417,7 @@ const OptimizedNavigation: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className={`flex-1 p-6 space-y-2 overflow-y-auto ${isDesktopExpanded ? 'lg:p-4 lg:space-y-1' : 'lg:p-2 lg:space-y-1'}`}>
+      <nav className={`flex-1 p-6 space-y-2 overflow-y-auto scrollbar-hide ${isDesktopExpanded ? 'lg:p-4 lg:space-y-1' : 'lg:p-2 lg:space-y-1'}`}>
         {sections.map((section) => {
           const Icon = section.icon;
           const isActive = activeSection === section.id;
@@ -450,21 +450,21 @@ const OptimizedNavigation: React.FC = () => {
             <Component
               key={section.id}
               {...componentProps}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
-                ? 'bg-[rgb(129,255,0)] dark:bg-[rgb(129,255,0)] text-black dark:text-black'
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
+                ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
                 : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
+              <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
               <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
                 <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                   {section.name}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
-                <div className={`text-sm lg:text-xs truncate mt-0.5 ${isActive
-                  ? 'text-black dark:text-black'
+                <div className={`text-sm lg:text-[11px] truncate mt-0.5 ${isActive
+                  ? 'text-[rgb(129,255,0)]/70'
                   : 'text-gray-500 dark:text-gray-400'
                   }`}>
                   {section.description}
@@ -482,7 +482,7 @@ const OptimizedNavigation: React.FC = () => {
               Tools
             </h3>
           </div>
-          <div className={`grid grid-cols-1 gap-2 ${isDesktopExpanded ? 'lg:grid-cols-2' : ''}`}>
+          <div className="grid grid-cols-1 gap-2">
             {toolSections.map((section) => {
               const Icon = section.icon;
               const isActive = activeSection === section.id;
@@ -514,9 +514,9 @@ const OptimizedNavigation: React.FC = () => {
                 <Component
                   key={section.id}
                   {...componentProps}
-                  className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl transition-all duration-200 text-center border relative ${isActive
-                    ? 'bg-[rgb(129,255,0)]/10 border-[rgb(129,255,0)] text-black dark:text-white'
-                    : 'bg-gray-50 dark:bg-gray-800/50 border-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left relative ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
+                    ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
+                    : 'bg-white dark:bg-[#1f2916] text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800'
                     }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -527,10 +527,17 @@ const OptimizedNavigation: React.FC = () => {
                       {(section as any).badge}
                     </span>
                   )}
-                  <Icon className={`w-5 h-5 ${section.id === 'resume-enhancer' ? 'text-[var(--accent-primary)]' : ''}`} />
-                  <div className={`hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
-                    <div className="text-xs font-medium leading-tight line-clamp-2">
+                  <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
+                  <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
+                    <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                       {section.name}
+                      {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
+                    </div>
+                    <div className={`text-sm lg:text-[11px] truncate mt-0.5 ${isActive
+                      ? 'text-[rgb(129,255,0)]/70'
+                      : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                      {section.description}
                     </div>
                   </div>
                 </Component>
