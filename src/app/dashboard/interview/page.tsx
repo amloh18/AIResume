@@ -8,6 +8,9 @@ import InterviewSessionGrid from '@/components/interview/InterviewSessionGrid';
 import PotentialSessionCard from '@/components/interview/PotentialSessionCard';
 import EmptyState from '@/components/interview/EmptyState';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import { useUserData, getUserDisplayName, getUserEmail, getUserAvatar } from '@/lib/hooks/useUserData';
+import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
+import PageHeader from '@/components/dashboard/PageHeader';
 
 interface Session {
     _id: string;
@@ -37,6 +40,8 @@ interface Job {
 const InterviewDashboard = () => {
     const router = useRouter();
     const { theme } = useTheme();
+    const { userData, loading: userLoading } = useUserData();
+    const { isOpen: isMobileMenuOpen, toggleSidebar } = useMobileSidebar();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [potentialSessions, setPotentialSessions] = useState<Job[]>([]);
     const [loading, setLoading] = useState(true);
@@ -72,42 +77,23 @@ const InterviewDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f]">
-            {/* Header */}
-            <div className="bg-white dark:bg-[#1a230f] border-b border-gray-200 dark:border-gray-800 px-6 py-4 sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => router.push('/dashboard')}
-                            className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-colors"
-                        >
-                            <ArrowLeft className="w-5 h-5 text-gray-500" />
-                        </button>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Interview Coach
-                            </h1>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div className="px-4 sm:px-6 md:px-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-12 sm:pb-20">
+                <PageHeader
+                    title="Interview Coach"
+                    description="Practice for your upcoming interviews with AI-powered coaching."
+                    user={{
+                        name: getUserDisplayName(userData),
+                        email: getUserEmail(userData),
+                        profilePhoto: getUserAvatar(userData)
+                    }}
+                    onMobileMenuToggle={toggleSidebar}
+                    isMobileMenuOpen={isMobileMenuOpen}
+                />
 
-            <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-10">
                 {!hasContent ? (
                     <EmptyState onAction={() => router.push('/dashboard/tracker')} />
                 ) : (
                     <>
-                        {/* Header Section */}
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                                    Interview Preparation
-                                </h2>
-                                <p className="text-gray-500 dark:text-gray-400">
-                                    Practice for your upcoming interviews with AI-powered coaching.
-                                </p>
-                            </div>
-                        </div>
-
                         {/* All Jobs (Applied & Interview Stage) */}
                         <section>
                             <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">
