@@ -13,6 +13,8 @@ import { InfoTooltip } from '@/components/ui/tooltip';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
+import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
+import { useInView } from 'framer-motion';
 
 interface ExistingCV {
   _id?: string;
@@ -22,8 +24,54 @@ interface ExistingCV {
   createdAt: string;
   updatedAt: string;
   cvData?: UnifiedCVDataStructure;
+  templateId?: any;
+  metadata?: {
+    thumbnailUrl?: string;
+    type?: string;
+    [key: string]: any;
+  };
   status?: string;
 }
+
+const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLetter?: boolean }) => {
+  const ref = React.useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "200px" });
+
+  const thumbnailUrl = item.metadata?.thumbnailUrl || item.thumbnailUrl;
+  
+  return (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 pt-4 pb-16">
+      <div 
+        ref={ref}
+        className="w-[65%] aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-lg border border-gray-200 dark:border-white/10 transition-all duration-700 shadow-md flex flex-col relative overflow-hidden group-hover:scale-[1.03]"
+      >
+        {isInView ? (
+          thumbnailUrl ? (
+             <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
+          ) : !isCoverLetter && item.cvData && item.templateId ? (
+             <div className="w-full h-full opacity-90">
+               <CVPreviewThumbnail cvData={item.cvData} template={item.templateId} />
+             </div>
+          ) : (
+            // Generic fallback
+            <div className="w-full h-full p-3 flex flex-col gap-2">
+              <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
+              <div className="h-2 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
+              <div className="h-1.5 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
+              <div className="mt-auto space-y-1.5">
+                 <div className="h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
+                 <div className="h-1 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+                 <div className="h-1 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+              </div>
+            </div>
+          )
+        ) : (
+          <div className="w-full h-full bg-gray-100 dark:bg-white/5 animate-pulse" />
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface Step1ParserProps {
   onComplete: (cvData: UnifiedCVDataStructure, isExistingCV?: boolean) => void;
@@ -615,10 +663,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     onClick={() => handleEditExistingCV(cv)}
                     className="group cursor-pointer"
                   >
-                    <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40 group-hover:-translate-y-4">
+                    <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40">
                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
                        
-                       <div className="h-full p-6 flex flex-col">
+                       <div className="h-full p-6 flex flex-col relative z-20">
                           <div className="flex justify-between items-start mb-4">
                             <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${
                               cv.cvType === 'master' ? 'bg-blue-600 text-white shadow-blue-500/20' :
@@ -632,18 +680,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                             </div>
                           </div>
                           
-                          <div className="flex-1 flex flex-col justify-center items-center gap-6 py-8">
-                             <div className="w-32 h-44 bg-gray-50 dark:bg-black/40 rounded-2xl border border-gray-200 dark:border-white/10 group-hover:scale-105 transition-all duration-700 shadow-inner flex flex-col p-4 gap-3 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
-                                <div className="h-3 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
-                                <div className="h-2 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
-                                <div className="mt-auto space-y-2">
-                                   <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
-                                   <div className="h-1.5 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
-                                   <div className="h-1.5 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
-                                </div>
-                             </div>
-                          </div>
+                          <LazyThumbnail item={cv} />
 
                           <div className="mt-auto relative z-20 overflow-hidden">
                              <h4 className="text-xl font-black text-white truncate group-hover:text-lime-500 transition-colors tracking-tight">
@@ -682,15 +719,13 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     {existingCoverLetters.map((cl) => (
                       <motion.div
                         key={cl.id || cl._id}
-                        whileHover={{ y: -8, scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
                         onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
                         className="group cursor-pointer"
                       >
-                        <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-gray-200 dark:border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.1)] dark:group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40 group-hover:-translate-y-4">
+                        <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-gray-200 dark:border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.1)] dark:group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40">
                            <div className="absolute inset-0 bg-gradient-to-t from-gray-100/90 via-gray-100/40 dark:from-black/90 dark:via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
                            
-                           <div className="h-full p-6 flex flex-col">
+                           <div className="h-full p-6 flex flex-col relative z-20">
                               <div className="flex justify-between items-start mb-4">
                                 <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-emerald-600 text-white shadow-emerald-500/20">
                                   Cover Letter
@@ -700,18 +735,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                                 </div>
                               </div>
                               
-                              <div className="flex-1 flex flex-col justify-center items-center gap-6 py-8">
-                                 <div className="w-32 h-44 bg-white dark:bg-black/40 rounded-2xl border border-gray-200 dark:border-white/10 group-hover:scale-105 transition-all duration-700 shadow-inner flex flex-col p-4 gap-3 relative overflow-hidden">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
-                                    <div className="h-3 w-1/2 bg-gray-200 dark:bg-white/20 rounded-full mb-2" />
-                                    <div className="space-y-1.5">
-                                       <div className="h-1.5 w-full bg-gray-50 dark:bg-white/5 rounded-full" />
-                                       <div className="h-1.5 w-full bg-gray-50 dark:bg-white/5 rounded-full" />
-                                       <div className="h-1.5 w-5/6 bg-gray-50 dark:bg-white/5 rounded-full" />
-                                       <div className="h-1.5 w-4/6 bg-gray-50 dark:bg-white/5 rounded-full" />
-                                    </div>
-                                 </div>
-                              </div>
+                              <LazyThumbnail item={cl} isCoverLetter={true} />
   
                               <div className="mt-auto relative z-20 overflow-hidden">
                                  <h4 className="text-xl font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
