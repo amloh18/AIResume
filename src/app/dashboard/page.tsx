@@ -332,7 +332,7 @@ function DashboardContent() {
           </Link>
 
           {/* Doc Center */}
-          <Link href="/dashboard/canvas">
+          <Link href="/editor?tab=cover-letters">
             <motion.div 
               whileHover={{ y: -4 }}
               className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 transition-all flex flex-col h-full relative group hover:shadow-md"
@@ -355,7 +355,14 @@ function DashboardContent() {
               
               <div className="flex-1 space-y-2 relative z-10 w-full">
                 {coverLetters?.slice(0, 2).map((doc: any) => (
-                  <div key={doc.id || doc._id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-transparent group-hover:border-purple-500/10 transition-colors">
+                  <div 
+                    key={doc.id || doc._id} 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      router.push(`/editor?mode=edit-cover-letter&coverLetterId=${doc.id || doc._id}`);
+                    }}
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-transparent hover:border-purple-500/30 transition-colors cursor-pointer"
+                  >
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0"></div>
                     <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
                       <div className="min-w-0">

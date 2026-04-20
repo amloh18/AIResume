@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
@@ -121,6 +121,7 @@ interface Step1ParserProps {
 
 export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType }: Step1ParserProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | null>(null);
@@ -139,7 +140,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   
   const [existingCoverLetters, setExistingCoverLetters] = useState<any[]>([]);
   const [isLoadingCoverLetters, setIsLoadingCoverLetters] = useState(false);
-  const [activeTab, setActiveTab] = useState<'cvs' | 'cover-letters'>('cvs');
+  const [activeTab, setActiveTab] = useState<'cvs' | 'cover-letters'>(searchParams.get('tab') === 'cover-letters' ? 'cover-letters' : 'cvs');
   const [filterType, setFilterType] = useState<'all' | 'master' | 'standalone' | 'journey'>('all');
   const [parsingSteps] = useState([
     { label: 'Extracting text...', progress: 20 },
