@@ -186,19 +186,19 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         <AreaChart data={filteredData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
             <linearGradient id="jobsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1} />
+              <stop offset="5%" stopColor="#059669" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
             </linearGradient>
             <linearGradient id="cvsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1} />
+              <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
             </linearGradient>
             <linearGradient id="coverLettersGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8} />
-              <stop offset="95%" stopColor="#10B981" stopOpacity={0.1} />
+              <stop offset="5%" stopColor="#34D399" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#34D399" stopOpacity={0.0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
+          <CartesianGrid strokeDasharray="1 10" strokeLinecap="round" stroke="#6B7280" opacity={0.4} vertical={true} horizontal={true} />
           <XAxis
             dataKey="date"
             stroke="#6B7280"
@@ -216,44 +216,82 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             domain={[0, 'dataMax + 1']}
           />
           <Tooltip
-            contentStyle={{
-              backgroundColor: '#1F2937',
-              border: '1px solid #374151',
-              borderRadius: '8px',
-              color: '#F9FAFB'
+            cursor={{ stroke: '#10B981', strokeWidth: 2, opacity: 0.5 }}
+            content={({ active, payload, label }) => {
+              if (active && payload && payload.length) {
+                return (
+                  <div className="bg-[#1F2937] border border-white/10 rounded-xl p-3 shadow-xl backdrop-blur-md">
+                    <p className="text-gray-400 text-xs mb-2">{formatDate(label)}</p>
+                    {payload.map((entry, index) => (
+                      <p key={index} className="text-sm font-semibold text-white flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
+                        {entry.name}: {entry.value}
+                      </p>
+                    ))}
+                  </div>
+                );
+              }
+              return null;
             }}
           />
           <Area
-            type="monotone"
+            type="linear"
             dataKey="jobs"
-            stroke="#3B82F6"
+            stroke="#059669"
             fill="url(#jobsGradient)"
             strokeWidth={2}
-            dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
+            dot={false}
+            activeDot={(props: any) => {
+              const { cx, cy, stroke } = props;
+              return (
+                <g>
+                  <circle cx={cx} cy={cy} r={8} fill="transparent" stroke={stroke} strokeWidth={2} opacity={0.5} />
+                  <circle cx={cx} cy={cy} r={4} fill="#fff" stroke={stroke} strokeWidth={2} />
+                </g>
+              );
+            }}
             name="Jobs"
             animationDuration={1000}
             animationEasing="ease-in-out"
             opacity={filter === 'all' || filter === 'jobs' ? 1 : 0.3}
           />
           <Area
-            type="monotone"
+            type="linear"
             dataKey="cvs"
-            stroke="#EF4444"
+            stroke="#10B981"
             fill="url(#cvsGradient)"
             strokeWidth={2}
-            dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+            dot={false}
+            activeDot={(props: any) => {
+              const { cx, cy, stroke } = props;
+              return (
+                <g>
+                  <circle cx={cx} cy={cy} r={8} fill="transparent" stroke={stroke} strokeWidth={2} opacity={0.5} />
+                  <circle cx={cx} cy={cy} r={4} fill="#fff" stroke={stroke} strokeWidth={2} />
+                </g>
+              );
+            }}
             name="CVs"
             animationDuration={1000}
             animationEasing="ease-in-out"
             opacity={filter === 'all' || filter === 'cvs' ? 1 : 0.3}
           />
           <Area
-            type="monotone"
+            type="linear"
             dataKey="coverLetters"
-            stroke="#10B981"
+            stroke="#34D399"
             fill="url(#coverLettersGradient)"
             strokeWidth={2}
-            dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+            dot={false}
+            activeDot={(props: any) => {
+              const { cx, cy, stroke } = props;
+              return (
+                <g>
+                  <circle cx={cx} cy={cy} r={8} fill="transparent" stroke={stroke} strokeWidth={2} opacity={0.5} />
+                  <circle cx={cx} cy={cy} r={4} fill="#fff" stroke={stroke} strokeWidth={2} />
+                </g>
+              );
+            }}
             name="Cover Letters"
             animationDuration={1000}
             animationEasing="ease-in-out"
@@ -331,16 +369,16 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         {/* Labels in upper right corner */}
         <div className="absolute top-2 right-2 z-10 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-[11px] font-medium max-w-[calc(100%-1rem)] sm:max-w-none">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#EF4444] flex-shrink-0"></div>
+            <div className="w-2 h-2 rounded-full bg-[#10B981] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">CVs</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#10B981] flex-shrink-0"></div>
+            <div className="w-2 h-2 rounded-full bg-[#34D399] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap hidden sm:inline">Cover Letters</span>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap sm:hidden">CL</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#3B82F6] flex-shrink-0"></div>
+            <div className="w-2 h-2 rounded-full bg-[#059669] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Jobs</span>
           </div>
         </div>
