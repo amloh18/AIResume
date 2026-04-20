@@ -191,20 +191,29 @@ function DashboardContent() {
     <div ref={scrollRef} className="h-full flex flex-col space-y-6 p-4 md:p-6 overflow-y-auto pb-24 overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {/* 1st Section: Full Width Greeting Block */}
       <div 
-        className="w-full bg-white dark:bg-[#111317] shadow-sm border border-gray-100 dark:border-white/5 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative"
+        className="w-full bg-white dark:bg-[#111317] shadow-sm border border-gray-100 dark:border-white/5 rounded-3xl p-6 md:p-8 flex flex-col relative"
       >
-        <div className="flex-1 flex flex-col justify-center min-w-0">
-          <h1 className="font-black text-gray-900 dark:text-white leading-tight tracking-tight text-3xl lg:text-4xl mb-2">
-            {getGreeting()},<br />{getUserDisplayName(userData)}!
-          </h1>
-          <p className="text-gray-500 dark:text-gray-400 font-medium text-base lg:text-lg mt-2">
-            Here is your career overview.
-          </p>
+        {/* Top Bar: Search and Notifications */}
+        <div className="absolute top-6 right-6 md:top-8 md:right-8 flex items-center gap-2 lg:gap-4 z-[100]">
+          <div className="flex-1 md:w-auto">
+            <GlobalSearchBar />
+          </div>
+          <div className="shrink-0">
+            <NotificationCenter />
+          </div>
         </div>
-        
-        <div className="flex flex-col md:flex-row items-end md:items-center gap-6 mt-4 md:mt-0 z-10 shrink-0 w-full md:w-auto justify-end">
-          {/* Master CV Score Ring */}
-          <div className="flex flex-col items-center shrink-0 order-2 md:order-1">
+
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-14 md:mt-0">
+          <div className="flex-1 flex flex-col justify-center min-w-0">
+            <h1 className="font-black text-gray-900 dark:text-white leading-tight tracking-tight text-3xl lg:text-4xl mb-2">
+              {getGreeting()},<br />{getUserDisplayName(userData)}!
+            </h1>
+            <p className="text-gray-500 dark:text-gray-400 font-medium text-base lg:text-lg mt-2">
+              Here is your career overview.
+            </p>
+          </div>
+          
+          <div className="flex flex-col items-center shrink-0">
             <div className="relative w-16 h-16 lg:w-20 lg:h-20 mb-2">
               <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
@@ -219,16 +228,6 @@ function DashboardContent() {
             <div className="flex flex-col items-center">
               <p className="text-gray-500 dark:text-gray-400 font-bold text-[9px] lg:text-[10px] text-center uppercase tracking-widest">Master CV</p>
               <p className={`text-[9px] lg:text-[10px] font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
-            </div>
-          </div>
-
-          {/* Search & Notifications */}
-          <div className="flex items-center gap-2 lg:gap-4 order-1 md:order-2 w-full md:w-auto">
-            <div className="flex-1 md:w-auto">
-              <GlobalSearchBar />
-            </div>
-            <div className="shrink-0">
-              <NotificationCenter />
             </div>
           </div>
         </div>
