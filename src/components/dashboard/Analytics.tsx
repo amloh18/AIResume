@@ -194,7 +194,7 @@ const CVManagementSection: React.FC<{
   };
 
   const status = getStatus(cvHealthScore);
-  const circumference = 2 * Math.PI * 45;
+  const circumference = 2 * Math.PI * 44;
   const strokeDashoffset = circumference * (1 - cvHealthScore / 100);
 
   // Find master CV - handle both old and new metadata formats
@@ -379,14 +379,14 @@ const CVManagementSection: React.FC<{
             <div className="text-center flex flex-col justify-center h-full">
               <div className="relative w-32 h-32 lg:w-40 lg:h-40 mx-auto mb-4">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="10" fill="none" className="text-gray-200 dark:text-white/10" />
+                  <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
                   <defs>
                     <linearGradient id="cvHealthGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stopColor="#ef4444" />
                       <stop offset="100%" stopColor="#f97316" />
                     </linearGradient>
                   </defs>
-                  <circle cx="50" cy="50" r="45" stroke="url(#cvHealthGradient)" strokeWidth="10" fill="none"
+                  <circle cx="50" cy="50" r="44" stroke="url(#cvHealthGradient)" strokeWidth="8" fill="none"
                     strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
                     className="transition-all duration-1000 ease-out" strokeLinecap="round" />
                 </svg>
