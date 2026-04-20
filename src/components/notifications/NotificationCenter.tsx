@@ -101,11 +101,11 @@ export default function NotificationCenter() {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-[9998]"
             onClick={() => setIsOpen(false)}
           />
           
-          <div className="absolute right-0 mt-2 w-[420px] max-h-[85vh] bg-[#0a0f0c] rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden">
+          <div className="absolute right-0 mt-2 w-[420px] max-h-[85vh] bg-[#0a0f0c] rounded-2xl shadow-2xl z-[9999] flex flex-col overflow-hidden">
             {/* Header */}
             <div className="px-5 pt-5 pb-4 flex-shrink-0">
               <div className="flex items-center justify-between mb-4">
