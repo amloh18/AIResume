@@ -110,7 +110,7 @@ export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
   );
 };
 
-export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate }: any) => {
+export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones }: any) => {
   const ctx = React.useContext(CanvasContext);
   if (!instance || !instance.type) return null;
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
@@ -156,14 +156,14 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     return <Renderer isDark={isDark} showIcons={ctx?.design?.showIcons ?? true} titleKey={titleKey}><EditableWrapper path={`sectionTitles.${titleKey}`} nowrap /></Renderer>;
   };
 
-  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showIcons ?? true, design: ctx?.design });
+  const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
 
   return (
     <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`}>
       {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
-        <div className={`ring-[2px] ring-transparent rounded-md transition-all relative ${!isHeader && !readOnly ? 'mt-4' : ''} hover:z-30 group/inner`}>
+        <div className={`relative ${!isHeader && !readOnly ? 'mt-4' : ''} hover:z-30 group/inner`}>
           {!readOnly && (
-            <div className="absolute right-[-2px] left-[-2px] -top-[34px] opacity-0 group-hover/inner:opacity-100 pointer-events-none group-hover/inner:pointer-events-auto transition-all duration-200 bg-white border-[2px] border-b-0 border-[#3b82f6] shadow-[0_-4px_12px_rgba(59,130,246,0.05)] rounded-t-md flex items-center z-[25] no-print font-sans h-[34px] translate-y-[2px] group-hover/inner:translate-y-[2px] overflow-hidden group-hover/inner:border-b-white group-hover/inner:pb-[2px] group-hover/inner:h-[36px] justify-between rounded-tl-md rounded-tr-md" style={{ clipPath: 'inset(-12px -12px -2px -12px)' }}>
+            <div className="absolute right-[-1px] left-[-1px] -top-[34px] opacity-0 group-hover/inner:opacity-100 pointer-events-none group-hover/inner:pointer-events-auto transition-all duration-200 bg-white border-[1px] border-b-0 border-blue-400/50 shadow-[0_-4px_12px_rgba(59,130,246,0.05)] rounded-t-md flex items-center z-[25] no-print font-sans h-[34px] translate-y-[1px] group-hover/inner:translate-y-[1px] overflow-hidden group-hover/inner:border-b-white group-hover/inner:pb-[1px] group-hover/inner:h-[35px] justify-between rounded-tl-md rounded-tr-md" style={{ clipPath: 'inset(-12px -12px -1px -12px)' }}>
               <div className="flex-1 px-3 text-slate-800 font-extrabold text-[12px] uppercase tracking-widest text-left select-none bg-white h-full flex items-center whitespace-nowrap rounded-tl-md"><span className="flex items-center gap-1.5"><FolderOpen size={14} className="text-slate-800" strokeWidth={2.5}/> {SnippetComponent?.category || 'Section'}</span></div>
               
               <div className="flex items-center h-full bg-white ml-2 rounded-tr-md overflow-hidden">
@@ -197,7 +197,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   );
 };
 
-export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, isDark = false, className = "" }: any) => {
+export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "" }: any) => {
   const [isOverZone, setIsOverZone] = useState(false);
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsOverZone(true); if (e.target === e.currentTarget && !readOnly) document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: blocks.length } })); };
   const onDragLeave = () => setIsOverZone(false);
@@ -210,7 +210,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
       <div className={`flex-1 min-h-[150px] transition-colors pb-10 ${isOverZone && !readOnly ? 'bg-gray-50/50' : ''} ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 italic pointer-events-none border-2 border-dashed border-gray-200 rounded-lg m-2 no-print">Empty Zone</div>}
         <div className="flex flex-col gap-1">
-          {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} isDark={isDark} />)}
+          {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={layoutZones} isDark={isDark} />)}
         </div>
         {showAppendLine && <div className="w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded mt-4 pointer-events-none"></div>}
       </div>

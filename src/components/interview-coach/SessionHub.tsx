@@ -169,7 +169,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     // Still loading
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] flex items-center justify-center">
+            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex items-center justify-center">
                 <div className="animate-spin w-8 h-8 border-4 border-lime-500 border-t-transparent rounded-full" />
             </div>
         );
@@ -178,7 +178,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     // Error state
     if (!session && !loading && !preparing) {
         return (
-            <div className="min-h-screen bg-gray-100 dark:bg-[#1a230f] flex flex-col items-center justify-center p-4">
+            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col items-center justify-center p-4">
                 <AlertTriangle className="w-12 h-12 text-yellow-500 mb-4" />
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Could not load session</h2>
                 <p className="text-gray-500 text-center max-w-md mb-6">
@@ -222,7 +222,7 @@ const SessionHub: React.FC<SessionHubProps> = ({ userId, jobId }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] flex flex-col">
+        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
             <InterviewCoachHeader />
             <div className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
                 {/* Header */}

@@ -102,7 +102,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] flex flex-col">
+        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
             <InterviewCoachHeader />
             <div className="flex-1 max-w-7xl mx-auto px-6 py-8 w-full">
                 {/* Page Header */}

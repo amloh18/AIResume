@@ -371,7 +371,7 @@ function DashboardContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* LinkedIn Enhancer */}
-        <Link href="/dashboard/linkedin">
+        <Link href="/linkedin-enhancer">
           <motion.div 
             whileHover={{ scale: 1.01 }}
             className="bg-white dark:bg-[#111317] rounded-3xl p-6 cursor-pointer shadow-sm border border-gray-100 dark:border-white/5 hover:shadow-md hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all flex items-center gap-5"

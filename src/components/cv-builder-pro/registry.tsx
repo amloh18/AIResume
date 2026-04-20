@@ -123,21 +123,25 @@ export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; 
 // ==========================================
 export const SNIPPETS: Record<string, { id: string; name: string; category: string; render: (props: any) => React.ReactNode }> = {
   // === HEADERS (7) ===
-  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
+  'header-minimal': { id: 'header-minimal', name: 'Minimal Center', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className={`text-center pb-4 border-b ${isDark ? 'border-slate-700 text-gray-300' : 'border-gray-200 text-gray-600'} mb-4 snippet-anim cv-keep-with-next`}>
         {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`mx-auto rounded-full object-cover shadow-md mb-3 ${isNarrow ? 'w-24 h-24' : 'w-20 h-20'} ${isDark ? 'border-2 border-slate-700' : ''}`} />}
         <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1 uppercase tracking-widest`}><Editable path="basics.name" /></h1>
         <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-gray-400' : ''} mb-3`}><Editable path="basics.title" /></h2>
-        <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5 items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact}`}>
-          <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
-        </div>
+        {!hasSidebarContact && (
+          <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5 items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact}`}>
+            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+          </div>
+        )}
       </div>
     );
   }},
-  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
+  'header-split': { id: 'header-split', name: 'Split Modern', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className={`flex ${isNarrow ? 'flex-col gap-4 text-center items-center' : 'justify-between items-end'} pb-4 border-b-[1.5px] ${isDark ? 'border-slate-600' : 'border-slate-800'} mb-4 snippet-anim w-full cv-keep-with-next`}>
         <div className={`flex ${isNarrow ? 'flex-col text-center items-center' : 'items-center text-left'} gap-4 min-w-0`}>
@@ -147,29 +151,35 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
             <h2 className={`${TYPOGRAPHY.role} ${isDark ? 'text-slate-400' : 'text-slate-600'}`}><Editable path="basics.title" /></h2>
           </div>
         </div>
-        <div className={`${isNarrow ? 'text-center w-full mt-2 flex-col items-center' : 'text-right flex-row justify-end flex-wrap gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} flex ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0 max-w-[60%]`}>
-          <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
-        </div>
+        {!hasSidebarContact && (
+          <div className={`${isNarrow ? 'text-center w-full mt-2 flex-col items-center' : 'text-right flex-row justify-end flex-wrap gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} flex ${isDark ? 'text-slate-300' : 'text-slate-600'} shrink-0 max-w-[60%]`}>
+            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
+          </div>
+        )}
       </div>
     );
   }},
-  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
+  'header-avatar': { id: 'header-avatar', name: 'Avatar Left Bold', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className={`flex ${isNarrow ? 'flex-col items-center text-center' : 'items-center'} gap-5 pb-5 mb-5 snippet-anim w-full cv-keep-with-next`}>
         {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`rounded-full shadow-lg object-cover shrink-0 ${isNarrow ? 'w-28 h-28' : 'w-24 h-24'} ${isDark ? 'border-2 border-slate-700' : 'border-4 border-white'}`} />}
         <div className="min-w-0 w-full">
           <h1 className={`${isNarrow ? TYPOGRAPHY.nameNarrow : TYPOGRAPHY.name} ${isDark ? 'text-white' : 'text-gray-900'} mb-1.5`}><Editable path="basics.name" /></h1>
           <h2 className={`${TYPOGRAPHY.role} mb-3`}><Editable path="basics.title" /></h2>
-          <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
-            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
-          </div>
+          {!hasSidebarContact && (
+            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5 justify-center items-center' : 'gap-x-4 gap-y-1.5 items-center'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-500'}`}>
+              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+            </div>
+          )}
         </div>
       </div>
     );
   }},
-  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
+  'header-boxed': { id: 'header-boxed', name: 'Elegant Box', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className="text-center pb-5 mb-5 snippet-anim w-full flex flex-col items-center cv-keep-with-next">
         <div className={`inline-block border-[2px] px-8 py-3 mb-4 tracking-[0.25em] uppercase ${isDark ? 'border-white text-white' : 'border-gray-900 text-gray-900'}`}>
@@ -177,30 +187,36 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
         </div>
         <h2 className={`${TYPOGRAPHY.role} mb-5 ${isDark ? 'text-gray-400' : ''}`}><Editable path="basics.title" /></h2>
         {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`mx-auto rounded-full object-cover shadow-xl mb-4 ${isNarrow ? 'w-28 h-28' : 'w-24 h-24'} ${isDark ? 'border-2 border-slate-700' : 'border-[4px] border-white'}`} />}
-        <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact}`}>
-          <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
-        </div>
+        {!hasSidebarContact && (
+          <div className={`flex flex-wrap justify-center ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact}`}>
+            <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+          </div>
+        )}
       </div>
     );
   }},
-  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
+  'header-executive': { id: 'header-executive', name: 'Executive Stacked', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className={`pb-4 mb-5 border-b-[1.5px] ${isDark ? 'border-slate-700' : 'border-gray-900'} snippet-anim w-full cv-keep-with-next`}>
         <div className={`flex ${isNarrow ? 'flex-col gap-4' : 'justify-between items-start'} w-full`}>
           <div className="min-w-0 w-full">
             <h1 className={`${isNarrow ? 'text-2xl text-center' : 'text-3xl uppercase'} font-extrabold tracking-widest mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}><Editable path="basics.name" /></h1>
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
-            </div>
+            {!hasSidebarContact && (
+              <div className={`flex flex-wrap ${isNarrow ? 'flex-col text-center gap-1.5' : 'gap-x-4 gap-y-1.5'} ${TYPOGRAPHY.contact} ${isDark ? 'text-gray-300' : 'text-gray-800'}`}>
+                <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : ''} />
+              </div>
+            )}
           </div>
           {data?.basics?.showAvatar && !isNarrow && <img src={data.basics.avatar} alt="Avatar" className={`rounded object-cover shadow-md shrink-0 w-20 h-24 ${isDark ? 'border border-slate-600' : ''}`} />}
         </div>
       </div>
     );
   }},
-  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons, design }: any) => {
+  'header-accent': { id: 'header-accent', name: 'Accent Side Bar', category: 'Header', render: ({ data, Editable, zoneId, isDark, Title, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className="snippet-anim w-full mb-8 cv-keep-with-next">
         <div className={`flex ${isNarrow ? 'flex-col gap-6' : 'justify-between items-center'}`}>
@@ -208,28 +224,33 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
             <h1 className={`${isNarrow ? 'text-3xl' : 'text-4xl'} font-light tracking-widest uppercase mb-2 ${isDark ? 'text-white' : 'text-gray-800'}`}><Editable path="basics.name" /></h1>
             <h2 className={`${TYPOGRAPHY.role} tracking-[0.25em]`}><Editable path="basics.title" /></h2>
           </div>
-          <div className={`flex items-stretch gap-4 ${isNarrow ? 'w-full justify-center text-center' : 'text-right'}`}>
-            {!isNarrow && <div className="flex flex-col justify-center"><Title titleKey="contact" overrideClass={`${TYPOGRAPHY.contact} tracking-widest uppercase mb-0 ${isDark ? 'text-gray-400' : 'text-gray-800'}`} /></div>}
-            <div className="w-1.5 cv-accent-bg shrink-0 rounded-full"></div>
-            <div className={`${TYPOGRAPHY.contact} flex flex-col justify-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : 'justify-end'} />
+          {!hasSidebarContact && (
+            <div className={`flex items-stretch gap-4 ${isNarrow ? 'w-full justify-center text-center' : 'text-right'}`}>
+              {!isNarrow && <div className="flex flex-col justify-center"><Title titleKey="contact" overrideClass={`${TYPOGRAPHY.contact} tracking-widest uppercase mb-0 ${isDark ? 'text-gray-400' : 'text-gray-800'}`} /></div>}
+              <div className="w-1.5 cv-accent-bg shrink-0 rounded-full"></div>
+              <div className={`${TYPOGRAPHY.contact} flex flex-col justify-center gap-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <ContactLinks data={data} Editable={Editable} isNarrow={true} showIcons={showIcons} design={design} align={isNarrow ? 'justify-center' : 'justify-end'} />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     );
   }},
-  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design }: any) => {
+  'header-creative': { id: 'header-creative', name: 'Creative Block', category: 'Header', render: ({ data, Editable, zoneId, isDark, showIcons, design, layoutZones }: any) => {
     const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
+    const hasSidebarContact = layoutZones && Object.values(layoutZones).flat().some((block: any) => block?.type === 'sidebar-contact');
     return (
       <div className={`p-6 rounded-xl mb-6 snippet-anim cv-keep-with-next cv-accent-bg text-white shadow-lg`}>
         <div className={`flex ${isNarrow ? 'flex-col gap-4 text-center' : 'justify-between items-center'} w-full`}>
           <div className="min-w-0 w-full">
             <h1 className={`${isNarrow ? 'text-2xl' : 'text-4xl'} font-black tracking-tight mb-1`}><Editable path="basics.name" /></h1>
             <h2 className={`text-sm font-semibold tracking-widest uppercase opacity-90 mb-4`}><Editable path="basics.title" /></h2>
-            <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} text-xs font-medium opacity-90`}>
-              <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
-            </div>
+            {!hasSidebarContact && (
+              <div className={`flex flex-wrap ${isNarrow ? 'flex-col gap-1.5' : 'gap-x-4 gap-y-1.5'} text-xs font-medium opacity-90`}>
+                <ContactLinks data={data} Editable={Editable} isNarrow={isNarrow} showIcons={showIcons} design={design} />
+              </div>
+            )}
           </div>
           {data?.basics?.showAvatar && <img src={data.basics.avatar} alt="Avatar" className={`rounded-full object-cover shrink-0 shadow-2xl border-4 border-white/20 ${isNarrow ? 'w-24 h-24 mx-auto mt-4' : 'w-24 h-24'}`} />}
         </div>
@@ -426,6 +447,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     const allSkills = [...(data.skills?.languages || '').split(','), ...(data.skills?.frameworks || '').split(',')].map((s: string) => s.trim()).filter(Boolean);
     return (<div className="mb-6 snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill}</span>))}</div></div>);
   }},
+  'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
+    const allSkills = [...(data.skills?.languages || '').split(','), ...(data.skills?.frameworks || '').split(',')].map((s: string) => s.trim()).filter(Boolean);
+    return (<div className="mb-6 snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-xs font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill}</span>))}</div></div>);
+  }},
   'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
     const allSkills = [...(data.skills?.languages || '').split(',')].map((s: string) => s.trim()).filter(Boolean).slice(0, 6);
     return (<div className="mb-6 snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: string, i: number) => { const rating = i % 2 === 0 ? 5 : 4; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>); })}</div></div>);
@@ -449,6 +474,10 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   'languages-pills': { id: 'languages-pills', name: 'Solid Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
     const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
     return (<div className="mb-6 snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
+  }},
+  'languages-round-pills': { id: 'languages-round-pills', name: 'Round Pills', category: 'Languages', render: ({ data, isDark, Title }: any) => {
+    const items = (data.languages || '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    return (<div className="mb-6 snippet-anim cv-section cv-item-avoid"><Title titleKey="languages" /><div className="flex flex-wrap gap-2 cv-gap-sm">{items.map((item: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-xs font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{item.split('(')[0]}</span>))}</div></div>);
   }},
 
   // === INTERESTS ===

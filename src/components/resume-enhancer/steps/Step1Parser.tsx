@@ -321,7 +321,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: 20 }}
           ref={scrollContainerRef}
-          className="flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-[var(--bg-primary)] snap-y snap-mandatory scroll-smooth"
+          className="flex flex-col h-full min-h-[calc(100vh-100px)] overflow-y-auto custom-scrollbar bg-[var(--bg-primary)] snap-y snap-mandatory scroll-smooth"
           onScroll={handleScroll}
         >
         {/* Sticky Small Header on Scroll */}
@@ -515,7 +515,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
         </div>
 
         {/* Continue Editing Section */}
-        <div className="snap-start w-full min-h-screen pt-12 bg-gray-50 dark:bg-[var(--bg-primary)]">
+        <div className="snap-start w-full min-h-screen pt-12 bg-[var(--bg-primary)]">
           <div className="w-full max-w-6xl mx-auto px-8 pb-32">
             <motion.div
               initial={{ opacity: 0, y: 40 }}
@@ -890,4 +890,3 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     </AnimatePresence>
   );
 }
-

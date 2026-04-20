@@ -16,6 +16,11 @@ const HowItWorks = () => {
       image: '/images/Howitworks/step_1.png',
     },
     {
+      title: 'Search & Save Jobs',
+      description: 'Discover roles across different portals and save them to your tracker. Pull job details instantly using our Chrome extension or add them manually.',
+      image: '/images/never_miss_a_role.png',
+    },
+    {
       title: 'Add Job Description',
       description: 'Import job details instantly using our Chrome extension or paste them manually. We analyze the requirements to understand exactly what the employer needs.',
       image: '/images/Howitworks/STEP_2.png',

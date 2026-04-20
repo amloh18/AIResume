@@ -202,8 +202,7 @@ function LinkedInEnhancerContent() {
     if (!initialLoadComplete) {
         return (
             <div
-                className="min-h-screen flex flex-col"
-                style={{ backgroundColor: LINKEDIN_COLORS.BACKGROUND }}
+                className="min-h-screen flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f]"
             >
                 <LinkedInHeader
                     availableCvs={[]}
@@ -250,8 +249,7 @@ function LinkedInEnhancerContent() {
     if (initialLoadComplete && availableCvs.length === 0) {
         return (
             <div
-                className="min-h-screen flex flex-col"
-                style={{ backgroundColor: LINKEDIN_COLORS.BACKGROUND }}
+                className="min-h-screen flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f]"
             >
                 <LinkedInHeader
                     availableCvs={[]}
@@ -290,8 +288,7 @@ function LinkedInEnhancerContent() {
 
     return (
         <div
-            className="min-h-screen flex flex-col"
-            style={{ backgroundColor: LINKEDIN_COLORS.BACKGROUND }}
+            className="min-h-screen flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f]"
         >
             {/* Header */}
             <LinkedInHeader

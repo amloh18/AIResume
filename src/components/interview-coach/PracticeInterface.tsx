@@ -343,7 +343,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] flex items-center justify-center">
+            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex items-center justify-center">
                 <div className="animate-spin w-8 h-8 border-4 border-lime-500 border-t-transparent rounded-full" />
             </div>
         );
@@ -351,7 +351,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
 
     if (!currentQuestion) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] flex items-center justify-center">
+            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex items-center justify-center">
                 <div className="text-center">
                     <p className="text-gray-500 dark:text-gray-400 mb-4">
                         No questions found {moduleId ? `for module: ${moduleId}` : ''}
@@ -367,7 +367,7 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
     const isAnswered = currentQuestion.userAnswer?.status === 'analyzed';
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f] flex flex-col">
+        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
             <InterviewCoachHeader />
             <div className="flex-1 w-full max-w-[1800px] mx-auto px-6 py-8">
                 {/* Back & Progress Header */}
