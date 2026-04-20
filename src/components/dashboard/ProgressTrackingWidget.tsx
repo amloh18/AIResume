@@ -222,10 +222,10 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             content={({ active, payload, label }) => {
               if (active && payload && payload.length) {
                 return (
-                  <div className="bg-[#1F2937] border border-white/10 rounded-xl p-3 shadow-xl backdrop-blur-md">
-                    <p className="text-gray-400 text-xs mb-2">{formatDate(label)}</p>
+                  <div className="bg-white dark:bg-[#1F2937] border border-gray-200 dark:border-white/10 rounded-xl p-3 shadow-xl backdrop-blur-md">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs mb-2">{formatDate(label)}</p>
                     {payload.map((entry, index) => (
-                      <p key={index} className="text-sm font-semibold text-white flex items-center gap-2">
+                      <p key={index} className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full" style={{ backgroundColor: entry.color }} />
                         {entry.name}: {entry.value}
                       </p>

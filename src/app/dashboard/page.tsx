@@ -193,10 +193,10 @@ function DashboardContent() {
         }`}
       >
         <div className="flex-1">
-          <h1 className="text-3xl lg:text-4xl font-black text-gray-900 dark:text-white mb-2 leading-tight tracking-tight">
+          <h1 className={`font-black text-gray-900 dark:text-white mb-2 leading-tight tracking-tight transition-all duration-500 origin-left ${hasScrolled ? 'text-3xl lg:text-4xl scale-100' : 'text-5xl lg:text-6xl scale-110'}`}>
             {getGreeting()},<br />{getUserDisplayName(userData)}!
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm lg:text-base font-medium">Here is your career overview.</p>
+          <p className={`text-gray-500 dark:text-gray-400 font-medium transition-all duration-500 ${hasScrolled ? 'text-sm lg:text-base' : 'text-base lg:text-lg mt-4'}`}>Here is your career overview.</p>
         </div>
         
         <div className="flex flex-col items-center shrink-0 ml-4">

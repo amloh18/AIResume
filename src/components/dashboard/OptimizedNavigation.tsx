@@ -395,10 +395,10 @@ const OptimizedNavigation: React.FC = () => {
         >
           {/* Logo Icon & Text */}
           <div className="flex items-center">
-            <div className={`lg:hidden ${isDesktopExpanded ? 'lg:flex' : ''}`}>
+            <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
               <Logo size="md" showText={true} />
             </div>
-            <div className={`hidden lg:flex ${isDesktopExpanded ? 'lg:hidden' : ''}`}>
+            <div className={`hidden ${!isDesktopExpanded ? 'lg:flex' : ''}`}>
               <Logo size="md" showText={false} />
             </div>
           </div>
