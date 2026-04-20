@@ -186,16 +186,16 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
         <AreaChart data={filteredData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
             <linearGradient id="jobsGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#059669" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0} />
             </linearGradient>
             <linearGradient id="cvsGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#10B981" stopOpacity={0.4} />
               <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
             </linearGradient>
             <linearGradient id="coverLettersGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#34D399" stopOpacity={0.4} />
-              <stop offset="95%" stopColor="#34D399" stopOpacity={0.0} />
+              <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
+              <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="1 10" strokeLinecap="round" stroke="#6B7280" opacity={0.4} vertical={true} horizontal={true} />
@@ -239,7 +239,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
           <Area
             type="linear"
             dataKey="jobs"
-            stroke="#059669"
+            stroke="#3b82f6"
             fill="url(#jobsGradient)"
             strokeWidth={2}
             dot={false}
@@ -281,7 +281,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
           <Area
             type="linear"
             dataKey="coverLetters"
-            stroke="#34D399"
+            stroke="#8b5cf6"
             fill="url(#coverLettersGradient)"
             strokeWidth={2}
             dot={false}
@@ -375,12 +375,12 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">CVs</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#34D399] flex-shrink-0"></div>
+            <div className="w-2 h-2 rounded-full bg-[#8b5cf6] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap hidden sm:inline">Cover Letters</span>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap sm:hidden">CL</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#059669] flex-shrink-0"></div>
+            <div className="w-2 h-2 rounded-full bg-[#3b82f6] flex-shrink-0"></div>
             <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Jobs</span>
           </div>
         </div>

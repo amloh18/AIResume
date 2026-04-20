@@ -22,7 +22,7 @@ import {
   IntelligenceDashboard 
 } from '@/components/dashboard/Analytics';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
-import { Target, MessageSquare } from 'lucide-react';
+import { Target, MessageSquare, Clock, Calendar } from 'lucide-react';
 
 const ProgressTrackingWidget = dynamic(() => import('@/components/dashboard/ProgressTrackingWidget'), { ssr: false });
 const ApplicationStatsWidget = dynamic(() => import('@/components/dashboard/ApplicationStatsWidget'), { ssr: false });
@@ -201,6 +201,10 @@ function DashboardContent() {
           </p>
         </div>
         
+        <div className="absolute top-6 right-6 md:top-8 md:right-8 shrink-0 z-10">
+          <GlobalSearchBar />
+        </div>
+        
         <div className="flex items-center gap-4 md:gap-8 flex-col md:flex-row items-end md:items-center w-full md:w-auto mt-4 md:mt-0">
           <div className="flex flex-col items-center shrink-0">
             <div className="relative w-20 h-20 lg:w-24 lg:h-24 mb-3">
@@ -218,10 +222,6 @@ function DashboardContent() {
               <p className="text-gray-500 dark:text-gray-400 font-bold text-[10px] lg:text-xs text-center uppercase tracking-widest">Master CV</p>
               <p className={`text-[10px] lg:text-xs font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
             </div>
-          </div>
-
-          <div className="absolute top-6 right-6 md:relative md:top-auto md:right-auto shrink-0">
-            <GlobalSearchBar />
           </div>
         </div>
       </div>
@@ -255,9 +255,17 @@ function DashboardContent() {
                 {cvs?.slice(0, 2).map((cv: any) => (
                   <div key={cv.id || cv._id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-transparent group-hover:border-blue-500/10 transition-colors">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{cv.title || 'Untitled CV'}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">{cv.metadata?.isMaster ? 'Master CV' : 'Targeted CV'}</p>
+                    <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{cv.title || 'Untitled CV'}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">{cv.metadata?.isMaster ? 'Master CV' : 'Targeted CV'}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-[9px] text-gray-400 flex items-center gap-1 justify-end">
+                          <Clock size={10} />
+                          {new Date(cv.updatedAt || cv.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -296,9 +304,16 @@ function DashboardContent() {
                 {jobs?.slice(0, 2).map((job: any) => (
                   <div key={job.id || job._id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 transition-colors">
                     <div className="w-1.5 h-1.5 rounded-full bg-lime-400 shadow-[0_0_8px_rgba(163,230,53,0.8)] flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-white truncate">{job.jobTitle || job.title || 'Untitled Role'}</p>
-                      <p className="text-[10px] text-blue-200 truncate mt-0.5">{job.company || 'Unknown Company'}</p>
+                    <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{job.jobTitle || job.title || 'Untitled Role'}</p>
+                        <p className="text-[10px] text-blue-200 truncate mt-0.5">{job.company || 'Unknown Company'}</p>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/40 text-[9px] text-white font-medium capitalize border border-blue-400/30">
+                          {job.status || 'Saved'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -335,9 +350,17 @@ function DashboardContent() {
                 {coverLetters?.slice(0, 2).map((doc: any) => (
                   <div key={doc.id || doc._id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 dark:bg-white/[0.02] border border-transparent group-hover:border-purple-500/10 transition-colors">
                     <div className="w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{doc.title || doc.jobTitle || 'Cover Letter'}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">Cover Letter</p>
+                    <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">{doc.title || doc.jobTitle || 'Cover Letter'}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">{doc.targetCompany || 'Cover Letter'}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <p className="text-[9px] text-gray-400 flex items-center gap-1 justify-end">
+                          <Clock size={10} />
+                          {new Date(doc.updatedAt || doc.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -377,9 +400,16 @@ function DashboardContent() {
                   {activePrepJobs.slice(0, 2).map((job: any) => (
                     <div key={job.id || job._id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 transition-colors">
                       <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)] flex-shrink-0"></div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-white truncate">{job.jobTitle || job.title || 'Untitled Role'}</p>
-                        <p className="text-[10px] text-indigo-200 truncate mt-0.5">Score: {job.interviewCoach?.readinessScore || 0}%</p>
+                      <div className="flex-1 min-w-0 flex justify-between items-center gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">{job.jobTitle || job.title || 'Untitled Role'}</p>
+                          <p className="text-[10px] text-indigo-200 truncate mt-0.5">{job.company || 'Unknown Company'}</p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span className="px-1.5 py-0.5 rounded bg-yellow-400/20 text-[10px] text-yellow-300 font-bold border border-yellow-400/30">
+                            {job.interviewCoach?.readinessScore || 0}%
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}

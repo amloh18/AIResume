@@ -498,8 +498,8 @@ const GlobalSearchBar: React.FC = () => {
     <>
       {/* Desktop/Tablet Search Bar */}
       <div ref={searchRef} className="relative hidden tablet:block shrink min-w-[220px] max-w-full">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500 z-10" />
+        <div className="relative flex items-center">
+          <Search className="absolute left-3 h-4 w-4 text-gray-400 dark:text-gray-500 z-10 pointer-events-none" />
           <input
             ref={inputRef}
             type="text"
@@ -525,7 +525,7 @@ const GlobalSearchBar: React.FC = () => {
             className="w-[clamp(220px,28vw,450px)] max-w-full pl-10 pr-12 py-2 rounded-2xl bg-gray-100 dark:bg-[#232f1c] border border-gray-300 dark:border-lime-500/20 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all text-sm"
           />
           {!query && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 hidden desktop:flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 font-medium px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 pointer-events-none">
+            <div className="absolute right-3 hidden desktop:flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 font-medium px-1.5 py-0.5 rounded-md border border-gray-200 dark:border-white/10 bg-white/50 dark:bg-black/20 pointer-events-none">
               <span className="text-[10px] mr-0.5">{isMac ? '⌘' : 'Ctrl'}</span>K
             </div>
           )}
@@ -535,7 +535,7 @@ const GlobalSearchBar: React.FC = () => {
                 setQuery('');
                 setIsOpen(false);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              className="absolute right-3 text-gray-400 hover:text-white transition-colors"
             >
               <X size={16} />
             </button>
