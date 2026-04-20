@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
 import { useATS } from '@/contexts/ATSContext';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle, ChevronRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScore';
 
 interface ATSMeterPanelProps {
@@ -11,6 +12,28 @@ interface ATSMeterPanelProps {
 export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser }) => {
   const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
   const { state } = useResumeEnhancer();
+  const router = useRouter();
+
+  const handleStartCoaching = async () => {
+    const jobId = state.journeyId || state.jobData?._id || state.jobData?.id;
+    if (!jobId) return;
+
+    // Check if the job is in 'draft' status. If so, we should update it to 'created'
+    if (state.jobData?.status === 'draft' || !state.jobData?.status) {
+      try {
+        await fetch(`/api/jobs/${jobId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'created' })
+        });
+      } catch (err) {
+        console.error('Failed to update job status:', err);
+      }
+    }
+    
+    // Redirect to interview coach
+    router.push(`/dashboard/interview/${jobId}`);
+  };
 
   const hasJobDesc = !!(state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd);
   
@@ -282,6 +305,28 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
           </div>
         )}
       </div>
+
+      {/* Interview Coach CTA Banner */}
+      {hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
+        <div className="mt-4 bg-indigo-600 dark:bg-indigo-900/30 rounded-xl p-4 border border-indigo-500/50 relative overflow-hidden group">
+          <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-xl opacity-50"></div>
+          <div className="relative z-10 flex flex-col">
+            <h4 className="text-white font-bold text-sm flex items-center gap-1.5 mb-1.5">
+              <Zap className="w-4 h-4 fill-current text-yellow-300" />
+              Prep for Interview?
+            </h4>
+            <p className="text-indigo-100 dark:text-indigo-200/80 text-xs mb-3">
+              Practice answering questions tailored specifically to this job description.
+            </p>
+            <button 
+              onClick={handleStartCoaching}
+              className="w-full py-2 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
+            >
+              Start Coaching <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

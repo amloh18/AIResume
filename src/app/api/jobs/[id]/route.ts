@@ -130,6 +130,7 @@ export async function GET(
       trustScore: job.trustScore,
       trustSnapshot: (job as any).trustSnapshot,
       transparencySnapshot: (job as any).transparencySnapshot,
+      interviewCoach: job.interviewCoach,
       atsAnalysis: job.atsAnalysis,
       statusHistory: (job.statusHistory || []).map((sh: any) => ({
         ...sh,

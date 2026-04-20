@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Check, Bookmark, BarChart3, Lightbulb,
-    Sparkles, FileText, Clock, Copy, Mic
+    Sparkles, FileText, Clock, Copy, Mic, Zap
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import InterviewCoachHeader from './InterviewCoachHeader';
@@ -49,19 +49,26 @@ interface Session {
 const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, moduleId }) => {
     const router = useRouter();
     const [session, setSession] = useState<Session | null>(null);
+    const [modules, setModules] = useState<any[]>([]);
     const [questions, setQuestions] = useState<Question[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [answer, setAnswer] = useState('');
     const [loading, setLoading] = useState(true);
+    const [generating, setGenerating] = useState(false);
+    const [needsGeneration, setNeedsGeneration] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
 
-    const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async (action: 'fetch' | 'generate' = 'fetch') => {
         try {
+            if (action === 'generate') {
+                setGenerating(true);
+            }
+            
             // Get or create session
             const sessionRes = await fetch('/api/interview/initiate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ jobId })
+                body: JSON.stringify({ jobId, action })
             });
             const sessionData = await sessionRes.json();
 
@@ -69,6 +76,15 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                 // Check for new embedded data format
                 if (sessionData.interviewCoach) {
                     const ic = sessionData.interviewCoach;
+                    
+                    if (ic.status === 'not_started' || !ic.questions || ic.questions.length === 0) {
+                        setNeedsGeneration(true);
+                        setLoading(false);
+                        setGenerating(false);
+                        return;
+                    }
+                    
+                    setNeedsGeneration(false);
                     setModules(ic.modules || []); // Save modules for navigation logic
                     setSession({
                         _id: ic.linkedCvId || jobId,
@@ -304,9 +320,6 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
         }
     };
 
-    // Need to add `modules` state to store module order
-    const [modules, setModules] = useState<any[]>([]);
-
     // Computed next module
     const currentModuleIndex = modules.findIndex(m => m.id === moduleId);
     const nextModuleId = (currentModuleIndex >= 0 && currentModuleIndex < modules.length - 1)
@@ -343,8 +356,49 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex items-center justify-center">
-                <div className="animate-spin w-8 h-8 border-4 border-lime-500 border-t-transparent rounded-full" />
+            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
+                <InterviewCoachHeader />
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="animate-spin w-8 h-8 border-4 border-lime-500 border-t-transparent rounded-full" />
+                </div>
+            </div>
+        );
+    }
+
+    if (needsGeneration) {
+        return (
+            <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
+                <InterviewCoachHeader />
+                <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+                    <div className="bg-white dark:bg-[#141810] rounded-2xl p-8 shadow-md max-w-lg w-full">
+                        <div className="w-16 h-16 bg-lime-100 dark:bg-lime-900/30 text-lime-600 dark:text-lime-400 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Sparkles className="w-8 h-8" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                            Ready to prep?
+                        </h2>
+                        <p className="text-gray-600 dark:text-gray-400 mb-8">
+                            Generate a customized interview prep plan tailored specifically to your CV and this job description.
+                        </p>
+                        <button
+                            onClick={() => fetchData('generate')}
+                            disabled={generating}
+                            className="w-full py-4 bg-lime-500 hover:bg-lime-600 text-black font-bold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                            {generating ? (
+                                <>
+                                    <div className="animate-spin w-5 h-5 border-2 border-black border-t-transparent rounded-full" />
+                                    Generating Plan (may take ~30s)...
+                                </>
+                            ) : (
+                                <>
+                                    <Zap className="w-5 h-5" />
+                                    Generate Interview Plan
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
             </div>
         );
     }
