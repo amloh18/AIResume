@@ -15,6 +15,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import { useInView } from 'framer-motion';
+import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 
 interface ExistingCV {
   _id?: string;
@@ -37,8 +38,17 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
   const ref = React.useRef(null);
   const isInView = useInView(ref, { once: true, margin: "200px" });
 
-  const thumbnailUrl = item.metadata?.thumbnailUrl || item.thumbnailUrl;
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(item.metadata?.thumbnailUrl || item.thumbnailUrl || null);
   
+  const templateObj = React.useMemo(() => {
+    if (typeof item.templateId === 'object' && item.templateId) return item.templateId;
+    if (typeof item.templateId === 'string') {
+      const foundTemplate = HARDCODED_TEMPLATES.find(t => t.id === item.templateId || (t as any)._id === item.templateId);
+      if (foundTemplate) return foundTemplate;
+    }
+    return null;
+  }, [item.templateId]);
+
   return (
     <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 pt-4 pb-16">
       <div 
@@ -46,15 +56,41 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
         className="w-[65%] aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-lg border border-gray-200 dark:border-white/10 transition-all duration-700 shadow-md flex flex-col relative overflow-hidden group-hover:scale-[1.03]"
       >
         {isInView ? (
-          thumbnailUrl ? (
-             <img src={thumbnailUrl} alt={item.title} className="w-full h-full object-cover" />
-          ) : !isCoverLetter && item.cvData && item.templateId ? (
-             <div className="w-full h-full opacity-90">
-               <CVPreviewThumbnail cvData={item.cvData} template={item.templateId} />
+          !isCoverLetter && item.cvData && templateObj ? (
+             <div className="w-full h-full opacity-90 bg-white relative">
+               <div className="absolute inset-0 pointer-events-none z-10" />
+               <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
              </div>
+          ) : thumbnailUrl ? (
+             <img 
+               src={thumbnailUrl} 
+               alt={item.title} 
+               className="w-full h-full object-cover bg-white" 
+               onError={(e) => {
+                 const target = e.target as HTMLImageElement;
+                 const currentSrc = target.src;
+                 if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
+                   // Extract key and fetch presigned URL
+                   fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
+                     .then(res => res.json())
+                     .then(data => {
+                       if (data.url && data.url !== currentSrc) {
+                         setThumbnailUrl(data.url);
+                       } else {
+                         setThumbnailUrl(null);
+                       }
+                     })
+                     .catch(() => {
+                       setThumbnailUrl(null);
+                     });
+                 } else {
+                   setThumbnailUrl(null);
+                 }
+               }}
+             />
           ) : (
             // Generic fallback
-            <div className="w-full h-full p-3 flex flex-col gap-2">
+            <div className="w-full h-full p-3 flex flex-col gap-2 bg-white/5">
               <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
               <div className="h-2 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
               <div className="h-1.5 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
