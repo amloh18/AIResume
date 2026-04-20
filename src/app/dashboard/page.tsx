@@ -21,6 +21,7 @@ import {
   ApplicationCalendarWidget, 
   IntelligenceDashboard 
 } from '@/components/dashboard/Analytics';
+import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
 
 const ProgressTrackingWidget = dynamic(() => import('@/components/dashboard/ProgressTrackingWidget'), { ssr: false });
 const ApplicationStatsWidget = dynamic(() => import('@/components/dashboard/ApplicationStatsWidget'), { ssr: false });
@@ -186,33 +187,47 @@ function DashboardContent() {
     <div ref={scrollRef} className="h-full flex flex-col space-y-6 p-4 md:p-6 overflow-y-auto pb-24 overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {/* 1st Section: Full Width Greeting Block */}
       <div 
-        className={`w-full transition-all duration-500 rounded-3xl p-6 md:p-8 flex items-center justify-between ${
+        className={`w-full transition-all duration-500 z-40 sticky top-0 flex flex-col md:flex-row md:items-center justify-between gap-4 ${
           hasScrolled 
-            ? 'bg-white dark:bg-[#111317] shadow-sm border border-gray-100 dark:border-white/5' 
-            : 'bg-transparent border border-transparent'
+            ? 'bg-white/80 dark:bg-[#111317]/80 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-white/10 px-4 py-3 md:px-6 md:py-4 -mx-4 md:-mx-6 rounded-none' 
+            : 'bg-transparent border-transparent px-0 py-2 rounded-3xl'
         }`}
       >
-        <div className="flex-1">
-          <h1 className={`font-black text-gray-900 dark:text-white mb-2 leading-tight tracking-tight transition-all duration-500 origin-left ${hasScrolled ? 'text-3xl lg:text-4xl scale-100' : 'text-5xl lg:text-6xl scale-110'}`}>
-            {getGreeting()},<br />{getUserDisplayName(userData)}!
+        <div className="flex-1 flex flex-col justify-center min-w-0">
+          <h1 className={`font-black text-gray-900 dark:text-white leading-tight tracking-tight transition-all duration-500 origin-left whitespace-nowrap overflow-hidden text-ellipsis ${
+            hasScrolled ? 'text-2xl lg:text-3xl scale-100' : 'text-5xl lg:text-6xl scale-110 mb-2'
+          }`}>
+            {getGreeting()}{!hasScrolled && ','}{hasScrolled ? ' ' : <br />}{getUserDisplayName(userData)}!
           </h1>
-          <p className={`text-gray-500 dark:text-gray-400 font-medium transition-all duration-500 ${hasScrolled ? 'text-sm lg:text-base' : 'text-base lg:text-lg mt-4'}`}>Here is your career overview.</p>
+          <p className={`text-gray-500 dark:text-gray-400 font-medium transition-all duration-500 overflow-hidden ${
+            hasScrolled ? 'h-0 opacity-0' : 'text-base lg:text-lg mt-4 opacity-100'
+          }`}>
+            Here is your career overview.
+          </p>
         </div>
         
-        <div className="flex flex-col items-center shrink-0 ml-4">
-          <div className="relative w-20 h-20 lg:w-24 lg:h-24 mb-3">
-            <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
-              <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
-                strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-                className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xl lg:text-2xl font-black text-gray-900 dark:text-white">{cvHealthScore}%</span>
+        <div className={`flex items-center transition-all duration-500 ${hasScrolled ? 'gap-3 md:gap-4' : 'gap-4 md:gap-8 flex-col md:flex-row items-end md:items-center w-full md:w-auto'}`}>
+          <div className="flex flex-col items-center shrink-0">
+            <div className={`relative transition-all duration-500 ${hasScrolled ? 'w-10 h-10 lg:w-12 lg:h-12' : 'w-20 h-20 lg:w-24 lg:h-24 mb-3'}`}>
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
+                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
+                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                  className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={`font-black text-gray-900 dark:text-white transition-all duration-500 ${hasScrolled ? 'text-xs lg:text-sm' : 'text-xl lg:text-2xl'}`}>{cvHealthScore}%</span>
+              </div>
+            </div>
+            <div className={`transition-all duration-500 overflow-hidden ${hasScrolled ? 'h-0 opacity-0' : 'flex flex-col items-center opacity-100'}`}>
+              <p className="text-gray-500 dark:text-gray-400 font-bold text-[10px] lg:text-xs text-center uppercase tracking-widest">Master CV</p>
+              <p className={`text-[10px] lg:text-xs font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
             </div>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-bold text-[10px] lg:text-xs text-center uppercase tracking-widest">Master CV</p>
-          <p className={`text-[10px] lg:text-xs font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
+
+          <div className={`transition-all duration-500 shrink-0 ${hasScrolled ? 'w-auto' : 'absolute top-0 right-0 md:relative md:top-auto md:right-auto'}`}>
+            <GlobalSearchBar />
+          </div>
         </div>
       </div>
 
