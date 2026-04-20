@@ -2,7 +2,7 @@
 
 
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
-import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X } from 'lucide-react';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
@@ -52,7 +52,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [aiIssues, setAiIssues] = useState<any[]>([]);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const [cvScore, setCvScore] = useState(100);
-  const [pointSuggestion, setPointSuggestion] = useState<any>(null);
+  const [pointSuggestion, setPointSuggestion] = useState<{ path: string, text: string, rect: DOMRect, loading?: boolean, originalText?: string, error?: string } | null>(null);
 
   const isDarkUI = theme === 'dark';
   const bgApp = isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100';
@@ -108,7 +108,44 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!path) { const parentWithPath = focusedNode.closest('[data-path]'); if (parentWithPath) path = parentWithPath.getAttribute('data-path'); }
     if (!path || !path.includes('description')) return;
     const rect = focusedNode.getBoundingClientRect();
-    setPointSuggestion({ path, text: "Spearheaded key initiatives yielding a 25% increase in operational efficiency across multiple cross-functional teams.", rect: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX } });
+    const originalText = focusedNode.innerText;
+    setPointSuggestion({ path, text: originalText, originalText, rect: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX }, loading: false });
+  };
+
+  const handleApplySuggestion = (text: string) => {
+    if (!pointSuggestion) return;
+    handleDataChange(pointSuggestion.path, text);
+    setPointSuggestion(null);
+  };
+
+  const handleFetchSuggestion = async (type: 'star' | 'tone', tone?: string) => {
+    if (!pointSuggestion) return;
+    setPointSuggestion(prev => prev ? { ...prev, loading: true, error: undefined } : null);
+    try {
+      const response = await fetch('/api/ai/fix-and-improve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          content: pointSuggestion.originalText, 
+          type: 'experience', 
+          promptType: type === 'star' ? 'star' : 'tone',
+          tone: tone 
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        if (response.status === 402) {
+          setPointSuggestion(prev => prev ? { ...prev, loading: false, error: 'usage_limit_reached' } : null);
+        } else {
+          throw new Error(result.error || 'Failed to fetch suggestion');
+        }
+      } else {
+        setPointSuggestion(prev => prev ? { ...prev, loading: false, text: result.content || result.improvedContent || result.text || 'No suggestion returned.' } : null);
+      }
+    } catch (error: any) {
+      console.error(error);
+      setPointSuggestion(prev => prev ? { ...prev, loading: false, error: error.message } : null);
+    }
   };
 
   const runAIScan = () => {
@@ -215,7 +252,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const layoutType = activeTemplate.type;
     const safeZones = zones || {};
     const renderZone = (zoneId: string, className: string, isDark = false) => (
-      <CanvasZone readOnly={readOnly} zoneId={zoneId} blocks={safeZones[zoneId] || []} cvData={cvData} EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper} handleDrop={handleZoneDrop} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={handleReplaceClick} onAddSnippet={handleAddClick} onTogglePhoto={handleTogglePhoto} onAddListEntry={handleAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} className={className} isDark={isDark} />
+      <CanvasZone readOnly={readOnly} zoneId={zoneId} blocks={safeZones[zoneId] || []} cvData={cvData} EditableWrapper={readOnly ? ReadOnlyWrapper : EditableWrapper} handleDrop={handleZoneDrop} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={handleReplaceClick} onAddSnippet={handleAddClick} onTogglePhoto={handleTogglePhoto} onAddListEntry={handleAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={safeZones} className={className} isDark={isDark} />
     );
 
     switch (layoutType) {
@@ -326,25 +363,57 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
       {/* AI SUGGESTION POPUP */}
       {pointSuggestion && (
-        <div className={`fixed z-50 border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111]`} style={{ top: pointSuggestion.rect.top + 15, left: pointSuggestion.rect.left }}>
+        <div className={`fixed z-[110] border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111]`} style={{ top: pointSuggestion.rect.top + 15, left: pointSuggestion.rect.left }}>
           <div className="flex items-center justify-between mb-4 text-[#7EE787]">
             <div className="flex items-center gap-2">
-              <Wand2 size={16}/>
-              <span className="text-[11px] font-bold uppercase tracking-widest">AI Contextual Suggestion</span>
+              <Wand2 size={16} className={pointSuggestion.loading ? 'animate-pulse' : ''} />
+              <span className="text-[11px] font-bold uppercase tracking-widest">{pointSuggestion.loading ? 'AI is thinking...' : 'AI Contextual Suggestion'}</span>
             </div>
             <button onClick={() => setPointSuggestion(null)} className="text-gray-400 hover:text-white transition-colors"><X size={16}/></button>
           </div>
-          <p className="text-sm mb-6 leading-relaxed text-gray-100">{pointSuggestion.text}</p>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setPointSuggestion(null)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#222] text-gray-300 hover:bg-[#333] hover:text-white transition-colors">Reject</button>
-            <button onClick={() => { const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; let newHtml = currentHtml; if (newHtml.includes('</ul>')) { newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); } else { newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; } handleDataChange(pointSuggestion.path, newHtml); setPointSuggestion(null); }} className="px-4 py-2 text-sm font-semibold rounded-lg shadow-lg bg-[#7EE787] text-black hover:bg-[#68d171] transition-colors">Accept & Add Bullet</button>
+          
+          <div className="mb-6 relative min-h-[60px]">
+            {pointSuggestion.loading ? (
+              <div className="flex flex-col gap-2">
+                <div className="h-3 bg-gray-800 rounded animate-pulse w-full"></div>
+                <div className="h-3 bg-gray-800 rounded animate-pulse w-[80%]"></div>
+                <div className="h-3 bg-gray-800 rounded animate-pulse w-[60%]"></div>
+              </div>
+            ) : pointSuggestion.error === 'usage_limit_reached' ? (
+              <div className="text-sm text-red-400">
+                You have reached your AI usage limit for the current plan. <a href="/pricing" className="underline font-bold text-red-300">Upgrade Plan</a> to continue using Thinkhard AI features.
+              </div>
+            ) : pointSuggestion.error ? (
+              <div className="text-sm text-red-400">{pointSuggestion.error}</div>
+            ) : (
+              <p className="text-sm leading-relaxed text-gray-100">{pointSuggestion.text}</p>
+            )}
           </div>
+          
+          {!pointSuggestion.loading && !pointSuggestion.error && (
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center pb-3 border-b border-[#333]">
+                <button onClick={() => handleFetchSuggestion('star')} className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"><Sparkles size={12}/> STAR Method</button>
+                <select onChange={(e) => handleFetchSuggestion('tone', e.target.value)} className="bg-[#222] text-xs text-gray-300 border border-[#444] rounded px-2 py-1 outline-none focus:border-emerald-500">
+                  <option value="">Change Tone...</option>
+                  <option value="Professional">Professional</option>
+                  <option value="Confident">Confident</option>
+                  <option value="Creative">Creative</option>
+                  <option value="Action-oriented">Action-oriented</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-3 mt-1">
+                <button onClick={() => setPointSuggestion(null)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#222] text-gray-300 hover:bg-[#333] hover:text-white transition-colors">Cancel</button>
+                <button onClick={() => { const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; let newHtml = currentHtml; if (newHtml.includes('</ul>')) { newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); } else { newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; } handleDataChange(pointSuggestion.path, newHtml); setPointSuggestion(null); }} className="px-4 py-2 text-sm font-semibold rounded-lg shadow-lg bg-[#7EE787] text-black hover:bg-[#68d171] transition-colors">Accept & Add Bullet</button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* TEMPLATE MODAL */}
       {isTemplateModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className={`rounded-2xl shadow-2xl w-full max-w-7xl overflow-hidden flex flex-col h-[90vh] border ${bgPanel}`}>
             <div className={`p-5 border-b flex justify-between items-center shrink-0 ${bgNav}`}>
               <div className="flex items-center gap-3"><LayoutTemplate size={24} className="text-emerald-500"/><div><h3 className={`font-black text-xl ${textPrimary}`}>Template Library</h3><p className={`text-xs ${textMuted}`}>Select a layout. All sections can be customized.</p></div></div>
@@ -372,48 +441,97 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       )}
 
       {/* REPLACE / ADD SNIPPET MODAL */}
-      {replacingSnippet && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className={`rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
-            <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
-              <h3 className={`font-bold text-base flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
-              <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
-            </div>
-            {replacingSnippet.isAdd && (
-              <div className={`px-5 pt-4 pb-2 flex flex-wrap gap-2 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'}`}>
-                {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar'].map(cat => (
-                  <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
-                ))}
+      {replacingSnippet && (() => {
+        const MOCK_CV_DATA = {
+          basics: { name: 'John Doe', title: 'Senior Software Engineer', email: 'john.doe@example.com', phone: '+1 234 567 890', location: 'New York, USA', summary: 'A passionate software engineer with 10+ years of experience in building scalable web applications and leading cross-functional teams.' },
+          experience: [{ id: 'mock-1', role: 'Lead Developer', company: 'Tech Solutions Inc.', date: '2018 - Present', description: '<ul><li>Architected and developed a microservices-based platform serving 1M+ users.</li><li>Mentored junior engineers and improved sprint velocity by 25%.</li></ul>' }],
+          education: [{ id: 'mock-2', degree: 'BSc Computer Science', institution: 'University of Technology', date: '2014 - 2018', description: 'Graduated with First Class Honors. President of the Coding Club.' }],
+          projects: [{ id: 'mock-3', name: 'Open Source E-commerce', role: 'Creator & Maintainer', date: '2021', description: 'Built an open-source e-commerce platform with React and Node.js. 5k+ GitHub stars.' }],
+          skills: { languages: 'JavaScript, TypeScript, Python, Go, Rust', frameworks: 'React, Node.js, Next.js, Express, Django', tools: 'Git, Docker, Kubernetes, AWS, GCP' },
+          certifications: [{ id: 'mock-4', name: 'AWS Certified Solutions Architect', issuer: 'Amazon Web Services', date: '2022' }],
+          awards: [{ id: 'mock-5', name: 'Developer of the Year', issuer: 'Tech Solutions Inc.', date: '2021' }],
+          publications: [{ id: 'mock-6', title: 'Microservices Patterns', publisher: 'TechPress', date: '2020', description: 'A comprehensive guide to building scalable microservices.' }],
+          volunteer: [{ id: 'mock-7', role: 'Mentor', organization: 'Code for Good', date: '2019 - Present', description: 'Mentoring underrepresented youth in tech.' }],
+          references: [{ id: 'mock-8', name: 'Jane Smith', role: 'CTO at Tech Solutions', contact: 'jane.smith@example.com' }],
+          languages: 'English (Native), Spanish (Fluent), French (Intermediate)',
+          interests: 'Open Source, Photography, Hiking, Reading'
+        };
+
+        const getPreviewData = (realData: any) => {
+          const isArrayEmpty = (arr: any) => !Array.isArray(arr) || arr.length === 0;
+          return {
+            ...realData,
+            basics: {
+              ...MOCK_CV_DATA.basics,
+              ...realData?.basics,
+              name: realData?.basics?.name || MOCK_CV_DATA.basics.name,
+              title: realData?.basics?.title || MOCK_CV_DATA.basics.title,
+              summary: realData?.basics?.summary || MOCK_CV_DATA.basics.summary,
+            },
+            experience: isArrayEmpty(realData?.experience) ? MOCK_CV_DATA.experience : realData.experience,
+            education: isArrayEmpty(realData?.education) ? MOCK_CV_DATA.education : realData.education,
+            projects: isArrayEmpty(realData?.projects) ? MOCK_CV_DATA.projects : realData.projects,
+            skills: {
+              ...MOCK_CV_DATA.skills,
+              ...realData?.skills,
+              languages: realData?.skills?.languages || MOCK_CV_DATA.skills.languages,
+            },
+            certifications: isArrayEmpty(realData?.certifications) ? MOCK_CV_DATA.certifications : realData.certifications,
+            awards: isArrayEmpty(realData?.awards) ? MOCK_CV_DATA.awards : realData.awards,
+            publications: isArrayEmpty(realData?.publications) ? MOCK_CV_DATA.publications : realData.publications,
+            volunteer: isArrayEmpty(realData?.volunteer) ? MOCK_CV_DATA.volunteer : realData.volunteer,
+            references: isArrayEmpty(realData?.references) ? MOCK_CV_DATA.references : realData.references,
+            languages: realData?.languages || MOCK_CV_DATA.languages,
+            interests: realData?.interests || MOCK_CV_DATA.interests,
+          };
+        };
+
+        const previewData = getPreviewData(cvData);
+        const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
+
+        return (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
+            <div className={`rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+              <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+                <h3 className={`font-bold text-base flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
+                <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
               </div>
-            )}
-            <div className={`p-5 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {Object.values(SNIPPETS).filter(s => replacingSnippet.isAdd ? (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory) : s.category === replacingSnippet.category).map(snippet => {
-                  if (!snippet) return null;
-                  const targetZoneId = replacingSnippet.zoneId;
-                  const isTargetDark = activeTemplate.type.includes('dark') && targetZoneId === 'sidebar';
-                  const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
-                  const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
-                  const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
-                  const isCurrent = snippet.id === replacingSnippet.currentType;
-                  return (
-                    <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400')}`}>
-                      <div className={`p-4 flex justify-between items-center z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}><div><div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div><div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div></div>{isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}</div>
-                      
-                      {/* Live Thumbnail Preview logic from snippet render inside modal */}
-                      <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height: '220px', backgroundColor: '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor } as React.CSSProperties}>
-                        <div className="absolute top-0 left-0 w-[200%] h-[200%] origin-top-left pointer-events-none px-8 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ transform: 'scale(0.5)' }}>
-                          <snippet.render data={cvData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} />
+              {replacingSnippet.isAdd && (
+                <div className={`px-5 pt-4 pb-2 flex flex-wrap gap-2 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'}`}>
+                  {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar'].map(cat => (
+                    <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
+                  ))}
+                </div>
+              )}
+              <div className={`p-5 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {Object.values(SNIPPETS).filter(s => replacingSnippet.isAdd ? (!currentCategories.includes(s.category) && (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory)) : s.category === replacingSnippet.category).map(snippet => {
+                    if (!snippet) return null;
+                    const targetZoneId = replacingSnippet.zoneId;
+                    const isTargetDark = activeTemplate.type.includes('dark') && targetZoneId === 'sidebar';
+                    const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
+                    const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
+                    const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                    const isCurrent = snippet.id === replacingSnippet.currentType;
+                    return (
+                      <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400')}`}>
+                        <div className={`p-4 flex justify-between items-center z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}><div><div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div><div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div></div>{isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}</div>
+                        
+                        {/* Live Thumbnail Preview logic from snippet render inside modal */}
+                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height: '220px', backgroundColor: '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor } as React.CSSProperties}>
+                          <div className="absolute top-0 left-0 w-[200%] h-[200%] origin-top-left pointer-events-none px-8 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ transform: 'scale(0.5)' }}>
+                            <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Global CSS Variables */}
       <style dangerouslySetInnerHTML={{__html: `
@@ -453,7 +571,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
-        .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 30; background-image: repeating-linear-gradient(to bottom, transparent, transparent calc(297mm - 12px), ${isDarkUI ? '#2a2b2e' : '#e5e7eb'} calc(297mm - 12px), ${isDarkUI ? '#2a2b2e' : '#e5e7eb'} calc(297mm + 12px)); }
+        .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 30; background-image: repeating-linear-gradient(to bottom, transparent, transparent calc(297mm - 12px), rgba(0,0,0,0.08) calc(297mm - 6px), transparent 297mm, transparent calc(297mm + 4px), rgba(0,0,0,0.08) calc(297mm + 10px), transparent calc(297mm + 16px)); }
         @media print {
           @page { margin: var(--cv-page-margin); size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }

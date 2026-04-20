@@ -190,7 +190,7 @@ export const LINKEDIN_LIMITS = {
 
 // Color palette for LinkedIn styling
 export const LINKEDIN_COLORS = {
-    BACKGROUND: '#f4f2ee',
+    BACKGROUND: '#f3f2ee',
     PRIMARY_BLUE: '#0a66c2',
     TEXT_PRIMARY: '#000000e6',
     TEXT_SECONDARY: '#00000099',

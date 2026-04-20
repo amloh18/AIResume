@@ -47,7 +47,7 @@ const PreparingSessionLoader: React.FC<PreparingSessionLoaderProps> = ({ onCompl
     }, [onComplete]);
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-[#1a230f] flex flex-col">
+        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col">
             <InterviewCoachHeader />
             <div className="flex-1 flex items-center justify-center">
                 <div className="bg-white dark:bg-[#141810] rounded-2xl p-8 shadow-lg max-w-md w-full mx-4">

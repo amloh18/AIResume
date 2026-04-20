@@ -276,7 +276,7 @@ const OptimizedNavigation: React.FC = () => {
       'resume-enhancer': '/editor',
       'cover-letter-generator': '/dashboard/canvas',
       'interview-coach': '/dashboard/interview',
-      'linkedin-enhancer': '/dashboard/linkedin',
+      'linkedin-enhancer': '/linkedin-enhancer',
       'ats-resume-checker': '/ats-resume-checker'
     };
 
@@ -358,7 +358,7 @@ const OptimizedNavigation: React.FC = () => {
       name: 'LinkedIn Enhancer',
       icon: Linkedin,
       description: 'Optimize your LinkedIn profile',
-      route: '/dashboard/linkedin',
+      route: '/linkedin-enhancer',
       badge: 'NEW'
     },
     {

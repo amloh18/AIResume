@@ -62,7 +62,7 @@ const PracticePage = () => {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#141810]">
+            <div className="flex flex-col items-center justify-center h-screen bg-[#f3f2ee] dark:bg-[#141810]">
                 <Loader2 className="w-10 h-10 animate-spin text-lime-500 mb-4" />
                 <p className="text-gray-500 font-medium">Loading question...</p>
             </div>
@@ -71,7 +71,7 @@ const PracticePage = () => {
 
     if (error || !question) {
         return (
-            <div className="flex flex-col items-center justify-center h-screen bg-gray-50 dark:bg-[#141810]">
+            <div className="flex flex-col items-center justify-center h-screen bg-[#f3f2ee] dark:bg-[#141810]">
                 <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
                 <div className="text-red-500 mb-2 font-semibold">Error: {error || 'Question not found'}</div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">

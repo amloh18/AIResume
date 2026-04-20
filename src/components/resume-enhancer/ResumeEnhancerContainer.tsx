@@ -2387,7 +2387,7 @@ export default function ResumeEnhancerContainer({
               className="group flex items-center pr-12 hover:opacity-80 transition-all duration-300"
             >
               <div className="flex items-center gap-3">
-                <Logo size="sm" showText={true} theme="dark" />
+                <Logo size="sm" showText={true} theme={theme === 'dark' ? 'dark' : 'light'} />
                 
                 <div className="flex items-center gap-1.5 sm:gap-3">
                   {state.currentStep === 1 && (
@@ -2413,7 +2413,7 @@ export default function ResumeEnhancerContainer({
             {state.currentStep !== 1 && (
               <div className="flex items-center gap-3">
                 <div className="h-px w-8 bg-gradient-to-r from-transparent to-lime-500/30" />
-                <span className="text-sm font-black text-white bg-lime-500/10 px-3 py-1 rounded-full border border-lime-500/20 shadow-sm shadow-lime-500/5 uppercase tracking-tighter italic">
+                <span className="text-sm font-black text-gray-900 dark:text-white bg-lime-500/10 px-3 py-1 rounded-full border border-lime-500/20 shadow-sm shadow-lime-500/5 uppercase tracking-tighter italic">
                   {state.cvTitle || 'Untitled Resume'}
                 </span>
                 <div className="h-px w-8 bg-gradient-to-l from-transparent to-lime-500/30" />
@@ -2557,7 +2557,7 @@ export default function ResumeEnhancerContainer({
       {/* Content Area */}
       <div className="flex-1 min-h-0 flex overflow-hidden bg-[var(--bg-primary)]">
         {/* Main Content */}
-        <main className="flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[var(--bg-primary)]">
+        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)]">
           <div className="w-full h-full min-h-0 box-border overflow-hidden flex flex-col">
             <div ref={stepContentRef} className="h-full min-h-0 flex flex-col relative">
               <AnimatePresence mode="wait">

@@ -21,6 +21,12 @@ const Logo = ({ className = '', size = 'md', showText = true, theme = 'auto' }: 
       ? 'text-white' 
       : 'text-gray-900 dark:text-gray-100';
 
+  const cvColor = theme === 'light'
+    ? 'text-gray-900'
+    : theme === 'dark'
+      ? 'text-white'
+      : 'text-gray-900 dark:text-white';
+
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       <Image
@@ -33,7 +39,7 @@ const Logo = ({ className = '', size = 'md', showText = true, theme = 'auto' }: 
       />
       {showText && (
         <span className={`font-black font-sans ${sizeMap[size].text}`} style={{ fontWeight: 900 }}>
-          <span className="text-white">CV</span><span className={textColor}>Circle</span>
+          <span className={cvColor}>CV</span><span className={textColor}>Circle</span>
         </span>
       )}
     </div>

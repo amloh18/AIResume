@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { SNIPPETS, TITLE_STYLES, CANVAS_TEMPLATES, TEMPLATE_CATEGORIES } from '@/components/cv-builder-pro/registry';
 import { EditableField, StaticLayoutRenderer } from '@/components/cv-builder-pro/components/CoreUI';
 import { initialData } from '@/lib/templates/canvas-initial-data';
-import { Sparkles, Blocks, LayoutTemplate } from 'lucide-react';
+import { Sparkles, Blocks, LayoutTemplate, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const FLOAT_POSITIONS = [
   { x: -350, y: -200, rotation: -6, delay: 0.1, z: 60 },
@@ -36,6 +36,10 @@ const PremiumTemplates = () => {
 
   const [templateIndex, setTemplateIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [viewMode, setViewMode] = useState<'snippets' | 'templates'>('snippets');
+  const [isHovered, setIsHovered] = useState(false);
+
+  const carouselRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -45,11 +49,12 @@ const PremiumTemplates = () => {
   }, []);
 
   useEffect(() => {
+    if (viewMode !== 'snippets') return;
     const interval = setInterval(() => {
       setTemplateIndex((prev) => (prev + 1) % TARGET_TEMPLATES.length);
     }, 8000); // Increased time for reading and animations
     return () => clearInterval(interval);
-  }, []);
+  }, [viewMode]);
 
   const activeTemplate = CANVAS_TEMPLATES.find(t => t.id === TARGET_TEMPLATES[templateIndex]) || CANVAS_TEMPLATES[0];
 
@@ -59,8 +64,48 @@ const PremiumTemplates = () => {
     return Array.from(new Set(ids)).slice(0, 10); // max 10 to fit positions
   }, [activeTemplate]);
 
+  const allTemplates = useMemo(() => CANVAS_TEMPLATES.filter(Boolean), []);
+
+  useEffect(() => {
+    if (viewMode !== 'templates' || isHovered) return;
+
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    let animationFrameId: number;
+    let currentScroll = carousel.scrollLeft;
+
+    const scroll = () => {
+      if (carousel) {
+        currentScroll += 0.5; // Adjust speed for smooth auto-scroll
+        if (currentScroll >= carousel.scrollWidth / 2) {
+          currentScroll -= carousel.scrollWidth / 2;
+        }
+        carousel.scrollLeft = currentScroll;
+      }
+      animationFrameId = requestAnimationFrame(scroll);
+    };
+
+    animationFrameId = requestAnimationFrame(scroll);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [viewMode, isHovered]);
+
+  const nextCarousel = () => {
+    if (carouselRef.current) {
+      const scrollAmount = isMobile ? window.innerWidth * 0.8 : 400;
+      carouselRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const prevCarousel = () => {
+    if (carouselRef.current) {
+      const scrollAmount = isMobile ? window.innerWidth * 0.8 : 400;
+      carouselRef.current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   // Memoize the editable field so it behaves as readOnly inside the showcase
-  const ReadOnlyWrapper = useMemo(() => function Editable(props: any) { 
+  const ReadOnlyWrapper = useMemo(() => function Editable(props: { path: string, nowrap?: boolean }) { 
     return <EditableField {...props} data={initialData} readOnly={true} />; 
   }, []);
 
@@ -71,20 +116,63 @@ const PremiumTemplates = () => {
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#603a86]/20 rounded-full blur-[150px]"></div>
       </div>
 
-      <div className="relative z-40 text-center mb-16 px-6">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6 }} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lime-400/10 border border-lime-400/20 text-lime-400 mb-6">
-          <Blocks className="w-4 h-4" />
-          <span className="text-sm font-semibold tracking-wide uppercase">Template Library</span>
-        </motion.div>
-        <motion.h2 initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, delay: 0.1 }} className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
-          Select a foundation layout. <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-emerald-400">All snippets can be fully customized inside.</span>
-        </motion.h2>
-        <motion.p initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, delay: 0.2 }} className="text-gray-400 text-lg max-w-2xl mx-auto">
-          From traditional top-to-bottom flow to modern sidebar aesthetics. We have everything tailored for ATS compatibility and human readability.
-        </motion.p>
+      <div className="relative z-40 w-full max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8 mb-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div>
+            <motion.div
+              className="mb-6"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              <svg width="48" height="24" viewBox="0 0 48 24" fill="none" className="text-[#99FF00]">
+                <path
+                  d="M2 12C8 4 12 20 18 12C24 4 28 20 34 12C40 4 46 12 46 12"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </motion.div>
+            <motion.h2
+              className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-4 max-w-3xl"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+            >
+              Select a foundation layout. <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500 font-normal">
+                All snippets can be fully customized inside.
+              </span>
+            </motion.h2>
+          </div>
+
+          <div className="flex items-center pb-2">
+            <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setViewMode('snippets')}
+                className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-colors inline-flex items-center gap-2 ${viewMode === 'snippets' ? 'bg-[rgb(129,255,0)] text-black' : 'text-gray-200 hover:text-white'}`}
+              >
+                <Blocks className="w-4 h-4" />
+                Snippets
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('templates')}
+                className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide transition-colors inline-flex items-center gap-2 ${viewMode === 'templates' ? 'bg-[rgb(129,255,0)] text-black' : 'text-gray-200 hover:text-white'}`}
+              >
+                <LayoutTemplate className="w-4 h-4" />
+                Templates
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Showcase Canvas Container */}
+      {viewMode === 'snippets' ? (
       <div className="relative w-full max-w-6xl mx-auto h-[600px] md:h-[800px] flex items-center justify-center pointer-events-none mt-10 overflow-hidden md:overflow-visible">
         
         {/* Floating Snippets (Blast Effect) */}
@@ -104,7 +192,7 @@ const PremiumTemplates = () => {
           const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
           const isDarkTarget = activeTemplate.type.includes('dark') && isSidebar;
 
-          const Title = ({ titleKey }: any) => (
+          const Title = ({ titleKey }: { titleKey: string }) => (
             <TitleRenderer isDark={isDarkTarget}>
               <ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap />
             </TitleRenderer>
@@ -145,7 +233,7 @@ const PremiumTemplates = () => {
                   damping: 15,
                   mass: 1 
                 }}
-                style={{ zIndex: pos.z, '--cv-font': 'Inter', '--cv-base-size': '12px', '--cv-spacing': 1.0, '--cv-accent': '#22c55e' } as React.CSSProperties}
+                style={{ zIndex: pos.z, '--cv-font': 'Inter', '--cv-base-size': '11px', '--cv-spacing': 1.0, '--cv-accent': '#22c55e' } as React.CSSProperties}
                 className={`absolute top-1/2 left-1/2 w-[350px] md:w-[400px] ${isDarkTarget ? 'bg-[#1a1a1a] border-slate-700' : 'bg-white border-white/20'} rounded-xl shadow-2xl overflow-hidden cv-document text-gray-900 border-4 ring-1 ring-black/5`}
               >
                 {/* Highlight overlay for snippets to emphasize modularity */}
@@ -198,6 +286,7 @@ const PremiumTemplates = () => {
                   exit={{ opacity: 0, filter: 'blur(4px)' }}
                   transition={{ duration: 0.5 }}
                   className="absolute inset-0 w-full h-full cv-document text-gray-900 bg-white"
+                  style={{ '--cv-base-size': '11px' } as React.CSSProperties}
                 >
                   <StaticLayoutRenderer 
                     template={activeTemplate} 
@@ -210,6 +299,51 @@ const PremiumTemplates = () => {
           </div>
         </motion.div>
       </div>
+      ) : (
+        <div 
+          className="relative w-full max-w-7xl mx-auto mt-14 px-4 tablet:px-6 desktop:px-8 pointer-events-auto"
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
+          {/* Carousel Navigation */}
+          <div className="absolute top-1/2 -left-4 md:-left-8 -translate-y-1/2 z-10 hidden md:block">
+            <button onClick={prevCarousel} className="p-3 rounded-full bg-white/10 hover:bg-[rgb(129,255,0)] text-white hover:text-black transition-all backdrop-blur-sm border border-white/20">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+          </div>
+          <div className="absolute top-1/2 -right-4 md:-right-8 -translate-y-1/2 z-10 hidden md:block">
+            <button onClick={nextCarousel} className="p-3 rounded-full bg-white/10 hover:bg-[rgb(129,255,0)] text-white hover:text-black transition-all backdrop-blur-sm border border-white/20">
+              <ChevronRight className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Carousel Container */}
+          <div 
+            ref={carouselRef}
+            className="flex gap-6 overflow-x-auto pb-8 scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {[...allTemplates, ...allTemplates].map((template, index) => (
+              <div 
+                key={`${template.id}-${index}`} 
+                className="shrink-0 w-[85vw] sm:w-[350px] lg:w-[400px] rounded-2xl overflow-hidden border border-white/10 bg-white/5 hover:bg-white/10 transition-colors"
+              >
+                <div className="px-5 py-4 border-b border-white/10 flex items-center justify-between gap-4">
+                  <div className="text-sm font-extrabold tracking-tight text-white truncate">{template.name}</div>
+                  <div className="text-[10px] uppercase tracking-widest font-bold text-lime-300/80 shrink-0">{template.type.replaceAll('-', ' ')}</div>
+                </div>
+                <div className="relative w-full h-[520px] overflow-hidden bg-[#0b0f08]" style={{ containerType: 'inline-size' } as React.CSSProperties}>
+                  <div className="absolute top-6 left-1/2 -translate-x-1/2 origin-top shadow-lg bg-white rounded-lg overflow-hidden" style={{ width: '794px', transform: 'translateX(-50%) scale(calc(100cqw / 860))' }}>
+                    <div className="cv-document text-gray-900 bg-white" style={{ '--cv-base-size': '11px' } as React.CSSProperties}>
+                      <StaticLayoutRenderer template={template} cvData={initialData} ReadOnlyWrapper={ReadOnlyWrapper} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={isInView ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.6, delay: 0.8 }} className="relative z-50 mt-16 text-center">
         <button onClick={() => router.push('/sign-up')} className="bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-bold text-xl px-12 py-5 rounded-full transition-all shadow-[0_0_40px_rgba(129,255,0,0.3)] hover:shadow-[0_0_60px_rgba(129,255,0,0.5)] hover:-translate-y-1 inline-flex items-center gap-3">
@@ -223,7 +357,7 @@ const PremiumTemplates = () => {
           
           :root {
             --cv-font: 'Inter';
-            --cv-base-size: 12px;
+            --cv-base-size: 11px;
             --cv-spacing: 1.0;
             --cv-accent: #22c55e;
           }
@@ -256,6 +390,10 @@ const PremiumTemplates = () => {
         .cv-accent-text { color: var(--cv-accent) !important; }
         .cv-accent-bg { background-color: var(--cv-accent) !important; }
         .cv-accent-border { border-color: var(--cv-accent) !important; }
+
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
       `}} />
     </section>
   );

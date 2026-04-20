@@ -67,7 +67,7 @@ const InterviewDashboard = () => {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-[#1a230f]">
+            <div className="flex items-center justify-center h-screen bg-[#f3f2ee] dark:bg-[#1a230f]">
                 <Loader2 className="w-8 h-8 animate-spin text-lime-500" />
             </div>
         );
@@ -76,7 +76,7 @@ const InterviewDashboard = () => {
     const hasContent = sessions.length > 0 || potentialSessions.length > 0;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#1a230f]">
+        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f]">
             <div className="px-4 sm:px-6 md:px-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-12 sm:pb-20">
                 <PageHeader
                     title="Interview Coach"
