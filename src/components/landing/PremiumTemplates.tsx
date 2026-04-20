@@ -332,8 +332,8 @@ const PremiumTemplates = () => {
                   <div className="text-sm font-extrabold tracking-tight text-white truncate">{template.name}</div>
                   <div className="text-[10px] uppercase tracking-widest font-bold text-lime-300/80 shrink-0">{template.type.replaceAll('-', ' ')}</div>
                 </div>
-                <div className="relative w-full h-[520px] overflow-hidden bg-[#0b0f08]" style={{ containerType: 'inline-size' } as React.CSSProperties}>
-                  <div className="absolute top-1/2 left-1/2 origin-center shadow-[0_15px_40px_rgba(0,0,0,0.5)] bg-white overflow-hidden" style={{ width: '794px', height: '1123px', transform: 'translate(-50%, -50%) scale(calc(85cqw / 794))' }}>
+                <div className="relative w-full h-[520px] overflow-hidden bg-[#0b0f08] flex items-center justify-center" style={{ containerType: 'inline-size' } as React.CSSProperties}>
+                  <div className="relative shadow-[0_15px_40px_rgba(0,0,0,0.5)] bg-white overflow-hidden origin-center" style={{ width: '794px', height: '1123px', transform: 'scale(calc(85cqw / 794))' }}>
                     <div className="cv-document text-gray-900 bg-white w-full h-full" style={{ '--cv-base-size': '11px' } as React.CSSProperties}>
                       <StaticLayoutRenderer template={template} cvData={initialData} ReadOnlyWrapper={ReadOnlyWrapper} />
                     </div>
