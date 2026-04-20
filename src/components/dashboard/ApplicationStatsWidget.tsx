@@ -208,7 +208,7 @@ const ApplicationStatsWidget: React.FC<ApplicationStatsWidgetProps> = ({ userId 
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
-                <PolarGrid stroke="#6b7280" strokeOpacity={0.4} />
+                <PolarGrid gridType="polygon" stroke="#6b7280" strokeOpacity={0.4} />
                 <PolarAngleAxis
                   dataKey="metric"
                   tick={{ fill: '#6b7280', fontSize: 12, fontWeight: 500 }}
