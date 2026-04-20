@@ -22,6 +22,7 @@ import {
   IntelligenceDashboard 
 } from '@/components/dashboard/Analytics';
 import GlobalSearchBar from '@/components/layout/GlobalSearchBar';
+import { Target, MessageSquare } from 'lucide-react';
 
 const ProgressTrackingWidget = dynamic(() => import('@/components/dashboard/ProgressTrackingWidget'), { ssr: false });
 const ApplicationStatsWidget = dynamic(() => import('@/components/dashboard/ApplicationStatsWidget'), { ssr: false });
@@ -183,6 +184,8 @@ function DashboardContent() {
   const circumference = 2 * Math.PI * 44;
   const strokeDashoffset = circumference * (1 - cvHealthScore / 100);
 
+  const activePrepJobs = jobs?.filter((j: any) => j.interviewCoach?.status === 'ready') || [];
+
   return (
     <div ref={scrollRef} className="h-full flex flex-col space-y-6 p-4 md:p-6 overflow-y-auto pb-24 overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       {/* 1st Section: Full Width Greeting Block */}
@@ -224,7 +227,7 @@ function DashboardContent() {
       </div>
 
       {/* Hub Cards Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 relative z-10">
+      <div className={`grid grid-cols-1 gap-6 relative z-10 ${activePrepJobs.length > 0 ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
           
           {/* CV Editor */}
           <Link href="/editor">
@@ -344,6 +347,46 @@ function DashboardContent() {
               </div>
             </motion.div>
           </Link>
+
+          {/* Interview Coach Widget (Dynamic) */}
+          {activePrepJobs.length > 0 && (
+            <Link href={`/dashboard/interview/${activePrepJobs[0]._id || activePrepJobs[0].id}`}>
+              <motion.div 
+                whileHover={{ y: -4 }}
+                className="bg-indigo-600 text-white rounded-3xl p-6 shadow-xl shadow-indigo-600/30 transition-all flex flex-col h-full relative group hover:shadow-2xl hover:shadow-indigo-600/40 overflow-hidden"
+              >
+                <div className="absolute -inset-24 bg-gradient-to-tr from-indigo-700 to-transparent opacity-50 pointer-events-none rounded-full blur-3xl"></div>
+                
+                <div className="flex items-center justify-between mb-4 relative z-10">
+                  <span className="text-sm font-semibold text-indigo-100">Interview Coach</span>
+                  <div className="flex items-center px-3 py-1.5 bg-indigo-500/30 backdrop-blur-md rounded-full text-xs font-medium text-white border border-indigo-400/20">
+                    <MessageSquare size={14} className="mr-1.5" /> <span className="hidden sm:inline">Prep</span>
+                  </div>
+                </div>
+                
+                <div className="mb-5 flex items-end gap-3 relative z-10">
+                  <h2 className="text-5xl font-black tracking-tighter text-white leading-none">
+                    {activePrepJobs.length}
+                  </h2>
+                  <span className="text-xs font-medium text-yellow-300 mb-1 flex items-center">
+                    ↑ Ready
+                  </span>
+                </div>
+                
+                <div className="flex-1 space-y-2 relative z-10 w-full">
+                  {activePrepJobs.slice(0, 2).map((job: any) => (
+                    <div key={job.id || job._id} className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 transition-colors">
+                      <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.8)] flex-shrink-0"></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-white truncate">{job.jobTitle || job.title || 'Untitled Role'}</p>
+                        <p className="text-[10px] text-indigo-200 truncate mt-0.5">Score: {job.interviewCoach?.readinessScore || 0}%</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </Link>
+          )}
 
         </div>
 

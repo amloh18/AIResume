@@ -67,6 +67,7 @@ const serializeJob = (job: any) => {
     trustScore: job?.trustScore,
     trustSnapshot: job?.trustSnapshot,
     transparencySnapshot: job?.transparencySnapshot,
+    interviewCoach: job?.interviewCoach,
     isArchived: Boolean(job?.isArchived),
     createdAt: job?.createdAt,
     updatedAt: job?.updatedAt

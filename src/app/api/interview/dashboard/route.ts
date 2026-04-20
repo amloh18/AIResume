@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
         // Fetch Eligible Jobs with simple case-insensitive matching
         // Using lowercase versions of statuses with $in
-        const eligibleStatuses = ['applied', 'screening', 'interview', 'Applied', 'Screening', 'Interview'];
+        const eligibleStatuses = ['created', 'applied', 'screening', 'interview', 'Created', 'Applied', 'Screening', 'Interview'];
 
         console.log(`Fetching jobs for user: ${auth.userId}, looking for statuses:`, eligibleStatuses);
         console.log(`Excluding job IDs:`, existingJobIds.map(id => id.toString()));

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { jobId, regenerate } = await request.json();
+        const { jobId, regenerate, action = 'generate' } = await request.json();
 
         if (!jobId) {
             return setCorsHeaders(
@@ -67,6 +67,29 @@ export async function POST(request: NextRequest) {
         }
 
         console.log(`✅ Job found: ${job.jobTitle} at ${job.company}`);
+
+        // Handle 'fetch' action to prevent unnecessary AI generation
+        if (action === 'fetch') {
+            if (job.interviewCoach?.status === 'ready' && job.interviewCoach?.questions?.length > 0) {
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: true,
+                        interviewCoach: job.interviewCoach,
+                        existing: true,
+                    }),
+                    request
+                );
+            } else {
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: true,
+                        interviewCoach: { status: 'not_started', questions: [] },
+                        existing: false,
+                    }),
+                    request
+                );
+            }
+        }
 
         // 🔄 Check for cached plan (72-hour freshness)
         if (!regenerate && job.interviewCoach?.status === 'ready' && job.interviewCoach?.questions?.length > 0) {

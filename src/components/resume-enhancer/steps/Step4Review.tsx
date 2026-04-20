@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen } from 'lucide-react';
+import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap } from 'lucide-react';
 import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -297,6 +297,27 @@ export default function Step4Review() {
     setShowTemplateModal(false);
   };
 
+  const handleStartCoaching = async () => {
+    const jobId = state.journeyId || state.jobData?._id || state.jobData?.id;
+    if (!jobId) return;
+
+    // Check if the job is in 'draft' status. If so, we should update it to 'created'
+    if (state.jobData?.status === 'draft' || !state.jobData?.status) {
+      try {
+        await fetch(`/api/jobs/${jobId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'created' })
+        });
+      } catch (err) {
+        console.error('Failed to update job status:', err);
+      }
+    }
+    
+    // Redirect to interview coach
+    router.push(`/dashboard/interview/${jobId}`);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden">
       {/* Split View: Preview Left, Info Right */}
@@ -446,14 +467,27 @@ export default function Step4Review() {
 
               {/* View in Job Tracker - only for Journey CVs */}
               {isJourneyCV && (
-                <div className="col-span-2 bg-blue-600/10 border border-blue-500/20 rounded-lg p-3 shadow-sm">
-                  <button
-                    onClick={() => router.push('/dashboard/tracker')}
-                    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
-                  >
-                    <Target className="w-4 h-4" />
-                    <span>View in Job Tracker</span>
-                  </button>
+                <div className="col-span-2 flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 bg-blue-600/10 border border-blue-500/20 rounded-lg p-3 shadow-sm">
+                    <button
+                      onClick={() => router.push('/dashboard/tracker')}
+                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Target className="w-4 h-4" />
+                      <span>View in Tracker</span>
+                    </button>
+                  </div>
+                  
+                  {/* Interview Coach CTA */}
+                  <div className="flex-1 bg-indigo-600/10 border border-indigo-500/20 rounded-lg p-3 shadow-sm">
+                    <button
+                      onClick={handleStartCoaching}
+                      className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
+                    >
+                      <Zap className="w-4 h-4 text-yellow-300" />
+                      <span>Interview Coach</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
