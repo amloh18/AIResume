@@ -277,7 +277,7 @@ const PremiumTemplates = () => {
 
           <div className="absolute inset-0 pt-10 overflow-hidden bg-gray-50 flex justify-center items-start pointer-events-none" style={{ containerType: 'inline-size' }}>
             {/* The Actual Rendered CV */}
-            <div className="relative w-[794px] origin-top-left shadow-sm bg-white" style={{ transform: 'scale(calc(100cqw / 794))', minHeight: '1123px' }}>
+            <div className="relative w-[794px] h-[1123px] origin-top-left shadow-[0_15px_40px_rgba(0,0,0,0.5)] bg-white overflow-hidden" style={{ transform: 'scale(calc(100cqw / 794))' }}>
               <AnimatePresence mode="wait">
                 <motion.div 
                   key={activeTemplate.id}
@@ -333,8 +333,8 @@ const PremiumTemplates = () => {
                   <div className="text-[10px] uppercase tracking-widest font-bold text-lime-300/80 shrink-0">{template.type.replaceAll('-', ' ')}</div>
                 </div>
                 <div className="relative w-full h-[520px] overflow-hidden bg-[#0b0f08]" style={{ containerType: 'inline-size' } as React.CSSProperties}>
-                  <div className="absolute top-6 left-1/2 -translate-x-1/2 origin-top shadow-lg bg-white rounded-lg overflow-hidden" style={{ width: '794px', transform: 'translateX(-50%) scale(calc(100cqw / 860))' }}>
-                    <div className="cv-document text-gray-900 bg-white" style={{ '--cv-base-size': '11px' } as React.CSSProperties}>
+                  <div className="absolute top-1/2 left-1/2 origin-center shadow-[0_15px_40px_rgba(0,0,0,0.5)] bg-white overflow-hidden" style={{ width: '794px', height: '1123px', transform: 'translate(-50%, -50%) scale(calc(85cqw / 794))' }}>
+                    <div className="cv-document text-gray-900 bg-white w-full h-full" style={{ '--cv-base-size': '11px' } as React.CSSProperties}>
                       <StaticLayoutRenderer template={template} cvData={initialData} ReadOnlyWrapper={ReadOnlyWrapper} />
                     </div>
                   </div>
