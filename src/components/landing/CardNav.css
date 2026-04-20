@@ -231,7 +231,7 @@
   color: #000000;
   border: 2px solid rgba(129, 255, 0, 0.3);
   border-radius: 30px;
-  padding: 0.5rem 1.5rem;
+  padding: 0 1.5rem;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -240,7 +240,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: fit-content;
 }
 
 .card-nav-cta-button:hover {
@@ -259,7 +258,7 @@
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 30px;
-  padding: 0.5rem 1.5rem;
+  padding: 0 1.5rem;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -268,7 +267,6 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  height: fit-content;
 }
 
 .card-nav-business-button:hover {
