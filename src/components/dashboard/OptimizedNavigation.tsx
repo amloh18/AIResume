@@ -458,7 +458,7 @@ const OptimizedNavigation: React.FC = () => {
               whileTap={{ scale: 0.98 }}
             >
               <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : ''}`} />
-              <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
+              <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                 <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                   {section.name}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
@@ -477,7 +477,7 @@ const OptimizedNavigation: React.FC = () => {
 
         {/* Tools Section */}
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800 px-2">
-          <div className={`px-3 mb-2 hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
+          <div className={`px-3 mb-2 ${!isDesktopExpanded ? 'hidden lg:hidden' : 'lg:block'}`}>
             <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Tools
             </h3>
@@ -528,7 +528,7 @@ const OptimizedNavigation: React.FC = () => {
                     </span>
                   )}
                   <Icon className={`w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0 ${isActive ? 'text-[rgb(129,255,0)]' : 'text-gray-500 dark:text-gray-400'}`} />
-                  <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
+                  <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                     <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                       {section.name}
                       {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
@@ -562,7 +562,7 @@ const OptimizedNavigation: React.FC = () => {
             whileTap={{ scale: 0.98 }}
           >
             <Shield className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
-            <div className={`flex-1 min-w-0 lg:hidden ${isDesktopExpanded ? 'lg:block' : ''}`}>
+            <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
               <div className="text-base lg:text-sm font-medium truncate">Switch to Admin</div>
               <div className="text-sm lg:text-xs text-purple-600 dark:text-purple-300 truncate mt-0.5">
                 Access admin dashboard
