@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useToast } from '@/hooks/use-toast';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { INotification, NotificationType } from '@/models/Notification';
 import {
   INITIAL_FETCH_TOAST_WINDOW_MS,
@@ -34,6 +34,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
   const eventSourceRef = useRef<EventSource | null>(null); // Ref to track eventSource without causing re-renders
   const [isMounted, setIsMounted] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   // Track if we've already fetched to prevent duplicate calls
   const hasFetchedRef = useRef(false);
   const lastFetchTimeRef = useRef<number>(0);
@@ -383,7 +384,7 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
         title: notification.title,
         description: notification.message,
         action:
-          notification.interactive && notification.actionType ? (
+          notification.interactive && (notification.actionType || notification.actionUrl) ? (
             <button
               onClick={() => {
                 const safeId = notification._id
@@ -391,8 +392,22 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
                     ? notification._id
                     : String(notification._id)
                   : '';
-                if (safeId) {
-                  handleNotificationAction(safeId, notification.actionType || '');
+                
+                // If there's an actionType, handle it on backend
+                if (safeId && notification.actionType) {
+                  handleNotificationAction(safeId, notification.actionType);
+                } else if (safeId) {
+                  // If no actionType but we still have an actionUrl, just mark as read
+                  markAsRead(safeId);
+                }
+
+                // Handle navigation if actionUrl exists
+                if (notification.actionUrl) {
+                  if (notification.actionUrl.startsWith('http://') || notification.actionUrl.startsWith('https://')) {
+                    window.location.href = notification.actionUrl;
+                  } else {
+                    router.push(notification.actionUrl);
+                  }
                 }
               }}
               className="text-sm font-medium text-primary hover:underline"
@@ -401,12 +416,16 @@ function NotificationProviderWithSession({ children }: { children: React.ReactNo
                 ? 'Move to Next Stage'
                 : notification.actionType === 'review_job'
                   ? 'Review Job'
-                  : 'View Details'}
+                  : notification.actionType === 'view_offer'
+                    ? 'View Offer'
+                    : notification.actionUrl
+                      ? 'View Details'
+                      : 'Take Action'}
             </button>
           ) : undefined,
       });
     },
-    [toast, handleNotificationAction, shouldShowToast]
+    [toast, handleNotificationAction, shouldShowToast, markAsRead, router]
   );
 
   useEffect(() => {
