@@ -2444,27 +2444,6 @@ export default function ResumeEnhancerContainer({
               <span className="hidden sm:inline">Back</span>
             </button>
           )}
-          {/* Add Section & Template - only show on step 3 (Builder) */}
-          {state.currentStep === 3 && (
-            <div className="flex items-center gap-1 sm:gap-2 mr-1 sm:mr-2">
-              <button
-                onClick={() => step3Ref.current?.openAddSection()}
-                className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
-                title="Add Section"
-              >
-                <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline">Add Section</span>
-              </button>
-              <button
-                onClick={() => step3Ref.current?.openTemplateSelector()}
-                className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
-                title="Select Template"
-              >
-                <Palette className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                <span className="hidden sm:inline">Template</span>
-              </button>
-            </div>
-          )}
 
           {/* Save button - only show on step 3, 4, and 5 */}
           {(state.currentStep === 3 || state.currentStep === 4 || state.currentStep === 5) && (

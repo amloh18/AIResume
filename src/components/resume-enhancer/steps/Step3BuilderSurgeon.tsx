@@ -33,8 +33,6 @@ import { getAnalysisModeWithValidation } from '@/lib/utils/analysis-mode';
 import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
-import AddSectionModal from '@/components/resume-enhancer/AddSectionModal';
-import TemplateSelector from '@/components/resume-enhancer/TemplateSelector';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
@@ -56,8 +54,6 @@ export interface Step3BuilderSurgeonRef {
   addNewSection: (sectionId: string) => void;
   handleDeleteSectionFromSidebar: (sectionId: string) => void;
   handleSectionReorder: (sectionIds: string[]) => void;
-  openAddSection: () => void;
-  openTemplateSelector: () => void;
   activeSection: string;
 }
 
@@ -73,13 +69,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [showRoleProfiler, setShowRoleProfiler] = useState(false);
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
-    const [showAddSectionModal, setShowAddSectionModal] = useState(false);
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
-
-    const [showTemplateModal, setShowTemplateModal] = useState(false);
-    const templateModalRef = useRef<HTMLDivElement>(null);
-    const templateModalContentRef = useRef<HTMLDivElement>(null);
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
@@ -963,8 +954,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       addNewSection,
       handleDeleteSectionFromSidebar,
       handleSectionReorder,
-      openAddSection: () => canvasBuilderRef.current?.openAddSection() || setShowAddSectionModal(true),
-      openTemplateSelector: () => canvasBuilderRef.current?.openTemplateSelector() || setShowTemplateModal(true),
       activeSection: 'personal'
     }));
 
@@ -1156,52 +1145,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             }
           }}
         />
-
-        {/* Add Section Modal */}
-        <AddSectionModal
-          isOpen={showAddSectionModal}
-          onClose={() => setShowAddSectionModal(false)}
-          onAddSection={addNewSection}
-          existingSections={
-            state.cvData.structure?.sections
-              ?.filter(s => s.visible !== false)
-              .map(s => s.type) || []
-          }
-        />
-
-        {/* Template Selector Modal */}
-        {showTemplateModal && (
-          <div
-            ref={templateModalRef}
-            className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4"
-            onClick={() => setShowTemplateModal(false)}
-          >
-            <div
-              ref={templateModalContentRef}
-              className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-[color:var(--text-primary)]">
-                  Select Template
-                </h2>
-                <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-[color:var(--text-primary)]" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-6">
-                <TemplateSelector
-                  selectedTemplate={state.selectedTemplate}
-                  onTemplateSelect={handleTemplateSelect}
-                  cvData={state.cvData}
-                />
-              </div>
-            </div>
-          </div>
-        )}
 
       </div >
     );
