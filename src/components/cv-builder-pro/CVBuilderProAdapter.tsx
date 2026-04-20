@@ -129,7 +129,13 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
         // Skip location and linkedin because they might be special in UnifiedCVDataStructure
         if (key === 'location') {
           if (!newCvData.basics.location) newCvData.basics.location = {};
-          newCvData.basics.location.city = updatedCanvasData.basics.location;
+          if (typeof updatedCanvasData.basics.location === 'string') {
+            newCvData.basics.location = {
+              city: updatedCanvasData.basics.location,
+              countryCode: '',
+              region: ''
+            };
+          }
         } else if (key === 'linkedin') {
           // If profiles array doesn't exist, create it
           if (!newCvData.basics.profiles) newCvData.basics.profiles = [];

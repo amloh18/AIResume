@@ -1,0 +1,8 @@
+- [x] Location string no longer duplicates (e.g., "UK, UK, UK") when saving and re-rendering CV.
+- [x] Design menu has a "Sidebar Background" color picker.
+- [x] Design menu has a "Section Gap" slider or preset selector.
+- [x] Sidebar templates apply the chosen sidebar background color.
+- [x] 2-column templates do not have excessive gap below the header.
+- [x] Section control buttons (Up, Down, Add, Replace, etc.) do not clip in narrow sidebar columns.
+- [x] Clicking a text field to edit it transforms it into a clear minimal form field (distinct focus state).
+- [x] All templates respect the global `sectionGap` setting consistently.

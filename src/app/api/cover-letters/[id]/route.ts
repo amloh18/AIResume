@@ -3,6 +3,7 @@ import getConnection from '@/lib/database';
 import { CoverLetter } from '@/models';
 import mongoose from 'mongoose';
 import { toObjectId } from '@/lib/db-utils';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -12,13 +13,16 @@ export async function GET(
     await getConnection();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
+    let userId = searchParams.get('userId');
     if (!userId) {
-      return NextResponse.json(
-        { success: false, error: 'User ID is required' },
-        { status: 400 }
-      );
+      const authResult = await getAuthenticatedUser(request);
+      if (!authResult) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+      userId = authResult.userId;
     }
 
     // Validate ObjectIds

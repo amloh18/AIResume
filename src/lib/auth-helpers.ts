@@ -35,7 +35,8 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
       // Get full user data from database if needed
       // Note: connectDB is idempotent, safe to call multiple times
       await getConnection();
-      const dbUser = await User.findOne({ email: session.user.email });
+      const email = String(session.user.email).toLowerCase();
+      let dbUser = await User.findOne({ email });
       
       if (dbUser) {
         return {
@@ -45,12 +46,35 @@ export async function getAuthenticatedUser(request?: NextRequest): Promise<AuthR
         };
       }
       
-      // If user not in database yet (shouldn't happen), return session data
-      console.warn('⚠️ Auth - User in session but not found in database:', session.user.email);
+      const fullName = typeof session.user.name === 'string' ? session.user.name.trim() : '';
+      const nameParts = fullName ? fullName.split(/\s+/).filter(Boolean) : [];
+      const fallbackFirstName = email.split('@')[0] || 'User';
+      const firstName = nameParts[0] || fallbackFirstName;
+      const lastName = nameParts.slice(1).join(' ') || 'User';
+      const authProviderId = String((session.user as any).id || email);
+
+      dbUser = await User.findOneAndUpdate(
+        { email },
+        {
+          $setOnInsert: {
+            email,
+            firstName,
+            lastName,
+            authProvider: 'nextauth',
+            authProviderId,
+            isEmailVerified: true,
+            avatar: (session.user as any).image || null
+          }
+        },
+        { new: true, upsert: true }
+      );
+
+      if (!dbUser) return null;
+
       return {
-        user: session.user,
-        userEmail: session.user.email,
-        userId: session.user.id || session.user.email,
+        user: dbUser,
+        userEmail: dbUser.email,
+        userId: dbUser._id.toString(),
       };
     }
 

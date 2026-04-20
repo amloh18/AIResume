@@ -171,17 +171,18 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
     return { body, closing };
   };
 
-  // Always merge header + body + footer for preview (on-the-fly merging)
-  // Use provided header/body/footer or parse from content as fallback
-  let headerContent = header || (content ? content.split('\n\n')[0] : '');
-  let bodyContent = body || (content ? parseContent(content).body : '');
-  let footerContent = footer || (content ? parseContent(content).closing : '');
+  const hasStructuredParts = header !== undefined || body !== undefined || footer !== undefined;
+  const parsed = hasStructuredParts ? { body: '', closing: '' } : parseContent(content);
 
-  // If we have separate header/body/footer, use them directly
-  // Otherwise fall back to parsing from content (for backward compatibility)
-
-  // Import merge function for on-the-fly merging
-  const { mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
+  const headerContent = header || '';
+  const footerContent = footer || (hasStructuredParts ? '' : parsed.closing);
+  const rawBodyContent = body || (hasStructuredParts ? '' : (parsed.body || content || ''));
+  const bodyContent = rawBodyContent
+    .split(/\n{2,}/)
+    .map(p => p.trim())
+    .filter(Boolean)
+    .filter((p, i, arr) => i === 0 || p !== arr[i - 1])
+    .join('\n\n');
 
   // Parse header to extract components (new format: name, contact, date, recipient, company)
   const headerLines = headerContent.split('\n').filter(line => line.trim());
@@ -323,7 +324,7 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
               <section className="cl-body" style={{ marginTop: '0px' }}>
                 {/* Greeting removed as per request */}
 
-                {(bodyContent || content) ? (
+                {bodyContent ? (
                   bodyContent.split('\n\n').map((paragraph, index) => (
                     <div key={index} className={`cl-module ${index === 0 ? 'introduction' : 'bridge'}`} style={{ marginBottom: '12px' }}>
                       {paragraph.trim().split('\n').map((line, lineIndex) => (
@@ -448,7 +449,7 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
       )}
 
       {/* Body Content - includes salutation as first line */}
-      {(bodyContent || content) ? (
+      {bodyContent ? (
         <>
           {/* Body Content */}
           <div style={{
@@ -459,7 +460,7 @@ const CoverLetterPreview: React.FC<CoverLetterPreviewProps> = ({
             wordWrap: 'break-word',
             overflowWrap: 'break-word'
           }}>
-            {bodyContent && bodyContent.trim() ? (
+            {bodyContent.trim() ? (
               bodyContent.split('\n\n').map((paragraph, index) => (
                 <div key={index} style={{
                   marginBottom: `${paragraphSpacing}px`,
