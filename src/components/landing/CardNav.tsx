@@ -231,10 +231,10 @@ const CardNav = ({
             })}
           </div>
 
-          <div className="nav-actions">
+          <div className="nav-actions flex items-center h-full">
             <button
               type="button"
-              className="card-nav-business-button hidden md:flex"
+              className="card-nav-business-button hidden md:flex h-[40px]"
               onClick={() => scrollToSection('/business', true)}
             >
               Business
@@ -242,7 +242,7 @@ const CardNav = ({
 
             <button
               type="button"
-              className="card-nav-cta-button"
+              className="card-nav-cta-button h-[40px]"
               onClick={handleCtaClick}
             >
               Login
