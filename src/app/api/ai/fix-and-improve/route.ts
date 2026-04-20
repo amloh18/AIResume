@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callGeminiWithAllKeysFallback } from '@/lib/utils/gemini-api-fallback';
-import { cookies } from 'next/headers';
-import { getIronSession } from 'iron-session';
-import { sessionOptions } from '@/lib/auth/session';
-import { usageLimitsService } from '@/lib/services/usageLimitsService';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import usageLimitsService from '@/lib/services/usageLimitsService';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getIronSession(cookies(), sessionOptions);
-    if (!session.user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -18,8 +17,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Content is required' }, { status: 400 });
     }
 
-    const hasUsage = await usageLimitsService.checkUsageLimit(session.user.id, 'ai_generation');
-    if (!hasUsage) {
+    const usageCheck = await usageLimitsService.checkUsageLimit({
+      userId: session.user.id,
+      action: 'ai_generation'
+    });
+    if (!usageCheck.allowed) {
       return NextResponse.json({ success: false, error: 'usage_limit_reached' }, { status: 402 });
     }
 
@@ -99,7 +101,10 @@ Please provide the STAR method bullet points:`;
       return NextResponse.json({ success: false, error: 'No content generated' }, { status: 500 });
     }
 
-    await usageLimitsService.incrementUsage(session.user.id, 'ai_generation');
+    await usageLimitsService.incrementUsage({
+      userId: session.user.id,
+      action: 'ai_generation'
+    });
 
     let cleanedContent = generatedContent.trim();
     cleanedContent = cleanedContent.replace(/```html/g, '').replace(/```/g, '').trim();
