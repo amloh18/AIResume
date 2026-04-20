@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { motion, AnimatePresence } from 'framer-motion';
 import { gsap } from 'gsap';
-import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText } from 'lucide-react';
+import { X, Save, Eye, Loader2, Sparkles, User, Settings, LogOut, Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Minimize2, Maximize2, Home, Plus, Palette, FileText } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import StepIndicator from './StepIndicator';
 import Step1Parser from './steps/Step1Parser';
@@ -1877,6 +1877,16 @@ export default function ResumeEnhancerContainer({
     return dataChanged || titleChanged || templateChanged;
   }, [mode, state.cvData, state.cvTitle, state.selectedTemplate]);
 
+  const handleBackStep = () => {
+    if (state.currentStep <= 1) return;
+    if (hasUnsavedChanges) {
+      if (!confirm('Go back to the previous step? Unsaved changes may be lost.')) {
+        return;
+      }
+    }
+    goToStep(state.currentStep - 1);
+  };
+
   const handleExit = () => {
     if (state.currentStep > 1) {
       if (hasUnsavedChanges) {
@@ -2424,6 +2434,16 @@ export default function ResumeEnhancerContainer({
 
         {/* Actions - Right side */}
         <div className="flex items-center space-x-2">
+          {state.currentStep > 1 && (
+            <button
+              onClick={handleBackStep}
+              className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-full text-xs font-medium transition-all duration-200"
+              title="Back"
+            >
+              <ChevronLeft className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          )}
           {/* Add Section & Template - only show on step 3 (Builder) */}
           {state.currentStep === 3 && (
             <div className="flex items-center gap-1 sm:gap-2 mr-1 sm:mr-2">

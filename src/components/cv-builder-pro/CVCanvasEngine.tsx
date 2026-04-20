@@ -37,7 +37,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>({});
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
-  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showIcons: true, headerLinks: {} as Record<string, boolean> });
+  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showIcons: true, headerLinks: {} as Record<string, boolean>, sidebarBgColor: '#f8fafc', sectionGap: '1.5rem' });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
@@ -270,23 +270,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
   return (
     <CanvasContext.Provider value={{ cvData, design, handleDataChange, setFocusedNode, aiIssues, activeIssueId, onIssueClick: (id: string) => { setActiveIssueId(id); setActiveSidebar('ai'); } }}>
-      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${bgApp}`}>
-        <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />
+      <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? '' : bgApp}`}>
+        {!readOnly && <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />}
 
-      {/* LEFT VERTICAL TOOLBAR */}
-      <div className={`w-16 border-r flex flex-col items-center py-4 gap-4 z-30 shrink-0 transition-colors ${bgNav}`}>
-        <div className={`p-2 rounded-xl mb-2 ${brandGreenBg} shadow-lg`} title="CVCIRCLE Builder"><FileText size={20} /></div>
-        <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'design' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Design & Layout"><Palette size={20}/></button>
-        <button onClick={() => setIsTemplateModalOpen(true)} className={`p-3 rounded-2xl transition-all ${isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100'}`} title="Templates"><LayoutTemplate size={20}/></button>
-        <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'data' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Raw Data JSON"><FileJson size={20}/></button>
-        <button onClick={() => { setActiveSidebar(activeSidebar === 'ai' ? null : 'ai'); if (activeSidebar !== 'ai') runAIScan(); }} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'ai' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="AI Review"><Wand2 size={20}/></button>
-        <div className="flex-1"></div>
-        <button onClick={() => window.print()} className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} title="Save to PDF"><Download size={20}/></button>
-      </div>
+      {!readOnly && (
+        <div className={`w-16 border-r flex flex-col items-center py-4 gap-4 z-30 shrink-0 transition-colors ${bgNav}`}>
+          <div className={`p-2 rounded-xl mb-2 ${brandGreenBg} shadow-lg`} title="CVCIRCLE Builder"><FileText size={20} /></div>
+          <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'design' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Design & Layout"><Palette size={20}/></button>
+          <button onClick={() => setIsTemplateModalOpen(true)} className={`p-3 rounded-2xl transition-all ${isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100'}`} title="Templates"><LayoutTemplate size={20}/></button>
+          <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'data' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Raw Data JSON"><FileJson size={20}/></button>
+          <button onClick={() => { setActiveSidebar(activeSidebar === 'ai' ? null : 'ai'); if (activeSidebar !== 'ai') runAIScan(); }} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'ai' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="AI Review"><Wand2 size={20}/></button>
+          <div className="flex-1"></div>
+          <button onClick={() => window.print()} className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} title="Save to PDF"><Download size={20}/></button>
+        </div>
+      )}
 
       <div className="flex-1 flex overflow-hidden">
-        {/* DESIGN SIDEBAR */}
-        {activeSidebar === 'design' && (
+        {!readOnly && activeSidebar === 'design' && (
           <div className={`w-[320px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
             <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
               <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><Palette size={18} className={brandGreen}/> Global Design</h3>
@@ -298,6 +298,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Line Spacing</span><span className={brandGreen}>{design.spacing.toFixed(1)}x</span></label><input type="range" min="0.5" max="2" step="0.1" value={design.spacing} onChange={(e) => setDesign({...design, spacing: parseFloat(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Page Margin</span><span className={brandGreen}>{design.pageMargin}px</span></label><input type="range" min="0" max="80" step="1" value={design.pageMargin} onChange={(e) => setDesign({...design, pageMargin: parseInt(e.target.value)})} className="w-full accent-emerald-500" /></div>
               <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Accent Color</label><div className="flex gap-3 flex-wrap">{['#7EE787', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#1f2937', '#000000', '#ffffff'].map(c => (<button key={c} onClick={() => setDesign({...design, accentColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.accentColor === c ? 'border-white scale-125 shadow-lg' : 'border-transparent hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 block ${textMuted}`}>Sidebar Background</label><div className="flex gap-3 flex-wrap">{['#ffffff', '#f8fafc', '#f3f4f6', '#1e293b', '#0f172a', '#172554'].map(c => (<button key={c} onClick={() => setDesign({...design, sidebarBgColor: c})} className={`w-7 h-7 rounded-full border-2 transition-transform ${design.sidebarBgColor === c ? 'border-emerald-500 scale-125 shadow-lg' : 'border-gray-300 dark:border-gray-600 hover:scale-110'}`} style={{ backgroundColor: c }} />))}</div></div>
+              <div><label className={`text-xs font-bold uppercase tracking-widest mb-2 flex justify-between ${textMuted}`}><span>Section Gap</span><span className={brandGreen}>{design.sectionGap}</span></label><div className="flex gap-2">{[{label: 'Small', value: '1rem'}, {label: 'Medium', value: '1.5rem'}, {label: 'Large', value: '2rem'}].map(g => (<button key={g.value} onClick={() => setDesign({...design, sectionGap: g.value})} className={`flex-1 py-1.5 text-xs rounded border transition-colors ${design.sectionGap === g.value ? 'bg-emerald-500/20 border-emerald-500 ' + brandGreen : (isDarkUI ? 'bg-[#222] border-[#333] text-gray-300' : 'bg-white border-gray-200 text-gray-700')}`}>{g.label}</button>))}</div></div>
               <div className="mt-4"><label className={`flex items-center justify-between cursor-pointer`}><span className={`text-xs font-bold uppercase tracking-widest ${textMuted}`}>Show Icons</span><div className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors ${design.showIcons ? brandGreenBg : (isDarkUI ? 'bg-[#333]' : 'bg-gray-300')}`} onClick={() => setDesign({...design, showIcons: !design.showIcons})}><span className={`inline-block w-4 h-4 transform bg-white rounded-full transition-transform ${design.showIcons ? 'translate-x-6' : 'translate-x-1'}`} /></div></label></div>
               
               <div className="mt-6 border-t pt-5 border-gray-200 dark:border-[#333]">
@@ -319,8 +321,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
         )}
 
-        {/* DATA SIDEBAR */}
-        {activeSidebar === 'data' && (
+        {!readOnly && activeSidebar === 'data' && (
           <div className={`w-[400px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
             <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}><h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><FileJson size={18} className={brandGreen}/> Raw JSON</h3><button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button></div>
             <div className="flex-1 overflow-hidden relative">
@@ -329,8 +330,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
         )}
 
-        {/* AI SIDEBAR */}
-        {activeSidebar === 'ai' && (
+        {!readOnly && activeSidebar === 'ai' && (
           <div className={`w-[360px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
             <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
               <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border-2 ${cvScore >= 80 ? 'bg-green-500/20 border-green-500 text-green-500' : 'bg-yellow-500/20 border-yellow-500 text-yellow-500'}`}>{cvScore}</div><div><span className={`font-bold text-sm uppercase ${textPrimary}`}>AI Review</span><div className={`text-xs ${textMuted}`}>{aiIssues.length} issues</div></div></div>
@@ -350,19 +350,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
         )}
 
-        {/* MAIN CANVAS */}
-        <div className={`flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
-          <div key={templateAnimKey} className="transform origin-top transition-transform scale-[0.85] lg:scale-100 xl:scale-105 h-max pb-20 text-gray-900">
-            <div className="cv-document-wrapper relative shadow-2xl" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px` } as React.CSSProperties}>
-              <div className="cv-page-visualizer"></div>
+        <div className={readOnly ? 'w-full' : `flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
+          {readOnly ? (
+            <div className="cv-document-wrapper text-gray-900" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap } as React.CSSProperties}>
               {renderCanvasLayout()}
             </div>
-          </div>
+          ) : (
+            <div key={templateAnimKey} className="transform origin-top transition-transform scale-[0.85] lg:scale-100 xl:scale-105 h-max pb-20 text-gray-900">
+              <div className="cv-document-wrapper relative shadow-2xl" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap } as React.CSSProperties}>
+                <div className="cv-page-visualizer"></div>
+                {renderCanvasLayout()}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* AI SUGGESTION POPUP */}
-      {pointSuggestion && (
+      {!readOnly && pointSuggestion && (
         <div className={`fixed z-[110] border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111]`} style={{ top: pointSuggestion.rect.top + 15, left: pointSuggestion.rect.left }}>
           <div className="flex items-center justify-between mb-4 text-[#7EE787]">
             <div className="flex items-center gap-2">
@@ -518,7 +522,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                         <div className={`p-4 flex justify-between items-center z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}><div><div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div><div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div></div>{isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}</div>
                         
                         {/* Live Thumbnail Preview logic from snippet render inside modal */}
-                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height: '220px', backgroundColor: '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor } as React.CSSProperties}>
+                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height: '220px', backgroundColor: '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap } as React.CSSProperties}>
                           <div className="absolute top-0 left-0 w-[200%] h-[200%] origin-top-left pointer-events-none px-8 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ transform: 'scale(0.5)' }}>
                             <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} />
                           </div>
@@ -597,4 +601,3 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 CVCanvasEngine.displayName = 'CVCanvasEngine';
 
 export default CVCanvasEngine;
-
