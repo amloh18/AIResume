@@ -214,6 +214,8 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
             stroke="#6B7280"
             fontSize={12}
             domain={[0, 'dataMax + 1']}
+            allowDecimals={false}
+            tickCount={5}
           />
           <Tooltip
             cursor={{ stroke: '#10B981', strokeWidth: 2, opacity: 0.5 }}
