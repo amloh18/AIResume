@@ -179,7 +179,7 @@ function DashboardContent() {
   };
 
   const status = getStatus(cvHealthScore);
-  const circumference = 2 * Math.PI * 36;
+  const circumference = 2 * Math.PI * 44;
   const strokeDashoffset = circumference * (1 - cvHealthScore / 100);
 
   return (
@@ -200,10 +200,10 @@ function DashboardContent() {
         </div>
         
         <div className="flex flex-col items-center shrink-0 ml-4">
-          <div className="relative w-20 h-20 lg:w-24 lg:h-24 mb-3 rounded-full">
+          <div className="relative w-20 h-20 lg:w-24 lg:h-24 mb-3">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
-              <circle cx="50" cy="50" r="36" stroke="currentColor" strokeWidth="8" fill="none"
+              <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
+              <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
                 strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
                 className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
             </svg>
@@ -211,8 +211,8 @@ function DashboardContent() {
               <span className="text-xl lg:text-2xl font-black text-gray-900 dark:text-white">{cvHealthScore}%</span>
             </div>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 font-bold text-[10px] lg:text-xs text-center uppercase tracking-widest mt-2">Master CV</p>
-          <p className={`text-[10px] lg:text-xs font-black text-center mt-1 ${status.color}`}>{status.label}</p>
+          <p className="text-gray-500 dark:text-gray-400 font-bold text-[10px] lg:text-xs text-center uppercase tracking-widest">Master CV</p>
+          <p className={`text-[10px] lg:text-xs font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
         </div>
       </div>
 
