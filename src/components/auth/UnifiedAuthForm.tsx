@@ -180,7 +180,7 @@ export default function UnifiedAuthForm({
     return (
       <div key={field.name}>
         <div className="flex flex-col gap-2">
-          <label htmlFor={field.name} className="text-sm font-medium text-white/80 w-full flex-shrink-0">
+          <label htmlFor={field.name} className="text-sm font-medium text-gray-700 dark:text-white/80 w-full flex-shrink-0">
             {field.label}
           </label>
           <div className="relative w-full flex items-center">
@@ -202,10 +202,10 @@ export default function UnifiedAuthForm({
               required={field.required}
               className={`w-full ${field.icon ? 'pl-11' : 'pl-4'} ${
                 isPasswordField ? 'pr-12' : 'pr-4'
-              } py-3 bg-[#232f1c] text-white placeholder-white/50 transition-all duration-200 rounded-xl outline-none focus:outline-none ${
+              } py-3 bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 transition-all duration-200 rounded-xl outline-none focus:outline-none ${
                 fieldError 
                   ? 'border border-red-500 focus:border-2 focus:border-red-500' 
-                  : 'border border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
+                  : 'border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
               }`}
             />
             {isPasswordField && field.showPasswordToggle && (
@@ -213,7 +213,7 @@ export default function UnifiedAuthForm({
                 type="button"
                 onClick={() => togglePasswordVisibility(field.name)}
                 tabIndex={-1}
-                className="absolute right-3 text-white/60 hover:text-white transition-colors flex items-center justify-center w-8 h-full z-10"
+                className="absolute right-3 text-gray-400 hover:text-gray-600 dark:text-white/60 dark:hover:text-white transition-colors flex items-center justify-center w-8 h-full z-10"
               >
                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
@@ -229,7 +229,7 @@ export default function UnifiedAuthForm({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-2 flex items-center gap-2 text-red-400 text-sm"
+            className="mt-2 flex items-center gap-2 text-red-500 dark:text-red-400 text-sm"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{fieldError}</span>
@@ -249,10 +249,10 @@ export default function UnifiedAuthForm({
           {/* Divider */}
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/20"></div>
+              <div className="w-full border-t border-gray-200 dark:border-white/20"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#222B22] text-white/60">Or continue with email</span>
+              <span className="px-2 bg-white dark:bg-[#141810] text-gray-500 dark:text-white/60">Or continue with email</span>
             </div>
           </div>
         </div>
@@ -298,7 +298,7 @@ export default function UnifiedAuthForm({
         <motion.button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#80FF00] hover:bg-[#70e600] text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-[#80FF00] hover:bg-[#70e600] text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >

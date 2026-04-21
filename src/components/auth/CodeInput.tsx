@@ -144,13 +144,13 @@ export default function CodeInput({
             disabled={disabled}
             className={`
               w-16 h-16 text-2xl font-bold text-center
-              bg-transparent rounded-full
-              text-white placeholder-gray-500
+              bg-white dark:bg-transparent rounded-full
+              text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
               outline-none focus:outline-none
               transition-all duration-200
               ${error 
                 ? 'border border-red-500 focus:border-2 focus:border-red-500' 
-                : 'border border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
+                : 'border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
               }
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-text'}
             `}
@@ -165,12 +165,12 @@ export default function CodeInput({
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <p className="text-red-400 text-sm">{error}</p>
+          <p className="text-red-500 dark:text-red-400 text-sm">{error}</p>
         </motion.div>
       )}
 
       <div className="text-center">
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-500 dark:text-gray-400 text-sm">
           Enter the 4-digit code sent to your email
         </p>
       </div>

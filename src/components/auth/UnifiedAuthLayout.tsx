@@ -33,9 +33,9 @@ export default function UnifiedAuthLayout({
 }: UnifiedAuthLayoutProps & { isModal?: boolean }) {
   if (isModal) {
     return (
-      <div className="w-full p-6 sm:p-8 bg-[#141810]">
+      <div className="w-full p-6 sm:p-8 bg-white dark:bg-[#141810]">
         <div className="mb-8 flex justify-center">
-          <Logo size="lg" showText={true} theme="light" />
+          <Logo size="lg" showText={true} theme="auto" />
         </div>
         {children}
       </div>
@@ -43,7 +43,7 @@ export default function UnifiedAuthLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-[#141810]">
+    <div className="min-h-screen flex bg-white dark:bg-[#141810]">
       {/* Left Side - 50% - Bright Color Panel */}
       <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden">
         {/* Vibrant Gradient Background */}
@@ -96,7 +96,7 @@ export default function UnifiedAuthLayout({
           <div className="absolute top-8 left-8">
             <Link
               href={backHref}
-              className="flex items-center gap-2 text-white/60 hover:text-white transition-colors duration-200"
+              className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white transition-colors duration-200"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="text-sm">{backText}</span>
@@ -110,11 +110,11 @@ export default function UnifiedAuthLayout({
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="bg-[#222B22] rounded-2xl border border-white/10 shadow-2xl p-8"
+            className="bg-white dark:bg-[#222B22] rounded-2xl border border-gray-100 dark:border-white/10 shadow-2xl p-8"
           >
             {/* Card Header with Logo - Only show on mobile */}
             <div className="mb-8 lg:hidden flex justify-center">
-              <Logo size="md" showText={true} theme="dark" />
+              <Logo size="md" showText={true} theme="auto" />
             </div>
 
             {/* Card Content */}

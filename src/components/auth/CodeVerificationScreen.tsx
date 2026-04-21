@@ -112,7 +112,7 @@ export default function CodeVerificationScreen({
       </div>
 
       {/* Title */}
-      <h3 className="text-3xl font-bold text-white mb-6">
+      <h3 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
         Check your email
       </h3>
       
@@ -124,10 +124,10 @@ export default function CodeVerificationScreen({
       )}
       
       {/* Instructions */}
-      <p className="text-gray-300 text-lg mb-2">
+      <p className="text-gray-600 dark:text-gray-300 text-lg mb-2">
         We've sent a 4-digit verification code to your email address.
       </p>
-      <p className="text-gray-300 text-lg mb-8">
+      <p className="text-gray-600 dark:text-gray-300 text-lg mb-8">
         Please enter it below to continue.
       </p>
 
