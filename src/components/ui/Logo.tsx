@@ -19,13 +19,13 @@ const Logo = ({ className = '', size = 'md', showText = true, theme = 'auto' }: 
     ? 'text-gray-900' 
     : theme === 'dark' 
       ? 'text-white' 
-      : 'text-gray-900 dark:text-gray-100';
+      : 'text-gray-900 dark:text-white';
 
   const cvColor = theme === 'light'
-    ? 'text-gray-900'
+    ? 'text-[#81ff00]'
     : theme === 'dark'
-      ? 'text-white'
-      : 'text-gray-900 dark:text-white';
+      ? 'text-[#81ff00]'
+      : 'text-[#81ff00] dark:text-[#81ff00]';
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -38,7 +38,7 @@ const Logo = ({ className = '', size = 'md', showText = true, theme = 'auto' }: 
         priority
       />
       {showText && (
-        <span className={`font-black font-sans ${sizeMap[size].text}`} style={{ fontWeight: 900 }}>
+        <span className={`font-bold flex items-center leading-none ${sizeMap[size].text}`} style={{ letterSpacing: '-0.5px' }}>
           <span className={cvColor}>CV</span><span className={textColor}>Circle</span>
         </span>
       )}
