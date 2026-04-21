@@ -215,7 +215,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
 
           {/* Modal */}
           <motion.div
-            className="relative w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
+            className="relative w-full max-w-md bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-none p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
@@ -242,7 +242,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                   exit={{ opacity: 0, scale: 0.8 }}
                 >
                   <motion.div
-                    className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
+                    className="w-16 h-16 mx-auto rounded-none bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
                     initial={{ scale: 0, rotate: -180 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ delay: 0.2, type: "spring" }}
@@ -275,7 +275,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           <motion.button
                             onClick={() => handleOAuthSignIn('google')}
                             disabled={isLoading}
-                            className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                            className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                             whileHover={{ scale: isLoading ? 1 : 1.02 }}
                             whileTap={{ scale: isLoading ? 1 : 0.98 }}
                           >
@@ -294,7 +294,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           <motion.button
                             onClick={() => handleOAuthSignIn('google')}
                             disabled={isLoading}
-                            className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                            className="w-full flex items-center justify-center px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                             whileHover={{ scale: isLoading ? 1 : 1.02 }}
                             whileTap={{ scale: isLoading ? 1 : 0.98 }}
                           >
@@ -312,7 +312,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           <motion.button
                             onClick={() => handleOAuthSignIn('apple')}
                             disabled={isLoading}
-                            className="w-full flex items-center justify-center px-4 py-3 bg-black border border-white/20 rounded-xl text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                            className="w-full flex items-center justify-center px-4 py-3 bg-black border border-white/20 rounded-none text-white hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-lime-400/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                             whileHover={{ scale: isLoading ? 1 : 1.02 }}
                             whileTap={{ scale: isLoading ? 1 : 0.98 }}
                           >
@@ -338,7 +338,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
 
                   {/* Show message if no OAuth providers are configured */}
                   {!hasGoogle && !hasApple && (
-                    <div className="mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="mb-6 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-none">
                       <p className="text-yellow-400 text-sm text-center">
                         🔧 OAuth providers not configured. Please set up Firebase or NextAuth credentials.
                       </p>
@@ -349,7 +349,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
                       <motion.div
-                        className="p-4 bg-red-400/10 border border-red-400/20 rounded-xl flex items-center gap-3 text-red-400"
+                        className="p-4 bg-red-400/10 border border-red-400/20 rounded-none flex items-center gap-3 text-red-400"
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                       >
@@ -371,7 +371,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                             value={formData.firstName}
                             onChange={(e) => handleInputChange('firstName', e.target.value)}
                             required
-                            className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                            className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
                             placeholder="First name"
                             disabled={isLoading}
                           />
@@ -388,7 +388,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                             value={formData.lastName}
                             onChange={(e) => handleInputChange('lastName', e.target.value)}
                             required
-                            className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                            className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
                             placeholder="Last name"
                             disabled={isLoading}
                           />
@@ -408,7 +408,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           value={formData.email}
                           onChange={(e) => handleInputChange('email', e.target.value)}
                           required
-                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                          className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
                           placeholder="Enter your email"
                           disabled={isLoading}
                         />
@@ -427,7 +427,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           value={formData.password}
                           onChange={(e) => handleInputChange('password', e.target.value)}
                           required
-                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
                           placeholder="Create a password"
                           disabled={isLoading}
                         />
@@ -456,7 +456,7 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                           value={formData.confirmPassword}
                           onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                           required
-                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
+                          className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 [&:-webkit-autofill]:bg-white/10 [&:-webkit-autofill]:text-white [&:-webkit-autofill]:shadow-[0_0_0_30px_rgba(255,255,255,0.1)_inset] [&:-webkit-autofill]:border-lime-400/50"
                           placeholder="Confirm your password"
                           disabled={isLoading}
                         />
@@ -477,14 +477,14 @@ export default function RegistrationModal({ isOpen, onClose, onSwitchToLogin, on
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      className="w-full bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold py-3 rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full bg-gradient-to-r from-lime-400 to-lime-500 text-black font-semibold py-3 rounded-none hover:from-lime-300 hover:to-lime-400 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       whileHover={{ scale: isLoading ? 1 : 1.02 }}
                       whileTap={{ scale: isLoading ? 1 : 0.98 }}
                     >
                       {isLoading ? (
                         <div className="flex items-center justify-center gap-2">
                           <motion.div
-                            className="w-5 h-5 border-2 border-black border-t-transparent rounded-full"
+                            className="w-5 h-5 border-2 border-black border-t-transparent rounded-none"
                             animate={{ rotate: 360 }}
                             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                           />

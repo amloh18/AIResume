@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, Heart, ExternalLink } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
-import { parseFormattedText } from '@/lib/utils/textFormatting';
+import { parseFormattedText, stripHtmlTags } from '@/lib/utils/textFormatting';
 import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface VolunteerProps {
@@ -91,8 +91,18 @@ const Volunteer: React.FC<VolunteerProps> = ({
 
             {volunteerItem.summary && (
               <div className="volunteer-summary entry-content item-content">
-                <p>{volunteerItem.summary}</p>
+                <div dangerouslySetInnerHTML={{ __html: parseFormattedText(volunteerItem.summary) }} />
               </div>
+            )}
+
+            {(Array.isArray((volunteerItem as any).highlights) ? (volunteerItem as any).highlights : Array.isArray((volunteerItem as any).achievements) ? (volunteerItem as any).achievements : []).length > 0 && (
+              <ul className="item-highlights">
+                {(Array.isArray((volunteerItem as any).highlights) ? (volunteerItem as any).highlights : Array.isArray((volunteerItem as any).achievements) ? (volunteerItem as any).achievements : []).map((highlight: any, hIndex: number) => (
+                  <li key={hIndex} className="bullet-point">
+                    {stripHtmlTags(typeof highlight === 'string' ? highlight : highlight?.text || '')}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         ))}
@@ -111,7 +121,6 @@ const Volunteer: React.FC<VolunteerProps> = ({
         
         .volunteer-item {
           page-break-inside: avoid;
-          margin-bottom: 14px;
           border-left: 2px solid #e11d48;
           padding-left: 16px;
           background: linear-gradient(90deg, rgba(225, 29, 72, 0.02) 0%, transparent 100%);
@@ -191,6 +200,20 @@ const Volunteer: React.FC<VolunteerProps> = ({
         .volunteer-summary p {
           margin: 0;
           text-align: justify;
+        }
+
+        .item-highlights {
+          max-width: 75%;
+          margin: 4px 0;
+          padding-left: 18px;
+          color: ${template.globalStyles.primaryColor};
+          font-size: ${template.globalStyles.fontSize};
+          line-height: ${template.globalStyles.lineHeight};
+        }
+
+        .bullet-point {
+          orphans: 2;
+          widows: 2;
         }
         
         @media (max-width: 768px) {

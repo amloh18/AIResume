@@ -203,6 +203,13 @@ export async function PUT(request: NextRequest) {
       // Update preferences
       if (settings.preferences) {
         Object.keys(settings.preferences).forEach(key => {
+          if (key === 'cv' && settings.preferences.cv && typeof settings.preferences.cv === 'object') {
+            userSettings.preferences.cv = {
+              ...(userSettings.preferences.cv || {}),
+              ...settings.preferences.cv
+            };
+            return;
+          }
           userSettings.preferences[key] = settings.preferences[key];
         });
       }

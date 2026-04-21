@@ -343,8 +343,8 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
             {work.map((job, index) => (
               <div key={index} className="pm-split-item" data-item-id={index}>
                 <div className="pm-split-left">
-                  <p className="pm-split-company">{job.name}</p>
-                  <p className="pm-split-position">{job.position}</p>
+                  <p className="pm-split-company">{job.name || <span className="text-gray-400">Company Name</span>}</p>
+                  <p className="pm-split-position">{job.position || <span className="text-gray-400">Job Title</span>}</p>
                   <p className="pm-split-dates">
                     {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
                   </p>
@@ -368,9 +368,9 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
             {education.map((edu, index) => (
               <div key={index} className="pm-split-item" data-item-id={index}>
                 <div className="pm-split-left">
-                  <p className="pm-split-company">{edu.institution}</p>
+                  <p className="pm-split-company">{edu.institution || <span className="text-gray-400">Institution Name</span>}</p>
                   <p className="pm-split-position">
-                    {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
+                    {edu.studyType || edu.area ? `${edu.studyType || ''}${edu.area ? ` in ${edu.area}` : ''}` : <span className="text-gray-400">Degree & Major</span>}
                   </p>
                   <p className="pm-split-dates">
                     {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
@@ -415,7 +415,7 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
             {projects.map((project, index) => (
               <div key={index} className="pm-split-item" data-item-id={index}>
                 <div className="pm-split-left">
-                  <p className="pm-split-company">{project.name}</p>
+                  <p className="pm-split-company">{project.name || <span className="text-gray-400">Project Name</span>}</p>
                   {project.startDate && (
                     <p className="pm-split-dates">
                       {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
@@ -449,12 +449,19 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
             {certificates.map((cert, index) => (
               <div key={index} className="pm-item" data-item-id={index}>
                 <div className="pm-item-header">
-                  <h3 className="pm-item-title">{cert.name}</h3>
+                  <h3 className="pm-item-title">{cert.name || <span className="text-gray-400">Certificate Name</span>}</h3>
                   {cert.date && (
                     <span className="pm-item-dates">{cert.date}</span>
                   )}
                 </div>
-                <p className="pm-item-subtitle">{cert.issuer}</p>
+                <p className="pm-item-subtitle">{cert.issuer || <span className="text-gray-400">Issuer</span>}</p>
+                {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                  <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                    {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                      <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                    ))}
+                  </ul>
+                )}
               </div>
             ))}
           </div>
@@ -486,7 +493,7 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
             <h2 className="pm-section-title">Awards</h2>
             {awards.map((award, index) => (
               <div key={index} className="pm-award-item" data-item-id={index}>
-                <span className="pm-award-title">{award.title}</span>
+                <span className="pm-award-title">{award.title || <span className="text-gray-400">Award Title</span>}</span>
                 {award.awarder && (
                   <span className="pm-award-info"> – {award.awarder}</span>
                 )}

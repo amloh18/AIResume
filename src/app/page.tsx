@@ -2,12 +2,11 @@
 
 import React, { useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import { FileText, Sparkles, Layout, PenTool, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
+import { FileText, Sparkles, PenTool, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import ProductVideo from '@/components/landing/ProductVideo';
 import ChromeExtension from '@/components/landing/ChromeExtension';
-import PremiumTemplates from '@/components/landing/PremiumTemplates';
 import Testimonials from '@/components/landing/Testimonials';
 import HowItWorks from '@/components/landing/HowItWorks';
 import Pricing from '@/components/landing/Pricing';
@@ -77,14 +76,6 @@ function LandingPageContent() {
           ariaLabel: 'ATS compatibility check',
           icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
           snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30'
-        },
-        { 
-          label: 'Premium Templates', 
-          description: 'Beautiful, professional templates designed by experts.', 
-          href: '#premium-templates', 
-          ariaLabel: 'View premium templates',
-          icon: <Layout className="w-6 h-6 text-orange-400" />,
-          snapshot: 'bg-gradient-to-br from-orange-500/20 to-red-600/20 border-orange-500/30'
         },
       ]
     },
@@ -210,9 +201,6 @@ function LandingPageContent() {
 
           {/* Hero Section */}
           <Hero />
-
-          {/* Premium Templates Section */}
-          <PremiumTemplates />
 
           {/* How It Works Section */}
           <HowItWorks />

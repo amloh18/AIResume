@@ -94,7 +94,7 @@ export default function CodeVerificationScreen({
     <div className="text-center">
       {/* Email Icon with Animation */}
       <div className="flex justify-center mb-8">
-        <div className="w-20 h-20 rounded-full flex items-center justify-center border-2 border-[#88E03F]">
+        <div className="w-20 h-20 rounded-none flex items-center justify-center border-2 border-[#88E03F]">
           <motion.div
             animate={{ 
               scale: [1, 1.1, 1],
@@ -157,7 +157,7 @@ export default function CodeVerificationScreen({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg"
+          className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-none"
         >
           <div className="flex items-center justify-center gap-2">
             <AlertCircle className="w-4 h-4 text-red-400" />
@@ -171,7 +171,7 @@ export default function CodeVerificationScreen({
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg"
+          className="mb-4 p-3 bg-green-500/10 border border-green-500/20 rounded-none"
         >
           <div className="flex items-center justify-center gap-2">
             <CheckCircle className="w-4 h-4 text-green-400" />

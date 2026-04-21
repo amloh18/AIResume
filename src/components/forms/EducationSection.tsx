@@ -77,7 +77,7 @@ function SortableEducationItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white/5 rounded-xl p-6 pl-10 border border-white/10 mb-6 relative ${isDragging ? 'shadow-2xl' : ''}`}
+      className={`bg-white/5 rounded-none p-6 pl-10 border border-white/10 mb-6 relative ${isDragging ? 'shadow-2xl' : ''}`}
     >
       {/* Drag handle */}
       <button
@@ -118,7 +118,7 @@ function SortableEducationItem({
             type="text"
             value={education.institution || ''}
             onChange={(e) => onUpdate(index, 'institution', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
             placeholder="University of California"
           />
         </div>
@@ -128,7 +128,7 @@ function SortableEducationItem({
             type="text"
             value={education.area || ''}
             onChange={(e) => onUpdate(index, 'area', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
             placeholder="Computer Science"
           />
         </div>
@@ -141,28 +141,28 @@ function SortableEducationItem({
             type="text"
             value={education.studyType || ''}
             onChange={(e) => onUpdate(index, 'studyType', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
             placeholder="Bachelor's Degree"
           />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
           <input
-            type="text"
+            type="month"
             value={education.startDate || ''}
             onChange={(e) => onUpdate(index, 'startDate', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-            placeholder="Sep 2016"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="YYYY-MM"
           />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
           <input
-            type="text"
+            type="month"
             value={education.endDate || ''}
             onChange={(e) => onUpdate(index, 'endDate', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-            placeholder="May 2020"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="YYYY-MM"
           />
         </div>
       </div>
@@ -171,12 +171,23 @@ function SortableEducationItem({
       <div className="mt-4">
         <div className="flex items-center justify-between mb-2">
           <label className="block text-white/80 text-sm font-medium">Description</label>
-          <WYSIWYGToolbar
-            showAIButton={true}
-            fieldType="other"
-            onAISuggestions={() => onGenerateSuggestions(index, education)}
-            isGenerating={loadingSuggestions}
-          />
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm" title="Show description as bullet points in the final resume">
+              <input
+                type="checkbox"
+                checked={!!education.showBullets}
+                onChange={(e) => onUpdate(index, 'showBullets', e.target.checked)}
+                className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+              />
+              Show as bullet points
+            </label>
+            <WYSIWYGToolbar
+              showAIButton={true}
+              fieldType="other"
+              onAISuggestions={() => onGenerateSuggestions(index, education)}
+              isGenerating={loadingSuggestions}
+            />
+          </div>
         </div>
         <AISuggestionsPanel
           isVisible={showSuggestions}
@@ -385,7 +396,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
           };
           onUpdate([...safeData, newEducation]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Education

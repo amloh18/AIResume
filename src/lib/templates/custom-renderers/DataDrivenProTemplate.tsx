@@ -469,8 +469,8 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
               <h3 className="section-title">Education</h3>
               {education?.map((edu, index) => (
                 <div key={index} className="education-item" data-item-id={index}>
-                  <div className="degree-title">{edu.studyType || 'ENTER YOUR MAJOR'}</div>
-                  <div className="institution-info">{edu.institution || 'Name of University'}</div>
+                  <div className="degree-title">{edu.studyType || <span className="text-gray-400">Degree & Major</span>}</div>
+                  <div className="institution-info">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                   <div className="education-dates">{formatDateRangeWithStyle(edu.startDate || '2005', edu.endDate || '2007', dateFormat)}</div>
                 </div>
               ))}
@@ -566,10 +566,10 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                 <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
                     <div>
-                      <div className="job-title">{job.position || ''}</div>
+                      <div className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</div>
                       <div className="company-info">
-                        {job.name || ''}
-                        {(job.name && (job.startDate || job.endDate)) && ' | '}
+                        {job.name || <span className="text-gray-400">Company Name</span>}
+                        {(job.startDate || job.endDate) && ' | '}
                         {formatDateRangeWithStyle(job.startDate || '', job.endDate || '', dateFormat)}
                       </div>
                     </div>
@@ -610,7 +610,7 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                 <div key={index} className="project-item" data-item-id={index}>
                   <div className="project-header">
                     <div>
-                      <div className="project-title">{project.name}</div>
+                      <div className="project-title">{project.name || <span className="text-gray-400">Project Name</span>}</div>
                     </div>
                   </div>
                   <div className="project-description">
@@ -619,6 +619,9 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                         {stripHtmlTags(project.description)}
                       </p>
                     )}
+                    {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, hi: number) => (
+                      <div key={hi} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                    ))}
                     {project.keywords && project.keywords.length > 0 && (
                       <div className="technologies">
                         Technologies: {project.keywords.join(', ')}
@@ -653,6 +656,9 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                           {stripHtmlTags(vol.summary)}
                         </div>
                       )}
+                      {(Array.isArray(vol.highlights) ? vol.highlights : Array.isArray((vol as any).achievements) ? (vol as any).achievements : []).map((h: any, hi: number) => (
+                        <div key={hi} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                      ))}
                     </div>
                   </div>
                 ))}
@@ -684,6 +690,9 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                         </div>
                       </div>
                     )}
+                    {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, hi: number) => (
+                      <div key={hi} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                    ))}
                   </div>
                 ))}
               </div>
@@ -744,6 +753,9 @@ export const DataDrivenProTemplate: React.FC<DataDrivenProTemplateProps> = ({
                         </div>
                       </div>
                     )}
+                    {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).map((h: any, hi: number) => (
+                      <div key={hi} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                    ))}
                   </div>
                 ))}
               </div>

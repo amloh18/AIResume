@@ -83,6 +83,7 @@ export interface IUserSettings extends Document {
       autoSaveInterval: number; // minutes
       exportFormat: 'pdf' | 'docx' | 'both';
       watermark: boolean;
+      sectionTitles: Record<string, string>;
     };
     jobSearch: {
       defaultFilters: Record<string, any>;
@@ -408,6 +409,24 @@ const userSettingsSchema = new Schema<IUserSettings>({
       watermark: {
         type: Boolean,
         default: false
+      },
+      sectionTitles: {
+        type: Schema.Types.Mixed,
+        default: {
+          summary: 'Professional Summary',
+          experience: 'Professional Experience',
+          education: 'Education',
+          projects: 'Projects',
+          certifications: 'Certifications',
+          awards: 'Awards',
+          publications: 'Publications',
+          volunteer: 'Volunteer Experience',
+          references: 'References',
+          skills: 'Skills',
+          languages: 'Languages',
+          interests: 'Interests',
+          contact: 'Contact'
+        }
       }
     },
     jobSearch: {

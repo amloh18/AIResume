@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import PremiumTemplates from '@/components/landing/PremiumTemplates'
 import { ArrowRight, FileText, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 
@@ -138,9 +137,6 @@ export default function TemplatesPage() {
           </div>
         </section>
 
-        {/* Templates Section */}
-        <PremiumTemplates />
-
         {/* Template Benefits Section */}
         <section className="py-20 px-4 bg-gray-900/50">
           <div className="max-w-7xl mx-auto">
@@ -195,4 +191,3 @@ export default function TemplatesPage() {
     </>
   )
 }
-

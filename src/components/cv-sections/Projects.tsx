@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, ExternalLink, Github, FolderOpen } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
-import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
+import { parseFormattedText, formatDate, formatDateRange, stripHtmlTags } from '@/lib/utils/textFormatting';
 import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface ProjectsProps {
@@ -89,11 +89,11 @@ const Projects: React.FC<ProjectsProps> = ({
               </div>
             )}
 
-            {project.highlights && project.highlights.length > 0 && (
+            {(Array.isArray((project as any).highlights) ? (project as any).highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).length > 0 && (
               <ul className="item-highlights">
-                {project.highlights.map((highlight, hIndex) => (
+                {(Array.isArray((project as any).highlights) ? (project as any).highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((highlight: any, hIndex: number) => (
                   <li key={hIndex} className="bullet-point">
-                    {highlight}
+                    {stripHtmlTags(typeof highlight === 'string' ? highlight : highlight?.text || '')}
                   </li>
                 ))}
               </ul>
@@ -122,7 +122,6 @@ const Projects: React.FC<ProjectsProps> = ({
         
         .project-item {
           page-break-inside: avoid;
-          margin-bottom: 14px;
           border-left: 2px solid ${template.globalStyles.primaryColor}20;
           padding-left: 16px;
         }

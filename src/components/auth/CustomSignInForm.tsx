@@ -72,7 +72,7 @@ export default function CustomSignInForm() {
           </p>
         </div>
         
-        <div className="rounded-lg border text-card-foreground shadow-sm bg-gray-800 border-gray-700">
+        <div className="rounded-none border text-card-foreground shadow-sm bg-gray-800 border-gray-700">
           <div className="flex flex-col space-y-1.5 p-6">
             <div className="text-2xl font-semibold leading-none tracking-tight text-white">
               User Access
@@ -97,7 +97,7 @@ export default function CustomSignInForm() {
                     onChange={handleChange}
                     required
                     placeholder="user@cvcircle.io"
-                    className="flex h-10 w-full rounded-md px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
+                    className="flex h-10 w-full rounded-none px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
                   />
                 </div>
                 
@@ -113,7 +113,7 @@ export default function CustomSignInForm() {
                     onChange={handleChange}
                     required
                     placeholder="Enter your password"
-                    className="flex h-10 w-full rounded-md px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
+                    className="flex h-10 w-full rounded-none px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 mt-1 bg-gray-700 border border-[#80FF00]/50 text-white placeholder-gray-400 focus:border-2 focus:border-[#80FF00] transition-all duration-200"
                   />
                 </div>
               </div>
@@ -133,7 +133,7 @@ export default function CustomSignInForm() {
               <button
                 type="submit"
                 disabled={loading}
-                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-none text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2 w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
               >
                 {loading ? 'Signing in...' : 'Sign In'}
               </button>

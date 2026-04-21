@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, ExternalLink, Award, AlertTriangle } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText, stripHtmlTags } from '@/lib/utils/textFormatting';
 import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface CertificatesProps {
@@ -80,6 +81,22 @@ const Certificates: React.FC<CertificatesProps> = ({
                 )}
               </div>
             </div>
+            
+            {certificate.description && (
+              <div className="certificate-description entry-content item-content">
+                <div dangerouslySetInnerHTML={{ __html: parseFormattedText(certificate.description) }} />
+              </div>
+            )}
+
+            {(Array.isArray((certificate as any).highlights) ? (certificate as any).highlights : Array.isArray((certificate as any).achievements) ? (certificate as any).achievements : []).length > 0 && (
+              <ul className="item-highlights">
+                {(Array.isArray((certificate as any).highlights) ? (certificate as any).highlights : Array.isArray((certificate as any).achievements) ? (certificate as any).achievements : []).map((highlight: any, hIndex: number) => (
+                  <li key={hIndex} className="bullet-point">
+                    {stripHtmlTags(typeof highlight === 'string' ? highlight : highlight?.text || '')}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>
@@ -214,6 +231,32 @@ const Certificates: React.FC<CertificatesProps> = ({
         
         .certificate-item.expiring-soon .expiry-warning {
           color: #f59e0b;
+        }
+
+        .certificate-description {
+          margin-top: 8px;
+          color: ${template.globalStyles.primaryColor};
+          font-size: ${template.globalStyles.fontSize};
+          line-height: ${template.globalStyles.lineHeight};
+        }
+        
+        .certificate-description p {
+          margin: 0;
+          text-align: justify;
+        }
+
+        .item-highlights {
+          margin: 8px 0 0 0;
+          padding-left: 18px;
+          color: ${template.globalStyles.primaryColor};
+          font-size: ${template.globalStyles.fontSize};
+          line-height: ${template.globalStyles.lineHeight};
+        }
+
+        .bullet-point {
+          orphans: 2;
+          widows: 2;
+          margin-bottom: 2px;
         }
         
         @media (max-width: 768px) {

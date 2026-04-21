@@ -144,7 +144,7 @@ export default function CodeInput({
             disabled={disabled}
             className={`
               w-16 h-16 text-2xl font-bold text-center
-              bg-white dark:bg-transparent rounded-full
+              bg-white dark:bg-transparent rounded-none
               text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500
               outline-none focus:outline-none
               transition-all duration-200

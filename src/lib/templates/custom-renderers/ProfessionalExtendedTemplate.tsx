@@ -252,6 +252,16 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           line-height: 1.4;
         }
 
+        .professional-extended-template .edu-description ul {
+          margin: 2px 0;
+          padding-left: 16px;
+          list-style-type: disc;
+        }
+
+        .professional-extended-template .edu-description li {
+          margin-bottom: 2px;
+        }
+
         .professional-extended-template .edu-score {
           font-size: 10px;
           color: #6b7280;
@@ -399,6 +409,16 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
           line-height: 1.5;
         }
 
+        .professional-extended-template .project-desc ul {
+          margin: 3px 0;
+          padding-left: 16px;
+          list-style-type: disc;
+        }
+
+        .professional-extended-template .project-desc li {
+          margin-bottom: 2px;
+        }
+
         .professional-extended-template .project-dates {
           font-size: 10px;
           color: #6b7280;
@@ -425,6 +445,18 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
         .professional-extended-template .cert-date {
           font-size: 10px;
           color: #6b7280;
+        }
+
+        .professional-extended-template .cert-bullets {
+          margin: 2px 0 0 0;
+          padding-left: 16px;
+          list-style-type: disc;
+          font-size: 10px;
+          color: #4b5563;
+        }
+
+        .professional-extended-template .cert-bullets li {
+          margin-bottom: 2px;
         }
 
         /* ── Footer ── */
@@ -571,14 +603,31 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                 {education.map((edu: any, i: number) => (
                   <div key={i} className="education-item" data-item-id={i}>
                     <div className="degree">
-                      {[edu.studyType, edu.area].filter(Boolean).join(' in ') || 'Degree'}
+                      {[edu.studyType, edu.area].filter(Boolean).join(' in ') || <span className="text-gray-400">Degree & Major</span>}
                     </div>
-                    {edu.institution && <div className="university">{edu.institution}</div>}
+                    <div className="university">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                     {(edu.startDate || edu.endDate) && (
                       <div className="edu-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                     )}
                     {edu.score && <div className="edu-score">{edu.score}</div>}
-                    {edu.description && <div className="edu-description">{stripHtmlTags(edu.description)}</div>}
+                    {edu.description && (
+                      <div className="edu-description">
+                        {(edu as any).showBullets ? (
+                          <ul>
+                            {stripHtmlTags(edu.description)
+                              .split('\n')
+                              .map(line => line.trim())
+                              .filter(Boolean)
+                              .map(line => line.replace(/^[•\-*◦▪]\s*/, ''))
+                              .map((line: string, li: number) => (
+                                <li key={li}>{line}</li>
+                              ))}
+                          </ul>
+                        ) : (
+                          stripHtmlTags(edu.description)
+                        )}
+                      </div>
+                    )}
                     {edu.courses && Array.isArray(edu.courses) && edu.courses.length > 0 && (
                       <div className="edu-courses">Courses: {edu.courses.join(', ')}</div>
                     )}
@@ -632,12 +681,12 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                   <div key={i} className="experience-item" data-item-id={i}>
                     <div className="timeline-dot" />
                     <div className="experience-header">
-                      <div className="job-title">{job.position || 'Position'}</div>
+                      <div className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</div>
                       <div className="company-line">
-                        {job.name && <span className="company-name">{job.name}</span>}
+                        <span className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</span>
                         {(job.startDate || job.endDate) && (
                           <span className="job-dates">
-                            {job.name ? ' | ' : ''}{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
+                            {' | '}{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
                           </span>
                         )}
                       </div>
@@ -677,6 +726,15 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                     {p.description && (
                       <div className="project-desc">{stripHtmlTags(p.description)}</div>
                     )}
+                    {(Array.isArray(p.highlights) ? p.highlights : Array.isArray(p.achievements) ? p.achievements : []).length > 0 && (
+                      <div className="project-desc">
+                        <ul>
+                          {(Array.isArray(p.highlights) ? p.highlights : Array.isArray(p.achievements) ? p.achievements : []).map((h: any, hi: number) => (
+                            <li key={hi}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -691,6 +749,13 @@ export const ProfessionalExtendedTemplate: React.FC<ProfessionalExtendedTemplate
                     <div className="cert-name">{c.name || 'Certificate'}</div>
                     {c.issuer && <div className="cert-issuer">{c.issuer}</div>}
                     {c.date && <div className="cert-date">{formatDateWithStyle(c.date, dateFormat)}</div>}
+                    {(Array.isArray(c.highlights) ? c.highlights : Array.isArray(c.achievements) ? c.achievements : []).length > 0 && (
+                      <ul className="cert-bullets">
+                        {(Array.isArray(c.highlights) ? c.highlights : Array.isArray(c.achievements) ? c.achievements : []).map((h: any, hi: number) => (
+                          <li key={hi}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 ))}
               </div>

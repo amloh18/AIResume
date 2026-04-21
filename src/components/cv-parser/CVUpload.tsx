@@ -412,7 +412,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
       transition={{ duration: 0.3, ease: "easeOut" }}
     >
       <motion.div
-        className="relative w-full max-w-4xl mx-4 bg-gradient-to-br from-gray-900/95 to-black/95 rounded-3xl border border-white/10 shadow-2xl overflow-hidden"
+        className="relative w-full max-w-4xl mx-4 bg-gradient-to-br from-gray-900/95 to-black/95 rounded-none border border-white/10 shadow-2xl overflow-hidden"
         initial={{ scale: 0.8, y: 50 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.8, y: 50 }}
@@ -431,7 +431,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
             </div>
             <motion.button
               onClick={onClose}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors duration-300"
+              className="p-2 rounded-none bg-white/10 hover:bg-white/20 transition-colors duration-300"
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
@@ -467,7 +467,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: index * 0.1 }}
                     >
-                      <div className={`p-4 rounded-2xl bg-white/5 border border-white/10 ${fileType.color}`}>
+                      <div className={`p-4 rounded-none bg-white/5 border border-white/10 ${fileType.color}`}>
                         <fileType.icon size={32} />
                       </div>
                       <span className="text-white/60 text-sm font-medium">{fileType.label}</span>
@@ -478,7 +478,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 {/* Drop Zone */}
                 <div {...getRootProps()}>
                   <motion.div
-                    className={`relative border-2 border-dashed rounded-3xl p-12 text-center transition-all duration-300 cursor-pointer ${
+                    className={`relative border-2 border-dashed rounded-none p-12 text-center transition-all duration-300 cursor-pointer ${
                       isDragActive
                         ? 'border-lime-400 bg-lime-400/10'
                         : 'border-white/20 hover:border-white/40 hover:bg-white/5'
@@ -493,7 +493,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                       animate={isDragActive ? { scale: 1.05 } : { scale: 1 }}
                     >
                       <motion.div
-                        className="p-6 rounded-full bg-gradient-to-br from-lime-400 to-lime-500"
+                        className="p-6 rounded-none bg-gradient-to-br from-lime-400 to-lime-500"
                         animate={isDragActive ? { rotate: 360 } : { rotate: 0 }}
                         transition={{ duration: 0.5 }}
                       >
@@ -528,7 +528,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
 
                 {/* Manual Entry Button */}
                 <motion.button
-                  className="w-full py-4 px-6 bg-white/5 border border-white/10 rounded-2xl text-white font-medium hover:bg-white/10 transition-colors duration-300"
+                  className="w-full py-4 px-6 bg-white/5 border border-white/10 rounded-none text-white font-medium hover:bg-white/10 transition-colors duration-300"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => onCVParsed(getEmptyStructure())}
@@ -547,7 +547,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 className="text-center space-y-6"
               >
                 <motion.div
-                  className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center"
+                  className="w-24 h-24 mx-auto rounded-none bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 >
@@ -560,9 +560,9 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 </div>
 
                 {/* Progress Bar */}
-                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                <div className="w-full bg-white/10 rounded-none h-2 overflow-hidden">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-lime-400 to-lime-500 rounded-full"
+                    className="h-full bg-gradient-to-r from-lime-400 to-lime-500 rounded-none"
                     initial={{ width: 0 }}
                     animate={{ width: `${uploadProgress}%` }}
                     transition={{ duration: 0.5 }}
@@ -582,7 +582,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 className="text-center space-y-6"
               >
                 <motion.div
-                  className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center"
+                  className="w-24 h-24 mx-auto rounded-none bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                 >
@@ -598,7 +598,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                   {[0, 1, 2].map((i) => (
                     <motion.div
                       key={i}
-                      className="w-2 h-2 bg-white/40 rounded-full"
+                      className="w-2 h-2 bg-white/40 rounded-none"
                       animate={{ scale: [1, 1.5, 1] }}
                       transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
                     />
@@ -616,7 +616,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 className="text-center space-y-6"
               >
                 <motion.div
-                  className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
+                  className="w-24 h-24 mx-auto rounded-none bg-gradient-to-br from-green-400 to-green-500 flex items-center justify-center"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", damping: 15, stiffness: 300 }}
@@ -640,7 +640,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                 className="text-center space-y-6"
               >
                 <motion.div
-                  className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center"
+                  className="w-24 h-24 mx-auto rounded-none bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", damping: 15, stiffness: 300 }}
@@ -653,7 +653,7 @@ const CVUpload: React.FC<CVUploadProps> = ({ onCVParsed, onClose }) => {
                   <p className="text-white/60 mb-4">{errorMessage}</p>
                   
                   <motion.button
-                    className="px-6 py-3 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors duration-300"
+                    className="px-6 py-3 bg-lime-400 text-black font-medium rounded-none hover:bg-lime-300 transition-colors duration-300"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => {

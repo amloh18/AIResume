@@ -67,7 +67,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 40px;
-          margin-bottom: 40px;
+          margin-bottom: 24px;
         }
         
         .header-second-row {
@@ -249,7 +249,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         }
         
         .education-item {
-          margin-bottom: 20px;
+          margin-bottom: 14px;
         }
         
         .education-header {
@@ -275,7 +275,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
         }
         
         .experience-item {
-          margin-bottom: 25px;
+          margin-bottom: 14px;
         }
         
         .experience-header {
@@ -404,8 +404,8 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                 {education.map((edu, index) => (
                   <div key={index} className="education-item" data-item-id={index}>
                     <div className="education-header">
-                      <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
-                      <div className="university">{edu.institution}</div>
+                      <div className="degree">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area ? `in ${edu.area}` : ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</div>
+                      <div className="university">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                       <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                     </div>
                   </div>
@@ -454,8 +454,8 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                 {awards.map((award, index) => (
                   <div key={index} className="education-item">
                     <div className="education-header">
-                      <div className="degree">{award.title}</div>
-                      <div className="university">{award.awarder}</div>
+                      <div className="degree">{award.title || <span className="text-gray-400">Award Title</span>}</div>
+                      <div className="university">{award.awarder || <span className="text-gray-400">Awarder</span>}</div>
                       <div className="education-dates">{award.date}</div>
                       {award.summary && (
                         <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(award.summary)}</div>
@@ -475,11 +475,20 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                 {certificates.map((cert, index) => (
                   <div key={index} className="education-item">
                     <div className="education-header">
-                      <div className="degree">{cert.name}</div>
-                      <div className="university">{cert.issuer}</div>
+                      <div className="degree">{cert.name || <span className="text-gray-400">Certificate Name</span>}</div>
+                      <div className="university">{cert.issuer || <span className="text-gray-400">Issuer</span>}</div>
                       <div className="education-dates">{cert.date}</div>
                       {cert.description && (
                         <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(cert.description)}</div>
+                      )}
+                      {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                        <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                          {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                            <li key={i} style={{ marginBottom: '4px', fontSize: '13px', lineHeight: '1.6', color: '#555555' }}>
+                              {stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   </div>
@@ -496,11 +505,20 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                 {publications.map((pub, index) => (
                   <div key={index} className="education-item">
                     <div className="education-header">
-                      <div className="degree">{pub.name}</div>
-                      <div className="university">{pub.publisher}</div>
+                      <div className="degree">{pub.name || <span className="text-gray-400">Publication Title</span>}</div>
+                      <div className="university">{pub.publisher || <span className="text-gray-400">Publisher</span>}</div>
                       <div className="education-dates">{pub.releaseDate}</div>
                       {pub.summary && (
                         <div className="university" style={{ marginTop: '4px', fontSize: '12px' }}>{stripHtmlTags(pub.summary)}</div>
+                      )}
+                      {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).length > 0 && (
+                        <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                          {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).map((h: any, i: number) => (
+                            <li key={i} style={{ marginBottom: '4px', fontSize: '13px', lineHeight: '1.6', color: '#555555' }}>
+                              {stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   </div>
@@ -555,9 +573,9 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                 {work.map((job, index) => (
                   <div key={index} className="experience-item" data-item-id={index}>
                     <div className="experience-header">
-                      <div className="job-title">{job.position}</div>
+                      <div className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</div>
                       <div className="company-info">
-                        <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
+                        <span className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
                       </div>
                     </div>
                     {job.summary && (
@@ -579,7 +597,7 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                 {projects.map((project, index) => (
                   <div key={index} className="experience-item" data-item-id={index}>
                     <div className="experience-header">
-                      <div className="job-title">{project.name}</div>
+                      <div className="job-title">{project.name || <span className="text-gray-400">Project Name</span>}</div>
                       {project.startDate && (
                         <div className="company-info">
                           <span className="job-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</span>
@@ -590,6 +608,15 @@ export const DesignerModernTemplate: React.FC<DesignerModernTemplateProps> = ({
                       <div className="job-description">
                         {stripHtmlTags(project.description)}
                       </div>
+                    )}
+                    {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).length > 0 && (
+                      <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                        {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, i: number) => (
+                          <li key={i} style={{ marginBottom: '4px', fontSize: '13px', lineHeight: '1.6', color: '#555555' }}>
+                            {stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}
+                          </li>
+                        ))}
+                      </ul>
                     )}
                     {project.keywords && project.keywords.length > 0 && (
                       <div style={{ marginTop: '8px', fontSize: '12px', color: '#999999', fontStyle: 'italic' }}>

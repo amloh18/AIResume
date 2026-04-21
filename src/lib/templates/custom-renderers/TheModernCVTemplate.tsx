@@ -75,7 +75,7 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 2rem;
+          margin-bottom: 1.25rem;
         }
 
         .name {
@@ -420,8 +420,8 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                   <h3 className="section-title-left">Work Experience</h3>
                   {work?.map((job, index) => (
                     <div key={index} className="work-item" data-item-id={index}>
-                      <h4 className="job-title">{job.position}</h4>
-                      <p className="company-info">{job.name} | {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</p>
+                      <h4 className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</h4>
+                      <p className="company-info">{job.name || <span className="text-gray-400">Company Name</span>} | {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</p>
                       {job.summary && (
                         <div
                           className="job-description"
@@ -471,6 +471,13 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                           dangerouslySetInnerHTML={{ __html: renderFormattedText(proj.description) }}
                         />
                       )}
+                      {(Array.isArray(proj.highlights) ? proj.highlights : Array.isArray((proj as any).achievements) ? (proj as any).achievements : []).length > 0 && (
+                        <ul className="bullet-list">
+                          {(Array.isArray(proj.highlights) ? proj.highlights : Array.isArray((proj as any).achievements) ? (proj as any).achievements : []).map((h: any, i: number) => (
+                            <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                          ))}
+                        </ul>
+                      )}
                       {proj.url && <a href={proj.url} target="_blank" rel="noopener noreferrer" className="project-link">[link]</a>}
                     </div>
                   ))}
@@ -508,8 +515,8 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                   <h3 className="section-title-right">Education</h3>
                   {education?.map((edu, index) => (
                     <div key={index} className="education-item" data-item-id={index}>
-                      <h4 className="degree">{edu.studyType} {edu.area ? `in ${edu.area}` : ''}</h4>
-                      <p className="institution">{edu.institution}</p>
+                      <h4 className="degree">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area ? `in ${edu.area}` : ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</h4>
+                      <p className="institution">{edu.institution || <span className="text-gray-400">Institution Name</span>}</p>
                       <p className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</p>
                     </div>
                   ))}
@@ -589,7 +596,14 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                     <ul className="skill-list">
                       {certificates.map((cert, index) => (
                         <li key={index} className="language-item">
-                          <strong>{cert.name}</strong> - {cert.issuer}
+                          <strong>{cert.name || <span className="text-gray-400">Certificate Name</span>}</strong> - {cert.issuer}
+                          {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                            <ul className="bullet-list">
+                              {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                                <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                              ))}
+                            </ul>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -604,8 +618,8 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                     <h3 className="section-title-right">Awards</h3>
                     {awards.map((award, index) => (
                       <div key={index} className="education-item">
-                        <h4 className="degree">{award.title}</h4>
-                        <p className="institution">{award.awarder}</p>
+                        <h4 className="degree">{award.title || <span className="text-gray-400">Award Title</span>}</h4>
+                        <p className="institution">{award.awarder || <span className="text-gray-400">Awarder</span>}</p>
                         <p className="education-dates">{award.date}</p>
                       </div>
                     ))}
@@ -623,6 +637,13 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                         <h4 className="degree">{vol.position}</h4>
                         <p className="institution">{vol.organization}</p>
                         <p className="education-dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</p>
+                        {(Array.isArray(vol.highlights) ? vol.highlights : Array.isArray((vol as any).achievements) ? (vol as any).achievements : []).length > 0 && (
+                          <ul className="bullet-list">
+                            {(Array.isArray(vol.highlights) ? vol.highlights : Array.isArray((vol as any).achievements) ? (vol as any).achievements : []).map((h: any, i: number) => (
+                              <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     ))}
                   </section>
@@ -636,9 +657,16 @@ export const TheModernCVTemplate: React.FC<TheModernCVTemplateProps> = ({
                     <h3 className="section-title-right">Publications</h3>
                     {publications.map((pub, index) => (
                       <div key={index} className="education-item">
-                        <h4 className="degree">{pub.name}</h4>
-                        <p className="institution">{pub.publisher}</p>
+                        <h4 className="degree">{pub.name || <span className="text-gray-400">Publication Title</span>}</h4>
+                        <p className="institution">{pub.publisher || <span className="text-gray-400">Publisher</span>}</p>
                         <p className="education-dates">{pub.releaseDate}</p>
+                        {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).length > 0 && (
+                          <ul className="bullet-list">
+                            {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).map((h: any, i: number) => (
+                              <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
                     ))}
                   </section>

@@ -25,7 +25,7 @@ export default function SocialAuthButtons({
         type="button"
         onClick={onGoogleAuth}
         disabled={isLoading}
-        className="w-full flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 border border-blue-500 hover:border-blue-600 text-white py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-center gap-3 bg-blue-500 hover:bg-blue-600 border border-blue-500 hover:border-blue-600 text-white py-3 px-6 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
       >
@@ -44,7 +44,7 @@ export default function SocialAuthButtons({
           type="button"
           onClick={onAppleAuth}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 bg-black hover:bg-gray-900 border border-black hover:border-gray-900 text-white py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 bg-black hover:bg-gray-900 border border-black hover:border-gray-900 text-white py-3 px-6 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >
@@ -61,7 +61,7 @@ export default function SocialAuthButtons({
           type="button"
           onClick={onMagicLinkAuth}
           disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-400/30 hover:border-purple-400/50 text-gray-900 dark:text-white py-3 px-6 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-400/30 hover:border-purple-400/50 text-gray-900 dark:text-white py-3 px-6 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >

@@ -202,7 +202,7 @@ export default function UnifiedAuthForm({
               required={field.required}
               className={`w-full ${field.icon ? 'pl-11' : 'pl-4'} ${
                 isPasswordField ? 'pr-12' : 'pr-4'
-              } py-3 bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 transition-all duration-200 rounded-xl outline-none focus:outline-none ${
+              } py-3 bg-white dark:bg-[#232f1c] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-white/50 transition-all duration-200 rounded-none outline-none focus:outline-none ${
                 fieldError 
                   ? 'border border-red-500 focus:border-2 focus:border-red-500' 
                   : 'border border-gray-300 dark:border-[#80FF00]/50 focus:border-2 focus:border-[#80FF00]'
@@ -220,7 +220,7 @@ export default function UnifiedAuthForm({
             )}
             {isValidating[field.name] && (
               <div className="absolute right-4 flex items-center justify-center w-5 h-5 pointer-events-none">
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-lime-400 rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-lime-400 rounded-none animate-spin"></div>
               </div>
             )}
           </div>
@@ -267,7 +267,7 @@ export default function UnifiedAuthForm({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400"
+            className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-none text-red-400"
           >
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm">{error}</span>
@@ -279,7 +279,7 @@ export default function UnifiedAuthForm({
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400"
+            className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-none text-green-400"
           >
             <CheckCircle className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm">{success}</span>
@@ -298,7 +298,7 @@ export default function UnifiedAuthForm({
         <motion.button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-[#80FF00] hover:bg-[#70e600] text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-[#80FF00] hover:bg-[#70e600] text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
         >

@@ -44,7 +44,7 @@ const RouteGuard: React.FC<RouteGuardProps> = ({
           <div className="absolute inset-0 flex items-center justify-center z-40">
             <button 
               onClick={() => openModal({ view: 'signin', callbackUrl: pathname })}
-              className="px-6 py-3 bg-emerald-600 text-white rounded-xl shadow-lg hover:bg-emerald-700 transition-colors font-medium"
+              className="px-6 py-3 bg-emerald-600 text-white rounded-none shadow-lg hover:bg-emerald-700 transition-colors font-medium"
             >
               Sign In to Continue
             </button>

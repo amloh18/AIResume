@@ -349,7 +349,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="text"
             value={formData.personalInfo.firstName}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, firstName: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="Enter your first name"
           />
         </div>
@@ -359,7 +359,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="text"
             value={formData.personalInfo.lastName}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, lastName: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="Enter your last name"
           />
         </div>
@@ -371,7 +371,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
           type="email"
           value={formData.personalInfo.email}
           onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, email: e.target.value })}
-          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
           placeholder="your.email@example.com"
         />
       </div>
@@ -383,7 +383,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="tel"
             value={formData.personalInfo.phone}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, phone: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="+1 234 567 8900"
           />
         </div>
@@ -393,7 +393,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="text"
             value={formData.personalInfo.location}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, location: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="City, Country"
           />
         </div>
@@ -406,7 +406,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="url"
             value={formData.personalInfo.website}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, website: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="https://yourwebsite.com"
           />
         </div>
@@ -416,7 +416,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="url"
             value={formData.personalInfo.linkedin}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, linkedin: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="linkedin.com/in/yourprofile"
           />
         </div>
@@ -426,7 +426,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             type="url"
             value={formData.personalInfo.github}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, github: e.target.value })}
-            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
             placeholder="github.com/yourusername"
           />
         </div>
@@ -438,7 +438,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
           value={formData.personalInfo.summary}
           onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, summary: e.target.value })}
           rows={4}
-          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
+          className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
           placeholder="Write a compelling summary of your professional background, skills, and career objectives..."
         />
       </div>
@@ -457,7 +457,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
         <h3 className="text-xl font-bold text-white">Education History</h3>
         <motion.button
           onClick={addEducation}
-          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-none hover:bg-lime-300 transition-colors"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -473,7 +473,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
+            className="p-6 bg-white/5 border border-white/10 rounded-none space-y-4"
           >
             <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <div>
@@ -486,7 +486,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newEducation[index].institution = e.target.value;
                     updateFormData('education', newEducation);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="University Name"
                 />
               </div>
@@ -500,7 +500,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newEducation[index].degree = e.target.value;
                     updateFormData('education', newEducation);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="Bachelor's, Master's, etc."
                 />
               </div>
@@ -517,7 +517,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newEducation[index].field = e.target.value;
                     updateFormData('education', newEducation);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="Computer Science, Business, etc."
                 />
               </div>
@@ -531,7 +531,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newEducation[index].startDate = e.target.value;
                     updateFormData('education', newEducation);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
               <div>
@@ -544,7 +544,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newEducation[index].endDate = e.target.value;
                     updateFormData('education', newEducation);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
             </div>
@@ -559,7 +559,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   updateFormData('education', newEducation);
                 }}
                 rows={3}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
                 placeholder="Brief description of your studies and achievements..."
               />
             </div>
@@ -581,7 +581,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
         <h3 className="text-xl font-bold text-white">Work Experience</h3>
         <motion.button
           onClick={addExperience}
-          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-none hover:bg-lime-300 transition-colors"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -597,7 +597,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
+            className="p-6 bg-white/5 border border-white/10 rounded-none space-y-4"
           >
             <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
               <div>
@@ -610,7 +610,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newExperience[index].company = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="Company Name"
                 />
               </div>
@@ -624,7 +624,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newExperience[index].position = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="Job Title"
                 />
               </div>
@@ -641,7 +641,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newExperience[index].location = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="City, Country"
                 />
               </div>
@@ -655,7 +655,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newExperience[index].startDate = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
               <div>
@@ -668,7 +668,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newExperience[index].endDate = e.target.value;
                     updateFormData('experience', newExperience);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
             </div>
@@ -683,7 +683,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   updateFormData('experience', newExperience);
                 }}
                 rows={3}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
                 placeholder="Describe your role and responsibilities..."
               />
             </div>
@@ -705,7 +705,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
         <h3 className="text-xl font-bold text-white">Skills & Expertise</h3>
         <motion.button
           onClick={addSkillCategory}
-          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-none hover:bg-lime-300 transition-colors"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -721,7 +721,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
+            className="p-6 bg-white/5 border border-white/10 rounded-none space-y-4"
           >
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Category</label>
@@ -733,7 +733,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   newSkills[index].category = e.target.value;
                   updateFormData('skills', newSkills);
                 }}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 placeholder="Technical Skills, Soft Skills, Languages, etc."
               />
             </div>
@@ -751,7 +751,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                         newSkills[index].skills[skillIndex] = e.target.value;
                         updateFormData('skills', newSkills);
                       }}
-                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                      className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                       placeholder="Skill name"
                     />
                     <button
@@ -760,7 +760,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                         newSkills[index].skills.splice(skillIndex, 1);
                         updateFormData('skills', newSkills);
                       }}
-                      className="px-3 py-3 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
+                      className="px-3 py-3 bg-red-500/20 text-red-400 rounded-none hover:bg-red-500/30 transition-colors"
                     >
                       ×
                     </button>
@@ -797,7 +797,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
         <h3 className="text-xl font-bold text-white">Projects</h3>
         <motion.button
           onClick={addProject}
-          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-lime-400 text-black font-medium rounded-none hover:bg-lime-300 transition-colors"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -813,7 +813,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="p-6 bg-white/5 border border-white/10 rounded-2xl space-y-4"
+            className="p-6 bg-white/5 border border-white/10 rounded-none space-y-4"
           >
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Project Title</label>
@@ -825,7 +825,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   newProjects[index].title = e.target.value;
                   updateFormData('projects', newProjects);
                 }}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 placeholder="Project Name"
               />
             </div>
@@ -840,7 +840,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   updateFormData('projects', newProjects);
                 }}
                 rows={3}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors resize-none"
                 placeholder="Describe your project..."
               />
             </div>
@@ -856,7 +856,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newProjects[index].url = e.target.value;
                     updateFormData('projects', newProjects);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="https://project-url.com"
                 />
               </div>
@@ -870,7 +870,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newProjects[index].github = e.target.value;
                     updateFormData('projects', newProjects);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                   placeholder="https://github.com/username/repo"
                 />
               </div>
@@ -887,7 +887,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newProjects[index].startDate = e.target.value;
                     updateFormData('projects', newProjects);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
               <div>
@@ -900,7 +900,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                     newProjects[index].endDate = e.target.value;
                     updateFormData('projects', newProjects);
                   }}
-                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
+                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-none text-white placeholder-white/40 focus:outline-none focus:border-lime-400 transition-colors"
                 />
               </div>
             </div>
@@ -943,7 +943,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                 <motion.button
                   key={section.id}
                   onClick={() => setCurrentSection(index)}
-                  className={`w-full p-4 rounded-2xl text-left transition-all duration-300 ${
+                  className={`w-full p-4 rounded-none text-left transition-all duration-300 ${
                     currentSection === index
                       ? 'bg-gradient-to-r from-lime-400 to-lime-500 text-black shadow-2xl shadow-lime-400/25'
                       : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
@@ -952,7 +952,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   whileTap={{ scale: 0.98 }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-xl ${
+                    <div className={`p-2 rounded-none ${
                       currentSection === index ? 'bg-black/20' : 'bg-white/10'
                     }`}>
                       <section.icon size={20} />
@@ -966,7 +966,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
 
           {/* Main Form Area */}
           <div className="desktop:col-span-3">
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-8 min-h-[600px]">
+            <div className="bg-white/5 border border-white/10 rounded-none p-8 min-h-[600px]">
               <AnimatePresence mode="wait">
                 {renderSection()}
               </AnimatePresence>
@@ -976,7 +976,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                 <motion.button
                   onClick={() => setCurrentSection(Math.max(0, currentSection - 1))}
                   disabled={currentSection === 0}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-none font-medium transition-all ${
                     currentSection === 0
                       ? 'text-white/30 cursor-not-allowed'
                       : 'text-white hover:bg-white/10'
@@ -992,7 +992,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                   {sections.map((_, index) => (
                     <div
                       key={index}
-                      className={`w-2 h-2 rounded-full transition-colors ${
+                      className={`w-2 h-2 rounded-none transition-colors ${
                         index === currentSection ? 'bg-lime-400' : 'bg-white/20'
                       }`}
                     />
@@ -1002,7 +1002,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                 {currentSection === sections.length - 1 ? (
                   <motion.button
                     onClick={() => onSave(formData)}
-                    className="flex items-center gap-2 px-6 py-3 bg-lime-400 text-black font-medium rounded-xl hover:bg-lime-300 transition-colors"
+                    className="flex items-center gap-2 px-6 py-3 bg-lime-400 text-black font-medium rounded-none hover:bg-lime-300 transition-colors"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
@@ -1012,7 +1012,7 @@ const InteractiveCVForm: React.FC<InteractiveCVFormProps> = ({ initialData, onSa
                 ) : (
                   <motion.button
                     onClick={() => setCurrentSection(Math.min(sections.length - 1, currentSection + 1))}
-                    className="flex items-center gap-2 px-6 py-3 text-white hover:bg-white/10 rounded-xl font-medium transition-all"
+                    className="flex items-center gap-2 px-6 py-3 text-white hover:bg-white/10 rounded-none font-medium transition-all"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >

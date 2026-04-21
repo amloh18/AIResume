@@ -1,0 +1,8 @@
+- [x] Skills section has a “Suggest Skills” button that opens a card/modal without breaking existing edit flows.
+- [x] Skills suggestions API returns categorized results based on CV + role, with safe empty/error handling.
+- [x] Suggestions UI shows category headers and skill chips/checkboxes.
+- [x] User can select one skill, multiple skills, and “select all” (global + per category).
+- [x] Clicking “Add Selected” inserts skills into the Skills section and prevents duplicates.
+- [x] Suggestions card includes a “Perfect Score” improvement summary (experience, gaps, grammar/clarity, other factors).
+- [x] Role context is included in the AI request and displayed in the UI.
+- [x] Basic merge logic is tested or otherwise validated, and manual smoke checks pass.

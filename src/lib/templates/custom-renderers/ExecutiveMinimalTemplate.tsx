@@ -224,8 +224,8 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
           {work.map((job, index) => (
             <div key={index} className="split-row" data-item-id={index}>
               <div className="split-left">
-                <div className="company-name">{job.name}</div>
-                <div className="job-title">{job.position}</div>
+                <div className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</div>
+                <div className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</div>
                 <div className="date-range">
                   {formatDateRangeWithStyle(job.startDate || '', job.endDate || '', dateFormat)}
                 </div>
@@ -252,13 +252,13 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
           {education.map((edu, index) => (
             <div key={index} style={{ marginBottom: '1rem' }} data-item-id={index}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <div className="company-name">{edu.institution}</div>
+                <div className="company-name">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                 <div className="date-range">
                   {formatDateRangeWithStyle(edu.startDate || '', edu.endDate || '', dateFormat)}
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                <div className="job-title" style={{ fontWeight: 400 }}>{edu.studyType} {edu.area && `in ${edu.area}`}</div>
+                <div className="job-title" style={{ fontWeight: 400 }}>{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area ? `in ${edu.area}` : ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</div>
                 {edu.score && <div style={{ fontSize: '0.85rem', color: '#666' }}>GPA: {edu.score}</div>}
               </div>
             </div>
@@ -301,8 +301,15 @@ export const ExecutiveMinimalTemplate: React.FC<ExecutiveMinimalTemplateProps> =
           <div className="section-title">Certificates</div>
           {certificates.map((cert, index) => (
             <div key={index} style={{ marginBottom: '1rem' }} data-item-id={index}>
-              <div className="company-name">{cert.name}</div>
+              <div className="company-name">{cert.name || <span className="text-gray-400">Certificate Name</span>}</div>
               <div className="date-range">{cert.issuer} | {cert.date}</div>
+              {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                  {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                    <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                  ))}
+                </ul>
+              )}
             </div>
           ))}
         </div>

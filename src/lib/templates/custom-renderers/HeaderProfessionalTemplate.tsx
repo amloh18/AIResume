@@ -344,8 +344,8 @@ export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProp
             {work.map((job, index) => (
               <div key={index} className="hp-item" data-item-id={index}>
                 <div className="hp-item-left">
-                  <div className="hp-item-role">{job.position}</div>
-                  <div className="hp-item-org">{job.name}</div>
+                  <div className="hp-item-role">{job.position || <span className="text-gray-400">Job Title</span>}</div>
+                  <div className="hp-item-org">{job.name || <span className="text-gray-400">Company Name</span>}</div>
                   <div className="hp-item-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
                 </div>
                 <div className="hp-item-right">
@@ -369,8 +369,8 @@ export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProp
             {education.map((edu, index) => (
               <div key={index} className="hp-item" data-item-id={index}>
                 <div className="hp-item-left">
-                  <div className="hp-item-role">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
-                  <div className="hp-item-org">{edu.institution}</div>
+                  <div className="hp-item-role">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area ? `in ${edu.area}` : ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</div>
+                  <div className="hp-item-org">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                   <div className="hp-item-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                 </div>
                 <div className="hp-item-right">
@@ -412,7 +412,7 @@ export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProp
             {projects.map((project, index) => (
               <div key={index} className="hp-item" data-item-id={index}>
                 <div className="hp-item-left">
-                  <div className="hp-item-role">{project.name}</div>
+                  <div className="hp-item-role">{project.name || <span className="text-gray-400">Project Name</span>}</div>
                   {project.startDate && (
                     <div className="hp-item-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>
                   )}
@@ -446,12 +446,19 @@ export const HeaderProfessionalTemplate: React.FC<HeaderProfessionalTemplateProp
             {certificates.map((cert, index) => (
               <div key={index} className="hp-item" data-item-id={index}>
                 <div className="hp-item-left">
-                  <div className="hp-item-role">{cert.name}</div>
-                  <div className="hp-item-org">{cert.issuer}</div>
+                  <div className="hp-item-role">{cert.name || <span className="text-gray-400">Certificate Name</span>}</div>
+                  <div className="hp-item-org">{cert.issuer || <span className="text-gray-400">Issuer</span>}</div>
                   {cert.date && <div className="hp-item-dates">{cert.date}</div>}
                 </div>
                 <div className="hp-item-right">
                   {cert.url && <div style={{ wordBreak: 'break-all' }}>{cert.url}</div>}
+                  {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                    <ul>
+                      {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                        <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             ))}

@@ -137,7 +137,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
   return (
     <>
       {safeData.map((certificate, index) => (
-        <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+        <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-[color:var(--text-primary)]">{certificate.name || 'Certification Name'}</h4>
             <div className="flex items-center gap-2">
@@ -168,7 +168,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="text"
                 value={certificate.name || ''}
                 onChange={(e) => updateCertificate(index, 'name', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="AWS Certified Solutions Architect"
               />
             </div>
@@ -179,7 +179,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="text"
                 value={certificate.issuer || ''}
                 onChange={(e) => updateCertificate(index, 'issuer', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="Amazon Web Services"
               />
             </div>
@@ -187,11 +187,11 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Date</label>
               <input
-                type="text"
+                type="month"
                 value={certificate.date || ''}
                 onChange={(e) => updateCertificate(index, 'date', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="2023"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                placeholder="YYYY-MM"
               />
             </div>
             
@@ -201,7 +201,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
                 type="url"
                 value={certificate.url || ''}
                 onChange={(e) => updateCertificate(index, 'url', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="https://aws.amazon.com/certification/"
               />
             </div>
@@ -209,13 +209,24 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
           
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-white/80 text-sm font-medium">Description</label>
-              <WYSIWYGToolbar
-                showAIButton={true}
-                fieldType="other"
-                onAISuggestions={() => generateAISuggestions(index, certificate)}
-                isGenerating={loadingSuggestions[index] || false}
-              />
+              <label className="block text-white/80 text-sm font-medium">Description / Highlights</label>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={certificate.useRichText !== false}
+                    onChange={(e) => updateCertificate(index, 'useRichText', e.target.checked)}
+                    className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+                  />
+                  Use Rich Text
+                </label>
+                <WYSIWYGToolbar
+                  showAIButton={true}
+                  fieldType="other"
+                  onAISuggestions={() => generateAISuggestions(index, certificate)}
+                  isGenerating={loadingSuggestions[index] || false}
+                />
+              </div>
             </div>
             <AISuggestionsPanel
               isVisible={showSuggestions[index] || false}
@@ -224,12 +235,55 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
               onSelect={(content) => handleSelectSuggestion(index, content)}
               onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
             />
-            <WYSIWYGEditor
-              value={certificate.description || ''}
-              onChange={(value) => updateCertificate(index, 'description', value)}
-              rows={3}
-              placeholder="Describe the certification, its relevance, or what you learned..."
-            />
+            {certificate.useRichText !== false ? (
+              <WYSIWYGEditor
+                value={certificate.description || ''}
+                onChange={(value) => updateCertificate(index, 'description', value)}
+                rows={3}
+                placeholder="Describe the certification, its relevance, or what you learned..."
+              />
+            ) : (
+              <div className="space-y-3">
+                {(certificate.highlights || []).map((highlight: string, hIndex: number) => (
+                  <div key={hIndex} className="flex items-start gap-2">
+                    <div className="mt-3 w-1.5 h-1.5 rounded-none bg-white/50 flex-shrink-0" />
+                    <input
+                      type="text"
+                      value={highlight}
+                      onChange={(e) => {
+                        const newHighlights = [...(certificate.highlights || [])];
+                        newHighlights[hIndex] = e.target.value;
+                        updateCertificate(index, 'highlights', newHighlights);
+                      }}
+                      className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                      placeholder="Highlight or key detail..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newHighlights = [...(certificate.highlights || [])];
+                        newHighlights.splice(hIndex, 1);
+                        updateCertificate(index, 'highlights', newHighlights);
+                      }}
+                      className="p-2 text-white/40 hover:text-red-400 transition-colors mt-0.5"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newHighlights = [...(certificate.highlights || []), ''];
+                    updateCertificate(index, 'highlights', newHighlights);
+                  }}
+                  className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
+                >
+                  <Plus size={14} />
+                  Add Bullet Point
+                </button>
+              </div>
+            )}
           </div>
         </div>
       ))}
@@ -245,7 +299,7 @@ const CertificatesSection: React.FC<CertificatesSectionProps> = ({
           };
           onUpdate([...safeData, newCertificate]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Certification

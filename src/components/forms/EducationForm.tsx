@@ -43,7 +43,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
         <h2 className="text-lg font-semibold text-gray-900">Education</h2>
         <button
           onClick={onAdd}
-          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-none hover:bg-blue-700 transition-colors"
         >
           <Plus size={16} />
           Add Education
@@ -58,7 +58,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
       ) : (
         <div className="space-y-4">
           {education.map((edu, index) => (
-            <div key={edu.institution} className="border border-gray-200 rounded-lg p-4">
+            <div key={edu.institution} className="border border-gray-200 rounded-none p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-medium text-gray-900">
                   Education #{index + 1}
@@ -95,7 +95,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         type="text"
                         value={edu.studyType}
                         onChange={(e) => onUpdate(edu.institution, { studyType: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Bachelor of Science"
                       />
                     </div>
@@ -108,7 +108,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         type="text"
                         value={edu.institution}
                         onChange={(e) => onUpdate(edu.institution, { institution: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="University of California"
                       />
                     </div>
@@ -123,7 +123,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         type="text"
                         value={edu.area}
                         onChange={(e) => onUpdate(edu.institution, { area: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Computer Science"
                       />
                     </div>
@@ -136,7 +136,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         type="text"
                         value={edu.score}
                         onChange={(e) => onUpdate(edu.institution, { score: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="3.8"
                       />
                     </div>
@@ -148,11 +148,11 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         Start Date
                       </label>
                       <input
-                        type="text"
+                        type="month"
                         value={edu.startDate}
                         onChange={(e) => onUpdate(edu.institution, { startDate: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Sep 2018"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="YYYY-MM"
                       />
                     </div>
                     
@@ -161,11 +161,11 @@ const EducationForm: React.FC<EducationFormProps> = ({
                         End Date
                       </label>
                       <input
-                        type="text"
+                        type="month"
                         value={edu.endDate}
                         onChange={(e) => onUpdate(edu.institution, { endDate: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="May 2022"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="YYYY-MM"
                       />
                     </div>
                   </div>
@@ -178,7 +178,7 @@ const EducationForm: React.FC<EducationFormProps> = ({
                       type="url"
                       value={edu.url}
                       onChange={(e) => onUpdate(edu.institution, { url: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="https://university.edu"
                     />
                   </div>

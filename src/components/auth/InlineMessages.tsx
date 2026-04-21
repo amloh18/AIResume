@@ -76,7 +76,7 @@ const InlineMessages: React.FC<InlineMessagesProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2, delay: index * 0.1 }}
-            className={`p-3 rounded-lg border-l-4 ${getBackgroundColor(message.level)}`}
+            className={`p-3 rounded-none border-l-4 ${getBackgroundColor(message.level)}`}
           >
             <div className="flex items-start">
               <div className="flex-shrink-0 mr-3">
