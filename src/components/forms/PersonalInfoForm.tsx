@@ -303,7 +303,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                 <img
                   src={safePersonalInfo.image}
                   alt="Profile"
-                  className="w-24 h-24 rounded-lg object-cover border-2 border-[var(--border-primary)]"
+                  className="w-24 h-24 rounded-none object-cover border-2 border-[var(--border-primary)]"
                   onError={(e) => {
                     // Handle broken image URLs
                     const target = e.target as HTMLImageElement;
@@ -313,14 +313,14 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                 <button
                   type="button"
                   onClick={handleRemoveImage}
-                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-colors"
+                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-none p-1.5 shadow-lg transition-colors"
                   title="Remove photo"
                 >
                   <X size={14} />
                 </button>
               </div>
             ) : (
-              <div className="w-24 h-24 rounded-lg border-2 border-dashed border-[var(--border-primary)] flex items-center justify-center bg-[var(--bg-tertiary)] flex-shrink-0">
+              <div className="w-24 h-24 rounded-none border-2 border-dashed border-[var(--border-primary)] flex items-center justify-center bg-[var(--bg-tertiary)] flex-shrink-0">
                 <ImageIcon className="w-8 h-8 text-[color:var(--text-tertiary)]" />
               </div>
             )}
@@ -338,7 +338,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               />
               <label
                 htmlFor="photo-upload"
-                className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-lg text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
+                className={`inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--bg-tertiary)] border border-[var(--border-primary)] rounded-none text-[color:var(--text-primary)] cursor-pointer hover:bg-[var(--hover-bg)] transition-colors ${isUploadingImage ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
               >
                 {isUploadingImage ? (
@@ -371,7 +371,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="text"
           value={safePersonalInfo.name}
           onChange={(e) => handleNameChange(e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="John Doe"
         />
       </div>
@@ -382,7 +382,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="text"
           value={safePersonalInfo.label}
           onChange={(e) => handleFieldChange('label', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="Senior Product Manager"
         />
       </div>
@@ -394,7 +394,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="email"
           value={safePersonalInfo.email}
           onChange={(e) => handleFieldChange('email', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="john.doe@example.com"
         />
       </div>
@@ -405,7 +405,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="tel"
           value={safePersonalInfo.phone}
           onChange={(e) => handleFieldChange('phone', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="+1 (555) 123-4567"
         />
       </div>
@@ -417,7 +417,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           type="url"
           value={safePersonalInfo.url}
           onChange={(e) => handleFieldChange('url', e.target.value)}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
           placeholder="https://yourportfolio.com"
         />
       </div>
@@ -469,7 +469,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             };
             onUpdate('location', updatedLocation);
           }}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors cursor-text"
           placeholder="San Francisco, CA"
         />
       </div>

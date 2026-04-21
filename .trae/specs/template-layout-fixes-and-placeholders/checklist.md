@@ -1,0 +1,6 @@
+- [x] Two-column templates no longer have a huge gap after the header.
+- [x] Education, Projects, Volunteer, and Publication records do not have excessive padding.
+- [x] Education section has a toggle to show/hide bullet points.
+- [x] Projects, Volunteer, Certificates, and Publications sections allow adding bullet points in the editor.
+- [x] Templates correctly render bullet points for these sections.
+- [x] Empty fields in the CV preview display light grey placeholder text (e.g., "Company Name").

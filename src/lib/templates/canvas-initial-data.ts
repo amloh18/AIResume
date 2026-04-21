@@ -1,19 +1,18 @@
 export const initialData = {
     sectionTitles: {
-        summary: "Profile",
+        summary: "Professional Summary",
         experience: "Professional Experience",
         education: "Education",
-        skills: "Skills",
-        expertise: "Expertise",
-        contact: "Contact",
         projects: "Projects",
         certifications: "Certifications",
         awards: "Awards",
-        languages: "Languages",
-        interests: "Interests",
         publications: "Publications",
         volunteer: "Volunteer Experience",
-        references: "References"
+        references: "References",
+        skills: "Skills",
+        languages: "Languages",
+        interests: "Interests",
+        contact: "Contact"
     },
     basics: {
         name: "Alex Morgan",

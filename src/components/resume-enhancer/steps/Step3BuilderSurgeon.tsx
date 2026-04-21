@@ -40,6 +40,22 @@ import { gsap } from 'gsap';
 
 type ViewMode = 'edit' | 'preview' | 'recruiter' | 'ats';
 
+const DEFAULT_SECTION_TITLES: Record<string, string> = {
+  summary: 'Professional Summary',
+  experience: 'Professional Experience',
+  education: 'Education',
+  projects: 'Projects',
+  certifications: 'Certifications',
+  awards: 'Awards',
+  publications: 'Publications',
+  volunteer: 'Volunteer Experience',
+  references: 'References',
+  skills: 'Skills',
+  languages: 'Languages',
+  interests: 'Interests',
+  contact: 'Contact'
+};
+
 
 
 
@@ -76,6 +92,8 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const sidePanelRef = useRef<HTMLDivElement>(null);
     const pillRef = useRef<FloatingPulsePillHandle>(null);
     const canvasBuilderRef = useRef<any>(null);
+    const lastSavedSectionTitlesRef = useRef<string>('');
+    const hasLoadedUserSectionTitlesRef = useRef(false);
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -90,6 +108,54 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       if (!state.cvData) return null;
       return validateCVPreview(state.cvData);
     }, [state.cvData]);
+
+    useEffect(() => {
+      if (hasLoadedUserSectionTitlesRef.current) return;
+      if (!state.cvData) return;
+
+      hasLoadedUserSectionTitlesRef.current = true;
+      (async () => {
+        try {
+          const response = await fetch('/api/user/settings');
+          if (!response.ok) return;
+          const result = await response.json().catch(() => ({}));
+          const titles = result?.data?.settings?.preferences?.cv?.sectionTitles;
+          if (!titles || typeof titles !== 'object') return;
+
+          const current = (state.cvData as any).sectionTitles;
+          const hasCurrent = current && typeof current === 'object' && Object.keys(current).length > 0;
+          if (hasCurrent) return;
+
+          const merged = { ...DEFAULT_SECTION_TITLES, ...titles };
+          lastSavedSectionTitlesRef.current = JSON.stringify(merged);
+          dispatch({ type: 'SET_CV_DATA', payload: { ...(state.cvData as any), sectionTitles: merged } });
+        } catch {}
+      })();
+    }, [dispatch, state.cvData, hasLoadedUserSectionTitlesRef, lastSavedSectionTitlesRef]);
+
+    useEffect(() => {
+      const sectionTitles = (state.cvData as any)?.sectionTitles;
+      if (!sectionTitles || typeof sectionTitles !== 'object') return;
+
+      const merged = { ...DEFAULT_SECTION_TITLES, ...sectionTitles };
+      const next = JSON.stringify(merged);
+      if (next === lastSavedSectionTitlesRef.current) return;
+
+      const t = setTimeout(async () => {
+        try {
+          const resp = await fetch('/api/user/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings: { preferences: { cv: { sectionTitles: merged } } } })
+          });
+          if (resp.ok) {
+            lastSavedSectionTitlesRef.current = next;
+          }
+        } catch {}
+      }, 800);
+
+      return () => clearTimeout(t);
+    }, [state.cvData, dispatch, lastSavedSectionTitlesRef]);
 
     const handleViewModeChange = (mode: ViewMode) => {
       setViewMode(mode);
@@ -1153,4 +1219,3 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 Step3BuilderSurgeon.displayName = 'Step3BuilderSurgeon';
 
 export default Step3BuilderSurgeon;
-

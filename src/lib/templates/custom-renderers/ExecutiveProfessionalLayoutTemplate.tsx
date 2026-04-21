@@ -317,8 +317,8 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
               <div key={index} className="experience-item" data-item-id={index}>
                 <div className="experience-header">
                   <div>
-                    <span className="job-title">{job.position}</span>
-                    <span className="company-name">- {job.name}</span>
+                    <span className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</span>
+                    <span className="company-name">- {job.name || <span className="text-gray-400">Company Name</span>}</span>
                   </div>
                   <div className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
                 </div>
@@ -342,14 +342,27 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
               <div key={index} className="education-item" data-item-id={index}>
                 <div className="education-header">
                   <div>
-                    <span className="degree-title">{edu.studyType} {edu.area && `in ${edu.area}`}</span>
-                    <span className="institution-name">- {edu.institution}</span>
+                    <span className="degree-title">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area ? `in ${edu.area}` : ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</span>
+                    <span className="institution-name">- {edu.institution || <span className="text-gray-400">Institution Name</span>}</span>
                   </div>
                   <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                 </div>
                 {edu.description && (
                   <div className="education-description">
-                    {stripHtmlTags(edu.description)}
+                    {(edu as any).showBullets ? (
+                      <ul style={{ margin: '4px 0', paddingLeft: '16px' }}>
+                        {stripHtmlTags(edu.description)
+                          .split('\n')
+                          .map(line => line.trim())
+                          .filter(Boolean)
+                          .map(line => line.replace(/^[•\-*◦▪]\s*/, ''))
+                          .map((line, i) => (
+                            <li key={i}>{line}</li>
+                          ))}
+                      </ul>
+                    ) : (
+                      stripHtmlTags(edu.description)
+                    )}
                   </div>
                 )}
               </div>
@@ -386,12 +399,19 @@ export const ExecutiveProfessionalLayoutTemplate: React.FC<ExecutiveProfessional
               <div key={index} className="project-item" data-item-id={index}>
                 <div className="project-header">
                   <div>
-                    <div className="project-title">{project.name}</div>
+                    <div className="project-title">{project.name || <span className="text-gray-400">Project Name</span>}</div>
                   </div>
                   <div className="project-dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>
                 </div>
                 {project.description && (
                   <div className="project-description">{stripHtmlTags(project.description)}</div>
+                )}
+                {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).length > 0 && (
+                  <ul style={{ margin: '4px 0 0 0', paddingLeft: '16px' }}>
+                    {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, i: number) => (
+                      <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                    ))}
+                  </ul>
                 )}
               </div>
             ))}

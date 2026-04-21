@@ -275,7 +275,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
             type="text"
             value={formData.personalInfo.firstName}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, firstName: e.target.value })}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
             placeholder="Enter your first name"
           />
         </div>
@@ -285,7 +285,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
             type="text"
             value={formData.personalInfo.lastName}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, lastName: e.target.value })}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
             placeholder="Enter your last name"
           />
         </div>
@@ -297,7 +297,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           type="email"
           value={formData.personalInfo.email}
           onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, email: e.target.value })}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
           placeholder="Enter your email"
         />
       </div>
@@ -308,7 +308,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           type="tel"
           value={formData.personalInfo.phone}
           onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, phone: e.target.value })}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
           placeholder="Enter your phone number"
         />
       </div>
@@ -319,7 +319,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           type="text"
           value={formData.personalInfo.location}
           onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, location: e.target.value })}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
           placeholder="City, Country"
         />
       </div>
@@ -329,7 +329,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
         <textarea
           value={formData.personalInfo.summary}
           onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, summary: e.target.value })}
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
+          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
           rows={4}
           placeholder="Tell us about your background, experience, and career goals..."
         />
@@ -342,7 +342,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
             type="url"
             value={formData.personalInfo.website}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, website: e.target.value })}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
             placeholder="https://yourwebsite.com"
           />
         </div>
@@ -352,7 +352,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
             type="url"
             value={formData.personalInfo.linkedin}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, linkedin: e.target.value })}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
             placeholder="https://linkedin.com/in/yourprofile"
           />
         </div>
@@ -362,7 +362,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
             type="url"
             value={formData.personalInfo.github}
             onChange={(e) => updateFormData('personalInfo', { ...formData.personalInfo, github: e.target.value })}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
             placeholder="https://github.com/yourusername"
           />
         </div>
@@ -378,7 +378,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           <p className="text-white/60 mb-4">No education entries yet</p>
           <button
             onClick={addEducation}
-            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-lg hover:bg-lime-400/30 transition-colors"
+            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-none hover:bg-lime-400/30 transition-colors"
           >
             Add Education
           </button>
@@ -386,7 +386,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
       ) : (
         <>
           {formData.education.map((edu, index) => (
-            <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10">
               <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">Institution</label>
@@ -398,7 +398,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedEducation[index].institution = e.target.value;
                       updateFormData('education', updatedEducation);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="University/College name"
                   />
                 </div>
@@ -412,7 +412,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedEducation[index].degree = e.target.value;
                       updateFormData('education', updatedEducation);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="e.g., Bachelor's, Master's"
                   />
                 </div>
@@ -426,7 +426,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedEducation[index].field = e.target.value;
                       updateFormData('education', updatedEducation);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="e.g., Computer Science"
                   />
                 </div>
@@ -440,7 +440,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedEducation[index].location = e.target.value;
                       updateFormData('education', updatedEducation);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="City, Country"
                   />
                 </div>
@@ -454,7 +454,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedEducation[index].startDate = e.target.value;
                       updateFormData('education', updatedEducation);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                   />
                 </div>
                 <div>
@@ -467,9 +467,24 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedEducation[index].endDate = e.target.value;
                       updateFormData('education', updatedEducation);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     disabled={edu.current}
                   />
+                </div>
+                <div className="flex items-center">
+                  <label className="flex items-center text-white/80 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={edu.current}
+                      onChange={(e) => {
+                        const updatedEducation = [...formData.education];
+                        updatedEducation[index].current = e.target.checked;
+                        updateFormData('education', updatedEducation);
+                      }}
+                      className="mr-2"
+                    />
+                    Currently studying here
+                  </label>
                 </div>
               </div>
               <div className="mt-4">
@@ -481,7 +496,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                     updatedEducation[index].description = e.target.value;
                     updateFormData('education', updatedEducation);
                   }}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
                   rows={3}
                   placeholder="Brief description of your studies, achievements, or relevant coursework..."
                 />
@@ -490,7 +505,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           ))}
           <button
             onClick={addEducation}
-            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-xl hover:bg-lime-400/30 transition-colors border border-lime-400/30"
+            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-none hover:bg-lime-400/30 transition-colors border border-lime-400/30"
           >
             <Plus size={20} className="inline mr-2" />
             Add Another Education
@@ -508,7 +523,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           <p className="text-white/60 mb-4">No work experience entries yet</p>
           <button
             onClick={addExperience}
-            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-lg hover:bg-lime-400/30 transition-colors"
+            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-none hover:bg-lime-400/30 transition-colors"
           >
             Add Experience
           </button>
@@ -516,7 +531,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
       ) : (
         <>
           {formData.experience.map((exp, index) => (
-            <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10">
               <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">Company</label>
@@ -528,7 +543,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedExperience[index].company = e.target.value;
                       updateFormData('experience', updatedExperience);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="Company name"
                   />
                 </div>
@@ -542,7 +557,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedExperience[index].position = e.target.value;
                       updateFormData('experience', updatedExperience);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="Job title"
                   />
                 </div>
@@ -556,7 +571,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedExperience[index].location = e.target.value;
                       updateFormData('experience', updatedExperience);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="City, Country"
                   />
                 </div>
@@ -570,7 +585,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedExperience[index].startDate = e.target.value;
                       updateFormData('experience', updatedExperience);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                   />
                 </div>
                 <div>
@@ -583,7 +598,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedExperience[index].endDate = e.target.value;
                       updateFormData('experience', updatedExperience);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     disabled={exp.current}
                   />
                 </div>
@@ -612,7 +627,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                     updatedExperience[index].description = e.target.value;
                     updateFormData('experience', updatedExperience);
                   }}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
                   rows={3}
                   placeholder="Describe your role, responsibilities, and achievements..."
                 />
@@ -621,7 +636,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           ))}
           <button
             onClick={addExperience}
-            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-xl hover:bg-lime-400/30 transition-colors border border-lime-400/30"
+            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-none hover:bg-lime-400/30 transition-colors border border-lime-400/30"
           >
             <Plus size={20} className="inline mr-2" />
             Add Another Experience
@@ -639,7 +654,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           <p className="text-white/60 mb-4">No skills added yet</p>
           <button
             onClick={addSkillCategory}
-            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-lg hover:bg-lime-400/30 transition-colors"
+            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-none hover:bg-lime-400/30 transition-colors"
           >
             Add Skills
           </button>
@@ -647,7 +662,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
       ) : (
         <>
           {formData.skills.map((skillCategory, index) => (
-            <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10">
               <div className="mb-4">
                 <label className="block text-white/80 text-sm font-medium mb-2">Category</label>
                 <input
@@ -658,7 +673,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                     updatedSkills[index].category = e.target.value;
                     updateFormData('skills', updatedSkills);
                   }}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                   placeholder="e.g., Programming Languages, Tools, Soft Skills"
                 />
               </div>
@@ -674,7 +689,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                         updatedSkills[index].skills[skillIndex] = e.target.value;
                         updateFormData('skills', updatedSkills);
                       }}
-                      className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                      className="flex-1 px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                       placeholder="Skill name"
                     />
                     <button
@@ -683,7 +698,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                         updatedSkills[index].skills.splice(skillIndex, 1);
                         updateFormData('skills', updatedSkills);
                       }}
-                      className="px-4 py-3 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
+                      className="px-4 py-3 bg-red-500/20 text-red-400 rounded-none hover:bg-red-500/30 transition-colors"
                     >
                       Remove
                     </button>
@@ -695,7 +710,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                     updatedSkills[index].skills.push('');
                     updateFormData('skills', updatedSkills);
                   }}
-                  className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-xl hover:bg-lime-400/30 transition-colors border border-lime-400/30"
+                  className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-none hover:bg-lime-400/30 transition-colors border border-lime-400/30"
                 >
                   <Plus size={20} className="inline mr-2" />
                   Add Skill
@@ -705,7 +720,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           ))}
           <button
             onClick={addSkillCategory}
-            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-xl hover:bg-lime-400/30 transition-colors border border-lime-400/30"
+            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-none hover:bg-lime-400/30 transition-colors border border-lime-400/30"
           >
             <Plus size={20} className="inline mr-2" />
             Add Another Skill Category
@@ -723,7 +738,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           <p className="text-white/60 mb-4">No projects added yet</p>
           <button
             onClick={addProject}
-            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-lg hover:bg-lime-400/30 transition-colors"
+            className="bg-lime-400/20 text-lime-400 px-4 py-2 rounded-none hover:bg-lime-400/30 transition-colors"
           >
             Add Project
           </button>
@@ -731,7 +746,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
       ) : (
         <>
           {formData.projects.map((project, index) => (
-            <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10">
+            <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10">
               <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-white/80 text-sm font-medium mb-2">Project Title</label>
@@ -743,7 +758,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedProjects[index].title = e.target.value;
                       updateFormData('projects', updatedProjects);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="Project name"
                   />
                 </div>
@@ -757,7 +772,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedProjects[index].technologies = e.target.value.split(',').map(t => t.trim());
                       updateFormData('projects', updatedProjects);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="React, Node.js, MongoDB"
                   />
                 </div>
@@ -771,7 +786,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedProjects[index].url = e.target.value;
                       updateFormData('projects', updatedProjects);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="https://project-url.com"
                   />
                 </div>
@@ -785,7 +800,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       updatedProjects[index].github = e.target.value;
                       updateFormData('projects', updatedProjects);
                     }}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
+                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300"
                     placeholder="https://github.com/username/project"
                   />
                 </div>
@@ -799,7 +814,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                     updatedProjects[index].description = e.target.value;
                     updateFormData('projects', updatedProjects);
                   }}
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
+                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-lime-400/50 focus:border-lime-400/50 transition-all duration-300 resize-none"
                   rows={3}
                   placeholder="Describe your project, its features, and your role..."
                 />
@@ -808,7 +823,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
           ))}
           <button
             onClick={addProject}
-            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-xl hover:bg-lime-400/30 transition-colors border border-lime-400/30"
+            className="w-full bg-lime-400/20 text-lime-400 px-4 py-3 rounded-none hover:bg-lime-400/30 transition-colors border border-lime-400/30"
           >
             <Plus size={20} className="inline mr-2" />
             Add Another Project
@@ -855,7 +870,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
 
           {/* Modal */}
           <motion.div
-            className="relative w-full max-w-6xl bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-3xl p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
+            className="relative w-full max-w-6xl bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-none p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.95, opacity: 0 }}
@@ -882,7 +897,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                   className="space-y-6"
                 >
                   <div className="text-center space-y-4">
-                    <div className="w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-lime-400/20 to-lime-500/20 flex items-center justify-center">
+                    <div className="w-24 h-24 mx-auto rounded-none bg-gradient-to-br from-lime-400/20 to-lime-500/20 flex items-center justify-center">
                       <Upload size={48} className="text-lime-400" />
                     </div>
                     <h3 className="text-xl font-bold text-white">Upload Your CV</h3>
@@ -920,7 +935,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                       <div key={section.id} className="flex items-center">
                         <button
                           onClick={() => setCurrentSection(index)}
-                          className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                          className={`w-12 h-12 rounded-none flex items-center justify-center text-sm font-medium transition-all duration-300 ${
                             currentSection === index
                               ? 'bg-lime-400 text-black'
                               : index < currentSection
@@ -962,7 +977,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                   className="text-center space-y-6"
                 >
                   <motion.div
-                    className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center"
+                    className="w-16 h-16 mx-auto rounded-none bg-gradient-to-br from-lime-400 to-lime-500 flex items-center justify-center"
                     animate={{ rotate: 360 }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                   >
@@ -992,7 +1007,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                   {currentStep === 'form' && currentSection < sections.length - 1 && (
                     <motion.button
                       onClick={() => setCurrentSection(currentSection + 1)}
-                      className="flex items-center gap-2 px-8 py-3 bg-white/10 text-white rounded-xl hover:bg-white/20 transition-colors"
+                      className="flex items-center gap-2 px-8 py-3 bg-white/10 text-white rounded-none hover:bg-white/20 transition-colors"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
@@ -1004,7 +1019,7 @@ const OnboardingForm: React.FC<OnboardingFormProps> = ({
                   {currentStep === 'form' && currentSection === sections.length - 1 && (
                     <motion.button
                       onClick={handleComplete}
-                      className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-xl hover:from-lime-300 hover:to-lime-400 transition-all duration-300 shadow-2xl shadow-lime-400/25"
+                      className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-lime-400 to-lime-500 text-black rounded-none hover:from-lime-300 hover:to-lime-400 transition-all duration-300 shadow-2xl shadow-lime-400/25"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >

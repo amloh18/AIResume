@@ -51,8 +51,8 @@ export default function UnifiedAuthLayout({
 
         {/* Animated Background Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse delay-700" />
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-none blur-3xl animate-pulse" />
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-none blur-3xl animate-pulse delay-700" />
         </div>
 
         {/* Content Container */}
@@ -110,7 +110,7 @@ export default function UnifiedAuthLayout({
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="bg-white dark:bg-[#222B22] rounded-2xl border border-gray-100 dark:border-white/10 shadow-2xl p-8"
+            className="bg-white dark:bg-[#222B22] rounded-none border border-gray-100 dark:border-white/10 shadow-2xl p-8"
           >
             {/* Card Header with Logo - Only show on mobile */}
             <div className="mb-8 lg:hidden flex justify-center">

@@ -2,7 +2,7 @@ import React from 'react';
 import { Calendar, GraduationCap, ExternalLink, Award } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
-import { parseFormattedText, formatDate, formatDateRange } from '@/lib/utils/textFormatting';
+import { parseFormattedText, formatDateRange, stripHtmlTags } from '@/lib/utils/textFormatting';
 import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface EducationProps {
@@ -65,9 +65,20 @@ const Education: React.FC<EducationProps> = ({
 
             {education.description && (
               <div className="education-description entry-content item-content">
-                <div 
-                  dangerouslySetInnerHTML={{ __html: parseFormattedText(education.description) }}
-                />
+                {(education as any).showBullets ? (
+                  <ul>
+                    {stripHtmlTags(education.description)
+                      .split('\n')
+                      .map(line => line.trim())
+                      .filter(Boolean)
+                      .map(line => line.replace(/^[•\-*◦▪]\s*/, ''))
+                      .map((line, i) => (
+                        <li key={i}>{line}</li>
+                      ))}
+                  </ul>
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: parseFormattedText(education.description) }} />
+                )}
               </div>
             )}
             
@@ -104,7 +115,6 @@ const Education: React.FC<EducationProps> = ({
         .education-item {
           page-break-inside: avoid;
           break-inside: avoid;
-          margin-bottom: 10px;
         }
 
         .item-header {
@@ -160,6 +170,16 @@ const Education: React.FC<EducationProps> = ({
         }
 
         .education-description p {
+          orphans: 2;
+          widows: 2;
+        }
+
+        .education-description ul {
+          margin: 4px 0;
+          padding-left: 18px;
+        }
+
+        .education-description li {
           orphans: 2;
           widows: 2;
         }

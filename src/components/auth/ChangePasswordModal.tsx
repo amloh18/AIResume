@@ -144,7 +144,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
         onClick={(e) => e.target === e.currentTarget && onClose()}
       >
         <motion.div
-          className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 relative"
+          className="bg-white dark:bg-gray-800 rounded-none shadow-xl max-w-md w-full p-6 relative"
           initial={{ scale: 0.95, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 20 }}
@@ -160,7 +160,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-none flex items-center justify-center">
               <Lock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
@@ -186,7 +186,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   value={formData.currentPassword}
                   onChange={(e) => handleInputChange('currentPassword', e.target.value)}
                   placeholder="Enter your current password"
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
                 <button
                   type="button"
@@ -209,7 +209,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   value={formData.newPassword}
                   onChange={(e) => handleInputChange('newPassword', e.target.value)}
                   placeholder="Enter your new password"
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
                 <button
                   type="button"
@@ -251,7 +251,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                   placeholder="Confirm your new password"
-                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-3 pr-10 border border-gray-300 dark:border-gray-600 rounded-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 />
                 <button
                   type="button"
@@ -281,7 +281,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
             </div>
 
             {/* Security Notice */}
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-none p-4">
               <div className="flex items-center gap-2 mb-2">
                 <Shield className="w-4 h-4 text-blue-500" />
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
@@ -298,7 +298,7 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-none p-4">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500" />
                   <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
@@ -311,18 +311,18 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                className="flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-none hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || passwordStrength < 2}
-                className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white rounded-none transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-none animate-spin" />
                     Changing...
                   </>
                 ) : (

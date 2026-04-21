@@ -88,7 +88,7 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
   return (
     <>
           {safeData.map((award, index) => (
-        <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+        <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10 mb-6">
               <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{award.title || 'Award Title'}</h4>
                 <div className="flex items-center gap-2">
@@ -116,7 +116,7 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
                 type="text"
                   value={award.title || ''}
                 onChange={(e) => updateAward(index, 'title', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="Employee of the Year"
                 />
             </div>
@@ -124,11 +124,11 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Date</label>
               <input
-                type="text"
+                type="month"
                   value={award.date || ''}
                 onChange={(e) => updateAward(index, 'date', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                placeholder="2023"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                placeholder="YYYY-MM"
                 />
             </div>
               </div>
@@ -162,7 +162,7 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
       
       <button
         onClick={onAdd}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Award

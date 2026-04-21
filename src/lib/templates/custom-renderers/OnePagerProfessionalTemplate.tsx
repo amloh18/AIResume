@@ -477,9 +477,9 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                   {education.map((edu, index) => (
                     <div key={index} className="opp-edu-item" data-item-id={index}>
                       <p className="opp-edu-degree">
-                        {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
+                        {edu.studyType || edu.area ? `${edu.studyType || ''}${edu.area ? ` in ${edu.area}` : ''}` : <span className="text-gray-400">Degree & Major</span>}
                       </p>
-                      <p className="opp-edu-institution">{edu.institution}</p>
+                      <p className="opp-edu-institution">{edu.institution || <span className="text-gray-400">Institution Name</span>}</p>
                       <p className="opp-edu-dates">
                         {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
                       </p>
@@ -521,9 +521,16 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                 <div className="opp-sidebar-content">
                   {certificates.map((cert, index) => (
                     <div key={index} className="opp-cert-item" data-item-id={index}>
-                      <p className="opp-cert-name">{cert.name}</p>
+                      <p className="opp-cert-name">{cert.name || <span className="text-gray-400">Certificate Name</span>}</p>
                       {cert.issuer && (
-                        <p className="opp-cert-issuer">{cert.issuer}</p>
+                        <p className="opp-cert-issuer">{cert.issuer || <span className="text-gray-400">Issuer</span>}</p>
+                      )}
+                      {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                        <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                          {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                            <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                          ))}
+                        </ul>
                       )}
                     </div>
                   ))}
@@ -545,12 +552,12 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                   {work.map((job, index) => (
                     <div key={index} className="opp-timeline-item" data-item-id={index}>
                       <div className="opp-timeline-header">
-                        <h4 className="opp-timeline-role">{job.position}</h4>
+                        <h4 className="opp-timeline-role">{job.position || <span className="text-gray-400">Job Title</span>}</h4>
                         <span className="opp-timeline-dates">
                           {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
                         </span>
                       </div>
-                      <p className="opp-timeline-org">{job.name}</p>
+                      <p className="opp-timeline-org">{job.name || <span className="text-gray-400">Company Name</span>}</p>
                       {job.summary && (
                         <div
                           className="opp-timeline-description"
@@ -573,7 +580,7 @@ export const OnePagerProfessionalTemplate: React.FC<OnePagerProfessionalTemplate
                   {projects.map((project, index) => (
                     <div key={index} className="opp-timeline-item" data-item-id={index}>
                       <div className="opp-timeline-header">
-                        <h4 className="opp-project-name">{project.name}</h4>
+                        <h4 className="opp-project-name">{project.name || <span className="text-gray-400">Project Name</span>}</h4>
                         {project.startDate && (
                           <span className="opp-timeline-dates">
                             {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}

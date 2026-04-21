@@ -41,7 +41,7 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
   return (
     <>
       {safeData.map((reference, index) => (
-        <div key={index} className="bg-white/5 rounded-xl p-6 border border-white/10 mb-6">
+        <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{reference.name || 'Reference Name'}</h4>
             <div className="flex items-center gap-2">
@@ -72,7 +72,7 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
                 type="text"
                 value={reference.name || ''}
                 onChange={(e) => updateReference(index, 'name', e.target.value)}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 placeholder="Dr. John Smith"
               />
             </div>
@@ -83,7 +83,7 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
                 value={reference.reference || ''}
                 onChange={(e) => updateReference(index, 'reference', e.target.value)}
                 placeholder="Include: Title, Company, Phone, Email, Relationship"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
                 rows={4}
               />
             </div>
@@ -96,7 +96,7 @@ const ReferencesSection: React.FC<ReferencesSectionProps> = ({
           const newReference = { name: '', reference: '' };
           onUpdate([...safeData, newReference]);
         }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-xl transition-colors flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add Reference

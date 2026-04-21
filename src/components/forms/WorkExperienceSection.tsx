@@ -89,7 +89,7 @@ function SortableWorkItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white/5 rounded-xl p-6 pl-10 border border-white/10 mb-6 relative ${isDragging ? 'shadow-2xl' : ''}`}
+      className={`bg-white/5 rounded-none p-6 pl-10 border border-white/10 mb-6 relative ${isDragging ? 'shadow-2xl' : ''}`}
     >
       {/* Drag handle */}
       <button
@@ -130,7 +130,7 @@ function SortableWorkItem({
             type="text"
             value={work.position || ''}
             onChange={(e) => onUpdate(index, 'position', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
             placeholder="Senior Product Manager"
           />
         </div>
@@ -140,28 +140,28 @@ function SortableWorkItem({
             type="text"
             value={work.name || ''}
             onChange={(e) => onUpdate(index, 'name', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
             placeholder="Tech Corp"
           />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">Start Date</label>
           <input
-            type="text"
+            type="month"
             value={work.startDate || ''}
             onChange={(e) => onUpdate(index, 'startDate', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-            placeholder="Jan 2020"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="YYYY-MM"
           />
         </div>
         <div>
           <label className="block text-white/80 text-sm font-medium mb-2">End Date</label>
           <input
-            type="text"
+            type="month"
             value={work.endDate || ''}
             onChange={(e) => onUpdate(index, 'endDate', e.target.value)}
-            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-            placeholder="Present"
+            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+            placeholder="YYYY-MM"
           />
         </div>
       </div>
@@ -417,7 +417,7 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
 
       <button
         onClick={addWorkItem}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-xl transition-all flex items-center justify-center gap-2"
+        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-all flex items-center justify-center gap-2"
       >
         <Plus size={20} />
         Add another Work Experience

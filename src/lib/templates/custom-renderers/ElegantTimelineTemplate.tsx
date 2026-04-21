@@ -65,7 +65,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
         
         .header-section {
           text-align: center;
-          margin-bottom: 40px;
+          margin-bottom: 24px;
         }
         
         .name-box {
@@ -104,7 +104,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
           height: 120px;
           border-radius: 50%;
           background: #E5E7EB;
-          margin: 0 auto 30px;
+          margin: 0 auto 20px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -197,7 +197,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
         }
         
         .education-item {
-          margin-bottom: 15px;
+          margin-bottom: 12px;
         }
         
         .education-header {
@@ -292,7 +292,7 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
         }
         
         .project-item {
-          margin-bottom: 15px;
+          margin-bottom: 12px;
         }
         
         .project-title {
@@ -434,8 +434,8 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
               {education.map((edu, index) => (
                 <div key={index} className="education-item" data-item-id={index}>
                   <div className="education-header">
-                    <div className="degree">{edu.studyType} {edu.area && `in ${edu.area}`}</div>
-                    <div className="university">{edu.institution}</div>
+                    <div className="degree">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area ? `in ${edu.area}` : ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</div>
+                    <div className="university">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                     <div className="education-dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
                   </div>
                 </div>
@@ -450,9 +450,16 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
               <div className="section-title">Projects</div>
               {projects.map((project, index) => (
                 <div key={index} className="project-item" data-item-id={index}>
-                  <div className="project-title">{project.name}</div>
+                  <div className="project-title">{project.name || <span className="text-gray-400">Project Name</span>}</div>
                   {project.description && (
                     <div className="project-description">{stripHtmlTags(project.description)}</div>
+                  )}
+                  {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).length > 0 && (
+                    <ul style={{ marginTop: '6px', paddingLeft: '18px' }}>
+                      {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, i: number) => (
+                        <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                      ))}
+                    </ul>
                   )}
                   {project.keywords && (
                     <div className="project-technologies">
@@ -470,8 +477,8 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
               <div className="section-title">Awards</div>
               {awards.map((award, index) => (
                 <div key={index} className="award-item" data-item-id={index}>
-                  <div className="award-title">{award.title}</div>
-                  <div className="award-issuer">{award.awarder}</div>
+                  <div className="award-title">{award.title || <span className="text-gray-400">Award Title</span>}</div>
+                  <div className="award-issuer">{award.awarder || <span className="text-gray-400">Awarder</span>}</div>
                   <div className="award-year">{award.date}</div>
                 </div>
               ))}
@@ -548,9 +555,9 @@ export const ElegantTimelineTemplate: React.FC<ElegantTimelineTemplateProps> = (
               {work.map((job, index) => (
                 <div key={index} className="experience-item" data-item-id={index}>
                   <div className="experience-header">
-                    <div className="job-title">{job.position}</div>
+                    <div className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</div>
                     <div className="company-info">
-                      <span className="company-name">{job.name}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
+                      <span className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</span> | <span className="job-dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</span>
                     </div>
                   </div>
                   {job.summary && (

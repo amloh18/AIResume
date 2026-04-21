@@ -184,7 +184,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   return (
     <div className={`relative ${className}`}>
       <div
-        className={`relative border border-white/20 rounded-lg transition-all ${
+        className={`relative border border-white/20 rounded-none transition-all ${
           hasAnnotation 
             ? 'bg-red-500/20 border-red-500/40' 
             : isFocused 
@@ -220,7 +220,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
         />
 
         {/* Placeholder */}
-        {(!value || value === '<br>' || value === '') && (
+        {(!value || value === '<br>' || value === '' || value === '<p></p>' || value === '<p><br></p>' || value === '<div><br></div>') && (
           <div 
             className="absolute top-3 left-4 text-white/50 pointer-events-none"
             style={{ top: '0.75rem', left: '1rem' }}

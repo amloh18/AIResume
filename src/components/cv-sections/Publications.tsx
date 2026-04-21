@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, BookOpen, ExternalLink, User } from 'lucide-react';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ISectionBlueprint, ITemplate } from '@/models/Template';
+import { parseFormattedText, stripHtmlTags } from '@/lib/utils/textFormatting';
 import { generateEnforcedCSS } from '@/lib/templates/shared-layout-css';
 
 interface PublicationsProps {
@@ -80,8 +81,18 @@ const Publications: React.FC<PublicationsProps> = ({
 
             {publication.summary && (
               <div className="publication-summary">
-                <p>{publication.summary}</p>
+                <div dangerouslySetInnerHTML={{ __html: parseFormattedText(publication.summary) }} />
               </div>
+            )}
+
+            {(Array.isArray((publication as any).highlights) ? (publication as any).highlights : Array.isArray((publication as any).achievements) ? (publication as any).achievements : []).length > 0 && (
+              <ul className="item-highlights">
+                {(Array.isArray((publication as any).highlights) ? (publication as any).highlights : Array.isArray((publication as any).achievements) ? (publication as any).achievements : []).map((highlight: any, hIndex: number) => (
+                  <li key={hIndex} className="bullet-point">
+                    {stripHtmlTags(typeof highlight === 'string' ? highlight : highlight?.text || '')}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         ))}
@@ -210,6 +221,20 @@ const Publications: React.FC<PublicationsProps> = ({
         .publication-summary p {
           margin: 0;
           text-align: justify;
+        }
+
+        .item-highlights {
+          margin: 8px 0 0 0;
+          padding-left: 18px;
+          color: ${template.globalStyles.primaryColor};
+          font-size: ${template.globalStyles.fontSize};
+          line-height: ${template.globalStyles.lineHeight};
+        }
+
+        .bullet-point {
+          orphans: 2;
+          widows: 2;
+          margin-bottom: 2px;
         }
         
         @media (max-width: 768px) {

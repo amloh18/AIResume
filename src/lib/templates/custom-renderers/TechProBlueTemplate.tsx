@@ -191,12 +191,12 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
               <div key={index} className="experience-item" data-item-id={index}>
                 <div className="experience-header">
                   <div className="job-title-company">
-                    <span className="job-title">{job.position}</span>
+                    <span className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</span>
                     <span className="separator"> at </span>
                     {job.url ? (
-                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="company-name">{job.name}</a>
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</a>
                     ) : (
-                      <span className="company-name">{job.name}</span>
+                      <span className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</span>
                     )}
                   </div>
                   <div className="date-range">
@@ -231,9 +231,9 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
                 <div className="education-header">
                   <div className="msg-row">
                     <div className="school-degree">
-                      <span className="school-name">{edu.institution}</span>
+                      <span className="school-name">{edu.institution || <span className="text-gray-400">Institution Name</span>}</span>
                       <span className="separator">, </span>
-                      <span className="degree">{edu.studyType} {edu.area}</span>
+                      <span className="degree">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area || ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</span>
                     </div>
                   </div>
                   <div className="date-range">
@@ -256,7 +256,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
               <div key={index} className="project-item" data-item-id={index}>
                 <div className="project-header">
                   <div className="project-name-link">
-                    <span className="project-name">{project.name}</span>
+                    <span className="project-name">{project.name || <span className="text-gray-400">Project Name</span>}</span>
                     {project.url && (
                       <a href={project.url} className="project-link" target="_blank" rel="noopener noreferrer">
                         view project
@@ -270,6 +270,9 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
                 {project.description && (
                   <div className="project-description" dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }} />
                 )}
+                {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, i: number) => (
+                  <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                ))}
               </div>
             ))}
             <div className="divider"></div>
@@ -284,10 +287,13 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
             {certificates.map((cert, index) => (
               <div key={index} className="certificate-item" data-item-id={index}>
                 <div className="certificate-header">
-                  <span className="certificate-name">{cert.name}</span>
+                  <span className="certificate-name">{cert.name || <span className="text-gray-400">Certificate Name</span>}</span>
                   <span className="date-range">{cert.date}</span>
                 </div>
-                <div className="certificate-issuer">{cert.issuer}</div>
+                <div className="certificate-issuer">{cert.issuer || <span className="text-gray-400">Issuer</span>}</div>
+                {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                  <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                ))}
               </div>
             ))}
             <div className="divider"></div>
@@ -302,10 +308,10 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
             {awards.map((award, index) => (
               <div key={index} className="award-item" data-item-id={index}>
                 <div className="award-header">
-                  <span className="award-title">{award.title}</span>
+                  <span className="award-title">{award.title || <span className="text-gray-400">Award Title</span>}</span>
                   <span className="date-range">{award.date}</span>
                 </div>
-                <div className="award-awarder">{award.awarder}</div>
+                <div className="award-awarder">{award.awarder || <span className="text-gray-400">Awarder</span>}</div>
                 <div className="award-summary">{award.summary}</div>
               </div>
             ))}
@@ -353,7 +359,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
               <div key={index} className="publication-item" data-item-id={index}>
                 <div className="publication-header">
                   <div className="pub-name-link">
-                    <span className="pub-name">{pub.name}</span>
+                    <span className="pub-name">{pub.name || <span className="text-gray-400">Publication Title</span>}</span>
                     {pub.url && (
                       <a href={pub.url} className="pub-link" target="_blank" rel="noopener noreferrer">
                         view publication
@@ -362,8 +368,11 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
                   </div>
                   <div className="date-range">{pub.releaseDate}</div>
                 </div>
-                <div className="pub-publisher">{pub.publisher}</div>
+                <div className="pub-publisher">{pub.publisher || <span className="text-gray-400">Publisher</span>}</div>
                 <div className="pub-summary">{pub.summary}</div>
+                {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).map((h: any, i: number) => (
+                  <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+                ))}
               </div>
             ))}
             <div className="divider"></div>
@@ -471,7 +480,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
 
         .header {
           text-align: center;
-          margin-bottom: 2rem;
+          margin-bottom: 1rem;
         }
 
         .tech-pro-blue-template .name {
@@ -573,7 +582,7 @@ export const TechProBlueTemplate: React.FC<TechProBlueTemplateProps> = ({
         }
 
         .experience-item, .education-item, .project-item {
-          margin-bottom: 1.5rem;
+          margin-bottom: 1rem;
         }
 
         .experience-header, .education-header, .project-header {

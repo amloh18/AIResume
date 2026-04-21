@@ -267,8 +267,8 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
           <div key={index} className="experience-item" data-item-id={index}>
             <div className="experience-header">
               <div>
-                <div className="job-title">{job.position}</div>
-                <div className="company-name">{job.name}</div>
+                <div className="job-title">{job.position || <span className="text-gray-400">Job Title</span>}</div>
+                <div className="company-name">{job.name || <span className="text-gray-400">Company Name</span>}</div>
               </div>
               <div className="dates">{formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}</div>
             </div>
@@ -291,8 +291,8 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
           <div key={index} className="education-item" data-item-id={index}>
             <div className="education-header">
               <div>
-                <div className="degree-title">{edu.studyType} {edu.area}</div>
-                <div className="institution-name">{edu.institution}</div>
+                <div className="degree-title">{edu.studyType || edu.area ? `${edu.studyType || ''} ${edu.area || ''}`.trim() : <span className="text-gray-400">Degree & Major</span>}</div>
+                <div className="institution-name">{edu.institution || <span className="text-gray-400">Institution Name</span>}</div>
                 {edu.score && <div style={{ fontSize: '0.9rem', color: '#6B7280', marginTop: '0.25rem' }}>Score: {edu.score}</div>}
               </div>
               <div className="dates">{formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}</div>
@@ -331,11 +331,14 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             <div key={index} className="experience-item">
               <div className="experience-header">
                 <div>
-                  <div className="job-title">{project.name}</div>
+                  <div className="job-title">{project.name || <span className="text-gray-400">Project Name</span>}</div>
                 </div>
                 {project.startDate && <div className="dates">{formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}</div>}
               </div>
               {project.description && <div className="bullet-point">{stripHtmlTags(project.description)}</div>}
+              {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, i: number) => (
+                <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+              ))}
             </div>
           ))}
         </div>
@@ -364,11 +367,15 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             <div key={index} className="certification-item">
               <div className="certification-header">
                 <div>
-                  <div className="certification-title">{cert.name}</div>
-                  <div className="certification-issuer">{cert.issuer}</div>
+                  <div className="certification-title">{cert.name || <span className="text-gray-400">Certificate Name</span>}</div>
+                  <div className="certification-issuer">{cert.issuer || <span className="text-gray-400">Issuer</span>}</div>
                 </div>
                 <div className="certification-year">{cert.date}</div>
               </div>
+              {cert.description && <div className="bullet-point">{stripHtmlTags(cert.description)}</div>}
+              {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+              ))}
             </div>
           ))}
         </div>
@@ -382,8 +389,8 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             <div key={index} className="experience-item">
               <div className="experience-header">
                 <div>
-                  <div className="job-title">{award.title}</div>
-                  <div className="company-name">{award.awarder}</div>
+                  <div className="job-title">{award.title || <span className="text-gray-400">Award Title</span>}</div>
+                  <div className="company-name">{award.awarder || <span className="text-gray-400">Awarder</span>}</div>
                 </div>
                 <div className="dates">{award.date}</div>
               </div>
@@ -406,6 +413,9 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
                 <div className="dates">{formatDateRangeWithStyle(vol.startDate, vol.endDate, dateFormat)}</div>
               </div>
               {vol.summary && <div className="bullet-point">{stripHtmlTags(vol.summary)}</div>}
+              {(Array.isArray(vol.highlights) ? vol.highlights : Array.isArray((vol as any).achievements) ? (vol as any).achievements : []).map((h: any, i: number) => (
+                <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+              ))}
             </div>
           ))}
         </div>
@@ -419,11 +429,15 @@ export const ExecutiveStandardTemplate: React.FC<ExecutiveStandardTemplateProps>
             <div key={index} className="experience-item">
               <div className="experience-header">
                 <div>
-                  <div className="job-title">{pub.name}</div>
-                  <div className="company-name">{pub.publisher}</div>
+                  <div className="job-title">{pub.name || <span className="text-gray-400">Publication Title</span>}</div>
+                  <div className="company-name">{pub.publisher || <span className="text-gray-400">Publisher</span>}</div>
                 </div>
                 <div className="dates">{pub.releaseDate}</div>
               </div>
+              {pub.summary && <div className="bullet-point">{stripHtmlTags(pub.summary)}</div>}
+              {(Array.isArray((pub as any).highlights) ? (pub as any).highlights : Array.isArray((pub as any).achievements) ? (pub as any).achievements : []).map((h: any, i: number) => (
+                <div key={i} className="bullet-point">{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</div>
+              ))}
             </div>
           ))}
         </div>

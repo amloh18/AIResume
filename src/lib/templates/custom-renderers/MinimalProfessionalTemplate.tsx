@@ -362,12 +362,12 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                         {work.map((job, index) => (
                             <div key={index} className="mp-item" data-item-id={index}>
                                 <div className="mp-item-header">
-                                    <h3 className="mp-item-title">{job.position}</h3>
+                                    <h3 className="mp-item-title">{job.position || <span className="text-gray-400">Job Title</span>}</h3>
                                     <span className="mp-item-dates">
                                         {formatDateRangeWithStyle(job.startDate, job.endDate, dateFormat)}
                                     </span>
                                 </div>
-                                <p className="mp-item-subtitle">{job.name}</p>
+                                <p className="mp-item-subtitle">{job.name || <span className="text-gray-400">Company Name</span>}</p>
                                 {job.summary && (
                                     <div
                                         className="mp-item-description"
@@ -391,13 +391,13 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                             <div key={index} className="mp-item" data-item-id={index}>
                                 <div className="mp-item-header">
                                     <h3 className="mp-item-title">
-                                        {edu.studyType}{edu.area ? ` in ${edu.area}` : ''}
+                                        {edu.studyType || edu.area ? `${edu.studyType || ''}${edu.area ? ` in ${edu.area}` : ''}` : <span className="text-gray-400">Degree & Major</span>}
                                     </h3>
                                     <span className="mp-item-dates">
                                         {formatDateRangeWithStyle(edu.startDate, edu.endDate, dateFormat)}
                                     </span>
                                 </div>
-                                <p className="mp-item-subtitle">{edu.institution}</p>
+                                <p className="mp-item-subtitle">{edu.institution || <span className="text-gray-400">Institution Name</span>}</p>
                                 {edu.score && (
                                     <div className="mp-item-description">Score: {edu.score}</div>
                                 )}
@@ -436,7 +436,7 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                         {projects.map((project, index) => (
                             <div key={index} className="mp-item" data-item-id={index}>
                                 <div className="mp-item-header">
-                                    <h3 className="mp-item-title">{project.name}</h3>
+                                    <h3 className="mp-item-title">{project.name || <span className="text-gray-400">Project Name</span>}</h3>
                                     {project.startDate && (
                                         <span className="mp-item-dates">
                                             {formatDateRangeWithStyle(project.startDate, project.endDate, dateFormat)}
@@ -448,6 +448,13 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                                         className="mp-item-description"
                                         dangerouslySetInnerHTML={{ __html: renderFormattedText(project.description) }}
                                     />
+                                )}
+                                {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).length > 0 && (
+                                    <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                                        {(Array.isArray(project.highlights) ? project.highlights : Array.isArray((project as any).achievements) ? (project as any).achievements : []).map((h: any, i: number) => (
+                                            <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                                        ))}
+                                    </ul>
                                 )}
                             </div>
                         ))}
@@ -465,12 +472,19 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                         {certificates.map((cert, index) => (
                             <div key={index} className="mp-item" data-item-id={index}>
                                 <div className="mp-item-header">
-                                    <h3 className="mp-item-title">{cert.name}</h3>
+                                    <h3 className="mp-item-title">{cert.name || <span className="text-gray-400">Certificate Name</span>}</h3>
                                     {cert.date && (
                                         <span className="mp-item-dates">{cert.date}</span>
                                     )}
                                 </div>
-                                <p className="mp-item-subtitle">{cert.issuer}</p>
+                                <p className="mp-item-subtitle">{cert.issuer || <span className="text-gray-400">Issuer</span>}</p>
+                                {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).length > 0 && (
+                                    <ul style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                                        {(Array.isArray((cert as any).highlights) ? (cert as any).highlights : Array.isArray((cert as any).achievements) ? (cert as any).achievements : []).map((h: any, i: number) => (
+                                            <li key={i}>{stripHtmlTags(typeof h === 'string' ? h : h?.text || '')}</li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -507,7 +521,7 @@ export const MinimalProfessionalTemplate: React.FC<MinimalProfessionalTemplatePr
                         </div>
                         {awards.map((award, index) => (
                             <div key={index} className="mp-award-item" data-item-id={index}>
-                                <span className="mp-award-title">{award.title}</span>
+                                <span className="mp-award-title">{award.title || <span className="text-gray-400">Award Title</span>}</span>
                                 {award.awarder && (
                                     <span className="mp-award-awarder"> – {award.awarder}</span>
                                 )}

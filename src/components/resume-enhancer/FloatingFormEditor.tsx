@@ -378,6 +378,9 @@ export default function FloatingFormEditor({
                         onUpdate={(updated) => updateCVData({ skills: updated })}
                         onAdd={addSkills}
                         onRemove={removeSkills}
+                        cvId={state.cvId}
+                        cvData={state.cvData}
+                        jobData={state.jobData}
                     />
                 );
             case 'projects':
@@ -483,7 +486,7 @@ export default function FloatingFormEditor({
         >
             <div
                 ref={modalRef}
-                className="w-full max-w-2xl bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[90vh] z-[10001]"
+                className="w-full max-w-2xl bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-none border border-white/10 shadow-2xl flex flex-col pointer-events-auto overflow-hidden max-h-[90vh] z-[10001]"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -493,7 +496,7 @@ export default function FloatingFormEditor({
                             {SECTION_TITLES[sectionId] || 'Edit Section'}
                         </h2>
                         {sectionAnnotations.length > 0 && (
-                            <span className="px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-300 rounded-full">
+                            <span className="px-2 py-0.5 text-xs font-medium bg-amber-500/20 text-amber-300 rounded-none">
                                 {sectionAnnotations.length} suggestion{sectionAnnotations.length !== 1 ? 's' : ''}
                             </span>
                         )}
@@ -501,7 +504,7 @@ export default function FloatingFormEditor({
                     <div className="flex items-center gap-2">
                         <button
                             onClick={handleClose}
-                            className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:-translate-y-0.5"
+                            className="p-2 rounded-none bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-all duration-200 hover:-translate-y-0.5"
                             aria-label="Cancel"
                             title="Cancel"
                         >
@@ -509,7 +512,7 @@ export default function FloatingFormEditor({
                         </button>
                         <button
                             onClick={handleClose}
-                            className="p-2 rounded-lg bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:-translate-y-0.5"
+                            className="p-2 rounded-none bg-[#80FF00]/10 text-[#80FF00] hover:bg-[#80FF00]/20 transition-all duration-200 hover:-translate-y-0.5"
                             aria-label="Accept"
                             title="Accept"
                         >
