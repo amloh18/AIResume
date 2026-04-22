@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap } from 'lucide-react';
+import { AlertCircle, Eye, Palette, X, FileText, Download, Target, Award, TrendingUp, AlertTriangle, CheckCircle2, Shield, Sparkles, BookOpen, ChevronRight, Zap, Briefcase, Edit2, LayoutTemplate, Calendar } from 'lucide-react';
 import CVBuilderProAdapter from '@/components/cv-builder-pro/CVBuilderProAdapter';
 import { ITemplate } from '@/types/template';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -319,57 +319,89 @@ export default function Step4Review() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden">
-      {/* Split View: Preview Left, Info Right */}
-      <div className="flex-1 flex gap-3 min-h-0 overflow-hidden pt-3 px-3 bg-[var(--bg-primary)]">
-        {/* Right Panel - Info (50%) */}
-        <div className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-          <div className="p-4">
-            <h2 className="text-lg font-bold text-[color:var(--text-primary)] mb-1">
+    <div className="flex flex-col h-[calc(100vh-64px)] min-h-0 overflow-hidden bg-[#f3f2ee] dark:bg-[#1a230f]">
+      {/* Split View: Info Left, Preview Right */}
+      <div className="flex-1 flex flex-col md:flex-row gap-6 min-h-0 overflow-hidden p-6 max-w-[1600px] mx-auto w-full">
+        {/* Left Panel - Info */}
+        <div className="w-full md:w-1/2 lg:w-[45%] flex flex-col min-h-0">
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               Review Your Resume
             </h2>
-            <p className="text-xs text-[color:var(--text-secondary)]">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Take a final look before saving to your dashboard
             </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
-            {/* Scorecard Panel - replaces custom score cards */}
-            <ScorecardPanel
-              atsResult={null}
-              scoreResult={scoreResult}
-              cvType={state.cvType}
-              isLoading={false}
-              analysisMode={isJourneyCV ? 'jd-based' : 'role-based'}
-              compact={false}
-              scoreLabel={isJourneyCV ? 'ATS Score' : 'CV Score'}
-            />
+          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 pb-20 pr-2">
+            {/* Scorecard Panel */}
+            <div className="bg-white dark:bg-[#141810] rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-800">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-8">
+                {/* Left side: ATS Score Ring */}
+                <div className="flex flex-col items-center shrink-0">
+                  <div className="relative w-32 h-32 mb-3">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-100 dark:text-gray-800" />
+                      <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
+                        strokeDasharray={276.46} strokeDashoffset={276.46 - (276.46 * ((primaryScore || 0) / 100))}
+                        className="text-red-500 transition-all duration-1000 ease-out" strokeLinecap="round" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center mt-2">
+                      <span className="text-4xl font-black text-red-500">{primaryScore || 0}</span>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">ATS SCORE</span>
+                </div>
+
+                {/* Right side: Total Score Breakdown */}
+                <div className="flex-1 w-full">
+                  <h3 className="text-sm font-bold text-green-500 mb-4">Score Breakdown</h3>
+                  {isJourneyCV ? (
+                    <div className="space-y-3">
+                      <ScoreBar label="Keyword Match" value={scoreResult?.atsScore?.keywordMatch || 0} max={40} />
+                      <ScoreBar label="Formatting" value={scoreResult?.atsScore?.formatting || 0} max={20} />
+                      <ScoreBar label="Alignment" value={scoreResult?.atsScore?.sectionAlignment || 0} max={15} />
+                      <ScoreBar label="Recency" value={scoreResult?.atsScore?.recency || 0} max={15} />
+                      <ScoreBar label="Contact Info" value={scoreResult?.atsScore?.contactability || 0} max={10} />
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <ScoreBar label="Completeness" value={scoreResult?.cvScore?.completeness || 0} max={25} />
+                      <ScoreBar label="Impact Verbs" value={scoreResult?.cvScore?.impactVerbs || 0} max={20} />
+                      <ScoreBar label="Quantification" value={scoreResult?.cvScore?.quantification || 0} max={20} />
+                      <ScoreBar label="Formatting" value={scoreResult?.cvScore?.formatting || 0} max={15} />
+                      <ScoreBar label="Readability" value={scoreResult?.cvScore?.readability || 0} max={20} />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Keyword Gaps for Journey CVs */}
             {isJourneyCV && state.keywordGaps && state.keywordGaps.length > 0 && (
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <div className="flex items-center gap-2 mb-2">
-                  <Target className="w-4 h-4 text-yellow-500" />
-                  <p className="text-xs font-medium text-[color:var(--text-primary)]">
+              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <Target className="w-5 h-5 text-yellow-500" />
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
                     Missing Keywords ({state.keywordGaps.filter(g => g.importance === 'critical').length} critical)
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-2">
                   {state.keywordGaps.slice(0, 8).map((gap, i) => (
                     <span
                       key={i}
-                      className={`text-xs px-2 py-0.5 rounded-full ${gap.importance === 'critical'
-                        ? 'bg-red-500/20 text-red-400'
+                      className={`text-xs px-3 py-1 rounded-full font-medium ${gap.importance === 'critical'
+                        ? 'bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400'
                         : gap.importance === 'preferred'
-                          ? 'bg-yellow-500/20 text-yellow-400'
-                          : 'bg-gray-500/20 text-gray-400'
+                          ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
                         }`}
                     >
                       {gap.keyword}
                     </span>
                   ))}
                   {state.keywordGaps.length > 8 && (
-                    <span className="text-xs text-[color:var(--text-tertiary)]">
+                    <span className="text-xs text-gray-500 font-medium px-2 py-1">
                       +{state.keywordGaps.length - 8} more
                     </span>
                   )}
@@ -377,134 +409,154 @@ export default function Step4Review() {
               </div>
             )}
 
-            {/* Cards Grid - 2x2 layout */}
-            <div className="grid grid-cols-2 gap-3">
-              {/* CV Type Card */}
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-1">CV Type</p>
-                <p className="font-semibold text-[color:var(--text-primary)] capitalize text-sm flex items-center gap-1">
-                  {state.cvType === 'master' && <Award className="w-3 h-3 text-[var(--accent-primary)]" />}
-                  {state.cvType === 'journey' && <Target className="w-3 h-3 text-blue-500" />}
-                  {state.cvType}
-                </p>
-                {state.cvType === 'journey' && state.jobData && (
-                  <p className="text-xs text-[color:var(--text-secondary)] mt-1 truncate">
-                    For: {state.jobData.title || state.jobData.jobTitle || 'Job'}
-                  </p>
-                )}
+            {/* Settings Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* CV Type */}
+              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
+                    <Briefcase className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">CV Type</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm capitalize">{state.cvType}</p>
+                    {state.cvType === 'journey' && state.jobData && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[140px]">
+                        For: {state.jobData.title || state.jobData.jobTitle || 'Job'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                  <Edit2 className="w-3 h-3" /> Change
+                </button>
               </div>
 
-              {/* Template Card */}
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <div className="flex items-center justify-between">
+              {/* Template */}
+              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center shrink-0">
+                    <LayoutTemplate className="w-5 h-5 text-purple-500" />
+                  </div>
                   <div>
-                    <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Template</p>
-                    <p className="font-semibold text-[color:var(--text-primary)] text-sm truncate">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Template</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm truncate max-w-[120px]">
                       {state.selectedTemplate?.name || 'None'}
                     </p>
                   </div>
                 </div>
-                <button
+                <button 
                   onClick={() => setShowTemplateModal(true)}
-                  className="mt-2 w-full px-2 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg text-xs font-medium transition-all flex items-center justify-center space-x-1.5 hover:scale-105 shadow-sm shadow-black/10 dark:shadow-black/30"
+                  className="px-3 py-1.5 border border-gray-200 dark:border-gray-700 rounded-lg text-xs font-bold text-gray-600 dark:text-gray-300 flex items-center gap-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <Palette className="w-3 h-3" />
-                  <span>Change</span>
+                  <Edit2 className="w-3 h-3" /> Change
                 </button>
               </div>
 
-              {/* Date Format Card */}
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <p className="text-xs text-[color:var(--text-tertiary)] mb-2">Date Format</p>
-                <DateFormatSelector
-                  value={state.dateFormat}
-                  onChange={(format) => dispatch({ type: 'SET_DATE_FORMAT', payload: format })}
-                />
-              </div>
-
-              {/* Cover Letter Card */}
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1">
-                    <BookOpen className="w-3 h-3 text-[var(--accent-primary)]" />
-                    <p className="text-xs font-medium text-[color:var(--text-primary)]">Cover Letter</p>
+              {/* Date Format */}
+              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div className="flex items-start gap-3 w-full">
+                  <div className="w-10 h-10 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center shrink-0">
+                    <Calendar className="w-5 h-5 text-green-500" />
                   </div>
-                  {(state.autoGeneratedCoverLetter || (state.cvType === 'journey' && state.coverLetterId)) && (
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                  )}
+                  <div className="flex-1 w-full">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">Date Format</p>
+                    <DateFormatSelector
+                      value={state.dateFormat}
+                      onChange={(format) => dispatch({ type: 'SET_DATE_FORMAT', payload: format })}
+                    />
+                  </div>
                 </div>
-                <button
-                  onClick={handleEditCoverLetter}
-                  className="w-full px-2 py-1.5 bg-[var(--accent-primary)] hover:bg-[var(--accent-hover)] text-black rounded-lg font-semibold transition-all flex items-center justify-center gap-1 text-xs"
-                >
-                  <FileText className="w-3 h-3" />
-                  <span>
-                    {state.autoGeneratedCoverLetter || (state.cvType === 'journey' && state.coverLetterId)
-                      ? 'Edit'
-                      : state.cvType === 'journey'
-                        ? 'Generate'
-                        : 'Create'
-                    }
-                  </span>
-                </button>
               </div>
 
-              {/* Download CV Card */}
-              <div className="bg-[var(--bg-tertiary)] rounded-lg p-3 shadow-sm shadow-black/10 dark:shadow-black/30 flex flex-col justify-between">
-                <div>
-                  <p className="text-xs text-[color:var(--text-tertiary)] mb-1">Export</p>
-                  <p className="font-semibold text-[color:var(--text-primary)] text-sm">Download</p>
+              {/* Cover Letter */}
+              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div className="flex items-start gap-3 w-full">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center shrink-0">
+                    <FileText className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Cover Letter</p>
+                      {(state.autoGeneratedCoverLetter || (state.cvType === 'journey' && state.coverLetterId)) && (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                      )}
+                    </div>
+                    <button
+                      onClick={handleEditCoverLetter}
+                      className="w-full px-3 py-2 bg-[#8bc34a] hover:bg-[#7cb342] text-white rounded-lg font-bold transition-all flex items-center justify-center gap-1.5 text-sm shadow-sm"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      {state.autoGeneratedCoverLetter || (state.cvType === 'journey' && state.coverLetterId)
+                        ? 'Edit'
+                        : state.cvType === 'journey' ? 'Generate' : 'Create'
+                      }
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Export */}
+              <div className="bg-white dark:bg-[#141810] rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-800 flex items-center justify-between sm:col-span-2">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center shrink-0">
+                    <Download className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Export</p>
+                    <p className="font-bold text-gray-900 dark:text-white text-sm">Download your resume as a PDF</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowDownloadModal(true)}
                   disabled={!state.selectedTemplate}
-                  className="mt-2 w-full px-2 py-1.5 bg-[var(--bg-primary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded-lg font-medium transition-all flex items-center justify-center gap-1 text-xs shadow-sm shadow-black/10 dark:shadow-black/30 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50"
                 >
-                  <Download className="w-3 h-3" />
-                  <span>Download</span>
+                  <Download className="w-4 h-4" /> Download PDF
                 </button>
               </div>
-
-              {/* View in Job Tracker - only for Journey CVs */}
-              {isJourneyCV && (
-                <div className="col-span-2 flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1 bg-blue-600/10 border border-blue-500/20 rounded-lg p-3 shadow-sm">
-                    <button
-                      onClick={() => router.push('/dashboard/tracker')}
-                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Target className="w-4 h-4" />
-                      <span>View in Tracker</span>
-                    </button>
-                  </div>
-                  
-                  {/* Interview Coach CTA */}
-                  <div className="flex-1 bg-indigo-600/10 border border-indigo-500/20 rounded-lg p-3 shadow-sm">
-                    <button
-                      onClick={handleStartCoaching}
-                      className="w-full px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Zap className="w-4 h-4 text-yellow-300" />
-                      <span>Interview Coach</span>
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
+
+            {/* Bottom Actions */}
+            {isJourneyCV && (
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <button
+                  onClick={() => router.push('/dashboard/tracker')}
+                  className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold transition-all flex flex-col items-center justify-center shadow-md shadow-blue-500/20 active:scale-95"
+                >
+                  <div className="flex items-center gap-2 text-lg mb-1">
+                    <Target className="w-5 h-5" />
+                    <span>View in Tracker</span>
+                  </div>
+                  <span className="text-xs text-blue-200 font-medium">See how your resume performs</span>
+                </button>
+                
+                <button
+                  onClick={handleStartCoaching}
+                  className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold transition-all flex flex-col items-center justify-center shadow-md shadow-indigo-500/20 active:scale-95"
+                >
+                  <div className="flex items-center gap-2 text-lg mb-1">
+                    <Zap className="w-5 h-5 text-yellow-300" />
+                    <span>Interview Coach</span>
+                  </div>
+                  <span className="text-xs text-indigo-200 font-medium">Get AI-powered interview prep</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Left Panel - Preview (50%) */}
-        <div ref={containerRef} className="w-1/2 flex flex-col min-h-0 bg-[var(--bg-secondary)] rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-          {/* Preview Header with Controls */}
-          <div className="p-3 bg-[var(--bg-secondary)] flex items-center justify-between border-b border-black/5 dark:border-white/5">
-            <div className="flex items-center space-x-2">
+        {/* Right Panel - Preview */}
+        <div ref={containerRef} className="w-full md:w-1/2 lg:w-[55%] flex flex-col min-h-0 bg-white dark:bg-[#141810] rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800">
+          {/* Preview Header */}
+          <div className="px-6 py-4 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
               <button
                 onClick={() => setShowCoverLetterPreview(false)}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                   !showCoverLetterPreview 
-                    ? 'bg-[var(--accent-primary)] text-black' 
-                    : 'text-[color:var(--text-secondary)] hover:bg-[var(--hover-bg)]'
+                    ? 'bg-[#8bc34a] text-white shadow-sm' 
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                 }`}
               >
                 Resume
@@ -512,47 +564,46 @@ export default function Step4Review() {
               {((state.autoGeneratedCoverLetter) || (state.cvType === 'journey' && state.coverLetterId)) && (
                 <button
                   onClick={() => setShowCoverLetterPreview(true)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
                     showCoverLetterPreview 
-                      ? 'bg-[var(--accent-primary)] text-black' 
-                      : 'text-[color:var(--text-secondary)] hover:bg-[var(--hover-bg)]'
+                      ? 'bg-[#8bc34a] text-white shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                   }`}
                 >
                   Cover Letter
                 </button>
               )}
             </div>
-            <div className="flex items-center space-x-3">
-              <div className="h-6 w-px bg-black/10 dark:bg-white/10" />
-              <div className="flex items-center space-x-2 text-xs text-[color:var(--text-secondary)]">
-                <Eye className="w-3.5 h-3.5" />
+            
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
+                <Eye className="w-4 h-4" />
                 <span>Zoom: {Math.round(zoom * 100)}%</span>
               </div>
-              <div className="flex space-x-1">
+              <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg">
                 <button
                   onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                  className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs shadow-sm shadow-black/10 dark:shadow-black/30"
+                  className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded shadow-sm font-medium transition-colors"
                 >
                   -
                 </button>
                 <button
                   onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                  className="px-2 py-1 bg-[var(--bg-tertiary)] hover:bg-[var(--hover-bg)] text-[color:var(--text-primary)] rounded text-xs shadow-sm shadow-black/10 dark:shadow-black/30"
+                  className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded shadow-sm font-medium transition-colors text-lg leading-none"
                 >
                   +
                 </button>
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-auto custom-scrollbar bg-white dark:bg-[var(--bg-secondary)]" ref={previewRef}>
+          
+          <div className="flex-1 overflow-auto custom-scrollbar bg-[#f9fafb] dark:bg-[#0a0c08]" ref={previewRef}>
             {showCoverLetterPreview ? (
               <div
-                className="w-full flex justify-center py-6"
-                style={{
-                  zoom,
-                }}
+                className="w-full flex justify-center py-12"
+                style={{ zoom }}
               >
-                <div className="pointer-events-none" style={{ width: paperWidth }}>
+                <div className="pointer-events-none shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)]" style={{ width: paperWidth }}>
                   <CoverLetterPreview
                     content={state.autoGeneratedCoverLetter || coverLetterData?.content || ''}
                     header={coverLetterData?.header}
@@ -576,12 +627,12 @@ export default function Step4Review() {
                   </div>
                 </div>
 
-                <div className="w-full flex justify-start py-6" style={{ zoom }}>
-                  <div className="flex gap-0" style={{ width: paperWidth * cvPageCount }}>
+                <div className="w-full flex justify-center py-12" style={{ zoom }}>
+                  <div className="flex flex-col gap-12">
                     {Array.from({ length: cvPageCount }).map((_, pageIndex) => (
                       <div
                         key={pageIndex}
-                        className="shrink-0 bg-white"
+                        className="shrink-0 bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)] mx-auto"
                         style={{ width: paperWidth, height: paperHeight }}
                       >
                         <div className="w-full h-full overflow-hidden">
@@ -597,9 +648,9 @@ export default function Step4Review() {
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-center py-8">
-                  <AlertCircle className="w-12 h-12 text-[color:var(--text-tertiary)] mx-auto mb-3" />
-                  <p className="text-sm text-[color:var(--text-secondary)]">
-                    No template selected. Please go back and select a template.
+                  <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-gray-500">
+                    No template selected. Please select a template.
                   </p>
                 </div>
               </div>
@@ -615,37 +666,28 @@ export default function Step4Review() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center"
             onClick={() => setShowTemplateModal(false)}
           >
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white dark:bg-[#141810] shadow-2xl w-full h-full md:w-[90vw] md:h-[90vh] md:max-w-[1200px] md:rounded-2xl flex flex-col overflow-hidden relative"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-[color:var(--text-primary)]">
-                  Select Template
-                </h2>
-                <button
-                  onClick={() => setShowTemplateModal(false)}
-                  className="p-2 hover:bg-[var(--bg-tertiary)] rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5 text-[color:var(--text-primary)]" />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              <div className="flex-1 overflow-y-auto p-6">
-                <TemplateSelector
-                  selectedTemplate={state.selectedTemplate}
-                  onTemplateSelect={handleTemplateSelect}
-                  cvData={state.cvData}
-                />
-              </div>
+              <button
+                onClick={() => setShowTemplateModal(false)}
+                className="absolute top-4 right-4 z-50 p-2 bg-white dark:bg-[#141810] hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors shadow-sm"
+              >
+                <X className="w-5 h-5 text-gray-900 dark:text-white" />
+              </button>
+              
+              <TemplateSelector
+                selectedTemplate={state.selectedTemplate}
+                onTemplateSelect={handleTemplateSelect}
+                cvData={state.cvData}
+              />
             </motion.div>
           </motion.div>
         )}
@@ -686,25 +728,19 @@ export default function Step4Review() {
 function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
   const percentage = (value / max) * 100;
 
-  const getBarColor = (pct: number): string => {
-    if (pct >= 80) return 'bg-green-500';
-    if (pct >= 60) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-[color:var(--text-tertiary)] w-24 truncate">{label}</span>
-      <div className="flex-1 h-1.5 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+    <div className="flex items-center gap-4">
+      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24 truncate">{label}</span>
+      <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
-          className={`h-full rounded-full ${getBarColor(percentage)}`}
+          className="h-full rounded-full bg-[#8bc34a]"
         />
       </div>
-      <span className="text-xs text-[color:var(--text-secondary)] w-10 text-right">
-        {value}/{max}
+      <span className="text-sm font-bold text-gray-500 dark:text-gray-400 w-16 text-right">
+        {value} / {max}
       </span>
     </div>
   );
