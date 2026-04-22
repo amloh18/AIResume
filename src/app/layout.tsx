@@ -5,6 +5,7 @@ import ClientProviders from '@/components/providers/ClientProviders'
 import ResourceHints from '@/components/ResourceHints'
 import DeferredAnalytics from '@/components/DeferredAnalytics'
 import ViewportMeta from '@/components/ViewportMeta'
+import GlobalCommandBar from '@/components/ui/GlobalCommandBar'
 import { getServerSession } from 'next-auth'
 import { authConfig } from '@/lib/auth-config'
 
@@ -171,6 +172,7 @@ export default async function RootLayout({
         <React.Suspense fallback={null}>
           <ClientProviders session={session}>
             {children}
+            <GlobalCommandBar />
           </ClientProviders>
         </React.Suspense>
         {/* Load analytics after page is interactive */}

@@ -304,25 +304,46 @@ INSTRUCTIONS:
     static async analyzeAnswer(
         questionText: string,
         userAnswer: string,
-        jobContext: string
+        jobContext: string,
+        cvContext: string = ''
     ): Promise<any> {
-        const systemPrompt = `You are a senior interview coach. Analyze the candidate's answer using the STAR method (Situation, Task, Action, Result).`;
+        const systemPrompt = `### ROLE
+You are the "CVCircle AI Interview Coach," an expert recruiter and career strategist. Your goal is to provide a high-end, brutal-yet-constructive analysis of a user's spoken interview response.
+
+### CONTEXT
+You will be provided with two key pieces of data:
+1. **User Master CV:** The core professional history of the user.
+2. **Interview Question:** The specific challenge the user is currently answering.
+
+### ANALYSIS CRITERIA
+For every response, you must evaluate:
+- **Accuracy:** Does the answer align with the facts in their CV?
+- **The "Edge":** Identify a specific skill or achievement from their CV that they *failed* to mention but would strengthen the answer.
+- **STAR Method:** Does the answer follow a Situation, Task, Action, Result structure?
+
+### OUTPUT FORMAT (JSON ONLY)
+Return a valid JSON object with the following keys:
+{
+  "score": (integer 0-100),
+  "feedback_summary": (string, 1-2 sentences on overall impact),
+  "what_you_did_well": [list of strings],
+  "areas_to_improve": [list of strings],
+  "your_edge": (string, a specific "missed opportunity" from their CV context),
+  "ai_enhanced_version": (string, a rewritten, high-impact version of their response)
+}
+
+### TONE
+Professional, encouraging, and luxury-focused. Avoid generic advice; be hyper-specific to the provided CV data.`;
 
         const userPrompt = `
       Question: "${questionText}"
       Job Context: ${jobContext}
       
+      Candidate CV:
+      ${cvContext}
+      
       Candidate Answer:
       "${userAnswer}"
-      
-      Provide a critique in JSON format:
-      {
-        "score": <0-100>,
-        "strengths": ["point 1", "point 2"],
-        "improvements": ["point 1", "point 2"],
-        "improvedScript": "Rewritten version of the answer that is 30% better but keeps the candidate's core facts...",
-        "sentiment": "positive|neutral|negative"
-      }
     `;
 
         try {
@@ -340,10 +361,11 @@ INSTRUCTIONS:
             // Fallback for UI if AI fails
             return {
                 score: 0,
-                strengths: ["Could not analyze at this time"],
-                improvements: ["Please try again"],
-                improvedScript: userAnswer,
-                sentiment: "neutral"
+                what_you_did_well: ["Could not analyze at this time"],
+                areas_to_improve: ["Please try again"],
+                ai_enhanced_version: userAnswer,
+                feedback_summary: "Analysis failed due to a system error.",
+                your_edge: "Please try again later."
             };
         }
     }

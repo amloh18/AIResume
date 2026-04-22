@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import InterviewSession from '@/models/InterviewSession';
-import { JobApplication } from '@/models';
+import { JobApplication, User } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
 
@@ -21,63 +21,66 @@ export async function GET(request: NextRequest) {
 
         await getConnection();
 
-        // Fetch sessions and populate Job details
-        // We strictly filter by userId for security
-        const sessions = await InterviewSession.find({ userId: auth.userId })
-            .populate({
-                path: 'jobId',
-                select: 'jobTitle company status companyLogo location'
-            })
-            .sort({ updatedAt: -1 })
-            .lean();
+        // Since we are storing Interview Coach data inside JobApplication under `interviewCoach`,
+        // we just need to fetch all active JobApplications for this user that either:
+        // a) Have interviewCoach.status = 'ready' (Already generated plan)
+        // b) Have status in ['applied', 'interview', 'screening', 'offer'] (Eligible to start)
 
-        // Filter out sessions where the job might have been deleted
-        const validSessions = sessions.filter(session => session.jobId);
-
-        // Get existing session Job IDs for exclusion - ensure ObjectIds for proper comparison
-        const existingJobIds = validSessions.map(s => {
-            const jobId = (s.jobId as any)._id;
-            return mongoose.Types.ObjectId.isValid(jobId)
-                ? new mongoose.Types.ObjectId(jobId.toString())
-                : jobId;
-        });
-
-        // Fetch Eligible Jobs (Applied or Interview) that don't have sessions
-        console.log(`Fetching jobs for user: ${auth.userId}`);
-        // Ensure userId is ObjectId if valid
         const userIdQuery = mongoose.Types.ObjectId.isValid(auth.userId)
             ? new mongoose.Types.ObjectId(auth.userId)
             : auth.userId;
 
-        // DEBUG: Check what statuses exist for this user
-        const distinctStatuses = await JobApplication.distinct('status', { userId: userIdQuery });
-        console.log('Available job statuses:', distinctStatuses);
+        const eligibleStatuses = ['created', 'applied', 'screening', 'interview', 'offer', 'Created', 'Applied', 'Screening', 'Interview', 'Offer'];
 
-        // Fetch Eligible Jobs with simple case-insensitive matching
-        // Using lowercase versions of statuses with $in
-        const eligibleStatuses = ['created', 'applied', 'screening', 'interview', 'Created', 'Applied', 'Screening', 'Interview'];
-
-        console.log(`Fetching jobs for user: ${auth.userId}, looking for statuses:`, eligibleStatuses);
-        console.log(`Excluding job IDs:`, existingJobIds.map(id => id.toString()));
-
-        const eligibleJobs = await JobApplication.find({
+        const allJobs = await JobApplication.find({
             userId: userIdQuery,
-            status: { $in: eligibleStatuses },
-            ...(existingJobIds.length > 0 ? { _id: { $nin: existingJobIds } } : {})
-        }).select('jobTitle company status companyLogo location').sort({ updatedAt: -1 }).lean();
+            $or: [
+                { 'interviewCoach.status': 'ready' },
+                { status: { $in: eligibleStatuses } }
+            ]
+        }).select('jobTitle company status companyLogo location jobType appliedDate interviewCoach').sort({ updatedAt: -1 }).lean();
 
-        console.log(`Found ${eligibleJobs.length} eligible jobs:`, eligibleJobs.map((j: any) => ({ title: j.jobTitle, status: j.status })));
+        // Filter into inProgress (has a plan) and potential (eligible but no plan)
+        const inProgress = allJobs.filter((job: any) => job.interviewCoach?.status === 'ready');
+        const potential = allJobs.filter((job: any) => job.interviewCoach?.status !== 'ready');
+
+        // Also calculate some stats
+        let totalScore = 0;
+        let completedQuestions = 0;
+        let totalQuestions = 0;
+        
+        inProgress.forEach((job: any) => {
+            if (job.interviewCoach?.questions) {
+                job.interviewCoach.questions.forEach((q: any) => {
+                    totalQuestions++;
+                    if (q.status === 'completed' || q.feedback) {
+                        completedQuestions++;
+                        if (q.feedback?.score) {
+                            totalScore += q.feedback.score;
+                        }
+                    }
+                });
+            }
+        });
+
+        const averageScore = completedQuestions > 0 ? Math.round(totalScore / completedQuestions) : 0;
+
+        // Fetch User streak
+        const user = await User.findById(userIdQuery).select('interviewCoach');
+        const currentStreak = user?.interviewCoach?.currentStreak || 0;
 
         return setCorsHeaders(
             NextResponse.json({
                 success: true,
-                sessions: validSessions,
-                potentialSessions: eligibleJobs,
-                debug: {
-                    userId: auth.userId,
-                    statuses: distinctStatuses,
-                    found: eligibleJobs.length
-                }
+                stats: {
+                    totalOpportunities: allJobs.length,
+                    completedSessions: completedQuestions,
+                    averageScore: averageScore,
+                    currentStreak: currentStreak
+                },
+                jobs: allJobs,
+                inProgress,
+                potentialSessions: potential,
             }),
             request
         );

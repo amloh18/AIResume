@@ -154,6 +154,10 @@ export interface IUser extends Document {
     };
   };
 
+  interviewCoach?: {
+    currentStreak: number;
+    lastPracticeDate: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -597,6 +601,10 @@ const userSchema = new Schema<IUser>({
   notificationPreferences: {
     type: Schema.Types.Mixed,
     default: {}
+  },
+  interviewCoach: {
+    currentStreak: { type: Number, default: 0 },
+    lastPracticeDate: { type: Date }
   }
 }, {
   timestamps: true,

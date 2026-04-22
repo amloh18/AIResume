@@ -1,47 +1,51 @@
-
 import React from 'react';
-import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer } from 'recharts';
-import { useTheme } from '@/lib/contexts/ThemeContext';
 
 const ReadinessChart = ({ score }: { score: number }) => {
-    const { theme } = useTheme();
-
-    // Safety check for NaN or undefined
     const safeScore = isNaN(score) ? 0 : Math.max(0, Math.min(100, score));
-
-    const data = [
-        { name: 'Score', value: safeScore, fill: safeScore >= 80 ? '#22c55e' : safeScore >= 50 ? '#eab308' : '#84cc16' }
-    ];
+    
+    // SVG properties
+    const size = 180;
+    const strokeWidth = 14;
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const strokeDashoffset = circumference - (safeScore / 100) * circumference;
 
     return (
-        <div className="relative w-48 h-48">
-            <ResponsiveContainer width="100%" height="100%">
-                <RadialBarChart
-                    cx="50%"
-                    cy="50%"
-                    innerRadius="80%"
-                    outerRadius="100%"
-                    barSize={10}
-                    data={data}
-                    startAngle={90}
-                    endAngle={-270}
-                >
-                    <PolarAngleAxis
-                        type="number"
-                        domain={[0, 100]}
-                        angleAxisId={0}
-                        tick={false}
-                    />
-                    <RadialBar
-                        background={{ fill: theme === 'dark' ? '#27272a' : '#f3f4f6' }}
-                        dataKey="value"
-                        cornerRadius={10}
-                    />
-                </RadialBarChart>
-            </ResponsiveContainer>
+        <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="transform -rotate-90">
+                {/* Background Circle */}
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    className="text-gray-100 dark:text-gray-800"
+                />
+                {/* Foreground Progress Circle */}
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    stroke="currentColor"
+                    strokeWidth={strokeWidth}
+                    fill="transparent"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    className="text-purple-600 dark:text-purple-500 transition-all duration-1000 ease-out"
+                />
+            </svg>
+            
+            {/* Center Content */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white">{safeScore}%</span>
-                <span className="text-xs text-gray-500 uppercase font-medium">Ready</span>
+                <span className="text-4xl font-black text-gray-900 dark:text-white leading-none tracking-tight mt-2">
+                    {safeScore}%
+                </span>
+                <span className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest">
+                    Ready
+                </span>
             </div>
         </div>
     );

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import { JobApplication } from '@/models';
+import { JobApplication, CV, User } from '@/models';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
@@ -65,13 +65,40 @@ export async function POST(request: NextRequest) {
         // Build job context
         const jobContext = `${job.jobTitle} at ${job.company}. ${job.jobDescription?.substring(0, 500) || ''}`;
 
+        // Fetch user Master CV for context
+        let cvContext = '';
+        try {
+            const masterCV = await CV.findOne({
+                userId: job.userId,
+                $or: [
+                    { 'metadata.isMaster': true },
+                    { cvType: 'master' }
+                ]
+            }).sort({ updatedAt: -1 }).lean() as any;
+
+            if (masterCV?.cvData) {
+                // Format basic details for the prompt
+                const cvData = masterCV.cvData;
+                cvContext = `Summary: ${cvData.basics?.summary || ''}\n\n`;
+                if (cvData.work) {
+                    cvContext += `Experience:\n${cvData.work.map((w: any) => `- ${w.position} at ${w.name}: ${w.summary}`).join('\n')}\n\n`;
+                }
+                if (cvData.skills) {
+                    cvContext += `Skills: ${cvData.skills.flatMap((s: any) => s.skills || []).join(', ')}`;
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch CV for analysis context:', e);
+        }
+
         // Call AI Service
         let analysis;
         try {
             analysis = await InterviewCoachService.analyzeAnswer(
                 question.question,
                 answer,
-                jobContext
+                jobContext,
+                cvContext
             );
         } catch (aiError) {
             console.error('AI Analysis failed:', aiError);
@@ -87,9 +114,11 @@ export async function POST(request: NextRequest) {
         // Build feedback object
         const feedback = {
             score: analysis.score || 0,
-            strengths: analysis.strengths || [],
-            improvements: analysis.improvements || [],
-            refinedAnswer: analysis.improvedScript || analysis.refinedAnswer || ''
+            strengths: analysis.what_you_did_well || analysis.strengths || [],
+            improvements: analysis.areas_to_improve || analysis.improvements || [],
+            refinedAnswer: analysis.ai_enhanced_version || analysis.improvedScript || analysis.refinedAnswer || '',
+            feedback_summary: analysis.feedback_summary || '',
+            your_edge: analysis.your_edge || ''
         };
 
         // Update question in embedded array using positional operator
@@ -107,6 +136,50 @@ export async function POST(request: NextRequest) {
                 }
             }
         );
+
+        // --- Streak Logic ---
+        let streakEvent = null;
+        try {
+            const user = await User.findById(userIdQuery);
+            if (user) {
+                const now = new Date();
+                const lastPractice = user.interviewCoach?.lastPracticeDate;
+                let currentStreak = user.interviewCoach?.currentStreak || 0;
+
+                if (!lastPractice) {
+                    currentStreak = 1;
+                    streakEvent = { type: 'started', currentStreak };
+                } else {
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const lastDate = new Date(lastPractice.getFullYear(), lastPractice.getMonth(), lastPractice.getDate());
+                    
+                    const diffTime = Math.abs(today.getTime() - lastDate.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 1) {
+                        currentStreak += 1;
+                        streakEvent = { type: 'continued', currentStreak };
+                    } else if (diffDays > 1) {
+                        currentStreak = 1;
+                        streakEvent = { type: 'reset', currentStreak, missedDays: diffDays - 1 };
+                    }
+                    // if diffDays === 0, it means they already practiced today. Streak remains the same.
+                }
+
+                // Update User
+                if (!user.interviewCoach) {
+                    user.interviewCoach = { currentStreak, lastPracticeDate: now };
+                } else {
+                    user.interviewCoach.currentStreak = currentStreak;
+                    user.interviewCoach.lastPracticeDate = now;
+                }
+                
+                await user.save();
+            }
+        } catch (e) {
+            console.error('Failed to update user streak:', e);
+        }
+        // --------------------
 
         // Recalculate readiness score
         // Get fresh data to calculate average
@@ -129,7 +202,8 @@ export async function POST(request: NextRequest) {
                     NextResponse.json({
                         success: true,
                         feedback,
-                        newReadinessScore: avgScore
+                        newReadinessScore: avgScore,
+                        streakEvent
                     }),
                     request
                 );
@@ -140,6 +214,7 @@ export async function POST(request: NextRequest) {
             NextResponse.json({
                 success: true,
                 feedback,
+                streakEvent
                 // If no score update happened, return null or current if we had it (but we don't query it if not updating)
             }),
             request

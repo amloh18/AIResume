@@ -174,7 +174,7 @@ const SectionToolbar = memo(({
   onDragStart?: (e: React.DragEvent) => void;
 }) => {
   return (
-    <div className="flex items-center gap-0.5 absolute -left-2 top-0 z-30 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto -translate-x-full">
+    <div className="flex items-center gap-0.5 absolute -left-2 top-0 z-[100] bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-700 px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none group-hover:pointer-events-auto -translate-x-full">
       {/* Drag handle */}
       <button
         draggable
@@ -255,7 +255,7 @@ const EntryToolbar = memo(({
   }, [generating, onAIGenerate]);
 
   return (
-    <div className="flex items-center gap-0.5 absolute -right-2 top-0 z-20 bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-md border border-gray-700 px-1.5 py-0.5 opacity-0 group-hover/item:opacity-100 transition-all duration-150 pointer-events-none group-hover/item:pointer-events-auto">
+    <div className="flex items-center gap-0.5 absolute -right-2 top-0 z-[100] bg-gray-900/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg shadow-md border border-gray-700 px-1.5 py-0.5 opacity-0 group-hover/item:opacity-100 transition-all duration-150 pointer-events-none group-hover/item:pointer-events-auto">
       {label && <span className="text-[8px] text-gray-500 px-1 max-w-[60px] truncate">{label}</span>}
       {onAddBelow && (
         <button onClick={(e) => { e.stopPropagation(); onAddBelow(); }} className="p-0.5 rounded text-gray-400 hover:text-lime-400 hover:bg-lime-400/10 transition-colors" title="Add below">
