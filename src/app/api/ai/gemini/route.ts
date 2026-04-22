@@ -134,7 +134,7 @@ Please provide the generated content:`;
 
     try {
       generatedText = await callGeminiWithAllKeysFallback(fullPrompt, {
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.0-flash-lite-preview-02-05',
         temperature: 0.7,
         maxTokens: 2048
       });

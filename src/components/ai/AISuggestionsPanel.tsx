@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Loader2, Info } from 'lucide-react';
+import { Sparkles, X, Loader2, Info, Lock } from 'lucide-react';
+import { useCredits } from '@/lib/hooks/useCredits';
 
 interface AISuggestion {
   method: string;
@@ -33,8 +34,53 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
   onClose
 }) => {
   const [showDetailed, setShowDetailed] = useState(true);
+  const { credits } = useCredits();
+
+  const isPro = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(credits?.planKey || 'free');
+  const isTrial = credits?.planKey === 'trialing';
+  const aiCreditsRemaining = credits?.aiCreditsRemaining ?? 0;
+  const isLocked = (!isPro && !isTrial) || (aiCreditsRemaining <= 0 && !isPro);
 
   if (!isVisible) return null;
+
+  if (isLocked) {
+    return (
+      <AnimatePresence>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.2 }}
+          className="mb-4 p-6 bg-[var(--bg-tertiary)] border border-gray-200 dark:border-white/10 rounded-xl relative overflow-hidden"
+        >
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors z-20"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          <div className="flex flex-col items-center text-center relative z-10">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+              <Lock className="w-6 h-6" />
+            </div>
+            <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              AI Suggestions Locked
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 max-w-sm">
+              Upgrade to Pro to unlock unlimited contextual AI suggestions and rewrite your CV content with expert frameworks like STAR and CAR.
+            </p>
+            <a
+              href="/dashboard/pricing"
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+            >
+              Upgrade to Pro
+            </a>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
 
   // Filter suggestions based on toggle
   const filteredSuggestions = suggestions.filter(s => {

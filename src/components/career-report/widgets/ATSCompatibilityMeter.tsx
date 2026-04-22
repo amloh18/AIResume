@@ -2,9 +2,10 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Lock } from 'lucide-react';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { useCredits } from '@/lib/hooks/useCredits';
 
 interface ATSCompatibilityMeterProps {
   cvData?: UnifiedCVDataStructure;
@@ -30,6 +31,8 @@ const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
   cvOptimization,
   industrySpecialization
 }) => {
+  const { credits } = useCredits();
+
   // Use CentralScoreManager to get the actual ATS score if cvData is available
   const scoreResult = useMemo(() => {
     if (cvData) {
@@ -38,9 +41,12 @@ const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
     return null;
   }, [cvData]);
 
+  const isPro = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(credits?.planKey || 'free');
+  const aiCreditsRemaining = credits?.aiCreditsRemaining ?? 0;
+  const isLocked = !isPro && aiCreditsRemaining <= 0;
+
   // Fallback to a default if cvData is not available, but prefer CentralScoreManager
   const atsScore = scoreResult?.atsScore?.total ?? 0;
-
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-[#80FF00]';
@@ -92,6 +98,63 @@ const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
       target: 'Complete'
     }
   ];
+
+  if (isLocked) {
+    return (
+      <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm relative overflow-hidden">
+        <div className="absolute inset-0 backdrop-blur-md bg-white/30 dark:bg-black/30 z-10 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+            Unlock ATS Compatibility Insights
+          </h3>
+          <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md">
+            You've reached your free AI analysis limit. Upgrade to Pro for unlimited deep ATS scoring, keyword mapping, and resume optimization.
+          </p>
+          <a
+            href="/dashboard/pricing"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
+          >
+            Upgrade to Pro
+          </a>
+        </div>
+        <div className="opacity-40 pointer-events-none select-none filter blur-[2px]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 bg-gray-300 rounded flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-gray-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-400">ATS Compatibility Meter</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm text-gray-400 mb-2">ATS Compatibility Score</div>
+                <div className="text-2xl font-bold text-gray-400">--%</div>
+              </div>
+              <div className="flex-1 ml-4">
+                <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden"></div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              {checks.slice(0, 3).map((check, index) => (
+                <div key={index} className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-500">{check.label}</div>
+                      <div className="text-sm text-gray-400">Target: {check.target}</div>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm font-semibold text-gray-400">--</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-8 shadow-sm">

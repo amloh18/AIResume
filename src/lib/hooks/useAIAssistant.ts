@@ -214,13 +214,16 @@ export const useAIAssistant = (
   }, [cvData, setSectionSuggestions, setHasRealData, markSectionOutOfDate]);
 
   // Calculate ATS score whenever CV data or job changes
-  useEffect(() => {
-    if (cvData && cvId) {
-      debouncedATSCalculation(cvData, currentJob);
-    }
-  }, [cvData, currentJob, cvId, debouncedATSCalculation]);
+  // Minimum Trigger Principle: AI must only run on explicit user action.
+  // useEffect(() => {
+  //   if (cvData && cvId) {
+  //     debouncedATSCalculation(cvData, currentJob);
+  //   }
+  // }, [cvData, currentJob, cvId, debouncedATSCalculation]);
 
   // Initialize sections when AI Assistant loads
+  // Minimum Trigger Principle: AI must only run on explicit user action.
+  /*
   useEffect(() => {
     if (cvData && cvId) {
       console.log('🔧 useAIAssistant - Initializing sections for CV:', cvId);
@@ -232,8 +235,11 @@ export const useAIAssistant = (
       }
     }
   }, [cvData, cvId, currentJob, generateBaselineSuggestions]);
+  */
 
   // Auto-trigger AI analysis when job is selected or CV data changes
+  // Minimum Trigger Principle: AI must only run on explicit user action.
+  /*
   useEffect(() => {
     console.log('🔍 useAIAssistant - Job/CV change detected:', {
       hasCvData: !!cvData,
@@ -258,6 +264,7 @@ export const useAIAssistant = (
       return () => clearTimeout(timer);
     }
   }, [cvData, currentJob, cvId, markAllJobBasedSectionsOutOfDate, generateInitialSuggestions]);
+  */
 
   // Helper function to convert analysis data to suggestions format
   const convertAnalysisToSuggestions = (sectionId: string, data: any): AISuggestion[] => {

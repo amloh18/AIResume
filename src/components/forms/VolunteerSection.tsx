@@ -2,6 +2,7 @@
 
 import React, { useCallback, useMemo, useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
+import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 
@@ -149,7 +150,11 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
 
   return (
     <>
-      {safeData.map((volunteer, index) => {
+      {safeData.length === 0 ? (
+          <EmptyStateSkeleton onAdd={() => {
+            onUpdate([...safeData, { organization: '', position: '', startDate: '', endDate: '', summary: '', highlights: [] }]);
+          }} itemName="Volunteer Experience" />
+        ) : safeData.map((volunteer, index) => {
         // Safety check: ensure volunteer is an object
         if (!volunteer || typeof volunteer !== 'object') {
           return null;
@@ -223,81 +228,88 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
               </div>
             </div>
 
-            <div className="mt-4">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-white/80 text-sm font-medium">Summary / Achievements</label>
-                <div className="flex items-center gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={volunteer.useRichText !== false}
-                      onChange={(e) => updateVolunteer(index, 'useRichText', e.target.checked)}
-                      className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
-                    />
-                    Use Rich Text
-                  </label>
-                  <WYSIWYGToolbar
+            <div className="mt-4 flex gap-6 items-start">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-white/80 text-sm font-medium">Summary / Achievements</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={volunteer.useRichText !== false}
+                        onChange={(e) => updateVolunteer(index, 'useRichText', e.target.checked)}
+                        className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+                      />
+                      Use Rich Text
+                    </label>
+                  </div>
+                </div>
+                
+                {volunteer.useRichText !== false ? (
+                  <WYSIWYGEditor
+                    value={volunteer.summary || ''}
+                    onChange={(value) => updateVolunteer(index, 'summary', value)}
+                    rows={3}
+                    placeholder="Describe your volunteer work and impact..."
+                    showToolbar={true}
                     showAIButton={true}
                     fieldType="other"
-                    onAISuggestions={() => generateAISuggestions(index, volunteer)}
+                    onAIGenerate={() => generateAISuggestions(index, volunteer)}
                     isGenerating={loadingSuggestions[index] || false}
                   />
-                </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(volunteer.highlights || []).map((highlight: string, hIndex: number) => (
+                      <div key={hIndex} className="flex items-start gap-2">
+                        <div className="mt-3 w-1.5 h-1.5 rounded-none bg-white/50 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={highlight}
+                          onChange={(e) => {
+                            const newHighlights = [...(volunteer.highlights || [])];
+                            newHighlights[hIndex] = e.target.value;
+                            updateVolunteer(index, 'highlights', newHighlights);
+                          }}
+                          className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                          placeholder="Achievement or key detail..."
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHighlights = [...(volunteer.highlights || [])];
+                            newHighlights.splice(hIndex, 1);
+                            updateVolunteer(index, 'highlights', newHighlights);
+                          }}
+                          className="p-2 text-white/40 hover:text-red-400 transition-colors mt-0.5"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newHighlights = [...(volunteer.highlights || []), ''];
+                        updateVolunteer(index, 'highlights', newHighlights);
+                      }}
+                      className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
+                    >
+                      <Plus size={14} />
+                      Add Bullet Point
+                    </button>
+                  </div>
+                )}
               </div>
-              <AISuggestionsPanel
-                isVisible={showSuggestions[index] || false}
-                suggestions={suggestions[index] || []}
-                isLoading={loadingSuggestions[index] || false}
-                onSelect={(content) => handleSelectSuggestion(index, content)}
-                onClose={() => setShowSuggestions(prev => ({ ...prev, [index]: false }))}
-              />
-              {volunteer.useRichText !== false ? (
-                <WYSIWYGEditor
-                  value={volunteer.summary || ''}
-                  onChange={(value) => updateVolunteer(index, 'summary', value)}
-                  rows={3}
-                  placeholder="Describe your volunteer work and impact..."
-                />
-              ) : (
-                <div className="space-y-3">
-                  {(volunteer.highlights || []).map((highlight: string, hIndex: number) => (
-                    <div key={hIndex} className="flex items-start gap-2">
-                      <div className="mt-3 w-1.5 h-1.5 rounded-none bg-white/50 flex-shrink-0" />
-                      <input
-                        type="text"
-                        value={highlight}
-                        onChange={(e) => {
-                          const newHighlights = [...(volunteer.highlights || [])];
-                          newHighlights[hIndex] = e.target.value;
-                          updateVolunteer(index, 'highlights', newHighlights);
-                        }}
-                        className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                        placeholder="Achievement or key detail..."
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const newHighlights = [...(volunteer.highlights || [])];
-                          newHighlights.splice(hIndex, 1);
-                          updateVolunteer(index, 'highlights', newHighlights);
-                        }}
-                        className="p-2 text-white/40 hover:text-red-400 transition-colors mt-0.5"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newHighlights = [...(volunteer.highlights || []), ''];
-                      updateVolunteer(index, 'highlights', newHighlights);
-                    }}
-                    className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
-                  >
-                    <Plus size={14} />
-                    Add Bullet Point
-                  </button>
+
+              {showSuggestions[index] && (
+                <div className="w-80 flex-shrink-0">
+                  <AISuggestionsPanel
+                    isVisible={showSuggestions[index] || false}
+                    suggestions={suggestions[index] || []}
+                    isLoading={loadingSuggestions[index] || false}
+                    onSelect={(content) => handleSelectSuggestion(index, content)}
+                    onClose={() => setShowSuggestions(prev => ({ ...prev, [index]: false }))}
+                  />
                 </div>
               )}
             </div>
@@ -305,13 +317,15 @@ const VolunteerSection: React.FC<VolunteerSectionProps> = ({
         );
       })}
 
-      <button
-        onClick={handleAdd}
-        className="w-full py-4 border-2 border-dashed border-[var(--border-primary)] hover:border-[#80FF00]/50 text-[color:var(--text-tertiary)] hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
-      >
-        <Plus size={20} />
-        Add another Volunteer Experience
-      </button>
+      {safeData.length > 0 && (
+        <button
+          onClick={handleAdd}
+          className="w-full py-4 border-2 border-dashed border-[var(--border-primary)] hover:border-[#80FF00]/50 text-[color:var(--text-tertiary)] hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={20} />
+          Add another Volunteer Experience
+        </button>
+      )}
     </>
   );
 };

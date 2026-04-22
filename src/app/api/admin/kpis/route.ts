@@ -66,15 +66,15 @@ export async function GET(request: NextRequest) {
       totalCoverLetters = totalCoverLettersResult || 0;
       recentUsers = recentUsersResult || 0;
     } catch (error) {
-      console.log('Database query failed, using fallback data');
-      // Use fallback data
-      totalUsers = Math.floor(Math.random() * 100) + 50;
-      activeUsers = Math.floor(totalUsers * 0.3);
-      totalCVs = Math.floor(Math.random() * 200) + 100;
-      totalJobs = Math.floor(Math.random() * 150) + 75;
-      draftJobs = Math.floor(totalJobs * 0.2);
-      totalCoverLetters = Math.floor(Math.random() * 80) + 40;
-      recentUsers = Math.floor(Math.random() * 20) + 10;
+      console.log('Database query failed', error);
+      // Removed fallback data, keep it 0 if failure
+      totalUsers = 0;
+      activeUsers = 0;
+      totalCVs = 0;
+      totalJobs = 0;
+      draftJobs = 0;
+      totalCoverLetters = 0;
+      recentUsers = 0;
     }
 
     // Calculate growth rate with error handling
@@ -89,10 +89,10 @@ export async function GET(request: NextRequest) {
 
       growthRate = previousPeriodUsers > 0
         ? ((recentUsers - previousPeriodUsers) / previousPeriodUsers) * 100
-        : Math.floor(Math.random() * 20) + 5; // Fallback growth rate
+        : 0; // Fallback growth rate
     } catch (error) {
-      console.log('Growth rate calculation failed, using fallback');
-      growthRate = Math.floor(Math.random() * 20) + 5; // Fallback growth rate
+      console.log('Growth rate calculation failed', error);
+      growthRate = 0; // Fallback growth rate
     }
 
     // Calculate AI usage from ActivityLog (Total Tokens)
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
         {
           $match: {
             logType: 'ai',
-            timestamp: { $gte: startDate }
+            createdAt: { $gte: startDate } // Fixed timestamp -> createdAt
           }
         },
         {
@@ -115,51 +115,49 @@ export async function GET(request: NextRequest) {
 
       aiUsage = result[0]?.totalTokens || 0;
     } catch (error) {
-      console.log('ActivityLog AI usage query failed, using fallback');
-      aiUsage = Math.floor(Math.random() * 50000) + 10000; // Fallback data (tokens)
+      console.log('ActivityLog AI usage query failed', error);
+      aiUsage = 0; // Removed mock
     }
 
     // Calculate revenue from subscriptions and invoices with fallback
     let revenue = 0;
     try {
+      let totalRevenue = 0;
       if (Subscription) {
         const activeSubscriptions = await Subscription.find({
           status: 'active',
           createdAt: { $gte: startDate }
         }).lean();
 
-        const totalRevenue = activeSubscriptions.reduce((sum, sub) => {
+        totalRevenue = activeSubscriptions.reduce((sum, sub) => {
           return sum + (sub.amount || 0);
         }, 0);
-
-        // Add revenue from invoices if available
-        if (Invoice) {
-          const invoiceRevenue = await Invoice.aggregate([
-            {
-              $match: {
-                status: 'paid',
-                createdAt: { $gte: startDate }
-              }
-            },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: '$amount' }
-              }
-            }
-          ]);
-
-          revenue = totalRevenue + (invoiceRevenue[0]?.total || 0);
-        } else {
-          revenue = totalRevenue;
-        }
-      } else {
-        // Fallback revenue calculation
-        revenue = Math.floor(Math.random() * 5000) + 1000;
       }
+
+      let invoiceTotal = 0;
+      if (Invoice) {
+        const invoiceRevenue = await Invoice.aggregate([
+          {
+            $match: {
+              status: 'paid',
+              createdAt: { $gte: startDate }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: '$amount' }
+            }
+          }
+        ]);
+        invoiceTotal = invoiceRevenue[0]?.total || 0;
+      }
+      
+      revenue = totalRevenue + invoiceTotal;
+      
     } catch (error) {
-      console.log('Revenue calculation failed, using fallback');
-      revenue = Math.floor(Math.random() * 5000) + 1000; // Fallback data
+      console.log('Revenue calculation failed', error);
+      revenue = 0; // Removed mock
     }
 
     const kpiData = {

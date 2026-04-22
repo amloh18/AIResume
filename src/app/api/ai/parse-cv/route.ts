@@ -68,7 +68,7 @@ Date formatting rules: Prefer YYYY-MM. If only a year is known use YYYY. If date
       console.log(`🔑 Attempting Gemini API call with ${name}...`);
       const genAI = new GoogleGenAI({ apiKey: key! });
       const result = await genAI.models.generateContent({
-        model: 'gemini-2.5-flash-lite',
+        model: 'gemini-2.0-flash-lite-preview-02-05',
         contents: prompt
       });
       const text = result.text || '';

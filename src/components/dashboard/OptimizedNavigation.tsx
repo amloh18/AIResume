@@ -555,7 +555,7 @@ const OptimizedNavigation: React.FC = () => {
               if (isMobileMenuOpen) {
                 setIsOpen(false);
               }
-              router.push('/admin');
+              router.push('/admin/dashboard');
             }}
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50`}
             whileHover={{ scale: 1.02 }}

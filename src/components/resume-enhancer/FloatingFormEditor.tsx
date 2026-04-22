@@ -521,11 +521,6 @@ export default function FloatingFormEditor({
                     </div>
                 </div>
 
-                {/* Formatting Toolbar */}
-                <div className="px-4 py-2 border-b border-white/5 bg-[#111]/80">
-                  <WYSIWYGToolbar showAIButton={false} />
-                </div>
-
                 {/* Form Content */}
                 <div className="flex-1 overflow-y-auto overscroll-contain p-5">
                     {renderSectionForm()}

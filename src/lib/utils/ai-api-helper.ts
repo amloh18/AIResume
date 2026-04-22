@@ -1,12 +1,13 @@
 /**
  * AI API Helper Utility
  * Provides unified interface for Google Gemini API calls with gemini_api_key and gemini_api_key2 fallback
- * Uses @google/genai package with gemini-2.5-flash-lite model
+ * Uses @google/genai package with gemini-2.0-flash-lite-preview-02-05 model
  * 
  * This file now uses Gemini API instead of OpenAI/Perplexity
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { ActivityLogService } from '@/lib/services/activityLogService';
 
 export interface AICallOptions {
   prompt: string;
@@ -16,6 +17,9 @@ export interface AICallOptions {
   model?: string;
   responseSchema?: any;
   responseMimeType?: string;
+  userId?: string;
+  action?: string;
+  endpoint?: string;
 }
 
 export interface AIResponse {
@@ -106,8 +110,8 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
   try {
     const genAI = new GoogleGenAI({ apiKey });
 
-    // Use gemini-2.5-flash-lite as default for speed and cost efficiency
-    const modelName = options.model || 'gemini-2.5-flash-lite';
+    // Use gemini-2.0-flash-lite-preview-02-05 as default for speed and cost efficiency
+    const modelName = options.model || 'gemini-2.0-flash-lite-preview-02-05';
 
     // Combine system prompt and user prompt
     let fullPrompt = options.prompt;
@@ -131,6 +135,34 @@ async function callGemini(options: AICallOptions, apiKey: string): Promise<strin
 
     if (!text) {
       throw new Error('Gemini API returned empty response');
+    }
+
+    // Try to get token usage if available in the SDK response, otherwise estimate
+    const usageMetadata = (result as any).usageMetadata;
+    const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(fullPrompt.length / 4);
+    const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
+    const tokensUsed = inputTokens + outputTokens;
+    
+    // Cost constants (using gemini flash lite / 1.5 flash pricing)
+    const INPUT_COST_PER_1M = 0.075;
+    const OUTPUT_COST_PER_1M = 0.30;
+    const cost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
+
+    // Log the AI usage to ActivityLogService
+    try {
+      await ActivityLogService.logAI({
+        userId: options.userId,
+        model: modelName,
+        tokensUsed,
+        cost,
+        prompt: fullPrompt.substring(0, 1000), // Log only the first 1000 chars of prompt
+        responseLength: text.length,
+        action: options.action || 'gemini_generation',
+        endpoint: options.endpoint || options.action || 'unknown_endpoint',
+        status: 'success'
+      });
+    } catch (logError) {
+      console.error('Failed to log AI usage:', logError);
     }
 
     return text;

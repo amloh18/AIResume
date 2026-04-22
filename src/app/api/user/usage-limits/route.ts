@@ -100,11 +100,27 @@ export async function GET(request: NextRequest) {
         ? totalCreatedJobs
         : Math.max(0, limit - (remaining === -1 ? 0 : remaining));
 
+      // Get AI credits availability
+      let aiCreditsRemaining: number | undefined = creditStatus.aiCredits;
+      let aiCreditsLimit: number | undefined = creditStatus.aiCredits;
+      
+      if (planKey === 'free' || planKey === 'day_pass') {
+        const aiCreditCheck = await creditService.checkCreditAvailability(userId, 'ai_generation');
+        aiCreditsRemaining = aiCreditCheck.creditsRemaining;
+        aiCreditsLimit = aiCreditCheck.limit;
+      }
+      
+      if (aiCreditsRemaining === undefined || aiCreditsRemaining === null) {
+        aiCreditsRemaining = aiCreditsLimit === -1 ? -1 : 0;
+      }
+
       creditInfo = {
         remaining,
         limit,
         used,
         totalCreated: totalCreatedJobs,
+        aiCreditsRemaining,
+        aiCreditsLimit,
         planKey,
         nextResetDate: creditStatus.nextResetDate,
         resetSchedule: creditStatus.resetSchedule

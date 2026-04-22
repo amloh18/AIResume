@@ -75,42 +75,6 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Add some mock system activities
-    const mockActivities = [
-      {
-        id: 'system-1',
-        type: 'system',
-        title: 'System backup completed',
-        description: 'Daily backup completed successfully',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-        icon: 'database',
-        status: 'success',
-        priority: 'high'
-      },
-      {
-        id: 'system-2',
-        type: 'system',
-        title: 'Performance optimization',
-        description: 'Database queries optimized for better performance',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
-        icon: 'settings',
-        status: 'success',
-        priority: 'medium'
-      },
-      {
-        id: 'system-3',
-        type: 'security',
-        title: 'Security scan completed',
-        description: 'No security vulnerabilities found',
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
-        icon: 'shield',
-        status: 'success',
-        priority: 'high'
-      }
-    ];
-
-    activities.push(...mockActivities);
-
     // Sort by timestamp (most recent first) and limit
     activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     const limitedActivities = activities.slice(0, limit);

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { getConnection } from '@/lib/database';
+import { ActivityLog } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,18 +10,33 @@ export async function GET(request: NextRequest) {
     // Test database connection
     const dbStatus = await testDatabaseConnection();
     
-    // Mock system health data
+    // Attempt to gather some real metrics
+    let recentApiReqs = 0;
+    try {
+      const fiveMinsAgo = new Date(Date.now() - 5 * 60 * 1000);
+      recentApiReqs = await ActivityLog.countDocuments({
+        createdAt: { $gte: fiveMinsAgo }
+      });
+    } catch (e) {
+      // Ignore
+    }
+
+    // Determine memory
+    const memoryUsage = process.memoryUsage();
+    const usedMemGB = memoryUsage.heapUsed / 1024 / 1024 / 1024;
+    const totalMemGB = memoryUsage.heapTotal / 1024 / 1024 / 1024;
+
     const systemStatus = {
       database: {
         status: dbStatus.healthy ? 'healthy' : 'error',
         responseTime: dbStatus.responseTime,
-        connections: 15,
+        connections: mongoose.connection.readyState === 1 ? 1 : 0, // Simplified connection tracking
         uptime: '99.9%'
       },
       api: {
         status: 'healthy',
-        responseTime: Math.floor(Math.random() * 50) + 100,
-        requestsPerMinute: Math.floor(Math.random() * 100) + 50,
+        responseTime: dbStatus.responseTime + 5, // Estimate
+        requestsPerMinute: Math.round(recentApiReqs / 5),
         errorRate: 0.1
       },
       storage: {
@@ -30,24 +47,52 @@ export async function GET(request: NextRequest) {
       },
       memory: {
         status: 'healthy',
-        used: 4.2,
-        total: 8,
-        percentage: 52.5
+        used: parseFloat(usedMemGB.toFixed(2)),
+        total: parseFloat(totalMemGB.toFixed(2)),
+        percentage: Math.round((usedMemGB / totalMemGB) * 100)
       },
       uptime: '99.9%',
       lastCheck: new Date().toISOString()
     };
 
-    // Generate performance data for charts
+    // Generate performance data for charts (Server-side real tracking requires a robust metric store like Prometheus)
+    // We will query ActivityLogs for the last 24 hours to provide "real" API request counts per hour
     const performanceData = [];
+    const now = new Date();
+    
+    // Fetch last 24h activity aggregated by hour
+    let hourlyReqs: any[] = [];
+    try {
+      hourlyReqs = await ActivityLog.aggregate([
+        {
+          $match: {
+            createdAt: { $gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) }
+          }
+        },
+        {
+          $group: {
+            _id: { $hour: "$createdAt" },
+            count: { $sum: 1 }
+          }
+        }
+      ]);
+    } catch (e) {
+      // Ignore
+    }
+
+    const hourMap = new Map(hourlyReqs.map(h => [h._id, h.count]));
+
     for (let i = 0; i < 24; i++) {
       const time = new Date(Date.now() - (23 - i) * 60 * 60 * 1000);
+      const hour = time.getHours();
+      const requests = hourMap.get(hour) || 0;
+
       performanceData.push({
         time: time.toISOString().split('T')[1].substring(0, 5),
-        apiResponse: Math.floor(Math.random() * 100) + 50,
-        memoryUsage: Math.floor(Math.random() * 20) + 40,
-        cpuUsage: Math.floor(Math.random() * 30) + 20,
-        requests: Math.floor(Math.random() * 200) + 100
+        apiResponse: dbStatus.responseTime + 10,
+        memoryUsage: Math.round((usedMemGB / totalMemGB) * 100),
+        cpuUsage: 20, // Cannot easily get OS CPU in serverless Node environments safely
+        requests: requests
       });
     }
 

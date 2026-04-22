@@ -23,6 +23,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check AI Quota before generating suggestions
+    const { AIQuotaService } = await import('@/lib/services/ai-quota-service');
+    const quotaStatus = await AIQuotaService.checkAndConsumeQuota(userId, 'ai_suggestions', true);
+    
+    if (!quotaStatus.allowed) {
+      console.log('⚠️ AI Suggestions API - Quota exceeded for user:', userId);
+      return NextResponse.json({
+        error: 'quota_exceeded',
+        quotaStatus
+      }, { status: 403 });
+    }
+
     // Generate 4 different variations
     const suggestions = await generateAISuggestions({
       jobData,

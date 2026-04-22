@@ -5,6 +5,7 @@
  */
 
 import { GoogleGenAI } from '@google/genai';
+import { ActivityLogService } from '@/lib/services/activityLogService';
 
 /**
  * Check if error is a quota/rate limit error (429)
@@ -78,6 +79,9 @@ export async function callGeminiWithAllKeysFallback(
     model?: string;
     temperature?: number;
     maxTokens?: number;
+    userId?: string;
+    action?: string;
+    endpoint?: string;
   }
 ): Promise<string> {
   const apiKeys = getAllGeminiApiKeys();
@@ -96,7 +100,7 @@ export async function callGeminiWithAllKeysFallback(
       console.log(`🔑 Attempting Gemini API call with ${name}...`);
       const genAI = new GoogleGenAI({ apiKey: key });
       
-      const modelName = options?.model || 'gemini-2.5-flash-lite';
+      const modelName = options?.model || 'gemini-2.0-flash-lite-preview-02-05';
       const contents = typeof prompt === 'string' 
         ? [{ role: 'user', parts: [{ text: prompt }] }]
         : prompt;
@@ -114,6 +118,36 @@ export async function callGeminiWithAllKeysFallback(
 
       if (text) {
         console.log(`✅ Gemini API call successful with ${name}`);
+
+        // Try to get token usage if available in the SDK response, otherwise estimate
+        const usageMetadata = (result as any).usageMetadata;
+        const promptString = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+        const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(promptString.length / 4);
+        const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
+        const tokensUsed = inputTokens + outputTokens;
+        
+        // Cost constants
+        const INPUT_COST_PER_1M = 0.075;
+        const OUTPUT_COST_PER_1M = 0.30;
+        const cost = (inputTokens / 1_000_000) * INPUT_COST_PER_1M + (outputTokens / 1_000_000) * OUTPUT_COST_PER_1M;
+
+        // Log the AI usage to ActivityLogService
+        try {
+          await ActivityLogService.logAI({
+            userId: options?.userId,
+            model: modelName,
+            tokensUsed,
+            cost,
+            prompt: promptString.substring(0, 1000), // Log only the first 1000 chars
+            responseLength: text.length,
+            action: options?.action || 'gemini_fallback_generation',
+            endpoint: options?.endpoint || options?.action || 'unknown_endpoint',
+            status: 'success'
+          });
+        } catch (logError) {
+          console.error('Failed to log AI usage:', logError);
+        }
+
         return text;
       } else {
         throw new Error('Gemini API returned empty response');

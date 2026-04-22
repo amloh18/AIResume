@@ -24,6 +24,22 @@ export interface ATSAnalysis {
 }
 
 export class AIAssistantService {
+  // Simple in-memory cache for AI responses
+  private static responseCache = new Map<string, { data: any; timestamp: number }>();
+  private static readonly CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+
+  private static generateCacheKey(action: string, cvData: any, jobData: any, additionalContext: any = {}): string {
+    // Create a deterministic hash/string for the state
+    // We only hash relevant data to avoid cache misses on unrelated CV changes
+    const state = {
+      action,
+      jobId: jobData?.id || jobData?.title || 'no-job',
+      cvId: cvData?.id || 'no-cv',
+      context: additionalContext
+    };
+    return JSON.stringify(state);
+  }
+
   // Section guidelines based on the image
   private static readonly SECTION_GUIDELINES = {
     contactInfo: {
@@ -849,6 +865,34 @@ export class AIAssistantService {
       
       const suggestions: AISuggestion[] = [];
       
+      try {
+        const cvContext = this.extractCVText(cvData);
+        const prompt = `Analyze the candidate's CV against the job requirements to identify gaps.
+Job Requirements: ${jobData.requirements || jobData.description}
+Candidate Background: ${cvContext.substring(0, 1000)}
+
+List the most critical missing experiences, skills, or qualifications. Format as a bulleted list. Provide actionable advice on how the candidate might address these gaps.`;
+        
+        const cacheKey = this.generateCacheKey('analyzeGaps', cvData, jobData, { cvContext: cvContext.substring(0, 1000) });
+        const aiResponse = await this.callAI(prompt, cacheKey, cvData, jobData);
+        
+        if (aiResponse && !aiResponse.includes('Improved content based on')) {
+          suggestions.push({
+            id: 'gap-1',
+            title: 'Gap Analysis',
+            content: aiResponse,
+            type: 'improvement',
+            section: 'experience',
+            field: 'work',
+            generatedAt: new Date().toISOString(),
+            isOutOfDate: false
+          });
+          return suggestions;
+        }
+      } catch (e) {
+        console.error('Failed to generate state-driven gap analysis, falling back', e);
+      }
+
       // Simple gap analysis
       if (!cvData.work || cvData.work.length < 2) {
         suggestions.push({
@@ -875,6 +919,37 @@ export class AIAssistantService {
       const suggestions: AISuggestion[] = [];
       
       if (cvData.work && cvData.work.length > 0) {
+        // Try calling the AI to generate state-driven achievements
+        try {
+          const workContext = cvData.work.map(w => `${w.position} at ${w.name}: ${w.summary}`).join('\n');
+          const prompt = `Generate 3 impactful, quantifiable achievements based on this work experience context:
+${workContext}
+
+${jobData ? `Target Job: ${jobData.title}\nKeywords: ${jobData.description}` : ''}
+
+Format as a simple bulleted list with no introduction or conclusion. Use strong action verbs and logical metrics.`;
+
+          const cacheKey = this.generateCacheKey('generateAchievements', cvData, jobData, { workContext });
+          const aiResponse = await this.callAI(prompt, cacheKey, cvData, jobData);
+          
+          if (aiResponse && !aiResponse.includes('Improved content based on')) {
+            suggestions.push({
+              id: 'achievement-1',
+              title: 'Add Achievement',
+              content: aiResponse,
+              type: 'addition',
+              section: 'achievements',
+              field: '0',
+              generatedAt: new Date().toISOString(),
+              isOutOfDate: false
+            });
+            return suggestions;
+          }
+        } catch (e) {
+          console.error('Failed to generate state-driven achievements, falling back to basic suggestions', e);
+        }
+
+        // Fallback
         suggestions.push({
           id: 'achievement-1',
           title: 'Add Achievement',
@@ -902,6 +977,38 @@ export class AIAssistantService {
       
       const suggestions: AISuggestion[] = [];
       
+      try {
+        const cvContext = this.extractCVText(cvData);
+        const prompt = `Write a professional 3-4 sentence summary tailored for the following job:
+Job Title: ${jobData.title}
+Job Description: ${jobData.description}
+
+Use the candidate's actual experience to highlight their qualifications for this role:
+Candidate Background: ${cvContext.substring(0, 1000)}
+
+Do not include greetings, bullet points, or concluding remarks. Just write the summary paragraph directly.`;
+        
+        const cacheKey = this.generateCacheKey('buildTailoredSummary', cvData, jobData, { cvContext: cvContext.substring(0, 1000) });
+        const aiResponse = await this.callAI(prompt, cacheKey, cvData, jobData);
+        
+        if (aiResponse && !aiResponse.includes('Improved content based on')) {
+          suggestions.push({
+            id: 'summary-1',
+            title: 'Tailored Summary',
+            content: aiResponse,
+            type: 'replacement',
+            section: 'summary',
+            field: 'summary',
+            generatedAt: new Date().toISOString(),
+            isOutOfDate: false
+          });
+          return suggestions;
+        }
+      } catch (e) {
+        console.error('Failed to generate state-driven summary, falling back', e);
+      }
+
+      // Fallback
       suggestions.push({
         id: 'summary-1',
         title: 'Tailored Summary',
@@ -926,6 +1033,15 @@ export class AIAssistantService {
         return [];
       }
       
+      const cacheKey = this.generateCacheKey('draftCoverLetter', cvData, jobData, {
+        cvContent: this.extractCVText(cvData),
+        jobContent: `${jobData.title} ${jobData.company}`
+      });
+      const cached = this.responseCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.data;
+      }
+
       const suggestions: AISuggestion[] = [];
       
       // Use the new cover letter generation API
@@ -956,6 +1072,7 @@ export class AIAssistantService {
               generatedAt: new Date().toISOString(),
               isOutOfDate: false
             });
+            this.responseCache.set(cacheKey, { data: suggestions, timestamp: Date.now() });
             return suggestions;
           }
         }
@@ -975,6 +1092,7 @@ export class AIAssistantService {
         isOutOfDate: false
       });
       
+      this.responseCache.set(cacheKey, { data: suggestions, timestamp: Date.now() });
       return suggestions;
     } catch (error) {
       console.error('Cover letter drafting error:', error);
@@ -985,9 +1103,34 @@ export class AIAssistantService {
   static async checkConsistency(cvData: UnifiedCVDataStructure): Promise<AISuggestion[]> {
     try {
       const cvText = this.extractCVText(cvData);
-      
       const suggestions: AISuggestion[] = [];
       
+      try {
+        const prompt = `Review the following CV text for formatting, tone, and grammatical consistency.
+CV Text: ${cvText.substring(0, 1500)}
+
+Identify any inconsistencies in tense, capitalization, punctuation, or tone (e.g., mixing first and third person). List the top 2-3 most important corrections. If there are no issues, reply with exactly "No issues found."`;
+        
+        const cacheKey = this.generateCacheKey('checkConsistency', cvData, null, { cvText: cvText.substring(0, 1500) });
+        const aiResponse = await this.callAI(prompt, cacheKey, cvData, null);
+        
+        if (aiResponse && !aiResponse.includes('Improved content based on') && !aiResponse.toLowerCase().includes('no issues found')) {
+          suggestions.push({
+            id: 'consistency-1',
+            title: 'Consistency and Tone',
+            content: aiResponse,
+            type: 'improvement',
+            section: 'consistency',
+            field: 'tone',
+            generatedAt: new Date().toISOString(),
+            isOutOfDate: false
+          });
+          return suggestions;
+        }
+      } catch (e) {
+        console.error('Failed to generate state-driven consistency check, falling back', e);
+      }
+
       // Simple consistency checks
       if (cvText.includes('I') || cvText.includes('me') || cvText.includes('my')) {
         suggestions.push({
@@ -1127,6 +1270,17 @@ export class AIAssistantService {
 
   static async performComprehensiveAnalysis(cvData: UnifiedCVDataStructure, jobData: Job): Promise<any> {
     try {
+      const cacheKey = this.generateCacheKey('comprehensiveAnalysis', cvData, jobData, {
+        cvContent: this.extractCVText(cvData),
+        jobContent: `${jobData?.title || ''} ${jobData?.description || ''}`
+      });
+      
+      const cached = this.responseCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        console.log('✅ AIAssistantService - Returning cached comprehensive analysis');
+        return cached.data;
+      }
+
       console.log('🔍 AIAssistantService - Starting comprehensive analysis...');
       // Normalize job description field
       const jobDescription = jobData?.jobDescription || jobData?.description || '';
@@ -1160,6 +1314,7 @@ export class AIAssistantService {
           
           if (result.success) {
             console.log('✅ AIAssistantService - Comprehensive ATS analysis completed via API');
+            this.responseCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
             return result.data;
           }
         }
@@ -1183,16 +1338,29 @@ export class AIAssistantService {
 
         console.log('📡 AIAssistantService - Legacy API response status:', response.status);
 
+        if (response.status === 403) {
+           const result = await response.json();
+           if (result.error === 'quota_exceeded') {
+             console.log('⚠️ AIAssistantService - Quota exceeded for comprehensive analysis');
+             throw new Error('quota_exceeded');
+           }
+        }
+
         if (response.ok) {
           const result = await response.json();
           console.log('📄 AIAssistantService - Legacy API response:', result);
           
           if (result.success) {
             console.log('✅ AIAssistantService - Comprehensive analysis completed via legacy API');
+            this.responseCache.set(cacheKey, { data: result.data, timestamp: Date.now() });
             return result.data;
           }
         }
-      } catch (apiError) {
+      } catch (apiError: any) {
+        if (apiError.message === 'quota_exceeded') {
+          // If quota exceeded, throw it directly so the caller knows and don't fallback to local analysis
+          throw apiError;
+        }
         console.log('⚠️ AIAssistantService - Legacy API failed, falling back to local analysis:', apiError);
       }
 
@@ -1267,6 +1435,7 @@ export class AIAssistantService {
       };
 
       console.log('✅ AIAssistantService - Local analysis completed');
+      this.responseCache.set(cacheKey, { data: comprehensiveAnalysis, timestamp: Date.now() });
       return comprehensiveAnalysis;
       
     } catch (error) {
@@ -1548,6 +1717,12 @@ export class AIAssistantService {
   // AI Content Improvement Methods - Updated with new prompting strategy
   static async improveSummary(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveSummary', cvData, jobData, { currentText });
+      const cached = this.responseCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.data;
+      }
+
       // Use the new section generation API
       const response = await fetch('/api/ai/section-generate', {
         method: 'POST',
@@ -1567,12 +1742,15 @@ export class AIAssistantService {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.content) {
+          this.responseCache.set(cacheKey, { data: data.content, timestamp: Date.now() });
           return data.content;
         }
       }
 
       // Fallback to local processing
-      return this.processLocally(`Improve summary: ${currentText}`);
+      const localResult = this.processLocally(`Improve summary: ${currentText}`);
+      this.responseCache.set(cacheKey, { data: localResult, timestamp: Date.now() });
+      return localResult;
     } catch (error) {
       console.error('Error improving summary:', error);
       return currentText;
@@ -1581,6 +1759,12 @@ export class AIAssistantService {
 
   static async improveDescription(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveDescription', cvData, jobData, { currentText });
+      const cached = this.responseCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.data;
+      }
+
       // Use the new section generation API
       const response = await fetch('/api/ai/section-generate', {
         method: 'POST',
@@ -1600,12 +1784,15 @@ export class AIAssistantService {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.content) {
+          this.responseCache.set(cacheKey, { data: data.content, timestamp: Date.now() });
           return data.content;
         }
       }
 
       // Fallback to local processing
-      return this.processLocally(`Improve description: ${currentText}`);
+      const localResult = this.processLocally(`Improve description: ${currentText}`);
+      this.responseCache.set(cacheKey, { data: localResult, timestamp: Date.now() });
+      return localResult;
     } catch (error) {
       console.error('Error improving description:', error);
       return currentText;
@@ -1614,6 +1801,12 @@ export class AIAssistantService {
 
   static async improveHighlights(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveHighlights', cvData, jobData, { currentText });
+      const cached = this.responseCache.get(cacheKey);
+      if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+        return cached.data;
+      }
+
       // Use the new section generation API
       const response = await fetch('/api/ai/section-generate', {
         method: 'POST',
@@ -1633,12 +1826,15 @@ export class AIAssistantService {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.content) {
+          this.responseCache.set(cacheKey, { data: data.content, timestamp: Date.now() });
           return data.content;
         }
       }
 
       // Fallback to local processing
-      return this.processLocally(`Improve highlights: ${currentText}`);
+      const localResult = this.processLocally(`Improve highlights: ${currentText}`);
+      this.responseCache.set(cacheKey, { data: localResult, timestamp: Date.now() });
+      return localResult;
     } catch (error) {
       console.error('Error improving highlights:', error);
       return currentText;
@@ -1647,6 +1843,7 @@ export class AIAssistantService {
 
   static async improveAchievements(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveAchievements', cvData, jobData, { currentText });
       const prompt = `Improve these achievements to be more quantifiable:
 
 Current Achievements: "${currentText}"
@@ -1662,7 +1859,7 @@ Guidelines:
 
 Return only the improved achievements text.`;
 
-      const response = await this.callAI(prompt);
+      const response = await this.callAI(prompt, cacheKey, cvData, jobData);
       return response || currentText;
     } catch (error) {
       console.error('Error improving achievements:', error);
@@ -1672,6 +1869,7 @@ Return only the improved achievements text.`;
 
   static async improveSkills(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveSkills', cvData, jobData, { currentText });
       const prompt = `Improve this skills section:
 
 Current Skills: "${currentText}"
@@ -1687,7 +1885,7 @@ Guidelines:
 
 Return only the improved skills list.`;
 
-      const response = await this.callAI(prompt);
+      const response = await this.callAI(prompt, cacheKey, cvData, jobData);
       return response || currentText;
     } catch (error) {
       console.error('Error improving skills:', error);
@@ -1697,6 +1895,7 @@ Return only the improved skills list.`;
 
   static async improveProjectDescription(currentText: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveProjectDescription', cvData, jobData, { currentText });
       const prompt = `Improve this project description:
 
 Current Description: "${currentText}"
@@ -1712,7 +1911,7 @@ Guidelines:
 
 Return only the improved project description.`;
 
-      const response = await this.callAI(prompt);
+      const response = await this.callAI(prompt, cacheKey, cvData, jobData);
       return response || currentText;
     } catch (error) {
       console.error('Error improving project description:', error);
@@ -1722,6 +1921,7 @@ Return only the improved project description.`;
 
   static async improveContent(currentText: string, fieldType: string, cvData: any, jobData: any): Promise<string> {
     try {
+      const cacheKey = this.generateCacheKey('improveContent', cvData, jobData, { currentText, fieldType });
       const prompt = `Improve this ${fieldType} content:
 
 Current Content: "${currentText}"
@@ -1732,7 +1932,7 @@ Make it more professional, impactful, and relevant to the job context.
 
 Return only the improved content.`;
 
-      const response = await this.callAI(prompt);
+      const response = await this.callAI(prompt, cacheKey, cvData, jobData);
       return response || currentText;
     } catch (error) {
       console.error('Error improving content:', error);
@@ -1740,8 +1940,15 @@ Return only the improved content.`;
     }
   }
 
-  private static async callAI(prompt: string): Promise<string> {
+  private static async callAI(prompt: string, cacheKey?: string, cvData?: any, jobData?: any): Promise<string> {
     try {
+      if (cacheKey) {
+        const cached = this.responseCache.get(cacheKey);
+        if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+          return cached.data;
+        }
+      }
+
       // Use the new improve-content API
       const response = await fetch('/api/ai/improve-content', {
         method: 'POST',
@@ -1750,20 +1957,27 @@ Return only the improved content.`;
         },
         body: JSON.stringify({
           prompt,
-          cvData: {},
-          jobData: null
+          cvData: cvData || {},
+          jobData: jobData || null
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.content) {
+          if (cacheKey) {
+            this.responseCache.set(cacheKey, { data: data.content, timestamp: Date.now() });
+          }
           return data.content;
         }
       }
 
       // Fallback to local processing
-      return this.processLocally(prompt);
+      const localResult = this.processLocally(prompt);
+      if (cacheKey) {
+        this.responseCache.set(cacheKey, { data: localResult, timestamp: Date.now() });
+      }
+      return localResult;
     } catch (error) {
       console.error('AI API call failed:', error);
       return this.processLocally(prompt);

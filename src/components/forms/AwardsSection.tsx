@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
+import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 
@@ -87,7 +88,11 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
 
   return (
     <>
-          {safeData.map((award, index) => (
+          {safeData.length === 0 ? (
+          <EmptyStateSkeleton onAdd={() => {
+            onUpdate([...safeData, { title: '', date: '', awarder: '', summary: '' }]);
+          }} itemName="Award" />
+        ) : safeData.map((award, index) => (
         <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10 mb-6">
               <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{award.title || 'Award Title'}</h4>
@@ -133,40 +138,47 @@ const AwardsSection: React.FC<AwardsSectionProps> = ({
             </div>
               </div>
 
-              <div className="mt-4">
-                <div className="flex items-center justify-between mb-2">
-              <label className="block text-white/80 text-sm font-medium">Description</label>
-              <WYSIWYGToolbar
-                showAIButton={true}
-                fieldType="other"
-                onAISuggestions={() => generateAISuggestions(index, award)}
-                isGenerating={loadingSuggestions[index] || false}
-              />
+              <div className="mt-4 flex gap-6 items-start">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-white/80 text-sm font-medium">Description</label>
+                  </div>
+                  <WYSIWYGEditor
+                    value={award.summary || ''}
+                    onChange={(value) => updateAward(index, 'summary', value)}
+                    rows={3}
+                    placeholder="Brief description of the award and what it was for..."
+                    showToolbar={true}
+                    showAIButton={true}
+                    fieldType="other"
+                    onAIGenerate={() => generateAISuggestions(index, award)}
+                    isGenerating={loadingSuggestions[index] || false}
+                  />
                 </div>
-            <AISuggestionsPanel
-              isVisible={showSuggestions[index] || false}
-              suggestions={suggestions[index] || []}
-              isLoading={loadingSuggestions[index] || false}
-              onSelect={(content) => handleSelectSuggestion(index, content)}
-              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
-            />
-            <WYSIWYGEditor
-                  value={award.summary || ''}
-              onChange={(value) => updateAward(index, 'summary', value)}
-                  rows={3}
-              placeholder="Describe the award and its significance..."
-                />
+                {showSuggestions[index] && (
+                  <div className="w-80 flex-shrink-0">
+                    <AISuggestionsPanel
+                      isVisible={showSuggestions[index] || false}
+                      suggestions={suggestions[index] || []}
+                      isLoading={loadingSuggestions[index] || false}
+                      onSelect={(content) => handleSelectSuggestion(index, content)}
+                      onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+                    />
+                  </div>
+                )}
               </div>
-        </div>
+            </div>
       ))}
       
-      <button
-        onClick={onAdd}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
-      >
-        <Plus size={20} />
-        Add another Award
-      </button>
+      {safeData.length > 0 && (
+        <button
+          onClick={onAdd}
+          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={20} />
+          Add another Award
+        </button>
+      )}
     </>
   );
 };

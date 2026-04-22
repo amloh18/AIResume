@@ -195,7 +195,7 @@ Focus on:
       systemPrompt,
       temperature: 0.7,
       maxTokens: 4096, // Increased for comprehensive answers
-      model: 'gemini-2.5-flash-lite'
+      model: 'gemini-2.0-flash-lite-preview-02-05'
     });
 
     // Robust JSON parsing with error handling

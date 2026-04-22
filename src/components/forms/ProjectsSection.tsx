@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy, GripVertical } from 'lucide-react';
+import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import {
   DndContext,
   closestCenter,
@@ -124,66 +125,88 @@ function SortableProjectItem({
         </div>
       </div>
 
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-white/80 text-sm font-medium">Description / Achievements</label>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm">
-              <input
-                type="checkbox"
-                checked={project.useRichText !== false}
-                onChange={(e) => onUpdate(index, 'useRichText', e.target.checked)}
-                className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
-              />
-              Use Rich Text
-            </label>
-            <WYSIWYGToolbar showAIButton={true} fieldType="other" onAISuggestions={() => onGenerateSuggestions(index, project)} isGenerating={loadingSuggestions} />
-          </div>
-        </div>
-        <AISuggestionsPanel isVisible={showSuggestions} suggestions={suggestions} isLoading={loadingSuggestions} onSelect={(content) => onSelectSuggestion(index, content)} onClose={() => onCloseSuggestions(index)} />
-        
-        {project.useRichText !== false ? (
-          <WYSIWYGEditor value={project.description || ''} onChange={(value) => onUpdate(index, 'description', value)} rows={3} placeholder="Describe the project and your role..." />
-        ) : (
-          <div className="space-y-3">
-            {(project.highlights || []).map((highlight: string, hIndex: number) => (
-              <div key={hIndex} className="flex items-start gap-2">
-                <div className="mt-3 w-1.5 h-1.5 rounded-none bg-white/50 flex-shrink-0" />
+      <div className="mt-4 flex gap-6 items-start">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-white/80 text-sm font-medium">Description / Achievements</label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm">
                 <input
-                  type="text"
-                  value={highlight}
-                  onChange={(e) => {
-                    const newHighlights = [...(project.highlights || [])];
-                    newHighlights[hIndex] = e.target.value;
-                    onUpdate(index, 'highlights', newHighlights);
-                  }}
-                  className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-                  placeholder="Achievement or key detail..."
+                  type="checkbox"
+                  checked={project.useRichText !== false}
+                  onChange={(e) => onUpdate(index, 'useRichText', e.target.checked)}
+                  className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
                 />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newHighlights = [...(project.highlights || [])];
-                    newHighlights.splice(hIndex, 1);
-                    onUpdate(index, 'highlights', newHighlights);
-                  }}
-                  className="p-2 text-white/40 hover:text-red-400 transition-colors mt-0.5"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={() => {
-                const newHighlights = [...(project.highlights || []), ''];
-                onUpdate(index, 'highlights', newHighlights);
-              }}
-              className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
-            >
-              <Plus size={14} />
-              Add Bullet Point
-            </button>
+                Use Rich Text
+              </label>
+            </div>
+          </div>
+          
+          {project.useRichText !== false ? (
+            <WYSIWYGEditor
+              value={project.description || ''}
+              onChange={(value) => onUpdate(index, 'description', value)}
+              rows={3}
+              placeholder="Describe the project and your role..."
+              showToolbar={true}
+              showAIButton={true}
+              fieldType="other"
+              onAIGenerate={() => onGenerateSuggestions(index, project)}
+              isGenerating={loadingSuggestions}
+            />
+          ) : (
+            <div className="space-y-3">
+              {(project.highlights || []).map((highlight: string, hIndex: number) => (
+                <div key={hIndex} className="flex items-start gap-2">
+                  <div className="mt-3 w-1.5 h-1.5 rounded-none bg-white/50 flex-shrink-0" />
+                  <input
+                    type="text"
+                    value={highlight}
+                    onChange={(e) => {
+                      const newHighlights = [...(project.highlights || [])];
+                      newHighlights[hIndex] = e.target.value;
+                      onUpdate(index, 'highlights', newHighlights);
+                    }}
+                    className="flex-1 px-4 py-2 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
+                    placeholder="Achievement or key detail..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newHighlights = [...(project.highlights || [])];
+                      newHighlights.splice(hIndex, 1);
+                      onUpdate(index, 'highlights', newHighlights);
+                    }}
+                    className="p-2 text-white/40 hover:text-red-400 transition-colors mt-0.5"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => {
+                  const newHighlights = [...(project.highlights || []), ''];
+                  onUpdate(index, 'highlights', newHighlights);
+                }}
+                className="flex items-center gap-2 text-sm text-[#80FF00] hover:text-[#70e600] transition-colors mt-2"
+              >
+                <Plus size={14} />
+                Add Bullet Point
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {showSuggestions && (
+          <div className="w-80 flex-shrink-0">
+            <AISuggestionsPanel
+              isVisible={showSuggestions}
+              suggestions={suggestions}
+              isLoading={loadingSuggestions}
+              onSelect={(content) => onSelectSuggestion(index, content)}
+              onClose={() => onCloseSuggestions(index)}
+            />
           </div>
         )}
       </div>
@@ -339,7 +362,21 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
     <>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={safeData.map((_, index) => `project-${index}`)} strategy={verticalListSortingStrategy}>
-          {safeData.map((project, index) => (
+          {safeData.length === 0 ? (
+          <EmptyStateSkeleton onAdd={() => {
+            const newProject = {
+              name: '',
+              description: '',
+              highlights: [],
+              keywords: [],
+              startDate: '',
+              endDate: '',
+              url: '',
+              roles: []
+            };
+            onUpdate([...safeData, newProject]);
+          }} itemName="Project" />
+        ) : safeData.map((project, index) => (
             <SortableProjectItem
               key={`project-${index}`}
               project={project}
@@ -357,10 +394,19 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
           ))}
         </SortableContext>
       </DndContext>
-
+      {safeData.length > 0 && (
       <button
         onClick={() => {
-          const newProject = { name: '', description: '', startDate: '', endDate: '', keywords: [], url: '' };
+          const newProject = {
+            name: '',
+            description: '',
+            highlights: [],
+            keywords: [],
+            startDate: '',
+            endDate: '',
+            url: '',
+            roles: []
+          };
           onUpdate([...safeData, newProject]);
         }}
         className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
@@ -368,6 +414,7 @@ const ProjectsSection: React.FC<ProjectsSectionProps> = ({
         <Plus size={20} />
         Add another Project
       </button>
+      )}
     </>
   );
 };

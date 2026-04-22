@@ -479,27 +479,34 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
         <div className="tablet:col-span-2">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-white/80 text-sm font-medium">Professional Summary</label>
-            <WYSIWYGToolbar
-              showAIButton={true}
-              fieldType="summary"
-              onAISuggestions={generateAISuggestions}
-              isGenerating={loadingSuggestions}
-            />
           </div>
-          <AISuggestionsPanel
-            isVisible={showSuggestions}
-            suggestions={suggestions}
-            isLoading={loadingSuggestions}
-            onSelect={handleSelectSuggestion}
-            onClose={() => setShowSuggestions(false)}
-          />
-          <WYSIWYGEditor
-            value={safePersonalInfo.summary}
-            onChange={(value) => handleFieldChange('summary', value)}
-            rows={4}
-            placeholder="Write a brief summary of your professional background and key achievements..."
-            hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')}
-          />
+          <div className="flex gap-6 items-start">
+            <div className="flex-1 min-w-0">
+              <WYSIWYGEditor
+                value={safePersonalInfo.summary}
+                onChange={(value) => handleFieldChange('summary', value)}
+                rows={4}
+                placeholder="Write a brief summary of your professional background and key achievements..."
+                hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')}
+                showToolbar={true}
+                showAIButton={true}
+                fieldType="summary"
+                onAIGenerate={generateAISuggestions}
+                isGenerating={loadingSuggestions}
+              />
+            </div>
+            {showSuggestions && (
+              <div className="w-80 flex-shrink-0">
+                <AISuggestionsPanel
+                  isVisible={showSuggestions}
+                  suggestions={suggestions}
+                  isLoading={loadingSuggestions}
+                  onSelect={handleSelectSuggestion}
+                  onClose={() => setShowSuggestions(false)}
+                />
+              </div>
+            )}
+          </div>
           {/* Display inline suggestions for basics.summary below the editor - only when review mode is ON */}
           {reviewMode && annotations
             .filter((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')
