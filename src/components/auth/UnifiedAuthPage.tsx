@@ -898,7 +898,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         return null;
       case 'reset':
         return (
-          <div className="w-12 h-12 rounded-none border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
+          <div className="w-12 h-12 rounded-sm border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
             <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z" />
             </svg>
@@ -906,7 +906,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         );
       case 'verify-code':
         return (
-          <div className="w-12 h-12 rounded-none border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
+          <div className="w-12 h-12 rounded-sm border-2 border-[#80FF00] flex items-center justify-center mb-6 mx-auto">
             <svg className="w-6 h-6 text-[#80FF00]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M20,8L12,13L4,8V6L12,11L20,6M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.1,4 20,4Z" />
             </svg>
@@ -1090,11 +1090,11 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       {/* Mode Toggle Switch - Only show for signin/signup */}
       {(mode === 'signin' || mode === 'signup') && (
         <div className="mb-6 flex justify-center">
-          <div className="relative inline-flex items-center bg-gray-100 dark:bg-[#1A1A1A] rounded-none p-1.5 border border-gray-200 dark:border-white/10">
+          <div className="relative inline-flex items-center bg-gray-100 dark:bg-[#1A1A1A] rounded-md p-1.5 border border-gray-200 dark:border-white/10">
             <motion.button
               type="button"
               onClick={() => switchMode('signin')}
-              className={`relative px-8 py-3 text-base font-medium rounded-none transition-all duration-300 z-10 ${mode === 'signin'
+              className={`relative px-8 py-3 text-base font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signin'
                 ? 'text-black dark:text-black'
                 : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
                 }`}
@@ -1104,7 +1104,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             <motion.button
               type="button"
               onClick={() => switchMode('signup')}
-              className={`relative px-8 py-3 text-base font-medium rounded-none transition-all duration-300 z-10 ${mode === 'signup'
+              className={`relative px-8 py-3 text-base font-medium rounded-sm transition-all duration-300 z-10 ${mode === 'signup'
                 ? 'text-black dark:text-black'
                 : 'text-gray-500 hover:text-gray-800 dark:text-white/70 dark:hover:text-white'
                 }`}
@@ -1113,7 +1113,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
             </motion.button>
             {/* Animated Pill Background */}
             <motion.div
-              className="absolute top-1.5 bottom-1.5 bg-[#80FF00] rounded-none z-0 shadow-sm"
+              className="absolute top-1.5 bottom-1.5 bg-[#80FF00] rounded-sm z-0 shadow-sm"
               initial={false}
               animate={{
                 left: mode === 'signin' ? '0.375rem' : '50%',
@@ -1173,7 +1173,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 type="button"
                 onClick={() => handleSendCode(email, 'passwordless-login')}
                 disabled={isLoading || checkingEmail}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#80FF00] to-[#80FF00]/80 hover:from-[#80FF00]/90 hover:to-[#80FF00]/70 text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-none transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#80FF00] to-[#80FF00]/80 hover:from-[#80FF00]/90 hover:to-[#80FF00]/70 text-gray-900 dark:text-black font-semibold py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading || checkingEmail ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
