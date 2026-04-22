@@ -121,7 +121,7 @@ const InterviewCoachContainer: React.FC<InterviewCoachContainerProps> = ({ userI
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#0a0c08] flex flex-col font-sans">
+        <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] flex flex-col font-sans">
             <div className="flex-1 max-w-[1400px] mx-auto px-4 sm:px-8 py-8 w-full">
                 
                 {/* Breadcrumbs & Header */}

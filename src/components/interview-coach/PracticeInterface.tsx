@@ -13,6 +13,7 @@ interface PracticeInterfaceProps {
     userId: string;
     jobId: string;
     moduleId?: string;
+    initialQuestionId?: string;
 }
 
 interface Question {
@@ -47,7 +48,7 @@ interface Session {
     targetRole: string;
 }
 
-const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, moduleId }) => {
+const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, moduleId, initialQuestionId }) => {
     const router = useRouter();
     const { data: authSession } = useSession();
     const [session, setSession] = useState<Session | null>(null);
@@ -116,6 +117,13 @@ const PracticeInterface: React.FC<PracticeInterfaceProps> = ({ userId, jobId, mo
                         }
                     }
                     setQuestions(qs);
+
+                    if (initialQuestionId) {
+                        const targetIdx = qs.findIndex((q: any) => q._id === initialQuestionId);
+                        if (targetIdx !== -1) {
+                            setCurrentIndex(targetIdx);
+                        }
+                    }
                 }
             } else {
                 toast.error(sessionData.error || 'Failed to load session');
