@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Shield } from 'lucide-react';
+import { Check, Shield, Search } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES } from '@/components/cv-builder-pro/registry';
 import { StaticLayoutRenderer, EditableField } from '@/components/cv-builder-pro/components/CoreUI';
 import { initialData } from '@/lib/templates/canvas-initial-data';
@@ -13,7 +13,6 @@ interface TemplateSelectorProps {
     cvData?: any;
 }
 
-// ATS scoring based on layout type
 const TEMPLATE_ATS_SCORES: Record<string, number> = {
     '1-col': 100,
     '2-col': 85,
@@ -30,26 +29,31 @@ const getTemplateATSScoreCap = (template: any): number => {
     return TEMPLATE_ATS_SCORES[template.type] || 80;
 };
 
-const getATSFriendliness = (scoreCap: number): { label: string; color: string; bgColor: string } => {
-    if (scoreCap >= 95) return { label: 'Excellent', color: 'text-green-500', bgColor: 'bg-green-500/20' };
-    if (scoreCap >= 85) return { label: 'Good', color: 'text-lime-500', bgColor: 'bg-lime-500/20' };
-    if (scoreCap >= 75) return { label: 'Fair', color: 'text-yellow-500', bgColor: 'bg-yellow-500/20' };
-    return { label: 'Low', color: 'text-red-500', bgColor: 'bg-red-500/20' };
-};
-
 export default function TemplateSelector({
     selectedTemplate,
     onTemplateSelect,
     cvData
 }: TemplateSelectorProps) {
-    const isDarkUI = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
+    const [hoveredTemplate, setHoveredTemplate] = useState<any | null>(null);
 
     const ReadOnlyWrapper = useMemo(() => function Editable(props: any) {
         return <EditableField {...props} data={cvData || initialData} readOnly={true} />;
     }, [cvData]);
 
+    const categories = ['all', ...TEMPLATE_CATEGORIES.map(c => c.id)];
+    
+    const templates = selectedCategory === 'all' 
+        ? CANVAS_TEMPLATES 
+        : CANVAS_TEMPLATES.filter(tpl => {
+            const cat = TEMPLATE_CATEGORIES.find(c => c.id === selectedCategory);
+            return cat?.types.includes(tpl.type);
+        });
+
+    const displayTemplate = hoveredTemplate || selectedTemplate || CANVAS_TEMPLATES[0];
+
     return (
-        <div className="space-y-8 bg-[#141414] p-4 rounded-xl relative">
+        <div className="flex h-full min-h-[600px] w-full bg-white dark:bg-[#141810]">
             {/* Required CSS for CV Preview */}
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -75,65 +79,95 @@ export default function TemplateSelector({
                 .cv-prose ul { list-style-type: disc; padding-left: 1.2em; margin-top: calc(0.25em * var(--cv-spacing)) !important; margin-bottom: calc(0.25em * var(--cv-spacing)) !important; }
               `}} />
 
-            {TEMPLATE_CATEGORIES.map(cat => {
-                const catTemplates = CANVAS_TEMPLATES.filter(tpl => cat.types.includes(tpl.type));
-                if (catTemplates.length === 0) return null;
+            {/* Left: Template List */}
+            <div className="w-[320px] border-r border-gray-200 dark:border-gray-800 flex flex-col h-full bg-gray-50 dark:bg-[#1a1f14]">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+                    <div className="flex gap-2 flex-wrap">
+                        {categories.map((cat) => {
+                            const catObj = TEMPLATE_CATEGORIES.find(c => c.id === cat);
+                            const label = cat === 'all' ? 'All Templates' : catObj?.name || cat;
+                            return (
+                                <button
+                                    key={cat}
+                                    onClick={() => setSelectedCategory(cat)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${
+                                        selectedCategory === cat 
+                                            ? 'bg-purple-600 text-white' 
+                                            : 'bg-white dark:bg-[#141810] border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-purple-300 dark:hover:border-purple-700'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
-                return (
-                    <div key={cat.id} className="relative">
-                        <div className={`py-3 mb-4 flex items-center gap-2 border-b border-[#333] text-white`}>
-                            <span className="text-[#1b814a] w-5 h-5">{cat.icon}</span>
-                            <h3 className="font-bold text-sm tracking-wide">{cat.name}</h3>
-                        </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                    {templates.map((template) => {
+                        const isSelected = selectedTemplate?.id === template.id;
+                        const isHovered = hoveredTemplate?.id === template.id;
+                        const atsScore = getTemplateATSScoreCap(template);
                         
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {catTemplates.map((template) => {
-                                const isSelected = selectedTemplate?.id === template.id;
-                                const atsScore = getTemplateATSScoreCap(template);
-                                const atsFriendliness = getATSFriendliness(atsScore);
+                        return (
+                            <button
+                                key={template.id}
+                                onClick={() => onTemplateSelect(template)}
+                                onMouseEnter={() => setHoveredTemplate(template)}
+                                onMouseLeave={() => setHoveredTemplate(null)}
+                                className={`w-full text-left p-4 rounded-xl border transition-all ${
+                                    isSelected 
+                                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20 ring-1 ring-purple-500' 
+                                        : isHovered 
+                                            ? 'border-purple-300 dark:border-purple-700 bg-white dark:bg-[#1a230f]' 
+                                            : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]'
+                                }`}
+                            >
+                                <div className="flex justify-between items-start mb-1">
+                                    <h4 className={`font-bold text-sm ${isSelected ? 'text-purple-700 dark:text-purple-400' : 'text-gray-900 dark:text-white'}`}>
+                                        {template.name}
+                                    </h4>
+                                    {isSelected && <Check className="w-4 h-4 text-purple-600 dark:text-purple-400" />}
+                                </div>
+                                <div className="flex gap-2 mt-3">
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 uppercase">
+                                        {template.type}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1 ${atsScore >= 85 ? 'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400'}`}>
+                                        <Shield className="w-2.5 h-2.5" /> ATS: {atsScore >= 85 ? 'High' : 'Medium'}
+                                    </span>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
 
-                                return (
-                                    <motion.button
-                                        key={template.id}
-                                        onClick={() => onTemplateSelect(template)}
-                                        className={`relative rounded-xl border cursor-pointer transition-all text-left overflow-hidden flex flex-col bg-[#111] ${isSelected
-                                            ? 'border-[#1b814a] shadow-[0_0_0_2px_rgba(27,129,74,0.5)] ring-1 ring-[#1b814a]'
-                                            : 'border-[#333] hover:border-gray-500'
-                                            }`}
-                                        whileHover={{ scale: 1.02 }}
-                                        whileTap={{ scale: 0.98 }}
-                                    >
-                                        {/* Template Info */}
-                                        <div className={`p-3 bg-[#111] border-b z-10 shrink-0 ${isSelected ? 'border-[#1b814a]' : 'border-[#333]'}`}>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <h3 className="font-bold text-sm text-gray-100 truncate">
-                                                    {template.name}
-                                                </h3>
-                                                {isSelected && <span className="bg-[#1b814a]/30 text-[#1b814a] text-[10px] px-2 py-0.5 rounded font-bold tracking-wide uppercase ml-2">ACTIVE</span>}
-                                            </div>
-
-                                            {/* ATS Score */}
-                                            <div className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full ${atsFriendliness.bgColor} ${atsFriendliness.color}`}>
-                                                <Shield className="w-2.5 h-2.5" />
-                                                ATS: {atsFriendliness.label}
-                                            </div>
-                                        </div>
-
-                                        {/* Template Canvas Preview */}
-                                        <div className="relative w-full aspect-[1/1.414] bg-[#141414] overflow-hidden flex flex-1 items-center justify-center pointer-events-none py-8 px-4 text-gray-900">
-                                            <div className="relative w-full max-w-[215px] aspect-[1/1.414] bg-white shadow-[0_0_15px_rgba(0,0,0,0.5)] overflow-hidden rounded-md ring-1 ring-white/10 mx-auto flex justify-center items-start" style={{ containerType: 'inline-size' }}>
-                                                <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left" style={{ transform: 'scale(calc(100cqi / 794))' }}>
-                                                    <StaticLayoutRenderer template={template} cvData={cvData || initialData} ReadOnlyWrapper={ReadOnlyWrapper} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </motion.button>
-                                );
-                            })}
+            {/* Right: Preview Area */}
+            <div className="flex-1 flex flex-col bg-[#f9fafb] dark:bg-[#0a0c08] relative overflow-hidden">
+                <div className="absolute inset-0 flex items-center justify-center p-8 overflow-auto custom-scrollbar">
+                    <div className="relative w-full max-w-[600px] bg-white shadow-[0_0_40px_rgba(0,0,0,0.1)] dark:shadow-[0_0_40px_rgba(0,0,0,0.3)] mx-auto flex justify-center items-start" style={{ containerType: 'inline-size' }}>
+                        <div className="relative w-full aspect-[1/1.414] overflow-hidden bg-white">
+                            <div className="absolute top-0 left-0 w-[794px] h-[1123px] origin-top-left" style={{ transform: 'scale(calc(100cqi / 794))' }}>
+                                <StaticLayoutRenderer template={displayTemplate} cvData={cvData || initialData} ReadOnlyWrapper={ReadOnlyWrapper} />
+                            </div>
                         </div>
                     </div>
-                );
-            })}
+                </div>
+                
+                {/* Floating action overlay when hovered/selected */}
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-white dark:bg-[#141810] px-6 py-3 rounded-full shadow-lg border border-gray-200 dark:border-gray-800 flex items-center gap-4 z-10">
+                    <span className="text-sm font-bold text-gray-900 dark:text-white">
+                        {displayTemplate.name}
+                    </span>
+                    <button 
+                        onClick={() => onTemplateSelect(displayTemplate)}
+                        className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-bold transition-colors shadow-sm"
+                    >
+                        Apply Template
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
