@@ -204,7 +204,7 @@ function DashboardContent() {
           </div>
           
           <div className="flex flex-col md:flex-row items-center gap-6 shrink-0">
-            {/* Score Ring (Prior to search bar) */}
+            {/* Score Ring */}
             <div className="flex flex-col items-center shrink-0">
               <div className="relative w-16 h-16 lg:w-20 lg:h-20 mb-2">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
