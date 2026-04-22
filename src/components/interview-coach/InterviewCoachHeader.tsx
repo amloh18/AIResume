@@ -68,7 +68,7 @@ const InterviewCoachHeader: React.FC<InterviewCoachHeaderProps> = ({
                         {userData && (
                             <UserAvatar
                                 name={getUserDisplayName(userData)}
-                                imageUrl={getUserAvatar(userData)}
+                                src={getUserAvatar(userData)}
                                 size="sm"
                             />
                         )}

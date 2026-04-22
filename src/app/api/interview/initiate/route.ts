@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import { JobApplication } from '@/models';
+import { JobApplication, User } from '@/models';
 import CV from '@/models/CV';
 import { InterviewCoachService } from '@/lib/services/interviewCoachService';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
 
         console.log(`✅ Job found: ${job.jobTitle} at ${job.company}`);
 
+        // --- Gating Logic: Free users can only generate 1 plan total ---
+        const user = await User.findById(userIdObj).select('currentPlanKey subscription');
+        const planKey = user?.currentPlanKey || 'free';
+
         // Handle 'fetch' action to prevent unnecessary AI generation
         if (action === 'fetch') {
             if (job.interviewCoach?.status === 'ready' && job.interviewCoach?.questions?.length > 0) {
@@ -76,6 +80,7 @@ export async function POST(request: NextRequest) {
                         success: true,
                         interviewCoach: job.interviewCoach,
                         existing: true,
+                        planKey
                     }),
                     request
                 );
@@ -85,6 +90,7 @@ export async function POST(request: NextRequest) {
                         success: true,
                         interviewCoach: { status: 'not_started', questions: [] },
                         existing: false,
+                        planKey
                     }),
                     request
                 );
@@ -106,13 +112,38 @@ export async function POST(request: NextRequest) {
                         interviewCoach: job.interviewCoach,
                         existing: true,
                         cached: true,
-                        cachedHoursAgo: Math.round(hoursOld)
+                        cachedHoursAgo: Math.round(hoursOld),
+                        planKey
                     }),
                     request
                 );
             }
             console.log(`⏰ Plan stale (${Math.round(hoursOld)}h old), regenerating...`);
         }
+        
+        if (planKey === 'free') {
+            // Count how many jobs already have a generated interview plan
+            const generatedCount = await JobApplication.countDocuments({
+                userId: userIdObj,
+                'interviewCoach.status': 'ready'
+            });
+            
+            // If they already generated 1 plan and this is for a DIFFERENT job, block it.
+            // If it's the SAME job (regenerating), allow it.
+            const isSameJob = job.interviewCoach?.status === 'ready';
+            
+            if (generatedCount >= 1 && !isSameJob) {
+                return setCorsHeaders(
+                    NextResponse.json({
+                        success: false,
+                        error: 'Free users can only generate an interview plan for 1 job. Upgrade to Pro for unlimited interview coaching.',
+                        requiresUpgrade: true
+                    }, { status: 403 }),
+                    request
+                );
+            }
+        }
+        // ----------------------------------------------------------------
 
         // Fetch Master CV for personalization
         let cvData: any = {};
@@ -218,7 +249,8 @@ export async function POST(request: NextRequest) {
                 NextResponse.json({
                     success: true,
                     interviewCoach: verifyJob.interviewCoach,
-                    existing: false
+                    existing: false,
+                    planKey: planKey
                 }),
                 request
             );

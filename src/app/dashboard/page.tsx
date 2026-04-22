@@ -193,17 +193,7 @@ function DashboardContent() {
       <div 
         className="w-full bg-white dark:bg-[#111317] shadow-sm border border-gray-100 dark:border-white/5 rounded-3xl p-6 md:p-8 flex flex-col relative"
       >
-        {/* Top Bar: Search and Notifications */}
-        <div className="absolute top-6 right-6 md:top-8 md:right-8 flex items-center gap-2 lg:gap-4 z-[100]">
-          <div className="flex-1 md:w-auto">
-            <GlobalSearchBar />
-          </div>
-          <div className="shrink-0">
-            <NotificationCenter />
-          </div>
-        </div>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mt-14 md:mt-0">
+        <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
           <div className="flex-1 flex flex-col justify-center min-w-0">
             <h1 className="font-black text-gray-900 dark:text-white leading-tight tracking-tight text-3xl lg:text-4xl mb-2">
               {getGreeting()},<br />{getUserDisplayName(userData)}!
@@ -213,21 +203,34 @@ function DashboardContent() {
             </p>
           </div>
           
-          <div className="flex flex-col items-center shrink-0">
-            <div className="relative w-16 h-16 lg:w-20 lg:h-20 mb-2">
-              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
-                <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
-                  strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-                  className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="font-black text-gray-900 dark:text-white text-lg lg:text-xl">{cvHealthScore}%</span>
+          <div className="flex flex-col md:flex-row items-center gap-6 shrink-0">
+            {/* Score Ring (Prior to search bar) */}
+            <div className="flex flex-col items-center shrink-0">
+              <div className="relative w-16 h-16 lg:w-20 lg:h-20 mb-2">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none" className="text-gray-200 dark:text-white/10" />
+                  <circle cx="50" cy="50" r="44" stroke="currentColor" strokeWidth="8" fill="none"
+                    strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
+                    className={`${status.stroke} transition-all duration-1000 ease-out`} strokeLinecap="round" />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="font-black text-gray-900 dark:text-white text-lg lg:text-xl">{cvHealthScore}%</span>
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <p className="text-gray-500 dark:text-gray-400 font-bold text-[9px] lg:text-[10px] text-center uppercase tracking-widest">Master CV</p>
+                <p className={`text-[9px] lg:text-[10px] font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
               </div>
             </div>
-            <div className="flex flex-col items-center">
-              <p className="text-gray-500 dark:text-gray-400 font-bold text-[9px] lg:text-[10px] text-center uppercase tracking-widest">Master CV</p>
-              <p className={`text-[9px] lg:text-[10px] font-black text-center mt-0.5 ${status.color}`}>{status.label}</p>
+
+            {/* Search Bar & Notifications */}
+            <div className="flex items-center gap-2 lg:gap-4">
+              <div className="w-full md:w-64 lg:w-80">
+                <GlobalSearchBar />
+              </div>
+              <div className="shrink-0">
+                <NotificationCenter />
+              </div>
             </div>
           </div>
         </div>

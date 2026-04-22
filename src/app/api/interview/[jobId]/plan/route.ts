@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
-import { JobApplication } from '@/models';
+import { JobApplication, User } from '@/models';
 import { setCorsHeaders } from '@/lib/utils/cors-helpers';
 import mongoose from 'mongoose';
 
@@ -106,6 +106,10 @@ export async function GET(
         });
 
 
+        // Fetch User streak
+        const user = await User.findById(userIdQuery).select('interviewCoach');
+        const currentStreak = user?.interviewCoach?.currentStreak || 0;
+
         // Build session-like response for frontend compatibility
         const session = {
             _id: job._id,
@@ -118,7 +122,8 @@ export async function GET(
             modules: modules,
             readinessScore: readinessScore || 0,
             status: job.interviewCoach.status,
-            generatedAt: job.interviewCoach.generatedAt
+            generatedAt: job.interviewCoach.generatedAt,
+            currentStreak: currentStreak
         };
 
         return setCorsHeaders(

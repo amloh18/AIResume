@@ -150,6 +150,8 @@ export interface IJobApplication extends Document {
         strengths: string[];
         improvements: string[];
         refinedAnswer: string;
+        feedback_summary?: string;
+        your_edge?: string;
       };
     }>;
   };
@@ -407,7 +409,9 @@ const jobApplicationSchema = new Schema<IJobApplication>({
         score: { type: Number, min: 0, max: 100 },
         strengths: [{ type: String }],
         improvements: [{ type: String }],
-        refinedAnswer: { type: String }
+        refinedAnswer: { type: String },
+        feedback_summary: { type: String },
+        your_edge: { type: String }
       }
     }]
   },

@@ -65,7 +65,7 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     aiSurgeonMode: 'spelling_only',
     coverLetterAI: false,       // No cover letter generator
     docxExport: false,          // PDF only
-    interviewCoach: false,      // No Interview Coach
+    interviewCoach: true,       // Gated inside feature (1 job, 1 question)
     jobTracker: false,          // No Job Tracker
     jobParsing: false,          // Cannot parse job descriptions
     prioritySupport: false,
