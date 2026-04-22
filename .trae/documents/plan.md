@@ -1,57 +1,59 @@
-# Implementation Plan for CV Builder UI/UX and AI Features
+# Plan: Implement Luxury Blank State and Snippet Gravity Sidebar
 
-## 1. Header Text Visibility in Light Theme
-**File:** `src/components/resume-enhancer/ResumeEnhancerContainer.tsx`
-- **Issue:** The CV Title in the top app bar uses `text-white` which is invisible on light backgrounds.
-- **Action:** Update the title `<span>` class to use `text-gray-900 dark:text-white` instead of `text-white`.
+## Summary
+Transform the empty state of list-based form sections (Work Experience, Education, Projects, etc.) from a simple "+ Add" button to a high-end "Skeleton UX". Update input placeholders to be directive and instructional. Introduce a "Snippet Gravity" sidebar for quick skill injections, and refine the rich text editor's empty state with a breathing AI suggestion button.
 
-## 2. Replace Snippet Modal Centering
-**File:** `src/components/cv-builder-pro/CVCanvasEngine.tsx`
-- **Issue:** The modal is `fixed inset-0` but has a `z-50` index, placing it *under* the top app bar (`z-[100]`), which makes it look off-center.
-- **Action:** Change the modal's z-index to `z-[110]` so it covers the header and centers correctly within the entire viewport.
+## Current State Analysis
+- **Empty States:** List-based sections currently show a simple dashed "+ Add another [Section]" button when empty.
+- **Placeholders:** Input placeholders are generic (e.g., "Senior Product Manager", "Tech Corp").
+- **Rich Text Editor:** The `WYSIWYGEditor` has a fixed small height and generic placeholders.
+- **AI Suggestion Button:** The ✨ Suggest button in the `WYSIWYGToolbar` is static.
+- **Sidebar:** There is no sidebar for quick snippet insertion in the form view.
 
-## 3. Hide Contact Section in Header if in Sidebar
-**Files:** `src/components/cv-builder-pro/components/CoreUI.tsx` and `src/components/cv-builder-pro/registry.tsx`
-- **Issue:** Contact details duplicate when present in both header and sidebar.
-- **Action:** 
-  - In `CoreUI.tsx`, pass `activeTemplate` to `SnippetComponent.render` alongside `design`.
-  - In `registry.tsx`, update header snippets (e.g., `header-minimal`, `header-split`) to check if `activeTemplate?.zones?.sidebar` (or left/right) includes `sidebar-contact`. If true, do not render `ContactLinks`.
+## Proposed Changes
 
-## 4. Add Round Border Pill Shaped Skills
-**File:** `src/components/cv-builder-pro/registry.tsx`
-- **Issue:** The user requested pill-shaped skills.
-- **Action:** Add a new snippet `skills-round-pills` to `SNIPPETS` which replicates `skills-pills` but replaces `rounded-md` with `rounded-full`. Update `CANVAS_TEMPLATES` to use this where appropriate or make it available in the library.
+### 1. `EmptyStateSkeleton` Component
+- **File:** `src/components/ui/EmptyStateSkeleton.tsx` (New)
+- **What/Why/How:** Create a reusable skeleton component for empty list states. It will display light gray rounded bars mimicking a filled entry, with a centered, high-contrast Lime Green "+" button and the micro-copy: "Add your first [item] to unlock career analytics."
 
-## 5. Show Snippets Preview for Empty CV Data
-**File:** `src/components/cv-builder-pro/CVCanvasEngine.tsx`
-- **Issue:** Snippet previews are blank if `cvData` is empty.
-- **Action:** Create a `MOCK_CV_DATA` object with placeholder data. In the Add/Replace modal, deeply merge `cvData` with `MOCK_CV_DATA` (using mock data as a fallback for empty fields/arrays) and pass the merged object to the snippet's `render` function for the preview thumbnail.
+### 2. Apply Skeletons to List-Based Sections
+- **Files:** 
+  - `src/components/forms/WorkExperienceSection.tsx`
+  - `src/components/forms/EducationSection.tsx`
+  - `src/components/forms/ProjectsSection.tsx`
+  - `src/components/forms/VolunteerSection.tsx`
+  - `src/components/forms/CertificatesSection.tsx`
+  - `src/components/forms/PublicationsSection.tsx`
+  - `src/components/forms/AwardsSection.tsx`
+- **What/Why/How:** When `safeData.length === 0`, render the `EmptyStateSkeleton` instead of the basic "+ Add" button.
 
-## 6. Hide Existing Sections in "Add Section" Modal
-**File:** `src/components/cv-builder-pro/CVCanvasEngine.tsx`
-- **Issue:** Users shouldn't be able to add duplicate sections (e.g., two "Experience" sections).
-- **Action:** When `replacingSnippet.isAdd` is true, calculate the active categories currently in the `zones` state. Filter the `SNIPPETS` array in the modal to exclude any snippet whose `category` is already present.
+### 3. Contextual "Magic" Placeholders
+- **Files:** Same form section files as above.
+- **What/Why/How:** Update the `placeholder` props for all inputs and the `WYSIWYGEditor`.
+  - **Work Experience:** Job Title `e.g., "Lead Solutions Architect"`, Company `e.g., "Global Tech Solutions"`, Summary `Start with a strong verb... (e.g., Orchestrated a cloud migration that reduced latency by 30%)`.
+  - **Education:** Degree `e.g., "Master of Science"`, Field `e.g., "Computer Science"`, Institution `e.g., "Stanford University"`, Summary `Start with an achievement... (e.g., Graduated top 5% of class)`.
+  - **Projects:** Name `e.g., "E-commerce Platform"`, Summary `Start with the impact... (e.g., Built a scalable backend serving 10k+ users)`.
 
-## 7. Make Section Hover Border Thin and Subtle
-**File:** `src/components/cv-builder-pro/components/CoreUI.tsx`
-- **Issue:** The hover border on sections is too thick.
-- **Action:** Change the hover styles from `border-[2px]` to `border-[1px]` and adjust the hover border color to be more subtle (e.g., `group-hover/inner:border-blue-400/50`).
+### 4. Refine `WYSIWYGEditor` UI
+- **Files:** `src/components/ui/WYSIWYGEditor.tsx`, `src/components/ui/WYSIWYGToolbar.tsx`, `src/app/globals.css`
+- **What/Why/How:** 
+  - Increase the default minimum height of the editor (e.g., `minHeight: '150px'`).
+  - Add a custom `@keyframes breathe` to `globals.css` that scales from 1.0 to 1.05.
+  - In `WYSIWYGToolbar.tsx`, apply the `animate-[breathe_2s_ease-in-out_infinite]` class to the ✨ Suggest button when the editor is completely empty.
+  - Fade the toolbar to 50% opacity when the editor is not focused.
 
-## 8. Page Gap Shadow Styling
-**File:** `src/components/cv-builder-pro/CVCanvasEngine.tsx`
-- **Issue:** The page gap is a solid grey bar.
-- **Action:** Update the `repeating-linear-gradient` for `.cv-page-visualizer` to draw a subtle shadow (using `rgba(0,0,0,0.1)`) at the top and bottom of the page breaks, leaving the center of the gap transparent so the background shows through.
+### 5. "Snippet Gravity" Sidebar
+- **File:** `src/components/forms/SnippetGravitySidebar.tsx` (New), `src/components/forms/WorkExperienceSection.tsx`
+- **What/Why/How:** Create a persistent right-hand panel that displays a "Recommended for you" stack of skill pills based on the current Job Title. When a user clicks a pill, it appends the text to the `summary` field of that work experience entry. Integrate this sidebar into the `SortableWorkItem` layout using a flex/grid structure (hidden on smaller screens, visible on desktop).
 
-## 9 & 10. Robust AI Contextual Suggestion (STAR & Tone)
-**Files:** 
-- `src/components/cv-builder-pro/CVCanvasEngine.tsx`
-- `src/app/api/ai/fix-and-improve/route.ts`
-- **Issue:** Suggestions are hardcoded. Needs Tone Changer, STAR method, and robust plan limit handling.
-- **Action:**
-  - **API:** Update `/api/ai/fix-and-improve/route.ts` to check `usageLimitsService` (enforcing plan limits). Add support for a `tone` parameter in the prompt. Return a 402 status if limits are exhausted.
-  - **UI:** In `CVCanvasEngine.tsx`, update `handleSuggestPoint` to capture the current text. Render a popup with a "Tone" dropdown and a "STAR Method" button. When clicked, set a loading state, call the API, and display the result. If a 402 is returned, show an "Upgrade Plan" message with a link.
+## Assumptions & Decisions
+- The Skeleton Empty State will replace the existing "+ Add" button *only* when the list is completely empty. The "+ Add another" button will still appear below existing items.
+- The Snippet Gravity Sidebar will initially be implemented for the Work Experience section, as it relies heavily on the "Job Title" context to recommend relevant skills.
+- Snippet insertion will intelligently append to the HTML content of the WYSIWYG editor (e.g., inserting before the closing `</p>` tag).
 
-## 11. AI Analysis Sidebar Light Theme Support
-**File:** `src/components/resume-enhancer/panels/ATSMeterPanel.tsx`
-- **Issue:** The AI Analysis sidebar uses hardcoded dark theme classes.
-- **Action:** Refactor the container and inner elements to use Tailwind's `dark:` modifier (e.g., `bg-white dark:bg-[#11140e]`, `text-gray-900 dark:text-white`, `border-gray-200 dark:border-white/5`) to support both light and dark themes.
+## Verification Steps
+1. Open the Interactive CV Form and clear all entries in the Work Experience section. Verify the Skeleton Empty State appears with the lime green "+" button.
+2. Click the "+" button and verify a new empty entry appears with the new Contextual Magic Placeholders.
+3. Focus on the Description text area and verify the toolbar becomes 100% opaque, and the ✨ Suggest button pulses (breathes).
+4. Type a Job Title (e.g., "Software Engineer") and verify the Snippet Gravity Sidebar on the right updates with relevant skills.
+5. Click a recommended skill pill and verify it is appended to the Description text area.

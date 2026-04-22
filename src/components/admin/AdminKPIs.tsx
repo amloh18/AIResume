@@ -77,8 +77,6 @@ const AdminKPIs: React.FC = () => {
 
   const fetchRecentUsers = async () => {
     try {
-      // Assuming there's a users endpoint we can use, or activity endpoint.
-      // The admin dashboard has an activity API: /api/admin/activity?limit=5
       const response = await fetch('/api/admin/users?limit=4');
       if (response.ok) {
         const data = await response.json();
@@ -334,7 +332,7 @@ const AdminKPIs: React.FC = () => {
                       <Activity className="w-4 h-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{act.action}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{act.title || act.action}</p>
                       <p className="text-xs text-gray-500">
                         {isRecent ? 'Today' : date.toLocaleDateString()}
                       </p>

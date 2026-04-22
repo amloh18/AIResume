@@ -23,6 +23,8 @@ import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 import InlineSuggestion from '@/components/resume-enhancer/annotations/InlineSuggestion';
 import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
+import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
+import { SnippetGravitySidebar } from '@/components/forms/SnippetGravitySidebar';
 
 interface WorkExperienceSectionProps {
   data: any[];
@@ -131,7 +133,7 @@ function SortableWorkItem({
             value={work.position || ''}
             onChange={(e) => onUpdate(index, 'position', e.target.value)}
             className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-            placeholder="Senior Product Manager"
+            placeholder='e.g., "Lead Solutions Architect"'
           />
         </div>
         <div>
@@ -141,7 +143,7 @@ function SortableWorkItem({
             value={work.name || ''}
             onChange={(e) => onUpdate(index, 'name', e.target.value)}
             className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-none text-white placeholder-white/50 focus:outline-none focus:border-[#80FF00] focus:bg-white/15 transition-colors"
-            placeholder="Tech Corp"
+            placeholder='e.g., "Global Tech Solutions"'
           />
         </div>
         <div>
@@ -166,43 +168,60 @@ function SortableWorkItem({
         </div>
       </div>
 
-      {/* Work Summary */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-white/80 text-sm font-medium">Work Summary</label>
-          <WYSIWYGToolbar
+      {/* Work Summary and Snippet Gravity */}
+      <div className="mt-4 flex gap-6 items-start">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-white/80 text-sm font-medium">Work Summary</label>
+          </div>
+          <WYSIWYGEditor
+            key={`work-summary-${index}`}
+            value={work?.summary || ''}
+            onChange={(value) => onUpdate(index, 'summary', value)}
+            rows={4}
+            placeholder="Start with a strong verb... (e.g., Orchestrated a cloud migration that reduced latency by 30%)"
+            hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')}
+            showToolbar={true}
             showAIButton={true}
             fieldType="experience"
-            onAISuggestions={() => onGenerateSuggestions(index, work)}
-            isGenerating={loadingSuggestions}
+            onAIGenerate={() => onGenerateSuggestions(index, work)}
+            isGenerating={loadingSuggestions[index] || false}
           />
+          {/* Inline suggestions */}
+          {reviewMode && annotations
+            .filter((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')
+            .map((fix) => (
+              <InlineSuggestion
+                key={fix.id}
+                fix={fix}
+                onApply={onApplyAnnotation || (() => { })}
+                onDismiss={onDismissAnnotation || (() => { })}
+              />
+            ))}
         </div>
-        <AISuggestionsPanel
-          isVisible={showSuggestions}
-          suggestions={suggestions}
-          isLoading={loadingSuggestions}
-          onSelect={(content) => onSelectSuggestion(index, content)}
-          onClose={() => onCloseSuggestions(index)}
-        />
-        <WYSIWYGEditor
-          key={`work-summary-${index}`}
-          value={work?.summary || ''}
-          onChange={(value) => onUpdate(index, 'summary', value)}
-          rows={4}
-          placeholder="Describe your key responsibilities and achievements..."
-          hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')}
-        />
-        {/* Inline suggestions */}
-        {reviewMode && annotations
-          .filter((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')
-          .map((fix) => (
-            <InlineSuggestion
-              key={fix.id}
-              fix={fix}
-              onApply={onApplyAnnotation || (() => { })}
-              onDismiss={onDismissAnnotation || (() => { })}
+
+        {showSuggestions && (
+          <div className="w-80 flex-shrink-0">
+            <AISuggestionsPanel
+              isVisible={showSuggestions}
+              suggestions={suggestions}
+              isLoading={loadingSuggestions}
+              onSelect={(content) => onSelectSuggestion(index, content)}
+              onClose={() => onCloseSuggestions(index)}
             />
-          ))}
+          </div>
+        )}
+
+        <SnippetGravitySidebar
+          header={work.position || ''}
+          onSelectSnippet={(snippet) => {
+            const currentSummary = work.summary || '';
+            const newSummary = currentSummary.endsWith('</p>') 
+              ? currentSummary.slice(0, -4) + ', ' + snippet + '</p>' 
+              : currentSummary ? currentSummary + ', ' + snippet : snippet;
+            onUpdate(index, 'summary', newSummary);
+          }}
+        />
       </div>
     </div>
   );
@@ -392,7 +411,9 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
           items={safeData.map((_, index) => `work-${index}`)}
           strategy={verticalListSortingStrategy}
         >
-          {safeData.map((work, index) => (
+          {safeData.length === 0 ? (
+          <EmptyStateSkeleton onAdd={addWorkItem} itemName="Role" />
+        ) : safeData.map((work, index) => (
             <SortableWorkItem
               key={`work-${index}`}
               work={work}
@@ -415,13 +436,15 @@ const WorkExperienceSection: React.FC<WorkExperienceSectionProps> = ({
         </SortableContext>
       </DndContext>
 
-      <button
-        onClick={addWorkItem}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-all flex items-center justify-center gap-2"
-      >
-        <Plus size={20} />
-        Add another Work Experience
-      </button>
+      {safeData.length > 0 && (
+        <button
+          onClick={addWorkItem}
+          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/50 hover:text-[#80FF00] rounded-none transition-all flex items-center justify-center gap-2"
+        >
+          <Plus size={20} />
+          Add another Work Experience
+        </button>
+      )}
     </>
   );
 };

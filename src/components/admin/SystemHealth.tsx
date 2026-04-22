@@ -76,10 +76,8 @@ const SystemHealth: React.FC = () => {
 
   useEffect(() => {
     fetchSystemStatus();
-    generatePerformanceData();
     const interval = setInterval(() => {
       fetchSystemStatus();
-      generatePerformanceData();
     }, 30000); // Update every 30 seconds
     return () => clearInterval(interval);
   }, []);
@@ -120,43 +118,7 @@ const SystemHealth: React.FC = () => {
     }
   };
 
-  const generatePerformanceData = () => {
-    const data: PerformanceData[] = [];
-    const now = new Date();
-    
-    // Generate 24 hours of data with realistic patterns
-    for (let i = 23; i >= 0; i--) {
-      const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-      const hour = time.getHours();
-      
-      // Generate realistic patterns based on time of day
-      const isWorkHours = hour >= 9 && hour <= 17;
-      const isPeakHours = hour >= 10 && hour <= 14;
-      const isNightHours = hour >= 22 || hour <= 6;
-      
-      // Base values with time-based adjustments
-      const baseApiResponse = isWorkHours ? 85 : isNightHours ? 95 : 90;
-      const baseDbResponse = isWorkHours ? 25 : isNightHours ? 35 : 30;
-      const baseCpuUsage = isPeakHours ? 35 : isWorkHours ? 28 : isNightHours ? 15 : 22;
-      const baseMemoryUsage = isPeakHours ? 45 : isWorkHours ? 35 : isNightHours ? 20 : 30;
-      const baseRequests = isPeakHours ? 85 : isWorkHours ? 65 : isNightHours ? 25 : 45;
-      
-      // Add realistic variations
-      const variation = (Math.random() - 0.5) * 0.3; // ±15% variation
-      
-      data.push({
-        time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        apiResponse: Math.floor(baseApiResponse * (1 + variation)),
-        dbResponse: Math.floor(baseDbResponse * (1 + variation)),
-        cpuUsage: Math.floor(baseCpuUsage * (1 + variation)),
-        memoryUsage: Math.floor(baseMemoryUsage * (1 + variation)),
-        storageUsage: 45.2 + (Math.random() * 1 - 0.5), // Small daily variation
-        requests: Math.floor(baseRequests * (1 + variation))
-      });
-    }
-    
-    setPerformanceData(data);
-  };
+  // Removed hardcoded mock generator
 
   const getStatusColor = (status: string) => {
     switch (status) {

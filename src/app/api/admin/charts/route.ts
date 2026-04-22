@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { User, CV, JobApplication } from '@/models';
+import { User, CV, JobApplication, ActivityLog } from '@/models';
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Get data for this period
-      const [users, cvs, jobs] = await Promise.all([
+      const [users, cvs, jobs, aiActivity] = await Promise.all([
         User.countDocuments({
           createdAt: { $gte: currentDate, $lt: nextDate }
         }),
@@ -63,11 +63,12 @@ export async function GET(request: NextRequest) {
         }),
         JobApplication.countDocuments({
           createdAt: { $gte: currentDate, $lt: nextDate }
-        })
+        }),
+        ActivityLog ? ActivityLog.countDocuments({
+          logType: 'ai',
+          createdAt: { $gte: currentDate, $lt: nextDate }
+        }) : Promise.resolve(0)
       ]);
-
-      // Generate mock AI usage data
-      const aiUsage = Math.floor(Math.random() * 50) + 10;
 
       chartData.push({
         date: currentDate.toISOString().split('T')[0],
@@ -75,7 +76,7 @@ export async function GET(request: NextRequest) {
         users,
         cvs,
         jobs,
-        aiUsage
+        aiUsage: aiActivity
       });
 
       currentDate.setTime(nextDate.getTime());

@@ -192,6 +192,114 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
               : 'bg-white/10'
         }`}
       >
+        {/* Toolbar - Now conditionally opacity */}
+        {showToolbar && (
+          <div 
+            className={`transition-all duration-300 overflow-hidden ${isFocused ? 'opacity-100 max-h-[100px] mb-2' : 'opacity-0 max-h-0 pointer-events-none'}`}
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <WYSIWYGToolbar
+              formatState={formatState}
+              undoStack={undoStack}
+              redoStack={redoStack}
+              onBold={handleBold}
+              onItalic={handleItalic}
+              onUnderline={handleUnderline}
+              onBulletList={handleBulletList}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onStrikethrough={() => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('strikeThrough', false);
+                  });
+                }
+              }}
+              onHeading={(level) => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('formatBlock', false, `h${level}`);
+                  });
+                }
+              }}
+              onAlign={(alignment) => {
+                const cmd = alignment === 'left' ? 'justifyLeft' : alignment === 'center' ? 'justifyCenter' : alignment === 'right' ? 'justifyRight' : 'justifyFull';
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand(cmd, false);
+                  });
+                }
+              }}
+              onOrderedList={() => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('insertOrderedList', false);
+                  });
+                }
+              }}
+              onBlockquote={() => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('formatBlock', false, 'blockquote');
+                  });
+                }
+              }}
+              onHorizontalRule={() => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('insertHorizontalRule', false);
+                  });
+                }
+              }}
+              onFontSize={(size) => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('fontSize', false, size);
+                  });
+                }
+              }}
+              onTextColor={(color) => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('foreColor', false, color);
+                  });
+                }
+              }}
+              onLink={() => {
+                const url = prompt('Enter URL:');
+                if (url) {
+                  if (editorRef.current) {
+                    editorRef.current.focus();
+                    requestAnimationFrame(() => {
+                      document.execCommand('createLink', false, url);
+                    });
+                  }
+                }
+              }}
+              onUnlink={() => {
+                if (editorRef.current) {
+                  editorRef.current.focus();
+                  requestAnimationFrame(() => {
+                    document.execCommand('unlink', false);
+                  });
+                }
+              }}
+              showAIButton={showAIButton}
+              fieldType={fieldType}
+              onAIGenerate={onAIGenerate}
+              isGenerating={isGenerating}
+              currentValue={value}
+            />
+          </div>
+        )}
 
         {/* Editable Content Area */}
         <div
@@ -213,9 +321,10 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
               handleContentChange();
             }
           }}
-          className="w-full px-4 py-3 text-white focus:outline-none resize-none overflow-y-auto"
-          style={{ minHeight, maxHeight: `${rows * 2}rem` }}
+          className={`w-full px-4 py-3 text-white focus:outline-none custom-scrollbar editor-content ${className} resize-none overflow-y-auto`}
+          style={{ minHeight: rows ? `${Math.max(rows * 1.5, 6)}rem` : '150px', maxHeight: `${rows * 2}rem` }}
           data-placeholder={placeholder}
+          spellCheck="false"
           suppressContentEditableWarning
         />
 

@@ -40,19 +40,21 @@ export async function GET(request: NextRequest) {
 
     // Helper to estimate cost
     const calculateLogCost = (log: any) => {
-      // If cost is already stored and non-zero, presume it's correct? 
-      // User asked to "fix it", implying stored might be wrong. Let's recalculate.
+      // Use stored cost if available
+      if (typeof log.aiMetadata?.cost === 'number') {
+        return log.aiMetadata.cost;
+      }
 
       let inputTokens = 0;
       let outputTokens = 0;
 
-      // Try to get from metadata if available (some loggers might store it)
+      // Try to get from metadata if available
       if (log.aiMetadata?.inputTokens) inputTokens = log.aiMetadata.inputTokens;
       else if (log.aiMetadata?.prompt) inputTokens = Math.ceil(log.aiMetadata.prompt.length / 4);
 
       if (log.aiMetadata?.outputTokens) outputTokens = log.aiMetadata.outputTokens;
       else if (log.aiMetadata?.responseLength) outputTokens = Math.ceil(log.aiMetadata.responseLength / 4);
-      // Fallback if only total is known: assume 80% input, 20% output? 
+      // Fallback if only total is known
       else if (log.aiMetadata?.tokensUsed) {
         inputTokens = Math.ceil(log.aiMetadata.tokensUsed * 0.8);
         outputTokens = log.aiMetadata.tokensUsed - inputTokens;

@@ -273,7 +273,7 @@ export const LivePreview: React.FC<LivePreviewProps> = ({
 
       {/* Preview Area */}
       <div 
-        className="preview-viewport flex-1 overflow-auto bg-gray-200 dark:bg-gray-800 p-8"
+        className="preview-viewport flex-1 overflow-auto bg-[#f3f2ee] dark:bg-[#1a230f] p-8"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

@@ -210,6 +210,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Check AI Quota before performing expensive calculation
+    const { AIQuotaService } = await import('@/lib/services/ai-quota-service');
+    const quotaStatus = await AIQuotaService.checkAndConsumeQuota(userId, 'ats_calculator', true);
+    
+    if (!quotaStatus.allowed) {
+      console.log('⚠️ ATS Calculate Score API - Quota exceeded for user:', userId);
+      return NextResponse.json({
+        success: false,
+        error: 'quota_exceeded',
+        quotaStatus
+      }, { status: 403 });
+    }
+
     // Step 1: Run keyword gap analysis using AI (same as FloatingPulsePill)
     console.log('📊 ATS Calculate Score API - Running keyword gap analysis...');
     const keywordAnalysis = await KeywordGapAnalysisService.analyze(cvData, {

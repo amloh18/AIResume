@@ -70,23 +70,6 @@ const SECTION_TYPE_TO_ID: Record<string, string> = {
   'references': 'references'
 };
 
-// Simple toolbar wrapper - toolbar operates on currently focused editor
-function ToolbarWrapper({ showAIButton, fieldType, onAIGenerate, isGenerating }: {
-  showAIButton?: boolean;
-  fieldType?: 'summary' | 'experience' | 'other';
-  onAIGenerate?: () => void;
-  isGenerating?: boolean;
-}) {
-  return (
-    <WYSIWYGToolbar
-      showAIButton={showAIButton}
-      fieldType={fieldType}
-      onAIGenerate={onAIGenerate}
-      isGenerating={isGenerating}
-    />
-  );
-}
-
 // ...
 export default function MasterCVBuilderStep({ onNext, onBack, isEmbedded = false }: MasterCVBuilderStepProps) {
   const context = useAICareerReport();

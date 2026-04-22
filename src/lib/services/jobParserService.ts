@@ -441,7 +441,7 @@ Return JSON matching this structure:
         systemPrompt,
         temperature: 0.3, // Lower temperature for more consistent extraction
         maxTokens: 2048,
-        model: 'gemini-2.5-flash-lite'
+        model: 'gemini-2.0-flash-lite-preview-02-05'
       });
 
       // Validate result

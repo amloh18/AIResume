@@ -137,59 +137,7 @@ const AIAnalytics: React.FC = () => {
     if (aiData?.dailyUsage && aiData.dailyUsage.length > 0) {
       return aiData.dailyUsage;
     }
-
-    // Generate realistic data
-    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : timeRange === '90d' ? 90 : 365;
-    const mockData = [];
-
-    // Base values that scale with time range
-    const baseRequests = timeRange === '7d' ? 45 : timeRange === '30d' ? 65 : timeRange === '90d' ? 85 : 120;
-    const baseTokens = timeRange === '7d' ? 2500 : timeRange === '30d' ? 3500 : timeRange === '90d' ? 4500 : 6000;
-    const baseCost = timeRange === '7d' ? 4.5 : timeRange === '30d' ? 6.5 : timeRange === '90d' ? 8.5 : 12.0;
-
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-
-      // Generate realistic patterns
-      const trendFactor = 1 + (Math.sin(i * 0.15) * 0.25); // Weekly trend
-      const weekendFactor = [0, 6].includes(date.getDay()) ? 0.6 : 1; // Weekend reduction
-      const workdayFactor = [1, 2, 3, 4, 5].includes(date.getDay()) ? 1.2 : 0.8; // Workday boost
-
-      // For yearly data, group by months
-      let dateLabel: string;
-      if (timeRange === '1y') {
-        dateLabel = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
-      } else {
-        dateLabel = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }
-
-      mockData.push({
-        date: dateLabel,
-        requests: Math.floor((baseRequests * trendFactor * weekendFactor * workdayFactor) + (Math.random() * 20 - 10)),
-        tokens: Math.floor((baseTokens * trendFactor * weekendFactor * workdayFactor) + (Math.random() * 800 - 400)),
-        cost: parseFloat(((baseCost * trendFactor * weekendFactor * workdayFactor) + (Math.random() * 2 - 1)).toFixed(2))
-      });
-    }
-
-    // For yearly data, aggregate by month
-    if (timeRange === '1y') {
-      const monthlyData: { [key: string]: any } = {};
-
-      mockData.forEach(item => {
-        if (monthlyData[item.date]) {
-          monthlyData[item.date].requests += item.requests;
-          monthlyData[item.date].tokens += item.tokens;
-          monthlyData[item.date].cost += item.cost;
-        } else {
-          monthlyData[item.date] = { ...item };
-        }
-      });
-
-      return Object.values(monthlyData);
-    }
-
-    return mockData;
+    return [];
   };
 
   const costBreakdownData = [

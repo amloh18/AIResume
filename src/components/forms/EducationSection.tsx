@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy, GripVertical } from 'lucide-react';
+import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import {
   DndContext,
   closestCenter,
@@ -168,40 +169,45 @@ function SortableEducationItem({
       </div>
 
       {/* Description Field */}
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <label className="block text-white/80 text-sm font-medium">Description</label>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm" title="Show description as bullet points in the final resume">
-              <input
-                type="checkbox"
-                checked={!!education.showBullets}
-                onChange={(e) => onUpdate(index, 'showBullets', e.target.checked)}
-                className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
-              />
-              Show as bullet points
-            </label>
-            <WYSIWYGToolbar
-              showAIButton={true}
-              fieldType="other"
-              onAISuggestions={() => onGenerateSuggestions(index, education)}
-              isGenerating={loadingSuggestions}
+      <div className="mt-4 flex gap-6 items-start">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-white/80 text-sm font-medium">Description</label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer text-white/70 text-sm" title="Show description as bullet points in the final resume">
+                <input
+                  type="checkbox"
+                  checked={!!education.showBullets}
+                  onChange={(e) => onUpdate(index, 'showBullets', e.target.checked)}
+                  className="rounded border-white/20 bg-white/5 text-[#80FF00] focus:ring-[#80FF00]/50"
+                />
+                Show as bullet points
+              </label>
+            </div>
+          </div>
+          <WYSIWYGEditor
+            value={education.description || ''}
+            onChange={(value) => onUpdate(index, 'description', value)}
+            rows={3}
+            placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
+            showToolbar={true}
+            showAIButton={true}
+            fieldType="other"
+            onAIGenerate={() => onGenerateSuggestions(index, education)}
+            isGenerating={loadingSuggestions}
+          />
+        </div>
+        {showSuggestions && (
+          <div className="w-80 flex-shrink-0">
+            <AISuggestionsPanel
+              isVisible={showSuggestions}
+              suggestions={suggestions}
+              isLoading={loadingSuggestions}
+              onSelect={(content) => onSelectSuggestion(index, content)}
+              onClose={() => onCloseSuggestions(index)}
             />
           </div>
-        </div>
-        <AISuggestionsPanel
-          isVisible={showSuggestions}
-          suggestions={suggestions}
-          isLoading={loadingSuggestions}
-          onSelect={(content) => onSelectSuggestion(index, content)}
-          onClose={() => onCloseSuggestions(index)}
-        />
-        <WYSIWYGEditor
-          value={education.description || ''}
-          onChange={(value) => onUpdate(index, 'description', value)}
-          rows={3}
-          placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
-        />
+        )}
       </div>
     </div>
   );
@@ -364,7 +370,20 @@ const EducationSection: React.FC<EducationSectionProps> = ({
           items={safeData.map((_, index) => `education-${index}`)}
           strategy={verticalListSortingStrategy}
         >
-          {safeData.map((education, index) => (
+          {safeData.length === 0 ? (
+          <EmptyStateSkeleton onAdd={() => {
+          const newEducation = {
+            institution: '',
+            area: '',
+            studyType: '',
+            startDate: '',
+            endDate: '',
+            score: '',
+            description: ''
+          };
+          onUpdate([...safeData, newEducation]);
+        }} itemName="Education" />
+        ) : safeData.map((education, index) => (
             <SortableEducationItem
               key={`education-${index}`}
               education={education}
@@ -382,7 +401,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
           ))}
         </SortableContext>
       </DndContext>
-
+      {safeData.length > 0 && (
       <button
         onClick={() => {
           const newEducation = {
@@ -401,6 +420,7 @@ const EducationSection: React.FC<EducationSectionProps> = ({
         <Plus size={20} />
         Add another Education
       </button>
+      )}
     </>
   );
 };

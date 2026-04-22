@@ -226,12 +226,32 @@ export class ActivityLogService {
     action: string;
     status: LogStatus;
     errorMessage?: string;
+    endpoint?: string;
   }): Promise<void> {
+    let finalUserId = params.userId;
+    let finalUserEmail = params.userEmail;
+
+    // Attempt to get user from session if not provided
+    if (!finalUserId) {
+      try {
+        const { getServerSession } = await import('next-auth');
+        const { authOptions } = await import('@/lib/auth');
+        const session = await getServerSession(authOptions);
+        if (session?.user?.id) {
+          finalUserId = session.user.id;
+          finalUserEmail = session.user.email || finalUserEmail;
+        }
+      } catch (e) {
+        // Ignore session errors
+      }
+    }
+
     await this.log({
       logType: 'ai',
-      userId: params.userId,
-      userEmail: params.userEmail,
+      userId: finalUserId,
+      userEmail: finalUserEmail,
       action: params.action,
+      endpoint: params.endpoint,
       status: params.status,
       errorMessage: params.errorMessage,
       aiMetadata: {

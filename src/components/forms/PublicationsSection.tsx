@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy } from 'lucide-react';
+import { EmptyStateSkeleton } from '@/components/ui/EmptyStateSkeleton';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
 
@@ -90,7 +91,11 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
 
   return (
     <>
-      {safeData.map((publication, index) => (
+      {safeData.length === 0 ? (
+          <EmptyStateSkeleton onAdd={() => {
+            onUpdate([...safeData, { name: '', publisher: '', releaseDate: '', url: '', summary: '' }]);
+          }} itemName="Publication" />
+        ) : safeData.map((publication, index) => (
         <div key={index} className="bg-white/5 rounded-none p-6 border border-white/10 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold text-white">{publication.name || 'Publication Title'}</h4>
@@ -159,9 +164,10 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
                 placeholder="https://publication-url.com"
               />
             </div>
-          </div>
-          
-          <div className="mt-4">
+        </div>
+
+        <div className="mt-4 flex gap-6 items-start">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-white/80 text-sm font-medium">Summary / Highlights</label>
               <div className="flex items-center gap-4">
@@ -174,27 +180,20 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
                   />
                   Use Rich Text
                 </label>
-                <WYSIWYGToolbar
-                  showAIButton={true}
-                  fieldType="other"
-                  onAISuggestions={() => generateAISuggestions(index, publication)}
-                  isGenerating={loadingSuggestions[index] || false}
-                />
               </div>
             </div>
-            <AISuggestionsPanel
-              isVisible={showSuggestions[index] || false}
-              suggestions={suggestions[index] || []}
-              isLoading={loadingSuggestions[index] || false}
-              onSelect={(content) => handleSelectSuggestion(index, content)}
-              onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
-            />
+            
             {publication.useRichText !== false ? (
               <WYSIWYGEditor
                 value={publication.summary || ''}
                 onChange={(value) => updatePublication(index, 'summary', value)}
                 rows={3}
                 placeholder="Brief description of the publication and its significance..."
+                showToolbar={true}
+                showAIButton={true}
+                fieldType="other"
+                onAIGenerate={() => generateAISuggestions(index, publication)}
+                isGenerating={loadingSuggestions[index] || false}
               />
             ) : (
               <div className="space-y-3">
@@ -239,19 +238,34 @@ const PublicationsSection: React.FC<PublicationsSectionProps> = ({
               </div>
             )}
           </div>
+
+          {showSuggestions[index] && (
+            <div className="w-80 flex-shrink-0">
+              <AISuggestionsPanel
+                isVisible={showSuggestions[index] || false}
+                suggestions={suggestions[index] || []}
+                isLoading={loadingSuggestions[index] || false}
+                onSelect={(content) => handleSelectSuggestion(index, content)}
+                onClose={() => setShowSuggestions({ ...showSuggestions, [index]: false })}
+              />
+            </div>
+          )}
         </div>
+      </div>
       ))}
       
-      <button
-        onClick={() => {
-          const newPublication = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
-          onUpdate([...safeData, newPublication]);
-        }}
-        className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
-      >
-        <Plus size={20} />
-        Add another Publication
-      </button>
+      {safeData.length > 0 && (
+        <button
+          onClick={() => {
+            const newPublication = { name: '', publisher: '', releaseDate: '', url: '', summary: '' };
+            onUpdate([...safeData, newPublication]);
+          }}
+          className="w-full py-4 border-2 border-dashed border-white/20 hover:border-[#80FF00]/50 text-white/60 hover:text-[#80FF00] rounded-none transition-colors flex items-center justify-center gap-2"
+        >
+          <Plus size={20} />
+          Add another Publication
+        </button>
+      )}
     </>
   );
 };

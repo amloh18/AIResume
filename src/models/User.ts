@@ -35,7 +35,7 @@ export interface IUser extends Document {
   // Credit-based usage system (UNIFIED)
   credits?: {
     // General AI credits (used for all AI features)
-    aiCredits: number; // Free: 5/month, Paid: unlimited (-1)
+    aiCredits: number; // Free: 3/month, Paid: unlimited (-1)
     jobCredits: number; // Kept for backward compatibility (same as aiCredits)
     lastResetDate: Date;
     resetSchedule: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
@@ -283,13 +283,13 @@ const userSchema = new Schema<IUser>({
     // General AI credits (used for all AI features)
     aiCredits: {
       type: Number,
-      default: 5, // Free plan: 5 credits per month
+      default: 3, // Free plan: 3 credits per month
       min: -1 // -1 means unlimited
     },
     // jobCredits kept for backward compatibility (same value as aiCredits)
     jobCredits: {
       type: Number,
-      default: 5, // Free plan: 5 credits per month
+      default: 3, // Free plan: 3 credits per month
       min: -1 // -1 means unlimited
     },
     lastResetDate: {

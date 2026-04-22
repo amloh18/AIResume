@@ -9,6 +9,8 @@ export interface CreditInfo {
   limit: number;
   available: boolean;
   creditsRemaining: number;
+  aiCreditsRemaining?: number;
+  aiCreditsLimit?: number;
   lastResetDate?: Date;
   nextResetDate?: Date;
   resetSchedule?: 'monthly' | 'quarterly' | 'yearly' | 'one-time' | 'never';
@@ -98,6 +100,8 @@ export function useCredits(): UseCreditsReturn {
             limit: creditInfo.limit ?? 0,
             available: creditInfo.remaining > 0 || creditInfo.limit === -1,
             creditsRemaining: creditInfo.remaining ?? 0,
+            aiCreditsRemaining: creditInfo.aiCreditsRemaining ?? 0,
+            aiCreditsLimit: creditInfo.aiCreditsLimit ?? 0,
             planKey
           });
         } else {
@@ -108,6 +112,8 @@ export function useCredits(): UseCreditsReturn {
               limit: -1,
               available: true,
               creditsRemaining: -1,
+              aiCreditsRemaining: -1,
+              aiCreditsLimit: -1,
               planKey
             });
           } else {
@@ -117,6 +123,8 @@ export function useCredits(): UseCreditsReturn {
               limit: 0,
               available: false,
               creditsRemaining: 0,
+              aiCreditsRemaining: 0,
+              aiCreditsLimit: 0,
               planKey
             });
           }

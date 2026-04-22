@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   let cvData: any;
   let jobData: any;
   
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const userId = session.user.id;
+
     const requestData = await request.json();
     cvData = requestData.cvData;
     jobData = requestData.jobData;
@@ -15,6 +23,19 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'CV data is required' },
         { status: 400 }
       );
+    }
+
+    // Check AI Quota before performing expensive Full Analysis
+    const { AIQuotaService } = await import('@/lib/services/ai-quota-service');
+    const quotaStatus = await AIQuotaService.checkAndConsumeQuota(userId, 'full_analysis', true);
+    
+    if (!quotaStatus.allowed) {
+      console.log('⚠️ Comprehensive Analysis API - Quota exceeded for user:', userId);
+      return NextResponse.json({
+        success: false,
+        error: 'quota_exceeded',
+        quotaStatus
+      }, { status: 403 });
     }
 
     // Normalize job description field (handle both jobDescription and description)

@@ -36,6 +36,7 @@ interface WYSIWYGToolbarProps {
   onAIGenerate?: () => void;
   onAISuggestions?: () => void;
   isGenerating?: boolean;
+  currentValue?: string;
 }
 
 const FONT_SIZES = ['8', '9', '10', '11', '12', '14', '16', '18', '20', '24', '28', '32', '36', '48'];
@@ -223,9 +224,11 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
   fieldType = 'other',
   onAIGenerate,
   onAISuggestions,
-  isGenerating = false
+  isGenerating = false,
+  currentValue = ''
 }) => {
   const [currentFormatState, setCurrentFormatState] = React.useState(formatState);
+  const isValueEmpty = !currentValue || currentValue === '<br>' || currentValue === '' || currentValue === '<p></p>' || currentValue === '<p><br></p>' || currentValue === '<div><br></div>';
 
   // Update format state from document when selection changes
   React.useEffect(() => {
@@ -369,7 +372,10 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
   const handleUnlinkClick = onUnlink || (() => execCommandOnEditor('unlink'));
 
   return (
-    <div className="flex items-center gap-0.5 flex-wrap">
+    <div 
+      className="flex items-center gap-0.5 flex-wrap"
+      onMouseDown={(e) => e.preventDefault()}
+    >
       {/* Undo / Redo */}
       <button
         type="button"
@@ -600,13 +606,19 @@ export const WYSIWYGToolbar: React.FC<WYSIWYGToolbarProps> = ({
           type="button"
           onClick={onAISuggestions || onAIGenerate}
           disabled={isGenerating}
-          className={`p-1.5 rounded hover:bg-[var(--bg-tertiary)] transition-colors opacity-60 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+          className={`p-1.5 rounded transition-all duration-300 ml-auto flex items-center gap-1.5 ${
+            isGenerating ? 'opacity-50 cursor-not-allowed' : 
+            isValueEmpty 
+              ? 'bg-[#80FF00]/10 hover:bg-[#80FF00]/20 text-[#80FF00] animate-pulse transform hover:scale-105 shadow-[0_0_10px_rgba(128,255,0,0.2)] px-3' 
+              : 'hover:bg-[var(--bg-tertiary)] opacity-60'
+          }`}
           title="AI: Generate writing suggestions"
         >
           <Sparkles
             size={15}
-            className={`text-[color:var(--text-secondary)] ${isGenerating ? 'animate-pulse' : ''}`}
+            className={`${isValueEmpty ? 'text-[#80FF00]' : 'text-[color:var(--text-secondary)]'} ${isGenerating ? 'animate-pulse' : ''}`}
           />
+          {isValueEmpty && <span className="text-xs font-semibold">Suggest</span>}
         </button>
       )}
     </div>
