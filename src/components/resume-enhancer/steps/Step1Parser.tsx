@@ -41,70 +41,69 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(item.metadata?.thumbnailUrl || item.thumbnailUrl || null);
   
   const templateObj = React.useMemo(() => {
+    if (item.template) return item.template;
     if (typeof item.templateId === 'object' && item.templateId) return item.templateId;
     if (typeof item.templateId === 'string') {
       const foundTemplate = HARDCODED_TEMPLATES.find(t => t.id === item.templateId || (t as any)._id === item.templateId);
       if (foundTemplate) return foundTemplate;
     }
     return null;
-  }, [item.templateId]);
+  }, [item.template, item.templateId]);
 
   return (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 pt-4 pb-16">
-      <div 
-        ref={ref}
-        className="w-[65%] aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-lg border border-gray-200 dark:border-white/10 transition-all duration-700 shadow-md flex flex-col relative overflow-hidden group-hover:scale-[1.03]"
-      >
-        {isInView ? (
-          !isCoverLetter && item.cvData && templateObj ? (
-             <div className="w-full h-full opacity-90 bg-white relative">
-               <div className="absolute inset-0 pointer-events-none z-10" />
-               <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
-             </div>
-          ) : thumbnailUrl ? (
-             <img 
-               src={thumbnailUrl} 
-               alt={item.title} 
-               className="w-full h-full object-cover bg-white" 
-               onError={(e) => {
-                 const target = e.target as HTMLImageElement;
-                 const currentSrc = target.src;
-                 if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
-                   // Extract key and fetch presigned URL
-                   fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
-                     .then(res => res.json())
-                     .then(data => {
-                       if (data.url && data.url !== currentSrc) {
-                         setThumbnailUrl(data.url);
-                       } else {
-                         setThumbnailUrl(null);
-                       }
-                     })
-                     .catch(() => {
+    <div 
+      ref={ref}
+      className="w-full aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-[2rem] border border-gray-200 dark:border-white/10 transition-all duration-500 shadow-md flex flex-col relative overflow-hidden group-hover:shadow-xl group-hover:border-lime-500/40 group-hover:scale-[1.02]"
+    >
+      {isInView ? (
+        !isCoverLetter && item.cvData && templateObj ? (
+           <div className="w-full h-full opacity-90 bg-white relative">
+             <div className="absolute inset-0 pointer-events-none z-10" />
+             <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
+           </div>
+        ) : thumbnailUrl ? (
+           <img 
+             src={thumbnailUrl} 
+             alt={item.title} 
+             className="w-full h-full object-cover bg-white" 
+             onError={(e) => {
+               const target = e.target as HTMLImageElement;
+               const currentSrc = target.src;
+               if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
+                 // Extract key and fetch presigned URL
+                 fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
+                   .then(res => res.json())
+                   .then(data => {
+                     if (data.url && data.url !== currentSrc) {
+                       setThumbnailUrl(data.url);
+                     } else {
                        setThumbnailUrl(null);
-                     });
-                 } else {
-                   setThumbnailUrl(null);
-                 }
-               }}
-             />
-          ) : (
-            // Generic fallback
-            <div className="w-full h-full p-3 flex flex-col gap-2 bg-white/5">
-              <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
-              <div className="h-2 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
-              <div className="h-1.5 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
-              <div className="mt-auto space-y-1.5">
-                 <div className="h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
-                 <div className="h-1 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
-                 <div className="h-1 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
-              </div>
-            </div>
-          )
+                     }
+                   })
+                   .catch(() => {
+                     setThumbnailUrl(null);
+                   });
+               } else {
+                 setThumbnailUrl(null);
+               }
+             }}
+           />
         ) : (
-          <div className="w-full h-full bg-gray-100 dark:bg-white/5 animate-pulse" />
-        )}
-      </div>
+          // Generic fallback
+          <div className="w-full h-full p-6 flex flex-col gap-3 bg-white/5">
+            <div className="absolute inset-0 bg-gradient-to-br from-lime-500/5 to-transparent" />
+            <div className="h-3 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
+            <div className="h-2 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
+            <div className="mt-auto space-y-2">
+               <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
+               <div className="h-1.5 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+               <div className="h-1.5 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+            </div>
+          </div>
+        )
+      ) : (
+        <div className="w-full h-full bg-gray-100 dark:bg-white/5 animate-pulse" />
+      )}
     </div>
   );
 };
@@ -134,6 +133,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   const [showJDInput, setShowJDInput] = useState(false);
   const [existingCVs, setExistingCVs] = useState<ExistingCV[]>([]);
   const [isLoadingCVs, setIsLoadingCVs] = useState(false);
+  const [draftCV, setDraftCV] = useState<any>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const topSectionRef = React.useRef<HTMLDivElement>(null);
@@ -172,6 +172,20 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     }
   }, [user?.id]);
 
+  const fetchDraftCV = useCallback(async () => {
+    try {
+      const response = await fetch('/api/cv-draft/load');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setDraftCV(data.data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load draft CV:', error);
+    }
+  }, []);
+
   const fetchExistingCoverLetters = useCallback(async () => {
     if (!user?.id) return;
     setIsLoadingCoverLetters(true);
@@ -190,10 +204,11 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
   useEffect(() => {
     fetchExistingCVs();
+    fetchDraftCV();
     if (user) {
       fetchExistingCoverLetters();
     }
-  }, [fetchExistingCVs, fetchExistingCoverLetters, user]);
+  }, [fetchExistingCVs, fetchExistingCoverLetters, fetchDraftCV, user]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
@@ -645,7 +660,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 <div className="flex flex-wrap items-center gap-1">
                    <button 
                      onClick={() => setFilterType('all')}
-                     className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${filterType === 'all' ? 'text-white border border-white/20 bg-white/5' : 'text-gray-500 hover:text-white'}`}
+                     className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${filterType === 'all' ? 'text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-white/5' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
                    >
                      All
                    </button>
@@ -653,9 +668,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                    <InfoTooltip content="Your primary resume - the source of truth for all tailored versions.">
                      <button 
                        onClick={() => setFilterType('master')}
-                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'master' ? 'text-blue-500 border border-blue-500/30 bg-blue-500/5' : 'text-gray-500 hover:text-blue-400'}`}
+                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'master' ? 'text-blue-600 dark:text-blue-500 border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/5' : 'text-gray-500 hover:text-blue-600 dark:hover:text-blue-400'}`}
                      >
-                       <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'master' ? 'bg-blue-500' : 'bg-gray-600'}`} />
+                       <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'master' ? 'bg-blue-600 dark:bg-blue-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                        Master
                      </button>
                    </InfoTooltip>
@@ -663,9 +678,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                    <InfoTooltip content="Resumes tailored for specific job applications with ATS optimization.">
                      <button 
                        onClick={() => setFilterType('journey')}
-                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'journey' ? 'text-purple-500 border border-purple-500/30 bg-purple-500/5' : 'text-gray-500 hover:text-purple-400'}`}
+                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'journey' ? 'text-purple-600 dark:text-purple-500 border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/5' : 'text-gray-500 hover:text-purple-600 dark:hover:text-purple-400'}`}
                      >
-                       <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'journey' ? 'bg-purple-500' : 'bg-gray-600'}`} />
+                       <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'journey' ? 'bg-purple-600 dark:bg-purple-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                        Journey
                      </button>
                    </InfoTooltip>
@@ -673,9 +688,9 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                    <InfoTooltip content="Standalone resumes for various purposes.">
                      <button 
                        onClick={() => setFilterType('standalone')}
-                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'standalone' ? 'text-orange-500 border border-orange-500/30 bg-orange-500/5' : 'text-gray-500 hover:text-orange-400'}`}
+                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'standalone' ? 'text-orange-600 dark:text-orange-500 border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/5' : 'text-gray-500 hover:text-orange-600 dark:hover:text-orange-400'}`}
                      >
-                       <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'standalone' ? 'bg-orange-500' : 'bg-gray-600'}`} />
+                       <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'standalone' ? 'bg-orange-600 dark:bg-orange-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                        Standalone
                      </button>
                    </InfoTooltip>
@@ -683,13 +698,61 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 )}
 
               {isLoadingCVs ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                  {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="aspect-[3/4] bg-gray-100 dark:bg-white/5 rounded-[2.5rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="flex flex-col gap-3">
+                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                      <div className="h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                      <div className="h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                    </div>
                   ))}
                 </div>
-              ) : activeTab === 'cvs' && filteredCVs.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              ) : activeTab === 'cvs' && (filteredCVs.length > 0 || draftCV) ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                
+                {/* Render Draft CV if it exists */}
+                {draftCV && filterType === 'all' && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                    whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    onClick={() => {
+                      // Navigate to editor with the draft
+                      router.push(`/editor?mode=create&resumeDraft=true`);
+                    }}
+                    className="group cursor-pointer flex flex-col gap-3 relative"
+                  >
+                    <div className="relative">
+                      {/* A special styled thumbnail for drafts */}
+                      <div className="w-full aspect-[1/1.414] bg-orange-50 dark:bg-orange-950/20 rounded-[2rem] border-2 border-dashed border-orange-300 dark:border-orange-500/30 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-orange-500 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
+                        <FileText className="w-12 h-12 text-orange-400/50 dark:text-orange-500/30 mb-4" />
+                        <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">Draft Resume</span>
+                        
+                        <div className="absolute top-4 left-4 z-30">
+                          <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-orange-500 text-white shadow-orange-500/20 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            Unsaved
+                          </span>
+                        </div>
+                        
+                        <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-orange-500 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                          <Edit2 className="w-5 h-5 text-white" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-1">
+                       <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
+                         {draftCV.cvTitle || 'Unfinished Resume'}
+                       </h4>
+                       <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
+                         <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                         Last edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString()}
+                       </p>
+                    </div>
+                  </motion.div>
+                )}
+
                 {filteredCVs.map((cv, index) => (
                   <motion.div
                     key={cv.id || cv._id}
@@ -698,37 +761,34 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleEditExistingCV(cv)}
-                    className="group cursor-pointer"
+                    className="group cursor-pointer flex flex-col gap-3"
                   >
-                    <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40">
-                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
-                       
-                       <div className="h-full p-6 flex flex-col relative z-20">
-                          <div className="flex justify-between items-start mb-4">
-                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${
-                              cv.cvType === 'master' ? 'bg-blue-600 text-white shadow-blue-500/20' :
-                              cv.cvType === 'journey' ? 'bg-purple-600 text-white shadow-purple-500/20' :
-                              'bg-orange-600 text-white shadow-orange-500/20'
-                            }`}>
-                              {cv.cvType}
-                            </span>
-                            <div className="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
-                              <Edit2 className="w-5 h-5 text-lime-500" />
-                            </div>
-                          </div>
-                          
-                          <LazyThumbnail item={cv} />
+                    <div className="relative">
+                      <LazyThumbnail item={cv} />
+                      
+                      <div className="absolute top-4 left-4 z-30">
+                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${
+                          cv.cvType === 'master' ? 'bg-blue-600 text-white shadow-blue-500/20' :
+                          cv.cvType === 'journey' ? 'bg-purple-600 text-white shadow-purple-500/20' :
+                          'bg-orange-600 text-white shadow-orange-500/20'
+                        }`}>
+                          {cv.cvType}
+                        </span>
+                      </div>
+                      
+                      <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-black/40 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                        <Edit2 className="w-5 h-5 text-white" />
+                      </div>
+                    </div>
 
-                          <div className="mt-auto relative z-20 overflow-hidden">
-                             <h4 className="text-xl font-black text-white truncate group-hover:text-lime-500 transition-colors tracking-tight">
-                               {cv.title || 'Untitled Resume'}
-                             </h4>
-                             <p className="text-xs text-gray-400 font-bold flex items-center gap-2 mt-2">
-                               <span className="w-2 h-2 bg-lime-500 rounded-full shadow-[0_0_10px_rgba(128,255,0,0.5)]" />
-                               Updated {new Date(cv.updatedAt || cv.createdAt).toLocaleDateString()}
-                             </p>
-                          </div>
-                       </div>
+                    <div className="px-1">
+                       <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
+                         {cv.title || 'Untitled Resume'}
+                       </h4>
+                       <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
+                         <span className="w-1.5 h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
+                         Updated {new Date(cv.updatedAt || cv.createdAt).toLocaleDateString()}
+                       </p>
                     </div>
                   </motion.div>
                 ))}
@@ -746,51 +806,52 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               {/* Cover Letters Grid */}
               {activeTab === 'cover-letters' && (
                 isLoadingCoverLetters ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="aspect-[3/4] bg-gray-100 dark:bg-white/5 rounded-[2.5rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <div key={i} className="flex flex-col gap-3">
+                        <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                        <div className="h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                        <div className="h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                      </div>
                     ))}
                   </div>
-                ) : existingCoverLetters.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                ) : existingCoverLetters && existingCoverLetters.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                     {existingCoverLetters.map((cl) => (
                       <motion.div
                         key={cl.id || cl._id}
                         onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                        className="group cursor-pointer"
+                        className="group cursor-pointer flex flex-col gap-3"
                       >
-                        <div className="aspect-[3/4] relative bg-white dark:bg-[#141810] rounded-[2.5rem] shadow-xl border border-gray-200 dark:border-white/5 overflow-hidden transition-all duration-500 group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.1)] dark:group-hover:shadow-[0_40px_80px_rgba(0,0,0,0.2)] group-hover:border-lime-500/40">
-                           <div className="absolute inset-0 bg-gradient-to-t from-gray-100/90 via-gray-100/40 dark:from-black/90 dark:via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity z-10" />
-                           
-                           <div className="h-full p-6 flex flex-col relative z-20">
-                              <div className="flex justify-between items-start mb-4">
-                                <span className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-emerald-600 text-white shadow-emerald-500/20">
-                                  Cover Letter
-                                </span>
-                                <div className="w-10 h-10 bg-black/10 dark:bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
-                                  <Edit2 className="w-5 h-5 text-lime-600 dark:text-lime-500" />
-                                </div>
-                              </div>
-                              
-                              <LazyThumbnail item={cl} isCoverLetter={true} />
-  
-                              <div className="mt-auto relative z-20 overflow-hidden">
-                                 <h4 className="text-xl font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
-                                   {cl.title || 'Untitled Cover Letter'}
-                                 </h4>
-                                 <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-2">
-                                    <span className="w-2 h-2 bg-lime-500 rounded-full shadow-[0_0_10px_rgba(132,204,22,0.5)] dark:shadow-[0_0_10px_rgba(128,255,0,0.5)]" />
-                                    Updated {new Date(cl.updatedAt || cl.createdAt).toLocaleDateString()}
-                                 </p>
-                              </div>
-                           </div>
+                        <div className="relative">
+                          <LazyThumbnail item={cl} isCoverLetter={true} />
+                          
+                          <div className="absolute top-4 left-4 z-30">
+                            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-emerald-600 text-white shadow-emerald-500/20">
+                              Cover Letter
+                            </span>
+                          </div>
+                          
+                          <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-black/40 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                            <Edit2 className="w-5 h-5 text-white" />
+                          </div>
+                        </div>
+
+                        <div className="px-1">
+                           <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
+                             {cl.title || 'Untitled Cover Letter'}
+                           </h4>
+                           <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
+                              <span className="w-1.5 h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
+                              Updated {new Date(cl.updatedAt || cl.createdAt).toLocaleDateString()}
+                           </p>
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-32 bg-black/5 dark:bg-white/[0.02] rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10">
-                    <FolderOpen className="w-20 h-20 text-gray-200 dark:text-gray-800 mx-auto mb-8 animate-bounce transition-all duration-1000" />
+                    <FolderOpen className="w-20 h-20 text-gray-400 dark:text-gray-600 mx-auto mb-8 animate-bounce transition-all duration-1000" />
                     <h4 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">No Cover Letters Found</h4>
                     <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-sm mx-auto">
                       Create your first cover letter from the dashboard or job application journey.

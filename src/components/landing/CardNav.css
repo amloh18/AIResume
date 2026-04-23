@@ -25,7 +25,7 @@
 
 .card-nav-container.submenu-open .card-nav {
   overflow: visible;
-  border-radius: 35px 35px 20px 20px;
+  border-radius: 35px;
   height: auto;
 }
 
@@ -136,8 +136,9 @@
   top: calc(100% + 10px);
   left: 0;
   right: 0;
-  background: rgba(13, 15, 10, 0.95);
-  backdrop-filter: blur(24px);
+  background-color: rgba(20, 24, 16, 0.75);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 24px;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(129, 255, 0, 0.1) inset;
@@ -229,9 +230,9 @@
 .card-nav-cta-button {
   background: rgb(129, 255, 0);
   color: #000000;
-  border: 2px solid rgba(129, 255, 0, 0.3);
+  border: 1px solid rgba(129, 255, 0, 0.3);
   border-radius: 30px;
-  padding: 0 1.5rem;
+  padding: 0 24px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -240,6 +241,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .card-nav-cta-button:hover {
@@ -258,7 +260,7 @@
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 30px;
-  padding: 0 1.5rem;
+  padding: 0 24px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -267,6 +269,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  box-sizing: border-box;
 }
 
 .card-nav-business-button:hover {

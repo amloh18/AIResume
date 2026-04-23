@@ -274,7 +274,7 @@ const OptimizedNavigation: React.FC = () => {
       'jobs-dashboard': '/dashboard/jobs',
       'settings': '/dashboard/settings',
       'resume-enhancer': '/editor',
-      'cover-letter-generator': '/dashboard/canvas',
+      'cover-letter-generator': '/editor?tab=cover-letters',
       'interview-coach': '/dashboard/interview',
       'linkedin-enhancer': '/linkedin-enhancer',
       'ats-resume-checker': '/ats-resume-checker'
@@ -344,7 +344,7 @@ const OptimizedNavigation: React.FC = () => {
       name: 'Cover Letter Generator',
       icon: PenTool,
       description: 'Create custom cover letters',
-      route: '/dashboard/canvas'
+      route: '/editor?tab=cover-letters'
     },
     {
       id: 'interview-coach',

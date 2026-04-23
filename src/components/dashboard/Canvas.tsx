@@ -662,10 +662,25 @@ const Canvas: React.FC = () => {
       setLoading(true);
 
       // Load CVs and cover letters in parallel for better performance
-      const [cvsResult, coverLettersResponse] = await Promise.allSettled([
+      const [cvsResult, coverLettersResponse, draftResponse] = await Promise.allSettled([
         UnifiedCVService.getCVs(userIdToUse, { projection: 'summary' }),
-        authenticatedFetch(`/api/cover-letters?userId=${userIdToUse}`)
+        authenticatedFetch(`/api/cover-letters?userId=${userIdToUse}`),
+        authenticatedFetch('/api/cv-draft/load')
       ]);
+
+      // Process Draft CV
+      if (draftResponse.status === 'fulfilled' && draftResponse.value) {
+        try {
+          const result = await draftResponse.value.json();
+          if (result.success && result.data) {
+            setDraftCV(result.data);
+          } else {
+            setDraftCV(null);
+          }
+        } catch (e) {
+          setDraftCV(null);
+        }
+      }
 
       // Process CVs
       if (cvsResult.status === 'fulfilled' && cvsResult.value && Array.isArray(cvsResult.value) && cvsResult.value.length > 0) {
@@ -995,6 +1010,7 @@ const Canvas: React.FC = () => {
   const initialTab = searchParams.get('tab') === 'coverLetter' ? 'coverLetter' : 'cv';
   const [activeTab, setActiveTab] = useState<'cv' | 'coverLetter'>(initialTab as 'cv' | 'coverLetter');
   const [coverLetters, setCoverLetters] = useState<CoverLetter[]>([]);
+  const [draftCV, setDraftCV] = useState<any>(null);
   // availableJobs is already defined above (line 850) before fetchAvailableJobs
   const [linkingJobCVId, setLinkingJobCVId] = useState<string | null>(null);
 
@@ -2446,6 +2462,38 @@ const Canvas: React.FC = () => {
               {/* My CVs Section (Master CVs + Standalone CVs) */}
               <div className="space-y-3">
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider ml-1">My CVs</h3>
+                
+                {/* Draft CV in List View */}
+                {draftCV && !searchQuery && (
+                  <div
+                    onClick={() => router.push('/editor?mode=create&resumeDraft=true')}
+                    className="flex items-center gap-4 p-4 rounded-xl border border-orange-200 dark:border-orange-500/20 bg-orange-50 dark:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-500/40 hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-all cursor-pointer group"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-orange-200/50 dark:bg-orange-500/20 flex items-center justify-center text-orange-500 dark:text-orange-400">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold text-gray-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
+                          {draftCV.cvTitle || 'Unfinished Resume'}
+                        </h4>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-500 text-white flex items-center gap-1">
+                          <span className="w-1 h-1 bg-white rounded-full animate-pulse" />
+                          Draft
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Last edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
+                        <Edit2 className="w-4 h-4 text-orange-500" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <CVListView
                   cvs={filteredAndSortedMyCVs}
                   onEdit={(cv) => {
@@ -2510,6 +2558,39 @@ const Canvas: React.FC = () => {
             <div className="space-y-6">
 
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5">
+                {/* Draft CV Card */}
+                {draftCV && !searchQuery && (
+                  <div
+                    onClick={() => router.push('/editor?mode=create&resumeDraft=true')}
+                    className="group cursor-pointer flex flex-col gap-3 relative"
+                  >
+                    <div className="relative">
+                      {/* A special styled thumbnail for drafts */}
+                      <div className="w-full aspect-[1/1.414] bg-orange-50 dark:bg-orange-950/20 rounded-[2rem] border-2 border-dashed border-orange-300 dark:border-orange-500/30 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-orange-500 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
+                        <FileText className="w-12 h-12 text-orange-400/50 dark:text-orange-500/30 mb-4" />
+                        <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">Draft Resume</span>
+                        
+                        <div className="absolute top-4 left-4 z-30">
+                          <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-orange-500 text-white shadow-orange-500/20 flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                            Unsaved
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="px-1">
+                       <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
+                         {draftCV.cvTitle || 'Unfinished Resume'}
+                       </h4>
+                       <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
+                         <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                         Last edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString()}
+                       </p>
+                    </div>
+                  </div>
+                )}
+
                 {/* Master CV Card - Always First */}
                 <MasterCVCardOverlay
                   onEditMasterCV={handleEditMasterCV}
