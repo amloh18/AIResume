@@ -352,12 +352,12 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         <div className={readOnly ? 'w-full' : `flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
           {readOnly ? (
-            <div className="cv-document-wrapper text-gray-900" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap } as React.CSSProperties}>
+            <div className="cv-document-wrapper text-gray-900" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap, '--cv-workspace-bg': isDarkUI ? '#1a1a1a' : '#f3f2ee' } as React.CSSProperties}>
               {renderCanvasLayout()}
             </div>
           ) : (
             <div key={templateAnimKey} className="transform origin-top transition-transform scale-[0.85] lg:scale-100 xl:scale-105 h-max pb-20 text-gray-900">
-              <div className="cv-document-wrapper relative shadow-2xl" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap } as React.CSSProperties}>
+              <div className="cv-document-wrapper relative shadow-2xl" style={{ width: '210mm', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap, '--cv-workspace-bg': isDarkUI ? '#1a1a1a' : '#f3f2ee' } as React.CSSProperties}>
                 <div className="cv-page-visualizer"></div>
                 {renderCanvasLayout()}
               </div>
@@ -575,7 +575,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
-        .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 30; background-image: repeating-linear-gradient(to bottom, transparent, transparent calc(297mm - 12px), rgba(0,0,0,0.08) calc(297mm - 6px), transparent 297mm, transparent calc(297mm + 4px), rgba(0,0,0,0.08) calc(297mm + 10px), transparent calc(297mm + 16px)); }
+        .cv-page-visualizer { position: absolute; inset: 0 -40px; pointer-events: none; z-index: 30; background-size: 100% 297mm; background-image: linear-gradient(to bottom, transparent calc(297mm - 24px), var(--cv-workspace-bg) calc(297mm - 24px), var(--cv-workspace-bg) calc(297mm - 4px), rgba(0,0,0,0.1) calc(297mm - 4px), transparent 297mm); }
         @media print {
           @page { margin: var(--cv-page-margin); size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }

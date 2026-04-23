@@ -2147,30 +2147,35 @@ export default function ResumeEnhancerContainer({
         // Note: localStorage backup is only saved if save fails (see error handler below)
       }
 
-      const response = await fetch(apiUrl, {
-        method: apiMethod,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        // LAYER 3: If save fails, ensure data is in localStorage
+      let response;
+      try {
+        response = await fetch(apiUrl, {
+          method: apiMethod,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      } catch (networkError) {
+        // Network error (true offline)
         try {
           const backupData = {
             ...payload,
             attemptedSaveAt: Date.now(),
-            error: result?.error || 'Failed to save',
+            error: 'Network offline',
             userId,
             mode: isMasterCV ? 'master-create' : 'create'
           };
           localStorage.setItem('unsaved_master_cv', JSON.stringify(backupData));
-          console.log('💾 Layer 3 Defense: Save failed, saved to localStorage');
+          console.log('💾 Layer 3 Defense: Network error, saved to localStorage');
         } catch (storageError) {
-          console.warn('⚠️ Failed to save to localStorage after error:', storageError);
+          console.warn('⚠️ Failed to save to localStorage after network error:', storageError);
         }
-        throw new Error(result?.error || 'Failed to save');
+        throw new Error('NETWORK_OFFLINE');
+      }
+
+      const result = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(result?.error || 'Failed to save CV');
       }
 
       const savedCvId = extractCvIdFromResponse(result);
@@ -2288,22 +2293,20 @@ export default function ResumeEnhancerContainer({
     } catch (error) {
       console.error('Save failed:', error);
       const message = error instanceof Error ? error.message : 'Failed to save';
-
-      // LAYER 3: Show user-friendly message if data was saved offline
-      const offlineBackupExists = typeof window !== 'undefined' && localStorage.getItem('unsaved_master_cv');
-      setHasOfflineBackup(!!offlineBackupExists);
-
-      const errorMessage = offlineBackupExists
-        ? 'Connection unstable. Your work has been saved locally and will sync when connection is restored.'
-        : message;
-
-      setSaveError(errorMessage);
-      setSaveStatus(offlineBackupExists ? 'offline' : 'error');
-      dispatch({ type: 'SET_SAVE_ERROR', payload: errorMessage });
-
-      // Show toast notification for offline save
-      if (offlineBackupExists) {
+      
+      const isOfflineError = message === 'NETWORK_OFFLINE';
+      
+      if (isOfflineError) {
+        setHasOfflineBackup(true);
+        setSaveError('Connection unstable. Your work has been saved locally and will sync when connection is restored.');
+        setSaveStatus('offline');
+        dispatch({ type: 'SET_SAVE_ERROR', payload: 'Connection unstable. Your work has been saved locally.' });
         console.log('💾 Layer 3 Defense: Data saved offline, will retry on next save');
+      } else {
+        // True API error
+        setSaveError(message);
+        setSaveStatus('error');
+        dispatch({ type: 'SET_SAVE_ERROR', payload: message });
       }
     } finally {
       dispatch({ type: 'SET_SAVING', payload: false });

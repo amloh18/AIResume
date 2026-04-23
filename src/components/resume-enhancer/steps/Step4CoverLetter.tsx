@@ -129,8 +129,8 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
     >
       {/* Main Content Area (Left side - Canvas) */}
       <div className="flex-1 min-h-0 relative flex flex-col rounded-xl overflow-hidden shadow-sm shadow-black/10 dark:shadow-black/30">
-        <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8">
-          <div className="w-full max-w-4xl mx-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-gray-100/50 dark:bg-[#141810] p-4 lg:p-8 flex justify-center">
+          <div className="transition-all duration-300">
             <CoverLetterLayoutEngine 
               templateType={templateType}
               headerProps={{

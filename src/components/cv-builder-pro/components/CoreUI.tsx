@@ -70,32 +70,37 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   if (multiline) wrapClass = 'break-words whitespace-pre-wrap';
 
   return (
-    <span ref={contentRef} data-path={path} contentEditable={!readOnly} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-blue-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border border-transparent focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-md px-1.5 py-0.5 -mx-1.5 -my-0.5 z-40 relative' : ''}`} style={{ minHeight: '1em' }} />
-  );
-};
-
-export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
-  const [pos, setPos] = useState({ top: -1000, left: 0 });
-  const [canSuggest, setCanSuggest] = useState(false);
-
-  useEffect(() => {
-    if (targetNode) {
-      const rect = targetNode.getBoundingClientRect();
-      setPos({ top: rect.top - 45, left: rect.left + rect.width / 2 });
-      const isBulletContext = targetNode.tagName === 'LI' || targetNode.closest('li') || targetNode.closest('ul') || (targetNode.getAttribute('data-path') || '').includes('description');
-      setCanSuggest(!!isBulletContext);
-    } else {
-      setPos({ top: -1000, left: 0 });
-      setCanSuggest(false);
-    }
-  }, [targetNode]);
-
-  const execCmd = (e: React.MouseEvent, cmd: string) => { e.preventDefault(); document.execCommand('styleWithCSS', false, 'true'); document.execCommand(cmd, false); };
-
-  if (!targetNode) return null;
-  return (
-    <div className="fixed z-50 bg-white shadow-2xl border border-gray-200 rounded-lg flex items-center p-1.5 gap-1 transform -translate-x-1/2 transition-all duration-200 animate-fade-in-up font-sans" style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
-      {canSuggest && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Contextual Point"><Wand2 size={14}/> ✨ Suggest</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
+      <span ref={contentRef} data-path={path} contentEditable={!readOnly} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-emerald-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5 z-40 relative empty:min-w-[60px] empty:inline-block empty:border-dashed empty:border-gray-300 empty:after:content-["Click_to_type..."] empty:after:text-gray-400 empty:after:text-xs empty:after:italic' : ''}`} style={{ minHeight: '1.2em' }} />
+    );
+  };
+  
+  export const FloatingToolbar = ({ targetNode, onSuggestPoint }: any) => {
+    const [pos, setPos] = useState({ top: -1000, left: 0 });
+    const [canSuggest, setCanSuggest] = useState(false);
+    const [canSuggestSkills, setCanSuggestSkills] = useState(false);
+  
+    useEffect(() => {
+      if (targetNode) {
+        const rect = targetNode.getBoundingClientRect();
+        setPos({ top: rect.top - 45, left: rect.left + rect.width / 2 });
+        const isBulletContext = targetNode.tagName === 'LI' || targetNode.closest('li') || targetNode.closest('ul') || (targetNode.getAttribute('data-path') || '').includes('description');
+        const isSkillContext = (targetNode.getAttribute('data-path') || '').toLowerCase().includes('skills');
+        setCanSuggest(!!isBulletContext);
+        setCanSuggestSkills(!!isSkillContext);
+      } else {
+        setPos({ top: -1000, left: 0 });
+        setCanSuggest(false);
+        setCanSuggestSkills(false);
+      }
+    }, [targetNode]);
+  
+    const execCmd = (e: React.MouseEvent, cmd: string) => { e.preventDefault(); document.execCommand('styleWithCSS', false, 'true'); document.execCommand(cmd, false); };
+  
+    if (!targetNode) return null;
+    return (
+      <div className="fixed z-50 bg-white shadow-2xl border border-gray-200 rounded-lg flex items-center p-1.5 gap-1 transform -translate-x-1/2 transition-all duration-200 animate-fade-in-up font-sans" style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
+        {canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Skills"><Wand2 size={14}/> ✨ Suggest Skills</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
+        {canSuggest && !canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Contextual Point"><Wand2 size={14}/> ✨ Suggest</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
       <button onClick={(e) => execCmd(e, 'bold')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Bold"><Bold size={16}/></button>
       <button onClick={(e) => execCmd(e, 'italic')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Italic"><Italic size={16}/></button>
       <button onClick={(e) => execCmd(e, 'underline')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Underline"><Underline size={16}/></button>
@@ -158,7 +163,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     const canAddListEntry = SnippetComponent && ['Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Publications', 'Volunteer', 'References'].includes(SnippetComponent.category);
 
     const controls = showInlineControls ? (
-      <div className="absolute right-0 top-0 opacity-0 group-hover/inner:opacity-100 transition-opacity flex items-center bg-white border border-blue-200 shadow-sm rounded-md overflow-hidden z-[25] no-print font-sans">
+      <div className="absolute -top-8 -right-2 opacity-0 group-hover/inner:opacity-100 transition-opacity flex items-center bg-white border border-gray-200 shadow-sm rounded-md overflow-hidden z-[25] no-print font-sans">
         {isHeader && <button onClick={onTogglePhoto} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#eff6ff] text-[#3b82f6] font-medium text-[12px] md:text-[13px] transition-colors bg-white" title="Toggle Photo"><ImageIcon size={14}/> {!isNarrow && 'Photo'}</button>}
         {canAddListEntry && <button onClick={() => onAddListEntry(SnippetComponent.category)} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#f0fdf4] text-emerald-600 font-medium text-[12px] md:text-[13px] border-l border-[#3b82f6]/20 transition-colors bg-white"><Plus size={14}/> {!isNarrow && 'Add'}</button>}
         <button onClick={() => onReplace(zoneId, index, instance.type)} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#eff6ff] text-[#3b82f6] font-medium text-[12px] md:text-[13px] border-l border-[#3b82f6]/20 transition-colors bg-white"><RefreshCw size={14}/> {!isNarrow && 'Replace'}</button>
@@ -193,18 +198,19 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
   return (
     <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`}>
-      {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
+      {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-emerald-50 border-2 border-dashed border-emerald-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
         <div className={`relative ${!isHeader && !readOnly ? 'mt-4' : ''} hover:z-30 group/inner`}>
         <div className={`p-2 pointer-events-auto snippet-content relative pb-2 z-10 ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
-            {!readOnly && <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-blue-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-blue-200 shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>}
+            {!readOnly && <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>}
           {content || (!readOnly && (
-            <div className="text-center opacity-40 select-none">
+            <div className="text-center opacity-40 select-none cursor-pointer hover:opacity-80 transition-opacity p-4 border border-dashed border-gray-300 rounded-lg mt-2" onClick={() => onAddListEntry(SnippetComponent.category)}>
               <Title titleKey={SnippetComponent.category.toLowerCase()} />
-              <div className="text-[11px] uppercase tracking-widest mt-2 font-bold text-gray-500">Empty Section</div>
+              <div className="text-[11px] uppercase tracking-widest mt-3 font-bold text-gray-500 flex items-center justify-center gap-1"><PlusCircle size={14}/> Add {SnippetComponent.category}</div>
             </div>
           ))}
         </div>
       </div>
+      {/* Remove the redundant appendLine since we have the button now */}
     </div>
   );
 };
@@ -224,7 +230,7 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
         <div className="flex flex-col gap-1">
           {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={layoutZones} isDark={isDark} />)}
         </div>
-        {showAppendLine && <div className="w-full h-4 bg-blue-100 border-2 border-dashed border-blue-400 rounded mt-4 pointer-events-none"></div>}
+        {showAppendLine && <div className="w-full h-4 bg-emerald-50 border-2 border-dashed border-emerald-400 rounded mt-4 pointer-events-none"></div>}
       </div>
       {!readOnly && (
         <div className="opacity-0 group-hover/zone:opacity-100 transition-opacity flex justify-center py-4 relative z-10 -mt-8 no-print">

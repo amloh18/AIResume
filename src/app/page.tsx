@@ -13,6 +13,7 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
+import CVTemplateShowcase from '@/components/landing/CVTemplateShowcase';
 import { useRouter } from 'next/navigation';
 
 
@@ -63,7 +64,7 @@ function LandingPageContent() {
       submenu: [
         { 
           label: 'AI Resume Builder', 
-          description: 'Create ATS-friendly resumes in minutes with AI assistance.', 
+          description: 'Create ATS-friendly resumes in minutes with AI assistance and mix-and-match layout blocks.', 
           href: '#features', 
           ariaLabel: 'AI-powered resume builder',
           icon: <Sparkles className="w-6 h-6 text-lime-400" />,
@@ -71,11 +72,25 @@ function LandingPageContent() {
         },
         { 
           label: 'ATS Scanner', 
-          description: 'Test your resume against job descriptions for better match rates.', 
+          description: 'Test your resume against job descriptions for keyword matches and format compatibility.', 
           href: '#features', 
           ariaLabel: 'ATS compatibility check',
           icon: <CheckCircle className="w-6 h-6 text-blue-400" />,
           snapshot: 'bg-gradient-to-br from-blue-500/20 to-cyan-600/20 border-blue-500/30'
+        },
+        { 
+          label: 'Cover Letter Generator', 
+          description: 'Generate tailored, professional cover letters perfectly matching your target role.', 
+          href: '#features', 
+          ariaLabel: 'Cover letter generator',
+          icon: <FileText className="w-6 h-6 text-purple-400" />
+        },
+        { 
+          label: 'Smart Job Tracker', 
+          description: 'Organize and track all your applications and upcoming interviews in one place.', 
+          href: '#features', 
+          ariaLabel: 'Job tracker',
+          icon: <Briefcase className="w-6 h-6 text-orange-400" />
         },
       ]
     },
@@ -86,17 +101,24 @@ function LandingPageContent() {
       submenu: [
         { 
           label: 'Chrome Add-on', 
-          description: 'Analyze jobs and sync data directly from Google Chrome.', 
+          description: 'Analyze jobs, extract requirements, and sync data directly from Google Chrome.', 
           href: '#chrome-extension', 
           ariaLabel: 'Chrome extension',
           icon: <Chrome className="w-6 h-6 text-yellow-400" />
         },
         { 
           label: 'Edge Add-on', 
-          description: 'Native support for Microsoft Edge browser.', 
+          description: 'Native support for Microsoft Edge browser with full tracking capabilities.', 
           href: '#chrome-extension', 
           ariaLabel: 'Edge extension',
           icon: <Globe className="w-6 h-6 text-blue-400" />
+        },
+        { 
+          label: 'One-Click Save', 
+          description: 'Save job descriptions from LinkedIn, Indeed, and more with a single click.', 
+          href: '#chrome-extension', 
+          ariaLabel: 'One-click save',
+          icon: <LayoutDashboard className="w-6 h-6 text-emerald-400" />
         },
       ]
     },
@@ -107,14 +129,21 @@ function LandingPageContent() {
       submenu: [
         { 
           label: 'How it Works', 
-          description: 'Step-by-step guide to landing your dream job.', 
+          description: 'Step-by-step guide to building your master CV and landing your dream job.', 
           href: '#how-it-works', 
           ariaLabel: 'Learn how to create a resume',
           icon: <LayoutDashboard className="w-5 h-5 text-gray-400" />
         },
         { 
+          label: 'Interview Prep', 
+          description: 'Practice answering questions tailored specifically to your target job descriptions.', 
+          href: '#features', 
+          ariaLabel: 'Interview preparation',
+          icon: <Sparkles className="w-5 h-5 text-gray-400" />
+        },
+        { 
           label: 'FAQ', 
-          description: 'Common questions and support.', 
+          description: 'Find answers to common questions and get support from our team.', 
           href: '#faq', 
           ariaLabel: 'View FAQ',
           icon: <Briefcase className="w-5 h-5 text-gray-400" />
@@ -126,8 +155,8 @@ function LandingPageContent() {
       href: '#pricing', 
       ariaLabel: 'View pricing section',
       submenu: [
-        { label: 'Free Plan', description: 'Get started for free', href: '#pricing', ariaLabel: 'Free plan details', icon: <CheckCircle className="w-5 h-5 text-gray-400" /> },
-        { label: 'Premium', description: 'Unlock all pro features', href: '#pricing', ariaLabel: 'Premium plan details', icon: <Sparkles className="w-5 h-5 text-gray-400" /> },
+        { label: 'Free Plan', description: 'Get started for free with basic ATS scanning and standard templates.', href: '#pricing', ariaLabel: 'Free plan details', icon: <CheckCircle className="w-5 h-5 text-gray-400" /> },
+        { label: 'Premium', description: 'Unlock all pro features, unlimited AI generations, and premium blocks.', href: '#pricing', ariaLabel: 'Premium plan details', icon: <Sparkles className="w-5 h-5 text-lime-400" /> },
       ]
     },
   ];
@@ -201,6 +230,9 @@ function LandingPageContent() {
 
           {/* Hero Section */}
           <Hero />
+
+          {/* Templates & Snippets Section */}
+          <CVTemplateShowcase />
 
           {/* How It Works Section */}
           <HowItWorks />

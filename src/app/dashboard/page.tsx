@@ -335,7 +335,7 @@ function DashboardContent() {
           </Link>
 
           {/* Doc Center */}
-          <Link href="/editor?tab=cover-letters">
+          <Link href="/dashboard/canvas">
             <motion.div 
               whileHover={{ y: -4 }}
               className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 transition-all flex flex-col h-full relative group hover:shadow-md"

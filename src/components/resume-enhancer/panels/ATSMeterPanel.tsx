@@ -53,14 +53,14 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
     } catch (e) {
       console.warn("Failed to extract skills for ATS meter", e);
     }
-    return ['JavaScript', 'React', 'Node.js', 'Python', 'Git', 'Agile', 'REST APIs', 'SQL'];
+    return [];
   }, [atsAnalysis, state.cvData]);
 
   const missingSkills = useMemo(() => {
     if (atsAnalysis?.missingKeywords && atsAnalysis.missingKeywords.length > 0) {
       return atsAnalysis.missingKeywords.slice(0, 6) as string[];
     }
-    return ['Docker', 'Kubernetes', 'CI/CD', 'Microservices', 'GraphQL'];
+    return [];
   }, [atsAnalysis]);
 
   // Formatting feedback
@@ -107,14 +107,14 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
       };
     }
     
-    // Fallback/mock metrics based on overall score to make it look realistic
+    // Return 0 if no analysis is present
     return {
-      keywords: Math.min(100, Math.max(0, score + (Math.random() * 20 - 10))),
-      impactWords: Math.min(100, Math.max(0, score - 10 + (Math.random() * 20 - 10))),
-      atsFormat: Math.min(100, Math.max(0, score + 15 + (Math.random() * 10 - 5))),
-      readability: Math.min(100, Math.max(0, score - 5 + (Math.random() * 20 - 10))),
+      keywords: 0,
+      impactWords: 0,
+      atsFormat: 0,
+      readability: 0,
     };
-  }, [score, atsAnalysis]);
+  }, [atsAnalysis]);
 
   // Determine stroke color based on score
   const strokeColor = score >= 75 ? '#80FF00' : score >= 50 ? '#eab308' : '#ef4444';
@@ -238,95 +238,128 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
       </div>
 
       {/* Extracted & Missing Skills */}
-      <div className="grid grid-cols-1 gap-6 mb-8">
+      <div className="grid grid-cols-1 gap-6 mb-8 shrink-0">
         <div>
           <h4 className="text-sm font-semibold text-gray-800 dark:text-white/80 mb-3">Extracted Skills</h4>
-          <div className="flex flex-wrap gap-2">
-            {extractedSkills.map((skill: string, i: number) => (
-              <span key={i} className="px-2.5 py-1 text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 rounded-md">
-                {skill}
-              </span>
-            ))}
-          </div>
+          {extractedSkills.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {extractedSkills.map((skill: string, i: number) => (
+                <span key={i} className="px-2.5 py-1 text-xs font-medium bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20 rounded-md">
+                  {skill}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 italic">No skills extracted yet.</p>
+          )}
         </div>
 
         {hasJobDesc && (
           <div>
             <h4 className="text-sm font-semibold text-gray-800 dark:text-white/80 mb-3">Missing High-Value Keys</h4>
-            <div className="flex flex-wrap gap-2">
-              {missingSkills.map((skill: string, i: number) => (
-                <button key={i} className="px-2.5 py-1 text-xs font-medium bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-yellow-200 dark:border-yellow-500/20 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition-colors flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> {skill}
-                </button>
-              ))}
-            </div>
+            {missingSkills.length > 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {missingSkills.map((skill: string, i: number) => (
+                  <button key={i} className="px-2.5 py-1 text-xs font-medium bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-yellow-200 dark:border-yellow-500/20 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition-colors flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> {skill}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 italic">No missing skills detected.</p>
+            )}
           </div>
         )}
       </div>
 
-      {/* Job Target Section */}
-      <div className="mt-auto bg-emerald-50 dark:bg-[#80FF00]/5 border border-emerald-200 dark:border-[#80FF00]/20 rounded-xl p-4 relative overflow-hidden">
-        <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 dark:bg-[#80FF00]/10 rounded-full blur-xl pointer-events-none" />
-        <h4 className="text-xs font-bold uppercase tracking-widest mb-3 text-emerald-600 dark:text-[#80FF00] flex items-center gap-2">
-          <Target className="w-3.5 h-3.5" />
-          Target Role context
-        </h4>
-        
-        {hasJobDesc ? (
-          <div className="space-y-3 relative z-10">
-            <div className="flex items-start gap-2">
-              <Briefcase className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
-              <div className="text-sm text-emerald-800 dark:text-white/80 font-medium">
-                {state.jobData?.title || 'Senior Software Engineer'}
+      {/* Bottom Actions Section */}
+      <div className="mt-auto flex flex-col gap-4 shrink-0 pb-2">
+        {/* Job Target Section */}
+        <div className="bg-emerald-50 dark:bg-[#80FF00]/5 border border-emerald-200 dark:border-[#80FF00]/20 rounded-xl p-4 relative overflow-hidden shrink-0">
+          <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 dark:bg-[#80FF00]/10 rounded-full blur-xl pointer-events-none" />
+          <h4 className="text-xs font-bold uppercase tracking-widest mb-3 text-emerald-600 dark:text-[#80FF00] flex items-center gap-2">
+            <Target className="w-3.5 h-3.5" />
+            Target Role context
+          </h4>
+          
+          {hasJobDesc ? (
+            <div className="space-y-3 relative z-10">
+              <div className="flex items-start gap-2">
+                <Briefcase className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
+                <div className="text-sm text-emerald-800 dark:text-white/80 font-medium">
+                  {state.jobData?.title || 'Senior Software Engineer'}
+                </div>
               </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <FileText className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
-              <div className="text-xs text-emerald-700 dark:text-white/60 line-clamp-3">
-                {state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd || 'Job description provided.'}
+              <div className="flex items-start gap-2">
+                <FileText className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-700 dark:text-white/60 line-clamp-3">
+                  {state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd || 'Job description provided.'}
+                </div>
               </div>
+              <button 
+                onClick={onOpenJobParser}
+                className="w-full mt-2 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-[#80FF00]/10 dark:text-[#80FF00] dark:hover:bg-[#80FF00]/20 rounded-lg transition-colors border border-emerald-600 dark:border-[#80FF00]/30"
+              >
+                Update Target Role
+              </button>
             </div>
-            <button 
-              onClick={onOpenJobParser}
-              className="w-full mt-2 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-[#80FF00]/10 dark:text-[#80FF00] dark:hover:bg-[#80FF00]/20 rounded-lg transition-colors border border-emerald-600 dark:border-[#80FF00]/30"
-            >
-              Update Target Role
-            </button>
-          </div>
-        ) : (
-          <div className="relative z-10">
-            <p className="text-xs text-emerald-700 dark:text-white/60 mb-3">Add a job description to get specific ATS feedback and keyword matches.</p>
-            <button 
-              onClick={onOpenJobParser}
-              className="w-full py-2 text-xs font-bold text-emerald-700 dark:text-[#11140e] bg-emerald-200 dark:bg-[#80FF00] hover:bg-emerald-300 dark:hover:bg-[#99ff33] rounded-lg transition-colors shadow-[0_0_10px_rgba(128,255,0,0.2)]"
-            >
-              Paste Job Description
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Interview Coach CTA Banner */}
-      {hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
-        <div className="mt-4 bg-indigo-600 dark:bg-indigo-900/30 rounded-xl p-4 border border-indigo-500/50 relative overflow-hidden group">
-          <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-xl opacity-50"></div>
-          <div className="relative z-10 flex flex-col">
-            <h4 className="text-white font-bold text-sm flex items-center gap-1.5 mb-1.5">
-              <Zap className="w-4 h-4 fill-current text-yellow-300" />
-              Prep for Interview?
-            </h4>
-            <p className="text-indigo-100 dark:text-indigo-200/80 text-xs mb-3">
-              Practice answering questions tailored specifically to this job description.
-            </p>
-            <button 
-              onClick={handleStartCoaching}
-              className="w-full py-2 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
-            >
-              Start Coaching <ChevronRight className="w-3 h-3" />
-            </button>
-          </div>
+          ) : (
+            <div className="relative z-10">
+              <p className="text-xs text-emerald-700 dark:text-white/60 mb-3">Add a job description to get specific ATS feedback and keyword matches.</p>
+              <button 
+                onClick={onOpenJobParser}
+                className="w-full py-2 text-xs font-bold text-emerald-700 dark:text-[#11140e] bg-emerald-200 dark:bg-[#80FF00] hover:bg-emerald-300 dark:hover:bg-[#99ff33] rounded-lg transition-colors shadow-[0_0_10px_rgba(128,255,0,0.2)]"
+              >
+                Paste Job Description
+              </button>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Cover Letter CTA Banner */}
+        {hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
+          <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 border border-orange-200 dark:border-orange-500/20 relative overflow-hidden group shrink-0">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-orange-500/10 rounded-full blur-xl pointer-events-none" />
+            <div className="relative z-10 flex flex-col">
+              <h4 className="text-orange-700 dark:text-orange-400 font-bold text-sm flex items-center gap-1.5 mb-1.5">
+                <FileText className="w-4 h-4 fill-current text-orange-400 dark:text-orange-500" />
+                Cover Letter
+              </h4>
+              <p className="text-orange-600/80 dark:text-orange-200/60 text-xs mb-3">
+                Generate a tailored cover letter based on this job description.
+              </p>
+              <button 
+                onClick={() => router.push('/editor?tab=cover-letters')}
+                className="w-full py-2 bg-orange-500 text-white hover:bg-orange-600 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                Create Cover Letter <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Interview Coach CTA Banner */}
+        {hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
+          <div className="bg-indigo-600 dark:bg-indigo-900/30 rounded-xl p-4 border border-indigo-500/50 relative overflow-hidden group shrink-0">
+            <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 blur-xl opacity-50"></div>
+            <div className="relative z-10 flex flex-col">
+              <h4 className="text-white font-bold text-sm flex items-center gap-1.5 mb-1.5">
+                <Zap className="w-4 h-4 fill-current text-yellow-300" />
+                Prep for Interview?
+              </h4>
+              <p className="text-indigo-100 dark:text-indigo-200/80 text-xs mb-3">
+                Practice answering questions tailored specifically to this job description.
+              </p>
+              <button 
+                onClick={handleStartCoaching}
+                className="w-full py-2 bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
+              >
+                Start Coaching <ChevronRight className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
