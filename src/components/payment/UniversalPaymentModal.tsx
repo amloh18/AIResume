@@ -79,7 +79,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   }>({ polar: null, razorpay: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
   const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
-  const [isDayPassOpen, setIsDayPassOpen] = useState(false);
 
   // Use the shared pricing hook only if props are not provided
   // Hooks must be called unconditionally at top level
@@ -1314,13 +1313,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       {/* Unified Plans Container with Header & Current Plan */}
                       {(() => {
                         const availablePlans = Array.isArray(pricingPlans) && pricingPlans.length > 0
-                          ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
+                          ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan) && plan.key !== 'day_pass')
                           : [];
 
                         const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
 
-                        const subscriptionPlans = availablePlans.filter(plan => plan.key !== 'pro_lifetime');
-                        const dayPassPlans = availablePlans.filter(plan => plan.key === 'pro_lifetime');
+                        const subscriptionPlans = availablePlans;
 
                         // Sort logic (optional, keeping consistent with before)
 
@@ -1388,7 +1386,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                         let planPrice = 0;
                                         if (plan.key === 'pro_monthly') planPrice = dbPlan.price_monthly || 0;
                                         else if (plan.key === 'pro_quarterly') planPrice = dbPlan.price_quarterly || 0;
-                                        else if (plan.key === 'pro_lifetime') planPrice = dbPlan.price_yearly || 0;
+                                        else if (plan.key === 'pro_yearly') planPrice = dbPlan.price_yearly || 0;
+                                        else if (plan.key === 'pro_lifetime') planPrice = dbPlan.price_one_time || 0;
                                         else planPrice = effectivePrice || 0;
 
                                         // Regional override logic
@@ -1403,7 +1402,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                           if (plan.key === 'pro_quarterly' && regionalPricing.quarterly) {
                                             const extracted = extractNumericPrice(regionalPricing.quarterly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
-                                          } else if (plan.key === 'pro_lifetime' && regionalPricing.yearly) {
+                                          } else if (plan.key === 'pro_yearly' && regionalPricing.yearly) {
                                             const extracted = extractNumericPrice(regionalPricing.yearly);
                                             if (extracted > 0) { regionalPriceValue = extracted; hasRegionalPrice = true; }
                                           } else if (plan.key === 'pro_monthly' && regionalPricing.monthly) {
@@ -1468,7 +1467,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                       </div>
 
                                       {/* Badges */}
-                                      {plan.key === 'pro_lifetime' && (
+                                      {plan.key === 'pro_yearly' && (
                                         <div className="mr-auto ml-2 px-2 py-0.5 bg-[rgb(129,255,0)] text-black text-xs font-bold rounded">
                                           Save ~25%
                                         </div>
@@ -1493,101 +1492,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             )}
 
 
-
-                            {/* Divider for Day Pass */}
-                            {dayPassPlans.length > 0 && (
-                              <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-                                <button
-                                  onClick={() => setIsDayPassOpen(!isDayPassOpen)}
-                                  className="w-full flex items-center justify-between group p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
-                                >
-                                  <span className="font-bold text-black dark:text-white">Want to try out for a day?</span>
-                                  {isDayPassOpen ? (
-                                    <ChevronUp className="w-5 h-5 text-black dark:text-white" />
-                                  ) : (
-                                    <ChevronDown className="w-5 h-5 text-black dark:text-white" />
-                                  )}
-                                </button>
-
-                                <AnimatePresence>
-                                  {isDayPassOpen && (
-                                    <motion.div
-                                      initial={{ height: 0, opacity: 0 }}
-                                      animate={{ height: 'auto', opacity: 1 }}
-                                      exit={{ height: 0, opacity: 0 }}
-                                      className="overflow-hidden"
-                                    >
-                                      <div className="pt-4 pb-2">
-                                        {dayPassPlans.map((plan) => {
-                                          // Render Day Pass as a similar row or simpler card
-                                          const dbPlan = plan as unknown as DatabasePricingPlan;
-                                          const regionalPrice = getRegionalPrice(dbPlan);
-                                          const currencySymbol = getCurrencySymbol();
-                                          const effectivePrice = getEffectivePrice(dbPlan);
-                                          const isSelected = selectedPlan?.key === plan.key;
-                                          const Icon = getPlanIcon(plan.key);
-
-                                          return (
-                                            <div
-                                              key={plan.key}
-                                              onClick={() => {
-                                                setUserChangedPlan(true);
-                                                // Day pass pricing logic
-                                                let planPrice = dbPlan.price_one_time || effectivePrice || 0;
-                                                if (regionalPricing && regionalPricing.dayPass) {
-                                                  const extracted = extractNumericPrice(regionalPricing.dayPass);
-                                                  if (extracted > 0) {
-                                                    setSelectedPlan({
-                                                      ...plan,
-                                                      regionalPricing: {
-                                                        price: extracted,
-                                                        currencySymbol: regionalPricing.currencySymbol || currencySymbol,
-                                                        currency: regionalPricing.currency || 'USD'
-                                                      }
-                                                    } as unknown as PricingPlan);
-                                                    return;
-                                                  }
-                                                }
-                                                setSelectedPlan(plan);
-                                              }}
-                                              className={`relative flex items-center p-4 m-1 rounded-xl border-2 cursor-pointer transition-all ${isSelected
-                                                ? 'border-gray-900 bg-gray-900 dark:border-lime-500 dark:bg-lime-500/10'
-                                                : 'border-transparent bg-gray-50 dark:bg-[#1A201A] hover:bg-gray-100 dark:hover:bg-gray-800/50'
-                                                }`}
-                                            >
-                                              <div className={`w-5 h-5 rounded-full border-[1.5px] mr-4 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-white dark:border-lime-500' : 'border-gray-400 dark:border-gray-500'
-                                                }`}>
-                                                {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-white dark:bg-lime-500" />}
-                                              </div>
-                                              <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                  <Icon size={20} className={isSelected ? 'text-white' : 'text-gray-900 dark:text-white'} />
-                                                  <div className={`font-semibold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Day Pass</div>
-                                                </div>
-                                                <div className={`text-xs ${isSelected ? 'text-gray-300' : 'text-gray-500'}`}>Full access for 24 hours</div>
-
-                                                {/* Day Pass Details/Features */}
-                                                <ul className={`mt-2 space-y-1 text-xs ${isSelected ? 'text-gray-200' : 'text-gray-600 dark:text-gray-400'}`}>
-                                                  {plan.features.slice(0, 3).map((feature, idx) => (
-                                                    <li key={idx} className="flex items-start gap-1.5">
-                                                      <Check size={12} className={`mt-0.5 flex-shrink-0 ${isSelected ? 'text-white' : 'text-lime-600 dark:text-lime-500'}`} />
-                                                      <span>{feature}</span>
-                                                    </li>
-                                                  ))}
-                                                </ul>
-                                              </div>
-                                              <div className={`text-lg font-bold ${isSelected ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
-                                                {regionalPricing?.dayPass || regionalPrice || `${currencySymbol}${effectivePrice}`}
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            )}
 
                             {/* Empty State */}
                             {availablePlans.length === 0 && (

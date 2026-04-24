@@ -4,8 +4,7 @@ import { CV, Template } from '@/models';
 import { createPaginationOptions, paginateQuery, createErrorResponse } from '@/lib/db-utils';
 import { UnifiedCVAPIResponse, UnifiedCVDocument, UnifiedCVRequest } from '@/types/unified-cv-schema';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
-import { getTemplateById, isHardcodedTemplate } from '@/lib/templates/template-utils';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById, isHardcodedTemplate, getAllTemplates } from '@/lib/templates/template-utils';
 import mongoose from 'mongoose';
 import usageLimitsService from '@/lib/services/usageLimitsService';
 
@@ -589,17 +588,18 @@ export async function POST(request: NextRequest) {
     let finalTemplateId = templateId;
     if (!finalTemplateId) {
       // Use Executive Professional as default template
-      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-      const executiveProfessional = HARDCODED_TEMPLATES.find(
-        t => t.id === 'executive-professional-layout-template' || t.name === 'Executive Professional'
+      const { getAllTemplates } = await import('@/lib/templates/template-utils');
+      const templates = getAllTemplates();
+      const executiveProfessional = templates.find(
+        t => t.id === 'professional-extended-v2' || t.name === 'Professional Extended'
       );
 
       if (executiveProfessional) {
         finalTemplateId = executiveProfessional.id || executiveProfessional._id;
-        console.log('✅ CV POST API - Using Executive Professional as default template');
+        console.log('✅ CV POST API - Using Professional Extended as default template');
       } else {
         // Fallback to any default template
-        const hardcodedDefault = HARDCODED_TEMPLATES.find(
+        const hardcodedDefault = templates.find(
           t => t.isDefault === true && t.category === 'cv'
         );
 
@@ -623,7 +623,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate template exists (check hardcoded templates first)
-    const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === finalTemplateId || t._id === finalTemplateId);
+    const hardcodedTemplate = getTemplateById(finalTemplateId);
 
     if (!hardcodedTemplate) {
       const template = await Template.findById(finalTemplateId);
@@ -803,8 +803,8 @@ export async function POST(request: NextRequest) {
       // Get template data if available
       let templateData = null;
       if (finalTemplateId) {
-        const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-        const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === finalTemplateId || t._id === finalTemplateId);
+        const { getTemplateById } = await import('@/lib/templates/template-utils');
+        const hardcodedTemplate = getTemplateById(finalTemplateId);
         if (hardcodedTemplate) {
           templateData = hardcodedTemplate;
         } else {

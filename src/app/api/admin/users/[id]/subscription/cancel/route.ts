@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { User, ActivityLog } from '@/models';
-import { withAdminAuth } from '@/lib/middleware/admin-auth';
+import { User } from '@/models';
+import { withAdminAuth, requireAdmin } from '@/lib/middleware/admin-auth';
+import { ActivityLogService } from '@/lib/services/activityLogService';
 
-export const POST = withAdminAuth(async (request: NextRequest, { params }: { params: { id: string } }) => {
+export const POST = withAdminAuth(async (request: NextRequest, { params }: { params: Promise<{ id: string }> }) => {
     try {
         await getConnection();
+        
+        const session = await requireAdmin(request);
+        const adminUser = session.user as any;
+        const adminContext = {
+            adminUserId: adminUser.id || session.user.id as string,
+            adminEmail: adminUser.email || session.user.email || undefined
+        };
 
-        const userId = params.id;
+        const { id: userId } = await params;
         const body = await request.json();
         const { when, note } = body;
 
@@ -58,18 +66,23 @@ export const POST = withAdminAuth(async (request: NextRequest, { params }: { par
         await user.save();
 
         // Log the cancellation activity
-        await ActivityLog.create({
-            userId: user._id,
+        await ActivityLogService.logAdminAction({
+            adminUserId: adminContext.adminUserId,
+            adminEmail: adminContext.adminEmail,
             action: 'subscription_cancelled',
-            details: {
+            actionType: 'user_management',
+            targetUserId: user._id.toString(),
+            resourceType: 'user',
+            resourceId: user._id.toString(),
+            status: 'success',
+            metadata: {
                 when,
                 note: note.trim(),
                 previousStatus,
                 previousPlan,
                 newPlan: user.currentPlanKey,
                 cancelledBy: 'admin'
-            },
-            timestamp: new Date()
+            }
         });
 
         return NextResponse.json({

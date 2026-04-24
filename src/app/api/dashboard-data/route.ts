@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { CV, JobApplication, ApplicationJourney } from '@/models';
 import UserModel from '@/models/User';
 import mongoose from 'mongoose';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 /**
  * Backend-for-Frontend (BFF) Endpoint for Dashboard
@@ -99,6 +100,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { currentPlanKey, subscription, isExpired } = subscriptionService.getEffectivePlan(user);
+
     // Calculate usage limits and counts
     const cvCount = includeCVs ? await CV.countDocuments({ userId: userObjectId }) : 0;
     const jobCount = includeJobs ? await JobApplication.countDocuments({ userId: userObjectId }) : 0;
@@ -109,9 +112,10 @@ export async function GET(request: NextRequest) {
         id: user._id.toString(),
         name: user.name,
         email: user.email,
-        subscription: user.subscription || {
+        currentPlanKey,
+        subscription: subscription || {
           status: 'free',
-          plan: 'free'
+          planKey: 'free'
         },
         credits: user.credits || 0,
         settings: user.settings || {},
@@ -120,11 +124,11 @@ export async function GET(request: NextRequest) {
       usageLimits: {
         cvs: {
           used: cvCount,
-          limit: user.subscription?.planKey === 'free' ? 1 : -1
+          limit: currentPlanKey === 'free' ? 1 : -1
         },
         jobs: {
           used: jobCount,
-          limit: user.subscription?.planKey === 'free' ? 1 : -1
+          limit: currentPlanKey === 'free' ? 1 : -1
         }
       },
       cvs: includeCVs ? cvs.map(cv => ({

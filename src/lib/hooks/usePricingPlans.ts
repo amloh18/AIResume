@@ -456,7 +456,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         return regionalPricing.monthly;
       case 'pro_quarterly':
         return regionalPricing.quarterly;
-      case 'pro_lifetime':
+      case 'pro_yearly':
         return regionalPricing.yearly;
       case 'pro_lifetime':
         // Lifetime is not in standard regional pricing object, fallback to plan price

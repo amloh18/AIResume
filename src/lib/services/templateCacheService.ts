@@ -8,7 +8,7 @@
 import { cacheManager } from '@/lib/cache/cache-manager';
 import { configService } from './configService';
 import { ITemplate } from '@/types/template';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById } from '@/lib/templates/template-utils';
 import { Template } from '@/models';
 import mongoose from 'mongoose';
 
@@ -31,9 +31,7 @@ export class TemplateCacheService {
       }
 
       // Check hardcoded templates first
-      const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-        t => t.id === templateId || t._id === templateId
-      );
+      const hardcodedTemplate = getTemplateById(templateId);
 
       if (hardcodedTemplate) {
         // Cache hardcoded template

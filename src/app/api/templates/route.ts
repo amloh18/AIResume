@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createErrorResponse } from '@/lib/db-utils';
-import { HARDCODED_TEMPLATES, resolveTemplateThumbnails } from '@/lib/templates/hardcoded-templates';
+import { getAllTemplates } from '@/lib/templates/template-utils';
 
 // GET - List available hardcoded templates only
 export async function GET(request: NextRequest) {
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 TEMPLATES API - Params:', { category, tier });
 
     // Filter hardcoded templates and resolve thumbnails at runtime
-    let templates = resolveTemplateThumbnails(HARDCODED_TEMPLATES);
+    let templates = getAllTemplates();
     
     if (category && category !== 'all') {
       templates = templates.filter(t => t.category === category);

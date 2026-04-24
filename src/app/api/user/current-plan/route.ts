@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 /**
  * GET /api/user/current-plan
@@ -36,10 +37,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+
     // Format plan data for frontend
     const planData = {
-      currentPlanKey: user.currentPlanKey || 'free',
-      subscription: user.subscription || null,
+      currentPlanKey: currentPlanKey,
+      subscription: subscription || null,
       credits: user.credits || null
     };
 

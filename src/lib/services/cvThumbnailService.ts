@@ -3,7 +3,7 @@ import CV from '@/models/CV';
 import Template from '@/models/Template';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById } from '@/lib/templates/template-utils';
 
 /**
  * Service to generate and save CV thumbnails to S3
@@ -51,9 +51,7 @@ export class CVThumbnailService {
       
       // Check hardcoded templates first
       const templateIdStr = cv.templateId?.toString() || '';
-      const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => 
-        t.id === templateIdStr || t._id === templateIdStr
-      );
+      const hardcodedTemplate = getTemplateById(templateIdStr);
       
       if (hardcodedTemplate) {
         template = hardcodedTemplate;

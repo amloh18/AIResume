@@ -7,5 +7,4 @@ export { getSlotRenderer, SLOT_RENDERER_MAP, HeaderSlotRenderer, SummarySlotRend
 // Style Generator
 export { generateCSSFromPreset, generateInlineStyles } from './style-to-css';
 
-// Legacy Adapter
-export { adaptToLegacyFormat, isV2Format, getLegacyRendererName } from './legacy-adapter';
+

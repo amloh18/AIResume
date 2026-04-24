@@ -7,7 +7,7 @@
 
 import mongoose from 'mongoose';
 import { CV, Template } from '@/models';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { TEMPLATE_REGISTRY } from '@/lib/templates/template-registry';
 
 export interface CVWithTemplate {
   _id: string;
@@ -48,8 +48,8 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     const templateIdString = cvDoc?.templateId?.toString() || '';
 
     // First check if it's a hardcoded template
-    const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-      t => t.id === templateIdString || t._id === templateIdString
+    const hardcodedTemplate = TEMPLATE_REGISTRY.find(
+      t => t.id === templateIdString
     );
 
     let templateData;
@@ -57,11 +57,10 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
     if (hardcodedTemplate) {
       // Use hardcoded template data
       templateData = {
-        _id: hardcodedTemplate.id || hardcodedTemplate._id,
+        _id: hardcodedTemplate.id,
         name: hardcodedTemplate.name,
-        globalStyles: hardcodedTemplate.globalStyles,
-        availableSections: hardcodedTemplate.availableSections,
-        customRenderer: hardcodedTemplate.customRenderer
+        globalStyles: hardcodedTemplate.theme,
+        availableSections: hardcodedTemplate.layout.sections.map(s => s.id)
       };
       console.log('✅ getCVWithTemplate - Using hardcoded template:', hardcodedTemplate.name);
     } else {
@@ -87,16 +86,15 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
         } else if (templateIdString) {
           // Template ID exists but template not found - might be deleted, fallback to hardcoded
           console.warn('⚠️ getCVWithTemplate - Template not found in database, checking hardcoded templates:', templateIdString);
-          const fallbackTemplate = HARDCODED_TEMPLATES.find(
-            t => t.id === templateIdString || t._id === templateIdString
+          const fallbackTemplate = TEMPLATE_REGISTRY.find(
+            t => t.id === templateIdString
           );
           if (fallbackTemplate) {
             templateData = {
-              _id: fallbackTemplate.id || fallbackTemplate._id,
+              _id: fallbackTemplate.id,
               name: fallbackTemplate.name,
-              globalStyles: fallbackTemplate.globalStyles,
-              availableSections: fallbackTemplate.availableSections,
-              customRenderer: fallbackTemplate.customRenderer
+              globalStyles: fallbackTemplate.theme,
+              availableSections: fallbackTemplate.layout.sections.map(s => s.id)
             };
             console.log('✅ getCVWithTemplate - Found fallback hardcoded template:', fallbackTemplate.name);
           }
@@ -105,16 +103,15 @@ export async function getCVWithTemplate(cvId: string): Promise<CVWithTemplate | 
         console.warn('⚠️ getCVWithTemplate - Populate failed, checking hardcoded templates:', populateError);
         // If populate fails (template deleted), check hardcoded templates
         if (templateIdString) {
-          const fallbackTemplate = HARDCODED_TEMPLATES.find(
-            t => t.id === templateIdString || t._id === templateIdString
+          const fallbackTemplate = TEMPLATE_REGISTRY.find(
+            t => t.id === templateIdString
           );
           if (fallbackTemplate) {
             templateData = {
-              _id: fallbackTemplate.id || fallbackTemplate._id,
+              _id: fallbackTemplate.id,
               name: fallbackTemplate.name,
-              globalStyles: fallbackTemplate.globalStyles,
-              availableSections: fallbackTemplate.availableSections,
-              customRenderer: fallbackTemplate.customRenderer
+              globalStyles: fallbackTemplate.theme,
+              availableSections: fallbackTemplate.layout.sections.map(s => s.id)
             };
             console.log('✅ getCVWithTemplate - Using fallback hardcoded template:', fallbackTemplate.name);
           }
@@ -175,19 +172,18 @@ export async function getCVsWithTemplates(
       const templateIdString = (cvDoc as any).templateId?.toString() || '';
 
       // Check hardcoded templates first
-      const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-        t => t.id === templateIdString || t._id === templateIdString
+      const hardcodedTemplate = TEMPLATE_REGISTRY.find(
+        t => t.id === templateIdString
       );
 
       let templateData;
 
       if (hardcodedTemplate) {
         templateData = {
-          _id: hardcodedTemplate.id || hardcodedTemplate._id,
+          _id: hardcodedTemplate.id,
           name: hardcodedTemplate.name,
-          globalStyles: hardcodedTemplate.globalStyles,
-          availableSections: hardcodedTemplate.availableSections,
-          customRenderer: hardcodedTemplate.customRenderer
+          globalStyles: hardcodedTemplate.theme,
+          availableSections: hardcodedTemplate.layout.sections.map(s => s.id)
         };
       } else if ((cvDoc as any).templateId && typeof (cvDoc as any).templateId === 'object') {
         // Populated from database

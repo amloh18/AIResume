@@ -149,8 +149,9 @@ export class AdminTemplateService {
   static async getDefaultTemplate(category: string = 'cv'): Promise<ITemplate | null> {
     try {
       // First check hardcoded templates for default
-      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-      const hardcodedDefault = HARDCODED_TEMPLATES.find(
+      const { getAllTemplates } = await import('@/lib/templates/template-utils');
+      const templates = getAllTemplates();
+      const hardcodedDefault = templates.find(
         t => t.isDefault === true && t.category === category
       );
       
