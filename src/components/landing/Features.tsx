@@ -101,7 +101,7 @@ const Features = () => {
       description: 'Save and autofill job data instantly from any job board. Never copy-paste again.',
       cta: 'Download Extension',
       ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii',
-      images: ['/images/never_miss_a_role.png'],
+      images: ['/images/extension.png'],
     },
     {
       id: 'linkedin-enhancer',
@@ -118,7 +118,7 @@ const Features = () => {
       description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high score.',
       cta: 'Create CV',
       ctaLink: '/studio',
-      images: ['/images/ats_optimized_documents.png'],
+      images: ['/images/ats_optimization.png'],
     },
     {
       id: 'skills-gap',
@@ -126,7 +126,7 @@ const Features = () => {
       description: 'Identify missing skills and get actionable recommendations to bridge the gap.',
       cta: 'Analyze Skills',
       ctaLink: '/ai-career-report',
-      images: ['/images/gain_your_edge.png'],
+      images: ['/images/skill_gap_analysis.png'],
     },
     {
       id: 'career-insights',
@@ -134,7 +134,7 @@ const Features = () => {
       description: 'Get detailed CV reports highlighting career gaps, strengths, and areas for improvement.',
       cta: 'Get Report',
       ctaLink: '/ai-career-report',
-      images: ['/images/deep_career_insights.png'],
+      images: ['/images/career_insights.png'],
     },
     // Row 3: 2 tiles
     {

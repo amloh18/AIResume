@@ -43,7 +43,7 @@ export default function UnifiedAuthLayout({
   }
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-[#141810]">
+    <div className={`min-h-screen flex bg-[#141810] ${!isModal ? 'dark' : ''}`}>
       {/* Left Side - 50% - Bright Color Panel */}
       <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden">
         {/* Vibrant Gradient Background */}
@@ -110,7 +110,7 @@ export default function UnifiedAuthLayout({
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="bg-white dark:bg-[#222B22] rounded-md border border-gray-100 dark:border-white/10 shadow-2xl p-8"
+            className="bg-white dark:bg-[#141810] rounded-md border border-gray-100 dark:border-white/10 shadow-2xl p-8"
           >
             {/* Card Header with Logo - Only show on mobile */}
             <div className="mb-8 lg:hidden flex justify-center">

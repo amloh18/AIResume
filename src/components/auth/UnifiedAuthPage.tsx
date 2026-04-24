@@ -1050,11 +1050,11 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   if (mode === 'verify-code') {
     return (
       <UnifiedAuthLayout
-        title="Verify Your Code"
-        subtitle="Enter the 4-digit code sent to your email"
+        title="Verification Required"
+        subtitle="Please verify your identity"
         showBackButton={!isModal}
         backHref="/sign-in"
-        backText="Back to Sign In"
+        backText="Back to Login"
         isModal={isModal}
       >
         <CodeVerificationScreen
@@ -1082,7 +1082,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     <UnifiedAuthLayout
       title={getTitle()}
       subtitle={getSubtitle()}
-      showBackButton={!isModal && mode !== 'signin'}
+      showBackButton={!isModal && mode !== 'signin' && mode !== 'signup'}
       backHref="/"
       backText="Back to Home"
       isModal={isModal}
