@@ -125,7 +125,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
   const [zones, setZones] = useState<Record<string, any[]>>({});
   const [templateAnimKey, setTemplateAnimKey] = useState(0);
-  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showIcons: true, headerLinks: {} as Record<string, boolean>, sidebarBgColor: '#f8fafc', sectionGap: '1.5rem', pageSize: 'A4' as 'A4' | 'Letter' });
+  const [design, setDesign] = useState({ font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showIcons: true, headerLinks: {} as Record<string, boolean>, sidebarBgColor: '#f8fafc', sectionGap: '1rem', pageSize: 'A4' as 'A4' | 'Letter' });
   const [activeSidebar, setActiveSidebar] = useState<string | null>(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [replacingSnippet, setReplacingSnippet] = useState<any>(null);
@@ -280,7 +280,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!focusedNode) return;
     let path = focusedNode.getAttribute('data-path');
     if (!path) { const parentWithPath = focusedNode.closest('[data-path]'); if (parentWithPath) path = parentWithPath.getAttribute('data-path'); }
-    if (!path || !path.includes('description')) return;
+    if (!path || (!path.includes('description') && !path.includes('summary'))) return;
     const originalText = focusedNode.innerText;
     setPointSuggestion({ path, text: originalText, originalText, node: focusedNode as HTMLElement, loading: false });
   };
@@ -295,12 +295,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!pointSuggestion) return;
     setPointSuggestion(prev => prev ? { ...prev, loading: true, error: undefined } : null);
     try {
+      const isSummary = pointSuggestion.path.includes('summary');
       const response = await fetch('/api/ai/fix-and-improve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           content: pointSuggestion.originalText, 
-          type: 'experience', 
+          type: isSummary ? 'summary' : 'experience', 
           promptType: type === 'star' ? 'star' : 'tone',
           tone: tone 
         })
@@ -429,14 +430,14 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     );
 
     switch (layoutType) {
-      case '1-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="flex-1" style={{ padding: 'var(--cv-page-margin)' }}>{renderZone('main', 'w-full min-w-0')}</div></div>;
-      case '2-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
-      case 'sidebar-left': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-full')}</div></div>;
-      case 'sidebar-left-dark': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-full', true)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-full')}</div></div>;
-      case 'sidebar-right': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-full')}</div><div className="absolute right-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-full', false)}</div></div>;
-      case 'top-sidebar-left': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="absolute left-[var(--cv-page-margin)] top-[6mm] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200" style={{ paddingRight: '5mm' }}>{renderZone('sidebar', 'h-full', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div></div></div>;
-      case 'top-sidebar-right': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex flex-1 gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="w-[68%] min-w-0">{renderZone('main', 'h-full')}</div><div className="absolute right-[var(--cv-page-margin)] top-[6mm] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200" style={{ paddingLeft: '5mm' }}>{renderZone('sidebar', 'h-full', false)}</div></div></div>;
-      case 'hybrid-split': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: '6mm', paddingBottom: 0 }}>{renderZone('main', 'w-full min-w-0')}</div><div className="flex flex-1 gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '2mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-full')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-full')}</div></div></div>;
+      case '1-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="h-max" style={{ padding: 'var(--cv-page-margin)' }}>{renderZone('main', 'w-full min-w-0')}</div></div>;
+      case '2-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
+      case 'sidebar-left': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div></div>;
+      case 'sidebar-left-dark': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', true)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div></div>;
+      case 'sidebar-right': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div><div className="absolute right-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', false)}</div></div>;
+      case 'top-sidebar-left': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="absolute left-[var(--cv-page-margin)] top-[6mm] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200" style={{ paddingRight: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div></div></div>;
+      case 'top-sidebar-right': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div><div className="absolute right-[var(--cv-page-margin)] top-[6mm] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200" style={{ paddingLeft: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div></div></div>;
+      case 'hybrid-split': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: '6mm', paddingBottom: 0 }}>{renderZone('main', 'w-full min-w-0')}</div><div className="flex h-max gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '2mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
       default: return <div>Layout not found</div>;
     }
   };
@@ -452,7 +453,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           <button onClick={() => setActiveSidebar(activeSidebar === 'design' ? null : 'design')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'design' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Design & Layout"><Palette size={20}/></button>
           <button onClick={() => setIsTemplateModalOpen(true)} className={`p-3 rounded-2xl transition-all ${isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100'}`} title="Templates"><LayoutTemplate size={20}/></button>
           <button onClick={() => setActiveSidebar(activeSidebar === 'data' ? null : 'data')} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'data' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="Raw Data JSON"><FileJson size={20}/></button>
-          <button onClick={() => { setActiveSidebar(activeSidebar === 'ai' ? null : 'ai'); if (activeSidebar !== 'ai') runAIScan(); }} className={`p-3 rounded-2xl transition-all ${activeSidebar === 'ai' ? 'bg-emerald-500/20 ' + brandGreen : (isDarkUI ? 'text-gray-400 hover:bg-[#222]' : 'text-gray-600 hover:bg-gray-100')}`} title="AI Review"><Wand2 size={20}/></button>
           <div className="flex-1"></div>
           <button onClick={() => window.print()} className={`p-3 rounded-2xl transition-all shadow-xl ${brandGreenBg} hover:scale-110`} title="Save to PDF"><Download size={20}/></button>
         </div>
@@ -495,7 +495,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         )}
 
         {!readOnly && activeSidebar === 'data' && (
-          <div className={`w-[400px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
+          <div className={`w-[600px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
             <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}><h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><FileJson size={18} className={brandGreen}/> Raw JSON</h3><button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button></div>
             <div className="flex-1 overflow-hidden relative">
               <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} />
@@ -503,27 +503,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           </div>
         )}
 
-        {!readOnly && activeSidebar === 'ai' && (
-          <div className={`w-[360px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
-            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
-              <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm border-2 ${cvScore >= 80 ? 'bg-green-500/20 border-green-500 text-green-500' : 'bg-yellow-500/20 border-yellow-500 text-yellow-500'}`}>{cvScore}</div><div><span className={`font-bold text-sm uppercase ${textPrimary}`}>AI Review</span><div className={`text-xs ${textMuted}`}>{aiIssues.length} issues</div></div></div>
-              <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
-              {scanning && <div className="text-center py-12 text-emerald-500 animate-pulse"><Wand2 size={40} className="mx-auto mb-3 opacity-80" /><span className="text-xs font-bold uppercase tracking-widest">Analyzing...</span></div>}
-              {!scanning && aiIssues.length === 0 && <div className={`text-center py-12 ${textMuted}`}><div className="text-5xl mb-3">&#10024;</div><p className="text-sm font-medium">No issues found.</p></div>}
-              {!scanning && aiIssues.map((issue: any) => (
-                <div key={issue.id} onMouseEnter={() => setActiveIssueId(issue.id)} onMouseLeave={() => setActiveIssueId(null)} className={`border rounded-xl p-4 transition-all ${activeIssueId === issue.id ? 'border-emerald-500' : (isDarkUI ? 'border-[#333] bg-[#1a1a1a]' : 'border-gray-200 bg-gray-50')}`}>
-                  <div className="flex items-start gap-2 mb-2"><span className={`px-2 py-0.5 text-[10px] uppercase font-bold rounded ${issue.type === 'Impact' ? 'bg-yellow-500/20 text-yellow-600' : 'bg-red-500/20 text-red-500'}`}>{issue.type}</span></div>
-                  <p className={`text-sm mb-4 leading-relaxed ${textPrimary}`}>{issue.suggestion}</p>
-                  <button onClick={() => applyAIFix(issue)} className={`w-full py-2 rounded-lg text-xs font-bold ${brandGreenBg}`}>APPLY FIX</button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className={readOnly ? 'w-full' : `flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
+        <div className="flex-1 flex flex-col relative min-w-0">
+          <div className={readOnly ? 'w-full' : `flex-1 overflow-auto relative py-8 flex justify-center custom-scrollbar transition-colors ${bgWorkspace}`}>
           {readOnly ? (
             <div className="cv-document-wrapper text-gray-900" style={{ width: 'var(--cv-page-width)', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-page-margin': `${design.pageMargin}px`, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': design.sectionGap, '--cv-workspace-bg': isDarkUI ? '#1a1a1a' : '#f3f2ee' } as React.CSSProperties}>
               {renderCanvasLayout()}
@@ -536,62 +517,62 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
             </div>
           )}
+          </div>
+
+          {!readOnly && (
+            <div className="absolute bottom-6 right-6 z-[40] flex items-center gap-2 pointer-events-none">
+              {/* Page Count and Size Info */}
+              <div className={`px-3 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-3 text-[10px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+                <div className="flex items-center gap-1.5 border-r pr-3 border-gray-500/20">
+                  <FileText size={12} className={brandGreen} />
+                  <span>{totalPagesCount} {totalPagesCount === 1 ? 'Page' : 'Pages'}</span>
+                </div>
+                <button 
+                  onClick={() => setDesign({ ...design, pageSize: design.pageSize === 'A4' ? 'Letter' : 'A4' })}
+                  className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md transition-all hover:bg-emerald-500/10 ${brandGreen}`}
+                >
+                  <LayoutTemplate size={10} />
+                  {design.pageSize}
+                </button>
+              </div>
+
+              {/* Zoom Controls */}
+              <div className={`px-2 py-1.5 rounded-xl border shadow-xl backdrop-blur-md flex items-center gap-2 ${bgNav} ${textPrimary} opacity-90 hover:opacity-100 transition-opacity pointer-events-auto`}>
+                <div className="flex items-center gap-0.5">
+                  <button 
+                    onClick={() => setZoom(Math.max(50, zoom - 10))}
+                    className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom <= 50 ? 'opacity-30 cursor-not-allowed' : textMuted}`}
+                  >
+                    <Search size={14} className="rotate-90" />
+                  </button>
+                  <input 
+                    type="range" 
+                    min="50" 
+                    max="200" 
+                    step="5"
+                    value={zoom} 
+                    onChange={(e) => setZoom(parseInt(e.target.value))}
+                    className="w-20 accent-emerald-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <button 
+                    onClick={() => setZoom(Math.min(200, zoom + 10))}
+                    className={`p-1.5 rounded-lg hover:bg-emerald-500/20 transition-all ${zoom >= 200 ? 'opacity-30 cursor-not-allowed' : textMuted}`}
+                  >
+                    <Search size={14} />
+                  </button>
+                </div>
+                
+                <button 
+                  onClick={() => setZoom(100)}
+                  className={`min-w-[42px] px-1.5 py-1 text-[9px] font-black rounded-md transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
+                >
+                  {zoom}%
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
-        {!readOnly && (
-          <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3">
-            {/* Page Count and Size Info */}
-            <div className={`px-4 py-2.5 rounded-2xl border shadow-2xl backdrop-blur-xl flex items-center gap-4 text-[11px] font-bold uppercase tracking-wider ${bgNav} ${textPrimary}`}>
-              <div className="flex items-center gap-2 border-r pr-4 border-gray-500/20">
-                <FileText size={14} className={brandGreen} />
-                <span>{totalPagesCount} {totalPagesCount === 1 ? 'Page' : 'Pages'}</span>
-              </div>
-              <button 
-                onClick={() => setDesign({ ...design, pageSize: design.pageSize === 'A4' ? 'Letter' : 'A4' })}
-                className={`flex items-center gap-2 px-2 py-1 rounded-lg transition-all hover:bg-emerald-500/10 ${brandGreen}`}
-              >
-                <LayoutTemplate size={12} />
-                {design.pageSize}
-              </button>
-            </div>
-
-            {/* Zoom Controls */}
-            <div className={`px-3 py-2 rounded-2xl border shadow-2xl backdrop-blur-xl flex items-center gap-3 ${bgNav} ${textPrimary}`}>
-              <div className="flex items-center gap-1">
-                <button 
-                  onClick={() => setZoom(Math.max(50, zoom - 10))}
-                  className={`p-2 rounded-xl hover:bg-emerald-500/20 transition-all ${zoom <= 50 ? 'opacity-30 cursor-not-allowed' : textMuted}`}
-                  title="Zoom Out"
-                >
-                  <Search size={16} className="rotate-90" />
-                </button>
-                <input 
-                  type="range" 
-                  min="50" 
-                  max="200" 
-                  step="5"
-                  value={zoom} 
-                  onChange={(e) => setZoom(parseInt(e.target.value))}
-                  className="w-28 accent-emerald-500 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                />
-                <button 
-                  onClick={() => setZoom(Math.min(200, zoom + 10))}
-                  className={`p-2 rounded-xl hover:bg-emerald-500/20 transition-all ${zoom >= 200 ? 'opacity-30 cursor-not-allowed' : textMuted}`}
-                  title="Zoom In"
-                >
-                  <Search size={16} />
-                </button>
-              </div>
-              
-              <button 
-                onClick={() => setZoom(100)}
-                className={`min-w-[54px] px-2 py-1.5 text-[10px] font-black rounded-lg transition-all border ${zoom === 100 ? 'bg-emerald-500/20 border-emerald-500/50 ' + brandGreen : 'bg-transparent border-gray-500/20 hover:border-emerald-500/50 ' + textMuted}`}
-              >
-                {zoom}%
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {!readOnly && <FloatingAICard pointSuggestion={pointSuggestion} setPointSuggestion={setPointSuggestion} handleFetchSuggestion={handleFetchSuggestion} cvData={cvData} handleDataChange={handleDataChange} />}
@@ -683,7 +664,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
               </div>
               {replacingSnippet.isAdd && (
                 <div className={`px-5 pt-4 pb-2 flex flex-wrap gap-2 border-b ${isDarkUI ? 'border-[#2a2a2a]' : 'border-gray-200'}`}>
-                  {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar'].map(cat => (
+                  {['All', 'Header', 'Summary', 'Experience', 'Education', 'Projects', 'Certifications', 'Awards', 'Skills', 'Languages', 'Interests', 'Publications', 'Volunteer', 'References', 'Sidebar']
+                    .filter(cat => cat === 'All' || !currentCategories.includes(cat))
+                    .map(cat => (
                     <button key={cat} onClick={() => setReplacingSnippet({...replacingSnippet, filterCategory: cat === 'All' ? null : cat})} className={`px-3 py-1.5 text-xs font-bold rounded-full uppercase tracking-wider border ${replacingSnippet.filterCategory === cat || (!replacingSnippet.filterCategory && cat === 'All') ? 'bg-emerald-500/20 text-emerald-500 border-emerald-500/50' : (isDarkUI ? 'bg-[#222] text-gray-400 border-[#333]' : 'bg-white text-gray-600 border-gray-200')}`}>{cat}</button>
                   ))}
                 </div>
@@ -729,6 +712,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           --cv-page-margin: ${design.pageMargin}px; 
           --cv-page-width: ${design.pageSize === 'Letter' ? '8.5in' : '210mm'};
           --cv-page-height: ${design.pageSize === 'Letter' ? '11in' : '297mm'};
+          --cv-section-gap: ${design.sectionGap};
         }
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
@@ -737,21 +721,17 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
           min-height: var(--cv-page-height);
           mask-image: linear-gradient(to bottom, 
-            transparent 0, 
-            transparent var(--cv-page-margin), 
-            black var(--cv-page-margin), 
-            black calc(var(--cv-page-height) - var(--cv-page-margin)), 
-            transparent calc(var(--cv-page-height) - var(--cv-page-margin)), 
+            black 0, 
+            black var(--cv-page-height), 
+            transparent var(--cv-page-height), 
             transparent calc(var(--cv-page-height) + 40px)
           );
           mask-size: 100% calc(var(--cv-page-height) + 40px);
           mask-repeat: repeat-y;
           -webkit-mask-image: linear-gradient(to bottom, 
-            transparent 0, 
-            transparent var(--cv-page-margin), 
-            black var(--cv-page-margin), 
-            black calc(var(--cv-page-height) - var(--cv-page-margin)), 
-            transparent calc(var(--cv-page-height) - var(--cv-page-margin)), 
+            black 0, 
+            black var(--cv-page-height), 
+            transparent var(--cv-page-height), 
             transparent calc(var(--cv-page-height) + 40px)
           );
           -webkit-mask-size: 100% calc(var(--cv-page-height) + 40px);

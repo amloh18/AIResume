@@ -339,9 +339,9 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       {work && work.length > 0 && (
         <Wrapper id="work" sectionType="work">
           <div className="pm-section">
-            <h2 className="pm-section-title">Work Experience</h2>
+            <h2 className="pm-section-title cv-page-breakable">Work Experience</h2>
             {work.map((job, index) => (
-              <div key={index} className="pm-split-item" data-item-id={index}>
+              <div key={index} className="pm-split-item cv-page-breakable" data-item-id={index}>
                 <div className="pm-split-left">
                   <p className="pm-split-company">{job.name || <span className="text-gray-400">Company Name</span>}</p>
                   <p className="pm-split-position">{job.position || <span className="text-gray-400">Job Title</span>}</p>
@@ -364,9 +364,9 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       {education && education.length > 0 && (
         <Wrapper id="education" sectionType="education">
           <div className="pm-section">
-            <h2 className="pm-section-title">Education</h2>
+            <h2 className="pm-section-title cv-page-breakable">Education</h2>
             {education.map((edu, index) => (
-              <div key={index} className="pm-split-item" data-item-id={index}>
+              <div key={index} className="pm-split-item cv-page-breakable" data-item-id={index}>
                 <div className="pm-split-left">
                   <p className="pm-split-company">{edu.institution || <span className="text-gray-400">Institution Name</span>}</p>
                   <p className="pm-split-position">
@@ -392,10 +392,10 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       {skills && skills.length > 0 && (
         <Wrapper id="skills" sectionType="skills">
           <div className="pm-section">
-            <h2 className="pm-section-title">Skills</h2>
+            <h2 className="pm-section-title cv-page-breakable">Skills</h2>
             <div className="pm-two-col-grid">
               {skills.map((skillCategory, index) => (
-                <div key={index} className="pm-skill-category">
+                <div key={index} className="pm-skill-category cv-page-breakable">
                   <span className="pm-skill-category-name">{skillCategory.category}: </span>
                   <span className="pm-skill-list">
                     {skillCategory.skills?.join(', ')}
@@ -411,9 +411,9 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       {projects && projects.length > 0 && (
         <Wrapper id="projects" sectionType="projects">
           <div className="pm-section">
-            <h2 className="pm-section-title">Projects</h2>
+            <h2 className="pm-section-title cv-page-breakable">Projects</h2>
             {projects.map((project, index) => (
-              <div key={index} className="pm-split-item" data-item-id={index}>
+              <div key={index} className="pm-split-item cv-page-breakable" data-item-id={index}>
                 <div className="pm-split-left">
                   <p className="pm-split-company">{project.name || <span className="text-gray-400">Project Name</span>}</p>
                   {project.startDate && (
@@ -445,9 +445,9 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       {certificates && certificates.length > 0 && (
         <Wrapper id="certificates" sectionType="certificates">
           <div className="pm-section">
-            <h2 className="pm-section-title">Certifications</h2>
+            <h2 className="pm-section-title cv-page-breakable">Certifications</h2>
             {certificates.map((cert, index) => (
-              <div key={index} className="pm-item" data-item-id={index}>
+              <div key={index} className="pm-item cv-page-breakable" data-item-id={index}>
                 <div className="pm-item-header">
                   <h3 className="pm-item-title">{cert.name || <span className="text-gray-400">Certificate Name</span>}</h3>
                   {cert.date && (
@@ -490,9 +490,9 @@ export const ProfessionalMinimalTemplate: React.FC<ProfessionalMinimalTemplatePr
       {awards && awards.length > 0 && (
         <Wrapper id="awards" sectionType="awards">
           <div className="pm-section">
-            <h2 className="pm-section-title">Awards</h2>
+            <h2 className="pm-section-title cv-page-breakable">Awards</h2>
             {awards.map((award, index) => (
-              <div key={index} className="pm-award-item" data-item-id={index}>
+              <div key={index} className="pm-award-item cv-page-breakable" data-item-id={index}>
                 <span className="pm-award-title">{award.title || <span className="text-gray-400">Award Title</span>}</span>
                 {award.awarder && (
                   <span className="pm-award-info"> – {award.awarder}</span>

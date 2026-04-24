@@ -60,6 +60,15 @@ export const renderFormattedText = (text: string, options?: { stripBullets?: boo
     // Text already contains HTML from WYSIWYG editor
     // Always strip bullet chars inside <li> tags since HTML lists render their own bullets
     normalizedText = normalizedText.replace(/(<li[^>]*>)\s*[•\-*◦▪]\s*/gi, '$1');
+    
+    // Inject cv-page-breakable class into common tags for pagination engine
+    normalizedText = normalizedText.replace(/<(p|li|h[1-6]|div)/gi, (match) => {
+      if (match.includes('class=')) {
+        return match.replace('class="', 'class="cv-page-breakable ');
+      }
+      return `${match} class="cv-page-breakable"`;
+    });
+    
     return normalizedText;
   }
 
@@ -123,7 +132,7 @@ export const parseFormattedText = (text: string): string => {
       formattedContent = formattedContent.replace(/^• /, '');
       const style = `text-align: ${alignment || 'justify'}; margin-left: 20px; position: relative;`;
       result.push(
-        `<div style="${style}">
+        `<div class="cv-page-breakable" style="${style}">
           <span style="position: absolute; left: -15px;">•</span>
           <span>${formattedContent}</span>
         </div>`
@@ -135,7 +144,7 @@ export const parseFormattedText = (text: string): string => {
         const [, number, content] = match;
         const style = `text-align: ${alignment || 'justify'}; margin-left: 20px; position: relative;`;
         result.push(
-          `<div style="${style}">
+          `<div class="cv-page-breakable" style="${style}">
             <span style="position: absolute; left: -15px;">${number}.</span>
             <span>${content}</span>
           </div>`
@@ -144,7 +153,7 @@ export const parseFormattedText = (text: string): string => {
     } else {
       // Regular paragraph - use justify alignment for better text distribution
       const style = `text-align: ${alignment || 'justify'}; margin: 0 0 4px 0;`;
-      result.push(`<p style="${style}">${formattedContent}</p>`);
+      result.push(`<p class="cv-page-breakable" style="${style}">${formattedContent}</p>`);
     }
   });
 
