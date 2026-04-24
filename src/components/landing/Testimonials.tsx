@@ -454,11 +454,11 @@ const Testimonials = () => {
                 <motion.div
                   key={testimonial._id}
                   data-testimonial-card
-                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
+                  className="group relative flex-shrink-0 w-[252px] tablet:w-[288px] desktop:w-[324px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[405px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
                     style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{
                       scale: 1.02,
@@ -534,11 +534,11 @@ const Testimonials = () => {
                 <motion.div
                   key={`${testimonial._id}-duplicate`}
                   data-testimonial-card
-                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
+                  className="group relative flex-shrink-0 w-[252px] tablet:w-[288px] desktop:w-[324px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[405px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
                     style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{
                       scale: 1.02,
@@ -637,11 +637,11 @@ const Testimonials = () => {
                 <motion.div
                   key={testimonial._id}
                   data-testimonial-card
-                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
+                  className="group relative flex-shrink-0 w-[252px] tablet:w-[288px] desktop:w-[324px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[405px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
                     style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{
                       scale: 1.02,
@@ -717,11 +717,11 @@ const Testimonials = () => {
                 <motion.div
                   key={`${testimonial._id}-duplicate`}
                   data-testimonial-card
-                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
+                  className="group relative flex-shrink-0 w-[252px] tablet:w-[288px] desktop:w-[324px]"
                   variants={cardVariants}
                 >
                   <motion.div
-                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[405px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
                     style={{ willChange: 'transform', minWidth: 0 }}
                     whileHover={{
                       scale: 1.02,
