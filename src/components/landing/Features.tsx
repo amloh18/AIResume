@@ -17,34 +17,35 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
   }, [images.length]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-2xl flex flex-col group bg-[#1c1c1e] border border-white/10 shadow-2xl">
-      {/* Mac Browser Header */}
-      <div className="h-6 tablet:h-8 bg-[#2d2d2d] flex items-center px-3 tablet:px-4 space-x-1.5 tablet:space-x-2 flex-shrink-0 z-20 border-b border-white/5">
-        <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ff5f56] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
-        <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ffbd2e] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
-        <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#27c93f] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
-      </div>
+    <div className="relative w-full h-full overflow-hidden rounded-2xl group bg-white p-3 tablet:p-6 flex items-center justify-center">
+      <div className="relative w-full h-full rounded-xl flex flex-col overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.15)] border border-gray-200">
+        {/* Mac Browser Header */}
+        <div className="h-6 tablet:h-8 bg-[#2d2d2d] flex items-center px-3 tablet:px-4 space-x-1.5 tablet:space-x-2 flex-shrink-0 z-20">
+          <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ff5f56] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
+          <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ffbd2e] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
+          <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#27c93f] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
+        </div>
 
-      {/* Browser Content */}
-      <div className="relative flex-1 overflow-hidden bg-white">
-        <AnimatePresence mode="popLayout">
-          <motion.div
-            key={currentIndex}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0"
-          >
-            <Image
-              src={images[currentIndex]}
-              alt={`${title} - view ${currentIndex + 1}`}
-              fill
-              className="object-contain object-center p-4 tablet:p-8 group-hover:scale-105 transition-transform duration-500"
-              quality={80}
-            />
-          </motion.div>
-        </AnimatePresence>
+        {/* Browser Content */}
+        <div className="relative flex-1 overflow-hidden bg-white">
+          <AnimatePresence mode="popLayout">
+            <motion.div
+              key={currentIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.05 }}
+              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="absolute inset-0"
+            >
+              <Image
+                src={images[currentIndex]}
+                alt={`${title} - view ${currentIndex + 1}`}
+                fill
+                className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                quality={80}
+              />
+            </motion.div>
+          </AnimatePresence>
 
         {/* Virtual Mouse simulation */}
         {images.length > 1 && (
@@ -82,8 +83,9 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
                 ease: "easeOut" 
               }}
             />
-          </motion.div>
-        )}
+            </motion.div>
+          )}
+        </div>
       </div>
     </div>
   );
