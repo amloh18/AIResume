@@ -835,7 +835,13 @@ export const IntelligenceDashboard: React.FC<{
   onUpdateGoal?: (goal: number) => void;
 }> = ({ predictions, marketIntelligence, jobs, cvs, userAvatar, onUpdateGoal }) => {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
-  const [newGoal, setNewGoal] = useState(predictions?.monthlyGoal || 20);
+  const [newGoal, setNewGoal] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('cvcircle_monthly_goal');
+      if (saved) return parseInt(saved, 10);
+    }
+    return predictions?.monthlyGoal || 20;
+  });
 
   // Extract user profile data from Master CV
   const extractUserProfile = () => {
@@ -990,8 +996,11 @@ export const IntelligenceDashboard: React.FC<{
   const handleUpdateGoal = async () => {
     if (onUpdateGoal) {
       await onUpdateGoal(newGoal);
-      setIsEditingGoal(false);
     }
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('cvcircle_monthly_goal', newGoal.toString());
+    }
+    setIsEditingGoal(false);
   };
 
 
@@ -1030,7 +1039,7 @@ export const IntelligenceDashboard: React.FC<{
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-gray-900 dark:text-white">
-                    {predictions?.projectedApplications || jobs.length} / {predictions?.monthlyGoal || 20}
+                    {predictions?.projectedApplications || jobs.length} / {newGoal}
                   </span>
                   <button onClick={() => setIsEditingGoal(true)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">
                     <Edit2 size={12} />
@@ -1042,7 +1051,7 @@ export const IntelligenceDashboard: React.FC<{
               <motion.div
                 className="h-full bg-gradient-to-r from-blue-400 to-blue-600"
                 initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, ((predictions?.projectedApplications || jobs.length) / (predictions?.monthlyGoal || 20)) * 100)}%` }}
+                animate={{ width: `${Math.min(100, ((predictions?.projectedApplications || jobs.length) / newGoal) * 100)}%` }}
                 transition={{ duration: 1, ease: "easeOut" }}
               />
             </div>
@@ -1055,13 +1064,40 @@ export const IntelligenceDashboard: React.FC<{
         {/* Market Data Snippets & CTA */}
         <div className="w-full md:w-1/2 flex flex-col h-full space-y-3">
           <div className="grid grid-cols-2 gap-3 flex-1">
-            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center text-center h-full">
-              <span className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Response Rate</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{competitiveData.metrics.responseRate}%</span>
+            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center text-center h-full relative">
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">Response Rate</span>
+              <div className="relative w-12 h-12 flex items-center justify-center">
+                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                  <circle cx="18" cy="18" r="16" stroke="currentColor" strokeWidth="3" fill="none" className="text-gray-200 dark:text-white/10" />
+                  <motion.circle 
+                    cx="18" cy="18" r="16" stroke="currentColor" strokeWidth="3" fill="none"
+                    strokeDasharray={2 * Math.PI * 16} 
+                    strokeDashoffset={2 * Math.PI * 16 * (1 - competitiveData.metrics.responseRate / 100)}
+                    className="text-lime-500" strokeLinecap="round" 
+                    initial={{ strokeDashoffset: 2 * Math.PI * 16 }}
+                    animate={{ strokeDashoffset: 2 * Math.PI * 16 * (1 - competitiveData.metrics.responseRate / 100) }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </svg>
+                <span className="absolute text-[11px] font-bold text-gray-900 dark:text-white">{competitiveData.metrics.responseRate}%</span>
+              </div>
             </div>
             <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 border border-gray-100 dark:border-white/5 flex flex-col items-center justify-center text-center h-full">
-              <span className="text-[11px] text-gray-500 dark:text-gray-400 mb-1">Time to Offer</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">{competitiveData.metrics.timeToOffer}d</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 w-full text-left">Time to Offer</span>
+              <div className="w-full flex flex-col gap-1 mt-auto">
+                <div className="flex justify-between items-end">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white leading-none">{competitiveData.metrics.timeToOffer}</span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">days</span>
+                </div>
+                <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-orange-400"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (competitiveData.metrics.timeToOffer / 60) * 100)}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <Link href="/dashboard/tracker" className="w-full flex items-center justify-center gap-2 p-2.5 bg-lime-500/10 text-lime-600 dark:text-lime-400 hover:bg-lime-500/20 transition-colors rounded-lg text-sm font-medium mt-auto">

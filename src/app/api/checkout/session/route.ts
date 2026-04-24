@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { getAdminPricingPlan } from '@/models/admin-models';
 import User from '@/models/User';
-import { getPolar } from '@/lib/payment/polar';
+import { getPolar, PolarService } from '@/lib/payment/polar';
 import { getRazorpay } from '@/lib/payment/razorpay';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
 import { getPricingForPlan } from '@/lib/services/countryPricingService';
@@ -909,171 +909,57 @@ async function handleDayPassPayment(
       });
     }
 
-    // Validate Stripe configuration before creating payment
+    // Validate Polar configuration before creating payment
     const secretKey = process.env.POLAR_ACCESS_TOKEN;
 
     if (!secretKey) {
-      console.error('❌ Stripe Payment Creation Failed (Day Pass): POLAR_ACCESS_TOKEN is missing');
+      console.error('❌ Polar Payment Creation Failed (Day Pass): POLAR_ACCESS_TOKEN is missing');
       console.error('   → This is the MOST COMMON issue on Vercel deployments');
       console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
       console.error('   → Ensure POLAR_ACCESS_TOKEN is set (without NEXT_PUBLIC_ prefix)');
       console.error('   → Redeploy after adding environment variables');
       return NextResponse.json({
-        error: 'Stripe is currently unavailable. Please contact support.',
-        details: 'Server configuration error'
-      }, { status: 500 });
-    }
-
-    const stripe = getStripe();
-    if (!stripe) {
-      console.error('❌ Stripe instance initialization failed (Day Pass)');
-      return NextResponse.json({
-        error: 'Stripe is currently unavailable. Please contact support.',
+        error: 'Polar is currently unavailable. Please contact support.',
         details: 'Server configuration error'
       }, { status: 500 });
     }
 
     try {
-      // Use Stripe price ID from plan or country pricing
-      const stripePriceId = countryPricing?.stripePriceIds?.dayPass || plan.stripePriceId_one_time;
+      // Use Polar price ID from plan or country pricing
+      const polarPriceId = countryPricing?.stripePriceIds?.dayPass || plan.stripePriceId_one_time;
 
-      if (stripePriceId) {
-        // Use existing Stripe price
-        let session;
-        try {
-          session = await stripe.checkout.sessions.create({
-            customer: user.subscription?.providerCustomerId || undefined,
-            payment_method_types: ['card'],
-            line_items: [{
-              price: stripePriceId,
-              quantity: 1,
-            }],
-            mode: 'payment', // One-time payment
-            success_url: `${process.env.NEXTAUTH_URL || ''}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.NEXTAUTH_URL || ''}/dashboard/settings?canceled=true`,
-            metadata: {
-              planKey: plan.key,
-              userId: user._id.toString(),
-              planId: plan._id.toString(),
-              type: 'day_pass',
-              region: regionInfo.countryCode
-            }
-          });
-
-          return NextResponse.json({
-            provider: 'stripe',
-            redirect_url: session.url
-          });
-        } catch (sessionError: any) {
-          console.error('❌ Stripe checkout session creation failed (Day Pass):', sessionError);
-
-          // Extract detailed error information
-          if (sessionError?.type) {
-            console.error('Stripe API Error Details:', {
-              type: sessionError.type,
-              code: sessionError.code,
-              message: sessionError.message,
-              param: sessionError.param,
-              decline_code: sessionError.decline_code,
-            });
-
-            // Check for common errors
-            if (sessionError.message?.toLowerCase().includes('api key') ||
-              sessionError.message?.toLowerCase().includes('authentication')) {
-              console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
-              console.error('   → Verify the secret key in Vercel Environment Variables');
-              console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
-            }
-          }
-
-          throw sessionError; // Re-throw to be caught by outer catch block
-        }
+      if (!polarPriceId) {
+        throw new Error('No Polar Price ID found for Day Pass');
       }
 
-      // Fallback: Create PaymentIntent for one-time payment
-      let paymentIntent;
-      try {
-        paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(amount),
-          currency: currency.toLowerCase(),
-          metadata: {
-            planKey: plan.key,
-            userId: user._id.toString(),
-            planId: plan._id.toString(),
-            type: 'day_pass',
-            region: regionInfo.countryCode
-          },
-          customer: user.subscription?.providerCustomerId || undefined,
-          description: `Day Pass - ${plan.name}`,
-          receipt_email: billingDetails.email || user.email
-        });
-      } catch (paymentIntentError: any) {
-        console.error('❌ Stripe payment intent creation failed (Day Pass):', paymentIntentError);
-
-        // Extract detailed error information
-        if (paymentIntentError?.type) {
-          console.error('Stripe API Error Details:', {
-            type: paymentIntentError.type,
-            code: paymentIntentError.code,
-            message: paymentIntentError.message,
-            param: paymentIntentError.param,
-            decline_code: paymentIntentError.decline_code,
-          });
-
-          // Check for common errors
-          if (paymentIntentError.message?.toLowerCase().includes('api key') ||
-            paymentIntentError.message?.toLowerCase().includes('authentication')) {
-            console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
-            console.error('   → Verify the secret key in Vercel Environment Variables');
-            console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
-          }
+      const checkoutResponse = await PolarService.createCheckout({
+        productPriceId: polarPriceId,
+        customerEmail: billingDetails.email || user.email,
+        customerName: billingDetails.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        successUrl: `${process.env.NEXTAUTH_URL || ''}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        metadata: {
+          planKey: plan.key,
+          userId: user._id.toString(),
+          planId: plan._id.toString(),
+          type: 'day_pass',
+          region: regionInfo.countryCode
         }
+      });
 
-        throw paymentIntentError; // Re-throw to be caught by outer catch block
+      if (!checkoutResponse.success || !checkoutResponse.url) {
+        throw new Error(checkoutResponse.error || 'Failed to create Polar checkout session');
       }
 
       return NextResponse.json({
-        provider: 'stripe',
-        client_secret: paymentIntent.client_secret,
-        payment_intent_id: paymentIntent.id
+        provider: 'polar',
+        redirect_url: checkoutResponse.url
       });
 
     } catch (error: any) {
-      console.error('Stripe PaymentIntent error:', error);
-
-      // Extract detailed error information from Stripe API
-      let errorMessage = 'Payment setup failed';
-      let errorCode = null;
-      let errorType = null;
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      // Stripe errors have a specific structure
-      if (error?.type) {
-        errorType = error.type;
-        errorCode = error.code;
-        errorMessage = error.message || errorMessage;
-
-        console.error('Stripe API error:', {
-          type: errorType,
-          code: errorCode,
-          message: errorMessage,
-          param: error.param,
-          decline_code: error.decline_code
-        });
-      }
-
+      console.error('Polar Checkout error:', error);
       return NextResponse.json({
-        error: errorMessage,
-        code: errorCode || errorType,
-        details: process.env.NODE_ENV === 'development' ? {
-          type: errorType,
-          code: errorCode,
-          param: error?.param,
-          decline_code: error?.decline_code
-        } : undefined
+        error: error.message || 'Payment setup failed',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       }, { status: 500 });
     }
 
@@ -1521,82 +1407,31 @@ async function handleProPlanPayment(
       }
     }
 
-    // Validate Stripe configuration before creating payment
+    // Validate Polar configuration before creating payment
     const secretKey = process.env.POLAR_ACCESS_TOKEN;
 
     if (!secretKey) {
-      console.error('❌ Stripe Payment Creation Failed (Pro Plan): POLAR_ACCESS_TOKEN is missing');
+      console.error('❌ Polar Payment Creation Failed (Pro Plan): POLAR_ACCESS_TOKEN is missing');
       console.error('   → This is the MOST COMMON issue on Vercel deployments');
       console.error('   → Check Vercel Dashboard → Project → Settings → Environment Variables');
       console.error('   → Ensure POLAR_ACCESS_TOKEN is set (without NEXT_PUBLIC_ prefix)');
       console.error('   → Redeploy after adding environment variables');
       return NextResponse.json({
-        error: 'Stripe is currently unavailable. Please contact support.',
-        details: 'Server configuration error'
-      }, { status: 500 });
-    }
-
-    const stripe = getStripe();
-    if (!stripe) {
-      console.error('❌ Stripe instance initialization failed (Pro Plan)');
-      return NextResponse.json({
-        error: 'Stripe is currently unavailable. Please contact support.',
+        error: 'Polar is currently unavailable. Please contact support.',
         details: 'Server configuration error'
       }, { status: 500 });
     }
 
     try {
-      // Create or get Stripe customer
-      let customerId = user.subscription?.providerCustomerId;
-      if (!customerId) {
-        let customer;
-        try {
-          customer = await stripe.customers.create({
-            email: user.email,
-            name: billingDetails.name || `${user.firstName} ${user.lastName}`,
-            metadata: {
-              userId: user._id.toString()
-            }
-          });
-        } catch (customerError: any) {
-          console.error('❌ Stripe customer creation failed (Pro Plan):', customerError);
-
-          // Extract detailed error information
-          if (customerError?.type) {
-            console.error('Stripe API Error Details:', {
-              type: customerError.type,
-              code: customerError.code,
-              message: customerError.message,
-              param: customerError.param,
-            });
-
-            // Check for common errors
-            if (customerError.message?.toLowerCase().includes('api key') ||
-              customerError.message?.toLowerCase().includes('authentication')) {
-              console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
-              console.error('   → Verify the secret key in Vercel Environment Variables');
-              console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
-            }
-          }
-
-          throw customerError; // Re-throw to be caught by outer catch block
-        }
-        customerId = customer.id;
-
-        // Update user with customer ID
-        await User.findByIdAndUpdate(user._id, {
-          'subscription.providerCustomerId': customerId
-        });
+      if (!priceId) {
+        throw new Error('No Polar Price ID found for the selected plan and interval');
       }
 
-      // For one-time payments (quarterly/yearly), use line_items with amount to ensure correct currency
-      // For subscriptions (monthly), use priceId if available, otherwise use line_items with amount
-      const sessionConfig: any = {
-        customer: customerId,
-        payment_method_types: ['card'],
-        mode: paymentMode,
-        success_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard/settings?canceled=true`,
+      const checkoutResponse = await PolarService.createCheckout({
+        productPriceId: priceId,
+        customerEmail: billingDetails.email || user.email,
+        customerName: billingDetails.name || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+        successUrl: `${returnUrl || process.env.NEXTAUTH_URL}/dashboard?success=true&session_id={CHECKOUT_SESSION_ID}`,
         metadata: {
           planKey: plan.key,
           userId: user._id.toString(),
@@ -1606,160 +1441,22 @@ async function handleProPlanPayment(
           couponCode: couponDiscount?.code || '',
           couponId: couponDiscount?.id || ''
         }
-      };
+      });
 
-      // Function to generate dynamic price config
-      const getDynamicPriceItem = () => {
-        const recurringConfig: any = {};
-
-        if (interval === 'monthly') {
-          recurringConfig.interval = 'month';
-        } else if (interval === 'quarterly') {
-          recurringConfig.interval = 'month';
-          recurringConfig.interval_count = 3; // Every 3 months
-        } else if (interval === 'yearly') {
-          recurringConfig.interval = 'year';
-        }
-
-        return {
-          price_data: {
-            currency: currency.toLowerCase(),
-            product_data: {
-              name: `${plan.name} - ${interval === 'monthly' ? 'Monthly' : interval === 'quarterly' ? 'Quarterly' : 'Yearly'}`,
-              description: interval === 'monthly'
-                ? 'Monthly subscription plan - automatically charged every month'
-                : interval === 'quarterly'
-                  ? 'Quarterly subscription plan - automatically charged every 3 months'
-                  : 'Yearly subscription plan - automatically charged every year'
-            },
-            recurring: recurringConfig,
-            unit_amount: Math.round(amount), // Ensure integer
-          },
-          quantity: 1,
-        };
-      };
-
-      // Use priceId if available (preferred method for subscriptions and better management)
-      // Otherwise fallback to price_data for dynamic price creation
-      if (priceId) {
-        // Use existing Stripe Price ID (preferred - better for subscription management)
-        sessionConfig.line_items = [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ];
-      } else {
-        // Fallback: Create price dynamically if price ID not available
-        sessionConfig.line_items = [getDynamicPriceItem()];
-      }
-
-      // For subscriptions (monthly), add subscription_data
-      if (paymentMode === 'subscription') {
-        sessionConfig.subscription_data = {
-          metadata: {
-            planKey: plan.key,
-            userId: user._id.toString(),
-            planId: plan._id.toString(),
-            interval: interval,
-            region: regionInfo?.countryCode || 'US'
-          }
-        };
-      }
-
-      let session;
-      try {
-        session = await stripe.checkout.sessions.create(sessionConfig);
-      } catch (sessionError: any) {
-        console.error('❌ Stripe checkout session creation failed (Pro Plan):', sessionError);
-
-        // Check if error is due to missing price ID (resource_missing or specific message)
-        const isMissingResource =
-          sessionError?.code === 'resource_missing' ||
-          (sessionError?.message && sessionError.message.includes('No such price'));
-
-        // If we failed with a priceId, retry with dynamic pricing
-        if (isMissingResource && priceId) {
-          console.log('⚠️  Falling back to dynamic pricing due to missing Price ID:', priceId);
-
-          try {
-            // Update config to use dynamic pricing config
-            sessionConfig.line_items = [getDynamicPriceItem()];
-
-            // Retry session creation
-            session = await stripe.checkout.sessions.create(sessionConfig);
-
-            console.log('✅ Fallback to dynamic pricing successful');
-          } catch (retryError: any) {
-            console.error('❌ Fallback to dynamic pricing also failed:', retryError);
-            throw retryError; // Throw the retry error if that also fails
-          }
-        } else {
-          // Re-throw original error if it's not a missing resource or we weren't using a priceId
-
-          // Extract detailed error information
-          if (sessionError?.type) {
-            console.error('Stripe API Error Details:', {
-              type: sessionError.type,
-              code: sessionError.code,
-              message: sessionError.message,
-              param: sessionError.param,
-            });
-
-            // Check for common errors
-            if (sessionError.message?.toLowerCase().includes('api key') ||
-              sessionError.message?.toLowerCase().includes('authentication')) {
-              console.error('⚠️  This error suggests POLAR_ACCESS_TOKEN may be incorrect or missing');
-              console.error('   → Verify the secret key in Vercel Environment Variables');
-              console.error('   → Ensure it matches your Stripe Dashboard (Test vs Live mode)');
-            }
-          }
-
-          throw sessionError;
-        }
+      if (!checkoutResponse.success || !checkoutResponse.url) {
+        throw new Error(checkoutResponse.error || 'Failed to create Polar checkout session');
       }
 
       return NextResponse.json({
-        provider: 'stripe',
-        redirect_url: session.url
+        provider: 'polar',
+        redirect_url: checkoutResponse.url
       });
 
     } catch (error: any) {
-      console.error('Stripe Checkout Session error:', error);
-
-      // Extract detailed error information from Stripe API
-      let errorMessage = 'Payment setup failed';
-      let errorCode = null;
-      let errorType = null;
-
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      }
-
-      // Stripe errors have a specific structure
-      if (error?.type) {
-        errorType = error.type;
-        errorCode = error.code;
-        errorMessage = error.message || errorMessage;
-
-        console.error('Stripe API error:', {
-          type: errorType,
-          code: errorCode,
-          message: errorMessage,
-          param: error.param,
-          decline_code: error.decline_code
-        });
-      }
-
+      console.error('Polar Checkout Session error:', error);
       return NextResponse.json({
-        error: errorMessage,
-        code: errorCode || errorType,
-        details: process.env.NODE_ENV === 'development' ? {
-          type: errorType,
-          code: errorCode,
-          param: error?.param,
-          decline_code: error?.decline_code
-        } : undefined
+        error: error.message || 'Payment setup failed',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
       }, { status: 500 });
     }
 
