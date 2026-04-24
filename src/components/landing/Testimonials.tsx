@@ -82,6 +82,78 @@ const Testimonials = () => {
       company: "",
       starRating: 5,
       message: "I had a critical formatting bug right before a major application deadline. I was panicking. I sent a support message at 9 PM on a Sunday, expecting a bot. A real person emailed me back in 20 minutes, had me try one thing, and when that didn't work, they *personally* fixed the issue on my account. I was stunned. That's how you earn a customer for life."
+    },
+    {
+      _id: "7",
+      username: "Aisha T.",
+      designation: "Recent Graduate",
+      company: "",
+      starRating: 5,
+      message: "Graduating into this market was terrifying. I had no idea how to translate my coursework into 'experience'. The CV builder didn't just format my page; the AI suggested ways to frame my university projects using the STAR method. I went from getting zero callbacks to landing three interviews in two weeks."
+    },
+    {
+      _id: "8",
+      username: "Carlos V.",
+      designation: "Software Developer (Migrant)",
+      company: "",
+      starRating: 5,
+      message: "Moving to a new country meant learning a completely different standard for resumes. I didn't know what recruiters here expected. CVCircle's templates are already optimized for local ATS systems, and the 'Smart Job Tracker' helped me realize which local keywords I was missing. It gave me the confidence to apply."
+    },
+    {
+      _id: "9",
+      username: "Priya S.",
+      designation: "Data Analyst",
+      company: "",
+      starRating: 5,
+      message: "I need Visa sponsorship, which means my applications have to be absolutely flawless to get noticed. The 'AI Insights' feature in the job tracker is a game-changer. It detects sponsorship likelihood for US/UK roles right from the JD, saving me hours of applying to dead-end roles. I finally landed a sponsored role in London!"
+    },
+    {
+      _id: "10",
+      username: "Michael L.",
+      designation: "Career Changer",
+      company: "",
+      starRating: 5,
+      message: "I spent 10 years in retail and wanted to move to tech sales. The cover letter generator actually took my retail experience and spun it into relationship management and KPIs. It read so naturally, not like a robot wrote it. I didn't have to spend hours staring at a blank page."
+    },
+    {
+      _id: "11",
+      username: "Yuki M.",
+      designation: "International Student",
+      company: "",
+      starRating: 5,
+      message: "English is my second language, so I always worried my resume sounded unnatural or had grammar mistakes. The contextual AI suggestion tool is brilliant. I just highlight a bullet point, click 'Professional Tone', and it instantly sounds like a native speaker wrote it without losing my original meaning."
+    },
+    {
+      _id: "12",
+      username: "Daniel K.",
+      designation: "Freelance Designer",
+      company: "",
+      starRating: 5,
+      message: "As a freelancer, I apply to dozens of short-term gigs every week. The Chrome extension is a lifesaver. I can save a gig from Upwork, generate a tailored CV from my Master CV, and track the status all in one place. It turned my chaotic hustle into a streamlined system."
+    },
+    {
+      _id: "13",
+      username: "Fatima A.",
+      designation: "Senior Project Manager",
+      company: "",
+      starRating: 5,
+      message: "I’ve reviewed thousands of resumes in my career, so I have high standards. The 'Data Driven Pro' template on this platform is exactly what hiring managers want to see. Clean, ATS-friendly, and pushes the metrics to the front. The fact that the formatting doesn't break when I add a line is just the cherry on top."
+    },
+    {
+      _id: "14",
+      username: "Omar R.",
+      designation: "Healthcare Professional",
+      company: "",
+      starRating: 5,
+      message: "I had a 3-year employment gap due to family reasons and dreaded explaining it. The AI actually suggested a 'Professional Development' placeholder that helped me frame that time constructively. It completely changed how I viewed my own gap year."
+    },
+    {
+      _id: "15",
+      username: "Elena P.",
+      designation: "Marketing Director",
+      company: "",
+      starRating: 5,
+      message: "The Interview Coach feature is wild. It looked at the specific job description I saved in the tracker, pulled out the core competencies, and gave me practice questions tailored EXACTLY to that role. It felt like I was getting the exam answers before the test."
     }
   ];
 
