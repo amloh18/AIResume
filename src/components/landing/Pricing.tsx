@@ -42,10 +42,10 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   const getPlanIcon = (planKey: string) => {
     switch (planKey) {
       case 'free': return Brain;
-      case 'day_pass': return Star;
       case 'pro_monthly': return Crown;
       case 'pro_quarterly': return Users;
-      case 'pro_lifetime': return Globe;
+      case 'pro_yearly': return Globe;
+      case 'pro_lifetime': return Star;
       default: return Brain;
     }
   };
@@ -89,9 +89,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
     const filtered = safePlans.filter(plan => {
       if (selectedCategory === 'essential') {
-        return plan.key === 'free' || plan.key === 'day_pass';
+        return plan.key === 'free';
       } else {
-        return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_lifetime';
+        return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly' || plan.key === 'pro_lifetime';
       }
     });
     return filtered;
@@ -249,9 +249,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
 
         {/* Plans Grid */}
         <motion.div
-          className={`grid gap-6 ${filteredPlans.length === 2
-            ? 'grid-cols-1 tablet:grid-cols-2 max-w-3xl mx-auto'
-            : 'grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3'
+          className={`grid gap-6 ${filteredPlans.length === 1
+            ? 'grid-cols-1 max-w-md mx-auto'
+            : filteredPlans.length === 2
+              ? 'grid-cols-1 tablet:grid-cols-2 max-w-3xl mx-auto'
+              : filteredPlans.length === 4
+                ? 'grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 max-w-7xl mx-auto'
+                : 'grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 max-w-6xl mx-auto'
             }`}
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -367,24 +371,29 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                               {regionalPrice} total
                             </div>
                           )}
-                          {/* Savings badge for quarterly */}
+                          {/* Savings badge */}
                           {plan.key === 'pro_quarterly' && (
                             <div className="text-xs text-lime-400 font-medium mt-1">
-                              Save <span className="bg-lime-400 text-black px-1 rounded font-bold">15%</span> vs monthly
+                              Save <span className="bg-lime-400 text-black px-1 rounded font-bold">10%</span> vs monthly
+                            </div>
+                          )}
+                          {plan.key === 'pro_yearly' && (
+                            <div className="text-xs text-lime-400 font-medium mt-1">
+                              Save <span className="bg-lime-400 text-black px-1 rounded font-bold">25%</span> vs monthly
                             </div>
                           )}
                         </div>
                       )}
                       <div className="text-white/60 text-xs tablet:text-xs mt-1">
-                        {plan.key === 'day_pass'
-                          ? 'one-time'
+                        {plan.key === 'pro_monthly'
+                          ? 'recurring monthly'
                           : plan.key === 'pro_quarterly'
                             ? 'billed quarterly'
-                            : plan.key === 'pro_lifetime'
-                              ? 'one-time'
-                              : plan.key === 'pro_monthly'
-                                ? 'recurring'
-                                : 'one-time'}
+                            : plan.key === 'pro_yearly'
+                              ? 'billed annually'
+                              : plan.key === 'pro_lifetime'
+                                ? 'one-time'
+                                : ''}
                       </div>
                     </div>
                   )
