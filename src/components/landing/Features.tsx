@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 
-const MultiImageFeature = ({ images, title }: { images: string[], title: string }) => {
+const MultiImageFeature = ({ images, title, showFrame = true }: { images: string[], title: string, showFrame?: boolean }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
@@ -15,6 +15,75 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
     }, 4000);
     return () => clearInterval(timer);
   }, [images.length]);
+
+  const imageContent = (
+    <AnimatePresence mode="popLayout">
+      <motion.div
+        key={currentIndex}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        className="absolute inset-0"
+      >
+        <Image
+          src={images[currentIndex]}
+          alt={`${title} - view ${currentIndex + 1}`}
+          fill
+          className={`group-hover:scale-105 transition-transform duration-500 ${showFrame ? 'object-cover object-top' : 'object-contain object-center'}`}
+          quality={80}
+        />
+      </motion.div>
+    </AnimatePresence>
+  );
+
+  const virtualMouse = images.length > 1 ? (
+    <motion.div
+      key={`mouse-${currentIndex}`}
+      className="absolute z-20 pointer-events-none flex items-center justify-center"
+      initial={{ x: '100%', y: '100%', opacity: 0 }}
+      animate={{ 
+        x: ['100%', '50%', '50%', '100%'], 
+        y: ['100%', '50%', '50%', '100%'],
+        opacity: [0, 1, 1, 0]
+      }}
+      transition={{ 
+        duration: 4, 
+        times: [0, 0.6, 0.8, 1],
+        ease: "easeInOut" 
+      }}
+      style={{ width: '24px', height: '24px', left: '0', top: '0' }}
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+        <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.42c.41 0 .63-.5.35-.78L5.85 2.86a.5.5 0 00-.85.35z"/>
+      </svg>
+      
+      <motion.div 
+        className="absolute inset-0 rounded-full border-2 border-lime-400 bg-lime-400/30"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ 
+          scale: [0, 2.5, 3], 
+          opacity: [0, 1, 0] 
+        }}
+        transition={{ 
+          duration: 0.6, 
+          delay: 2.4,
+          ease: "easeOut" 
+        }}
+      />
+    </motion.div>
+  ) : null;
+
+  if (!showFrame) {
+    return (
+      <div className="relative w-full h-full overflow-hidden rounded-2xl group flex items-center justify-center p-6 bg-transparent">
+        <div className="relative w-full h-full">
+          {imageContent}
+          {virtualMouse}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative w-full h-full overflow-hidden rounded-2xl group bg-white p-3 tablet:p-6 flex items-center justify-center">
@@ -28,63 +97,8 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
 
         {/* Browser Content */}
         <div className="relative flex-1 overflow-hidden bg-white">
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              key={currentIndex}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 1.05 }}
-              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="absolute inset-0"
-            >
-              <Image
-                src={images[currentIndex]}
-                alt={`${title} - view ${currentIndex + 1}`}
-                fill
-                className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                quality={80}
-              />
-            </motion.div>
-          </AnimatePresence>
-
-        {/* Virtual Mouse simulation */}
-        {images.length > 1 && (
-          <motion.div
-            key={`mouse-${currentIndex}`}
-            className="absolute z-20 pointer-events-none flex items-center justify-center"
-            initial={{ x: '100%', y: '100%', opacity: 0 }}
-            animate={{ 
-              x: ['100%', '50%', '50%', '100%'], 
-              y: ['100%', '50%', '50%', '100%'],
-              opacity: [0, 1, 1, 0]
-            }}
-            transition={{ 
-              duration: 4, 
-              times: [0, 0.6, 0.8, 1],
-              ease: "easeInOut" 
-            }}
-            style={{ width: '24px', height: '24px', left: '0', top: '0' }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
-              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.42c.41 0 .63-.5.35-.78L5.85 2.86a.5.5 0 00-.85.35z"/>
-            </svg>
-            
-            {/* Click Ripple */}
-            <motion.div 
-              className="absolute inset-0 rounded-full border-2 border-lime-400 bg-lime-400/30"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ 
-                scale: [0, 2.5, 3], 
-                opacity: [0, 1, 0] 
-              }}
-              transition={{ 
-                duration: 0.6, 
-                delay: 2.4, // occurs at 60% of 4s (2.4s) when mouse stops moving
-                ease: "easeOut" 
-              }}
-            />
-            </motion.div>
-          )}
+          {imageContent}
+          {virtualMouse}
         </div>
       </div>
     </div>
@@ -102,6 +116,7 @@ const Features = () => {
       cta: 'Download Extension',
       ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii',
       images: ['/images/extension.png'],
+      showFrame: false,
     },
     {
       id: 'linkedin-enhancer',
@@ -110,6 +125,7 @@ const Features = () => {
       cta: 'Enhance Profile',
       ctaLink: '/linkedin-enhancer',
       images: ['/images/linkedin_enhancer.png', '/images/linkedin_enhancer_dashbaord.png'],
+      showFrame: true,
     },
     // Row 2: 3 medium tiles
     {
@@ -119,6 +135,7 @@ const Features = () => {
       cta: 'Create CV',
       ctaLink: '/studio',
       images: ['/images/ats_optimization.png'],
+      showFrame: false,
     },
     {
       id: 'skills-gap',
@@ -127,6 +144,7 @@ const Features = () => {
       cta: 'Analyze Skills',
       ctaLink: '/ai-career-report',
       images: ['/images/skill_gap_analysis.png'],
+      showFrame: false,
     },
     {
       id: 'career-insights',
@@ -135,6 +153,7 @@ const Features = () => {
       cta: 'Get Report',
       ctaLink: '/ai-career-report',
       images: ['/images/career_insights.png'],
+      showFrame: false,
     },
     // Row 3: 2 tiles
     {
@@ -144,6 +163,7 @@ const Features = () => {
       cta: 'Explore Jobs',
       ctaLink: '/dashboard/jobs',
       images: ['/images/global_opportunities.png'],
+      showFrame: false,
     },
     {
       id: 'interview-coach',
@@ -152,6 +172,7 @@ const Features = () => {
       cta: 'Start Practice',
       ctaLink: '/interview-coach',
       images: ['/images/interviewcoach_dashbaord.png', '/images/interviewcoach_questionanalysis.png', '/images/interviwcoach.png'],
+      showFrame: true,
     },
     {
       id: 'dark-light-mode',
@@ -160,6 +181,7 @@ const Features = () => {
       cta: 'Try Theme',
       ctaLink: '/dashboard',
       images: ['/images/features/dark_light.png'],
+      showFrame: true,
     },
   ];
 
@@ -221,9 +243,11 @@ const Features = () => {
                   </p>
                 </div>
 
-                <div className="relative aspect-[16/6] overflow-hidden rounded-2xl mx-4 mb-4">
-                  <MultiImageFeature images={feature.images} title={feature.title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
+                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/6]'} overflow-hidden rounded-2xl mx-4 mb-4`}>
+                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
+                  {feature.showFrame !== false && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -249,9 +273,11 @@ const Features = () => {
                   </p>
                 </div>
 
-                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl mx-4 mb-4">
-                  <MultiImageFeature images={feature.images} title={feature.title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
+                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden rounded-2xl mx-4 mb-4`}>
+                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
+                  {feature.showFrame !== false && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -277,9 +303,11 @@ const Features = () => {
                   </p>
                 </div>
 
-                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl mx-4 mb-4">
-                  <MultiImageFeature images={feature.images} title={feature.title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
+                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/10]'} overflow-hidden rounded-2xl mx-4 mb-4`}>
+                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
+                  {feature.showFrame !== false && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -305,9 +333,11 @@ const Features = () => {
                   </p>
                 </div>
 
-                <div className="relative aspect-[16/9] overflow-hidden bg-gray-800/50 rounded-2xl mx-4 mb-4">
-                  <MultiImageFeature images={feature.images} title={feature.title} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/40 to-transparent pointer-events-none rounded-2xl z-10" />
+                <div className={`relative ${feature.showFrame === false ? 'aspect-square' : 'aspect-[16/9]'} overflow-hidden bg-gray-800/50 rounded-2xl mx-4 mb-4`}>
+                  <MultiImageFeature images={feature.images} title={feature.title} showFrame={feature.showFrame} />
+                  {feature.showFrame !== false && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/40 to-transparent pointer-events-none rounded-2xl z-10" />
+                  )}
                 </div>
               </motion.div>
             ))}
