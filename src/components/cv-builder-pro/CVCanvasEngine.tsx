@@ -663,10 +663,24 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
         .cv-document { 
           font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
-          mask-image: linear-gradient(to bottom, black 0, black 297mm, transparent 297mm, transparent calc(297mm + 40px));
+          mask-image: linear-gradient(to bottom, 
+            transparent 0, 
+            transparent var(--cv-page-margin), 
+            black var(--cv-page-margin), 
+            black calc(297mm - var(--cv-page-margin)), 
+            transparent calc(297mm - var(--cv-page-margin)), 
+            transparent calc(297mm + 40px)
+          );
           mask-size: 100% calc(297mm + 40px);
           mask-repeat: repeat-y;
-          -webkit-mask-image: linear-gradient(to bottom, black 0, black 297mm, transparent 297mm, transparent calc(297mm + 40px));
+          -webkit-mask-image: linear-gradient(to bottom, 
+            transparent 0, 
+            transparent var(--cv-page-margin), 
+            black var(--cv-page-margin), 
+            black calc(297mm - var(--cv-page-margin)), 
+            transparent calc(297mm - var(--cv-page-margin)), 
+            transparent calc(297mm + 40px)
+          );
           -webkit-mask-size: 100% calc(297mm + 40px);
           -webkit-mask-repeat: repeat-y;
         }

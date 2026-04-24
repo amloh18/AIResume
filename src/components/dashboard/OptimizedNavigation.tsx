@@ -450,10 +450,11 @@ const OptimizedNavigation: React.FC = () => {
             <Component
               key={section.id}
               {...componentProps}
-              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
+              className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
                 ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
                 : 'text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50'
                 }`}
+              style={{ outline: 'none', boxShadow: 'none' }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -514,10 +515,11 @@ const OptimizedNavigation: React.FC = () => {
                 <Component
                   key={section.id}
                   {...componentProps}
-                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left relative ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
+                  className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left relative outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none ${isDesktopExpanded ? 'lg:px-4 lg:py-3 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} ${isActive
                     ? 'bg-[#1a230f] dark:bg-[#1a230f] border border-[rgb(129,255,0)] text-[rgb(129,255,0)]'
                     : 'bg-white dark:bg-[#1f2916] text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800 border border-gray-100 dark:border-gray-800'
                     }`}
+                  style={{ outline: 'none', boxShadow: 'none' }}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -981,7 +983,8 @@ const OptimizedNavigation: React.FC = () => {
           {/* Theme Toggle Button */}
           <motion.button
             onClick={toggleTheme}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50"
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700/50 outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none"
+            style={{ outline: 'none', boxShadow: 'none' }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -1003,7 +1006,8 @@ const OptimizedNavigation: React.FC = () => {
           {/* Sign Out Button */}
           <motion.button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+            className="w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 outline-none focus:outline-none focus:ring-0 focus:shadow-none hover:shadow-none !shadow-none"
+            style={{ outline: 'none', boxShadow: 'none' }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >

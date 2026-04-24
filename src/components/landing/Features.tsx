@@ -1,9 +1,83 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
+
+const MultiImageFeature = ({ images, title }: { images: string[], title: string }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const timer = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % images.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [images.length]);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden rounded-2xl group">
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={currentIndex}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.05 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0"
+        >
+          <Image
+            src={images[currentIndex]}
+            alt={`${title} - view ${currentIndex + 1}`}
+            fill
+            className="object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
+            quality={80}
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Virtual Mouse simulation */}
+      {images.length > 1 && (
+        <motion.div
+          key={`mouse-${currentIndex}`}
+          className="absolute z-20 pointer-events-none flex items-center justify-center"
+          initial={{ x: '100%', y: '100%', opacity: 0 }}
+          animate={{ 
+            x: ['100%', '50%', '50%', '100%'], 
+            y: ['100%', '50%', '50%', '100%'],
+            opacity: [0, 1, 1, 0]
+          }}
+          transition={{ 
+            duration: 4, 
+            times: [0, 0.6, 0.8, 1],
+            ease: "easeInOut" 
+          }}
+          style={{ width: '24px', height: '24px', left: '0', top: '0' }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.42c.41 0 .63-.5.35-.78L5.85 2.86a.5.5 0 00-.85.35z"/>
+          </svg>
+          
+          {/* Click Ripple */}
+          <motion.div 
+            className="absolute inset-0 rounded-full border-2 border-lime-400 bg-lime-400/30"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ 
+              scale: [0, 2.5, 3], 
+              opacity: [0, 1, 0] 
+            }}
+            transition={{ 
+              duration: 0.6, 
+              delay: 2.4, // occurs at 60% of 4s (2.4s) when mouse stops moving
+              ease: "easeOut" 
+            }}
+          />
+        </motion.div>
+      )}
+    </div>
+  );
+};
 
 const Features = () => {
   // All features organized for 2-column layout (8 total features)
@@ -15,7 +89,7 @@ const Features = () => {
       description: 'Save and autofill job data instantly from any job board. Never copy-paste again.',
       cta: 'Download Extension',
       ctaLink: 'https://chromewebstore.google.com/detail/fphkljfgefkfemmlfbpnjdojnfeadaii',
-      image: '/images/never_miss_a_role.png',
+      images: ['/images/never_miss_a_role.png'],
     },
     {
       id: 'linkedin-enhancer',
@@ -23,7 +97,7 @@ const Features = () => {
       description: 'Optimize your LinkedIn profile with AI-powered suggestions to attract recruiters & land more opportunities.',
       cta: 'Enhance Profile',
       ctaLink: '/linkedin-enhancer',
-      image: '/images/image_asset/hero-resume-enhancer.png',
+      images: ['/images/linkedin_enhancer.png', '/images/linkedin_enhancer_dashbaord.png'],
     },
     // Row 2: 3 medium tiles
     {
@@ -32,7 +106,7 @@ const Features = () => {
       description: 'Auto-generate CVs and Cover Letters tailored to pass Applicant Tracking Systems with high score.',
       cta: 'Create CV',
       ctaLink: '/studio',
-      image: '/images/ats_optimized_documents.png',
+      images: ['/images/ats_optimized_documents.png'],
     },
     {
       id: 'skills-gap',
@@ -40,7 +114,7 @@ const Features = () => {
       description: 'Identify missing skills and get actionable recommendations to bridge the gap.',
       cta: 'Analyze Skills',
       ctaLink: '/ai-career-report',
-      image: '/images/gain_your_edge.png',
+      images: ['/images/gain_your_edge.png'],
     },
     {
       id: 'career-insights',
@@ -48,7 +122,7 @@ const Features = () => {
       description: 'Get detailed CV reports highlighting career gaps, strengths, and areas for improvement.',
       cta: 'Get Report',
       ctaLink: '/ai-career-report',
-      image: '/images/deep_career_insights.png',
+      images: ['/images/deep_career_insights.png'],
     },
     // Row 3: 2 tiles
     {
@@ -57,7 +131,7 @@ const Features = () => {
       description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies with updated companies list.',
       cta: 'Explore Jobs',
       ctaLink: '/dashboard/jobs',
-      image: '/images/global_opportunities.png',
+      images: ['/images/global_opportunities.png'],
     },
     {
       id: 'interview-coach',
@@ -65,7 +139,7 @@ const Features = () => {
       description: 'Get an edge over other candidates by practising industry standard interview questions.',
       cta: 'Start Practice',
       ctaLink: '/interview-coach',
-      image: '/images/image_asset/hero-interview-mode.png',
+      images: ['/images/interviewcoach_dashbaord.png', '/images/interviewcoach_questionanalysis.png', '/images/interviwcoach.png'],
     },
     {
       id: 'dark-light-mode',
@@ -73,7 +147,7 @@ const Features = () => {
       description: 'Switch between dark and light themes for a comfortable reading experience in any environment.',
       cta: 'Try Theme',
       ctaLink: '/dashboard',
-      image: '/images/features/dark_light.png',
+      images: ['/images/features/dark_light.png'],
     },
   ];
 
@@ -136,14 +210,8 @@ const Features = () => {
                 </div>
 
                 <div className="relative aspect-[16/6] overflow-hidden rounded-2xl mx-4 mb-4">
-                  <Image
-                    src={feature.image}
-                    alt={feature.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
-                    quality={80}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl" />
+                  <MultiImageFeature images={feature.images} title={feature.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
                 </div>
               </motion.div>
             ))}
@@ -170,14 +238,8 @@ const Features = () => {
                 </div>
 
                 <div className="relative aspect-[16/10] overflow-hidden rounded-2xl mx-4 mb-4">
-                  <Image
-                    src={feature.image}
-                    alt={feature.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
-                    quality={80}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl" />
+                  <MultiImageFeature images={feature.images} title={feature.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
                 </div>
               </motion.div>
             ))}
@@ -204,14 +266,8 @@ const Features = () => {
                 </div>
 
                 <div className="relative aspect-[16/10] overflow-hidden rounded-2xl mx-4 mb-4">
-                  <Image
-                    src={feature.image}
-                    alt={feature.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
-                    quality={80}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl" />
+                  <MultiImageFeature images={feature.images} title={feature.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/60 to-transparent pointer-events-none rounded-2xl z-10" />
                 </div>
               </motion.div>
             ))}
@@ -238,14 +294,8 @@ const Features = () => {
                 </div>
 
                 <div className="relative aspect-[16/9] overflow-hidden bg-gray-800/50 rounded-2xl mx-4 mb-4">
-                  <Image
-                    src={feature.image}
-                    alt={feature.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
-                    quality={75}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/40 to-transparent pointer-events-none rounded-2xl" />
+                  <MultiImageFeature images={feature.images} title={feature.title} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#141810]/40 to-transparent pointer-events-none rounded-2xl z-10" />
                 </div>
               </motion.div>
             ))}
