@@ -26,7 +26,7 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
       </div>
 
       {/* Browser Content */}
-      <div className="relative flex-1 overflow-hidden bg-[#141810]">
+      <div className="relative flex-1 overflow-hidden bg-white">
         <AnimatePresence mode="popLayout">
           <motion.div
             key={currentIndex}
@@ -40,7 +40,7 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
               src={images[currentIndex]}
               alt={`${title} - view ${currentIndex + 1}`}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              className="object-contain object-center p-4 tablet:p-8 group-hover:scale-105 transition-transform duration-500"
               quality={80}
             />
           </motion.div>
