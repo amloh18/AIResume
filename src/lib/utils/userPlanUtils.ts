@@ -1,4 +1,12 @@
-export type PlanKey = 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
+export type PlanKey = 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+
+export const PLAN_NAMES: Record<PlanKey, string> = {
+  free: 'Free Plan',
+  pro_monthly: 'Pro Monthly',
+  pro_quarterly: 'Pro Quarterly',
+  pro_yearly: 'Pro Yearly',
+  pro_lifetime: 'Pro Lifetime'
+};
 
 export interface UserPlan {
   currentPlanKey: PlanKey;
@@ -16,7 +24,7 @@ export interface UserPlan {
 export function hasAIAccess(userPlan: UserPlan | null): boolean {
   if (!userPlan) return false;
 
-  const proPlans: PlanKey[] = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'];
+  const proPlans: PlanKey[] = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
   const hasProPlan = proPlans.includes(userPlan.currentPlanKey);
 
   // Check if subscription is active
@@ -35,9 +43,9 @@ export function hasAIAccess(userPlan: UserPlan | null): boolean {
 export function getPlanName(planKey: PlanKey): string {
   const planNames = {
     free: 'Free Plan',
-    day_pass: 'Day Pass',
     pro_monthly: 'Pro Monthly',
     pro_quarterly: 'Pro Quarterly',
+    pro_yearly: 'Pro Yearly',
     pro_lifetime: 'Pro Lifetime'
   };
 
@@ -55,7 +63,7 @@ export function hasSpecificAIAccess(userPlan: UserPlan | null, feature: 'basic' 
       return true; // All PRO users get basic AI
     case 'advanced':
       // Advanced features for quarterly and yearly plans
-      return ['pro_quarterly', 'pro_lifetime'].includes(userPlan?.currentPlanKey || 'free');
+      return ['pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(userPlan?.currentPlanKey || 'free');
     case 'all':
       return true; // All PRO users get all features
     default:

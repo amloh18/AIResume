@@ -49,7 +49,7 @@ const OptimizedNavigation: React.FC = () => {
   const [creditInfoLoading, setCreditInfoLoading] = useState(true);
   const [isAnyPaymentModalOpen, setIsAnyPaymentModalOpen] = useState(false);
 
-  // Update time every minute for day pass countdown
+  // Update time every minute for annual countdown
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -612,9 +612,9 @@ const OptimizedNavigation: React.FC = () => {
               return null;
             }
 
-            // Calculate time remaining for day pass (updates with currentTime state)
+            // Calculate time remaining for annual pass (updates with currentTime state)
             const getTimeRemaining = () => {
-              if (currentPlan !== 'day_pass') return null;
+              if (currentPlan !== 'pro_yearly' && currentPlan !== 'pro_lifetime') return null;
 
               const accessExpiresAt = userData?.subscription?.accessExpiresAt;
               if (!accessExpiresAt) return null;
@@ -631,11 +631,11 @@ const OptimizedNavigation: React.FC = () => {
             };
 
             const timeRemaining = getTimeRemaining();
-            const isDayPass = currentPlan === 'day_pass';
-            const isExpired = isDayPass && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
+            const isAnnual = currentPlan === 'pro_yearly' || currentPlan === 'pro_lifetime';
+            const isExpired = isAnnual && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
 
             // Urgency indicators
-            const isUrgent = isDayPass && timeRemaining && timeRemaining.hours < 3;
+            const isUrgent = isAnnual && timeRemaining && timeRemaining.hours < 3;
 
             // Use the utility function to get plan display name
             const planDisplayName = (planKey: string) => {
@@ -714,7 +714,7 @@ const OptimizedNavigation: React.FC = () => {
                   <div className="space-y-2">
                     <motion.button
                       onClick={() => {
-                        setPreselectedPlanKey('day_pass');
+                        setPreselectedPlanKey('pro_yearly');
                         setShowSubscriptionModal(true);
                       }}
                       className="w-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5"
@@ -722,7 +722,7 @@ const OptimizedNavigation: React.FC = () => {
                       whileTap={{ scale: 0.97 }}
                     >
                       <Star className="w-3 h-3" />
-                      Buy Day Pass
+                      Go Yearly
                     </motion.button>
 
                     <motion.button
@@ -755,11 +755,11 @@ const OptimizedNavigation: React.FC = () => {
               );
             }
 
-            // Day pass card
-            if (currentPlan === 'day_pass') {
+            // Yearly plan card
+            if (currentPlan === 'pro_yearly') {
               return (
                 <motion.div
-                  className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
+                  className={`hidden ${isDesktopExpanded ? 'lg:block' : ''} bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-purple-500 to-purple-600'} rounded-2xl p-3 text-white border-2 ${isUrgent ? 'border-red-300' : 'border-white/20'}`}
                   animate={isUrgent ? {
                     boxShadow: ['0 0 0px rgba(239, 68, 68, 0.4)', '0 0 12px rgba(239, 68, 68, 0.6)', '0 0 0px rgba(239, 68, 68, 0.4)']
                   } : {}}
@@ -769,7 +769,7 @@ const OptimizedNavigation: React.FC = () => {
                     <div className="flex items-center gap-1.5">
                       {isUrgent && <AlertCircle className="w-3.5 h-3.5 animate-pulse" />}
                       <div className="text-sm font-semibold">
-                        Day Pass
+                        Yearly Plan
                       </div>
                     </div>
                     {timeRemaining && (
@@ -812,9 +812,9 @@ const OptimizedNavigation: React.FC = () => {
 
                   <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
                     {isUrgent ? (
-                      <span className="font-medium">Need your plan to last for a month? Monthly or quarterly plans keep you covered.</span>
+                      <span className="font-medium">Your yearly plan is about to expire. Upgrade to lifetime for permanent access.</span>
                     ) : (
-                      <span>Job searching was never easier. Upgrade to monthly or quarterly plans for longer access.</span>
+                      <span>Enjoying your yearly access? Upgrade to lifetime to never worry about renewals again!</span>
                     )}
                   </div>
 
