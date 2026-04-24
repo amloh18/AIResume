@@ -17,64 +17,74 @@ const MultiImageFeature = ({ images, title }: { images: string[], title: string 
   }, [images.length]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-2xl group">
-      <AnimatePresence mode="popLayout">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 1.05 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="absolute inset-0"
-        >
-          <Image
-            src={images[currentIndex]}
-            alt={`${title} - view ${currentIndex + 1}`}
-            fill
-            className="object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
-            quality={80}
-          />
-        </motion.div>
-      </AnimatePresence>
+    <div className="relative w-full h-full overflow-hidden rounded-2xl flex flex-col group bg-[#1c1c1e] border border-white/10 shadow-2xl">
+      {/* Mac Browser Header */}
+      <div className="h-6 tablet:h-8 bg-[#2d2d2d] flex items-center px-3 tablet:px-4 space-x-1.5 tablet:space-x-2 flex-shrink-0 z-20 border-b border-white/5">
+        <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ff5f56] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
+        <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#ffbd2e] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
+        <div className="w-2 h-2 tablet:w-2.5 tablet:h-2.5 rounded-full bg-[#27c93f] shadow-[inset_0_0_4px_rgba(0,0,0,0.1)]" />
+      </div>
 
-      {/* Virtual Mouse simulation */}
-      {images.length > 1 && (
-        <motion.div
-          key={`mouse-${currentIndex}`}
-          className="absolute z-20 pointer-events-none flex items-center justify-center"
-          initial={{ x: '100%', y: '100%', opacity: 0 }}
-          animate={{ 
-            x: ['100%', '50%', '50%', '100%'], 
-            y: ['100%', '50%', '50%', '100%'],
-            opacity: [0, 1, 1, 0]
-          }}
-          transition={{ 
-            duration: 4, 
-            times: [0, 0.6, 0.8, 1],
-            ease: "easeInOut" 
-          }}
-          style={{ width: '24px', height: '24px', left: '0', top: '0' }}
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
-            <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.42c.41 0 .63-.5.35-.78L5.85 2.86a.5.5 0 00-.85.35z"/>
-          </svg>
-          
-          {/* Click Ripple */}
-          <motion.div 
-            className="absolute inset-0 rounded-full border-2 border-lime-400 bg-lime-400/30"
-            initial={{ scale: 0, opacity: 0 }}
+      {/* Browser Content */}
+      <div className="relative flex-1 overflow-hidden bg-[#141810]">
+        <AnimatePresence mode="popLayout">
+          <motion.div
+            key={currentIndex}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.05 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0"
+          >
+            <Image
+              src={images[currentIndex]}
+              alt={`${title} - view ${currentIndex + 1}`}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              quality={80}
+            />
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Virtual Mouse simulation */}
+        {images.length > 1 && (
+          <motion.div
+            key={`mouse-${currentIndex}`}
+            className="absolute z-20 pointer-events-none flex items-center justify-center"
+            initial={{ x: '100%', y: '100%', opacity: 0 }}
             animate={{ 
-              scale: [0, 2.5, 3], 
-              opacity: [0, 1, 0] 
+              x: ['100%', '50%', '50%', '100%'], 
+              y: ['100%', '50%', '50%', '100%'],
+              opacity: [0, 1, 1, 0]
             }}
             transition={{ 
-              duration: 0.6, 
-              delay: 2.4, // occurs at 60% of 4s (2.4s) when mouse stops moving
-              ease: "easeOut" 
+              duration: 4, 
+              times: [0, 0.6, 0.8, 1],
+              ease: "easeInOut" 
             }}
-          />
-        </motion.div>
-      )}
+            style={{ width: '24px', height: '24px', left: '0', top: '0' }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="white" stroke="black" strokeWidth="1" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-lg">
+              <path d="M5.5 3.21V20.8c0 .45.54.67.85.35l4.86-4.86a.5.5 0 01.35-.15h6.42c.41 0 .63-.5.35-.78L5.85 2.86a.5.5 0 00-.85.35z"/>
+            </svg>
+            
+            {/* Click Ripple */}
+            <motion.div 
+              className="absolute inset-0 rounded-full border-2 border-lime-400 bg-lime-400/30"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ 
+                scale: [0, 2.5, 3], 
+                opacity: [0, 1, 0] 
+              }}
+              transition={{ 
+                duration: 0.6, 
+                delay: 2.4, // occurs at 60% of 4s (2.4s) when mouse stops moving
+                ease: "easeOut" 
+              }}
+            />
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 };
