@@ -10,6 +10,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useMembership } from '@/lib/hooks/useMembership';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
 import Image from 'next/image';
+import { COMMON_JOB_TITLES } from '@/lib/data/role-profiler-data';
 
 interface ParsedJobData {
   jobTitle: string;
@@ -29,6 +30,7 @@ interface ParsedJobData {
   sourceUrl?: string;
   tags?: string[];
   notes?: string;
+  experienceLevel?: string;
 }
 
 interface JobParserDialogProps {
@@ -69,6 +71,13 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
   const [editedLocation, setEditedLocation] = useState('');
   const [editedSalary, setEditedSalary] = useState<{ min?: number; max?: number; currency?: string; period?: 'hourly' | 'monthly' | 'yearly' } | null>(null);
 
+  const [targetJobTitle, setTargetJobTitle] = useState('');
+  const [experienceLevel, setExperienceLevel] = useState('Mid Level (3-5 years)');
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false);
+  
+  // Filter job titles based on input
+  const filteredTitles = COMMON_JOB_TITLES.filter(t => t.toLowerCase().includes(targetJobTitle.toLowerCase())).slice(0, 5);
+
   // Reset form when dialog closes
   useEffect(() => {
     if (!isOpen) {
@@ -81,6 +90,9 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       setEditedLocation('');
       setEditedSalary(null);
       setActiveTab('paste');
+      setTargetJobTitle('');
+      setExperienceLevel('Mid Level (3-5 years)');
+      setShowTitleDropdown(false);
     } else {
       if (initialData?.jobDescription) {
         setInputText(initialData.jobDescription);
@@ -173,10 +185,11 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       // Merge edited fields with parsed data
       const updatedData: ParsedJobData = {
         ...parsedData,
-        jobTitle: editedJobTitle || parsedData.jobTitle,
+        jobTitle: editedJobTitle || targetJobTitle || parsedData.jobTitle,
         company: editedCompany || parsedData.company,
         location: editedLocation || parsedData.location,
         salary: editedSalary || parsedData.salary,
+        experienceLevel: experienceLevel,
       };
       // Always save as draft - credit check will happen when moving to 'created' stage
       onParseComplete(updatedData);
@@ -189,10 +202,11 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       // Merge edited fields with parsed data
       const updatedData: ParsedJobData = {
         ...parsedData,
-        jobTitle: editedJobTitle || parsedData.jobTitle,
+        jobTitle: editedJobTitle || targetJobTitle || parsedData.jobTitle,
         company: editedCompany || parsedData.company,
         location: editedLocation || parsedData.location,
         salary: editedSalary || parsedData.salary,
+        experienceLevel: experienceLevel,
       };
       onSaveAndTrack(updatedData);
       handleClose();
@@ -292,6 +306,57 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
                       </div>
                     )}
                   </div>
+
+                  {/* Target Role & Experience Inputs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 shrink-0">
+                    <div className="relative">
+                      <label className="text-xs font-semibold mb-1.5 block text-gray-700 dark:text-gray-300">Target Job Title</label>
+                      <input 
+                        type="text"
+                        value={targetJobTitle}
+                        onChange={(e) => {
+                          setTargetJobTitle(e.target.value);
+                          setShowTitleDropdown(true);
+                        }}
+                        onFocus={() => setShowTitleDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
+                        placeholder="e.g. Senior Frontend Developer"
+                        className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1A201A] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500 transition-colors"
+                        disabled={isParsing}
+                      />
+                      {showTitleDropdown && filteredTitles.length > 0 && (
+                        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 rounded-lg shadow-lg overflow-hidden">
+                          {filteredTitles.map((title, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                setTargetJobTitle(title);
+                                setShowTitleDropdown(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
+                            >
+                              {title}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold mb-1.5 block text-gray-700 dark:text-gray-300">Your Experience Level</label>
+                      <select
+                        value={experienceLevel}
+                        onChange={(e) => setExperienceLevel(e.target.value)}
+                        className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1A201A] border border-gray-300 dark:border-white/10 rounded-lg text-gray-900 dark:text-white focus:outline-none focus:border-lime-500 focus:ring-1 focus:ring-lime-500 transition-colors"
+                        disabled={isParsing}
+                      >
+                        <option value="Entry Level (0-2 years)">Entry Level (0-2 years)</option>
+                        <option value="Mid Level (3-5 years)">Mid Level (3-5 years)</option>
+                        <option value="Senior (5-8 years)">Senior (5-8 years)</option>
+                        <option value="Lead/Manager (8-12 years)">Lead/Manager (8-12 years)</option>
+                        <option value="Director/VP (12+ years)">Director/VP (12+ years)</option>
+                      </select>
+                    </div>
+                  </div>
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5">
@@ -349,14 +414,59 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
             </div>
 
             {!parsedData ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-                <div className="w-16 h-16 bg-gray-200 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4">
-                  <ScanLine className="w-8 h-8 text-gray-400" />
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-8 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/50 to-white dark:via-[#0a0a0a]/50 dark:to-[#0a0a0a] z-10 pointer-events-none" />
+                
+                <div className="w-full space-y-6 opacity-40 blur-[3px] select-none pointer-events-none pt-4">
+                  {/* Blurred Skills */}
+                  <div className="text-left">
+                    <div className="h-4 w-24 bg-gray-300 dark:bg-gray-700 rounded mb-3" />
+                    <div className="flex flex-wrap gap-2">
+                      <div className="h-6 w-20 bg-indigo-200 dark:bg-indigo-900/50 rounded-md" />
+                      <div className="h-6 w-24 bg-indigo-200 dark:bg-indigo-900/50 rounded-md" />
+                      <div className="h-6 w-16 bg-indigo-200 dark:bg-indigo-900/50 rounded-md" />
+                      <div className="h-6 w-28 bg-indigo-200 dark:bg-indigo-900/50 rounded-md" />
+                    </div>
+                  </div>
+                  {/* Blurred Requirements */}
+                  <div className="text-left">
+                    <div className="h-4 w-32 bg-gray-300 dark:bg-gray-700 rounded mb-3" />
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-green-200 dark:bg-green-900/50" /><div className="h-3 w-3/4 bg-gray-200 dark:bg-gray-800 rounded" /></div>
+                      <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-green-200 dark:bg-green-900/50" /><div className="h-3 w-5/6 bg-gray-200 dark:bg-gray-800 rounded" /></div>
+                      <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-full bg-green-200 dark:bg-green-900/50" /><div className="h-3 w-2/3 bg-gray-200 dark:bg-gray-800 rounded" /></div>
+                    </div>
+                  </div>
+                  {/* Blurred Match Score */}
+                  <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl p-5 flex items-center justify-between">
+                    <div>
+                      <div className="h-4 w-32 bg-indigo-200 dark:bg-indigo-900/50 rounded mb-2" />
+                      <div className="h-3 w-48 bg-indigo-100 dark:bg-indigo-900/30 rounded" />
+                    </div>
+                    <div className="w-14 h-14 rounded-full border-4 border-indigo-200 dark:border-indigo-900/50 flex items-center justify-center">
+                      <div className="h-5 w-8 bg-indigo-200 dark:bg-indigo-900/50 rounded" />
+                    </div>
+                  </div>
+                  {/* Blurred Perks & Sponsorship */}
+                  <div className="text-left">
+                    <div className="h-4 w-28 bg-gray-300 dark:bg-gray-700 rounded mb-3" />
+                    <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-5 space-y-3">
+                      <div className="h-4 w-1/2 bg-gray-200 dark:bg-gray-800 rounded" />
+                      <div className="h-3 w-1/3 bg-gray-200 dark:bg-gray-800 rounded" />
+                      <div className="flex gap-2"><div className="h-4 w-20 bg-blue-100 dark:bg-blue-900/30 rounded" /><div className="h-4 w-24 bg-purple-100 dark:bg-purple-900/30 rounded" /></div>
+                    </div>
+                  </div>
                 </div>
-                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No Insights Yet</h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Paste a job description and click "Analyze with AI" to instantly extract key skills, requirements, and job details.
-                </p>
+                
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center text-center px-8">
+                  <div className="w-16 h-16 bg-white dark:bg-[#141810] shadow-lg rounded-2xl flex items-center justify-center mb-4 border border-gray-100 dark:border-white/5">
+                    <ScanLine className="w-8 h-8 text-lime-500" />
+                  </div>
+                  <h4 className="text-xl font-black text-gray-900 dark:text-white mb-2">No Insights Yet</h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xs mx-auto">
+                    Paste a job description and click "Analyze with AI" to instantly extract key skills, requirements, and job details.
+                  </p>
+                </div>
               </div>
             ) : (
               <motion.div
@@ -447,6 +557,12 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
                           />
                           <span>•</span>
                           <span>Full-time</span>
+                          {(editedLocation.toLowerCase().includes('uk') || editedLocation.toLowerCase().includes('united kingdom') || editedLocation.toLowerCase().includes('london') || editedLocation.toLowerCase().includes('us') || editedLocation.toLowerCase().includes('united states') || editedLocation.toLowerCase().includes('usa')) && (
+                            <>
+                              <span>•</span>
+                              <span className="text-blue-600 dark:text-blue-400 font-semibold">Sponsorship: AI Detected</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

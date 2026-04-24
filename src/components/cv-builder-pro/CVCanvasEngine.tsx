@@ -32,6 +32,94 @@ export interface CVCanvasBuilderRef {
 
 // MAIN CANVAS BUILDER COMPONENT
 // ==========================================
+const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSuggestion, cvData, handleDataChange }: any) => {
+  const [pos, setPos] = useState({ top: -1000, left: 0 });
+
+  useEffect(() => {
+    const updatePos = () => {
+      if (pointSuggestion?.node) {
+        const nodeRect = pointSuggestion.node.getBoundingClientRect();
+        const wrapper = document.querySelector('.cv-document-wrapper');
+        const wrapperRect = wrapper?.getBoundingClientRect();
+        
+        let top = nodeRect.top;
+        let left = wrapperRect ? wrapperRect.right + 20 : nodeRect.right + 20;
+        
+        if (left + 420 > window.innerWidth - 20) {
+          left = window.innerWidth - 440;
+        }
+        if (top + 300 > window.innerHeight - 20) {
+          top = window.innerHeight - 320;
+        }
+        
+        setPos({ top, left });
+      }
+    };
+    
+    updatePos();
+    const scrollContainers = document.querySelectorAll('.overflow-auto');
+    const handleScroll = () => updatePos();
+    scrollContainers.forEach(c => c.addEventListener('scroll', handleScroll, { passive: true }));
+    window.addEventListener('resize', handleScroll);
+    
+    return () => {
+      scrollContainers.forEach(c => c.removeEventListener('scroll', handleScroll));
+      window.removeEventListener('resize', handleScroll);
+    };
+  }, [pointSuggestion?.node]);
+
+  if (!pointSuggestion) return null;
+
+  return (
+    <div className={`fixed z-[110] border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111] transition-all duration-75`} style={{ top: pos.top, left: pos.left }}>
+      <div className="flex items-center justify-between mb-4 text-[#7EE787]">
+        <div className="flex items-center gap-2">
+          <Wand2 size={16} className={pointSuggestion.loading ? 'animate-pulse' : ''} />
+          <span className="text-[11px] font-bold uppercase tracking-widest">{pointSuggestion.loading ? 'AI is thinking...' : 'AI Contextual Suggestion'}</span>
+        </div>
+        <button onClick={() => setPointSuggestion(null)} className="text-gray-400 hover:text-white transition-colors"><X size={16}/></button>
+      </div>
+      
+      <div className="mb-6 relative min-h-[60px]">
+        {pointSuggestion.loading ? (
+          <div className="flex flex-col gap-2">
+            <div className="h-3 bg-gray-800 rounded animate-pulse w-full"></div>
+            <div className="h-3 bg-gray-800 rounded animate-pulse w-[80%]"></div>
+            <div className="h-3 bg-gray-800 rounded animate-pulse w-[60%]"></div>
+          </div>
+        ) : pointSuggestion.error === 'usage_limit_reached' ? (
+          <div className="text-sm text-red-400">
+            You have reached your AI usage limit for the current plan. <a href="/pricing" className="underline font-bold text-red-300">Upgrade Plan</a> to continue using Thinkhard AI features.
+          </div>
+        ) : pointSuggestion.error ? (
+          <div className="text-sm text-red-400">{pointSuggestion.error}</div>
+        ) : (
+          <p className="text-sm leading-relaxed text-gray-100">{pointSuggestion.text}</p>
+        )}
+      </div>
+      
+      {!pointSuggestion.loading && !pointSuggestion.error && (
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center pb-3 border-b border-[#333]">
+            <button onClick={() => handleFetchSuggestion('star')} className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"><Sparkles size={12}/> STAR Method</button>
+            <select onChange={(e) => handleFetchSuggestion('tone', e.target.value)} className="bg-[#222] text-xs text-gray-300 border border-[#444] rounded px-2 py-1 outline-none focus:border-emerald-500">
+              <option value="">Change Tone...</option>
+              <option value="Professional">Professional</option>
+              <option value="Confident">Confident</option>
+              <option value="Creative">Creative</option>
+              <option value="Action-oriented">Action-oriented</option>
+            </select>
+          </div>
+          <div className="flex justify-end gap-3 mt-1">
+            <button onClick={() => setPointSuggestion(null)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#222] text-gray-300 hover:bg-[#333] hover:text-white transition-colors">Cancel</button>
+            <button onClick={() => { const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; let newHtml = currentHtml; if (newHtml.includes('</ul>')) { newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); } else { newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; } handleDataChange(pointSuggestion.path, newHtml); setPointSuggestion(null); }} className="px-4 py-2 text-sm font-semibold rounded-lg shadow-lg bg-[#7EE787] text-black hover:bg-[#68d171] transition-colors">Accept & Add Bullet</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ cvData, onDataChange, theme = 'dark', template, onTemplateChange, readOnly = false }, ref) => {
   const [activeTemplate, setActiveTemplate] = useState(template || CANVAS_TEMPLATES[0]);
   const [focusedNode, setFocusedNode] = useState<HTMLElement | null>(null);
@@ -52,7 +140,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const [aiIssues, setAiIssues] = useState<any[]>([]);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const [cvScore, setCvScore] = useState(100);
-  const [pointSuggestion, setPointSuggestion] = useState<{ path: string, text: string, rect: DOMRect, loading?: boolean, originalText?: string, error?: string } | null>(null);
+  const [pointSuggestion, setPointSuggestion] = useState<{ path: string, text: string, node?: HTMLElement, loading?: boolean, originalText?: string, error?: string } | null>(null);
 
   const isDarkUI = theme === 'dark';
   const bgApp = isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100';
@@ -87,8 +175,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       if (!doc) return;
       
       const A4_HEIGHT = 1122.5; // 297mm at 96 DPI
-      const PAGE_GAP = 24; // Visual gap between pages in mm/px
-      const EFFECTIVE_HEIGHT = A4_HEIGHT; 
+      const PAGE_GAP = 40; // Visual gap between pages in px
+      const EFFECTIVE_HEIGHT = A4_HEIGHT + PAGE_GAP; 
+      const PAGE_MARGIN = design.pageMargin || 40; // Use actual design margin
       
       const items = Array.from(doc.querySelectorAll('.cv-page-breakable'));
       
@@ -99,24 +188,27 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       doc.style.height = 'auto';
       doc.style.minHeight = '297mm';
 
-      // Small delay to allow DOM to recalculate after reset
+        // Small delay to allow DOM to recalculate after reset
       requestAnimationFrame(() => {
         let maxBottom = 0;
         const docRect = doc.getBoundingClientRect();
+        // Calculate true scale to avoid pushing bugs from CSS transforms
+        const scale = docRect.width / doc.offsetWidth;
 
         items.forEach((item: any) => {
           const itemRect = item.getBoundingClientRect();
-          const top = itemRect.top - docRect.top;
-          const bottom = top + itemRect.height;
+          const top = (itemRect.top - docRect.top) / scale;
+          const height = itemRect.height / scale;
+          const bottom = top + height;
           
-          const pageStart = Math.floor(top / EFFECTIVE_HEIGHT);
-          const pageEnd = Math.floor(bottom / EFFECTIVE_HEIGHT);
+          const cycleStart = Math.floor(top / EFFECTIVE_HEIGHT);
+          const visibleEnd = (cycleStart * EFFECTIVE_HEIGHT) + A4_HEIGHT - PAGE_MARGIN;
+          const nextCycleStart = ((cycleStart + 1) * EFFECTIVE_HEIGHT) + PAGE_MARGIN;
           
-          // If it crosses a boundary and fits on a single page, push it
-          if (pageEnd > pageStart && itemRect.height < EFFECTIVE_HEIGHT) {
-            const pushAmount = ((pageStart + 1) * EFFECTIVE_HEIGHT) - top;
-            // Add a 20px buffer past the break
-            item.style.marginTop = `${pushAmount + 20}px`;
+          // If it crosses the bottom margin boundary and fits on a single page, push it
+          if (bottom > visibleEnd && height < (A4_HEIGHT - PAGE_MARGIN * 2)) {
+            const pushAmount = nextCycleStart - top;
+            item.style.marginTop = `${pushAmount}px`;
           }
         });
 
@@ -124,7 +216,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         requestAnimationFrame(() => {
           const newDocRect = doc.getBoundingClientRect();
           items.forEach((item: any) => {
-            const itemBottom = item.getBoundingClientRect().bottom - newDocRect.top;
+            const itemBottom = (item.getBoundingClientRect().bottom - newDocRect.top) / scale;
             if (itemBottom > maxBottom) maxBottom = itemBottom;
           });
           const totalPages = Math.max(1, Math.ceil(maxBottom / EFFECTIVE_HEIGHT));
@@ -180,9 +272,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     let path = focusedNode.getAttribute('data-path');
     if (!path) { const parentWithPath = focusedNode.closest('[data-path]'); if (parentWithPath) path = parentWithPath.getAttribute('data-path'); }
     if (!path || !path.includes('description')) return;
-    const rect = focusedNode.getBoundingClientRect();
     const originalText = focusedNode.innerText;
-    setPointSuggestion({ path, text: originalText, originalText, rect: { top: rect.bottom + window.scrollY, left: rect.left + window.scrollX }, loading: false });
+    setPointSuggestion({ path, text: originalText, originalText, node: focusedNode as HTMLElement, loading: false });
   };
 
   const handleApplySuggestion = (text: string) => {
@@ -439,54 +530,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         </div>
       </div>
 
-      {!readOnly && pointSuggestion && (
-        <div className={`fixed z-[110] border border-emerald-500/30 shadow-2xl rounded-xl p-5 w-[420px] bg-[#111111]`} style={{ top: pointSuggestion.rect.top + 15, left: pointSuggestion.rect.left }}>
-          <div className="flex items-center justify-between mb-4 text-[#7EE787]">
-            <div className="flex items-center gap-2">
-              <Wand2 size={16} className={pointSuggestion.loading ? 'animate-pulse' : ''} />
-              <span className="text-[11px] font-bold uppercase tracking-widest">{pointSuggestion.loading ? 'AI is thinking...' : 'AI Contextual Suggestion'}</span>
-            </div>
-            <button onClick={() => setPointSuggestion(null)} className="text-gray-400 hover:text-white transition-colors"><X size={16}/></button>
-          </div>
-          
-          <div className="mb-6 relative min-h-[60px]">
-            {pointSuggestion.loading ? (
-              <div className="flex flex-col gap-2">
-                <div className="h-3 bg-gray-800 rounded animate-pulse w-full"></div>
-                <div className="h-3 bg-gray-800 rounded animate-pulse w-[80%]"></div>
-                <div className="h-3 bg-gray-800 rounded animate-pulse w-[60%]"></div>
-              </div>
-            ) : pointSuggestion.error === 'usage_limit_reached' ? (
-              <div className="text-sm text-red-400">
-                You have reached your AI usage limit for the current plan. <a href="/pricing" className="underline font-bold text-red-300">Upgrade Plan</a> to continue using Thinkhard AI features.
-              </div>
-            ) : pointSuggestion.error ? (
-              <div className="text-sm text-red-400">{pointSuggestion.error}</div>
-            ) : (
-              <p className="text-sm leading-relaxed text-gray-100">{pointSuggestion.text}</p>
-            )}
-          </div>
-          
-          {!pointSuggestion.loading && !pointSuggestion.error && (
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center pb-3 border-b border-[#333]">
-                <button onClick={() => handleFetchSuggestion('star')} className="text-xs font-semibold text-blue-400 hover:text-blue-300 flex items-center gap-1"><Sparkles size={12}/> STAR Method</button>
-                <select onChange={(e) => handleFetchSuggestion('tone', e.target.value)} className="bg-[#222] text-xs text-gray-300 border border-[#444] rounded px-2 py-1 outline-none focus:border-emerald-500">
-                  <option value="">Change Tone...</option>
-                  <option value="Professional">Professional</option>
-                  <option value="Confident">Confident</option>
-                  <option value="Creative">Creative</option>
-                  <option value="Action-oriented">Action-oriented</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-3 mt-1">
-                <button onClick={() => setPointSuggestion(null)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-[#222] text-gray-300 hover:bg-[#333] hover:text-white transition-colors">Cancel</button>
-                <button onClick={() => { const currentHtml = getNestedValue(cvData, pointSuggestion.path) || ''; let newHtml = currentHtml; if (newHtml.includes('</ul>')) { newHtml = newHtml.replace('</ul>', `<li>${pointSuggestion.text}</li></ul>`); } else { newHtml += `<ul><li>${pointSuggestion.text}</li></ul>`; } handleDataChange(pointSuggestion.path, newHtml); setPointSuggestion(null); }} className="px-4 py-2 text-sm font-semibold rounded-lg shadow-lg bg-[#7EE787] text-black hover:bg-[#68d171] transition-colors">Accept & Add Bullet</button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
+      {!readOnly && <FloatingAICard pointSuggestion={pointSuggestion} setPointSuggestion={setPointSuggestion} handleFetchSuggestion={handleFetchSuggestion} cvData={cvData} handleDataChange={handleDataChange} />}
 
       {/* TEMPLATE MODAL */}
       {isTemplateModalOpen && (
@@ -617,7 +661,15 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: ${isDarkUI ? '#444' : '#ccc'}; border-radius: 4px; }
-        .cv-document { font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; }
+        .cv-document { 
+          font-family: var(--cv-font), sans-serif; color: #111827; font-size: var(--cv-base-size); position: relative; z-index: 10; 
+          mask-image: linear-gradient(to bottom, black 0, black 297mm, transparent 297mm, transparent calc(297mm + 40px));
+          mask-size: 100% calc(297mm + 40px);
+          mask-repeat: repeat-y;
+          -webkit-mask-image: linear-gradient(to bottom, black 0, black 297mm, transparent 297mm, transparent calc(297mm + 40px));
+          -webkit-mask-size: 100% calc(297mm + 40px);
+          -webkit-mask-repeat: repeat-y;
+        }
         .cv-document .text-gray-900 { color: #111827 !important; }
         .cv-document .text-gray-800 { color: #1f2937 !important; }
         .cv-document .text-gray-700 { color: #374151 !important; }
@@ -648,13 +700,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         .cv-document .cv-gap-sm { gap: calc(0.5rem * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-md { gap: calc(0.75rem * var(--cv-spacing)) !important; }
         .cv-document .cv-gap-lg { gap: calc(1rem * var(--cv-spacing)) !important; }
-        .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: 0; background-size: 100% 297mm; background-image: linear-gradient(to bottom, #ffffff 0, #ffffff calc(297mm - 24px), transparent calc(297mm - 24px), transparent 297mm); filter: drop-shadow(0 20px 25px rgba(0,0,0,0.15)); }
+        .cv-page-visualizer { position: absolute; inset: 0; pointer-events: none; z-index: -1; background-size: 100% calc(297mm + 40px); background-image: linear-gradient(to bottom, #ffffff 0, #ffffff 297mm, transparent 297mm, transparent calc(297mm + 40px)); filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15)); }
         @media print {
           @page { margin: var(--cv-page-margin); size: A4; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
           .no-print { display: none !important; }
           .cv-document-wrapper { transform: none !important; padding: 0 !important; box-shadow: none !important; margin: 0 !important; overflow: visible !important; }
-          .cv-document { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; display: block !important; height: auto !important; }
+          .cv-document { width: 100% !important; min-height: auto !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; display: block !important; height: auto !important; mask-image: none !important; -webkit-mask-image: none !important; }
           .cv-page-breakable { margin-top: 0 !important; }
           .cv-section { break-inside: auto !important; page-break-inside: auto !important; display: block !important; width: 100% !important; }
           .cv-item { break-inside: avoid !important; page-break-inside: avoid !important; display: block !important; width: 100% !important; }

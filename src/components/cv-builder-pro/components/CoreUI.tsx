@@ -69,8 +69,17 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   if (breakAll) wrapClass = 'break-all whitespace-normal';
   if (multiline) wrapClass = 'break-words whitespace-pre-wrap';
 
+  let emptyText = "Click to type...";
+  const lowerPath = path?.toLowerCase() || '';
+  if (lowerPath.includes('summary')) emptyText = "Click to type summary...";
+  else if (lowerPath.includes('description')) emptyText = "Click to type work summary...";
+  else if (lowerPath.includes('skills')) emptyText = "Click to type skills...";
+  else if (lowerPath.includes('position')) emptyText = "Click to type role...";
+  else if (lowerPath.includes('name')) emptyText = "Click to type name...";
+  else if (lowerPath.includes('date')) emptyText = "Click to type date...";
+
   return (
-      <span ref={contentRef} data-path={path} contentEditable={!readOnly} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-emerald-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5 z-40 relative empty:min-w-[60px] empty:inline-block empty:border-dashed empty:border-gray-300 empty:after:content-["Click_to_type..."] empty:after:text-gray-400 empty:after:text-xs empty:after:italic' : ''}`} style={{ minHeight: '1.2em' }} />
+      <span ref={contentRef} data-path={path} data-empty-text={emptyText} contentEditable={!readOnly} suppressContentEditableWarning onPaste={handlePaste} onInput={handleInput} onKeyDown={handleKeyDown} onFocus={handleFocus} onBlur={handleBlur} onClick={handleClick} className={`outline-none transition-all duration-200 inline-block max-w-full ${wrapClass} ${!readOnly ? 'hover:bg-emerald-50/30 focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-emerald-500/50 focus:shadow-md border-b border-transparent hover:border-gray-300 focus:border-emerald-400 focus:text-gray-900 dark:focus:text-white rounded-sm px-1.5 py-0.5 -mx-1.5 -my-0.5 z-40 relative empty:min-w-[60px] empty:inline-block empty:border-dashed empty:border-gray-300 empty:after:content-[attr(data-empty-text)] empty:after:text-gray-400 empty:after:text-xs empty:after:italic' : ''}`} style={{ minHeight: '1.2em' }} />
     );
   };
   
@@ -80,18 +89,33 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     const [canSuggestSkills, setCanSuggestSkills] = useState(false);
   
     useEffect(() => {
-      if (targetNode) {
-        const rect = targetNode.getBoundingClientRect();
-        setPos({ top: rect.top - 45, left: rect.left + rect.width / 2 });
-        const isBulletContext = targetNode.tagName === 'LI' || targetNode.closest('li') || targetNode.closest('ul') || (targetNode.getAttribute('data-path') || '').includes('description');
-        const isSkillContext = (targetNode.getAttribute('data-path') || '').toLowerCase().includes('skills');
-        setCanSuggest(!!isBulletContext);
-        setCanSuggestSkills(!!isSkillContext);
-      } else {
-        setPos({ top: -1000, left: 0 });
-        setCanSuggest(false);
-        setCanSuggestSkills(false);
-      }
+      const updatePos = () => {
+        if (targetNode) {
+          const rect = targetNode.getBoundingClientRect();
+          setPos({ top: rect.top - 45, left: rect.left + rect.width / 2 });
+          const isBulletContext = targetNode.tagName === 'LI' || targetNode.closest('li') || targetNode.closest('ul') || (targetNode.getAttribute('data-path') || '').includes('description');
+          const isSkillContext = (targetNode.getAttribute('data-path') || '').toLowerCase().includes('skills');
+          setCanSuggest(!!isBulletContext);
+          setCanSuggestSkills(!!isSkillContext);
+        } else {
+          setPos({ top: -1000, left: 0 });
+          setCanSuggest(false);
+          setCanSuggestSkills(false);
+        }
+      };
+
+      updatePos();
+
+      const scrollContainers = document.querySelectorAll('.overflow-auto');
+      const handleScroll = () => updatePos();
+      
+      scrollContainers.forEach(c => c.addEventListener('scroll', handleScroll, { passive: true }));
+      window.addEventListener('resize', handleScroll);
+      
+      return () => {
+        scrollContainers.forEach(c => c.removeEventListener('scroll', handleScroll));
+        window.removeEventListener('resize', handleScroll);
+      };
     }, [targetNode]);
   
     const execCmd = (e: React.MouseEvent, cmd: string) => { e.preventDefault(); document.execCommand('styleWithCSS', false, 'true'); document.execCommand(cmd, false); };

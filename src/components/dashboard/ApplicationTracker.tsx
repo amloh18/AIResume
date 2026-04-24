@@ -8,7 +8,8 @@ import {
   CheckCircle, Clock, AlertCircle, Target, FileText,
   ArrowRight, ChevronDown, ChevronUp, Star, Zap,
   TrendingUp, Users, Building2, Globe, Bookmark,
-  Archive, Copy, Share2, Download, Upload, X, Mail, Linkedin, GraduationCap
+  Archive, Copy, Share2, Download, Upload, X, Mail, Linkedin, GraduationCap,
+  Send, Trophy, XCircle, Award, Layout, List, MousePointer2
 } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -239,6 +240,17 @@ const ApplicationTracker: React.FC = () => {
       setZoomedStage(null);
     }
   }, [isFocusMode, zoomedStage]);
+
+  // Sync focus mode state with localStorage
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'jobs-focus-mode') {
+        setIsFocusMode(e.newValue === 'true');
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Check for paywall trigger from URL (e.g., from extension)
   useEffect(() => {
@@ -746,38 +758,50 @@ ${userName}`
       {
         status: 'draft',
         title: 'Draft',
-        color: draftColor,
-        hoverColor: draftColor
+        icon: FileText,
+        iconColor: 'text-blue-500',
+        color: 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10',
+        hoverColor: 'border-blue-300 dark:border-blue-500/30'
       },
       {
         status: 'created',
         title: 'Created',
-        color: draftColor,
-        hoverColor: 'bg-purple-100 dark:bg-purple-500/20 border-purple-300 dark:border-purple-500/30 text-purple-600 dark:text-white'
+        icon: Briefcase,
+        iconColor: 'text-orange-500',
+        color: 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10',
+        hoverColor: 'border-orange-300 dark:border-orange-500/30'
       },
       {
         status: 'applied',
         title: 'Applied',
-        color: draftColor,
-        hoverColor: 'bg-blue-100 dark:bg-blue-500/20 border-blue-300 dark:border-blue-500/30 text-blue-600 dark:text-white'
+        icon: Send,
+        iconColor: 'text-green-500',
+        color: 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10',
+        hoverColor: 'border-green-300 dark:border-green-500/30'
       },
       {
         status: 'interview',
         title: 'Interview',
-        color: draftColor,
-        hoverColor: 'bg-orange-100 dark:bg-orange-500/20 border-orange-300 dark:border-orange-500/30 text-orange-600 dark:text-white'
+        icon: Calendar,
+        iconColor: 'text-purple-500',
+        color: 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10',
+        hoverColor: 'border-purple-300 dark:border-purple-500/30'
       },
       {
         status: 'offer',
         title: 'Offer',
-        color: draftColor,
-        hoverColor: 'bg-green-100 dark:bg-green-500/20 border-green-300 dark:border-green-500/30 text-green-600 dark:text-white'
+        icon: Trophy,
+        iconColor: 'text-green-600',
+        color: 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10',
+        hoverColor: 'border-green-400 dark:border-green-600/30'
       },
       {
         status: 'rejected',
         title: 'Rejected',
-        color: draftColor,
-        hoverColor: 'bg-red-100 dark:bg-red-500/20 border-red-300 dark:border-red-500/30 text-red-600 dark:text-white'
+        icon: XCircle,
+        iconColor: 'text-red-500',
+        color: 'bg-white dark:bg-[#141810] border-gray-200 dark:border-white/10',
+        hoverColor: 'border-red-300 dark:border-red-500/30'
       }
     ];
     // Filter stages based on focus mode
@@ -1257,12 +1281,13 @@ ${userName}`
       <div className="h-full flex flex-col min-w-0">
         <div className="w-full h-full flex flex-col min-w-0">
           {/* Fixed Header Section */}
-          <div className="flex-shrink-0 space-y-6 pb-4 pt-6 min-w-0">
+          <div className="flex-shrink-0 space-y-0 pb-1 pt-2 min-w-0">
             {/* Page Header - Always show immediately */}
             <div className="min-w-0 w-full">
               <PageHeader
                 title="Application Tracker"
                 description="Manage your job applications with integrated CV journeys"
+                className="!mb-0"
                 user={{
                   name: getUserDisplayName(userData),
                   email: getUserEmail(userData),
@@ -1310,18 +1335,18 @@ ${userName}`
             )}
 
             {/* Enhanced Action Bar */}
-            <div className="space-y-4 min-w-0">
-              {/* Top Row */}
-              <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-start lg:items-center justify-between min-w-0">
-                <div className="flex flex-row items-center gap-2 w-full lg:w-auto lg:flex-1 min-w-0 flex-wrap sm:flex-nowrap">
+            <div className="min-w-0 flex items-center justify-end gap-3 sm:gap-4 pb-2">
+              {/* Top Row - Controls aligned to right */}
+              <div className="flex flex-row items-center gap-3 sm:gap-4 min-w-0">
+                <div className="flex flex-row items-center gap-2 flex-wrap sm:flex-nowrap">
                   <motion.button
                     onClick={handleAddJob}
-                    className="px-3 sm:px-4 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 shadow-md hover:shadow-lg flex-shrink-0 h-[36px]"
+                    className="px-3 sm:px-5 py-2 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black rounded-xl text-sm font-bold transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md flex-shrink-0 h-[38px]"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Plus size={16} />
-                    <span className="hidden sm:inline">Add Job</span>
+                    <Plus size={18} />
+                    <span>Quick Add</span>
                   </motion.button>
 
                   {/* Focus Mode Toggle */}
@@ -1370,7 +1395,9 @@ ${userName}`
               </div>
 
               {/* Bulk Actions Bar */}
-              <AnimatePresence>
+
+
+      <AnimatePresence>
                 {showBulkActions && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
@@ -1476,47 +1503,21 @@ ${userName}`
                   ) : (
                     // All stages - horizontal scrollable
                     <div className="flex flex-row gap-4 h-full pb-4 pl-0 sm:pl-2 pr-0 sm:pr-4" style={{ width: 'max-content' }}>
-                      {stages.map((stage) => (
+                      {stages.filter(stage => !isFocusMode || (stage.status !== 'draft' && stage.status !== 'rejected')).map((stage) => (
                         <div key={stage.status} className={`space-y-4 w-[320px] flex-shrink-0`}>
                           {/* Stage Header */}
                           <div
-                            className={`p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.hoverColor} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.className = `p-3 rounded-xl border-2 border-solid ${stage.color} min-h-[60px] flex items-center justify-center cursor-pointer transition-all duration-200 group`;
-                            }}
+                            className={`p-4 rounded-2xl border-2 border-solid ${stage.color} min-h-[70px] flex items-center cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md ${stage.hoverColor} group`}
                             onClick={() => handleStageClick(stage.status)}
                           >
                             <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-2">
-                                {zoomedStage && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setZoomedStage(null);
-                                    }}
-                                    className="p-1 rounded-md bg-white/20 hover:bg-white/30 transition-colors"
-                                  >
-                                    <ArrowRight className="w-4 h-4 rotate-180" />
-                                  </button>
-                                )}
-                                <h3 className={`text-base font-bold text-black ${stage.status === 'draft' ? 'dark:text-gray-400' :
-                                  stage.status === 'created' ? 'dark:text-purple-400' :
-                                    stage.status === 'applied' ? 'dark:text-blue-400' :
-                                      stage.status === 'interview' ? 'dark:text-orange-400' :
-                                        stage.status === 'offer' ? 'dark:text-green-400' :
-                                          'dark:text-red-400'
-                                  }`}>{stage.title}</h3>
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50 ${stage.iconColor}`}>
+                                  {stage.icon && <stage.icon className="w-5 h-5" />}
+                                </div>
+                                <h3 className="text-base font-bold text-gray-900 dark:text-white">{stage.title}</h3>
                               </div>
-                              <span className={`text-sm ${stage.status === 'draft' ? 'text-gray-800 dark:text-gray-400' :
-                                stage.status === 'created' ? 'text-purple-800 dark:text-purple-400' :
-                                  stage.status === 'applied' ? 'text-blue-800 dark:text-blue-400' :
-                                    stage.status === 'interview' ? 'text-orange-800 dark:text-orange-400' :
-                                      stage.status === 'offer' ? 'text-green-800 dark:text-green-400' :
-                                        'text-red-800 dark:text-red-400'
-                                }`}>
+                              <span className="text-sm font-semibold text-gray-400 bg-gray-50 dark:bg-gray-800/50 px-2 py-0.5 rounded-md">
                                 {jobsByStatus[stage.status as keyof typeof jobsByStatus].length}
                               </span>
                             </div>
@@ -1690,350 +1691,194 @@ ${userName}`
                                       onDragOver={handleDragOver}
                                       onDrop={(e) => handleDrop(e, stage.status)}
                                       onClick={() => handleJobClick(job)}
-                                      className={`group relative overflow-hidden cursor-pointer transition-all duration-300 w-full max-w-full ${isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
+                                      className={`group relative overflow-hidden cursor-pointer transition-all duration-300 w-full max-w-full rounded-2xl bg-white dark:bg-[#1A201A] border border-gray-200 dark:border-white/10 p-4 shadow-sm hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] ${isSelected ? 'ring-2 ring-blue-500 ring-opacity-50' : ''
                                         } ${isDragging ? 'opacity-50' : ''} ${!canDrag && stage.status !== 'draft' && stage.status !== 'created' ? 'opacity-60 cursor-not-allowed' : ''
                                         }`}
                                       role="button"
                                       tabIndex={0}
                                       aria-label={`Job application: ${job.jobTitle} at ${job.company}`}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter' || e.key === ' ') {
-                                          e.preventDefault();
-                                          handleJobClick(job);
-                                        }
-                                      }}
                                     >
-                                      {/* Card Background */}
-                                      <div className="absolute inset-0 bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/20 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300" />
-
-                                      {/* Card Content */}
-                                      <div className="relative z-10 p-4 w-full">
-                                        {/* Collapsed View - Always Visible */}
-                                        <div className="space-y-3 w-full">
-                                          <div className="flex items-center justify-between w-full">
-                                            <div className="flex items-center gap-3 flex-1 min-w-0 w-full">
-                                              <div className="flex-1 min-w-0 w-full max-w-full">
-                                                <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-full">
-                                                  {job.jobTitle || job.title || 'Untitled Job'}
-                                                </h4>
-                                                <p className="text-gray-600 dark:text-gray-400 text-xs truncate max-w-full">{job.company}</p>
-                                              </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                              {/* Show CV/CL/ATS indicators for Applied, Interview, Offer, Rejected stages */}
-                                              {['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && jobJourneys.length > 0 ? (
-                                                (() => {
-                                                  const primaryJourney = jobJourneys[0];
-                                                  const hasCV = !!primaryJourney.cvId;
-                                                  const hasCoverLetter = !!primaryJourney.coverLetterId;
-                                                  const atsScore = primaryJourney.atsScore;
-
-                                                  return (
-                                                    <div className="flex flex-col items-end gap-1">
-                                                      {/* CV Status */}
-                                                      <div className={`flex items-center gap-1 ${hasCV ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {hasCV ? <CheckCircle size={14} /> : <X size={14} />}
-                                                        <span className="text-xs">CV</span>
-                                                      </div>
-
-                                                      {/* Cover Letter Status */}
-                                                      <div className={`flex items-center gap-1 ${hasCoverLetter ? 'text-green-500' : 'text-red-500'}`}>
-                                                        {hasCoverLetter ? <CheckCircle size={14} /> : <X size={14} />}
-                                                        <span className="text-xs">CL</span>
-                                                      </div>
-
-                                                      {/* ATS Score */}
-                                                      {atsScore !== null && atsScore !== undefined && (
-                                                        <div className={`flex items-center gap-1 text-xs font-medium ${atsScore >= 85 ? 'text-green-500' :
-                                                          atsScore >= 70 ? 'text-blue-500' :
-                                                            'text-red-500'
-                                                          }`}>
-                                                          <span>ATS {atsScore}%</span>
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  );
-                                                })()
-                                              ) : (
-                                                /* Show journey completion indicator for other stages */
-                                                jobJourneys.length > 0 && (() => {
-                                                  const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
-                                                  const hasCompleted = completedJourneys.length > 0;
-                                                  const allCompleted = completedJourneys.length === jobJourneys.length;
-
-                                                  return (
-                                                    <div className="flex items-center gap-1">
-                                                      {hasCompleted && (
-                                                        <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${allCompleted
-                                                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                                                          : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
-                                                          }`}>
-                                                          <CheckCircle size={10} />
-                                                          <span>{completedJourneys.length}/{jobJourneys.length}</span>
-                                                        </div>
-                                                      )}
-                                                    </div>
-                                                  );
-                                                })()
-                                              )}
-
-                                              {/* Hover indicator */}
-                                              <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                <ChevronDown size={12} className="text-gray-400" />
-                                              </div>
-                                            </div>
-                                          </div>
-
-                                          {/* Progress Bar - Only show for non-Applied/Interview/Offer/Rejected stages */}
-                                          {jobJourneys.length > 0 && !['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && (
-                                            <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden group-hover:h-0 group-hover:opacity-0 transition-all duration-300">
-                                              <motion.div
-                                                className={`h-2 rounded-full transition-all duration-500 ${avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                                                  avgProgress >= 60 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                                                    avgProgress >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                                                      'bg-gradient-to-r from-red-500 to-red-600'
-                                                  }`}
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${avgProgress}%` }}
-                                                transition={{ duration: 0.8, ease: "easeOut" }}
-                                              />
-                                            </div>
-                                          )}
+                                      {/* Header Info */}
+                                      <div className="flex items-start gap-3 mb-3">
+                                        {/* Company Logo Placeholder */}
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg flex-shrink-0 ${['bg-blue-100 text-blue-600', 'bg-purple-100 text-purple-600', 'bg-green-100 text-green-600', 'bg-orange-100 text-orange-600', 'bg-red-100 text-red-600', 'bg-indigo-100 text-indigo-600'][job.company.length % 6]}`}>
+                                          {job.company.charAt(0).toUpperCase()}
                                         </div>
 
-                                        {/* Expanded View - Visible on Hover */}
-                                        <div className="max-h-0 group-hover:max-h-96 overflow-hidden transition-all duration-300 ease-out">
-                                          <div className="mt-4 space-y-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center justify-between gap-2">
+                                            <h4 className="font-bold text-gray-900 dark:text-white text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+                                              {job.jobTitle || job.title || 'Untitled Job'}
+                                            </h4>
+                                            <button className="text-gray-400 hover:text-gray-600 dark:hover:text-white p-1 rounded-md transition-colors">
+                                              <MoreVertical size={16} />
+                                            </button>
+                                          </div>
+                                          <p className="text-gray-500 dark:text-gray-400 text-xs truncate">{job.company}</p>
+                                        </div>
+                                      </div>
 
-
-                                            {/* Follow-up notification */}
-                                            {['applied', 'interview', 'offer', 'rejected'].includes(stage.status) && isFollowUpNeeded(job) && (
-                                              <div className="mb-3 p-2 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-full">
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center gap-2">
-                                                    <AlertCircle size={14} className="text-orange-600" />
-                                                    <span className="text-xs text-orange-700 dark:text-orange-400">
-                                                      Follow-up recommended - {getDaysSinceLastUpdate(job)} days since {job.status}
-                                                    </span>
-                                                  </div>
-                                                  <button
-                                                    className="px-2 py-1 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded"
-                                                    onClick={(e) => {
-                                                      e.stopPropagation();
-                                                      handleJobClick(job);
-                                                    }}
-                                                  >
-                                                    Take Action
-                                                  </button>
+                                      {/* Stage Specific Content */}
+                                      <div className="space-y-3">
+                                        {/* Draft & Created Stage: ATS Score */}
+                                        {(stage.status === 'draft' || stage.status === 'created') && (
+                                          <div className="space-y-2">
+                                            {job.atsScore !== undefined && job.atsScore !== null ? (
+                                              <>
+                                                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                                  <span>ATS Score</span>
+                                                  <span className={job.atsScore >= 80 ? 'text-green-600' : job.atsScore >= 60 ? 'text-orange-600' : 'text-red-600'}>
+                                                    {job.atsScore}/100
+                                                  </span>
                                                 </div>
+                                                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-1.5 overflow-hidden">
+                                                  <div
+                                                    className={`h-full transition-all duration-500 ${job.atsScore >= 80 ? 'bg-green-500' : job.atsScore >= 60 ? 'bg-orange-500' : 'bg-red-500'}`}
+                                                    style={{ width: `${job.atsScore}%` }}
+                                                  />
+                                                </div>
+                                              </>
+                                            ) : (
+                                              <div className="px-2 py-1 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-white/5 rounded-lg inline-flex items-center gap-1.5">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-pulse" />
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Score Pending</span>
                                               </div>
                                             )}
 
-                                            {/* Key Info */}
-                                            <div className="space-y-2">
-                                              {job.location && (
-                                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                                  <MapPin size={12} />
-                                                  <span>{job.location}</span>
+                                            <div className="flex items-center gap-1.5 text-gray-400 text-[10px] font-medium">
+                                              <Edit size={10} />
+                                              <span>Edited {formatCardTime(job.updatedAt)}</span>
+                                              {jobJourneys.length > 0 && (
+                                                <div className="ml-auto bg-green-50 dark:bg-green-500/10 p-1 rounded-md">
+                                                  <FileText size={12} className="text-green-600" />
                                                 </div>
                                               )}
-                                              {job.salary && (job.salary.min || job.salary.max) && (
-                                                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                                  <DollarSign size={12} />
-                                                  <span>
-                                                    {job.salary.min && job.salary.max
-                                                      ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}-${job.salary.max.toLocaleString()}`
-                                                      : job.salary.min
-                                                        ? `${job.salary.currency || '$'}${job.salary.min.toLocaleString()}+`
-                                                        : job.salary.max
-                                                          ? `${job.salary.currency || '$'}${job.salary.max.toLocaleString()}`
-                                                          : 'Not specified'
-                                                    }
-                                                  </span>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Applied Stage */}
+                                        {stage.status === 'applied' && (
+                                          <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                              <span className="px-2.5 py-1 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold uppercase rounded-lg">
+                                                Applied
+                                              </span>
+                                              <div className="bg-gray-50 dark:bg-gray-800/50 p-1 rounded-md">
+                                                <Bookmark size={12} className="text-gray-400" />
+                                              </div>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-medium">
+                                              <Calendar size={12} />
+                                              <span>Applied {formatCardTime(job.applicationDate || job.updatedAt)} • via {job.source || 'LinkedIn'}</span>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Interview Stage */}
+                                        {stage.status === 'interview' && (
+                                          <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                              <span className="px-2.5 py-1 bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 text-[10px] font-bold uppercase rounded-lg">
+                                                Interview
+                                              </span>
+                                              <div className="bg-gray-50 dark:bg-gray-800/50 p-1 rounded-md">
+                                                <Mail size={12} className="text-gray-400" />
+                                              </div>
+                                            </div>
+
+                                            {job.interviews && job.interviews.length > 0 ? (
+                                              <div className="space-y-2">
+                                                <div className="text-xs font-bold text-gray-900 dark:text-white">
+                                                  Round {job.interviews.length} • {job.interviews[0].type || 'Technical'}
                                                 </div>
-                                              )}
-                                              {/* Show application date and deadline inline for created and applied stages */}
-                                              {['created', 'applied'].includes(stage.status) ? (
-                                                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
-                                                  {job.applicationDate && (
-                                                    <div className="flex items-center gap-1.5">
-                                                      <Calendar size={12} />
-                                                      <span>Applied: {new Date(job.applicationDate).toLocaleDateString()}</span>
-                                                    </div>
-                                                  )}
-                                                  {job.deadline && (
-                                                    <div className="flex items-center gap-1.5">
-                                                      <Clock size={12} />
-                                                      <span>Deadline: {new Date(job.deadline).toLocaleDateString()}</span>
-                                                    </div>
-                                                  )}
-                                                  {!job.applicationDate && !job.deadline && (
-                                                    <div className="flex items-center gap-2">
-                                                      <Calendar size={12} />
-                                                      <span>Created: {new Date(job.createdAt).toLocaleDateString()}</span>
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              ) : (
-                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-500">
+                                                <div className="flex items-center gap-1.5 text-blue-600 text-xs font-semibold">
                                                   <Calendar size={12} />
-                                                  <span>{new Date(job.createdAt).toLocaleDateString()}</span>
+                                                  <span>{new Date(job.interviews[0].date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}, {new Date(job.interviews[0].date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                              </div>
+                                            ) : (
+                                              <div className="text-xs text-gray-400 italic">No interview scheduled</div>
+                                            )}
+
+                                            <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-medium">
+                                              <Mail size={12} />
+                                              <span>Applied {formatCardTime(job.applicationDate || job.updatedAt)} • via {job.source || 'LinkedIn'}</span>
+                                            </div>
+                                          </div>
+                                        )}
+
+                                        {/* Offer Stage */}
+                                        {stage.status === 'offer' && (
+                                          <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                              <span className="px-2.5 py-1 bg-green-50 dark:bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold uppercase rounded-lg">
+                                                Offer
+                                              </span>
+                                              <div className="bg-gray-50 dark:bg-gray-800/50 p-1 rounded-md">
+                                                <Award size={12} className="text-gray-400" />
+                                              </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                              <div className="flex items-center gap-2 text-xs font-bold text-gray-900 dark:text-white">
+                                                <Calendar size={14} className="text-gray-400" />
+                                                <span>Offer Received</span>
+                                              </div>
+                                              <p className="text-xs text-gray-500 pl-6">{new Date(job.updatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+
+                                              {job.salary && (job.salary.min || job.salary.max) && (
+                                                <div className="flex items-center gap-2 text-xs font-bold text-green-600 bg-green-50 dark:bg-green-500/10 p-2 rounded-lg">
+                                                  <DollarSign size={14} />
+                                                  <span>Salary: {job.salary.currency || '$'}{job.salary.max?.toLocaleString() || job.salary.min?.toLocaleString()}</span>
                                                 </div>
                                               )}
                                             </div>
 
-                                            {/* Divider */}
-                                            <div className="border-t border-gray-200 dark:border-white/20 dark:border-gray-600/50"></div>
+                                            <div className="flex items-center gap-1.5 text-gray-500 text-[10px] font-medium">
+                                              <List size={12} />
+                                              <span>Applied {formatCardTime(job.applicationDate || job.updatedAt)} • via {job.source || 'LinkedIn'}</span>
+                                            </div>
+                                          </div>
+                                        )}
 
-                                            {/* Journey Status - Hidden for created and applied stages */}
-                                            {!['created', 'applied'].includes(stage.status) && (
-                                              <div className="space-y-2">
-                                                <div className="flex items-center justify-between">
-                                                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                                    <Target size={12} />
-                                                    <span>{journeyStatusText}</span>
-                                                  </div>
-                                                  {jobJourneys.length > 0 && (
-                                                    <div className="flex items-center gap-1">
-                                                      {jobJourneys
-                                                        .filter(journey => journey.id) // Filter out journeys without valid IDs
-                                                        .map((journey, index) => (
-                                                          <div
-                                                            key={`${job.id}-${journey.id || `journey-${index}`}`}
-                                                            className={`w-2 h-2 rounded-full ${journey.status === 'completed' ? 'bg-green-500' :
-                                                              journey.status === 'in-progress' ? 'bg-blue-500' :
-                                                                'bg-gray-400'
-                                                              }`}
-                                                            title={`${journey.jobTitle} Journey - ${journey.status}`}
-                                                          />
-                                                        ))}
-                                                    </div>
-                                                  )}
-                                                </div>
-
-                                                {/* Journey Completion Status */}
-                                                {jobJourneys.length > 0 && (
-                                                  <div className="space-y-1">
-                                                    {(() => {
-                                                      const completedJourneys = jobJourneys.filter(j => j.status === 'completed');
-                                                      const totalJourneys = jobJourneys.length;
-                                                      const completionPercentage = totalJourneys > 0 ? Math.round((completedJourneys.length / totalJourneys) * 100) : 0;
-
-                                                      return (
-                                                        <div className="flex items-center justify-between">
-                                                          <div className="flex items-center gap-2">
-                                                            <div className="flex items-center gap-1">
-                                                              <CheckCircle size={12} className="text-green-500" />
-                                                              <span className="text-xs text-gray-600 dark:text-gray-400">
-                                                                {completedJourneys.length}/{totalJourneys} Completed
-                                                              </span>
-                                                            </div>
-                                                            {completionPercentage === 100 && (
-                                                              <div className="flex items-center gap-1">
-                                                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                                                                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                                                                  All Complete
-                                                                </span>
-                                                              </div>
-                                                            )}
-                                                          </div>
-                                                          <div className="text-xs text-gray-500 dark:text-gray-500">
-                                                            {completionPercentage}%
-                                                          </div>
-                                                        </div>
-                                                      );
-                                                    })()}
-                                                  </div>
-                                                )}
-
-                                                {jobJourneys.length > 0 && (
-                                                  <div className="space-y-1">
-                                                    <div className="flex items-center justify-between text-xs">
-                                                      <span className="text-gray-600 dark:text-gray-400">Progress</span>
-                                                      <span className="text-gray-600 dark:text-gray-400">{Math.round(avgProgress)}%</span>
-                                                    </div>
-                                                    <div className="w-full bg-gray-200 dark:bg-gray-700/50 rounded-full h-2 overflow-hidden">
-                                                      <motion.div
-                                                        className={`h-2 rounded-full transition-all duration-500 ${avgProgress >= 80 ? 'bg-gradient-to-r from-green-500 to-green-600' :
-                                                          avgProgress >= 60 ? 'bg-gradient-to-r from-blue-500 to-blue-600' :
-                                                            avgProgress >= 40 ? 'bg-gradient-to-r from-yellow-500 to-orange-500' :
-                                                              'bg-gradient-to-r from-red-500 to-red-600'
-                                                          }`}
-                                                        initial={{ width: 0 }}
-                                                        animate={{ width: `${avgProgress}%` }}
-                                                        transition={{ duration: 0.8, ease: "easeOut" }}
-                                                      />
-                                                    </div>
-                                                  </div>
-                                                )}
-                                              </div>
-                                            )}
-
-                                            {/* Follow-up Actions for Applied Stage */}
-                                            {job.status === 'applied' ? (
-                                              <div className="w-full mt-3 space-y-2">
-                                                {getFollowUpTimeline(job).slice(0, 1).map((timeline, idx) => (
-                                                  <div key={idx} className="space-y-2">
-                                                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium px-1">
-                                                      {timeline.day}
-                                                    </div>
-                                                    <div className="flex gap-2">
-                                                      <motion.button
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          const searchQuery = encodeURIComponent(`${job.company} hiring manager`);
-                                                          window.open(`https://www.linkedin.com/search/results/people/?keywords=${searchQuery}`, '_blank');
-                                                        }}
-                                                        className="flex-1 px-3 py-2 bg-gradient-to-r from-blue-600/80 to-blue-700/80 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
-                                                        whileHover={{ scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
-                                                      >
-                                                        <Linkedin size={12} />
-                                                        LinkedIn
-                                                      </motion.button>
-                                                      <motion.button
-                                                        onClick={(e) => {
-                                                          e.stopPropagation();
-                                                          handleOpenEmail(job, 0);
-                                                        }}
-                                                        className="flex-1 px-3 py-2 bg-gradient-to-r from-lime-500/80 to-lime-600/80 hover:from-lime-500 hover:to-lime-600 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm"
-                                                        whileHover={{ scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
-                                                      >
-                                                        <Mail size={12} />
-                                                        Email
-                                                      </motion.button>
-                                                    </div>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            ) : job.status !== 'draft' ? (
-                                              <motion.button
+                                        {/* Rejected Stage */}
+                                        {stage.status === 'rejected' && (
+                                          <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                              <span className="px-2.5 py-1 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold uppercase rounded-lg">
+                                                Rejected
+                                              </span>
+                                              <button
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  handleJobClick(job);
+                                                  // Add delete functionality here or keep it in expanded view
                                                 }}
-                                                className={`w-full mt-3 px-3 py-2 text-white text-xs font-medium rounded-full transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm ${job.status === 'interview'
-                                                  ? 'bg-gradient-to-r from-purple-500/80 to-purple-600/80 hover:from-purple-500 hover:to-purple-600'
-                                                  : 'bg-gradient-to-r from-blue-500/80 to-blue-600/80 hover:from-blue-500 hover:to-blue-600'
-                                                  }`}
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
+                                                className="bg-gray-50 dark:bg-gray-800/50 p-1.5 rounded-md hover:bg-red-100 dark:hover:bg-red-500/20 text-gray-400 hover:text-red-600 transition-colors"
                                               >
-                                                {job.status === 'interview' ? (
-                                                  <>
-                                                    <GraduationCap size={12} />
-                                                    Interview Prep
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <Eye size={12} />
-                                                    Manage Applications
-                                                    <ArrowRight size={12} />
-                                                  </>
-                                                )}
-                                              </motion.button>
-                                            ) : null}
+                                                <Trash2 size={12} />
+                                              </button>
+                                            </div>
+
+                                            <div className="space-y-1">
+                                              <p className="text-[10px] font-medium text-gray-500 tracking-wide">Rejected {formatCardTime(job.updatedAt)}</p>
+                                              <p className="text-xs font-bold text-red-600">Reason: {job.notes?.slice(0, 30) || 'Role filled'}</p>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Expanded View on Hover - Keeping for actions */}
+                                      <div className="max-h-0 group-hover:max-h-32 overflow-hidden transition-all duration-300 ease-out">
+                                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5 space-y-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                          <div className="flex gap-2">
+                                            <button className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-1.5">
+                                              <Eye size={12} />
+                                              View Details
+                                            </button>
+                                            <button className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-[10px] font-bold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                                              Edit
+                                            </button>
                                           </div>
                                         </div>
                                       </div>
@@ -2216,6 +2061,22 @@ ${userName}`
           onClose={() => setShowMasterCVCard(false)}
         />
       )}
+      {/* Floating Sticky Tip */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100] w-full max-w-fit px-4">
+        <motion.div
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/95 dark:bg-[#1A201A]/95 backdrop-blur-xl border border-gray-200 dark:border-lime-500/20 px-6 py-3 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] flex items-center gap-4 text-sm font-semibold text-gray-700 dark:text-gray-200 ring-1 ring-black/5"
+        >
+          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-500/10 dark:bg-lime-500/10 border border-blue-200/50 dark:border-lime-500/30">
+            <Zap size={18} className="text-blue-600 dark:text-[#80FF00]" />
+          </div>
+          <p className="whitespace-nowrap">
+            <span className="text-gray-400 dark:text-gray-500 mr-1">Pro Tip:</span> 
+            Drag and drop jobs between stages to update your application status instantly.
+          </p>
+        </motion.div>
+      </div>
     </React.Fragment>
   );
 };

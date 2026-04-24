@@ -287,8 +287,6 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
               <div 
                 className="group cursor-pointer hover:bg-white/50 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors"
                 onClick={() => {
-                  // If there's an existing handler to open the job sidebar, call it.
-                  // For now, we'll trigger a custom event that the container can listen to
                   const event = new CustomEvent('open-job-sidebar');
                   window.dispatchEvent(event);
                 }}
@@ -306,12 +304,27 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
                   </div>
                 </div>
               </div>
-              <button 
-                onClick={onOpenJobParser}
-                className="w-full mt-2 py-2 text-xs font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-[#80FF00]/10 dark:text-[#80FF00] dark:hover:bg-[#80FF00]/20 rounded-lg transition-colors border border-emerald-600 dark:border-[#80FF00]/30"
-              >
-                Update Target Role
-              </button>
+              <div className="flex gap-2 mt-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenJobParser();
+                  }}
+                  className="flex-1 py-2 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-[#80FF00]/10 dark:text-[#80FF00] dark:hover:bg-[#80FF00]/20 rounded-lg transition-colors border border-emerald-600 dark:border-[#80FF00]/30"
+                >
+                  Update Target Role
+                </button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const event = new CustomEvent('open-job-sidebar');
+                    window.dispatchEvent(event);
+                  }}
+                  className="flex-1 py-2 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10 rounded-lg transition-colors border border-emerald-200 dark:border-white/10"
+                >
+                  Job Details
+                </button>
+              </div>
             </div>
           ) : (
             <div className="relative z-10">
