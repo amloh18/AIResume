@@ -83,19 +83,22 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
     }
   };
 
-  // Filter plans by category
+  // Remove filter plans by category since we show all now
   const filteredPlans = useMemo(() => {
     // Ensure pricingPlans is always an array
     const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
-    const filtered = safePlans.filter(plan => {
-      if (selectedCategory === 'essential') {
-        return plan.key === 'free';
-      } else {
-        return plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly' || plan.key === 'pro_lifetime';
-      }
+    // Sort plans by price or a predefined order
+    const order = ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
+    
+    return [...safePlans].sort((a, b) => {
+      const indexA = order.indexOf(a.key);
+      const indexB = order.indexOf(b.key);
+      // If a key isn't in our predefined order, put it at the end
+      if (indexA === -1) return 1;
+      if (indexB === -1) return -1;
+      return indexA - indexB;
     });
-    return filtered;
-  }, [pricingPlans, selectedCategory]);
+  }, [pricingPlans]);
 
   if (loading) {
     return (
@@ -197,66 +200,12 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           </p>
         </motion.div>
 
-        {/* Category Toggle */}
-        <motion.div
-          className="flex justify-center mb-16"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          viewport={{ once: true }}
-        >
-          <div className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-full p-1 inline-flex">
-            {/* Sliding background indicator */}
-            <motion.div
-              className="absolute top-1 bottom-1 bg-lime-400 rounded-full shadow-lg z-0"
-              initial={false}
-              animate={{
-                left: selectedCategory === 'essential'
-                  ? '4px'
-                  : 'calc(50% + 2px)',
-              }}
-              transition={{
-                type: 'spring',
-                stiffness: 300,
-                damping: 30,
-              }}
-              style={{
-                width: 'calc(50% - 4px)',
-              }}
-            />
 
-            <button
-              onClick={() => setSelectedCategory('essential')}
-              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-xs tablet:text-sm transition-colors duration-300 ${selectedCategory === 'essential'
-                ? 'text-black'
-                : 'text-white/70 hover:text-white'
-                }`}
-            >
-              Essential
-            </button>
-            <button
-              onClick={() => setSelectedCategory('professional')}
-              className={`relative z-10 min-w-[140px] px-6 py-3 tablet:min-w-[160px] tablet:px-8 tablet:py-4 rounded-full font-medium text-xs tablet:text-sm transition-colors duration-300 ${selectedCategory === 'professional'
-                ? 'text-black'
-                : 'text-white/70 hover:text-white'
-                }`}
-            >
-              Professional
-            </button>
-          </div>
-        </motion.div>
 
 
         {/* Plans Grid */}
         <motion.div
-          className={`grid gap-6 ${filteredPlans.length === 1
-            ? 'grid-cols-1 max-w-md mx-auto'
-            : filteredPlans.length === 2
-              ? 'grid-cols-1 tablet:grid-cols-2 max-w-3xl mx-auto'
-              : filteredPlans.length === 4
-                ? 'grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 max-w-7xl mx-auto'
-                : 'grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 max-w-6xl mx-auto'
-            }`}
+          className="grid gap-6 grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-5 max-w-[90rem] mx-auto w-full"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
@@ -273,7 +222,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             return (
               <motion.div
                 key={plan._id}
-                className={`group relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-6 min-h-[600px] flex flex-col card-hover ${plan.isPopular ? 'ring-2 ring-lime-400/50' : ''
+                className={`group relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5 min-h-[550px] flex flex-col card-hover ${plan.isPopular ? 'ring-2 ring-lime-400/50' : ''
                   }`}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -410,9 +359,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                         transition={{ delay: 0.5 + featureIndex * 0.1 }}
                         whileHover={{ scale: 1.2 }}
                       >
-                        <Check size={18} className="text-lime-400 flex-shrink-0 mt-0.5" />
+                        <Check size={16} className="text-lime-400 flex-shrink-0 mt-0.5" />
                       </motion.div>
-                      <span className="text-white/80 text-xs tablet:text-sm leading-relaxed">{feature}</span>
+                      <span className="text-white/80 text-xs leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
