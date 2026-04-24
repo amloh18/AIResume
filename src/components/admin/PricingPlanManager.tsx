@@ -190,7 +190,7 @@ const PricingPlanManager: React.FC = () => {
   }, []);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [editedPrices, setEditedPrices] = useState<Record<string, { dayPass: number, monthly: number, quarterly: number, yearly: number }>>({});
+  const [editedPrices, setEditedPrices] = useState<Record<string, { lifetime: number, monthly: number, quarterly: number, yearly: number }>>({});
   const [savingPricing, setSavingPricing] = useState(false);
 
   const handleSaveRegionalPricing = async () => {
@@ -209,7 +209,7 @@ const PricingPlanManager: React.FC = () => {
           regionId: original.regionId,
           planPrices: {
             ...original.planPrices,
-            dayPass: { ...original.planPrices?.dayPass, price: prices.dayPass },
+            lifetime: { ...original.planPrices?.lifetime, price: prices.lifetime },
             monthly: { ...original.planPrices?.monthly, price: prices.monthly },
             quarterly: { ...original.planPrices?.quarterly, price: prices.quarterly },
             yearly: { ...original.planPrices?.yearly, price: prices.yearly }
@@ -362,19 +362,19 @@ const PricingPlanManager: React.FC = () => {
 
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === DEFAULT_PLAN_KEY) return 0;
-    if (plan.key === 'day_pass') return plan.price_one_time || 0;
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
-    if (plan.key === 'pro_lifetime') return plan.price_yearly || 0;
+    if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
+    if (plan.key === 'pro_lifetime') return plan.price_one_time || 0;
     return 0;
   };
 
   const getBillingCycle = (plan: PricingPlan) => {
     if (plan.key === DEFAULT_PLAN_KEY) return 'N/A';
-    if (plan.key === 'day_pass') return 'One-time';
-    if (plan.price_monthly) return 'Monthly';
-    if (plan.price_quarterly) return 'Quarterly';
-    if (plan.price_yearly) return 'Annually';
+    if (plan.key === 'pro_monthly') return 'Monthly';
+    if (plan.key === 'pro_quarterly') return 'Quarterly';
+    if (plan.key === 'pro_yearly') return 'Annually';
+    if (plan.key === 'pro_lifetime') return 'One-time';
     return 'N/A';
   };
 
@@ -391,7 +391,7 @@ const PricingPlanManager: React.FC = () => {
       readiness.razorpay = true;
       readiness.stripeDetails = 'Free plan';
       readiness.razorpayDetails = 'Free plan';
-    } else if (plan.key === 'day_pass') {
+    } else if (plan.key === 'pro_lifetime') {
       readiness.stripe = !!plan.stripePriceId_one_time;
       readiness.razorpay = true; // Uses Order
       readiness.stripeDetails = plan.stripePriceId_one_time || 'Missing one-time price ID';
@@ -712,7 +712,7 @@ const PricingPlanManager: React.FC = () => {
                       const initialEdits: Record<string, any> = {};
                       safeCountryPricing.forEach(cp => {
                         initialEdits[cp.countryCode] = {
-                          dayPass: cp.planPrices?.dayPass?.price || 0,
+                          lifetime: cp.planPrices?.lifetime?.price || 0,
                           monthly: cp.planPrices?.monthly?.price || 0,
                           quarterly: cp.planPrices?.quarterly?.price || 0,
                           yearly: cp.planPrices?.yearly?.price || 0
@@ -738,7 +738,7 @@ const PricingPlanManager: React.FC = () => {
                       <tr>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider sticky left-0 ${ADMIN_THEME.background.tertiary} z-10 ${ADMIN_THEME.text.secondary}`}>Country</th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Currency</th>
-                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Day Pass</th>
+                        <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Lifetime</th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Monthly</th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Quarterly</th>
                         <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${ADMIN_THEME.text.secondary}`}>Yearly</th>
@@ -784,7 +784,7 @@ const PricingPlanManager: React.FC = () => {
                                     </div>
                                   </td>
                                   {/* Price Columns */}
-                                  {(['dayPass', 'monthly', 'quarterly', 'yearly'] as const).map((planKey) => (
+                                  {(['lifetime', 'monthly', 'quarterly', 'yearly'] as const).map((planKey) => (
                                     <td key={planKey} className="px-6 py-4 whitespace-nowrap">
                                       {isEditing ? (
                                         <div className="relative">

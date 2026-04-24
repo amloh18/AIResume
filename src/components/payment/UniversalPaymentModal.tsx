@@ -191,18 +191,18 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           // Attach regional pricing to preselected plan
           const dbPlan = plan as unknown as DatabasePricingPlan;
           // Determine the correct price based on plan key and billing interval
-          let planPrice = 0;
-          if (plan.key === 'pro_monthly') {
-            planPrice = dbPlan.price_monthly || 0;
-          } else if (plan.key === 'pro_quarterly') {
-            planPrice = dbPlan.price_quarterly || 0;
-          } else if (plan.key === 'pro_lifetime') {
-            planPrice = dbPlan.price_yearly || 0;
-          } else if (plan.key === 'day_pass') {
-            planPrice = dbPlan.price_one_time || 0;
-          } else {
-            planPrice = getEffectivePrice(dbPlan) || 0;
-          }
+        let planPrice = 0;
+        if (plan.key === 'pro_monthly') {
+          planPrice = dbPlan.price_monthly || 0;
+        } else if (plan.key === 'pro_quarterly') {
+          planPrice = dbPlan.price_quarterly || 0;
+        } else if (plan.key === 'pro_yearly') {
+          planPrice = dbPlan.price_yearly || 0;
+        } else if (plan.key === 'pro_lifetime') {
+          planPrice = dbPlan.price_one_time || 0;
+        } else {
+          planPrice = getEffectivePrice(dbPlan) || 0;
+        }
 
           const currencySymbol = getCurrencySymbol();
           const monthlyEquivalent = getMonthlyEquivalent(dbPlan);
@@ -236,11 +236,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       // Default to first paid plan (prefer professional plans)
       // Try to find a professional plan first
       const professionalPlan = pricingPlans.find((p: PricingPlan) =>
-        p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_lifetime'
+        p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_yearly' || p.key === 'pro_lifetime'
       );
 
       // If no professional plan, try day pass
-      const dayPassPlan = pricingPlans.find((p: PricingPlan) => p.key === 'day_pass');
+      const dayPassPlan = pricingPlans.find((p: PricingPlan) => p.key === 'pro_lifetime');
 
       // Fallback to first paid plan (not free)
       const paidPlan = professionalPlan || dayPassPlan || pricingPlans.find((p: PricingPlan) => p.key !== 'free');
@@ -254,9 +254,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           planPrice = dbPlan.price_monthly || 0;
         } else if (paidPlan.key === 'pro_quarterly') {
           planPrice = dbPlan.price_quarterly || 0;
-        } else if (paidPlan.key === 'pro_lifetime') {
+        } else if (paidPlan.key === 'pro_yearly') {
           planPrice = dbPlan.price_yearly || 0;
-        } else if (paidPlan.key === 'day_pass') {
+        } else if (paidPlan.key === 'pro_lifetime') {
           planPrice = dbPlan.price_one_time || 0;
         } else {
           planPrice = getEffectivePrice(dbPlan) || 0;
@@ -387,7 +387,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
         // Auto-switch to healthy provider if current provider is down
         if (paymentProvider === 'polar' && !polarHealthy && razorpayHealthy) {
-          console.warn('Stripe is down, switching to Razorpay');
+          console.warn('Polar is down, switching to Razorpay');
           setPaymentProvider('razorpay');
         } else if (paymentProvider === 'razorpay' && !razorpayHealthy && polarHealthy) {
           console.warn('Razorpay is down, switching to Polar');
@@ -709,8 +709,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         if (plan.key === 'pro_quarterly' && promotional.pricing.quarterly) {
           return promotional.pricing.quarterly;
         }
-        if (plan.key === 'pro_lifetime' && promotional.pricing.yearly) {
+        if (plan.key === 'pro_yearly' && promotional.pricing.yearly) {
           return promotional.pricing.yearly;
+        }
+        if (plan.key === 'pro_lifetime' && promotional.pricing.oneTime) {
+          return promotional.pricing.oneTime;
         }
         if (plan.key === 'pro_monthly' && promotional.pricing.monthly) {
           return promotional.pricing.monthly;
@@ -730,10 +733,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     } else if (plan.key === 'pro_quarterly') {
       // Use full quarterly price (one-time charge)
       planPrice = dbPlan.price_quarterly || 0;
-    } else if (plan.key === 'pro_lifetime') {
+    } else if (plan.key === 'pro_yearly') {
       // Use full yearly price (one-time charge)
       planPrice = dbPlan.price_yearly || 0;
-    } else if (plan.key === 'day_pass') {
+    } else if (plan.key === 'pro_lifetime') {
+      // Use full lifetime price (one-time charge)
       planPrice = dbPlan.price_one_time || 0;
     } else {
       // Fallback to effective price from hook
@@ -760,11 +764,11 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   };
 
   const getBillingInterval = (plan: PricingPlan) => {
-    if (plan.key === 'day_pass') return 'one-time';
     if (plan.key === 'free') return 'free';
     // Determine interval from plan key first, then fallback to billingCycle
     if (plan.key === 'pro_quarterly') return 'quarterly';
-    if (plan.key === 'pro_lifetime') return 'yearly';
+    if (plan.key === 'pro_yearly') return 'yearly';
+    if (plan.key === 'pro_lifetime') return 'lifetime';
     if (plan.key === 'pro_monthly') return 'monthly';
     return plan.billingCycle || 'monthly';
   };
@@ -919,18 +923,15 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           }
 
           if (data.redirect_url) {
-            // Stripe Checkout - redirect to Stripe
+            // Polar Checkout - redirect to Polar
             window.location.href = data.redirect_url;
           } else if (data.provider === 'razorpay' && data.checkout && (data.order_id || data.subscription_id)) {
             // Razorpay Checkout - open embedded form (supports both orders and subscriptions)
             await handleRazorpayCheckout(data);
-          } else if (data.client_secret) {
-            // Handle Stripe payment intent
-            console.log('Stripe payment intent:', data.client_secret);
           }
         } else {
           let errorMessage = 'Failed to create checkout session';
-          let shouldRetryWithStripe = false;
+          let shouldRetryWithPolar = false;
 
           // Clone the response to read it multiple times if needed
           const responseClone = response.clone();
@@ -968,7 +969,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             // If currency is not supported by Razorpay, automatically retry with Polar
             if (errorData && errorData.unsupportedCurrency && errorData.suggestedProvider === 'polar' && paymentProvider === 'razorpay') {
               console.log('Currency not supported by Razorpay, switching to Polar');
-              shouldRetryWithStripe = true;
+              shouldRetryWithPolar = true;
               setPaymentProvider('polar');
 
               // Retry the payment with Polar
@@ -993,7 +994,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 const retryData = await retryResponse.json();
                 if (retryData.redirect_url) {
                   window.location.href = retryData.redirect_url;
-                  return; // Exit early, redirecting to Stripe
+                  return; // Exit early, redirecting to Polar
                 }
               }
             }
@@ -1020,7 +1021,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             }
           }
 
-          if (!shouldRetryWithStripe) {
+          if (!shouldRetryWithPolar) {
             throw new Error(errorMessage);
           }
         }
@@ -1808,10 +1809,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                           {paymentProvider === 'polar' ? 'Polar' : 'Razorpay'} is currently unavailable
                                         </p>
                                         <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                                          {providerHealth.stripe && providerHealth.razorpay ? (
+                                          {providerHealth.polar && providerHealth.razorpay ? (
                                             'Both providers are available. Please try again.'
-                                          ) : providerHealth.stripe ? (
-                                            'Switched to Stripe. Please try again.'
+                                          ) : providerHealth.polar ? (
+                                            'Switched to Polar. Please try again.'
                                           ) : providerHealth.razorpay ? (
                                             'Switched to Razorpay. Please try again.'
                                           ) : (

@@ -254,7 +254,7 @@ const PricingPlanEditModal: React.FC<PricingPlanEditModalProps> = ({
                     <div className="space-y-4">
                       {formData.key !== 'free' && (
                         <>
-                          {formData.key === 'day_pass' && (
+                          {formData.key === 'pro_lifetime' && (
                             <div>
                               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                                 One-time Price
@@ -367,7 +367,7 @@ const PricingPlanEditModal: React.FC<PricingPlanEditModalProps> = ({
                         />
                       </div>
 
-                      {formData.key === 'day_pass' && (
+                      {formData.key === 'pro_lifetime' && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Duration (hours)
