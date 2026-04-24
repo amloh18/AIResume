@@ -284,16 +284,26 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
           
           {hasJobDesc ? (
             <div className="space-y-3 relative z-10">
-              <div className="flex items-start gap-2">
-                <Briefcase className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
-                <div className="text-sm text-emerald-800 dark:text-white/80 font-medium">
-                  {state.jobData?.title || 'Senior Software Engineer'}
+              <div 
+                className="group cursor-pointer hover:bg-white/50 dark:hover:bg-white/5 p-2 -mx-2 rounded-lg transition-colors"
+                onClick={() => {
+                  // If there's an existing handler to open the job sidebar, call it.
+                  // For now, we'll trigger a custom event that the container can listen to
+                  const event = new CustomEvent('open-job-sidebar');
+                  window.dispatchEvent(event);
+                }}
+              >
+                <div className="flex items-start gap-2 mb-2">
+                  <Briefcase className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
+                  <div className="text-sm text-emerald-800 dark:text-white/80 font-medium group-hover:text-emerald-900 dark:group-hover:text-white transition-colors">
+                    {state.jobData?.title || 'Senior Software Engineer'}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <FileText className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
-                <div className="text-xs text-emerald-700 dark:text-white/60 line-clamp-3">
-                  {state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd || 'Job description provided.'}
+                <div className="flex items-start gap-2">
+                  <FileText className="w-4 h-4 text-emerald-500 dark:text-[#80FF00]/80 shrink-0 mt-0.5" />
+                  <div className="text-xs text-emerald-700 dark:text-white/60 line-clamp-3 group-hover:text-emerald-800 dark:group-hover:text-white/80 transition-colors">
+                    {state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd || 'Job description provided.'}
+                  </div>
                 </div>
               </div>
               <button 

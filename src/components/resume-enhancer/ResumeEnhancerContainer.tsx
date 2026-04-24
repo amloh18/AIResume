@@ -15,7 +15,7 @@ import Step2Template from './steps/Step2Template';
 import Step3BuilderSurgeon from './steps/Step3BuilderSurgeon';
 import Step4CoverLetter from './steps/Step4CoverLetter';
 import Step4Review from './steps/Step4Review';
-import SmartJDModal from './SmartJDModal';
+
 import ErrorBoundary from './ErrorBoundary';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
@@ -42,7 +42,7 @@ import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScor
 import JobCard from './JobCard';
 import JobRoleCard from './JobRoleCard';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
-// import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
+import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import AuthPromptModal from './AuthPromptModal';
 import { CVJourney } from '@/types/cv';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
@@ -57,6 +57,7 @@ import { generateCVTitle } from '@/lib/utils/cv-title-generator';
 import ModeValidationBanner from '@/components/resume-enhancer/components/ModeValidationBanner';
 import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
 import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode } from '@/lib/utils/analysis-mode';
+import { invalidateStep1Cache } from './steps/Step1Parser';
 
 interface ResumeEnhancerContainerProps {
   userId: string;
@@ -128,6 +129,8 @@ export default function ResumeEnhancerContainer({
   const [hasShownAuthPrompt, setHasShownAuthPrompt] = useState(false);
   const [isTransferringDraft, setIsTransferringDraft] = useState(false);
   const [showModeTransitionDialog, setShowModeTransitionDialog] = useState(false);
+  const [showSaveWarningModal, setShowSaveWarningModal] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{ type: 'step' | 'path', target: number | string } | null>(null);
   const [modeTransitionData, setModeTransitionData] = useState<{
     fromMode: AnalysisMode;
     toMode: AnalysisMode;
@@ -142,6 +145,12 @@ export default function ResumeEnhancerContainer({
     refreshATSScore,
     refreshAll
   } = useATS();
+
+  useEffect(() => {
+    const handleOpenJobSidebar = () => setShowJobSidebar(true);
+    window.addEventListener('open-job-sidebar', handleOpenJobSidebar);
+    return () => window.removeEventListener('open-job-sidebar', handleOpenJobSidebar);
+  }, []);
 
   // Calculate JD reference status
   const jdText =
@@ -445,6 +454,28 @@ export default function ResumeEnhancerContainer({
     };
   }, []);
 
+  const confirmNavigation = async (saveBeforeLeaving: boolean) => {
+    if (saveBeforeLeaving) {
+      await handleSmartSave();
+    }
+    
+    if (pendingNavigation) {
+      if (pendingNavigation.type === 'step') {
+        goToStep(pendingNavigation.target as number);
+      } else {
+        router.push(pendingNavigation.target as string);
+      }
+    }
+    
+    setShowSaveWarningModal(false);
+    setPendingNavigation(null);
+  };
+
+  const cancelNavigation = () => {
+    setShowSaveWarningModal(false);
+    setPendingNavigation(null);
+  };
+
   // Handle sign out
   const handleSignOut = async () => {
     await comprehensiveSignOut();
@@ -512,13 +543,22 @@ export default function ResumeEnhancerContainer({
     }
   }, [cvId, state.cvId]);
 
-  // Guest mode: Load draft on mount if restoreDraft is true
+  // Load draft on mount if restoreDraft is true (for both Guest and Authenticated users)
   useEffect(() => {
-    if (isGuestMode && restoreDraft) {
-      const loadGuestDraft = async () => {
+    if (restoreDraft) {
+      const loadDraft = async () => {
         try {
-          const result = await guestCVService.loadGuestDraft();
-          if (result.success && result.data) {
+          let result;
+          if (isGuestMode) {
+            result = await guestCVService.loadGuestDraft();
+          } else {
+            const response = await fetch('/api/cv-draft/load');
+            if (response.ok) {
+              result = await response.json();
+            }
+          }
+
+          if (result && result.success && result.data) {
             const draft = result.data;
 
             // Restore CV data
@@ -561,14 +601,14 @@ export default function ResumeEnhancerContainer({
               setActiveSection(draft.activeSection);
             }
 
-            console.log('✅ Guest draft restored successfully');
+            console.log(`✅ ${isGuestMode ? 'Guest' : 'Authenticated'} draft restored successfully`);
           }
         } catch (error) {
-          console.error('Failed to load guest draft:', error);
+          console.error(`Failed to load ${isGuestMode ? 'guest' : 'authenticated'} draft:`, error);
         }
       };
 
-      loadGuestDraft();
+      loadDraft();
     }
   }, [isGuestMode, restoreDraft, dispatch, goToStep, setRoleContext]);
 
@@ -1880,19 +1920,27 @@ export default function ResumeEnhancerContainer({
   const handleBackStep = () => {
     if (state.currentStep <= 1) return;
     if (hasUnsavedChanges) {
-      if (!confirm('Go back to the previous step? Unsaved changes may be lost.')) {
-        return;
-      }
+      setPendingNavigation({ type: 'step', target: state.currentStep - 1 });
+      setShowSaveWarningModal(true);
+      return;
     }
     goToStep(state.currentStep - 1);
+  };
+
+  const handleHomeClick = () => {
+    if (hasUnsavedChanges) {
+      setPendingNavigation({ type: 'path', target: '/dashboard' });
+      setShowSaveWarningModal(true);
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   const handleExit = () => {
     if (state.currentStep > 1) {
       if (hasUnsavedChanges) {
-        if (confirm('Are you sure you want to go back? Unsaved changes will be lost.')) {
-          goToStep(1);
-        }
+        setPendingNavigation({ type: 'step', target: 1 });
+        setShowSaveWarningModal(true);
       } else {
         goToStep(1);
       }
@@ -1903,20 +1951,16 @@ export default function ResumeEnhancerContainer({
     let returnPath = '/dashboard'; // Default
 
     if (journeyId) {
-      // User came from tracker (journey-based editing)
       returnPath = '/dashboard/tracker';
     } else if (cvId && (mode === 'edit' || mode === 'edit-master')) {
-      // User came from canvas/documents page
       returnPath = '/dashboard/canvas';
     }
 
     // Only show confirmation if there are unsaved changes
     if (hasUnsavedChanges) {
-      if (confirm('Are you sure you want to exit? Unsaved changes will be lost.')) {
-        router.push(returnPath);
-      }
+      setPendingNavigation({ type: 'path', target: returnPath });
+      setShowSaveWarningModal(true);
     } else {
-      // No unsaved changes, exit without confirmation
       router.push(returnPath);
     }
   };
@@ -2278,6 +2322,9 @@ export default function ResumeEnhancerContainer({
              console.error("Failed to save cover letter:", clErr);
           }
       }
+      
+      // Invalidate step 1 cache so it re-fetches when navigating back to step 1
+      invalidateStep1Cache();
 
       setSaveStatus('success');
 
@@ -2394,7 +2441,15 @@ export default function ResumeEnhancerContainer({
       <header className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-white/5 bg-white dark:bg-[#141810] sticky top-0 z-[100] shadow-sm dark:shadow-xl">
         <div className="flex items-center gap-12 flex-1">
           {/* Logo or Back to Dashboard if in deep editing */}
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleHomeClick}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              title="Return to Dashboard"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+            <div className="w-px h-6 bg-gray-200 dark:bg-white/10" />
             <button
               onClick={handleExit}
               className="group flex items-center pr-12 hover:opacity-80 transition-all duration-300"
@@ -2578,6 +2633,7 @@ export default function ResumeEnhancerContainer({
                         userHasMasterCV={state.hasMasterCV}
                         mode={mode as any}
                         cvType={state.cvType}
+                        isGuestMode={isGuestMode}
                       />
                     </ErrorBoundary>
                   </motion.div>
@@ -2651,25 +2707,24 @@ export default function ResumeEnhancerContainer({
         )}
       </AnimatePresence>
 
-      {/* Unified Smart JD Modal */}
-      <SmartJDModal
+      <JobParserDialog
         isOpen={showRoleModal || showJobParserDialog}
         onClose={() => {
           setShowRoleModal(false);
           setShowJobParserDialog(false);
           setPendingRoleData(null);
         }}
-        onSubmit={(data) => {
-          handleRoleModalSubmit({
-            targetRole: data.title,
-            seniorityLevel: data.experienceLevel,
-            jobDescription: data.jobDescription,
-            hasJD: !!data.jobDescription.trim()
-          });
-        }}
         initialData={{
-           title: state.targetRole || '',
-           experienceLevel: state.seniorityLevel || '',
+          jobDescription: state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd || ''
+        }}
+        matchScore={analysisScore || 82}
+        onParseComplete={(data) => {
+          handleRoleModalSubmit({
+            targetRole: data.jobTitle,
+            seniorityLevel: 'Mid Level (3-5 years)', // Mocked default since parser doesn't extract experience level explicitly yet
+            jobDescription: data.jobDescription || data.jobDescriptionRaw || '',
+            hasJD: !!(data.jobDescription || data.jobDescriptionRaw)?.trim()
+          });
         }}
       />
 
@@ -2732,6 +2787,43 @@ export default function ResumeEnhancerContainer({
         onClose={() => setShowATSDeepDive(false)}
         userId={userId}
       />
+
+      {/* Save Warning Modal */}
+      {showSaveWarningModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-[#141810] rounded-2xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-gray-200 dark:border-white/10"
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Unsaved Changes</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              You have unsaved changes. Would you like to save them before leaving?
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+              <button
+                onClick={cancelNavigation}
+                className="px-4 py-2 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => confirmNavigation(false)}
+                className="px-4 py-2 text-sm font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors"
+              >
+                Discard
+              </button>
+              <button
+                onClick={() => confirmNavigation(true)}
+                className="px-4 py-2 text-sm font-bold bg-lime-500 text-black hover:bg-lime-400 rounded-xl shadow-lg shadow-lime-500/20 transition-colors"
+              >
+                Save & Leave
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Mode Transition Dialog */}
       <ModeTransitionDialog

@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
-import { TemplateRenderer } from '@/lib/templates/template-renderer';
+import CVCanvasEngine from '@/components/cv-builder-pro/CVCanvasEngine';
 
 // A4 dimensions in pixels (210mm x 297mm at 96 DPI) - constants outside component
 const A4_WIDTH = 794; // 210mm * 96/25.4
@@ -82,24 +82,22 @@ const CVPreviewThumbnail: React.FC<CVPreviewThumbnailProps> = ({
       >
         {dimensions.width > 0 && dimensions.height > 0 ? (
           <div 
-            className="bg-white shadow-lg border border-gray-300"
+            className="bg-white shadow-lg relative"
             style={{ 
-              width: `${dimensions.width}px`,
-              height: `${dimensions.height}px`,
-              overflow: 'hidden'
+              width: `${A4_WIDTH}px`,
+              height: `${A4_HEIGHT}px`,
+              transform: `scale(${dimensions.width / A4_WIDTH})`,
+              transformOrigin: 'top left',
+              overflow: 'hidden',
+              pointerEvents: 'none'
             }}
           >
-            <TemplateRenderer
+            <CVCanvasEngine
               cvData={cvData}
-              template={template as any}
-              className="template-preview-content"
-              customStyles={{
-                width: `${dimensions.width}px`,
-                height: `${dimensions.height}px`,
-                overflow: 'hidden',
-                fontSize: `${baseFontSize}px`,
-                lineHeight: '1.4'
-              }}
+              template={template}
+              onDataChange={() => {}}
+              readOnly={true}
+              theme="light"
             />
           </div>
         ) : null}

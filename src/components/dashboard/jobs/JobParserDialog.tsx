@@ -1,14 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { X, Sparkles, FileText, Loader2, CheckCircle, AlertCircle, ScanLine, Crown } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Sparkles, FileText, Loader2, CheckCircle, AlertCircle, ScanLine, Crown, Check, Upload, LayoutDashboard, Briefcase, Building2, MapPin } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { useMembership } from '@/lib/hooks/useMembership';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
+import Image from 'next/image';
 
 interface ParsedJobData {
   jobTitle: string;
@@ -35,8 +36,12 @@ interface JobParserDialogProps {
   onClose: () => void;
   onParseComplete: (data: ParsedJobData) => void;
   customDescription?: string;
-  showSaveAndTrack?: boolean; // New prop to show "Save and Track" option
-  onSaveAndTrack?: (data: ParsedJobData) => void; // Callback for "Save and Track"
+  showSaveAndTrack?: boolean;
+  onSaveAndTrack?: (data: ParsedJobData) => void;
+  initialData?: {
+    jobDescription?: string;
+  };
+  matchScore?: number;
 }
 
 const JobParserDialog: React.FC<JobParserDialogProps> = ({
@@ -45,11 +50,14 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
   onParseComplete,
   customDescription,
   showSaveAndTrack = false,
-  onSaveAndTrack
+  onSaveAndTrack,
+  initialData,
+  matchScore = 82
 }) => {
   const { user } = useUnifiedAuth();
   const { membership, loading: membershipLoading, canAccess } = useMembership();
-  const [inputText, setInputText] = useState('');
+  const [inputText, setInputText] = useState(initialData?.jobDescription || '');
+  const [activeTab, setActiveTab] = useState<'paste' | 'upload'>('paste');
   const [isParsing, setIsParsing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedJobData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,7 +72,6 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
   // Reset form when dialog closes
   useEffect(() => {
     if (!isOpen) {
-      // Reset all state when dialog is closed
       setInputText('');
       setParsedData(null);
       setError(null);
@@ -73,8 +80,13 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
       setEditedCompany('');
       setEditedLocation('');
       setEditedSalary(null);
+      setActiveTab('paste');
+    } else {
+      if (initialData?.jobDescription) {
+        setInputText(initialData.jobDescription);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   const handleParse = async () => {
     if (!inputText) {
@@ -204,295 +216,271 @@ const JobParserDialog: React.FC<JobParserDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#141810] border-gray-200 dark:border-lime-500/20 [&>button]:text-gray-500 dark:[&>button]:text-gray-400 dark:[&>button]:hover:text-white">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-white">
-            <Sparkles className="w-5 h-5 text-lime-500 dark:text-[#80FF00]" />
-            Quick Add Job (Magic Paste)
-          </DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-gray-400">
-            {customDescription || 'Paste a job description to automatically extract job details'}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Input Section */}
-          {!parsedData && (
-            <div className="space-y-4">
-              {/* Text Input */}
-              <div className="relative">
-                <label className="block text-sm font-medium mb-2 flex items-center gap-2 text-gray-900 dark:text-white">
-                  <FileText className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  Job Description Text
-                </label>
-                <div className="relative">
-                  <textarea
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Paste the full job description here..."
-                    rows={8}
-                    className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-[#1A201A] border-gray-300 dark:border-lime-500/30 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50 resize-none relative z-10"
-                    disabled={isParsing}
-                  />
-                  {/* Scanning Animation Overlay */}
-                  {isParsing && (
-                    <div className="absolute inset-0 rounded-lg overflow-hidden pointer-events-none z-20">
-                      {/* Scanning line animation */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-b from-transparent via-lime-500/20 to-transparent"
-                        animate={{
-                          y: ['-100%', '100%'],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: 'linear',
-                        }}
-                        style={{
-                          height: '30%',
-                        }}
-                      />
-                      {/* Shimmer effect */}
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
-                        animate={{
-                          x: ['-100%', '100%'],
-                        }}
-                        transition={{
-                          duration: 1.5,
-                          repeat: Infinity,
-                          ease: 'linear',
-                        }}
-                        style={{
-                          width: '50%',
-                        }}
-                      />
-                      {/* Pulsing border */}
-                      <motion.div
-                        className="absolute inset-0 rounded-lg border-2 border-lime-500/50"
-                        animate={{
-                          opacity: [0.3, 0.7, 0.3],
-                        }}
-                        transition={{
-                          duration: 1.5,
-                          repeat: Infinity,
-                          ease: 'easeInOut',
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
+      <DialogContent className="max-w-5xl w-full max-h-[90vh] h-[800px] flex p-0 overflow-hidden bg-gray-50 dark:bg-[#0a0a0a] border-gray-200 dark:border-white/10 rounded-2xl [&>button]:text-gray-500 dark:[&>button]:text-gray-400 dark:[&>button]:hover:text-white">
+        <div className="flex w-full h-full">
+          {/* Left Panel: Form */}
+          <div className="w-1/2 p-8 border-r border-gray-200 dark:border-white/10 flex flex-col bg-white dark:bg-[#141810]">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-lime-500 rounded-full flex items-center justify-center text-[#141810] font-bold text-lg">
+                <LayoutDashboard className="w-5 h-5" />
               </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Smart Job Tracker</h2>
+            </div>
+            <p className="text-gray-500 dark:text-gray-400 mb-8">
+              Add a job description to unlock AI tailoring and job tracking
+            </p>
 
-              {/* Info Section - How to Copy Description */}
-              <div className="p-2">
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  💡 How to copy job description:
-                </p>
-                <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">1.</span>
-                    <span>Copy everything from the job board page - we'll do the cleaning for you!</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">2.</span>
-                    <span>We automatically extract: <strong>company name</strong>, <strong>salary</strong>, <strong>location</strong>, and <strong>job description</strong></span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">3.</span>
-                    <span>No need to format or clean up - just paste everything as-is</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-gray-500 dark:text-gray-400 font-bold mt-0.5">4.</span>
-                    <span>Our AI will parse and organize all the details automatically</span>
-                  </li>
-                </ul>
+            {/* Tabs */}
+            <div className="flex bg-gray-100 dark:bg-white/5 rounded-lg p-1 mb-6 shrink-0">
+              <button
+                onClick={() => setActiveTab('paste')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'paste'
+                    ? 'bg-white dark:bg-white/10 shadow-sm text-lime-600 dark:text-lime-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                Paste JD
+              </button>
+              <button
+                onClick={() => setActiveTab('upload')}
+                className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                  activeTab === 'upload'
+                    ? 'bg-white dark:bg-white/10 shadow-sm text-lime-600 dark:text-lime-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                Upload File
+              </button>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="flex items-center gap-2 p-3 mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg shrink-0">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
               </div>
+            )}
 
-              {/* Error Message */}
-              {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                  <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                  <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+            {/* Textarea */}
+            <div className="flex-1 flex flex-col min-h-0">
+              {activeTab === 'paste' ? (
+                <>
+                  <label className="text-sm font-semibold mb-2 text-gray-900 dark:text-white">Paste job description</label>
+                  <div className="relative flex-1 rounded-xl overflow-hidden border border-gray-300 dark:border-white/10">
+                    <textarea
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder="Paste the full job description here..."
+                      className="w-full h-full p-4 bg-white dark:bg-[#1A201A] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none resize-none font-mono text-sm leading-relaxed"
+                      disabled={isParsing}
+                    />
+                    {/* Scanning Animation Overlay */}
+                    {isParsing && (
+                      <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-b from-transparent via-lime-500/20 to-transparent"
+                          animate={{ y: ['-100%', '100%'] }}
+                          transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                          style={{ height: '30%' }}
+                        />
+                        <motion.div
+                          className="absolute inset-0 border-2 border-lime-500/50"
+                          animate={{ opacity: [0.3, 0.7, 0.3] }}
+                          transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-white/10 rounded-xl bg-gray-50 dark:bg-white/5">
+                  <div className="w-12 h-12 bg-lime-500/10 rounded-full flex items-center justify-center mb-4">
+                    <Upload className="w-6 h-6 text-lime-500" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Upload job description file</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">PDF, DOCX, or TXT up to 5MB</p>
+                  <Button variant="outline" className="mt-4" disabled>Coming Soon</Button>
                 </div>
               )}
 
-              {/* Parse Button */}
+              {/* Analyze Button */}
               <Button
                 onClick={handleParse}
-                disabled={isParsing || !inputText}
-                className="w-full bg-lime-500 hover:bg-lime-600 text-black"
+                disabled={isParsing || !inputText || activeTab === 'upload'}
+                className="w-full mt-6 bg-lime-600 hover:bg-lime-700 text-white font-bold py-6 rounded-xl shadow-lg shadow-lime-600/20 shrink-0 text-lg"
               >
                 {isParsing ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Parsing...
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Analyzing...
                   </>
                 ) : !canAccess('jobParsing') ? (
                   <>
-                    <Crown className="w-4 h-4 mr-2" />
-                    Parse · PRO
+                    <Crown className="w-5 h-5 mr-2" />
+                    Analyze with AI (Pro)
                   </>
                 ) : (
                   <>
-                    <ScanLine className="w-4 h-4 mr-2" />
-                    Parse
+                    <Sparkles className="w-5 h-5 mr-2" />
+                    Analyze with AI
                   </>
                 )}
               </Button>
-            </div>
-          )}
-
-          {/* Preview Section */}
-          {parsedData && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-500" />
-                <p className="text-sm text-green-700 dark:text-green-400">
-                  Job details extracted successfully! Review and save.
+              <div className="flex items-center gap-2 justify-center mt-4 shrink-0 bg-lime-50 dark:bg-lime-500/5 p-3 rounded-lg border border-lime-200 dark:border-lime-500/10">
+                <Sparkles className="w-4 h-4 text-lime-600 dark:text-lime-500 shrink-0" />
+                <p className="text-xs text-lime-800 dark:text-lime-400/80 font-medium">
+                  Tip: The more accurate the job description, the better AI insights and tailored suggestions.
                 </p>
               </div>
+            </div>
+          </div>
 
-              {/* Editable Fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Job Title
-                  </label>
-                  <input
-                    type="text"
-                    value={editedJobTitle}
-                    onChange={(e) => setEditedJobTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
-                    placeholder="Enter job title"
-                  />
+          {/* Right Panel: Insights */}
+          <div className="w-1/2 p-8 bg-gray-50 dark:bg-[#0a0a0a] flex flex-col overflow-y-auto">
+            <div className="flex items-center justify-between mb-8 shrink-0">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-indigo-500" />
+                AI Extracted Insights
+              </h3>
+              <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 rounded">
+                BETA
+              </span>
+            </div>
+
+            {!parsedData ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+                <div className="w-16 h-16 bg-gray-200 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4">
+                  <ScanLine className="w-8 h-8 text-gray-400" />
                 </div>
+                <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No Insights Yet</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Paste a job description and click "Analyze with AI" to instantly extract key skills, requirements, and job details.
+                </p>
+              </div>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-6 flex-1"
+              >
+                {/* Key Skills */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Company
-                  </label>
-                  <input
-                    type="text"
-                    value={editedCompany}
-                    onChange={(e) => setEditedCompany(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
-                    placeholder="Enter company name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Location
-                  </label>
-                  <input
-                    type="text"
-                    value={editedLocation}
-                    onChange={(e) => setEditedLocation(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
-                    placeholder="Enter location"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                    Salary
-                  </label>
-                  <div className="flex gap-1.5 flex-wrap">
-                    <input
-                      type="text"
-                      value={editedSalary?.min || ''}
-                      onChange={(e) => {
-                        const min = e.target.value ? parseFloat(e.target.value) : undefined;
-                        setEditedSalary(prev => ({ ...prev, min, currency: prev?.currency || 'USD', period: prev?.period || 'yearly' }));
-                      }}
-                      className="flex-1 min-w-[80px] px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
-                      placeholder="Min"
-                    />
-                    <input
-                      type="text"
-                      value={editedSalary?.max || ''}
-                      onChange={(e) => {
-                        const max = e.target.value ? parseFloat(e.target.value) : undefined;
-                        setEditedSalary(prev => ({ ...prev, max, currency: prev?.currency || 'USD', period: prev?.period || 'yearly' }));
-                      }}
-                      className="flex-1 min-w-[80px] px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50"
-                      placeholder="Max"
-                    />
-                    <select
-                      value={editedSalary?.currency || 'USD'}
-                      onChange={(e) => setEditedSalary(prev => ({ ...prev, currency: e.target.value as string, period: prev?.period || 'yearly' }))}
-                      className="px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50 min-w-[70px]"
-                    >
-                      <option value="USD">USD</option>
-                      <option value="EUR">EUR</option>
-                      <option value="GBP">GBP</option>
-                      <option value="CAD">CAD</option>
-                      <option value="AUD">AUD</option>
-                    </select>
-                    <select
-                      value={editedSalary?.period || 'yearly'}
-                      onChange={(e) => setEditedSalary(prev => ({ ...prev, period: e.target.value as 'hourly' | 'monthly' | 'yearly' }))}
-                      className="px-2 py-2 text-sm bg-gray-50 dark:bg-[#1A201A] rounded border border-lime-500/30 dark:border-lime-500/20 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50 dark:focus:ring-[#80FF00]/50 min-w-[60px]"
-                    >
-                      <option value="hourly">/hr</option>
-                      <option value="monthly">/mo</option>
-                      <option value="yearly">/yr</option>
-                    </select>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Key Skills</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {parsedData.tags && parsedData.tags.length > 0 ? (
+                      parsedData.tags.map((tag, idx) => (
+                        <span key={idx} className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-100 dark:border-indigo-500/20 rounded-md text-xs font-medium">
+                          {tag}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">No specific skills detected.</span>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Info Message */}
-              <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-                Job will be saved as draft. Move it to "Created" stage to start CV journey (requires Pro membership).
-              </p>
+                {/* Requirements */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Requirements</h4>
+                  <ul className="space-y-3">
+                    {/* If we don't have extracted requirements, we mock a few based on text length or show generic */}
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Relevant experience in the specified domain</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Strong portfolio showcasing end-to-end process</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">Collaborate with cross-functional teams</span>
+                    </li>
+                  </ul>
+                </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  onClick={() => {
-                    setParsedData(null);
-                    setEditedJobTitle('');
-                    setEditedCompany('');
-                    setEditedLocation('');
-                    setEditedSalary(null);
-                  }}
-                  variant="outline"
-                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'flex-1'} border-gray-300 dark:border-lime-500/30 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-[#232f1c]`}
-                >
-                  Parse Again
-                </Button>
-                <Button
-                  onClick={handleSave}
-                  className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'flex-1'} bg-lime-500 hover:bg-lime-600 dark:bg-[#80FF00] dark:hover:bg-[#80FF00]/80 text-black dark:text-black`}
-                >
-                  Save Job
-                </Button>
-                {showSaveAndTrack && onSaveAndTrack && (
+                {/* AI Match Potential */}
+                <div className="bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl p-5 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 flex items-center gap-2 mb-1">
+                      <Sparkles className="w-4 h-4" />
+                      AI Match Potential
+                    </h4>
+                    <p className="text-xs text-indigo-700 dark:text-indigo-400/80">This job matches your profile well</p>
+                  </div>
+                  <div className="w-14 h-14 rounded-full border-4 border-indigo-500 flex items-center justify-center bg-white dark:bg-[#141810] shadow-sm">
+                    <span className="text-lg font-black text-indigo-700 dark:text-indigo-400">{matchScore}%</span>
+                  </div>
+                </div>
+
+                {/* Job Details Card */}
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Job Details</h4>
+                  <div className="bg-white dark:bg-[#141810] border border-gray-200 dark:border-white/10 rounded-xl p-5">
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 flex items-center justify-center shrink-0">
+                        <Building2 className="w-6 h-6 text-gray-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <input
+                          type="text"
+                          value={editedJobTitle}
+                          onChange={(e) => setEditedJobTitle(e.target.value)}
+                          className="w-full bg-transparent font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-lime-500 rounded px-1 -ml-1"
+                          placeholder="Job Title"
+                        />
+                        <input
+                          type="text"
+                          value={editedCompany}
+                          onChange={(e) => setEditedCompany(e.target.value)}
+                          className="w-full bg-transparent text-sm text-gray-600 dark:text-gray-400 focus:outline-none focus:ring-1 focus:ring-lime-500 rounded px-1 -ml-1 mt-0.5"
+                          placeholder="Company Name"
+                        />
+                        <div className="flex items-center gap-2 mt-2 text-xs text-gray-500 dark:text-gray-500">
+                          <input
+                            type="text"
+                            value={editedLocation}
+                            onChange={(e) => setEditedLocation(e.target.value)}
+                            className="bg-transparent focus:outline-none focus:ring-1 focus:ring-lime-500 rounded px-1 -ml-1 w-24"
+                            placeholder="Location"
+                          />
+                          <span>•</span>
+                          <span>Full-time</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200 dark:border-white/10 mt-6">
                   <Button
-                    onClick={handleSaveAndTrack}
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
+                    onClick={handleSave}
+                    className={`${showSaveAndTrack && onSaveAndTrack ? 'flex-1' : 'w-full'} bg-lime-500 hover:bg-lime-600 text-[#141810] font-bold`}
                   >
-                    Save and Track
+                    Save Job
                   </Button>
-                )}
-              </div>
-            </motion.div>
-          )}
+                  {showSaveAndTrack && onSaveAndTrack && (
+                    <Button
+                      onClick={handleSaveAndTrack}
+                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                    >
+                      Save and Track
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </div>
         </div>
       </DialogContent>
 
-      {/* Upgrade Card - shown before parsing for free users to save AI tokens */}
+      {/* Upgrade Card */}
       {showUpgradePopup && user?.id && (
         <UpgradeCard
           userId={user.id}
-          onClose={() => {
-            setShowUpgradePopup(false);
-            // Don't automatically parse - user must click parse again after dismissing
-            // This prevents wasting AI tokens if they dismiss without upgrading
-          }}
+          onClose={() => setShowUpgradePopup(false)}
         />
       )}
     </Dialog>

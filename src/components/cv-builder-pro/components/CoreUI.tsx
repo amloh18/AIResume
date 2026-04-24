@@ -197,7 +197,7 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
   return (
-    <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`}>
+    <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`cv-page-breakable relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`}>
       {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-emerald-50 border-2 border-dashed border-emerald-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
         <div className={`relative ${!isHeader && !readOnly ? 'mt-4' : ''} hover:z-30 group/inner`}>
         <div className={`p-2 pointer-events-auto snippet-content relative pb-2 z-10 ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
@@ -256,7 +256,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
           const styleKey = isSidebar && template.sidebarTitleStyle ? template.sidebarTitleStyle : template.titleStyle;
           const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
           const Title = ({ titleKey, overrideClass }: any) => overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3> : <TitleRenderer isDark={isDark} showIcons={defaultDesign.showIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>;
-          return <div key={index} className="pointer-events-none mb-[var(--cv-section-gap,1.5rem)]"><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showIcons} /></div>;
+          return <div key={index} className="cv-page-breakable pointer-events-none mb-[var(--cv-section-gap,1.5rem)]"><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showIcons} /></div>;
         })}
       </div>
     );
