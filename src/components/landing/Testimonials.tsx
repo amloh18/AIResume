@@ -418,10 +418,7 @@ const Testimonials = () => {
           viewport={{ once: true }}
         >
           <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-left">
-            The new way to{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
-              build Tailored CV
-            </span>
+            Trusted by <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">15k+</span> users worldwide
           </h2>
           <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl leading-relaxed">
             Join thousands of successful job seekers who have landed their dream positions using <span className="text-lime-400">CV</span><span className="text-white/70">Circle</span>.
