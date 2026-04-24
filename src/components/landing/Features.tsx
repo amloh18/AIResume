@@ -32,7 +32,6 @@ const MultiImageFeature = ({ images, title, showFrame = true }: { images: string
           fill
           className={`group-hover:scale-105 transition-transform duration-500 ${showFrame ? 'object-cover object-top' : 'object-contain object-center'}`}
           quality={80}
-          unoptimized={images[currentIndex].startsWith('http')}
         />
       </motion.div>
     </AnimatePresence>
@@ -163,7 +162,7 @@ const Features = () => {
       description: 'Access sponsored jobs with visa sponsorship tags for UK and USA companies with updated companies list.',
       cta: 'Explore Jobs',
       ctaLink: '/dashboard/jobs',
-      images: ['https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20sleek%2C%20modern%20web%20UI%20dashboard%20showing%20global%20job%20opportunities.%20Map%20of%20the%20world%20with%20glowing%20markers%20in%20UK%20and%20USA%2C%20visa%20sponsorship%20tags%2C%20sleek%20dark%20mode%20design%2C%20high%20quality%2C%20realistic%20UI.&image_size=landscape_16_9'],
+      images: ['/images/global_opportunities.png'],
       showFrame: false,
     },
     {

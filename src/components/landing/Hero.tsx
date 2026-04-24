@@ -87,14 +87,13 @@ const Hero = () => {
           {/* Main image - Direct rendering without complex wrappers */}
           <div className="relative w-full h-auto">
             <Image
-              src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=A%20professional%2C%20sleek%2C%20dark%20mode%20web%20application%20dashboard%20UI%20for%20a%20job%20tracker.%20Features%20automated%20CV%20generation%2C%20cover%20letter%20generation%2C%20modern%20lime%20green%20accents%2C%20glowing%20elements%2C%20professional%2C%20highly%20detailed%2C%20photorealistic.&image_size=landscape_16_9"
+              src="/images/herobanner.png"
               alt="CVCircle Dashboard"
               width={1920}
               height={1080}
               className="w-full h-auto object-contain drop-shadow-2xl rounded-2xl"
               priority
               quality={100}
-              unoptimized
             />
           </div>
         </motion.div>
