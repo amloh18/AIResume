@@ -82,11 +82,10 @@ const ChromeExtension = () => {
             {JOB_SITES.map((site, index) => (
               <motion.div
                 key={site.name}
-                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-xs font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
-                style={{ backgroundColor: '#603a86' }}
+                className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center">
+                <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-sm">
                   <img
                     src={`https://www.google.com/s2/favicons?domain=${site.domain}&sz=128`}
                     alt={site.name}
@@ -97,7 +96,7 @@ const ChromeExtension = () => {
                     }}
                   />
                 </div>
-                <span className="font-semibold">{site.name}</span>
+                <span className="font-semibold tracking-wide">{site.name}</span>
               </motion.div>
             ))}
 
@@ -105,11 +104,10 @@ const ChromeExtension = () => {
             {JOB_SITES.map((site, index) => (
               <motion.div
                 key={`${site.name}-duplicate`}
-                className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-xs font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
-                style={{ backgroundColor: '#603a86' }}
+                className="rounded-full px-4 py-2.5 tablet:px-6 tablet:py-3 text-white/90 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 backdrop-blur-sm transition-all duration-300 text-xs tablet:text-sm font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
                 whileHover={{ scale: 1.05, y: -2 }}
               >
-                <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center">
+                <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center shadow-sm">
                   <img
                     src={`https://www.google.com/s2/favicons?domain=${site.domain}&sz=128`}
                     alt={site.name}
@@ -120,7 +118,7 @@ const ChromeExtension = () => {
                     }}
                   />
                 </div>
-                <span className="font-semibold">{site.name}</span>
+                <span className="font-semibold tracking-wide">{site.name}</span>
               </motion.div>
             ))}
           </div>
