@@ -90,7 +90,7 @@ export default function LinkedInRecommendationsSidebar({
             </motion.div>
 
             {/* Edge Cases Detected (Audit) */}
-            {audit && audit.detected_edge_cases.length > 0 && (
+            {audit?.detected_edge_cases?.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -135,7 +135,7 @@ export default function LinkedInRecommendationsSidebar({
             )}
 
             {/* Recommended Actions */}
-            {sideCards.recommended_actions.length > 0 && (
+            {sideCards.recommended_actions?.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -174,7 +174,7 @@ export default function LinkedInRecommendationsSidebar({
             )}
 
             {/* Career Pathway */}
-            {sideCards.career_pathway.next_step && (
+            {sideCards.career_pathway?.next_step && (
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -186,7 +186,7 @@ export default function LinkedInRecommendationsSidebar({
                         <span className="font-medium">Next Role: </span>
                         {sideCards.career_pathway.next_step}
                     </p>
-                    {sideCards.career_pathway.missing_skill && (
+                    {sideCards.career_pathway?.missing_skill && (
                         <p className="text-xs text-blue-600 bg-blue-100 p-2 rounded">
                             <span className="font-medium">Gap: </span>
                             {sideCards.career_pathway.missing_skill}
@@ -196,7 +196,7 @@ export default function LinkedInRecommendationsSidebar({
             )}
 
             {/* Recommended Courses */}
-            {sideCards.affiliate_courses.length > 0 && (
+            {sideCards.affiliate_courses?.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -235,7 +235,7 @@ export default function LinkedInRecommendationsSidebar({
             )}
 
             {/* Networking Groups */}
-            {sideCards.networking.length > 0 && (
+            {sideCards.networking?.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -258,7 +258,7 @@ export default function LinkedInRecommendationsSidebar({
             )}
 
             {/* Missing Credentials */}
-            {careerGuide?.missing_credentials && careerGuide.missing_credentials.length > 0 && (
+            {careerGuide?.missing_credentials?.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}

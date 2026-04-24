@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Home, Bell, ChevronDown, RefreshCw, Sparkles, Crown, Lock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useUserData } from '@/lib/hooks/useUserData';
+import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useMembership } from '@/lib/hooks/useMembership';
 import type { CVSelectionItem, LinkedInUserContext } from '@/types/linkedin';
 
@@ -39,6 +39,7 @@ export default function LinkedInHeader({
     const { canAccess, membership } = useMembership();
     const [showCvDropdown, setShowCvDropdown] = useState(false);
     const [showToneDropdown, setShowToneDropdown] = useState(false);
+    const [quickMode, setQuickMode] = useState(false);
 
     const selectedCv = availableCvs.find(cv => cv.id === selectedCvId);
 
@@ -205,10 +206,10 @@ export default function LinkedInHeader({
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                         >
-                            {userData?.image ? (
+                            {getUserAvatar(userData) ? (
                                 <Image
-                                    src={userData.image}
-                                    alt={userData.name || 'User'}
+                                    src={getUserAvatar(userData)}
+                                    alt={getUserDisplayName(userData)}
                                     width={32}
                                     height={32}
                                     className="w-full h-full object-cover"
@@ -218,7 +219,7 @@ export default function LinkedInHeader({
                                     className="w-full h-full flex items-center justify-center text-white text-sm font-medium"
                                     style={{ backgroundColor: '#0a66c2' }}
                                 >
-                                    {userData?.name?.charAt(0) || 'U'}
+                                    {getUserDisplayName(userData).charAt(0)}
                                 </div>
                             )}
                         </motion.button>
@@ -236,6 +237,49 @@ export default function LinkedInHeader({
                     }}
                 />
             )}
+
+            {/* 3-Step Progress Header & Quick Mode Toggle */}
+            <div className="border-t border-gray-100 bg-gray-50/50">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-12">
+                        {/* Progress Steps */}
+                        <div className="flex items-center gap-6">
+                            {[
+                                { step: 1, label: 'Select CV', active: true },
+                                { step: 2, label: 'Review & Edit', active: isEnhancing || !!selectedCvId },
+                                { step: 3, label: 'Apply to LinkedIn', active: false },
+                            ].map((s, idx, arr) => (
+                                <div key={s.step} className="flex items-center gap-2">
+                                    <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold ${s.active ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
+                                        {s.step}
+                                    </div>
+                                    <span className={`text-sm font-medium ${s.active ? 'text-gray-900' : 'text-gray-500'}`}>
+                                        {s.label}
+                                    </span>
+                                    {idx < arr.length - 1 && (
+                                        <div className="w-8 h-px bg-gray-300 ml-4" />
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Quick Mode Toggle */}
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-gray-700 flex items-center gap-1.5">
+                                <span className="text-amber-500">⚡</span> One-click optimize
+                            </span>
+                            <button
+                                onClick={() => setQuickMode(!quickMode)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${quickMode ? 'bg-blue-600' : 'bg-gray-200'}`}
+                                role="switch"
+                                aria-checked={quickMode}
+                            >
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${quickMode ? 'translate-x-5' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </header>
     );
 }

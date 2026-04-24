@@ -1,0 +1,12 @@
+- [x] `LinkedInEnhancerContainer` correctly switches between Dashboard and Enhancement Flow views.
+- [x] Context is successfully split into `EnhancerContext`, `DashboardContext`, and `ExtensionContext`.
+- [x] Strict state machine (`ORIGINAL` -> `GENERATED` -> `ACCEPTED` -> `APPLIED`) governs all section changes.
+- [x] `LinkedInEnhancerDashboard` displays "Next Best Actions" (e.g., "Improve your headline [Fix Now]") routing to specific sections.
+- [x] Enhancement Flow top bar includes a "⚡ One-click optimize" Quick Mode toggle.
+- [x] Enhancement Flow implements progressive disclosure (Insights column hidden by default, visible via "Show Insights" toggle).
+- [x] Enhancement Flow "Ready to apply" block includes granular control checkboxes (e.g., `[✓ Headline] [✗ Experience]`) to select injection targets.
+- [x] Main Content Area section cards show "Confidence Score" and inline "Why this change?" reasoning.
+- [x] Main Content Area section cards handle edit overrides correctly (Edit -> overrides Generated -> becomes Accepted).
+- [x] "Preview on LinkedIn" button is available and opens a safe-mode overlay preview of changes.
+- [x] Post-apply Success Feedback Loop shows updated metrics and an "Undo Changes" (rollback) button.
+- [x] All UI components are fully wired to the split Contexts and function dynamically without hardcoded values.
