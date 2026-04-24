@@ -270,7 +270,7 @@ const PricingPlanEditModal: React.FC<PricingPlanEditModalProps> = ({
                             </div>
                           )}
                           
-                          {formData.key.startsWith('pro_') && (
+                          {formData.key.startsWith('pro_') && formData.key !== 'pro_lifetime' && (
                             <>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

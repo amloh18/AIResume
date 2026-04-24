@@ -239,11 +239,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
         p.key === 'pro_monthly' || p.key === 'pro_quarterly' || p.key === 'pro_yearly' || p.key === 'pro_lifetime'
       );
 
-      // If no professional plan, try day pass
-      const dayPassPlan = pricingPlans.find((p: PricingPlan) => p.key === 'pro_lifetime');
-
       // Fallback to first paid plan (not free)
-      const paidPlan = professionalPlan || dayPassPlan || pricingPlans.find((p: PricingPlan) => p.key !== 'free');
+      const paidPlan = professionalPlan || pricingPlans.find((p: PricingPlan) => p.key !== 'free');
 
       if (paidPlan) {
         // Attach regional pricing to default plan
@@ -1052,7 +1049,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     if (plan.key === 'free') return false;
     if (currentUserPlan === 'free') return true;
 
-    const planOrder = { free: 0, day_pass: 1, pro_monthly: 2, pro_quarterly: 3, pro_lifetime: 4 };
+    const planOrder = { free: 0, pro_monthly: 1, pro_quarterly: 2, pro_yearly: 3, pro_lifetime: 4 };
     return planOrder[plan.key as keyof typeof planOrder] > planOrder[currentUserPlan as keyof typeof planOrder];
   };
 
@@ -1060,10 +1057,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getPlanIcon = (planKey: string) => {
     switch (planKey) {
       case 'free': return Brain;
-      case 'day_pass': return Star;
       case 'pro_monthly': return Crown;
       case 'pro_quarterly': return Users;
-      case 'pro_lifetime': return Globe;
+      case 'pro_yearly': return Globe;
+      case 'pro_lifetime': return Star;
       default: return Brain;
     }
   };
@@ -1071,9 +1068,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const getPlanColor = (planKey: string) => {
     switch (planKey) {
       case 'free': return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
-      case 'day_pass': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       case 'pro_monthly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       case 'pro_quarterly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
+      case 'pro_yearly': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       case 'pro_lifetime': return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       default: return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
     }
@@ -1322,8 +1319,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                         const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
 
-                        const subscriptionPlans = availablePlans.filter(plan => plan.key !== 'day_pass');
-                        const dayPassPlans = availablePlans.filter(plan => plan.key === 'day_pass');
+                        const subscriptionPlans = availablePlans.filter(plan => plan.key !== 'pro_lifetime');
+                        const dayPassPlans = availablePlans.filter(plan => plan.key === 'pro_lifetime');
 
                         // Sort logic (optional, keeping consistent with before)
 
@@ -1668,9 +1665,9 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   {(() => {
                                     if (!selectedPlan) return 'No Plan Selected';
                                     if (selectedPlan.key === 'pro_lifetime') return 'Pro Annual Plan';
+                                    if (selectedPlan.key === 'pro_yearly') return 'Pro Yearly Plan';
                                     if (selectedPlan.key === 'pro_quarterly') return 'Pro Quarterly Plan';
                                     if (selectedPlan.key === 'pro_monthly') return 'Pro Monthly Plan';
-                                    if (selectedPlan.key === 'day_pass') return 'Day Pass';
                                     return selectedPlan.name || `Plan ${selectedPlan.key}`;
                                   })()}
                                 </h3>

@@ -79,13 +79,13 @@ export const updateMonthlyGoalSchema = z.object({
 // ============================================
 
 export const createPaymentIntentSchema = z.object({
-  planKey: z.enum(['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']),
+  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
   billingCycle: z.enum(['one-time', 'monthly', 'quarterly', 'yearly']).optional(),
   couponCode: z.string().optional(),
 });
 
 export const razorpayPaymentSchema = z.object({
-  planKey: z.enum(['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']),
+  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
   razorpay_payment_id: z.string().min(1),
   razorpay_order_id: z.string().min(1),
   razorpay_signature: z.string().min(1),
@@ -93,7 +93,7 @@ export const razorpayPaymentSchema = z.object({
 
 export const applyCouponSchema = z.object({
   couponCode: z.string().min(1, 'Coupon code is required'),
-  planKey: z.enum(['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']),
+  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
 });
 
 // ============================================

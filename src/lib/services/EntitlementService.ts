@@ -48,7 +48,7 @@ const METER_LIMITS: Record<string, Record<string, number>> = {
         CV_CREATION: 5,
         COVER_LETTER_AI: 0      // Not available for free
     },
-    day_pass: {
+    pro_yearly: {
         JOB_ACTIVATION: -1,     // Unlimited
         PDF_DOWNLOAD: -1,
         AI_FIX: -1,
@@ -69,7 +69,7 @@ const METER_LIMITS: Record<string, Record<string, number>> = {
         CV_CREATION: -1,
         COVER_LETTER_AI: -1
     },
-    pro_lifetime: {
+    pro_yearly: {
         JOB_ACTIVATION: -1,
         PDF_DOWNLOAD: -1,
         AI_FIX: -1,
@@ -92,8 +92,8 @@ const QUOTA_LIMITS: Record<string, Record<string, number>> = {
         DRAFTS: 10,             // 10 draft CVs
         JOURNEY_CVS: 1          // 1 active journey CV
     },
-    day_pass: {
-        ACTIVE_JOBS: 0,         // No Job Tracker for Day Pass
+    pro_yearly: {
+        ACTIVE_JOBS: -1,         // No Job Tracker for Day Pass
         DRAFTS: -1,
         JOURNEY_CVS: -1
     },
@@ -107,7 +107,7 @@ const QUOTA_LIMITS: Record<string, Record<string, number>> = {
         DRAFTS: -1,
         JOURNEY_CVS: -1
     },
-    pro_lifetime: {
+    pro_yearly: {
         ACTIVE_JOBS: -1,
         DRAFTS: -1,
         JOURNEY_CVS: -1
@@ -150,9 +150,7 @@ class EntitlementService {
         let isActive = true;
         if (planKey !== 'free' && user.subscription) {
             const now = new Date();
-            if (planKey === 'day_pass' && user.subscription.accessExpiresAt) {
-                isActive = new Date(user.subscription.accessExpiresAt) > now;
-            } else if (user.subscription.currentPeriodEnd) {
+            if (user.subscription.currentPeriodEnd) {
                 isActive = new Date(user.subscription.currentPeriodEnd) > now;
             } else if (user.subscription.accessExpiresAt) {
                 isActive = new Date(user.subscription.accessExpiresAt) > now;
