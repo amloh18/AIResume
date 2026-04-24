@@ -27,11 +27,14 @@ const Testimonials = () => {
     successRate: "95%",
     jobsLanded: "10K+"
   });
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const scrollPositionRef = useRef(0);
+  const scrollContainer1Ref = useRef<HTMLDivElement>(null);
+  const scrollContainer2Ref = useRef<HTMLDivElement>(null);
+  const scrollPosition1Ref = useRef(0);
+  const scrollPosition2Ref = useRef(0);
   const animationSpeedRef = useRef(0.5); // Base speed (lower = faster)
 
-  const isPaused = useRef(false);
+  const isPaused1 = useRef(false);
+  const isPaused2 = useRef(false);
 
   // Default testimonials as fallback
   const defaultTestimonials = [
@@ -175,9 +178,9 @@ const Testimonials = () => {
 
   // Calculate dynamic speed based on card position relative to center
   const calculateSpeed = useCallback(() => {
-    if (typeof window === 'undefined' || !scrollContainerRef.current) return 0.5;
+    if (typeof window === 'undefined' || !scrollContainer1Ref.current) return 0.5;
 
-    const container = scrollContainerRef.current;
+    const container = scrollContainer1Ref.current;
     const containerParent = container.parentElement;
     if (!containerParent) return 0.5;
 
@@ -216,7 +219,7 @@ const Testimonials = () => {
 
   // Update animation speed based on card positions using requestAnimationFrame
   useEffect(() => {
-    if (!scrollContainerRef.current) return;
+    if (!scrollContainer1Ref.current) return;
 
     let rafId: number;
     let lastUpdate = 0;
@@ -239,26 +242,36 @@ const Testimonials = () => {
 
   // Animation frame for smooth scrolling
   useAnimationFrame((time, delta) => {
-    if (!scrollContainerRef.current || isPaused.current) return;
-
     const speedMultiplier = animationSpeedRef.current;
-    // Base speed: 30 pixels per second, adjusted by multiplier
-    // Lower multiplier = slower scroll (when centered)
-    // Higher multiplier = faster scroll (when not centered)
     const baseSpeed = 30; // pixels per second
     const increment = (delta / 1000) * (baseSpeed * speedMultiplier);
 
-    scrollPositionRef.current += increment;
-
-    const container = scrollContainerRef.current;
-    const totalWidth = container.scrollWidth / 2; // Since we duplicate the content
-
-    // Reset position when we've scrolled through one complete set
-    if (scrollPositionRef.current >= totalWidth) {
-      scrollPositionRef.current = 0;
+    // Carousel 1 (Left to Right)
+    if (scrollContainer1Ref.current && !isPaused1.current) {
+      scrollPosition1Ref.current += increment;
+      const container1 = scrollContainer1Ref.current;
+      const totalWidth1 = container1.scrollWidth / 2;
+      
+      if (scrollPosition1Ref.current >= totalWidth1) {
+        scrollPosition1Ref.current = 0;
+      }
+      container1.style.transform = `translateX(-${scrollPosition1Ref.current}px)`;
     }
 
-    container.style.transform = `translateX(-${scrollPositionRef.current}px)`;
+    // Carousel 2 (Right to Left)
+    if (scrollContainer2Ref.current && !isPaused2.current) {
+      const container2 = scrollContainer2Ref.current;
+      const totalWidth2 = container2.scrollWidth / 2;
+      
+      // Move backwards
+      scrollPosition2Ref.current -= increment;
+      
+      // If we go past 0 (going left), reset to the end of the first set
+      if (scrollPosition2Ref.current <= 0) {
+        scrollPosition2Ref.current = totalWidth2;
+      }
+      container2.style.transform = `translateX(-${scrollPosition2Ref.current}px)`;
+    }
   });
 
   const fetchTestimonials = async () => {
@@ -417,7 +430,7 @@ const Testimonials = () => {
 
         {/* Enhanced Testimonials Carousel - Continuous Scroll */}
         <motion.div
-          className="relative mb-20 -mx-2 tablet:-mx-6 desktop:-mx-8"
+          className="relative mb-10 -mx-2 tablet:-mx-6 desktop:-mx-8"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
@@ -427,17 +440,17 @@ const Testimonials = () => {
             WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
           }}
         >
-          {/* Carousel Container */}
+          {/* First Carousel Container (Left to Right) */}
           <div className="relative overflow-hidden">
             <div
-              ref={scrollContainerRef}
+              ref={scrollContainer1Ref}
               className="flex items-stretch space-x-4 tablet:space-x-6 desktop:space-x-8 whitespace-nowrap"
               style={{ willChange: 'transform' }}
-              onMouseEnter={() => { isPaused.current = true; }}
-              onMouseLeave={() => { isPaused.current = false; }}
+              onMouseEnter={() => { isPaused1.current = true; }}
+              onMouseLeave={() => { isPaused1.current = false; }}
             >
-              {/* First set of testimonials */}
-              {(testimonials.length > 0 ? testimonials : defaultTestimonials).map((testimonial, index) => (
+              {/* First set of testimonials (first half) */}
+              {(testimonials.length > 0 ? testimonials : defaultTestimonials).slice(0, Math.ceil((testimonials.length > 0 ? testimonials : defaultTestimonials).length / 2)).map((testimonial, index) => (
                 <motion.div
                   key={testimonial._id}
                   data-testimonial-card
@@ -516,8 +529,191 @@ const Testimonials = () => {
                 </motion.div>
               ))}
 
-              {/* Duplicate set for seamless loop */}
-              {(testimonials.length > 0 ? testimonials : defaultTestimonials).map((testimonial, index) => (
+              {/* Duplicate set for seamless loop (first half) */}
+              {(testimonials.length > 0 ? testimonials : defaultTestimonials).slice(0, Math.ceil((testimonials.length > 0 ? testimonials : defaultTestimonials).length / 2)).map((testimonial, index) => (
+                <motion.div
+                  key={`${testimonial._id}-duplicate`}
+                  data-testimonial-card
+                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
+                  variants={cardVariants}
+                >
+                  <motion.div
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    style={{ willChange: 'transform', minWidth: 0 }}
+                    whileHover={{
+                      scale: 1.02,
+                      y: -5,
+                      boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.3)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {/* Glow Effect */}
+                    <motion.div
+                      className="absolute inset-0 rounded-3xl bg-gradient-to-br from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{ filter: 'blur(20px)' }}
+                    />
+
+                    {/* Quote Icon */}
+                    <motion.div
+                      className="text-xl tablet:text-2xl desktop:text-3xl text-lime-400 mb-3 tablet:mb-4"
+                      whileHover={{
+                        scale: 1.2,
+                        rotateY: 15,
+                        textShadow: "0 0 30px rgba(132, 204, 22, 0.5)"
+                      }}
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        perspective: '1000px'
+                      }}
+                    >
+                      <Quote />
+                    </motion.div>
+
+                    {/* Quote Text */}
+                    <p className="text-white/80 text-xs tablet:text-xs desktop:text-sm leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                      {renderMessageWithAccents(testimonial.message)}
+                    </p>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-1 mb-3 tablet:mb-4 relative z-10">
+                      {[...Array(testimonial.starRating)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.5 + i * 0.1 }}
+                          whileHover={{ scale: 1.2 }}
+                        >
+                          <Star size={14} className="text-yellow-400 fill-current tablet:w-4 tablet:h-4" />
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Author Info */}
+                    <div className="flex items-center gap-2 tablet:gap-3 relative z-10 mt-auto">
+                      <div className="w-9 h-9 tablet:w-10 tablet:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-xs tablet:text-sm">
+                          {testimonial.username.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-white font-semibold text-xs tablet:text-xs truncate">
+                          {testimonial.username}
+                        </div>
+                        <div className="text-white/60 text-xs truncate">
+                          {testimonial.designation}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Second Carousel Container (Right to Left) */}
+        <motion.div
+          className="relative mb-20 -mx-2 tablet:-mx-6 desktop:-mx-8"
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          style={{
+            maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)'
+          }}
+        >
+          <div className="relative overflow-hidden">
+            <div
+              ref={scrollContainer2Ref}
+              className="flex items-stretch space-x-4 tablet:space-x-6 desktop:space-x-8 whitespace-nowrap"
+              style={{ willChange: 'transform' }}
+              onMouseEnter={() => { isPaused2.current = true; }}
+              onMouseLeave={() => { isPaused2.current = false; }}
+            >
+              {/* Second set of testimonials (second half) */}
+              {(testimonials.length > 0 ? testimonials : defaultTestimonials).slice(Math.ceil((testimonials.length > 0 ? testimonials : defaultTestimonials).length / 2)).map((testimonial, index) => (
+                <motion.div
+                  key={testimonial._id}
+                  data-testimonial-card
+                  className="group relative flex-shrink-0 w-[280px] tablet:w-[320px] desktop:w-[360px]"
+                  variants={cardVariants}
+                >
+                  <motion.div
+                    className="relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-3xl p-5 tablet:p-6 h-[450px] card-hover w-full max-w-full box-border flex flex-col overflow-hidden"
+                    style={{ willChange: 'transform', minWidth: 0 }}
+                    whileHover={{
+                      scale: 1.02,
+                      y: -5,
+                      boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.3)"
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    {/* Glow Effect */}
+                    <motion.div
+                      className="absolute inset-0 rounded-3xl bg-gradient-to-br from-lime-400/10 to-blue-400/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+                      style={{ filter: 'blur(20px)' }}
+                    />
+
+                    {/* Quote Icon */}
+                    <motion.div
+                      className="text-xl tablet:text-2xl desktop:text-3xl text-lime-400 mb-3 tablet:mb-4"
+                      whileHover={{
+                        scale: 1.2,
+                        rotateY: 15,
+                        textShadow: "0 0 30px rgba(132, 204, 22, 0.5)"
+                      }}
+                      style={{
+                        transformStyle: 'preserve-3d',
+                        perspective: '1000px'
+                      }}
+                    >
+                      <Quote />
+                    </motion.div>
+
+                    {/* Quote Text */}
+                    <p className="text-white/80 text-xs tablet:text-xs desktop:text-sm leading-relaxed mb-4 tablet:mb-6 relative z-10 flex-grow whitespace-normal break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word', minWidth: 0 }}>
+                      {renderMessageWithAccents(testimonial.message)}
+                    </p>
+
+                    {/* Rating */}
+                    <div className="flex items-center gap-1 mb-3 tablet:mb-4 relative z-10">
+                      {[...Array(testimonial.starRating)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.5 + i * 0.1 }}
+                          whileHover={{ scale: 1.2 }}
+                        >
+                          <Star size={14} className="text-yellow-400 fill-current tablet:w-4 tablet:h-4" />
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    {/* Author Info */}
+                    <div className="flex items-center gap-2 tablet:gap-3 relative z-10 mt-auto">
+                      <div className="w-9 h-9 tablet:w-10 tablet:h-10 bg-gradient-to-br from-lime-400 to-lime-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-black font-bold text-xs tablet:text-sm">
+                          {testimonial.username.charAt(0)}
+                        </span>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-white font-semibold text-xs tablet:text-xs truncate">
+                          {testimonial.username}
+                        </div>
+                        <div className="text-white/60 text-xs truncate">
+                          {testimonial.designation}
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              ))}
+
+              {/* Duplicate set for seamless loop (second half) */}
+              {(testimonials.length > 0 ? testimonials : defaultTestimonials).slice(Math.ceil((testimonials.length > 0 ? testimonials : defaultTestimonials).length / 2)).map((testimonial, index) => (
                 <motion.div
                   key={`${testimonial._id}-duplicate`}
                   data-testimonial-card
