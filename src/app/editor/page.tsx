@@ -117,6 +117,7 @@ return (
             clId={clId}
             journeyId={journeyId}
             isGuestMode={false}
+            restoreDraft={restoreDraft}
           />
         </ATSProvider>
       </ResumeEnhancerProvider>

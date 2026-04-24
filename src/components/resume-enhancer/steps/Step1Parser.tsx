@@ -17,6 +17,20 @@ import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import { useInView } from 'framer-motion';
 import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
 
+// Global cache to prevent refetching when navigating between steps
+let cachedExistingCVs: ExistingCV[] | null = null;
+let cachedExistingCoverLetters: any[] | null = null;
+let cachedDraftCV: any | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+export const invalidateStep1Cache = () => { 
+  lastFetchTime = 0; 
+  cachedDraftCV = null;
+  cachedExistingCVs = null;
+  cachedExistingCoverLetters = null;
+};
+
 interface ExistingCV {
   _id?: string;
   id?: string;
@@ -116,9 +130,11 @@ interface Step1ParserProps {
   mode?: 'create' | 'edit' | 'edit-master' | 'journey';
   /** CV type being edited */
   cvType?: 'master' | 'standalone' | 'journey';
+  /** Whether the user is in guest mode */
+  isGuestMode?: boolean;
 }
 
-export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType }: Step1ParserProps) {
+export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType, isGuestMode = false }: Step1ParserProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText } = useResumeEnhancer();
@@ -158,12 +174,19 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
   // Fetch existing CVs on mount
   const fetchExistingCVs = useCallback(async () => {
+    if (cachedExistingCVs && Date.now() - lastFetchTime < CACHE_TTL) {
+      setExistingCVs(cachedExistingCVs);
+      return;
+    }
     setIsLoadingCVs(true);
     try {
       const response = await fetch('/api/cvs');
       if (response.ok) {
         const data = await response.json();
-        setExistingCVs(data.cvs || data.data?.cvs || []);
+        const cvs = data.cvs || data.data?.cvs || [];
+        cachedExistingCVs = cvs;
+        lastFetchTime = Date.now();
+        setExistingCVs(cvs);
       }
     } catch (error) {
       console.error('Failed to fetch existing CVs:', error);
@@ -173,12 +196,20 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   }, [user?.id]);
 
   const fetchDraftCV = useCallback(async () => {
+    if (cachedDraftCV && Date.now() - lastFetchTime < CACHE_TTL) {
+      setDraftCV(cachedDraftCV);
+      return;
+    }
     try {
       const response = await fetch('/api/cv-draft/load');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
+          cachedDraftCV = data.data;
           setDraftCV(data.data);
+        } else {
+          cachedDraftCV = null;
+          setDraftCV(null);
         }
       }
     } catch (error) {
@@ -188,12 +219,18 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
   const fetchExistingCoverLetters = useCallback(async () => {
     if (!user?.id) return;
+    if (cachedExistingCoverLetters && Date.now() - lastFetchTime < CACHE_TTL) {
+      setExistingCoverLetters(cachedExistingCoverLetters);
+      return;
+    }
     setIsLoadingCoverLetters(true);
     try {
       const response = await authenticatedFetchWithUserId('/api/cover-letters', user.id);
       if (response.ok) {
         const data = await response.json();
-        setExistingCoverLetters(data.coverLetters || data.data?.coverLetters || []);
+        const cls = data.coverLetters || data.data?.coverLetters || [];
+        cachedExistingCoverLetters = cls;
+        setExistingCoverLetters(cls);
       }
     } catch (error) {
       console.error('Failed to fetch existing cover letters:', error);
@@ -474,18 +511,6 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
             transition={{ duration: 0.5, ease: "circOut" }}
             className="text-center mb-20"
           >
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-lime-500/10 border border-lime-500/20 rounded-full mb-8"
-            >
-              <Sparkles className="w-4 h-4 text-lime-500" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-500">
-                AI-Powered Career Engine
-              </span>
-            </motion.div>
-
             <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-none whitespace-nowrap">
                 Let's Build Your <span className="text-lime-500 italic relative">Resume</span>
               </h2>
@@ -615,49 +640,50 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
         </div>
 
         {/* Continue Editing Section */}
-        <div className="snap-start w-full min-h-screen pt-12 bg-[var(--bg-primary)]">
-          <div className="w-full max-w-6xl mx-auto px-8 pb-32">
-            <motion.div
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
-            >
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 pb-8 border-b border-gray-200/50 dark:border-white/5">
-                <div className="text-left">
-                  <div className="flex items-center gap-4 mb-3">
-                    <div className="w-12 h-12 bg-lime-500/10 rounded-2xl flex items-center justify-center shadow-inner">
-                      <FolderOpen className="w-6 h-6 text-lime-500" />
+        {!isGuestMode && (
+          <div className="snap-start w-full min-h-screen pt-12 bg-[var(--bg-primary)] relative">
+            <div className="w-full max-w-6xl mx-auto px-8 pb-32">
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
+              >
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-6 pb-6 border-b border-gray-200/50 dark:border-white/5 sticky top-16 pt-6 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-md">
+                  <div className="text-left">
+                    <div className="flex items-center gap-4 mb-3">
+                      <div className="w-12 h-12 bg-lime-500/10 rounded-2xl flex items-center justify-center shadow-inner">
+                        <FolderOpen className="w-6 h-6 text-lime-500" />
+                      </div>
+                      <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
+                        Continue Editing
+                      </h3>
                     </div>
-                    <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
-                      Continue Editing
-                    </h3>
+                    <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+                      Pick up where you left off with your recent resumes and cover letters.
+                    </p>
                   </div>
-                  <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
-                    Pick up where you left off with your recent resumes and cover letters.
-                  </p>
+                  
+                  {/* Toggle Tab UI */}
+                  <div className="flex items-center gap-2 bg-gray-100 dark:bg-black/20 p-1.5 rounded-xl border border-gray-200 dark:border-white/5 shrink-0">
+                     <button
+                       onClick={() => setActiveTab('cvs')}
+                       className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cvs' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
+                     >
+                       Resumes
+                     </button>
+                     <button
+                       onClick={() => setActiveTab('cover-letters')}
+                       className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cover-letters' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
+                     >
+                       Cover Letters
+                     </button>
+                  </div>
                 </div>
-                
-                {/* Toggle Tab UI */}
-                <div className="flex items-center gap-2 bg-gray-100 dark:bg-black/20 p-1.5 rounded-xl border border-gray-200 dark:border-white/5">
-                   <button
-                     onClick={() => setActiveTab('cvs')}
-                     className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cvs' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
-                   >
-                     Resumes
-                   </button>
-                   <button
-                     onClick={() => setActiveTab('cover-letters')}
-                     className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cover-letters' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
-                   >
-                     Cover Letters
-                   </button>
-                </div>
-              </div>
 
-              {/* Enhanced Filters */}
+                {/* Enhanced Filters */}
               {existingCVs.length > 0 && activeTab === 'cvs' && (
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex flex-wrap items-center gap-1 mb-8">
                    <button 
                      onClick={() => setFilterType('all')}
                      className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${filterType === 'all' ? 'text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-white/5' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
@@ -718,7 +744,8 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     viewport={{ once: true }}
                     onClick={() => {
                       // Navigate to editor with the draft
-                      router.push(`/editor?mode=create&resumeDraft=true`);
+                      // Use window.location.href to force a full reload and guarantee the draft loads
+                      window.location.href = `/editor?mode=create&resumeDraft=true`;
                     }}
                     className="group cursor-pointer flex flex-col gap-3 relative"
                   >
@@ -862,6 +889,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
             </motion.div>
             </div>
           </div>
+        )}
         </motion.div>
       )}
 
