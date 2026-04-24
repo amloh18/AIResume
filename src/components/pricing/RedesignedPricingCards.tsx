@@ -66,20 +66,19 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
   // Group plans into categories
   const essentialPlans = safePlans.filter(plan =>
-    plan.key === 'free' || plan.key === 'day_pass'
+    plan.key === 'free'
   );
   const proPlans = safePlans.filter(plan =>
-    plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_lifetime'
+    plan.key === 'pro_monthly' || plan.key === 'pro_quarterly' || plan.key === 'pro_yearly' || plan.key === 'pro_lifetime'
   );
 
   const getPlanIcon = (key: string) => {
     switch (key) {
       case 'free':
         return <Zap className="w-6 h-6" />;
-      case 'day_pass':
-        return <Star className="w-6 h-6" />;
       case 'pro_monthly':
       case 'pro_quarterly':
+      case 'pro_yearly':
       case 'pro_lifetime':
         return <Crown className="w-6 h-6" />;
       default:
@@ -89,36 +88,37 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
 
   const getPlanPrice = (plan: PricingPlan) => {
     if (plan.key === 'free') return 0;
-    if (plan.key === 'day_pass') return plan.price_one_time || 0;
     if (plan.key === 'pro_monthly') return plan.price_monthly || 0;
     if (plan.key === 'pro_quarterly') return plan.price_quarterly || 0;
-    if (plan.key === 'pro_lifetime') return plan.price_yearly || 0;
-    return 0;
+    if (plan.key === 'pro_yearly') return plan.price_yearly || 0;
+    if (plan.key === 'pro_lifetime') return plan.price_one_time || 0;
+    return plan.price_monthly || plan.price_quarterly || plan.price_yearly || plan.price_one_time || 0;
   };
 
   const getBillingText = (plan: PricingPlan) => {
     switch (plan.key) {
       case 'free':
-        return 'Forever free';
-      case 'day_pass':
-        return 'One-time payment';
+        return '';
       case 'pro_monthly':
-        return 'recurring';
+        return '/ mo';
       case 'pro_quarterly':
-        return 'Per quarter';
+        return '/ every 3rd mo';
+      case 'pro_yearly':
+        return '/ yr';
       case 'pro_lifetime':
-        return 'Per year';
+        return 'One-time payment';
       default:
         return '';
     }
   };
 
   const getPlanColor = (plan: PricingPlan) => {
-    if (plan.isBestValue) return 'from-emerald-500 to-teal-600';
-    if (plan.isPopular) return 'from-blue-500 to-indigo-600';
     if (plan.key === 'free') return 'from-gray-500 to-gray-600';
-    if (plan.key === 'day_pass') return 'from-orange-500 to-red-500';
-    return 'from-purple-500 to-pink-600';
+    if (plan.key === 'pro_monthly') return 'from-blue-500 to-indigo-600';
+    if (plan.key === 'pro_quarterly') return 'from-emerald-500 to-teal-600';
+    if (plan.key === 'pro_yearly') return 'from-purple-500 to-pink-600';
+    if (plan.key === 'pro_lifetime') return 'from-orange-500 to-red-500';
+    return 'from-gray-500 to-gray-600';
   };
 
   const getCardStyle = (plan: PricingPlan) => {
@@ -176,16 +176,11 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
           {/* Pricing */}
           <div className="text-center mb-8">
             <div className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
-              {plan.key === 'free' ? 'Free' : `€${price}${plan.key === 'pro_monthly' ? '/month' : ''}`}
+              {plan.key === 'free' ? 'Free' : `$${price}`}
             </div>
             <div className="text-gray-600 dark:text-gray-300 text-sm">
               {getBillingText(plan)}
             </div>
-            {plan.key === 'day_pass' && plan.dayPassDuration && (
-              <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                Valid for {plan.dayPassDuration} hours
-              </div>
-            )}
           </div>
 
           {/* Features */}
@@ -207,7 +202,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {plan.maxJourneys === -1 ? '∞' : plan.maxJourneys || (plan.key === 'free' ? '1' : plan.key === 'pro_monthly' ? '50' : '∞')}
+                  {plan.maxJourneys === -1 ? '∞' : plan.maxJourneys || (plan.key === 'free' ? '1' : plan.key === 'pro_monthly' ? '10' : '∞')}
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-300">Journey CVs</div>
               </div>
@@ -223,22 +218,13 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
           {/* Actions */}
           {adminMode ? (
             <div className="space-y-3">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onPreview?.(plan)}
-                  className="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Eye className="w-4 h-4" />
-                  Preview
-                </button>
-                <button
-                  onClick={() => onCheckout?.(plan)}
-                  className="flex-1 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-4 py-2 rounded-lg text-sm hover:bg-blue-200 dark:hover:bg-blue-800 flex items-center justify-center gap-2 transition-colors"
-                >
-                  <LinkIcon className="w-4 h-4" />
-                  Checkout
-                </button>
-              </div>
+              <button
+                onClick={() => onPreview?.(plan)}
+                className="w-full bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-lg text-sm hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center gap-2 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                Preview
+              </button>
               <button
                 onClick={() => onEdit?.(plan)}
                 className="w-full bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-4 py-2 rounded-lg text-sm hover:bg-green-200 dark:hover:bg-green-800 flex items-center justify-center gap-2 transition-colors"
@@ -249,6 +235,7 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
             </div>
           ) : (
             <button
+              onClick={() => onCheckout?.(plan)}
               className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${plan.isBestValue || plan.isPopular
                 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-lg'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -266,40 +253,44 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
   return (
     <div className="space-y-12">
       {/* Essential Plans Section */}
-      <div>
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Get Started
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-lg">
-            Perfect for first-time users and quick job applications
-          </p>
-        </div>
+      {essentialPlans.length > 0 && (
+        <div>
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Get Started
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              Perfect for first-time users and quick job applications
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 tablet:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {essentialPlans.map((plan) => (
-            <PlanCard key={plan._id} plan={plan} category="essential" />
-          ))}
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {essentialPlans.map((plan) => (
+              <PlanCard key={plan._id} plan={plan} category="essential" />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Pro Plans Section */}
-      <div>
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-            Professional Plans
-          </h2>
-          <p className="text-gray-600 dark:text-gray-300 text-lg">
-            For active job seekers who need unlimited access to all tools
-          </p>
-        </div>
+      {proPlans.length > 0 && (
+        <div>
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+              Professional Plans
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-lg">
+              For active job seekers who need unlimited access to all tools
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 tablet:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {proPlans.map((plan) => (
-            <PlanCard key={plan._id} plan={plan} category="pro" />
-          ))}
+          <div className={`grid grid-cols-1 ${proPlans.length === 4 ? 'tablet:grid-cols-2 desktop:grid-cols-4 max-w-7xl' : 'tablet:grid-cols-3 max-w-6xl'} gap-8 mx-auto`}>
+            {proPlans.map((plan) => (
+              <PlanCard key={plan._id} plan={plan} category="pro" />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Additional Info */}
       <div className="text-center">
