@@ -174,14 +174,15 @@ export default function JobsDashboard() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex items-center gap-2 py-4 px-1 border-b-2 font-medium text-sm transition-all duration-200 outline-none hover:bg-transparent focus:ring-0 focus-visible:ring-0 focus:outline-none focus-visible:outline-none !shadow-none !outline-none hover:!shadow-none focus:!shadow-none group ${
                 activeTab === tab.id
                   ? 'border-lime-500 text-lime-600 dark:text-lime-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200'
               }`}
+              style={{ boxShadow: 'none', outline: 'none', WebkitTapHighlightColor: 'transparent' }}
             >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
+              <tab.icon className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+              <span className="transition-transform duration-200 group-hover:scale-105">{tab.label}</span>
             </button>
           ))}
         </nav>
