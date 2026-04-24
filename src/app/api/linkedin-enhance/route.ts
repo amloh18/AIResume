@@ -235,7 +235,8 @@ Return ONLY valid JSON, no other text:
         "headline": "max 220 chars, key value in first 60",
         "seo_keywords_used": ["keyword1", "keyword2"],
         "location_suggestion": "optimized location string",
-        "rationale": "why this headline works"
+        "rationale": "why this headline works",
+        "confidence_score": 95
       }
     },
     "about": {
@@ -244,7 +245,8 @@ Return ONLY valid JSON, no other text:
         "body": "main content with proof points",
         "cta": "call to action",
         "character_count": 0,
-        "narrative_strategy": "why this structure"
+        "narrative_strategy": "why this structure",
+        "confidence_score": 92
       }
     },
     "experience": [
@@ -254,7 +256,8 @@ Return ONLY valid JSON, no other text:
           "title": "optimized title max 100 chars",
           "description_bullets": ["bullet 1", "bullet 2"],
           "tagged_skills": ["skill1", "skill2"],
-          "improvement_notes": "what was improved and why"
+          "improvement_notes": "what was improved and why",
+          "confidence_score": 90
         }
       }
     ],

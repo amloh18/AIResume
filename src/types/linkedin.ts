@@ -10,9 +10,12 @@ export interface LinkedInUserContext {
     career_goal: string;
 }
 
+// Section state machine enum
+export type LinkedInSectionStatus = 'ORIGINAL' | 'GENERATED' | 'ACCEPTED' | 'APPLIED';
+
 // Hero section (headline, location)
 export interface LinkedInHeroSection {
-    status: 'default' | 'suggestion_available' | 'preview_mode' | 'applied';
+    status: LinkedInSectionStatus;
     current: {
         headline: string;
         location: string;
@@ -26,12 +29,13 @@ export interface LinkedInHeroSection {
         seo_keywords_used: string[];
         location_suggestion: string;
         rationale: string;
+        confidence_score?: number;
     };
 }
 
 // About section with hook/body/CTA
 export interface LinkedInAboutSection {
-    status: 'default' | 'suggestion_available' | 'preview_mode' | 'applied';
+    status: LinkedInSectionStatus;
     current: string;
     enhanced: {
         hook: string;
@@ -39,12 +43,14 @@ export interface LinkedInAboutSection {
         cta: string;
         character_count: number;
         narrative_strategy: string;
+        confidence_score?: number;
     };
 }
 
 // Experience entry
 export interface LinkedInExperienceEntry {
     id: string;
+    status?: LinkedInSectionStatus;
     original_data: {
         role: string;
         company: string;
@@ -58,6 +64,7 @@ export interface LinkedInExperienceEntry {
         description_bullets: string[];
         tagged_skills: string[];
         improvement_notes: string;
+        confidence_score?: number;
     };
 }
 
@@ -92,6 +99,7 @@ export interface LinkedInLanguagesSection {
 // Project entry
 export interface LinkedInProjectEntry {
     id: string;
+    status?: LinkedInSectionStatus;
     original_data: {
         title: string;
         date_range: string;
@@ -104,6 +112,7 @@ export interface LinkedInProjectEntry {
         description_bullets: string[];
         tagged_skills: string[];
         improvement_notes: string;
+        confidence_score?: number;
     };
 }
 
