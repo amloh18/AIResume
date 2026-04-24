@@ -501,6 +501,52 @@ class SubscriptionService {
       return { expired: 0, updated: 0 };
     }
   }
+  /**
+   * Get effective subscription state (dynamically checks for expiration)
+   */
+  getEffectivePlan(user: any): { currentPlanKey: string; subscription: any; isExpired: boolean } {
+    if (!user || !user.subscription) {
+      return {
+        currentPlanKey: 'free',
+        subscription: null,
+        isExpired: false
+      };
+    }
+
+    const sub = user.subscription;
+    const now = new Date();
+    let isExpired = false;
+
+    if (sub.status === 'active' && user.currentPlanKey !== 'free') {
+      const expiresAt = sub.accessExpiresAt || sub.currentPeriodEnd || sub.endDate;
+      if (expiresAt) {
+        const expiryDate = new Date(expiresAt);
+        // If the expiration date is in the past, treat it as expired
+        if (expiryDate.getTime() < now.getTime()) {
+          isExpired = true;
+        }
+      }
+    }
+
+    if (isExpired || sub.status === 'expired') {
+      return {
+        currentPlanKey: 'free',
+        subscription: {
+          ...sub,
+          status: 'expired',
+          planKey: 'free'
+        },
+        isExpired: true
+      };
+    }
+
+    return {
+      currentPlanKey: user.currentPlanKey || 'free',
+      subscription: sub,
+      isExpired: false
+    };
+  }
+
 }
 
 export default new SubscriptionService();

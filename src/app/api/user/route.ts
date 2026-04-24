@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 // Extend global type for cache
 declare global {
@@ -97,6 +98,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+
     // Format user data for frontend
     const userData = {
       id: user._id.toString(),
@@ -108,8 +111,8 @@ export async function GET(request: NextRequest) {
       role: user.role,
       isEmailVerified: user.isEmailVerified,
       authProvider: user.authProvider,
-      currentPlanKey: user.currentPlanKey,
-      subscription: user.subscription,
+      currentPlanKey,
+      subscription,
       settings: user.settings,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt
@@ -260,6 +263,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+
     return NextResponse.json({
       success: true,
       message: 'Profile updated successfully',
@@ -272,8 +277,8 @@ export async function PUT(request: NextRequest) {
         avatar: user.avatar,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
-        currentPlanKey: user.currentPlanKey,
-        subscription: user.subscription,
+        currentPlanKey,
+        subscription,
         settings: user.settings,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt

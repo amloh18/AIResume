@@ -6,7 +6,7 @@
  */
 
 import { ITemplate } from '@/types/template';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById, getAllTemplates } from '@/lib/templates/template-utils';
 import Template from '@/models/Template';
 import mongoose from 'mongoose';
 import { logger } from '@/lib/structured-logger';
@@ -25,6 +25,38 @@ export interface CVWithTemplate {
     name?: string;
   };
 }
+
+const RENDERER_TO_V2_ID: Record<string, string> = {
+  'DataDrivenProTemplate': 'two-column-sidebar-v2',
+  'DesignerModernTemplate': 'creative-bold-v2',
+  'ElegantTimelineTemplate': 'academic-cv-v2',
+  'ExecutiveProfessionalLayoutTemplate': 'professional-extended-v2',
+  'ExecutiveStandardTemplate': 'professional-extended-v2',
+  'ExecutiveMinimalTemplate': 'modern-minimal-v2',
+  'HeaderProfessionalTemplate': 'professional-extended-v2',
+  'MinimalProfessionalTemplate': 'modern-minimal-v2',
+  'OnePagerProfessionalTemplate': 'modern-minimal-v2',
+  'ProfessionalExtendedTemplate': 'professional-extended-v2',
+  'ProfessionalMinimalTemplate': 'modern-minimal-v2',
+  'TechProBlueTemplate': 'professional-extended-v2',
+  'TheModernCVTemplate': 'two-column-sidebar-v2'
+};
+
+const LEGACY_ID_TO_V2_ID: Record<string, string> = {
+  'data-driven-pro-template': 'two-column-sidebar-v2',
+  'designer-modern-template': 'creative-bold-v2',
+  'elegant-timeline-template': 'academic-cv-v2',
+  'executive-professional-layout-template': 'professional-extended-v2',
+  'executive-standard-template': 'professional-extended-v2',
+  'tech-pro-blue-template': 'professional-extended-v2',
+  'the-modern-cv-template': 'two-column-sidebar-v2',
+  'executive-minimal-template': 'modern-minimal-v2',
+  'header-professional-template': 'professional-extended-v2',
+  'minimal-professional-template': 'modern-minimal-v2',
+  'one-pager-professional-template': 'modern-minimal-v2',
+  'professional-minimal-template': 'modern-minimal-v2',
+  'professional-extended-template': 'professional-extended-v2'
+};
 
 /**
  * Template Resolution Service
@@ -142,11 +174,12 @@ export class TemplateResolutionService {
     name?: string,
     id?: string
   ): ITemplate | null {
-    return HARDCODED_TEMPLATES.find(t => 
-      t.customRenderer === customRenderer ||
-      (name && t.name === name) ||
-      (id && (t.id === id || t._id === id))
-    ) || null;
+    let targetId = RENDERER_TO_V2_ID[customRenderer];
+    if (!targetId && id) {
+      targetId = LEGACY_ID_TO_V2_ID[id];
+    }
+    if (!targetId) return null;
+    return getTemplateById(targetId) || null;
   }
 
   /**
@@ -154,17 +187,16 @@ export class TemplateResolutionService {
    */
   private findHardcodedById(id: string): ITemplate | null {
     if (!id) return null;
-    return HARDCODED_TEMPLATES.find(t => 
-      t.id === id || t._id === id
-    ) || null;
+    const targetId = LEGACY_ID_TO_V2_ID[id] || id;
+    return getTemplateById(targetId) || null;
   }
 
   /**
    * Get default template for fallback
    */
   private getDefaultTemplate(): ITemplate {
-    // Return first hardcoded template or create a minimal default
-    return HARDCODED_TEMPLATES[0] || {
+    const all = getAllTemplates();
+    return all[0] || {
       id: 'default',
       _id: 'default',
       name: 'Default Template',

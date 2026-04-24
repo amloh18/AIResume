@@ -74,10 +74,8 @@ export async function GET(
           // Always get the full template object (not just the partial from getCVWithTemplate)
           const templateIdStr = cvWithTemplate.templateId?.toString() || '';
           if (templateIdStr) {
-            const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-            const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-              t => t.id === templateIdStr || t._id === templateIdStr
-            );
+            const { getTemplateById } = await import('@/lib/templates/template-utils');
+            const hardcodedTemplate = getTemplateById(templateIdStr);
             if (hardcodedTemplate) {
               cvTemplate = hardcodedTemplate;
             } else {

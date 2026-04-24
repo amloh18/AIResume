@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { Button } from '@/components/ui/button';
+
 const WelcomePage: React.FC = () => {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
@@ -272,13 +274,15 @@ const WelcomePage: React.FC = () => {
 
         {/* Navigation Buttons */}
         <div className="flex justify-between items-center max-w-6xl mx-auto mt-12">
-          <button
+          <Button
             onClick={handlePrevious}
             disabled={currentStep === 0}
-            className="px-6 py-3 text-gray-600 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="ghost"
+            size="lg"
+            className="text-gray-600 dark:text-gray-300 font-medium rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
           >
             Previous
-          </button>
+          </Button>
 
           <div className="text-center">
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -286,9 +290,10 @@ const WelcomePage: React.FC = () => {
             </p>
           </div>
 
-          <button
+          <Button
             onClick={handleNext}
-            className={`px-6 py-3 ${colors.button} text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg`}
+            size="lg"
+            className={`${colors.button} text-white font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg`}
           >
             {currentStep === features.length - 1 ? (
               <>
@@ -301,17 +306,18 @@ const WelcomePage: React.FC = () => {
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
-          </button>
+          </Button>
         </div>
 
         {/* Skip Button */}
         <div className="text-center mt-8">
-          <button
+          <Button
             onClick={handleGetStarted}
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline"
+            variant="link"
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
             Skip tutorial
-          </button>
+          </Button>
         </div>
       </div>
     </div>

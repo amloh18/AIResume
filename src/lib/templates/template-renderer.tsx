@@ -5,7 +5,6 @@ import { ISectionBlueprint } from '@/models/Template';
 import { generateTemplateCSS } from './default-template';
 import { convertToTemplateSectionOrder } from '@/lib/section-mapping';
 import { generateEnforcedCSS } from './shared-layout-css';
-import * as CustomTemplates from './custom-renderers';
 import { useFormatStore } from '@/lib/stores/formatStore';
 
 // Component registry for dynamic section rendering
@@ -20,9 +19,6 @@ import Languages from '@/components/cv-sections/Languages';
 import Volunteer from '@/components/cv-sections/Volunteer';
 import Awards from '@/components/cv-sections/Awards';
 import Publications from '@/components/cv-sections/Publications';
-
-// Import hardcoded template system
-import { CustomTemplates as HardcodedTemplates } from './hardcoded-templates';
 
 // Component registry mapping
 const COMPONENT_REGISTRY: Record<string, React.ComponentType<any>> = {
@@ -141,45 +137,8 @@ const TemplateRendererComponent: React.FC<TemplateRendererProps> = ({
 
   // Check if this is a custom template with a hardcoded renderer
   const customRenderer = template.customRenderer;
-  console.log('🔍 TemplateRenderer - Checking custom renderer:', {
-    customRenderer,
-    hasHardcodedTemplates: !!HardcodedTemplates,
-    availableKeys: Object.keys(HardcodedTemplates || {}),
-    templateName: template.name
-  });
-
-  if (customRenderer && HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates]) {
-    const CustomTemplateComponent = HardcodedTemplates[customRenderer as keyof typeof HardcodedTemplates] as React.ComponentType<{
-      cvData: UnifiedCVDataStructure;
-      className?: string;
-      dateFormat?: string;
-      showContactIcons?: boolean;
-      snippetOverrides?: Record<string, string>;
-    }>;
-
-    console.log('✅ TemplateRenderer - Using custom renderer:', customRenderer);
-
-    const enforcedCSS = generateEnforcedCSS();
-    return (
-      <>
-        <style dangerouslySetInnerHTML={{ __html: enforcedCSS }} />
-        <CustomTemplateComponent
-          cvData={cvData}
-          className={className}
-          dateFormat={cvData.snippetOverrides?.dates === 'date-mm-yyyy' ? 'MM_YYYY'
-            : cvData.snippetOverrides?.dates === 'date-full' ? 'FULL_MONTH'
-            : cvData.snippetOverrides?.dates === 'date-iso' ? 'MM_YYYY'
-            : 'MMM_YYYY'}
-          showContactIcons={true}
-          snippetOverrides={cvData.snippetOverrides}
-        />
-      </>
-    );
-  } else if (customRenderer) {
-    console.error('❌ TemplateRenderer - Custom renderer not found:', {
-      customRenderer,
-      availableRenderers: Object.keys(HardcodedTemplates || {})
-    });
+  if (customRenderer) {
+    console.log('🔍 TemplateRenderer - Custom renderer not supported, using standard renderer instead:', customRenderer);
   }
 
   // Determine section order - use structure if available, otherwise use legacy props

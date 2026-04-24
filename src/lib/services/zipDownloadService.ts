@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
 import { PDFService } from './pdfService';
 import { getCVWithTemplate } from '@/lib/cv-template-utils';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById, getAllTemplates } from '@/lib/templates/template-utils';
 import { Template } from '@/models';
 import mongoose from 'mongoose';
 import { BaseService } from './baseService';
@@ -244,9 +244,7 @@ export class ZipDownloadService extends BaseService {
    */
   private static async getTemplate(templateId: string): Promise<any> {
     // Check hardcoded templates first
-    const hardcodedTemplate = HARDCODED_TEMPLATES.find(
-      t => t.id === templateId || t._id === templateId
-    );
+    const hardcodedTemplate = getTemplateById(templateId);
 
     if (hardcodedTemplate) {
       return hardcodedTemplate;
@@ -268,7 +266,8 @@ export class ZipDownloadService extends BaseService {
    */
   private static getDefaultTemplate(): any {
     // Return first hardcoded template as default, or create minimal default
-    const defaultTemplate = HARDCODED_TEMPLATES.find(t => t.name === 'Executive Professional') || HARDCODED_TEMPLATES[0];
+    const templates = getAllTemplates();
+    const defaultTemplate = templates.find(t => t.name === 'Executive Professional') || templates[0];
 
     if (defaultTemplate) {
       return defaultTemplate;

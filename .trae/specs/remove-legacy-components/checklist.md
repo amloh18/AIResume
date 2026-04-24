@@ -1,0 +1,7 @@
+- [x] Unused legacy `.tsx` components and `.ts` scripts across the project are deleted.
+- [x] References to old components are updated to use the latest components.
+- [x] Hardcoded legacy templates in `src/lib/templates` and related folders are removed.
+- [x] LinkedIn Enhancer correctly supports dark theme.
+- [x] LinkedIn Enhancer back navigation correctly routes to the dashboard (instead of sign-in).
+- [x] TypeScript compilation passes with no missing import errors.
+- [x] The app builds successfully without legacy component references.

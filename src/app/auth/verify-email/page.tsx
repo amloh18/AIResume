@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 function VerifyEmailContent() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'expired'>('loading');
@@ -168,19 +169,19 @@ function VerifyEmailContent() {
 
               {(status === 'error' || status === 'expired') && (
                 <div className="space-y-3">
-                  <button
+                  <Button
                     onClick={resendVerification}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
                   >
                     Resend Verification Email
-                  </button>
+                  </Button>
                   
-                  <button
+                  <Button
                     onClick={() => router.push('/sign-in')}
                     className="w-full bg-gray-600 hover:bg-gray-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
                   >
                     Go to Sign In
-                  </button>
+                  </Button>
                 </div>
               )}
 

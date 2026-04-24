@@ -3,6 +3,7 @@ import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
 import { handleCorsPreflight, setCorsHeaders } from '@/lib/utils/cors-helpers';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 const toNumberOrNull = (value: number | null | undefined) =>
   typeof value === 'number' ? value : null;
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
       'avatar',
       'role',
       'currentPlanKey',
+      'subscription',
       'credits',
       'usage',
       'settings',
@@ -61,6 +63,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { currentPlanKey } = subscriptionService.getEffectivePlan(user);
+
     const profile = {
       id: user._id.toString(),
       firstName: user.firstName,
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
       email: user.email,
       avatar: user.avatar || null,
       role: user.role,
-      plan: user.currentPlanKey,
+      plan: currentPlanKey,
       credits: {
         jobCredits: typeof user.credits?.jobCredits === 'number' ? user.credits.jobCredits : 0,
         totalJobsCreated: typeof user.credits?.totalCreated?.jobs === 'number' ? user.credits.totalCreated.jobs : 0,

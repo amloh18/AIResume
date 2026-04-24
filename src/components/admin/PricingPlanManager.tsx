@@ -36,6 +36,7 @@ import PromotionalOfferManager from '@/components/admin/PromotionalOfferManager'
 import DiscountCodeManager from '@/components/admin/DiscountCodeManager';
 import RevenueManager from '@/components/admin/RevenueManager';
 import { getCountryName, getCountryFlag, DEFAULT_PLAN_KEY, TIME_RANGES } from '@/lib/config/adminConstants';
+import { ADMIN_THEME } from '@/lib/config/adminTheme';
 import { useRouter } from 'next/navigation';
 // RegionalPricing interface (from database)
 interface RegionalPricing {

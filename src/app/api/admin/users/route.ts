@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,31 +47,34 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Transform users to match expected format
-    const transformedUsers = users.map(user => ({
-      _id: user._id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role || 'user',
-      currentPlanKey: user.currentPlanKey || 'free',
-      subscription: {
-        status: user.subscription?.status || 'inactive',
-        provider: user.subscription?.provider || 'none',
-        currentPeriodEnd: user.subscription?.currentPeriodEnd,
-        interval: user.subscription?.interval || 'monthly'
-      },
-      createdAt: user.createdAt,
-      phone: user.phone,
-      location: user.location,
-      website: user.website,
-      linkedin: user.linkedin,
-      github: user.github,
-      summary: user.summary,
-      company: user.company,
-      timezone: user.timezone,
-      languagePreference: user.languagePreference,
-      region: user.region
-    }));
+    const transformedUsers = users.map(user => {
+      const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+      return {
+        _id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role || 'user',
+        currentPlanKey: currentPlanKey,
+        subscription: {
+          status: subscription?.status || 'inactive',
+          provider: subscription?.provider || 'none',
+          currentPeriodEnd: subscription?.currentPeriodEnd,
+          interval: subscription?.interval || 'monthly'
+        },
+        createdAt: user.createdAt,
+        phone: user.phone,
+        location: user.location,
+        website: user.website,
+        linkedin: user.linkedin,
+        github: user.github,
+        summary: user.summary,
+        company: user.company,
+        timezone: user.timezone,
+        languagePreference: user.languagePreference,
+        region: user.region
+      };
+    });
 
     return NextResponse.json({
       success: true,

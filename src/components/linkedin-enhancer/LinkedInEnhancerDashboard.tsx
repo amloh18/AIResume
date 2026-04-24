@@ -1,19 +1,30 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import ProfileStrengthCard from './ProfileStrengthCard';
 import ProfileChecklistCard from './ProfileChecklistCard';
 import AISummaryCard from './AISummaryCard';
 import TopRecommendationsCard from './TopRecommendationsCard';
 
 export default function LinkedInEnhancerDashboard({ onStartEnhancing }: { onStartEnhancing: (sectionId?: string) => void }) {
+    const router = useRouter();
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 min-h-screen">
+        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-[#1a230f] min-h-screen">
             <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+                <button 
+                    onClick={() => router.push('/dashboard')}
+                    className="flex items-center text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 mb-6 transition-colors"
+                >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Back to Dashboard
+                </button>
+
                 <div className="flex justify-between items-end mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">LinkedIn Dashboard</h1>
-                        <p className="text-gray-600">Overview of your profile strength and next best actions.</p>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">LinkedIn Dashboard</h1>
+                        <p className="text-gray-600 dark:text-gray-400">Overview of your profile strength and next best actions.</p>
                     </div>
                     <button 
                         onClick={() => onStartEnhancing()}

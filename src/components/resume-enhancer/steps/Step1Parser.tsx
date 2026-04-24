@@ -15,7 +15,7 @@ import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import { useInView } from 'framer-motion';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getAllTemplates } from '@/lib/templates/template-utils';
 
 // Global cache to prevent refetching when navigating between steps
 let cachedExistingCVs: ExistingCV[] | null = null;
@@ -58,7 +58,7 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
     if (item.template) return item.template;
     if (typeof item.templateId === 'object' && item.templateId) return item.templateId;
     if (typeof item.templateId === 'string') {
-      const foundTemplate = HARDCODED_TEMPLATES.find(t => t.id === item.templateId || (t as any)._id === item.templateId);
+      const foundTemplate = getAllTemplates().find(t => t.id === item.templateId);
       if (foundTemplate) return foundTemplate;
     }
     return null;

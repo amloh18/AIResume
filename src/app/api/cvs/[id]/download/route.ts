@@ -5,7 +5,7 @@ import { getCVWithTemplate } from '@/lib/cv-template-utils';
 import { PDFService } from '@/lib/services/pdfService';
 import { docxService } from '@/lib/services/docxService';
 import { downloadAnalyticsService } from '@/lib/services/downloadAnalyticsService';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById, getAllTemplates } from '@/lib/templates/template-utils';
 import { Template } from '@/models';
 import mongoose from 'mongoose';
 import { redisRateLimiter } from '@/lib/redis-rate-limiter';

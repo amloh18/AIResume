@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import CV from '@/models/CV';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +43,8 @@ export async function GET(request: NextRequest) {
       ]
     });
 
+    const { currentPlanKey, subscription } = subscriptionService.getEffectivePlan(user);
+
     // Format user data for frontend
     const userData = {
       id: user._id.toString(),
@@ -53,8 +56,8 @@ export async function GET(request: NextRequest) {
       role: user.role,
       isEmailVerified: user.isEmailVerified,
       authProvider: user.authProvider,
-      currentPlanKey: user.currentPlanKey,
-      subscription: user.subscription,
+      currentPlanKey,
+      subscription,
       settings: user.settings,
       hasMasterCV: masterCVCount > 0,
       createdAt: user.createdAt,

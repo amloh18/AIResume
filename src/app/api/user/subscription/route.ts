@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import { getAdminSubscription, getAdminPricingPlan } from '@/models/admin-models';
+import subscriptionService from '@/lib/services/subscriptionService';
 
 export async function GET(request: NextRequest) {
   try {
@@ -38,13 +39,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const effective = subscriptionService.getEffectivePlan(user);
+    const { currentPlanKey, subscription: effectiveSub } = effective;
+
     // Get the current plan details from database
-    const currentPlanKey = user.currentPlanKey || 'free';
     const PricingPlan = await getAdminPricingPlan();
     const planDetails = await PricingPlan.findOne({ key: currentPlanKey }).lean();
 
-    // If user has no subscription, return default free plan
-    if (!user.subscription) {
+    // If user has no subscription or it's free, return default free plan
+    if (!effectiveSub || currentPlanKey === 'free') {
       const freePlan = await PricingPlan.findOne({ key: 'free' }).lean();
       return NextResponse.json({
         success: true,
@@ -67,11 +70,11 @@ export async function GET(request: NextRequest) {
     // Format subscription data with database plan details
     const subscription = {
       planName: planDetails?.name || 'Free Plan',
-      planKey: user.subscription.planKey || 'free',
-      status: user.subscription.status || 'active',
+      planKey: effectiveSub.planKey || 'free',
+      status: effectiveSub.status || 'active',
       credits: planDetails?.features?.maxCVs || 20,
-      endDate: user.subscription.endDate 
-        ? new Date(user.subscription.endDate).toLocaleDateString('en-US', {
+      endDate: effectiveSub.endDate 
+        ? new Date(effectiveSub.endDate).toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'

@@ -466,8 +466,8 @@ export async function PUT(
     // Validate templateId if provided
     if (updateData.templateId) {
       // Check if it's a hardcoded template first
-      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-      const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => t.id === updateData.templateId || t._id === updateData.templateId);
+      const { getTemplateById } = await import('@/lib/templates/template-utils');
+      const hardcodedTemplate = getTemplateById(updateData.templateId);
 
       if (hardcodedTemplate) {
         // Allow hardcoded templates
@@ -720,10 +720,8 @@ export async function PUT(
       // Get template data if available
       let templateData = cv.templateData || null;
       if (!templateData && cv.templateId) {
-        const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-        const hardcodedTemplate = HARDCODED_TEMPLATES.find(t =>
-          t.id === cv.templateId?.toString() || t._id === cv.templateId?.toString()
-        );
+        const { getTemplateById } = await import('@/lib/templates/template-utils');
+        const hardcodedTemplate = getTemplateById(cv.templateId?.toString());
         if (hardcodedTemplate) {
           templateData = hardcodedTemplate;
         } else {

@@ -133,10 +133,11 @@ export async function POST(request: NextRequest) {
     let templateId = (draft as any).templateId || draft.cvData?.templateId || 'executive-professional-layout-template';
     let templateName = 'Executive Professional';
     
-    if (!templateId || templateId === 'executive-professional-layout-template') {
-      const { HARDCODED_TEMPLATES } = await import('@/lib/templates/hardcoded-templates');
-      const executiveProfessional = HARDCODED_TEMPLATES.find(
-        t => t.id === 'executive-professional-layout-template' || t.name === 'Executive Professional'
+    if (!templateId || templateId === 'executive-professional-layout-template' || templateId === 'professional-extended-v2') {
+      const { getAllTemplates } = await import('@/lib/templates/template-utils');
+      const templates = getAllTemplates();
+      const executiveProfessional = templates.find(
+        t => t.id === 'professional-extended-v2' || t.name === 'Professional Extended'
       );
       if (executiveProfessional) {
         templateId = executiveProfessional.id || executiveProfessional._id;

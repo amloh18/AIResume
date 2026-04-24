@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import CV from '@/models/CV';
 import Template from '@/models/Template';
-import { HARDCODED_TEMPLATES } from '@/lib/templates/hardcoded-templates';
+import { getTemplateById, getAllTemplates } from '@/lib/templates/template-utils';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
 
@@ -69,9 +69,7 @@ export async function POST(
     const templateIdStr = cv.templateId?.toString() || '';
     
     if (templateIdStr) {
-      const hardcodedTemplate = HARDCODED_TEMPLATES.find(t => 
-        t.id === templateIdStr || t._id === templateIdStr
-      );
+      const hardcodedTemplate = getTemplateById(templateIdStr);
       
       if (hardcodedTemplate) {
         template = hardcodedTemplate;
@@ -105,16 +103,17 @@ export async function POST(
       console.log('⚠️ Thumbnail API - No templateId found, using default template');
       
       // Try to find Executive Professional as default (same as CV POST API)
-      const executiveProfessional = HARDCODED_TEMPLATES.find(
-        t => t.id === 'executive-professional-layout-template' || t.name === 'Executive Professional'
+      const templates = getAllTemplates();
+      const executiveProfessional = templates.find(
+        t => t.id === 'professional-extended-v2' || t.name === 'Professional Extended'
       );
       
       if (executiveProfessional) {
         template = executiveProfessional;
-        console.log('✅ Thumbnail API - Using Executive Professional as default template');
+        console.log('✅ Thumbnail API - Using Professional Extended as default template');
       } else {
         // Fallback to any default template
-        const hardcodedDefault = HARDCODED_TEMPLATES.find(
+        const hardcodedDefault = templates.find(
           t => t.isDefault === true && t.category === 'cv'
         );
         
@@ -123,8 +122,8 @@ export async function POST(
           console.log('✅ Thumbnail API - Using hardcoded default template:', hardcodedDefault.name);
         } else {
           // Fallback to first available template
-          if (HARDCODED_TEMPLATES.length > 0) {
-            template = HARDCODED_TEMPLATES[0];
+          if (templates.length > 0) {
+            template = templates[0];
             console.log('✅ Thumbnail API - Using first available template:', template.name);
           }
         }

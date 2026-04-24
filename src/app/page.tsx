@@ -13,7 +13,6 @@ import Pricing from '@/components/landing/Pricing';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
-import CVTemplateShowcase from '@/components/landing/CVTemplateShowcase';
 import { useRouter } from 'next/navigation';
 
 
@@ -230,9 +229,6 @@ function LandingPageContent() {
 
           {/* Hero Section */}
           <Hero />
-
-          {/* Templates & Snippets Section */}
-          <CVTemplateShowcase />
 
           {/* How It Works Section */}
           <HowItWorks />
