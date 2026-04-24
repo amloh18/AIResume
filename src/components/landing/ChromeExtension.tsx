@@ -3,6 +3,24 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 
+const JOB_SITES = [
+  { name: 'LinkedIn', domain: 'linkedin.com' },
+  { name: 'Indeed', domain: 'indeed.com' },
+  { name: 'Glassdoor', domain: 'glassdoor.com' },
+  { name: 'ZipRecruiter', domain: 'ziprecruiter.com' },
+  { name: 'Monster', domain: 'monster.com' },
+  { name: 'Wellfound', domain: 'wellfound.com' },
+  { name: 'RemoteOK', domain: 'remoteok.com' },
+  { name: 'We Work Remotely', domain: 'weworkremotely.com' },
+  { name: 'Dice', domain: 'dice.com' },
+  { name: 'Stack Overflow', domain: 'stackoverflow.com' },
+  { name: 'FlexJobs', domain: 'flexjobs.com' },
+  { name: 'CareerBuilder', domain: 'careerbuilder.com' },
+  { name: 'SimplyHired', domain: 'simplyhired.com' },
+  { name: 'Upwork', domain: 'upwork.com' },
+  { name: 'Freelancer', domain: 'freelancer.com' }
+];
+
 const ChromeExtension = () => {
   return (
     <section id="chrome-extension" className="relative pt-32 pb-20 bg-[#141810] overflow-hidden">
@@ -61,23 +79,7 @@ const ChromeExtension = () => {
           }}
         >
           <div className="flex items-center space-x-8 whitespace-nowrap animate-scroll">
-            {[
-              { name: 'LinkedIn', logoUrl: 'https://logo.clearbit.com/linkedin.com' },
-              { name: 'Indeed', logoUrl: 'https://logo.clearbit.com/indeed.com' },
-              { name: 'Glassdoor', logoUrl: 'https://logo.clearbit.com/glassdoor.com' },
-              { name: 'ZipRecruiter', logoUrl: 'https://logo.clearbit.com/ziprecruiter.com' },
-              { name: 'Monster', logoUrl: 'https://logo.clearbit.com/monster.com' },
-              { name: 'AngelList', logoUrl: 'https://logo.clearbit.com/angel.co' },
-              { name: 'RemoteOK', logoUrl: 'https://logo.clearbit.com/remoteok.com' },
-              { name: 'We Work Remotely', logoUrl: 'https://logo.clearbit.com/weworkremotely.com' },
-              { name: 'Dice', logoUrl: 'https://logo.clearbit.com/dice.com' },
-              { name: 'Stack Overflow', logoUrl: 'https://logo.clearbit.com/stackoverflow.com' },
-              { name: 'FlexJobs', logoUrl: 'https://logo.clearbit.com/flexjobs.com' },
-              { name: 'CareerBuilder', logoUrl: 'https://logo.clearbit.com/careerbuilder.com' },
-              { name: 'SimplyHired', logoUrl: 'https://logo.clearbit.com/simplyhired.com' },
-              { name: 'Upwork', logoUrl: 'https://logo.clearbit.com/upwork.com' },
-              { name: 'Freelancer', logoUrl: 'https://logo.clearbit.com/freelancer.com' }
-            ].map((site, index) => (
+            {JOB_SITES.map((site, index) => (
               <motion.div
                 key={site.name}
                 className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-xs font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
@@ -86,9 +88,9 @@ const ChromeExtension = () => {
               >
                 <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center">
                   <img
-                    src={site.logoUrl}
+                    src={`https://www.google.com/s2/favicons?domain=${site.domain}&sz=128`}
                     alt={site.name}
-                    className="w-5 h-5 tablet:w-6 tablet:h-6 object-contain"
+                    className="w-4 h-4 tablet:w-5 tablet:h-5 object-contain"
                     loading="lazy"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
@@ -100,23 +102,7 @@ const ChromeExtension = () => {
             ))}
 
             {/* Duplicate set for seamless loop */}
-            {[
-              { name: 'LinkedIn', logoUrl: 'https://logo.clearbit.com/linkedin.com' },
-              { name: 'Indeed', logoUrl: 'https://logo.clearbit.com/indeed.com' },
-              { name: 'Glassdoor', logoUrl: 'https://logo.clearbit.com/glassdoor.com' },
-              { name: 'ZipRecruiter', logoUrl: 'https://logo.clearbit.com/ziprecruiter.com' },
-              { name: 'Monster', logoUrl: 'https://logo.clearbit.com/monster.com' },
-              { name: 'AngelList', logoUrl: 'https://logo.clearbit.com/angel.co' },
-              { name: 'RemoteOK', logoUrl: 'https://logo.clearbit.com/remoteok.com' },
-              { name: 'We Work Remotely', logoUrl: 'https://logo.clearbit.com/weworkremotely.com' },
-              { name: 'Dice', logoUrl: 'https://logo.clearbit.com/dice.com' },
-              { name: 'Stack Overflow', logoUrl: 'https://logo.clearbit.com/stackoverflow.com' },
-              { name: 'FlexJobs', logoUrl: 'https://logo.clearbit.com/flexjobs.com' },
-              { name: 'CareerBuilder', logoUrl: 'https://logo.clearbit.com/careerbuilder.com' },
-              { name: 'SimplyHired', logoUrl: 'https://logo.clearbit.com/simplyhired.com' },
-              { name: 'Upwork', logoUrl: 'https://logo.clearbit.com/upwork.com' },
-              { name: 'Freelancer', logoUrl: 'https://logo.clearbit.com/freelancer.com' }
-            ].map((site, index) => (
+            {JOB_SITES.map((site, index) => (
               <motion.div
                 key={`${site.name}-duplicate`}
                 className="rounded-xl px-4 py-3 tablet:px-6 tablet:py-4 text-white text-xs tablet:text-xs font-medium shadow-lg flex items-center space-x-2 tablet:space-x-3 flex-shrink-0"
@@ -125,9 +111,9 @@ const ChromeExtension = () => {
               >
                 <div className="w-6 h-6 tablet:w-8 tablet:h-8 flex-shrink-0 bg-white rounded-full overflow-hidden flex items-center justify-center">
                   <img
-                    src={site.logoUrl}
+                    src={`https://www.google.com/s2/favicons?domain=${site.domain}&sz=128`}
                     alt={site.name}
-                    className="w-5 h-5 tablet:w-6 tablet:h-6 object-contain"
+                    className="w-4 h-4 tablet:w-5 tablet:h-5 object-contain"
                     loading="lazy"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
