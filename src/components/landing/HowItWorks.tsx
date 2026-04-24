@@ -165,26 +165,28 @@ const HowItWorks = () => {
             <div className="absolute -inset-4 bg-gradient-to-r from-[#81ff00]/20 via-[#6dd600]/20 to-[#5cc000]/20 rounded-3xl blur-2xl opacity-50" />
 
             {/* Image container with 1:1 aspect ratio */}
-            <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-gray-900/30 backdrop-blur-sm aspect-square min-h-[280px] tablet:min-h-[400px]">
+            <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl bg-white/5 backdrop-blur-sm aspect-square min-h-[280px] tablet:min-h-[400px] flex items-center justify-center p-6 tablet:p-10">
               {features.map((feature, index) => (
                 <motion.div
                   key={index}
-                  className="absolute inset-0"
+                  className="absolute inset-6 tablet:inset-10"
                   initial={false}
                   animate={{
                     opacity: index === activeStep ? 1 : 0,
-                    scale: index === activeStep ? 1 : 1.05,
+                    scale: index === activeStep ? 1 : 0.95,
                   }}
                   transition={{ duration: 0.5, ease: 'easeInOut' }}
                 >
-                  <Image
-                    src={feature.image}
-                    alt={feature.title}
-                    fill
-                    className="object-cover object-center"
-                    quality={85}
-                    priority={index === 0}
-                  />
+                  <div className="relative w-full h-full rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 bg-white">
+                    <Image
+                      src={feature.image}
+                      alt={feature.title}
+                      fill
+                      className="object-contain object-center p-2"
+                      quality={85}
+                      priority={index === 0}
+                    />
+                  </div>
                 </motion.div>
               ))}
             </div>
