@@ -35,7 +35,7 @@ function ResumeEnhancerPageContent() {
   const rawJourneyId = searchParams.get('journeyId');
   const journeyId = (rawJourneyId && rawJourneyId !== 'undefined') ? rawJourneyId : undefined;
   
-  const restoreDraftParam = searchParams.get('restoreDraft') === 'true';
+  const restoreDraftParam = searchParams.get('restoreDraft') === 'true' || searchParams.get('resumeDraft') === 'true';
 
   // Automatically determine mode if type or ids are present
   if (typeParam === 'cv' && cvId && mode === 'create') mode = 'edit';

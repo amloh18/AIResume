@@ -181,6 +181,7 @@ function SortableWorkItem({
             rows={4}
             placeholder="Start with a strong verb... (e.g., Orchestrated a cloud migration that reduced latency by 30%)"
             hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === `work[${index}].summary` && ann.status === 'open')}
+            reviewMode={reviewMode}
             showToolbar={true}
             showAIButton={true}
             fieldType="experience"

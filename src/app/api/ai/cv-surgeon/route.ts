@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { AIQuotaService } from '@/lib/services/ai-quota-service';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -59,6 +62,14 @@ export async function POST(request: NextRequest) {
                 note: 'Cannot analyze CV without AI service'
             }, { status: 503, headers });
         }
+
+        const session = await getServerSession(authOptions);
+        if (!session?.user?.id) {
+            return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401, headers });
+        }
+
+        const quotaStatus = await AIQuotaService.checkAndConsumeQuota(session.user.id, 'surgeon_analysis', true);
+        const isRestricted = !quotaStatus.allowed;
 
         // Build the CV/ATS Master Architect prompt (from enhance.md)
         const hasJD = jobData?.description || jobData?.jobDescription;
@@ -129,6 +140,7 @@ ${!hasJD ? `- **Evaluation:** Switch ATS Score "K" (Keywords) to "Global Industr
 2. **The Bridging Layer:** If Score < 75%, generate 3 [STRATEGIC UPGRADE] project entries.
 3. **The XYZ Metric Injection:** Rewrite bullets using: "[Action Verb] + [Quantifiable Result] + [Keyword]." Use \`[X]\` for missing metrics.
 4. **Format Enforcement:** All fixes for \`work\`, \`projects\`, \`education\`, and \`volunteer\` MUST be formatted as bullet points. Convert paragraph summaries within these sections into bulleted lists. Do NOT use bullet points for \`basics.summary\`.
+${isRestricted ? '5. **RESTRICTED MODE (FREE TIER):** YOU MUST ONLY OUTPUT FIXES WITH CATEGORY `grammar` OR `clarity`. DO NOT OUTPUT ANY `impact`, `keywords`, `structure`, OR `formatting` FIXES. KEEP OUTPUT TO MAXIMUM 5 FIXES.' : ''}
 
 ### INPUT DATA
 - **Input JSON:** ${JSON.stringify(cvData)}
@@ -334,6 +346,7 @@ NOTE: Return 5-10 most impactful fixes only. Do NOT include full CV copies in th
 
         return NextResponse.json({
             success: true,
+            isRestricted,
             // Primary scores
             score: cvScore,
             atsScore: atsScore,

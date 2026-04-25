@@ -16,7 +16,7 @@ export interface AnalysisState {
   jobData?: any;
   
   // AI Analysis
-  surgeonAnalysis: { score: number; fixes: SurgicalFix[] } | null;
+  surgeonAnalysis: { score: number; fixes: SurgicalFix[]; isRestricted?: boolean } | null;
   isAnalyzing: boolean;
   
   // Surgical fixes
@@ -56,7 +56,7 @@ type AnalysisAction =
   | { type: 'SET_TARGET_ROLE'; payload: string }
   | { type: 'SET_SENIORITY_LEVEL'; payload: string }
   | { type: 'SET_JOB_DATA'; payload: any }
-  | { type: 'SET_SURGEON_ANALYSIS'; payload: { score: number; fixes: SurgicalFix[] } | null }
+  | { type: 'SET_SURGEON_ANALYSIS'; payload: { score: number; fixes: SurgicalFix[]; isRestricted?: boolean } | null }
   | { type: 'SET_ANALYZING'; payload: boolean }
   | { type: 'SET_SURGICAL_FIXES'; payload: SurgicalFix[] }
   | { type: 'SET_FIX_ANNOTATIONS'; payload: FixAnnotation[] }

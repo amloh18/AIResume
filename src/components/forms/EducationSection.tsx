@@ -22,6 +22,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import WYSIWYGEditor, { WYSIWYGToolbar } from '@/components/ui/WYSIWYGEditor';
 import { AISuggestionsPanel } from '@/components/ai/AISuggestionsPanel';
+import type { FixAnnotation } from '@/components/resume-enhancer/annotations/fix-annotation';
 
 interface EducationSectionProps {
   data: any[];
@@ -30,6 +31,10 @@ interface EducationSectionProps {
   onRemove: (index: number) => void;
   jobData?: any;
   userId?: string;
+  annotations?: FixAnnotation[];
+  onApplyAnnotation?: (fix: FixAnnotation) => void;
+  onDismissAnnotation?: (fixId: string) => void;
+  reviewMode?: boolean;
 }
 
 // Sortable education item component
@@ -45,18 +50,26 @@ function SortableEducationItem({
   loadingSuggestions,
   onSelectSuggestion,
   onCloseSuggestions,
+  annotations,
+  onApplyAnnotation,
+  onDismissAnnotation,
+  reviewMode,
 }: {
   education: any;
   index: number;
   onUpdate: (index: number, field: string, value: any) => void;
   onRemove: (index: number) => void;
   onDuplicate: (index: number) => void;
-  onGenerateSuggestions: (index: number, item: any) => void;
+  onGenerateSuggestions: (index: number, educationItem: any) => void;
   showSuggestions: boolean;
   suggestions: Array<{ method: string; content: string }>;
   loadingSuggestions: boolean;
   onSelectSuggestion: (index: number, content: string) => void;
   onCloseSuggestions: (index: number) => void;
+  annotations: FixAnnotation[];
+  onApplyAnnotation?: (fix: FixAnnotation) => void;
+  onDismissAnnotation?: (fixId: string) => void;
+  reviewMode: boolean;
 }) {
   const {
     attributes,
@@ -190,6 +203,8 @@ function SortableEducationItem({
             onChange={(value) => onUpdate(index, 'description', value)}
             rows={3}
             placeholder="Describe your education, achievements, relevant coursework, or academic honors..."
+            hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === `education[${index}].description` && ann.status === 'open')}
+            reviewMode={reviewMode}
             showToolbar={true}
             showAIButton={true}
             fieldType="other"
@@ -219,7 +234,11 @@ const EducationSection: React.FC<EducationSectionProps> = ({
   onAdd,
   onRemove,
   jobData,
-  userId
+  userId,
+  annotations = [],
+  onApplyAnnotation,
+  onDismissAnnotation,
+  reviewMode = false
 }) => {
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState<{ [key: number]: boolean }>({});
@@ -397,6 +416,10 @@ const EducationSection: React.FC<EducationSectionProps> = ({
               loadingSuggestions={loadingSuggestions[index] || false}
               onSelectSuggestion={handleSelectSuggestion}
               onCloseSuggestions={(idx) => setShowSuggestions({ ...showSuggestions, [idx]: false })}
+              annotations={annotations}
+              onApplyAnnotation={onApplyAnnotation}
+              onDismissAnnotation={onDismissAnnotation}
+              reviewMode={reviewMode}
             />
           ))}
         </SortableContext>

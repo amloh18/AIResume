@@ -38,15 +38,18 @@ export async function isTwoFactorEnabled(userId: string): Promise<boolean> {
  */
 export async function generateAndSendTwoFactorCode(
   userId: string,
-  email: string
+  email: string,
+  isSetup: boolean = false
 ): Promise<{ success: boolean; sessionId: string; error?: string }> {
   try {
     await getConnection();
 
-    // Check if 2FA is enabled
-    const isEnabled = await isTwoFactorEnabled(userId);
-    if (!isEnabled) {
-      return { success: false, sessionId: '', error: 'Two-factor authentication is not enabled' };
+    // Check if 2FA is enabled (unless setting it up)
+    if (!isSetup) {
+      const isEnabled = await isTwoFactorEnabled(userId);
+      if (!isEnabled) {
+        return { success: false, sessionId: '', error: 'Two-factor authentication is not enabled' };
+      }
     }
 
     // Generate 4-digit code
@@ -148,11 +151,11 @@ export async function verifyTwoFactorCode(
  */
 function cleanupExpiredSessions() {
   const now = new Date();
-  for (const [sessionId, session] of twoFactorSessions.entries()) {
+  Array.from(twoFactorSessions.entries()).forEach(([sessionId, session]) => {
     if (now > session.expiresAt) {
       twoFactorSessions.delete(sessionId);
     }
-  }
+  });
 }
 
 /**

@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
 import { useATS } from '@/contexts/ATSContext';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle, ChevronRight } from 'lucide-react';
+import { Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScore';
+import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 
 interface ATSMeterPanelProps {
   onOpenJobParser: () => void;
@@ -11,7 +12,7 @@ interface ATSMeterPanelProps {
 
 export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser }) => {
   const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
-  const { state } = useResumeEnhancer();
+  const { state, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
 
   const handleStartCoaching = async () => {
@@ -62,6 +63,10 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
     }
     return [];
   }, [atsAnalysis]);
+
+  const formattingIssues = useMemo(() => {
+    return checkSyntaxAndGrammar(state.cvData);
+  }, [state.cvData]);
 
   // Formatting feedback
   const feedback = useMemo(() => {
@@ -121,6 +126,89 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
+
+  const handleAddSkill = (skillName: string) => {
+    if (!skillName) return;
+    
+    // Add skill to state
+    const currentSkills = Array.isArray(state.cvData?.skills) ? [...state.cvData.skills] : [];
+    
+    // Check if "Core Skills" or similar category exists, otherwise create or use first
+    let targetCategoryIndex = currentSkills.findIndex((c: any) => 
+      c.category?.toLowerCase() === 'core skills' || 
+      c.category?.toLowerCase() === 'technical skills' || 
+      c.category?.toLowerCase() === 'skills'
+    );
+    
+    if (targetCategoryIndex === -1 && currentSkills.length > 0) {
+      targetCategoryIndex = 0; // Use first category if available
+    }
+    
+    if (targetCategoryIndex >= 0) {
+      const category = { ...currentSkills[targetCategoryIndex] };
+      // Check if skill already exists in keywords array
+      if (!category.keywords) category.keywords = [];
+      if (!category.skills) category.skills = []; // Support for older formats
+      
+      const existingKeywords = category.keywords || category.skills || [];
+      if (!existingKeywords.includes(skillName)) {
+        category.keywords = [...existingKeywords, skillName];
+        
+        // Ensure cvData.skills is updated with the modified category
+        const newSkills = [...currentSkills];
+        newSkills[targetCategoryIndex] = category;
+        
+        dispatch({
+          type: 'SET_CV_DATA',
+          payload: {
+            ...state.cvData,
+            skills: newSkills
+          }
+        });
+      }
+    } else {
+      // Create new category
+      const newCategory = {
+        id: crypto.randomUUID(),
+        category: 'Core Skills',
+        keywords: [skillName]
+      };
+      
+      dispatch({
+        type: 'SET_CV_DATA',
+        payload: {
+          ...state.cvData,
+          skills: [...currentSkills, newCategory]
+        }
+      });
+    }
+  };
+
+  const handleJobDetails = () => {
+    const event = new CustomEvent('open-job-sidebar');
+    window.dispatchEvent(event);
+  };
+
+  const handleDismissTransition = () => {
+    if (state.modeTransitionData) {
+      sessionStorage.setItem(`hide_transition_${state.modeTransitionData.transitionType}`, 'true');
+      dispatch({ type: 'SET_MODE_TRANSITION_DATA', payload: null });
+      dispatch({ type: 'CLEAR_MODE_WARNINGS' });
+    }
+  };
+
+  const handleAcceptTransition = () => {
+    if (state.modeTransitionData) {
+      sessionStorage.setItem(`hide_transition_${state.modeTransitionData.transitionType}`, 'true');
+      dispatch({ type: 'SET_MODE_TRANSITION_DATA', payload: null });
+      dispatch({ type: 'CLEAR_MODE_WARNINGS' });
+      // Re-run analysis automatically if user confirms
+      if (state.cvId && state.targetRole) {
+        const event = new CustomEvent('run-surgeon-analysis');
+        window.dispatchEvent(event);
+      }
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-white dark:bg-[#11140e] rounded-xl border border-gray-200 dark:border-white/5 overflow-y-auto hide-scrollbar p-5 text-gray-900 dark:text-white">
@@ -195,13 +283,51 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
           <div className="flex items-center justify-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mt-1">
             <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
             <span className="truncate max-w-[200px] text-blue-600 dark:text-blue-400/90 font-medium">
-              {typeof state.cvData?.basics?.name === 'string' && state.cvData.basics.name 
+              {state.cvTitle || (typeof state.cvData?.basics?.name === 'string' && state.cvData.basics.name 
                 ? `${state.cvData.basics.name.replace(/\s+/g, '_')}_CV` 
-                : 'My_Resume'}.pdf
+                : 'My_Resume')}.pdf
             </span>
           </div>
         </div>
       </div>
+
+      {/* Mode Transition Panel */}
+      {state.modeTransitionData && (
+        <div className="mb-6 bg-blue-50 dark:bg-[#1a1f2e] border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 relative overflow-hidden shadow-sm">
+          <div className="absolute top-2 right-2">
+            <button 
+              onClick={handleDismissTransition}
+              className="p-1 text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 transition-colors rounded-md"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-400 flex items-center gap-2 mb-2">
+            <RefreshCw className="w-4 h-4" />
+            Analysis Mode Change
+          </h4>
+          
+          <p className="text-xs text-blue-700 dark:text-blue-300/80 mb-4 leading-relaxed pr-6">
+            Analysis will change from <span className="font-semibold">{state.modeTransitionData.fromMode}</span> to <span className="font-semibold">{state.modeTransitionData.toMode}</span>.
+          </p>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={handleDismissTransition}
+              className="flex-1 py-1.5 text-xs font-semibold text-blue-700 dark:text-blue-300 bg-white dark:bg-white/5 border border-blue-200 dark:border-white/10 hover:bg-blue-50 dark:hover:bg-white/10 rounded-lg transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAcceptTransition}
+              className="flex-1 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors shadow-sm border border-blue-700 dark:border-blue-400"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 gap-3 mb-6">
@@ -211,29 +337,30 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
         <MetricCard title="Readability" value={metrics.readability} />
       </div>
 
-      {/* Formatting Feedback */}
-      <div className="mb-6">
-        <h4 className="text-sm font-semibold text-gray-800 dark:text-white/80 mb-3 flex items-center gap-2">
-          Formatting Feedback
+      {/* Formatting Feedback (Live Offline Checks) */}
+      <div className="mb-6 bg-white dark:bg-[#1a1410] border border-gray-200 dark:border-white/10 rounded-xl p-4">
+        <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+          <Zap className="w-4 h-4 text-yellow-500" />
+          Live Formatting Checks
         </h4>
         <div className="space-y-2">
-          {feedback.map((item: any, i: number) => (
-            <div 
-              key={i} 
-              className={`flex items-start gap-2.5 p-2.5 rounded-lg text-sm font-medium ${
-                item.type === 'success' 
-                  ? 'bg-emerald-500/10 dark:bg-[#80FF00]/10 text-emerald-600 dark:text-[#80FF00]/90 border border-emerald-500/20 dark:border-[#80FF00]/20' 
-                  : 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500/90 border border-yellow-500/20'
-              }`}
-            >
-              {item.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-              ) : (
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              )}
-              <span>{item.text}</span>
+          {formattingIssues.length > 0 ? (
+            formattingIssues.map((issue, i) => (
+              <div key={i} className="flex items-start gap-2 bg-yellow-50 dark:bg-yellow-500/10 p-2 rounded-lg border border-yellow-100 dark:border-yellow-500/20">
+                <AlertTriangle className="w-3.5 h-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-yellow-700 dark:text-yellow-500/90 leading-tight">
+                  {issue.message}
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-500/10 p-2 rounded-lg border border-emerald-100 dark:border-emerald-500/20">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-500 shrink-0" />
+              <p className="text-xs text-emerald-700 dark:text-emerald-500/90">
+                No syntax or formatting issues detected!
+              </p>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -260,8 +387,13 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
             {missingSkills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {missingSkills.map((skill: string, i: number) => (
-                  <button key={i} className="px-2.5 py-1 text-xs font-medium bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-yellow-200 dark:border-yellow-500/20 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition-colors flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> {skill}
+                  <button 
+                    key={i} 
+                    onClick={() => handleAddSkill(skill)}
+                    className="px-2.5 py-1 text-xs font-medium bg-yellow-50 dark:bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border border-yellow-200 dark:border-yellow-500/20 rounded-md hover:bg-yellow-100 dark:hover:bg-yellow-500/20 transition-colors flex items-center gap-1 group"
+                    title={`Add "${skill}" to your skills section`}
+                  >
+                    <Plus className="w-3 h-3 group-hover:scale-110 transition-transform" /> {skill}
                   </button>
                 ))}
               </div>
@@ -317,8 +449,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    const event = new CustomEvent('open-job-sidebar');
-                    window.dispatchEvent(event);
+                    handleJobDetails();
                   }}
                   className="flex-1 py-2 text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-white/5 dark:text-white/80 dark:hover:bg-white/10 rounded-lg transition-colors border border-emerald-200 dark:border-white/10"
                 >
@@ -352,7 +483,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
                 Generate a tailored cover letter based on this job description.
               </p>
               <button 
-                onClick={() => router.push('/editor?tab=cover-letters')}
+                onClick={() => goToStep(4)}
                 className="w-full py-2 bg-orange-500 text-white hover:bg-orange-600 font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1"
               >
                 Create Cover Letter <ChevronRight className="w-3 h-3" />

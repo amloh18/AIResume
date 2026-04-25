@@ -696,6 +696,17 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
             className="w-full h-full max-w-[1600px] max-h-[calc(100vh-1.5rem)] sm:max-h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-3rem)] bg-white dark:bg-[#141810] rounded-2xl overflow-hidden shadow-2xl shadow-black/20 dark:shadow-black/60 flex flex-col"
           >
             {/* Top Bar (HUD) */}
+            {surgeonAnalysis?.isRestricted && (
+              <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-amber-200 text-sm">
+                  <AlertTriangle className="w-4 h-4" />
+                  <span>Free limit reached. Showing Grammar & Clarity only.</span>
+                </div>
+                <a href="/dashboard/pricing" className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-full font-medium transition-colors">
+                  Upgrade to Pro
+                </a>
+              </div>
+            )}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-3 min-w-0">
                 <Sparkles className="w-4 h-4 text-[#80FF00]" />

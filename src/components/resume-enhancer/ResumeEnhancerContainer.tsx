@@ -21,6 +21,8 @@ import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 import UserAvatar from '@/components/ui/UserAvatar';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import ThemeToggle from '@/components/ui/ThemeToggle';
+import UserAvatarDropdown from '@/components/ui/UserAvatarDropdown';
 import { useUserData, getUserDisplayName, getUserAvatar } from '@/lib/hooks/useUserData';
 import { useSession } from 'next-auth/react';
 import SidebarMembershipCard from '@/components/resume-enhancer/SidebarMembershipCard';
@@ -128,14 +130,8 @@ export default function ResumeEnhancerContainer({
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [hasShownAuthPrompt, setHasShownAuthPrompt] = useState(false);
   const [isTransferringDraft, setIsTransferringDraft] = useState(false);
-  const [showModeTransitionDialog, setShowModeTransitionDialog] = useState(false);
   const [showSaveWarningModal, setShowSaveWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{ type: 'step' | 'path', target: number | string } | null>(null);
-  const [modeTransitionData, setModeTransitionData] = useState<{
-    fromMode: AnalysisMode;
-    toMode: AnalysisMode;
-    transitionType: string;
-  } | null>(null);
 
   // Use ATS Context for shared ATS data
   const {
@@ -812,15 +808,16 @@ export default function ResumeEnhancerContainer({
 
         // Don't show dialog for minor changes or initial setup
         if (state.currentStep === 3) {
-          setModeTransitionData({
-            fromMode: currentMode,
-            toMode: modeInfo.mode,
-            transitionType
-          });
-          // Only show dialog if user hasn't opted out and it's a significant change
           const hideDialog = sessionStorage.getItem(`hide_transition_${transitionType}`);
           if (!hideDialog) {
-            setShowModeTransitionDialog(true);
+            dispatch({
+              type: 'SET_MODE_TRANSITION_DATA',
+              payload: {
+                fromMode: currentMode,
+                toMode: modeInfo.mode,
+                transitionType
+              }
+            });
           }
         }
       }
@@ -1275,8 +1272,8 @@ export default function ResumeEnhancerContainer({
           }
         }
 
-        // Only go to step 1 if we are starting fresh (create mode, no ID)
-        if (mode === 'create' && !cvId && !journeyId) {
+        // Only go to step 1 if we are starting fresh (create mode, no ID) and not restoring draft
+        if (mode === 'create' && !cvId && !journeyId && !restoreDraft) {
           goToStep(1);
         }
 
@@ -1286,7 +1283,7 @@ export default function ResumeEnhancerContainer({
     };
 
     initializeEnhancer();
-  }, [mode, cvId, journeyId]);
+  }, [mode, cvId, journeyId, restoreDraft]);
 
   const handleStep1Complete = (cvData: UnifiedCVDataStructure) => {
     dispatch({ type: 'SET_CV_DATA', payload: cvData });
@@ -2046,7 +2043,7 @@ export default function ResumeEnhancerContainer({
         }
       };
 
-      const response = await fetch('/api/cvs', {
+      let response = await fetch('/api/cvs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -2054,7 +2051,28 @@ export default function ResumeEnhancerContainer({
 
       const result = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
+      // Handle 409 Conflict when Master CV already exists
+      if (response.status === 409 && result.existingMasterCVId) {
+        console.log('🔄 Layer 1 Defense: Master CV already exists, retrying as PUT with ID:', result.existingMasterCVId);
+        
+        // Update state with the found ID
+        dispatch({ type: 'SET_CV_ID', payload: result.existingMasterCVId });
+        
+        // Retry the save as PUT
+        response = await fetch(`/api/cvs/${result.existingMasterCVId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        const retryResult = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(retryResult?.error || 'Failed to save CV after retry');
+        }
+        
+        // Copy the successful retry result back to the main result object
+        Object.assign(result, retryResult);
+      } else if (!response.ok) {
         throw new Error(result?.error || 'Failed to save CV');
       }
 
@@ -2218,7 +2236,29 @@ export default function ResumeEnhancerContainer({
 
       const result = await response.json().catch(() => ({}));
 
-      if (!response.ok) {
+      // Handle 409 Conflict when Master CV already exists
+      if (response.status === 409 && result.existingMasterCVId && apiMethod === 'POST') {
+        console.log('🔄 Layer 1 Defense: Master CV already exists, retrying as PUT with ID:', result.existingMasterCVId);
+        
+        // Update state with the found ID
+        dispatch({ type: 'SET_CV_ID', payload: result.existingMasterCVId });
+        if (setExternalCvId) setExternalCvId(result.existingMasterCVId);
+        
+        // Retry the save as PUT
+        response = await fetch(`/api/cvs/${result.existingMasterCVId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        const retryResult = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(retryResult?.error || 'Failed to save CV after retry');
+        }
+        
+        // Copy the successful retry result back to the main result object
+        Object.assign(result, retryResult);
+      } else if (!response.ok) {
         throw new Error(result?.error || 'Failed to save CV');
       }
 
@@ -2481,8 +2521,10 @@ export default function ResumeEnhancerContainer({
             {state.currentStep !== 1 && (
               <div className="flex items-center gap-3">
                 <div className="h-px w-8 bg-gradient-to-r from-transparent to-lime-500/30" />
-                <span className="text-sm font-black text-gray-900 dark:text-white bg-lime-500/10 px-3 py-1 rounded-full border border-lime-500/20 shadow-sm shadow-lime-500/5 uppercase tracking-tighter italic">
-                  {state.cvTitle || 'Untitled Resume'}
+                <span className="text-sm font-black text-gray-900 dark:text-white bg-lime-500/10 px-3 py-1 rounded-full border border-lime-500/20 shadow-sm shadow-lime-500/5 uppercase tracking-tighter italic truncate max-w-[300px]">
+                  {state.cvTitle || (typeof state.cvData?.basics?.name === 'string' && state.cvData.basics.name 
+                    ? `${state.cvData.basics.name.replace(/\s+/g, '_')}_CV` 
+                    : 'My_Resume')}.pdf
                 </span>
                 <div className="h-px w-8 bg-gradient-to-l from-transparent to-lime-500/30" />
               </div>
@@ -2597,8 +2639,20 @@ export default function ResumeEnhancerContainer({
             </span>
           )}
 
+          {/* Theme Toggle */}
+          <div className="hidden sm:block">
+            <ThemeToggle variant="compact" />
+          </div>
+
           {/* Notification Center */}
           <NotificationCenter />
+
+          {/* User Profile Menu */}
+          {!isGuestMode && userData && (
+            <div className="ml-2 border-l border-gray-200 dark:border-gray-800 pl-4">
+              <UserAvatarDropdown user={userData} />
+            </div>
+          )}
         </div>
 
         {/* Save Error (lightweight inline) */}
@@ -2825,23 +2879,7 @@ export default function ResumeEnhancerContainer({
         </div>
       )}
 
-      {/* Mode Transition Dialog */}
-      <ModeTransitionDialog
-        isOpen={showModeTransitionDialog}
-        onClose={() => {
-          setShowModeTransitionDialog(false);
-          setModeTransitionData(null);
-        }}
-        onConfirm={() => {
-          setShowModeTransitionDialog(false);
-          setModeTransitionData(null);
-          dispatch({ type: 'CLEAR_MODE_WARNINGS' });
-        }}
-        fromMode={modeTransitionData?.fromMode || 'insufficient-data'}
-        toMode={modeTransitionData?.toMode || 'insufficient-data'}
-        transitionType={modeTransitionData?.transitionType as any || 'generic'}
-        cvType={state.cvType}
-      />
+      {/* Mode Transition Panel moved to ATSMeterPanel */}
     </div>
   );
 }

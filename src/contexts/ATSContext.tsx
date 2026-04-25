@@ -47,6 +47,7 @@ export interface SurgeonAnalysis {
   analyzedAt: Date;
   contentHash?: string;
   jobDataHash?: string;
+  isRestricted?: boolean;
 }
 
 interface ATSContextState {

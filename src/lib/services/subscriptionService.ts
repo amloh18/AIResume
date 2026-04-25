@@ -143,7 +143,7 @@ class SubscriptionService {
    */
   async activateProPlan(
     userId: string,
-    planKey: 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
+    planKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
     interval: 'monthly' | 'quarterly' | 'yearly',
     paymentId: string,
     region: string,
@@ -202,10 +202,15 @@ class SubscriptionService {
         expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
         daysRemaining = 90;
         autoRenew = false;
-      } else if (planKey === 'pro_lifetime') {
-        // Yearly: one-time payment for 365 days
+      } else if (planKey === 'pro_yearly') {
+        // Yearly: recurring or one-time payment for 365 days
         expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
         daysRemaining = 365;
+        autoRenew = interval === 'yearly';
+      } else if (planKey === 'pro_lifetime') {
+        // Lifetime: one-time payment for 100 years
+        expiresAt = new Date(now.getTime() + 36500 * 24 * 60 * 60 * 1000);
+        daysRemaining = 36500;
         autoRenew = false;
       } else {
         return { success: false, error: 'Invalid plan key' };

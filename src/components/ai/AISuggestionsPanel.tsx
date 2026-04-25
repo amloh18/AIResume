@@ -43,47 +43,15 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
 
   if (!isVisible) return null;
 
-  if (isLocked) {
-    return (
-      <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.2 }}
-          className="mb-4 p-6 bg-[var(--bg-tertiary)] border border-gray-200 dark:border-white/10 rounded-xl relative overflow-hidden"
-        >
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors z-20"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          
-          <div className="flex flex-col items-center text-center relative z-10">
-            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
-              <Lock className="w-6 h-6" />
-            </div>
-            <h4 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-              AI Suggestions Locked
-            </h4>
-            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 max-w-sm">
-              Upgrade to Pro to unlock unlimited contextual AI suggestions and rewrite your CV content with expert frameworks like STAR and CAR.
-            </p>
-            <a
-              href="/dashboard/pricing"
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
-            >
-              Upgrade to Pro
-            </a>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
+  const dummySuggestions: AISuggestion[] = [
+    { method: 'STAR', size: 'Detailed', content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.' },
+    { method: 'CAR', size: 'Detailed', content: 'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.' }
+  ];
+
+  const activeSuggestions = isLocked ? dummySuggestions : suggestions;
 
   // Filter suggestions based on toggle
-  const filteredSuggestions = suggestions.filter(s => {
+  const filteredSuggestions = activeSuggestions.filter(s => {
     if (!s.size) return true; // Backward compatibility
     // For 'Full' size (cover letter body), always show regardless of toggle
     if (s.size === 'Full') return true;
@@ -108,8 +76,27 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
           transition={{ duration: 0.2 }}
-          className="mb-4 p-4 bg-[var(--bg-tertiary)] border border-[rgb(129,255,0)]/20 rounded-lg"
+          className="mb-4 p-4 bg-[var(--bg-tertiary)] border border-[rgb(129,255,0)]/20 rounded-lg relative overflow-hidden"
         >
+          {isLocked && (
+            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full flex items-center justify-center mb-4">
+                <Lock className="w-6 h-6" />
+              </div>
+              <h4 className="text-lg font-bold text-white mb-2">
+                AI Suggestions Locked
+              </h4>
+              <p className="text-sm text-gray-200 mb-6 max-w-[250px] text-center">
+                Upgrade to Pro to unlock unlimited contextual AI suggestions.
+              </p>
+              <a
+                href="/dashboard/pricing"
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
+              >
+                Upgrade to Pro
+              </a>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[rgb(129,255,0)]" />
@@ -117,7 +104,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
             </div>
             <div className="flex items-center gap-3">
               {/* Toggle for Short/Detailed - only show if suggestions have Short/Detailed sizes */}
-              {suggestions.some(s => s.size === 'Short' || s.size === 'Detailed') && (
+              {activeSuggestions.some(s => s.size === 'Short' || s.size === 'Detailed') && (
                 <div className="flex items-center gap-2 bg-black/5 dark:bg-white/5 rounded-lg p-1">
                   <button
                     onClick={() => setShowDetailed(false)}
@@ -188,7 +175,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-[color:var(--text-secondary)] whitespace-pre-wrap">
+                      <div className={`text-xs text-[color:var(--text-secondary)] whitespace-pre-wrap ${isLocked ? 'blur-sm select-none' : ''}`}>
                         {suggestion.content}
                       </div>
                     </motion.button>

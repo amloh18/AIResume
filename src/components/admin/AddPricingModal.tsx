@@ -171,7 +171,7 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Day Pass</Label>
+                            <Label>Professional Yearly Price</Label>
                             <Input
                                 type="number"
                                 step="0.01"
