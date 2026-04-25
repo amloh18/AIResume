@@ -245,11 +245,13 @@ function LandingPageContent() {
           {/* Testimonials Section */}
           <Testimonials />
 
-          {/* Pricing Section */}
-          <Pricing onPlanSelect={(plan) => {
-            // Redirect to sign-up with plan selection
-            window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
-          }} />
+          {/* Pricing Section (Forced Dark Theme) */}
+          <div className="dark">
+            <Pricing onPlanSelect={(plan) => {
+              // Redirect to sign-up with plan selection
+              window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
+            }} />
+          </div>
 
           {/* FAQ Section */}
           <FAQ />
