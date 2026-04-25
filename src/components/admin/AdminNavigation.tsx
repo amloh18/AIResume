@@ -43,6 +43,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
           icon: Users,
           subItems: [
             { id: 'users', label: 'Users', icon: Users },
+            { id: 'businesses', label: 'Businesses (B2B)', icon: Briefcase },
             { id: 'campaigns', label: 'Campaigns', icon: Mail },
             { id: 'notifications', label: 'Notifications', icon: Bell },
             { id: 'drafts', label: 'CV Drafts', icon: FileText },

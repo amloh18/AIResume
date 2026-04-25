@@ -169,7 +169,18 @@ export default function RosterPage() {
                 Showing {total} total candidates
               </CardDescription>
             </div>
-            <div>
+            <div className="flex gap-2">
+              <Button 
+                variant="secondary"
+                onClick={() => {
+                  toast.success('Database Refresh initiated. Rediscovering top past candidates...', { icon: '🔄' });
+                  fetchCandidates();
+                }}
+                className="flex items-center gap-2"
+              >
+                <Search className="w-4 h-4" />
+                Database Refresh
+              </Button>
               <input 
                 type="file" 
                 multiple 
@@ -252,8 +263,8 @@ export default function RosterPage() {
             </div>
           </div>
 
-          <div className="border rounded-md">
-            <table className="w-full text-sm text-left">
+          <div className="border rounded-md overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-[800px]">
               <thead className="bg-muted/50 text-muted-foreground border-b">
                 <tr>
                   <th className="px-4 py-3 font-medium">Candidate</th>
