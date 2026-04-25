@@ -488,6 +488,7 @@ const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
                 rows={4}
                 placeholder="Write a brief summary of your professional background and key achievements..."
                 hasAnnotation={reviewMode && annotations.some((ann) => ann.fieldPath === 'basics.summary' && ann.status === 'open')}
+                reviewMode={reviewMode}
                 showToolbar={true}
                 showAIButton={true}
                 fieldType="summary"

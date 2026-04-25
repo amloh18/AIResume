@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { Upload, FileText, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2 } from 'lucide-react';
@@ -153,6 +153,17 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   const [isScrolled, setIsScrolled] = useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const topSectionRef = React.useRef<HTMLDivElement>(null);
+  
+  const { scrollY } = useScroll({ container: scrollContainerRef });
+  
+  // Smooth scroll transforms
+  const headerScale = useTransform(scrollY, [0, 300], [1, 0.85]);
+  const headerOpacity = useTransform(scrollY, [0, 300], [1, 0.4]);
+  const headerY = useTransform(scrollY, [0, 300], [0, -30]);
+
+  const cardsScale = useTransform(scrollY, [0, 400], [1, 0.75]);
+  const cardsY = useTransform(scrollY, [0, 400], [0, -60]);
+  const cardsOpacity = useTransform(scrollY, [0, 400], [1, 0.7]);
   
   const [existingCoverLetters, setExistingCoverLetters] = useState<any[]>([]);
   const [isLoadingCoverLetters, setIsLoadingCoverLetters] = useState(false);
@@ -503,13 +514,12 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
         <div ref={topSectionRef} className="snap-start snap-always w-full min-h-[85vh] flex flex-col justify-center pt-12 pb-12">
           <div className="w-full max-w-6xl mx-auto px-8">
             <motion.div
-            animate={{ 
-              scale: isScrolled ? 0.95 : 1,
-              opacity: isScrolled ? 0.6 : 1,
-              y: isScrolled ? -20 : 0
+            style={{ 
+              scale: headerScale,
+              opacity: headerOpacity,
+              y: headerY
             }}
-            transition={{ duration: 0.5, ease: "circOut" }}
-            className="text-center mb-20"
+            className="text-center mb-20 origin-bottom"
           >
             <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-none whitespace-nowrap">
                 Let's Build Your <span className="text-lime-500 italic relative">Resume</span>
@@ -534,7 +544,14 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
           </motion.div>
 
           {/* Action Cards Grid - Now always 3 columns if userHasMasterCV exists */}
-          <div className={`grid gap-8 transition-all duration-700 ${userHasMasterCV ? 'md:grid-cols-3' : 'md:grid-cols-2 max-w-4xl mx-auto'}`}>
+          <motion.div 
+            style={{
+              scale: cardsScale,
+              y: cardsY,
+              opacity: cardsOpacity
+            }}
+            className={`grid gap-8 origin-top ${userHasMasterCV ? 'md:grid-cols-3' : 'md:grid-cols-2 max-w-4xl mx-auto'}`}
+          >
             {/* Upload Option */}
             <motion.button
               whileHover={{ y: -12, scale: 1.02 }}
@@ -619,7 +636,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 </div>
               </motion.button>
             )}
-          </div>
+          </motion.div>
 
           {/* Pro Tip - Minimalist Inline Section */}
           <motion.div

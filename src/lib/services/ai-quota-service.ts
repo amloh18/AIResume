@@ -2,7 +2,7 @@ import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import mongoose from 'mongoose';
 
-export type AIFeatureType = 'ats_calculator' | 'ai_suggestions' | 'full_analysis';
+export type AIFeatureType = 'ats_calculator' | 'ai_suggestions' | 'full_analysis' | 'surgeon_analysis';
 
 export interface AIQuotaStatus {
   allowed: boolean;
@@ -53,6 +53,14 @@ export class AIQuotaService {
         }
         break;
         
+      case 'surgeon_analysis':
+        // 1 free usage for free tier
+        const surgeonUsage = user.credits?.totalUsage?.surgeonAnalysis || 0;
+        if (!isPro && surgeonUsage >= 1) {
+          return { allowed: false, reason: 'Free tier is limited to 1 AI Analysis', remainingCredits: 0, isPro };
+        }
+        break;
+
       case 'full_analysis':
         // Pro only
         if (!isPro) {
@@ -62,13 +70,20 @@ export class AIQuotaService {
     }
 
     // If allowed and consume is true, decrement credits (unless unlimited -1)
-    if (consume && credits > 0) {
-      // Decrease credit
-      user.credits.aiCredits -= 1;
+    if (consume) {
+      if (featureType === 'surgeon_analysis') {
+        if (!user.credits.totalUsage) {
+          user.credits.totalUsage = { aiGenerations: 0, cvs: 0, jobs: 0, downloads: 0, surgeonAnalysis: 0 };
+        }
+        user.credits.totalUsage.surgeonAnalysis = (user.credits.totalUsage.surgeonAnalysis || 0) + 1;
+      } else if (credits > 0) {
+        // Decrease credit
+        user.credits.aiCredits -= 1;
+      }
       
       // Update usage stats
       if (!user.credits.totalUsage) {
-        user.credits.totalUsage = { aiGenerations: 0, cvs: 0, jobs: 0, downloads: 0 };
+        user.credits.totalUsage = { aiGenerations: 0, cvs: 0, jobs: 0, downloads: 0, surgeonAnalysis: 0 };
       }
       user.credits.totalUsage.aiGenerations = (user.credits.totalUsage.aiGenerations || 0) + 1;
       

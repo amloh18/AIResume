@@ -151,9 +151,15 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       });
     }
 
-    // Copy sectionTitles
+    // Copy sectionTitles and metadata
     if (updatedCanvasData.sectionTitles) {
       newCvData.sectionTitles = updatedCanvasData.sectionTitles;
+    }
+    if (updatedCanvasData.metadata) {
+      newCvData.metadata = {
+        ...newCvData.metadata,
+        ...updatedCanvasData.metadata
+      };
     }
 
     const copyDirectly = ['projects', 'certifications', 'awards', 'publications', 'volunteer', 'references'];

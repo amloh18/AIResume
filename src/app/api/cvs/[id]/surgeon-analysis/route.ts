@@ -163,7 +163,8 @@ export async function GET(
         score: cachedAnalysis.score,
         fixes: cachedAnalysis.fixes || [],
         annotations: cachedAnalysis.annotations || [],
-        analyzedAt: cachedAnalysis.analyzedAt
+        analyzedAt: cachedAnalysis.analyzedAt,
+        isRestricted: cachedAnalysis.isRestricted
       }
     });
 
@@ -193,7 +194,8 @@ export async function POST(
       annotations,
       targetRole,
       seniorityLevel,
-      jobData
+      jobData,
+      isRestricted
     } = body;
 
     if (!userId) {
@@ -233,7 +235,8 @@ export async function POST(
       seniorityLevel: seniorityLevel || '',
       analyzedAt: new Date(),
       contentHash,
-      jobDataHash
+      jobDataHash,
+      isRestricted
     };
 
     cv.metadata = cv.metadata || {} as any;

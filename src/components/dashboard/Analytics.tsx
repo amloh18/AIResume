@@ -1003,7 +1003,31 @@ export const IntelligenceDashboard: React.FC<{
     setIsEditingGoal(false);
   };
 
+  const last30DaysData = useMemo(() => {
+    const data: { date: Date; count: number }[] = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      data.push({ date: d, count: 0 });
+    }
+    
+    jobs.forEach((job: any) => {
+      const jobDate = new Date(job.createdAt || job.updatedAt);
+      jobDate.setHours(0, 0, 0, 0);
+      const diffTime = now.getTime() - jobDate.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays >= 0 && diffDays < 30) {
+        const index = 29 - diffDays;
+        if (data[index]) data[index].count += 1;
+      }
+    });
+    return data;
+  }, [jobs]);
 
+  const maxCount = Math.max(2, ...last30DaysData.map(d => d.count));
 
   return (
     <div className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full" data-analytics-widget="intelligence-dashboard">
@@ -1047,13 +1071,22 @@ export const IntelligenceDashboard: React.FC<{
                 </div>
               )}
             </div>
-            <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-2">
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-400 to-blue-600"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, ((predictions?.projectedApplications || jobs.length) / newGoal) * 100)}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-              />
+            <div className="w-full h-14 flex items-end gap-[2px] mt-2 mb-2">
+              {last30DaysData.map((day, idx) => (
+                <div key={idx} className="flex-1 bg-gray-100 dark:bg-gray-800 rounded-t-sm relative group h-full flex items-end">
+                  <motion.div
+                    className={`w-full rounded-t-sm ${day.count > 0 ? 'bg-blue-500' : 'bg-transparent'}`}
+                    initial={{ height: 0 }}
+                    animate={{ height: `${(day.count / maxCount) * 100}%` }}
+                    transition={{ duration: 0.5, delay: idx * 0.015 }}
+                  />
+                  {day.count > 0 && (
+                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 whitespace-nowrap">
+                      {day.count} apps
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
               You're on track to hit your goal!

@@ -31,9 +31,11 @@ import {
   Send,
   Loader2,
   Award,
-  Star
+  Star,
+  ArrowRight
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
+import Pricing from '@/components/landing/Pricing';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
 import RouteGuard from '@/components/auth/RouteGuard';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
@@ -221,22 +223,6 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
   const [avatar, setAvatar] = useState(user.avatar || user.profilePhoto || '');
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [masterCVData, setMasterCVData] = useState<any>(null);
-  const [hasUserModified, setHasUserModified] = useState({
-    firstName: false,
-    lastName: false,
-    phone: false,
-    location: false,
-    website: false,
-    linkedin: false,
-    github: false,
-    summary: false,
-    company: false,
-    address: false,
-    dateOfBirth: false,
-    gender: false,
-    nationality: false,
-  });
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -258,193 +244,8 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
     };
   }, [usernameTimeout]);
 
-  // Fetch Master CV data and populate form if user hasn't modified fields
-  React.useEffect(() => {
-    const fetchMasterCV = async () => {
-      try {
-        console.log('🔍 Settings - Fetching master CV data for profile population');
-
-        // Use the correct API endpoint for master CV
-        const response = await fetch('/api/cvs/master');
-        if (response.ok) {
-          const data = await response.json();
-          console.log('🔍 Settings - Master CV API response:', data);
-
-          if (data.success && data.data?.masterCV) {
-            const masterCV = data.data.masterCV;
-            setMasterCVData(masterCV);
-
-            console.log('🔍 Settings - Master CV data:', masterCV);
-
-            // Only update fields that haven't been manually modified by user
-            const updatedFormData = { ...formData };
-            const updatedHasUserModified = { ...hasUserModified };
-
-            // Extract and populate name fields
-            if (!hasUserModified.firstName && masterCV.cvData?.basics?.name) {
-              const fullName = masterCV.cvData.basics.name.trim();
-              const nameParts = fullName.split(' ');
-              updatedFormData.firstName = nameParts[0] || '';
-              updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
-              console.log('🔍 Settings - Populated name from master CV:', { firstName: updatedFormData.firstName, lastName: updatedFormData.lastName });
-            }
-
-            // Populate phone
-            if (!hasUserModified.phone && masterCV.cvData?.basics?.phone) {
-              updatedFormData.phone = masterCV.cvData.basics.phone.trim();
-              console.log('🔍 Settings - Populated phone from master CV:', updatedFormData.phone);
-            }
-
-            // Populate location (combine city, address, region)
-            if (!hasUserModified.location && masterCV.cvData?.basics?.location) {
-              const location = masterCV.cvData.basics.location;
-              const locationParts = [];
-              if (location.city) locationParts.push(location.city);
-              if (location.region) locationParts.push(location.region);
-              if (location.address) locationParts.push(location.address);
-              updatedFormData.location = locationParts.join(', ');
-              console.log('🔍 Settings - Populated location from master CV:', updatedFormData.location);
-            }
-
-            // Populate website
-            if (!hasUserModified.website && masterCV.cvData?.basics?.url) {
-              updatedFormData.website = masterCV.cvData.basics.url.trim();
-              console.log('🔍 Settings - Populated website from master CV:', updatedFormData.website);
-            }
-
-            // Populate social profiles
-            if (masterCV.cvData?.basics?.profiles && Array.isArray(masterCV.cvData.basics.profiles)) {
-              // LinkedIn
-              if (!hasUserModified.linkedin) {
-                const linkedinProfile = masterCV.cvData.basics.profiles.find((p: any) =>
-                  p.network && p.network.toLowerCase() === 'linkedin'
-                );
-                if (linkedinProfile && linkedinProfile.url) {
-                  updatedFormData.linkedin = linkedinProfile.url.trim();
-                  console.log('🔍 Settings - Populated LinkedIn from master CV:', updatedFormData.linkedin);
-                }
-              }
-
-              // GitHub
-              if (!hasUserModified.github) {
-                const githubProfile = masterCV.cvData.basics.profiles.find((p: any) =>
-                  p.network && p.network.toLowerCase() === 'github'
-                );
-                if (githubProfile && githubProfile.url) {
-                  updatedFormData.github = githubProfile.url.trim();
-                  console.log('🔍 Settings - Populated GitHub from master CV:', updatedFormData.github);
-                }
-              }
-            }
-
-            // Populate summary
-            if (!hasUserModified.summary && masterCV.cvData?.basics?.summary) {
-              updatedFormData.summary = masterCV.cvData.basics.summary.trim();
-              console.log('🔍 Settings - Populated summary from master CV');
-            }
-
-            // Populate label as company (if not already set)
-            if (!hasUserModified.company && masterCV.cvData?.basics?.label && !updatedFormData.company) {
-              updatedFormData.company = masterCV.cvData.basics.label.trim();
-              console.log('🔍 Settings - Populated company from master CV label:', updatedFormData.company);
-            }
-
-            // Populate avatar/profile photo
-            if (masterCV.cvData?.basics?.image && !avatar) {
-              setAvatar(masterCV.cvData.basics.image.trim());
-              console.log('🔍 Settings - Populated avatar from master CV');
-            }
-
-            setFormData(updatedFormData);
-            console.log('✅ Settings - Successfully populated profile from master CV');
-          } else {
-            console.log('⚠️ Settings - No master CV found or API returned no data');
-          }
-        } else {
-          console.error('❌ Settings - Failed to fetch master CV:', response.status, response.statusText);
-        }
-      } catch (error) {
-        console.error('❌ Settings - Error fetching Master CV:', error);
-      }
-    };
-
-    fetchMasterCV();
-  }, []); // Only run once on mount
-
-  // Function to refresh data from Master CV
-  const refreshFromMasterCV = async () => {
-    if (!masterCVData) return;
-
-    console.log('🔄 Settings - Refreshing profile data from master CV');
-
-    const updatedFormData = { ...formData };
-
-    // Only update fields that haven't been manually modified by user
-    if (!hasUserModified.firstName && masterCVData.cvData?.basics?.name) {
-      const fullName = masterCVData.cvData.basics.name.trim();
-      const nameParts = fullName.split(' ');
-      updatedFormData.firstName = nameParts[0] || '';
-      updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
-    }
-
-    if (!hasUserModified.phone && masterCVData.cvData?.basics?.phone) {
-      updatedFormData.phone = masterCVData.cvData.basics.phone.trim();
-    }
-
-    if (!hasUserModified.location && masterCVData.cvData?.basics?.location) {
-      const location = masterCVData.cvData.basics.location;
-      const locationParts = [];
-      if (location.city) locationParts.push(location.city);
-      if (location.region) locationParts.push(location.region);
-      if (location.address) locationParts.push(location.address);
-      updatedFormData.location = locationParts.join(', ');
-    }
-
-    if (!hasUserModified.website && masterCVData.cvData?.basics?.url) {
-      updatedFormData.website = masterCVData.cvData.basics.url.trim();
-    }
-
-    if (masterCVData.cvData?.basics?.profiles && Array.isArray(masterCVData.cvData.basics.profiles)) {
-      // LinkedIn
-      if (!hasUserModified.linkedin) {
-        const linkedinProfile = masterCVData.cvData.basics.profiles.find((p: any) =>
-          p.network && p.network.toLowerCase() === 'linkedin'
-        );
-        if (linkedinProfile && linkedinProfile.url) {
-          updatedFormData.linkedin = linkedinProfile.url.trim();
-        }
-      }
-
-      // GitHub
-      if (!hasUserModified.github) {
-        const githubProfile = masterCVData.cvData.basics.profiles.find((p: any) =>
-          p.network && p.network.toLowerCase() === 'github'
-        );
-        if (githubProfile && githubProfile.url) {
-          updatedFormData.github = githubProfile.url.trim();
-        }
-      }
-    }
-
-    if (!hasUserModified.summary && masterCVData.cvData?.basics?.summary) {
-      updatedFormData.summary = masterCVData.cvData.basics.summary.trim();
-    }
-
-    if (!hasUserModified.company && masterCVData.cvData?.basics?.label && !updatedFormData.company) {
-      updatedFormData.company = masterCVData.cvData.basics.label.trim();
-    }
-
-    setFormData(updatedFormData);
-    console.log('✅ Settings - Profile refreshed from master CV');
-  };
-
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-
-    // Mark field as user-modified to prevent Master CV from overriding it
-    if (field in hasUserModified) {
-      setHasUserModified(prev => ({ ...prev, [field]: true }));
-    }
   };
 
   const checkUsernameAvailability = async (username: string) => {
@@ -710,16 +511,6 @@ const AccountProfile = ({ user, onSave }: { user: User; onSave: (userData: User)
         <div className="space-y-4 sm:space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Personal Information</h3>
-            {masterCVData && (
-              <button
-                onClick={refreshFromMasterCV}
-                className="flex items-center justify-center gap-2 px-3 py-2 text-xs sm:text-sm bg-lime-100 dark:bg-lime-400/20 text-lime-700 dark:text-lime-400 border border-lime-300 dark:border-lime-400/30 rounded-lg hover:bg-lime-200 dark:hover:bg-lime-400/30 transition-colors w-full sm:w-auto"
-              >
-                <RefreshCw size={14} />
-                <span className="hidden sm:inline">Sync from Master CV</span>
-                <span className="sm:hidden">Sync from CV</span>
-              </button>
-            )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
@@ -1046,6 +837,17 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // 2FA State
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
+  const [twoFactorSessionId, setTwoFactorSessionId] = useState<string | null>(null);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorLoading, setTwoFactorLoading] = useState(false);
+  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
+  
+  // Password prompt for disabling 2FA
+  const [showDisableTwoFactorPrompt, setShowDisableTwoFactorPrompt] = useState(false);
+  const [disableTwoFactorPassword, setDisableTwoFactorPassword] = useState('');
+
   // Password change form state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
@@ -1061,6 +863,8 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
     confirm: false
   });
 
+  const isSocialLogin = ['google', 'apple', 'nextauth'].includes(user?.authProvider?.toLowerCase() || '');
+
   // Load initial settings from user data
   useEffect(() => {
     if (user?.settings?.notifications) {
@@ -1068,9 +872,21 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
       setPushNotifications(user.settings.notifications.push?.enabled ?? true);
       setDailySummaryEmail(user.settings.notifications.email?.dailySummary ?? true);
     }
-    if (user?.settings?.security) {
-      setTwoFactorEnabled(user.settings.security.twoFactorEnabled ?? false);
-    }
+    
+    // Fetch security settings
+    const fetchSecuritySettings = async () => {
+      try {
+        const response = await fetch('/api/user/settings/security');
+        const data = await response.json();
+        if (data.success && data.data) {
+          setTwoFactorEnabled(data.data.twoFactorEnabled ?? false);
+        }
+      } catch (error) {
+        console.error('Error fetching security settings:', error);
+      }
+    };
+    
+    fetchSecuritySettings();
   }, [user]);
 
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
@@ -1228,8 +1044,104 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
     }
   };
 
-  const handleTwoFactorToggled = () => {
-    showToastNotification('info', 'Two-factor authentication coming soon!');
+  const handleTwoFactorToggled = async () => {
+    if (twoFactorEnabled) {
+      // Prompt to disable 2FA
+      if (isSocialLogin) {
+        // Bypass password requirement for social logins
+        await disableTwoFactor('');
+      } else {
+        setShowDisableTwoFactorPrompt(true);
+      }
+    } else {
+      // Start enable 2FA flow
+      setTwoFactorLoading(true);
+      setTwoFactorError(null);
+      try {
+        const response = await fetch('/api/auth/two-factor/generate?setup=true', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, email: user.email })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setTwoFactorSessionId(data.sessionId);
+          setShowTwoFactorSetup(true);
+          showToastNotification('success', 'Verification code sent to your email');
+        } else {
+          showToastNotification('error', data.error || 'Failed to start 2FA setup');
+        }
+      } catch (error) {
+        showToastNotification('error', 'Network error. Please try again.');
+      } finally {
+        setTwoFactorLoading(false);
+      }
+    }
+  };
+
+  const confirmEnableTwoFactor = async () => {
+    if (!twoFactorCode || twoFactorCode.length !== 4) {
+      setTwoFactorError('Please enter a valid 4-digit code');
+      return;
+    }
+    
+    setTwoFactorLoading(true);
+    setTwoFactorError(null);
+    try {
+      const response = await fetch('/api/user/settings/security/2fa/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: twoFactorSessionId, code: twoFactorCode })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setTwoFactorEnabled(true);
+        setShowTwoFactorSetup(false);
+        setTwoFactorSessionId(null);
+        setTwoFactorCode('');
+        showToastNotification('success', 'Two-factor authentication enabled successfully!');
+      } else {
+        setTwoFactorError(data.error || 'Failed to verify code');
+      }
+    } catch (error) {
+      setTwoFactorError('Network error. Please try again.');
+    } finally {
+      setTwoFactorLoading(false);
+    }
+  };
+
+  const disableTwoFactor = async (password: string) => {
+    setTwoFactorLoading(true);
+    setTwoFactorError(null);
+    try {
+      const response = await fetch('/api/user/settings/security', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'disableTwoFactor',
+          data: { password }
+        })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setTwoFactorEnabled(false);
+        setShowDisableTwoFactorPrompt(false);
+        setDisableTwoFactorPassword('');
+        showToastNotification('success', 'Two-factor authentication disabled');
+      } else {
+        setTwoFactorError(data.message || 'Failed to disable 2FA');
+        if (showDisableTwoFactorPrompt) {
+           showToastNotification('error', data.message || 'Failed to disable 2FA');
+        }
+      }
+    } catch (error) {
+      setTwoFactorError('Network error. Please try again.');
+      if (showDisableTwoFactorPrompt) {
+         showToastNotification('error', 'Network error. Please try again.');
+      }
+    } finally {
+      setTwoFactorLoading(false);
+    }
   };
 
   return (
@@ -1246,14 +1158,95 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                 <div className="text-xs text-gray-500 dark:text-gray-300">Add an extra layer of security to your account</div>
               </div>
               <button
-                onClick={() => showToastNotification('info', 'Two-factor authentication coming soon!')}
-                className={`w-12 h-6 rounded-full transition-colors ${twoFactorEnabled ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
+                onClick={handleTwoFactorToggled}
+                disabled={twoFactorLoading}
+                className={`w-12 h-6 rounded-full transition-colors ${twoFactorEnabled ? 'bg-lime-500' : 'bg-gray-300 dark:bg-gray-600'} ${twoFactorLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'
-                  }`} />
+                <div className={`w-5 h-5 bg-white rounded-full transition-transform ${twoFactorEnabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
               </button>
             </div>
+
+            {/* Inline Form to Enter 2FA Code */}
+            {showTwoFactorSetup && (
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Verify Your Email</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                  We've sent a 4-digit code to {user.email}. Enter it below to enable two-factor authentication.
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    maxLength={4}
+                    value={twoFactorCode}
+                    onChange={(e) => {
+                      setTwoFactorCode(e.target.value.replace(/\D/g, ''));
+                      setTwoFactorError(null);
+                    }}
+                    placeholder="0000"
+                    className="w-24 px-3 py-2 text-center text-lg tracking-widest border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={confirmEnableTwoFactor}
+                    disabled={twoFactorLoading || twoFactorCode.length !== 4}
+                    className="px-4 py-2 bg-lime-500 hover:bg-lime-600 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+                  >
+                    {twoFactorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Verify'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowTwoFactorSetup(false);
+                      setTwoFactorSessionId(null);
+                      setTwoFactorCode('');
+                      setTwoFactorError(null);
+                    }}
+                    className="px-4 py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {twoFactorError && <p className="mt-2 text-xs text-red-500">{twoFactorError}</p>}
+              </div>
+            )}
+
+            {/* Inline Prompt for Disabling 2FA */}
+            {showDisableTwoFactorPrompt && (
+              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Disable Two-Factor Authentication</h4>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                  Please enter your password to confirm you want to disable 2FA.
+                </p>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="password"
+                    value={disableTwoFactorPassword}
+                    onChange={(e) => {
+                      setDisableTwoFactorPassword(e.target.value);
+                      setTwoFactorError(null);
+                    }}
+                    placeholder="Enter password"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white focus:ring-2 focus:ring-lime-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={() => disableTwoFactor(disableTwoFactorPassword)}
+                    disabled={twoFactorLoading || !disableTwoFactorPassword}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium text-sm transition-colors disabled:opacity-50"
+                  >
+                    {twoFactorLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Disable'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDisableTwoFactorPrompt(false);
+                      setDisableTwoFactorPassword('');
+                      setTwoFactorError(null);
+                    }}
+                    className="px-4 py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-lg font-medium text-sm transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {twoFactorError && <p className="mt-2 text-xs text-red-500">{twoFactorError}</p>}
+              </div>
+            )}
 
             <div className="py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-4">
@@ -1261,15 +1254,28 @@ const SecurityAndNotifications = ({ user }: { user: User }) => {
                   <div className="text-sm font-medium text-gray-900 dark:text-white">Change Password</div>
                   <div className="text-xs text-gray-500 dark:text-gray-300">Update your account password</div>
                 </div>
-                <button
-                  onClick={() => setShowPasswordForm(!showPasswordForm)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
-                >
-                  {showPasswordForm ? 'Cancel' : 'Change Password'}
-                </button>
+                {!isSocialLogin && (
+                  <button
+                    onClick={() => setShowPasswordForm(!showPasswordForm)}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm font-medium"
+                  >
+                    {showPasswordForm ? 'Cancel' : 'Change Password'}
+                  </button>
+                )}
               </div>
 
-              {showPasswordForm && (
+              {isSocialLogin ? (
+                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/30 rounded-lg border border-gray-200 dark:border-gray-700/50">
+                  <div className="flex items-start gap-3">
+                    <Shield className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Your account is linked via your provider. Password management is handled there.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : showPasswordForm && (
                 <form onSubmit={handlePasswordSubmit} className="mt-6 space-y-5 p-6 bg-[#1a1a1a]/95 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl">
                   <div className="flex items-center gap-3 mb-2">
                     <h4 className="text-lg font-semibold text-white">Change Password</h4>
@@ -1468,6 +1474,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
 
   const [isMembershipModalOpen, setIsMembershipModalOpen] = useState(false);
   const [isAddPaymentModalOpen, setIsAddPaymentModalOpen] = useState(false);
+  const [showComparePlans, setShowComparePlans] = useState(false);
 
   // Toast notification state
   const showToastNotification = (type: 'success' | 'error' | 'info', message: string) => {
@@ -1492,6 +1499,7 @@ const MembershipBilling = ({ user }: { user: User }) => {
   // Determine the current plan key - use subscription planKey if available, otherwise use user's currentPlanKey
   const currentPlanKey = subscription?.planKey || userData?.currentPlanKey || 'free';
   const currentPlanName = subscription?.planName || getPlanName(currentPlanKey as any);
+  const currentPlanDetails = pricingHookResult.plans?.find((p: any) => p.key === currentPlanKey);
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -1554,114 +1562,151 @@ const MembershipBilling = ({ user }: { user: User }) => {
                 </div>
               </div>
             ) : (
-              <div className="glass-widget-premium p-4 relative h-full flex flex-col justify-between">
+              <div className="glass-widget-premium p-6 relative h-full flex flex-col justify-between">
                 <div>
-                  <div className="absolute top-3 right-3">
-                    <span className="px-2.5 py-0.5 bg-lime-500 text-white text-[10px] font-medium rounded-full uppercase tracking-wide">
-                      Current
+                  <div className="absolute top-4 right-4">
+                    <span className="px-2.5 py-1 bg-lime-500/10 text-lime-600 dark:text-lime-400 border border-lime-500/20 text-xs font-semibold rounded-full tracking-wide">
+                      {subscription?.status || 'Active'}
                     </span>
                   </div>
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-lime-400 to-lime-600 rounded-lg flex items-center justify-center shadow-md shadow-lime-500/20 shrink-0">
-                      <CreditCard className="w-5 h-5 text-white" />
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-lime-400 to-lime-600 rounded-xl flex items-center justify-center shadow-lg shadow-lime-500/20 shrink-0">
+                      <Award className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-lg font-bold text-gray-900 dark:text-white leading-tight">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-0.5">Current Plan</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">
                         {currentPlanName}
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${subscription?.status === 'active'
-                          ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}>
-                          <span className={`w-1 h-1 rounded-full ${subscription?.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}`}></span>
-                          {subscription?.status || 'Active'}
-                        </span>
-                      </div>
                     </div>
                   </div>
+                  
+                  {currentPlanDetails?.features && (
+                    <ul className="space-y-2 mb-4">
+                      {currentPlanDetails.features.slice(0, 3).map((feature: string, idx: number) => (
+                        <li key={idx} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                          <CheckCircle className="w-3.5 h-3.5 text-lime-500 shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
-                <div className="space-y-2 mt-auto">
+                <div className="space-y-3 mt-auto pt-4 border-t border-gray-100 dark:border-gray-800/50">
                   {(() => {
                     const endDate = subscription?.currentPeriodEnd || subscription?.endDate;
-                    const startDate = subscription?.currentPeriodStart;
-
-                    if (!endDate && !startDate) return null;
+                    if (!endDate) return null;
 
                     return (
-                      <div className="bg-gray-50/50 dark:bg-white/5 rounded-lg p-2.5 space-y-1 text-xs">
-                        {startDate && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-gray-400">Started</span>
-                            <span className="font-medium text-gray-900 dark:text-white">{formatDate(startDate)}</span>
-                          </div>
-                        )}
-                        {endDate && (
-                          <div className="flex justify-between">
-                            <span className="text-gray-500 dark:text-gray-400">Renews</span>
-                            <span className="font-medium text-gray-900 dark:text-white">{formatDate(endDate)}</span>
-                          </div>
-                        )}
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                          <Calendar className="w-4 h-4" /> Renewal Date
+                        </span>
+                        <span className="font-medium text-gray-900 dark:text-white">{formatDate(endDate)}</span>
                       </div>
                     );
                   })()}
 
                   {subscription?.amount && subscription?.currency && (
-                    <div className="flex justify-between items-baseline text-xs pt-1 border-t border-gray-100 dark:border-gray-700/50">
-                      <span className="text-gray-500 dark:text-gray-400">Price</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4" /> Price
+                      </span>
                       <div>
                         <span className="font-semibold text-gray-900 dark:text-white">{formatCurrency(subscription.amount, subscription.currency)}</span>
                         <span className="text-gray-500 dark:text-gray-400">/{subscription.billingCycle || 'mo'}</span>
                       </div>
                     </div>
                   )}
+
+                  <div className="pt-2">
+                    <a href="#payment-history" className="text-sm text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-medium flex items-center gap-1 transition-colors">
+                      View Billing History <ArrowRight className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
                 </div>
               </div>
             )}
 
-            {/* Change Plan Card */}
+            {/* Change Plan Card / Upgrade Box */}
             {loading ? (
-              <div className="glass-widget-premium p-4 animate-pulse h-full">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-600 rounded-lg"></div>
+              <div className="glass-widget-premium p-6 animate-pulse h-full">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-gray-200 dark:bg-gray-600 rounded-xl"></div>
                   <div className="flex-1">
-                    <div className="h-5 w-24 bg-gray-200 dark:bg-gray-600 rounded mb-1.5"></div>
-                    <div className="h-3 w-32 bg-gray-200 dark:bg-gray-600 rounded"></div>
+                    <div className="h-5 w-32 bg-gray-200 dark:bg-gray-600 rounded mb-2"></div>
+                    <div className="h-4 w-48 bg-gray-200 dark:bg-gray-600 rounded"></div>
                   </div>
                 </div>
-                <div className="h-3 w-20 bg-gray-200 dark:bg-gray-600 rounded mt-auto"></div>
+                <div className="h-10 w-full bg-gray-200 dark:bg-gray-600 rounded-lg mt-auto"></div>
               </div>
             ) : (
-              <div
-                className="glass-widget-premium p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 transition-all duration-200 group h-full flex flex-col items-center justify-center text-center gap-3"
-                onClick={() => setIsMembershipModalOpen(true)}
-              >
-                <div className="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-inner">
-                  <Award className="w-6 h-6 text-gray-600 dark:text-gray-300" />
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                    Upgrade Plan
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-[200px] mx-auto line-clamp-2">
-                    Unlock premium features and AI-powered tools.
+              <div className="glass-widget-premium p-6 h-full flex flex-col relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-lime-400/20 to-lime-600/5 rounded-bl-full -mr-8 -mt-8 z-0"></div>
+                
+                <div className="relative z-10 flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-gray-100 dark:bg-gray-800/80 rounded-lg flex items-center justify-center">
+                      <Star className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                        Upgrade Your Plan
+                      </h3>
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                    Unlock premium features, priority support, and advanced AI-powered tools to accelerate your career.
                   </p>
+                  
+                  <ul className="space-y-2.5 mb-6">
+                    {['Unlimited AI resume tailoring', 'Advanced cover letter generation', 'Priority support'].map((feature, idx) => (
+                      <li key={idx} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                        <CheckCircle className="w-4 h-4 text-lime-500 shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
-                <button className="px-4 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-semibold rounded-md hover:opacity-90 transition-opacity mt-1">
-                  View Plans
+                <button 
+                  onClick={() => {
+                    setShowComparePlans(true);
+                    setTimeout(() => {
+                      const pricingSection = document.getElementById('compare-plans');
+                      if (pricingSection) {
+                        pricingSection.scrollIntoView({ behavior: 'smooth' });
+                      } else {
+                        setIsMembershipModalOpen(true);
+                      }
+                    }, 100);
+                  }}
+                  className="relative z-10 w-full py-2.5 px-4 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  View All Plans & Upgrade <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             )}
           </div>
-
         </div>
 
-
+        {/* Compare Plans Section */}
+        {showComparePlans && (
+          <div id="compare-plans" className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Compare Plans</h3>
+            <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800">
+              <Pricing onSuccess={() => {
+                refetchBillingData();
+                showToastNotification('success', 'Subscription updated successfully!');
+              }} />
+            </div>
+          </div>
+        )}
 
         {/* Payment History Section */}
-        <div className="space-y-6">
+        <div id="payment-history" className="space-y-6 pt-6 border-t border-gray-200 dark:border-gray-800">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Payment History
           </h3>
@@ -1833,8 +1878,6 @@ const settingsTabs = [
   { id: 'account', name: 'Account & Profile', icon: User },
   { id: 'security', name: 'Security & Notifications', icon: Shield },
   { id: 'membership', name: 'Membership & Billing', icon: CreditCard },
-  { id: 'integrations', name: 'Integrations', icon: Link },
-  { id: 'workspace', name: 'Workspace', icon: Users },
 ];
 
 // Helper function to get tab description
@@ -1844,8 +1887,6 @@ const getTabDescription = (tab: string) => {
     case 'security': return 'Secure your account and manage notification preferences';
     case 'membership': return 'View and manage your subscription and billing information';
     case 'referrals': return 'Track your referrals and earn rewards';
-    case 'integrations': return 'Connect and manage your third-party integrations';
-    case 'workspace': return 'Manage your workspace and team settings';
     default: return 'Configure your account settings';
   }
 };
@@ -1957,34 +1998,6 @@ const SettingsContent = () => {
         return loading || !userData ? <SecuritySkeleton /> : <SecurityAndNotifications user={userData} />;
       case 'membership':
         return loading || !userData ? <MembershipSkeleton /> : <MembershipBilling user={userData} />;
-      case 'integrations':
-        return (
-          <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
-            <div className="w-full min-w-0 max-w-full">
-              <div className="text-center py-8 sm:py-12">
-                <Link size={40} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
-                  Connected apps and integrations are currently in development.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
-      case 'workspace':
-        return (
-          <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">
-            <div className="w-full min-w-0 max-w-full">
-              <div className="text-center py-8 sm:py-12">
-                <Users size={40} className="sm:w-12 sm:h-12 mx-auto mb-4 text-gray-400 dark:text-gray-500" />
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-2">Coming Soon</h3>
-                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 px-4">
-                  Team collaboration features are currently in development.
-                </p>
-              </div>
-            </div>
-          </div>
-        );
       default:
         return (
           <div className="p-4 sm:p-6 lg:p-8 h-full min-w-0 max-w-full overflow-x-hidden">

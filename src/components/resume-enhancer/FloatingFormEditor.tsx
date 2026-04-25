@@ -369,6 +369,10 @@ export default function FloatingFormEditor({
                         onAdd={addEducation}
                         onRemove={removeEducation}
                         jobData={state.jobData}
+                        annotations={annotations}
+                        onApplyAnnotation={onApplyAnnotation}
+                        onDismissAnnotation={onDismissAnnotation}
+                        reviewMode={state.reviewMode}
                     />
                 );
             case 'skills':
@@ -391,6 +395,10 @@ export default function FloatingFormEditor({
                         onAdd={addProject}
                         onRemove={removeProject}
                         jobData={state.jobData}
+                        annotations={annotations}
+                        onApplyAnnotation={onApplyAnnotation}
+                        onDismissAnnotation={onDismissAnnotation}
+                        reviewMode={state.reviewMode}
                     />
                 );
             case 'certificates':

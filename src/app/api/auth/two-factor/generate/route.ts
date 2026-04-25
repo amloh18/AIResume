@@ -29,8 +29,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if this is a setup request
+    const isSetup = request.nextUrl.searchParams.get('setup') === 'true';
+
     // Generate and send code
-    const result = await generateAndSendTwoFactorCode(userId, email);
+    const result = await generateAndSendTwoFactorCode(userId, email, isSetup);
 
     if (!result.success) {
       return NextResponse.json(

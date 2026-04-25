@@ -451,18 +451,14 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     // Map plan keys to regional pricing
     switch (plan.key) {
       case 'day_pass':
+      case 'pro_yearly': // pro_yearly uses the dayPass slot in CountryPricing
         return regionalPricing.dayPass;
       case 'pro_monthly':
         return regionalPricing.monthly;
       case 'pro_quarterly':
         return regionalPricing.quarterly;
-      case 'pro_yearly':
+      case 'pro_lifetime': // pro_lifetime uses the yearly slot in CountryPricing
         return regionalPricing.yearly;
-      case 'pro_lifetime':
-        // Lifetime is not in standard regional pricing object, fallback to plan price
-        // If we had a oneTime field in regional pricing, we would use it here
-        const lifetimePrice = (plan as any).price_one_time || (plan as any).price || 0;
-        return `${regionalPricing.currencySymbol}${lifetimePrice}`;
       default:
         // Use plan.price as fallback if specific key not found in regional pricing
         const fallbackPrice = (plan as any).price || 0;
@@ -497,6 +493,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
       // Extract numeric value from quarterly price
       const quarterlyNum = extractNumericValue(regionalPricing.quarterly);
       const monthlyNum = quarterlyNum / 3;
+      const formattedMonthly = formatMonthlyPrice(monthlyNum);
+      return {
+        price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,
+        showMonthly: true
+      };
+    }
+    
+    if (plan.key === 'pro_yearly') {
+      // Extract numeric value from yearly price (which is in the dayPass slot)
+      const yearlyNum = extractNumericValue(regionalPricing.dayPass);
+      const monthlyNum = yearlyNum / 12;
       const formattedMonthly = formatMonthlyPrice(monthlyNum);
       return {
         price: `${regionalPricing.currencySymbol}${formattedMonthly}/month`,

@@ -13,9 +13,10 @@ import { useAuthModalStore } from '@/lib/stores/authModalStore';
 
 interface PricingProps {
   onPlanSelect?: (plan: DatabasePricingPlan, pricingData: PricingData) => void;
+  onSuccess?: () => void;
 }
 
-const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
+const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState('professional'); // 'essential' or 'professional'
@@ -111,16 +112,16 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
   if (error) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-white text-center">
+        <div className="text-gray-900 dark:text-white text-center">
           <p className="text-red-400 mb-2">Error loading pricing plans</p>
-          <p className="text-sm text-white/60">{error}</p>
+          <p className="text-sm text-gray-500 dark:text-white/60">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <section id="pricing" className="relative pt-8 pb-20 flex items-center bg-gradient-to-b from-[#141810] to-[#141810] overflow-hidden">
+    <section id="pricing" className="relative pt-8 pb-20 flex items-center bg-gray-50 dark:bg-[#141810] overflow-hidden">
       {/* Grid Pattern Background with Glowing Dots */}
       <div className="absolute inset-0">
         {/* Grid Lines - Much more visible */}
@@ -176,7 +177,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
         </svg>
 
         {/* Gradient Overlay - Reduced to show grid */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#141810]/50 to-[#141810]/50"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-white/50 to-white/50 dark:from-[#141810]/50 dark:to-[#141810]/50"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-lime-400/5 to-blue-400/5 rounded-full blur-3xl"></div>
       </div>
 
@@ -189,13 +190,13 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
           transition={{ duration: 0.8 }}
           viewport={{ once: true }}
         >
-          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-white mb-6 text-left">
+          <h2 className="text-2xl tablet:text-3xl desktop:text-4xl font-bold text-gray-900 dark:text-white mb-6 text-left">
             Simple,{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-400 to-lime-500">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-lime-500 to-lime-600 dark:from-lime-400 dark:to-lime-500">
               Transparent Pricing
             </span>
           </h2>
-          <p className="text-xs tablet:text-sm desktop:text-base text-white/70 max-w-3xl leading-relaxed">
+          <p className="text-xs tablet:text-sm desktop:text-base text-gray-600 dark:text-white/70 max-w-3xl leading-relaxed">
             Choose the plan that fits your career goals. No hidden fees, no surprises.
           </p>
         </motion.div>
@@ -222,7 +223,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             return (
               <motion.div
                 key={plan._id}
-                className={`group relative bg-gradient-to-br from-white/5 to-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-5 min-h-[550px] flex flex-col card-hover ${plan.isPopular ? 'ring-2 ring-lime-400/50' : ''
+                className={`group relative bg-white dark:bg-[#1A2015] border border-gray-200 dark:border-white/10 rounded-2xl p-5 min-h-[550px] flex flex-col card-hover shadow-lg dark:shadow-none ${plan.isPopular ? 'ring-2 ring-lime-500 dark:ring-lime-400/50' : ''
                   }`}
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -243,7 +244,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* Popular Badge */}
                 {plan.isPopular && (
                   <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 z-10">
-                    <span className="bg-lime-400 text-black text-xs font-medium px-3 py-1 rounded-full shadow-lg">
+                    <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-xs font-medium px-3 py-1 rounded-full shadow-lg">
                       Most Popular
                     </span>
                   </div>
@@ -252,7 +253,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* Promotional Badge */}
                 {hasPromo && (
                   <div className="absolute -top-3 right-3 z-10">
-                    <span className="bg-lime-400 text-black text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
+                    <span className="bg-lime-500 dark:bg-lime-400 text-white dark:text-gray-900 text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 shadow-lg">
                       <Gift size={10} />
                       {plan.promotionDescription || 'Limited Time!'}
                     </span>
@@ -276,64 +277,64 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 </motion.div>
 
                 {/* Plan Name */}
-                <h3 className="text-base tablet:text-lg font-bold mb-3 text-white relative z-10">{plan.name}</h3>
+                <h3 className="text-base tablet:text-lg font-bold mb-3 text-gray-900 dark:text-white relative z-10">{plan.name}</h3>
 
                 {/* Plan Description */}
-                <p className="text-white/80 mb-4 text-xs tablet:text-xs leading-relaxed relative z-10">
+                <p className="text-gray-600 dark:text-white/80 mb-4 text-xs tablet:text-xs leading-relaxed relative z-10">
                   {plan.description}
                 </p>
 
                 {/* Pricing */}
                 <div className="mb-6 relative z-10">
                   {plan.key === 'free' ? (
-                    <div className="text-xl tablet:text-2xl font-bold text-white">Free</div>
+                    <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">Free</div>
                   ) : (
                     <div>
                       {hasPromo ? (
                         <div>
                           <div className="flex flex-col gap-1">
                             <div className="flex items-baseline gap-2 flex-wrap">
-                              <span className="text-xl tablet:text-2xl font-bold text-white">
+                              <span className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
                                 {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}{plan.key === 'pro_monthly' ? '/month' : ''}
                               </span>
-                              <span className="text-sm tablet:text-base text-white/50 line-through">
+                              <span className="text-sm tablet:text-base text-gray-400 dark:text-white/50 line-through">
                                 {currencySymbol}{plan.price_one_time || plan.price_monthly}
                               </span>
                             </div>
                             {monthlyEquivalent.showMonthly && (
-                              <div className="text-xs text-white/60">
+                              <div className="text-xs text-gray-500 dark:text-white/60">
                                 {regionalPrice} total
                               </div>
                             )}
                           </div>
-                          <div className="text-xs tablet:text-xs text-lime-400 font-medium mt-1">
+                          <div className="text-xs tablet:text-xs text-lime-600 dark:text-lime-400 font-medium mt-1">
                             {plan.promotionDescription || 'Limited Time Offer!'}
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div className="text-xl tablet:text-2xl font-bold text-white">
+                          <div className="text-xl tablet:text-2xl font-bold text-gray-900 dark:text-white">
                             {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}{plan.key === 'pro_monthly' ? '/month' : ''}
                           </div>
                           {monthlyEquivalent.showMonthly && (
-                            <div className="text-xs text-white/60 mt-1">
+                            <div className="text-xs text-gray-500 dark:text-white/60 mt-1">
                               {regionalPrice} total
                             </div>
                           )}
                           {/* Savings badge */}
                           {plan.key === 'pro_quarterly' && (
-                            <div className="text-xs text-lime-400 font-medium mt-1">
-                              Save <span className="bg-lime-400 text-black px-1 rounded font-bold">10%</span> vs monthly
+                            <div className="text-xs text-lime-600 dark:text-lime-400 font-medium mt-1">
+                              Save <span className="bg-lime-200 dark:bg-lime-400 text-lime-800 dark:text-black px-1 rounded font-bold">10%</span> vs monthly
                             </div>
                           )}
                           {plan.key === 'pro_yearly' && (
-                            <div className="text-xs text-lime-400 font-medium mt-1">
-                              Save <span className="bg-lime-400 text-black px-1 rounded font-bold">25%</span> vs monthly
+                            <div className="text-xs text-lime-600 dark:text-lime-400 font-medium mt-1">
+                              Save <span className="bg-lime-200 dark:bg-lime-400 text-lime-800 dark:text-black px-1 rounded font-bold">25%</span> vs monthly
                             </div>
                           )}
                         </div>
                       )}
-                      <div className="text-white/60 text-xs tablet:text-xs mt-1">
+                      <div className="text-gray-500 dark:text-white/60 text-xs tablet:text-xs mt-1">
                         {plan.key === 'pro_monthly'
                           ? 'recurring monthly'
                           : plan.key === 'pro_quarterly'
@@ -359,9 +360,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                         transition={{ delay: 0.5 + featureIndex * 0.1 }}
                         whileHover={{ scale: 1.2 }}
                       >
-                        <Check size={16} className="text-lime-400 flex-shrink-0 mt-0.5" />
+                        <Check size={16} className="text-lime-600 dark:text-lime-400 flex-shrink-0 mt-0.5" />
                       </motion.div>
-                      <span className="text-white/80 text-xs leading-relaxed">{feature}</span>
+                      <span className="text-gray-700 dark:text-white/80 text-xs leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -369,14 +370,14 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* Not Included Features */}
                 {plan.notIncludedFeatures && plan.notIncludedFeatures.length > 0 && (
                   <div className="mb-4 relative z-10">
-                    <h4 className="text-xs font-medium text-white/60 mb-2">Not Included:</h4>
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-white/60 mb-2">Not Included:</h4>
                     <ul className="space-y-1">
                       {plan.notIncludedFeatures.slice(0, 2).map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-start gap-2">
-                          <div className="w-4 h-4 rounded-full border border-white/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <div className="w-1.5 h-1.5 bg-white/50 rounded-full"></div>
+                          <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-white/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-white/50 rounded-full"></div>
                           </div>
-                          <span className="text-white/60 text-xs">{feature}</span>
+                          <span className="text-gray-500 dark:text-white/60 text-xs">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -386,7 +387,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
                 {/* CTA Button */}
                 <motion.button
                   onClick={() => handlePlanSelect(plan)}
-                  className="w-full py-3 px-4 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-black font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
+                  className="w-full py-3 px-4 bg-[rgb(129,255,0)] hover:bg-[rgb(110,230,0)] text-gray-900 font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg relative z-10"
                   whileHover={{
                     scale: 1.05,
                     boxShadow: "0 20px 40px -12px rgba(132, 204, 22, 0.5)"
@@ -402,16 +403,17 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
         </motion.div >
 
         {/* Bottom CTA */}
-        < motion.div
+        <motion.div
           className="text-center mt-12"
           initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.3 }}
           viewport={{ once: true }}
         >
-          <p className="text-white/70 mb-4 text-xs">Have questions about pricing?</p>
-          <motion.button
-            className="group text-lime-400 hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto"
+          <p className="text-gray-600 dark:text-white/70 mb-4 text-xs">Have questions about pricing?</p>
+          <motion.a
+            href="mailto:support@cvcircle.io?subject=Sales%20Inquiry%20-%20CVCircle"
+            className="group text-lime-600 dark:text-lime-400 hover:text-lime-700 dark:hover:text-lime-300 font-semibold transition-colors duration-300 flex items-center gap-2 mx-auto w-fit"
             whileHover={{ x: 5 }}
           >
             <span>Contact our sales team</span>
@@ -421,7 +423,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             >
               <ArrowRight size={14} />
             </motion.div>
-          </motion.button>
+          </motion.a>
         </motion.div >
       </div >
 
@@ -434,7 +436,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect }) => {
             preselectedPlanKey={selectedPlan.key}
             onSuccess={() => {
               setShowPaymentModal(false);
-              // Handle success (redirect, show success message, etc.)
+              if (onSuccess) {
+                onSuccess();
+              }
             }}
           />
         )

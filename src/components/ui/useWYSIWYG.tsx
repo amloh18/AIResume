@@ -95,8 +95,23 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
       console.log('🔍 useWYSIWYG - valueJustAppeared:', valueJustAppeared);
       
       if (needsUpdate || isEmptyButHasValue || isFirstInit || valueJustAppeared) {
-        // Normalize current content for comparison (remove extra whitespace)
-        const normalizedCurrentContent = currentContent.replace(/\s+/g, ' ').trim();
+        // Normalize current content for comparison (remove extra whitespace and spans)
+        const strippedCurrentContent = currentContent 
+          ? (() => {
+              const temp = document.createElement('div');
+              temp.innerHTML = currentContent;
+              const spans = temp.querySelectorAll('span.grammar-highlight');
+              spans.forEach(span => {
+                const fragment = document.createDocumentFragment();
+                while (span.firstChild) {
+                  fragment.appendChild(span.firstChild);
+                }
+                span.parentNode?.replaceChild(fragment, span);
+              });
+              return temp.innerHTML;
+            })()
+          : '';
+        const normalizedCurrentContent = strippedCurrentContent.replace(/\s+/g, ' ').trim();
         const normalizedPropForCompare = normalizedPropValue.replace(/\s+/g, ' ').trim();
         
         console.log('🔍 useWYSIWYG - normalizedCurrentContent:', normalizedCurrentContent);
@@ -148,19 +163,41 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
     }
   }, [isFocused]);
 
+  // Helper to strip grammar spans before saving
+  const stripGrammarSpans = (html: string): string => {
+    if (!html) return '';
+    // Create a temporary div to parse and manipulate the HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // Find all grammar highlight spans
+    const spans = temp.querySelectorAll('span.grammar-highlight');
+    spans.forEach(span => {
+      // Replace the span with its contents
+      const fragment = document.createDocumentFragment();
+      while (span.firstChild) {
+        fragment.appendChild(span.firstChild);
+      }
+      span.parentNode?.replaceChild(fragment, span);
+    });
+    
+    return temp.innerHTML;
+  };
+
   // Handle content changes
   const handleContentChange = useCallback(() => {
     if (!editorRef.current) return;
     
     const content = editorRef.current.innerHTML;
+    const cleanContent = stripGrammarSpans(content);
+    
     // Normalize the content for comparison
-    const normalizedContent = content.trim();
+    const normalizedContent = cleanContent.trim();
     const normalizedLastSynced = lastSyncedValueRef.current 
       ? convertPlainTextToHTML(lastSyncedValueRef.current).trim() 
       : '';
     
     // Compare normalized HTML values to detect actual changes
-    // This ensures we catch changes even if format differs (plain text vs HTML)
     if (normalizedContent !== normalizedLastSynced && !isInternalUpdateRef.current) {
       isInternalUpdateRef.current = true;
       setUndoStack(prev => {
@@ -168,9 +205,8 @@ export function useWYSIWYG(value: string, onChange: (value: string) => void) {
         return newStack.slice(-20);
       });
       setRedoStack([]);
-      // Store the HTML content (which is what we're actually working with)
-      lastSyncedValueRef.current = content;
-      onChange(content);
+      lastSyncedValueRef.current = cleanContent;
+      onChange(cleanContent);
     }
     updateFormatState();
   }, [onChange, updateFormatState]);

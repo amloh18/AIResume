@@ -22,10 +22,10 @@ import CountryPricing from '../src/models/CountryPricing';
 
 // Razorpay Plan IDs from Razorpay Dashboard
 const RAZORPAY_PLAN_IDS = {
-  dayPass: 'plan_RivdpnkPFipjzk',      // Day Pass - ₹49.00
+  dayPass: 'plan_Rivh0SUqKUEWOB',      // Professional Yearly - ₹1,999.00
   monthly: 'plan_Rivf5wNg9v4nsx',      // Professional Monthly - ₹199.00
   quarterly: 'plan_RivgCvVqHGbAyD',    // Professional Quarterly - ₹549.00
-  yearly: 'plan_Rivh0SUqKUEWOB'        // Professional Yearly - ₹1,999.00
+  yearly: 'plan_Shd2SSuzFyKIPx'        // Lifetime - ₹4,999.00
 };
 
 async function updateIndiaRazorpayPlans() {

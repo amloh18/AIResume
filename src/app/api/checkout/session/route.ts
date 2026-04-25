@@ -28,13 +28,13 @@ async function getCountryPricingForPlan(
     // Map billingCycle to planKey if not provided
     let finalPlanKey = planKey;
     if (!finalPlanKey && billingCycle) {
-      const cycleToPlanKey: Record<string, 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'> = {
+      const cycleToPlanKey: Record<string, string> = {
         'monthly': 'pro_monthly',
         'quarterly': 'pro_quarterly',
-        'yearly': 'pro_lifetime',
-        'one-time': 'day_pass'
+        'yearly': 'pro_yearly',
+        'one-time': 'pro_lifetime' // lifetime is one-time
       };
-      finalPlanKey = cycleToPlanKey[billingCycle] || 'pro_monthly';
+      finalPlanKey = (cycleToPlanKey[billingCycle] || 'pro_monthly') as any;
     }
 
     // Get full CountryPricing data (not just the plan-specific pricing)
@@ -84,6 +84,7 @@ async function getCountryPricingForPlan(
       'day_pass': 'dayPass',
       'pro_monthly': 'monthly',
       'pro_quarterly': 'quarterly',
+      'pro_yearly': 'dayPass',
       'pro_lifetime': 'yearly'
     };
 
@@ -166,12 +167,14 @@ async function activatePlanWithCoupon({
     const normalizedInterval: 'monthly' | 'quarterly' | 'yearly' =
       interval === 'quarterly' ? 'quarterly' : interval === 'yearly' ? 'yearly' : 'monthly';
 
-    const proPlanKey: 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime' =
+    const proPlanKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime' =
       planKey === 'pro_quarterly'
         ? 'pro_quarterly'
-        : planKey === 'pro_lifetime'
-          ? 'pro_lifetime'
-          : 'pro_monthly';
+        : planKey === 'pro_yearly'
+          ? 'pro_yearly'
+          : planKey === 'pro_lifetime'
+            ? 'pro_lifetime'
+            : 'pro_monthly';
 
     activationResult = await subscriptionService.activateProPlan(
       user._id.toString(),

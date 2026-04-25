@@ -695,6 +695,22 @@ export async function POST(request: NextRequest) {
       }
     };
 
+    // Auto-populate avatar from user profile if CV image is empty
+    try {
+      const { User } = await import('@/models');
+      const userProfile = await User.findById(userId).select('avatar');
+      if (userProfile && userProfile.avatar) {
+        if (!cvDataToCreate.cvData) cvDataToCreate.cvData = {};
+        if (!cvDataToCreate.cvData.basics) cvDataToCreate.cvData.basics = {};
+        if (!cvDataToCreate.cvData.basics.image) {
+          cvDataToCreate.cvData.basics.image = userProfile.avatar;
+          console.log('✅ CV POST API - Assigned user avatar to CV');
+        }
+      }
+    } catch (avatarError) {
+      console.warn('⚠️ CV POST API - Failed to fetch user avatar:', avatarError);
+    }
+
     console.log('🚀 CV POST API - CV data prepared:', {
       title,
       status: cvDataToCreate.status,

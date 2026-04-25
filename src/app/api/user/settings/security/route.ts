@@ -198,19 +198,21 @@ async function handleEnableTwoFactor(userId: string, userSettings: any, clientIP
 async function handleDisableTwoFactor(userId: string, data: any, userSettings: any, clientIP: string, userAgent: string) {
   const { password } = data;
   
-  if (!password) {
-    throw new Error('Password is required to disable two-factor authentication');
-  }
-
   const user = await User.findById(userId).select('+password');
   if (!user) {
     throw new Error('User not found');
   }
 
-  // Verify password
-  const isPasswordValid = await user.comparePassword(password);
-  if (!isPasswordValid) {
-    throw new Error('Password is incorrect');
+  // If user has a password, require it to disable 2FA
+  if (user.password) {
+    if (!password) {
+      throw new Error('Password is required to disable two-factor authentication');
+    }
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      throw new Error('Password is incorrect');
+    }
   }
 
   userSettings.security.twoFactorEnabled = false;

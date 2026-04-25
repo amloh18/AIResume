@@ -1,8 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useWYSIWYG } from './useWYSIWYG';
 import { WYSIWYGToolbar } from './WYSIWYGToolbar';
+import { GrammarCorrectionCard } from './GrammarCorrectionCard';
+import { highlightGrammarIssues } from '@/lib/grammar/dom';
+import { GrammarIssue } from '@/lib/grammar/engine';
 
 interface WYSIWYGEditorProps {
   value: string;
@@ -16,6 +19,7 @@ interface WYSIWYGEditorProps {
   fieldType?: 'summary' | 'experience' | 'other';
   showToolbar?: boolean;
   hasAnnotation?: boolean;
+  reviewMode?: boolean;
 }
 
 // Hook to get toolbar props for external rendering
@@ -123,7 +127,8 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   isGenerating = false,
   fieldType = 'other',
   showToolbar = false,
-  hasAnnotation = false
+  hasAnnotation = false,
+  reviewMode = false
 }) => {
   // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
@@ -143,6 +148,70 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
     redoStack
   } = useWYSIWYG(value, onChange);
 
+  const [activeIssue, setActiveIssue] = useState<GrammarIssue | null>(null);
+  const [cardPos, setCardPos] = useState({ top: 0, left: 0 });
+  const editorWrapperRef = useRef<HTMLDivElement>(null);
+
+  // Apply grammar highlights when reviewMode is true
+  useEffect(() => {
+    if (reviewMode && editorRef.current) {
+      highlightGrammarIssues(editorRef.current); // The function fetches issues and applies them
+      // We don't trigger handleContentChange here to avoid saving spans
+    } else if (!reviewMode && editorRef.current) {
+      // Remove highlights if annotation is toggled off
+      const existingSpans = editorRef.current.querySelectorAll('span.grammar-highlight');
+      existingSpans.forEach(span => {
+        const fragment = document.createDocumentFragment();
+        while (span.firstChild) {
+          fragment.appendChild(span.firstChild);
+        }
+        span.parentNode?.replaceChild(fragment, span);
+      });
+      editorRef.current.normalize();
+    }
+  }, [reviewMode, value]); // run on value change as well so re-scans work if reviewMode is on
+
+  const handleEditorClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('grammar-highlight') && target.dataset.issueData) {
+      e.preventDefault();
+      e.stopPropagation();
+      const issueData = JSON.parse(target.dataset.issueData) as GrammarIssue;
+      
+      const wrapperRect = editorWrapperRef.current?.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      
+      if (wrapperRect) {
+        setCardPos({
+          top: targetRect.bottom - wrapperRect.top + 5,
+          left: Math.min(targetRect.left - wrapperRect.left, wrapperRect.width - 300) // keep within view
+        });
+        setActiveIssue(issueData);
+      }
+    } else {
+      setActiveIssue(null);
+    }
+  };
+
+  const handleApplySuggestion = (issue: GrammarIssue) => {
+    if (!editorRef.current) return;
+    
+    // Find the span for this issue
+    const spans = editorRef.current.querySelectorAll(`span.grammar-highlight[data-issue-id="${issue.id}"]`);
+    if (spans.length > 0) {
+      // Replace all spans belonging to this issue with the suggestion
+      // We take the first span, insert a text node, and remove all spans
+      const textNode = document.createTextNode(issue.suggestion || '');
+      spans[0].parentNode?.insertBefore(textNode, spans[0]);
+      
+      spans.forEach(span => span.remove());
+      
+      handleContentChange();
+    }
+    
+    setActiveIssue(null);
+  };
+
   // Ensure value is set when component mounts or value changes
   // This is a backup to the hook's sync logic - handles cases where hook sync might miss
   React.useEffect(() => {
@@ -151,6 +220,23 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
       if (editorRef.current) {
         const currentContent = editorRef.current.innerHTML.trim();
         const stringValue = value ? String(value) : '';
+        
+        // Strip grammar spans from current content
+        const strippedCurrentContent = currentContent 
+          ? (() => {
+              const temp = document.createElement('div');
+              temp.innerHTML = currentContent;
+              const spans = temp.querySelectorAll('span.grammar-highlight');
+              spans.forEach(span => {
+                const fragment = document.createDocumentFragment();
+                while (span.firstChild) {
+                  fragment.appendChild(span.firstChild);
+                }
+                span.parentNode?.replaceChild(fragment, span);
+              });
+              return temp.innerHTML;
+            })()
+          : '';
         
         // Convert prop value to HTML for comparison
         const htmlValue = stringValue && stringValue.trim() 
@@ -163,7 +249,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           : '';
         
         // Normalize both for comparison (remove extra whitespace)
-        const normalizedCurrent = currentContent.replace(/\s+/g, ' ').trim();
+        const normalizedCurrent = strippedCurrentContent.replace(/\s+/g, ' ').trim();
         const normalizedValue = htmlValue.replace(/\s+/g, ' ').trim();
         
         // Update if editor is empty but we have a value, OR if values don't match
@@ -182,7 +268,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   const minHeight = `${rows * 1.5}rem`;
 
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} ref={editorWrapperRef}>
       <div
         className={`relative border border-white/20 rounded-none transition-all ${
           hasAnnotation 
@@ -312,6 +398,7 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           }}
           onBlur={() => setIsFocused(false)}
           onMouseUp={updateFormatState}
+          onClick={handleEditorClick}
           onKeyUp={updateFormatState}
           onPaste={(e: React.ClipboardEvent<HTMLDivElement>) => {
             e.preventDefault();
@@ -327,6 +414,16 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
           spellCheck="false"
           suppressContentEditableWarning
         />
+
+        {/* Grammar Correction Card */}
+        {activeIssue && (
+          <GrammarCorrectionCard
+            issue={activeIssue}
+            onApply={handleApplySuggestion}
+            onDismiss={() => setActiveIssue(null)}
+            position={cardPos}
+          />
+        )}
 
         {/* Placeholder */}
         {(!value || value === '<br>' || value === '' || value === '<p></p>' || value === '<p><br></p>' || value === '<div><br></div>') && (

@@ -99,6 +99,7 @@ export interface ResumeEnhancerState {
     jdHash: string;
   } | null;
   modeTransitionWarnings: string[];
+  modeTransitionData: { fromMode: AnalysisMode; toMode: AnalysisMode; transitionType: string } | null;
 
   // Score multipliers and breakdowns (for enhance.md formulas)
   cvScoreMultiplier: number;           // V factor (0.2 or 1.0)
@@ -179,6 +180,7 @@ type ResumeEnhancerAction =
   | { type: 'INVALIDATE_ANALYSIS' }
   | { type: 'SET_MODE_WARNINGS'; payload: string[] }
   | { type: 'CLEAR_MODE_WARNINGS' }
+  | { type: 'SET_MODE_TRANSITION_DATA'; payload: { fromMode: AnalysisMode; toMode: AnalysisMode; transitionType: string } | null }
   | { type: 'UPDATE_LAST_ANALYSIS_CONTEXT'; payload: { mode: AnalysisMode; roleHash: string; jdHash: string } }
   // Score multiplier and simulated CV actions (NEW for enhance.md)
   | { type: 'SET_SCORE_MULTIPLIERS'; payload: { cvMultiplier: number; atsMultiplier: number } }
@@ -237,6 +239,7 @@ const initialState: ResumeEnhancerState = {
   analysisModeInfo: null,
   lastAnalysisContext: null,
   modeTransitionWarnings: [],
+  modeTransitionData: null,
   // Score multipliers and breakdowns (NEW for enhance.md)
   cvScoreMultiplier: 1.0,
   cvScoreBreakdown: null,
@@ -587,16 +590,13 @@ function resumeEnhancerReducer(
       };
 
     case 'SET_MODE_WARNINGS':
-      return {
-        ...state,
-        modeTransitionWarnings: action.payload
-      };
+      return { ...state, modeTransitionWarnings: action.payload };
 
     case 'CLEAR_MODE_WARNINGS':
-      return {
-        ...state,
-        modeTransitionWarnings: []
-      };
+      return { ...state, modeTransitionWarnings: [] };
+
+    case 'SET_MODE_TRANSITION_DATA':
+      return { ...state, modeTransitionData: action.payload };
 
     case 'UPDATE_LAST_ANALYSIS_CONTEXT':
       return {

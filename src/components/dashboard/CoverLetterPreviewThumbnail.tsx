@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { MessageSquare } from 'lucide-react';
+import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 
 interface CoverLetterPreviewThumbnailProps {
   content: string;
@@ -12,110 +13,91 @@ const CoverLetterPreviewThumbnail: React.FC<CoverLetterPreviewThumbnailProps> = 
   content,
   className = ''
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
+  // A4 dimensions in pixels
+  const A4_WIDTH = 794;
+  const A4_HEIGHT = 1123;
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const updateDimensions = () => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const containerWidth = container.clientWidth;
+      const containerHeight = container.clientHeight;
+
+      if (containerWidth === 0 || containerHeight === 0) return;
+
+      const aspectRatio = A4_WIDTH / A4_HEIGHT;
+      let renderWidth = containerWidth;
+      let renderHeight = containerWidth / aspectRatio;
+
+      if (renderHeight > containerHeight) {
+        renderHeight = containerHeight;
+        renderWidth = containerHeight * aspectRatio;
+      }
+
+      setDimensions({ width: renderWidth, height: renderHeight });
+    };
+
+    updateDimensions();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateDimensions();
+    });
+
+    resizeObserver.observe(containerRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
   const previewContent = useMemo(() => {
-    if (!content) {
-      return null;
-    }
-
-    // A4 dimensions in pixels (210mm x 297mm at 96 DPI)
-    const a4Width = 794; // 210mm * 96/25.4
-    const a4Height = 1123; // 297mm * 96/25.4
-    const scale = 0.15; // Scale down to fit in card
-    const scaledWidth = a4Width * scale;
-    const scaledHeight = a4Height * scale;
-
-    // Extract key information from cover letter content
-    const lines = content.split('\n').filter(line => line.trim());
-    const firstLine = lines[0] || '';
-    const secondLine = lines[1] || '';
-    
-    // Try to extract date, greeting, and first paragraph
-    const dateMatch = content.match(/(\w+ \d{1,2}, \d{4})/);
-    const greetingMatch = content.match(/(Dear \w+)/i);
-    const firstParagraph = lines.find(line => 
-      line.length > 50 && 
-      !line.includes('Dear') && 
-      !line.match(/\w+ \d{1,2}, \d{4}/) &&
-      !line.includes('Sincerely')
-    ) || '';
+    if (!content) return null;
 
     return (
       <div 
-        className="w-full h-full flex items-center justify-center"
-        style={{ 
-          backgroundColor: '#f8f9fa'
-        }}
+        ref={containerRef}
+        className="w-full h-full flex items-center justify-center relative overflow-hidden bg-gray-100"
       >
-        {/* A4 Document Preview */}
-        <div 
-          className="shadow-lg border border-gray-300"
-          style={{ 
-            width: `${scaledWidth}px`,
-            height: `${scaledHeight}px`,
-            backgroundColor: '#fff',
-            fontSize: `${8 * scale}px`,
-            lineHeight: '1.4',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Header */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            .cv-cl-thumbnail > div {
+              padding: 0 !important;
+              background: transparent !important;
+            }
+            .cv-cl-thumbnail .bg-white.shadow-lg.mx-auto {
+              box-shadow: none !important;
+            }
+          `
+        }} />
+        {dimensions.width > 0 && dimensions.height > 0 ? (
           <div 
-            className="p-2 border-b"
+            className="bg-white shadow-lg relative cv-cl-thumbnail"
             style={{ 
-              backgroundColor: '#8b5cf6',
-              color: '#fff',
-              fontSize: `${10 * scale}px`
+              width: `${A4_WIDTH}px`,
+              height: `${A4_HEIGHT}px`,
+              transform: `scale(${dimensions.width / A4_WIDTH})`,
+              transformOrigin: 'top left',
+              overflow: 'hidden',
+              pointerEvents: 'none'
             }}
           >
-            <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>Cover Letter</div>
-            <div style={{ opacity: 0.9, fontSize: `${8 * scale}px` }}>Professional Communication</div>
+            <CoverLetterPreview 
+              content={content}
+              cvData={{}}
+              jobData={{}}
+              selectedCVData={{}}
+              pageSize="A4"
+            />
           </div>
-
-          {/* Content Preview */}
-          <div className="p-2" style={{ fontSize: `${7 * scale}px` }}>
-            {/* Date */}
-            {dateMatch && (
-              <div style={{ marginBottom: '4px', color: '#666' }}>
-                {dateMatch[1]}
-              </div>
-            )}
-
-            {/* Greeting */}
-            {greetingMatch && (
-              <div style={{ marginBottom: '4px', fontWeight: 'bold' }}>
-                {greetingMatch[1]},
-              </div>
-            )}
-
-            {/* First paragraph preview */}
-            {firstParagraph && (
-              <div style={{ 
-                color: '#333', 
-                lineHeight: '1.3',
-                marginBottom: '4px'
-              }}>
-                {firstParagraph.length > 80 
-                  ? firstParagraph.substring(0, 80) + '...'
-                  : firstParagraph
-                }
-              </div>
-            )}
-
-            {/* Additional content indicators */}
-            <div style={{ 
-              paddingTop: '4px', 
-              borderTop: '1px solid #e5e7eb',
-              marginTop: '4px'
-            }}>
-              <div style={{ color: '#666', fontSize: `${6 * scale}px` }}>
-                {lines.length > 3 ? `${lines.length - 3} more paragraphs` : 'Complete letter'}
-              </div>
-            </div>
-          </div>
-        </div>
+        ) : null}
       </div>
     );
-  }, [content]);
+  }, [content, dimensions]);
 
   if (!previewContent) {
     return (

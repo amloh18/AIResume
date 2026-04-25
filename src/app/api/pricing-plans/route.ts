@@ -65,12 +65,14 @@ const fallbackPlans = [
     category: 'essential'
   },
   {
-    _id: 'day_pass',
-    key: 'day_pass',
-    name: 'Day Pass',
-    description: '24-hour unlimited access to premium tools',
+    _id: 'pro_yearly',
+    key: 'pro_yearly',
+    name: 'Professional Yearly',
+    description: 'Full access to all features with yearly billing',
     price_monthly: 0,
-    price_one_time: 5,
+    price_quarterly: 0,
+    price_yearly: 149,
+    price_one_time: 0,
     currency: 'GBP',
     features: [
       'Unlimited AI Generation',
@@ -90,10 +92,10 @@ const fallbackPlans = [
     maxCVs: -1,
     maxExports: -1,
     maxCoverLetters: -1,
-    maxJobs: 0,
+    maxJobs: -1,
     maxJourneys: -1,
-    billingCycle: 'one-time',
-    category: 'essential'
+    billingCycle: 'yearly',
+    category: 'professional'
   },
   // Professional Category
   {
@@ -315,7 +317,8 @@ export async function GET(request: NextRequest) {
           'day_pass': 'dayPass',
           'pro_monthly': 'monthly',
           'pro_quarterly': 'quarterly',
-          'pro_lifetime': 'oneTime'
+          'pro_yearly': 'dayPass',
+          'pro_lifetime': 'yearly'
         };
 
         const pricingKey = planKeyMap[planKey];
@@ -342,7 +345,9 @@ export async function GET(request: NextRequest) {
         quarterly: getCountryPriceForPlan('pro_quarterly', activePricing)
           || getCountryPriceForPlan('pro_quarterly', planDefaultCountryPricing)
           || 0, // No legacy fallback
-        yearly: 0, // No yearly price
+        yearly: getCountryPriceForPlan('pro_yearly', activePricing)
+          || getCountryPriceForPlan('pro_yearly', planDefaultCountryPricing)
+          || 0, // No legacy fallback
         oneTime: getCountryPriceForPlan('day_pass', activePricing)
           || getCountryPriceForPlan('pro_lifetime', activePricing)
           || getCountryPriceForPlan('day_pass', planDefaultCountryPricing)
@@ -385,6 +390,12 @@ export async function GET(request: NextRequest) {
           durationInDays: 90,
           durationType: 'month',
           displayText: '3 months'
+        };
+      } else if (plan.key === 'pro_yearly') {
+        durationInfo = {
+          durationInDays: 365,
+          durationType: 'year',
+          displayText: '1 year'
         };
       } else if (plan.key === 'pro_lifetime') {
         durationInfo = {

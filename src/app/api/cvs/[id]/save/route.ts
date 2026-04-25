@@ -258,6 +258,12 @@ export async function POST(
     cv.metadata.lastModified = new Date();
     cv.version += 1;
 
+    // Explicitly mark Mixed type fields as modified to ensure Mongoose saves them
+    if (cvData) {
+      cv.markModified('cvData');
+    }
+    cv.markModified('metadata');
+
     await cv.save();
 
     // Save CV with template to S3 as backup
