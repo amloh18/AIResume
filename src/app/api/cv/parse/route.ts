@@ -829,7 +829,7 @@ from the resume text and return **only** a valid JSON object.
 /**
  * Robustly parses any document by running the full pipeline.
  */
-async function robustDocumentParser(
+export async function robustDocumentParser(
   fileBuffer: Buffer,
   mimeType: string
 ): Promise<{ cvData?: UnifiedCVDataStructure; error?: string; details?: any }> {

@@ -12,12 +12,13 @@ import { getConnection } from '@/lib/database/connection-manager';
 export interface AuthenticatedUser {
   id: string;
   email: string;
-  name: string;
+  name?: string;
   image?: string | null;
-  role: string;
-  planKey: string;
+  role?: string;
+  planKey?: string;
   subscriptionStatus?: string;
   requiresTwoFactor?: boolean; // Flag to indicate 2FA is required
+  isB2b?: boolean;
 }
 
 export interface AuthenticationResult {
@@ -73,6 +74,7 @@ export class UserService {
           role: user.role || 'user',
           planKey: user.currentPlanKey || 'free',
           subscriptionStatus: user.subscription?.status || 'inactive',
+          isB2b: !!(user as any).b2b?.tenantId,
         },
       };
     } catch (error: any) {
@@ -137,6 +139,7 @@ export class UserService {
         role: existingUser.role || 'user',
         planKey: existingUser.currentPlanKey || 'free',
         subscriptionStatus: existingUser.subscription?.status || 'inactive',
+        isB2b: !!(existingUser as any).b2b?.tenantId,
       };
     } catch (error: any) {
       console.error(`❌ Error finding/creating ${data.provider} user:`, error);

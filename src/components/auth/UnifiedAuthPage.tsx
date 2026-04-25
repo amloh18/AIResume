@@ -16,20 +16,23 @@ export type AuthMode = 'signin' | 'signup' | 'reset' | 'magic-link' | 'verify-co
 export interface AuthPageProps {
   initialMode?: AuthMode;
   isModal?: boolean;
+  layoutVariant?: 'default' | 'b2b' | 'admin';
+  callbackUrl?: string;
 }
 
-export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false }: AuthPageProps) {
+export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false, layoutVariant = 'default', callbackUrl: propCallbackUrl }: AuthPageProps) {
   const { data: session, status } = useSession();
   const globalCallbackUrl = useAuthModalStore(state => state.callbackUrl);
 
   // Get callbackUrl from search params, default to dashboard
   const callbackUrl = useMemo(() => {
+    if (propCallbackUrl) return propCallbackUrl;
     if (typeof window !== 'undefined') {
       const url = new URLSearchParams(window.location.search).get('callbackUrl');
       return globalCallbackUrl || url || '/dashboard';
     }
     return globalCallbackUrl || '/dashboard';
-  }, [globalCallbackUrl]);
+  }, [globalCallbackUrl, propCallbackUrl]);
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [isLoading, setIsLoading] = useState(false);
@@ -103,6 +106,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         body: JSON.stringify({
           email: formData.email,
           password: formData.password,
+          portal: layoutVariant,
         }),
       });
 
@@ -145,6 +149,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       const signInPromise = signIn('credentials', {
         email: formData.email,
         password: formData.password,
+        portal: layoutVariant,
         redirect: false,
       });
 
@@ -335,6 +340,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
               signIn('passwordless', {
                 email,
                 verificationCode: code,
+                portal: layoutVariant,
                 redirect: false
               } as any),
               new Promise((_, reject) =>
@@ -481,6 +487,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                     email,
                     verificationCode: atomicSignupResult.sessionToken || 'fallback',
                     preVerified: 'true',
+                    portal: layoutVariant,
                     redirect: false
                   } as any),
                   new Promise((_, reject) =>
@@ -949,15 +956,17 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 Sign In
               </button>
             </p>
-            <p className="text-gray-500 text-sm text-center">
-              Don't have an account?{' '}
-              <button
-                onClick={() => switchMode('signup')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
-              >
-                Sign up here
-              </button>
-            </p>
+            {layoutVariant === 'default' && (
+              <p className="text-gray-500 text-sm text-center">
+                Don't have an account?{' '}
+                <button
+                  onClick={() => switchMode('signup')}
+                  className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                >
+                  Sign up here
+                </button>
+              </p>
+            )}
           </div>
         );
 
@@ -973,15 +982,17 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
                 Sign in with password
               </button>
             </p>
-            <p className="text-gray-500 text-sm text-center">
-              Don't have an account?{' '}
-              <button
-                onClick={() => switchMode('signup')}
-                className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
-              >
-                Sign up here
-              </button>
-            </p>
+            {layoutVariant === 'default' && (
+              <p className="text-gray-500 text-sm text-center">
+                Don't have an account?{' '}
+                <button
+                  onClick={() => switchMode('signup')}
+                  className="text-[#80FF00] hover:text-[#80FF00]/80 transition-colors duration-200 font-medium"
+                >
+                  Sign up here
+                </button>
+              </p>
+            )}
           </div>
         );
 
@@ -990,7 +1001,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
-  const socialButtons = (mode !== 'magic-link' && mode !== 'verify-code') ? (
+  const socialButtons = (mode !== 'magic-link' && mode !== 'verify-code' && layoutVariant === 'default') ? (
     <SocialAuthButtons
       onGoogleAuth={handleGoogleAuth}
       onAppleAuth={handleAppleAuth}
@@ -1010,6 +1021,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         backHref="/sign-in"
         backText="Back to Sign In"
         isModal={isModal}
+        variant={layoutVariant}
       >
         <UnifiedAuthForm
           fields={[
@@ -1056,6 +1068,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         backHref="/sign-in"
         backText="Back to Login"
         isModal={isModal}
+        variant={layoutVariant}
       >
         <CodeVerificationScreen
           email={email}
@@ -1086,9 +1099,10 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       backHref="/"
       backText="Back to Home"
       isModal={isModal}
+      variant={layoutVariant}
     >
-      {/* Mode Toggle Switch - Only show for signin/signup */}
-      {(mode === 'signin' || mode === 'signup') && (
+      {/* Mode Toggle Switch - Only show for signin/signup on default layout */}
+      {(mode === 'signin' || mode === 'signup') && layoutVariant === 'default' && (
         <div className="mb-6 flex justify-center">
           <div className="relative inline-flex items-center bg-gray-100 dark:bg-[#1A1A1A] rounded-md p-1.5 border border-gray-200 dark:border-white/10">
             <motion.button
@@ -1227,6 +1241,6 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 }
 
 // Wrapper component that handles mounting
-export default function UnifiedAuthPage({ initialMode = 'signin' }: AuthPageProps) {
-  return <UnifiedAuthPageContent initialMode={initialMode} />;
+export default function UnifiedAuthPage({ initialMode = 'signin', layoutVariant = 'default', callbackUrl }: AuthPageProps) {
+  return <UnifiedAuthPageContent initialMode={initialMode} layoutVariant={layoutVariant} callbackUrl={callbackUrl} />;
 }

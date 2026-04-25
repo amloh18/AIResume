@@ -81,6 +81,7 @@ export class UnifiedAuthService {
           credentials: {
             email: { type: 'email' },
             password: { type: 'password' },
+            portal: { type: 'text' },
           },
           async authorize(credentials, req) {
             try {
@@ -104,6 +105,26 @@ export class UnifiedAuthService {
                 return null;
               }
 
+              // Enforce portal isolation
+              const portal = credentials.portal || 'default';
+              const role = result.user.role;
+              // Add proper null checking for b2b object
+              const isB2b = !!(result.user as any).b2b?.tenantId || !!(result.user as any).isB2b;
+              const isAdmin = role === 'admin' || role === 'superadmin';
+
+              if (portal === 'admin' && !isAdmin) {
+                throw new Error('Unauthorized. Please use the consumer login.');
+              }
+              if (portal === 'b2b' && !isB2b) {
+                throw new Error('Unauthorized. Please use the consumer login.');
+              }
+              if (portal === 'default' && isAdmin) {
+                throw new Error('Unauthorized. Please use the admin login.');
+              }
+              if (portal === 'default' && isB2b && !isAdmin) {
+                throw new Error('Unauthorized. Please use the B2B login.');
+              }
+
               console.log('✅ Credentials provider: Authentication successful for:', result.user.email);
 
               // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
@@ -112,6 +133,8 @@ export class UnifiedAuthService {
                 id: String(result.user.id).substring(0, 100),
                 email: String(result.user.email).substring(0, 255),
                 name: String(result.user.name || '').substring(0, 100),
+                role: result.user.role,
+                isB2b: isB2b,
                 // Only include image if it's a short URL (not a large base64 string)
                 image: result.user.image && typeof result.user.image === 'string' && result.user.image.length < 500
                   ? result.user.image.substring(0, 500)
@@ -135,6 +158,7 @@ export class UnifiedAuthService {
             email: { type: 'email' },
             verificationCode: { type: 'text' },
             preVerified: { type: 'text' }, // Flag to skip code verification (user already verified)
+            portal: { type: 'text' },
           },
           async authorize(credentials) {
             if (!credentials?.email) {
@@ -185,12 +209,34 @@ export class UnifiedAuthService {
                 // Update last login
                 await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
 
+                // Enforce portal isolation
+                const portal = credentials.portal || 'default';
+                const role = userDoc.role;
+                // Use any to bypass strict typing issues with mongoose lean documents
+                const isB2b = !!(userDoc as any).b2b?.tenantId || !!(userDoc as any).isB2b;
+                const isAdmin = role === 'admin' || role === 'superadmin';
+
+                if (portal === 'admin' && !isAdmin) {
+                  throw new Error('Unauthorized. Please use the consumer login.');
+                }
+                if (portal === 'b2b' && !isB2b) {
+                  throw new Error('Unauthorized. Please use the consumer login.');
+                }
+                if (portal === 'default' && isAdmin) {
+                  throw new Error('Unauthorized. Please use the admin login.');
+                }
+                if (portal === 'default' && isB2b && !isAdmin) {
+                  throw new Error('Unauthorized. Please use the B2B login.');
+                }
+
                 // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
-                const userData = {
-                  id: String((userDoc._id as any).toString()).substring(0, 100),
-                  email: String(userDoc.email).substring(0, 255),
-                  name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
-                  // Only include image if it's a short URL (not a large base64 string)
+                  const userData = {
+                    id: String((userDoc._id as any).toString()).substring(0, 100),
+                    email: String(userDoc.email).substring(0, 255),
+                    name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
+                    role: userDoc.role,
+                    isB2b: isB2b,
+                    // Only include image if it's a short URL (not a large base64 string)
                   image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
                     ? userDoc.avatar.substring(0, 500)
                     : undefined,
@@ -295,11 +341,33 @@ export class UnifiedAuthService {
               // Update last login
               await User.findByIdAndUpdate((userDoc._id as any).toString(), { lastLogin: new Date() });
 
+              // Enforce portal isolation
+              const portal = credentials.portal || 'default';
+              const role = userDoc.role;
+              // Use any to bypass strict typing issues with mongoose lean documents
+              const isB2b = !!(userDoc as any).b2b?.tenantId || !!(userDoc as any).isB2b;
+              const isAdmin = role === 'admin' || role === 'superadmin';
+
+              if (portal === 'admin' && !isAdmin) {
+                throw new Error('Unauthorized. Please use the consumer login.');
+              }
+              if (portal === 'b2b' && !isB2b) {
+                throw new Error('Unauthorized. Please use the consumer login.');
+              }
+              if (portal === 'default' && isAdmin) {
+                throw new Error('Unauthorized. Please use the admin login.');
+              }
+              if (portal === 'default' && isB2b && !isAdmin) {
+                throw new Error('Unauthorized. Please use the B2B login.');
+              }
+
               // CRITICAL: Return only minimal user data to prevent JWT token from becoming too large
               const userData = {
                 id: String((userDoc._id as any).toString()).substring(0, 100),
                 email: String(userDoc.email).substring(0, 255),
                 name: String(`${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User').substring(0, 100),
+                role: userDoc.role,
+                isB2b: isB2b,
                 // Only include image if it's a short URL (not a large base64 string)
                 image: userDoc.avatar && typeof userDoc.avatar === 'string' && userDoc.avatar.length < 500
                   ? userDoc.avatar.substring(0, 500)
@@ -364,6 +432,7 @@ export class UnifiedAuthService {
             
             token.type = String(userType).substring(0, 50);
             token.role = String(userRole).substring(0, 50);
+            token.isB2b = !!(user as any).isB2b;
 
             // If it's an admin, we can optionally store the name
             if (userType === 'admin') {
@@ -394,6 +463,9 @@ export class UnifiedAuthService {
           }
           if (token.name && token.type === 'admin') {
             cleanedToken.name = String(token.name).substring(0, 100);
+          }
+          if (token.isB2b !== undefined) {
+            cleanedToken.isB2b = !!token.isB2b;
           }
 
           // Log token size for debugging (should be < 500 bytes)
@@ -436,6 +508,7 @@ export class UnifiedAuthService {
                   (session.user as any).type = 'user';
                   (session.user as any).planKey = userData.planKey || 'free';
                   (session.user as any).subscriptionStatus = userData.subscriptionStatus || 'inactive';
+                  (session.user as any).isB2b = !!userData.isB2b;
                 } else {
                   // Fallback to token data if user not found
                   session.user.id = (token.id as string) || '';
@@ -445,6 +518,7 @@ export class UnifiedAuthService {
                   (session.user as any).type = 'user';
                   (session.user as any).planKey = 'free';
                   (session.user as any).subscriptionStatus = 'inactive';
+                  (session.user as any).isB2b = !!token.isB2b;
                 }
               } catch (error) {
                 console.error('❌ Error in session callback:', error);
@@ -470,6 +544,7 @@ export class UnifiedAuthService {
               type: String((session.user as any)?.type || (isAdmin ? 'admin' : 'user')).substring(0, 50),
               planKey: String((session.user as any)?.planKey || (isAdmin ? 'admin' : 'free')).substring(0, 50),
               subscriptionStatus: String((session.user as any)?.subscriptionStatus || (isAdmin ? 'active' : 'inactive')).substring(0, 50),
+              isB2b: !!(session.user as any)?.isB2b,
             },
             expires: session.expires
           };
@@ -588,7 +663,7 @@ export class UnifiedAuthService {
       // Fetch from database - only select fields we need to prevent large payloads
       await getConnection();
       const user = await User.findById(userId)
-        .select('_id email firstName lastName avatar role currentPlanKey subscription.status')
+        .select('_id email firstName lastName avatar role currentPlanKey subscription.status b2b')
         .lean()
         .exec();
 
@@ -613,14 +688,15 @@ export class UnifiedAuthService {
         }
       }
 
-      const userData: AuthenticatedUser = {
-        id: (userDoc._id as any).toString(),
+      const userData = {
+        id: String(userDoc._id),
         email: userDoc.email || '',
         name: `${userDoc.firstName || ''} ${userDoc.lastName || ''}`.trim() || 'User',
         image: avatarUrl,
         role: userDoc.role || 'user',
         planKey: userDoc.currentPlanKey || 'free',
         subscriptionStatus: (userDoc as any).subscription?.status || 'inactive',
+        isB2b: !!userDoc.b2b?.tenantId || !!(userDoc as any).isB2b,
       };
 
       // Cache for 5 minutes

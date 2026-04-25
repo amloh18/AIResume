@@ -158,6 +158,13 @@ export interface IUser extends Document {
     currentStreak: number;
     lastPracticeDate: Date;
   };
+
+  // B2B Support
+  b2b?: {
+    tenantId: mongoose.Types.ObjectId;
+    role: 'admin' | 'recruiter' | 'member';
+  };
+
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -605,6 +612,16 @@ const userSchema = new Schema<IUser>({
   interviewCoach: {
     currentStreak: { type: Number, default: 0 },
     lastPracticeDate: { type: Date }
+  },
+  b2b: {
+    tenantId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Tenant'
+    },
+    role: {
+      type: String,
+      enum: ['admin', 'recruiter', 'member']
+    }
   }
 }, {
   timestamps: true,
