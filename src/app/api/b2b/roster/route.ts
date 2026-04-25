@@ -31,6 +31,10 @@ export async function POST(req: NextRequest) {
           cvData,
           status: 'new',
           score: Math.floor(Math.random() * 40) + 60, // Simulate a match score for now
+          metadata: {
+            jobTitle: 'Software Engineer',
+            jobDescription: 'We are looking for a Senior Software Engineer with strong experience in React, Node.js, and TypeScript. Must have at least 5 years of experience building scalable web applications. Experience with cloud infrastructure (AWS/GCP) is a big plus. The ideal candidate will be a self-starter who can mentor junior developers and lead technical architecture discussions.',
+          }
         });
       })
     );

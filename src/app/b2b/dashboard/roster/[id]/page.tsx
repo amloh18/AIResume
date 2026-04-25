@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Download, Mail, Phone, MapPin, Briefcase, GraduationCap, Code, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, Download, Mail, Phone, MapPin, Briefcase, GraduationCap, Code, FileText, CheckCircle, XCircle, FileQuestion, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
@@ -21,7 +21,9 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'analysis' | 'preview'>('preview');
+  const [activeTab, setActiveTab] = useState<'analysis' | 'preview' | 'interview'>('preview');
+
+  const [generatingGuide, setGeneratingGuide] = useState(false);
 
   const fetchCandidate = async () => {
     try {
@@ -67,6 +69,38 @@ export default function CandidateDetailPage() {
       toast.error('An error occurred while updating status');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleGenerateInterviewGuide = async () => {
+    if (!candidate.metadata?.jobDescription) {
+      toast.error('A Job Description must be attached to generate an interview guide');
+      return;
+    }
+    
+    setGeneratingGuide(true);
+    try {
+      const response = await fetch('/api/v1/b2b/interview-guide', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidateId: candidate._id,
+          jobTitle: candidate.metadata.jobTitle,
+          jobDescription: candidate.metadata.jobDescription
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Interview guide generated successfully!');
+        fetchCandidate(); // Refresh candidate data to get the new guide
+      } else {
+        toast.error(data.error || 'Failed to generate guide');
+      }
+    } catch (error) {
+      toast.error('An error occurred while generating the interview guide');
+    } finally {
+      setGeneratingGuide(false);
     }
   };
 
@@ -241,6 +275,19 @@ export default function CandidateDetailPage() {
             >
               Analysis & Extracted Data
             </button>
+            <button
+              onClick={() => setActiveTab('interview')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+                activeTab === 'interview' 
+                  ? 'bg-primary/10 text-primary border-b-2 border-primary' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              Interview Guide
+              {candidate.metadata?.interviewGuide && (
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+              )}
+            </button>
           </div>
 
           {activeTab === 'preview' ? (
@@ -252,6 +299,62 @@ export default function CandidateDetailPage() {
                   theme="light"
                 />
               </div>
+            </div>
+          ) : activeTab === 'interview' ? (
+            <div className="space-y-6">
+              <Card className={`border-primary/20 shadow-sm ${glassCard}`}>
+                <CardHeader className="bg-primary/5 pb-4">
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <FileQuestion className="h-5 w-5 text-primary" />
+                      Dynamic Interview Guide
+                    </span>
+                    {candidate.metadata?.interviewGuide && (
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Calendar className="h-4 w-4" />
+                        Send to Calendar
+                      </Button>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-sm mt-1">
+                    AI-generated technical questions based specifically on the candidate's skill gaps against the Job Description.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {!candidate.metadata?.jobDescription ? (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground mb-4">No Job Description attached to this candidate.</p>
+                      <Button variant="outline" disabled>Cannot Generate Guide</Button>
+                    </div>
+                  ) : !candidate.metadata?.interviewGuide ? (
+                    <div className="text-center py-10">
+                      <p className="text-muted-foreground mb-4">Generate a targeted interview guide to probe this candidate's specific weaknesses.</p>
+                      <Button onClick={handleGenerateInterviewGuide} disabled={generatingGuide}>
+                        {generatingGuide ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileQuestion className="mr-2 h-4 w-4" />}
+                        Generate Guide
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {candidate.metadata.interviewGuide.map((q: any, idx: number) => (
+                        <div key={idx} className="bg-white dark:bg-gray-900 border rounded-lg p-5">
+                          <h4 className="font-semibold text-lg mb-2">Q{idx + 1}. {q.question}</h4>
+                          <div className="mt-3 text-sm space-y-3">
+                            <div className="flex gap-2">
+                              <span className="font-medium text-amber-600 dark:text-amber-400 shrink-0">Why ask this:</span>
+                              <span className="text-muted-foreground">{q.reason}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              <span className="font-medium text-blue-600 dark:text-blue-400 shrink-0">What to look for:</span>
+                              <span className="text-muted-foreground">{q.whatToLookFor}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           ) : (
             <>

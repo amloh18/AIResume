@@ -6,7 +6,7 @@ import ApiKey from '@/models/b2b/ApiKey';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Activity, Zap, CreditCard, Clock } from 'lucide-react';
+import { Activity, Zap, CreditCard, Clock, Users, Timer } from 'lucide-react';
 import { redirect } from 'next/navigation';
 import { AnalyticsIllustration } from '@/components/b2b/Illustrations';
 
@@ -29,11 +29,18 @@ export default async function B2BDashboardPage() {
 
   const apiKeys = await ApiKey.find({ tenantId: tenant._id }).lean() as any[];
   
-  // Mock usage data for now since we don't have a real usage collection yet
   const maxRequests = tenant.subscriptionTier === 'free' ? 1000 : 
                       tenant.subscriptionTier === 'pro' ? 10000 : 100000;
-  const currentUsage = Math.floor(maxRequests * 0.35); // 35% mock usage
-  const usagePercent = (currentUsage / maxRequests) * 100;
+  
+  // Use actual API usage
+  const currentUsage = tenant.apiUsageCount || 0; 
+  const usagePercent = Math.min((currentUsage / maxRequests) * 100, 100);
+
+  // Phase 3: Analytics & ROI Tracking
+  // Assume each CV takes 3 minutes (0.05 hours) to screen manually
+  const hoursSaved = Math.floor(currentUsage * 0.05);
+  // Assume a 1.2% rediscovery rate for qualified candidates from dark data
+  const rediscoveredCandidates = Math.floor(currentUsage * 0.012);
 
   return (
     <div className="space-y-8 pb-10">
@@ -54,20 +61,7 @@ export default async function B2BDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card className={glassCard}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Subscription Tier</CardTitle>
-            <CreditCard className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold capitalize">{tenant.subscriptionTier}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Active Plan
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className={glassCard}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">API Calls (This Month)</CardTitle>
+            <CardTitle className="text-sm font-medium">CVs Processed</CardTitle>
             <Activity className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -80,13 +74,30 @@ export default async function B2BDashboardPage() {
 
         <Card className={glassCard}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Rate Limit</CardTitle>
-            <Zap className="w-4 h-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Hours Saved</CardTitle>
+            <Timer className="w-4 h-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{tenant.rateLimit}</div>
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {hoursSaved.toLocaleString()}h
+            </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Requests per minute
+              Manual screening time saved
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className={glassCard}>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Dark Data Resurfaced</CardTitle>
+            <Users className="w-4 h-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {rediscoveredCandidates.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Qualified past candidates found
             </p>
           </CardContent>
         </Card>

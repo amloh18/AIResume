@@ -2,6 +2,7 @@ import React from 'react';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import ATSIntegrationsManager from '@/components/b2b/ATSIntegrationsManager';
 
 const glassCard = "bg-white/40 dark:bg-black/40 backdrop-blur-xl border-white/40 dark:border-white/10 shadow-lg";
 
@@ -36,6 +37,12 @@ export default async function SettingsPage() {
             Manage your tenant configuration and team members.
           </p>
         </div>
+      </div>
+
+      <div className="mt-8 mb-4">
+        <h2 className="text-2xl font-bold tracking-tight">ATS Integrations</h2>
+        <p className="text-muted-foreground mt-1 mb-6">Connect your Applicant Tracking Systems to automatically parse and score incoming candidates.</p>
+        <ATSIntegrationsManager />
       </div>
 
       <Card className={glassCard}>

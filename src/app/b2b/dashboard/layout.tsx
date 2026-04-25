@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import B2BSidebar from '@/components/b2b/B2BSidebar';
 import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
+import B2BMobileHeader from '@/components/b2b/B2BMobileHeader';
 
 export const metadata = {
   title: 'B2B Dashboard - CVCircle',
@@ -33,7 +34,8 @@ export default async function B2BDashboardLayout({
         <B2BSidebar userRole={user.b2b.role} />
         
         <div className="flex-1 flex flex-col overflow-hidden">
-          <main className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-black/50 p-6">
+          <B2BMobileHeader userRole={user.b2b.role} />
+          <main className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-black/50 p-4 md:p-6">
             <div className="max-w-7xl mx-auto">
               {children}
             </div>
