@@ -15,9 +15,15 @@ const adminRoutes = [
   '/admin',
 ]
 
+const b2bRoutes = [
+  '/b2b',
+]
+
 const publicRoutes = [
   '/',
   '/sign-in',
+  '/b2b/login', // New business login
+  '/admin/login', // New admin login
   '/custom-signin', // Custom sign-in page
   '/sign-up',
   '/auth/verify-email',
@@ -43,6 +49,10 @@ const isAdminRoute = (req: NextRequest) => {
 
 const isPublicRoute = (req: NextRequest) => {
   return publicRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
+}
+
+const isB2BRoute = (req: NextRequest) => {
+  return b2bRoutes.some((route) => req.nextUrl.pathname.startsWith(route))
 }
 
 export default async function middleware(req: NextRequest) {
@@ -85,6 +95,7 @@ export default async function middleware(req: NextRequest) {
       '/api/public',
       '/api/webhooks',
       '/api/health',
+      '/api/v1/b2b', // B2B API routes handle their own auth via API Keys
     ];
     
     if (publicApiRoutes.some(route => pathname.startsWith(route))) {
@@ -131,12 +142,12 @@ export default async function middleware(req: NextRequest) {
   // Protect admin routes with special authorization
   if (isAdminRoute(req)) {
     if (!isAuth) {
-      log.warn('Unauthorized admin access attempt', { 
+      log.warn('Unauthenticated admin access attempt', { 
         pathname,
         ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
       });
-      // Pass through so the client-side AuthGuard can pop up the modal
-      return NextResponse.next();
+      // Redirect to dedicated admin login
+      return NextResponse.redirect(new URL('/admin/login', req.url));
     }
 
     // Check if user has admin role
@@ -148,6 +159,9 @@ export default async function middleware(req: NextRequest) {
         role: token.role,
         type: token.type || 'none',
       });
+      if (token.isB2b) {
+        return NextResponse.redirect(new URL('/b2b/dashboard', req.url))
+      }
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
@@ -159,12 +173,47 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
+  // Protect B2B routes with special authorization
+  if (isB2BRoute(req)) {
+    if (!isAuth) {
+      log.warn('Unauthenticated B2B access attempt', { 
+        pathname,
+        ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+      });
+      // Redirect to dedicated B2B login
+      return NextResponse.redirect(new URL('/b2b/login', req.url));
+    }
+    
+    // Check if user is B2B
+    const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+    if (!token.isB2b) {
+      log.warn('Insufficient permissions for B2B access', { pathname, userId: token.id });
+      if (isUserAdmin) {
+        return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+      }
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+    
+    // Specific B2B tenant check is handled by the B2B layout.tsx
+    return NextResponse.next();
+  }
+
   // Protect routes that require authentication
   if (isProtectedRoute(req)) {
     if (!isAuth) {
-      log.debug('Unauthenticated access to protected route, passing to client Auth Modal', { pathname });
-      // Pass through to let client-side Auth Modal handle it
-      return NextResponse.next()
+      log.debug('Unauthenticated access to protected route, redirecting to login', { pathname });
+      return NextResponse.redirect(new URL('/sign-in', req.url));
+    }
+
+    // Enforce dashboard isolation: Admins and B2B users shouldn't access Consumer routes
+    const isUserAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
+    if (isUserAdmin) {
+      log.debug('Admin attempted to access consumer route, redirecting', { pathname });
+      return NextResponse.redirect(new URL('/admin/dashboard', req.url));
+    }
+    if (token.isB2b) {
+      log.debug('B2B user attempted to access consumer route, redirecting', { pathname });
+      return NextResponse.redirect(new URL('/b2b/dashboard', req.url));
     }
 
     // For dashboard routes, check for expired subscription context

@@ -38,7 +38,6 @@ export default function BusinessPage() {
       <CardNav 
         logo="CVCircle"
         links={navLinks}
-        onCtaClick={() => router.push('/sign-in')}
       />
       
       <main className="pt-32">

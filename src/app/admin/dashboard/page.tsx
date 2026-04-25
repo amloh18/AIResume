@@ -76,12 +76,12 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      window.location.href = '/sign-in';
+      window.location.href = '/admin/login';
       return;
     }
 
     if (status === 'authenticated' && !isAdmin) {
-      window.location.href = '/sign-in';
+      window.location.href = '/dashboard';
       return;
     }
 

@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { Menu, X } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import './CardNav.css';
 
 interface SubmenuItem {
@@ -42,6 +42,8 @@ const CardNav = ({
   const [hoveredLink, setHoveredLink] = useState<string | null>(null);
   const navRef = useRef<HTMLElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
+  const isBusinessRoute = pathname === '/business';
 
   // Determine if any submenu is currently open
   const isAnySubmenuOpen = hoveredLink !== null;
@@ -49,6 +51,8 @@ const CardNav = ({
   const handleCtaClick = () => {
     if (onCtaClick) {
       onCtaClick();
+    } else if (isBusinessRoute) {
+      router.push('/b2b/login?callbackUrl=%2Fb2b%2Fdashboard');
     } else {
       // Default action - route to sign in page
       router.push('/sign-in');
@@ -96,9 +100,12 @@ const CardNav = ({
             <div className="logo-image-wrapper">
               <Logo size="md" showText={false} />
             </div>
-            <span className="logo-text" aria-label={logo}>
+            <span className="logo-text relative" aria-label={logo}>
               <span className="logo-cv">CV</span>
               <span className="logo-circle">Circle</span>
+              {isBusinessRoute && (
+                <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
+              )}
             </span>
           </button>
 
@@ -158,13 +165,15 @@ const CardNav = ({
           </div>
 
           <div className="nav-actions flex items-center h-full">
-            <button
-              type="button"
-              className="card-nav-business-button hidden md:flex h-[40px]"
-              onClick={() => scrollToSection('/business', true)}
-            >
-              Business
-            </button>
+            {!isBusinessRoute && (
+              <button
+                type="button"
+                className="card-nav-business-button hidden md:flex h-[40px]"
+                onClick={() => scrollToSection('/business', true)}
+              >
+                Business
+              </button>
+            )}
 
             <button
               type="button"
@@ -187,14 +196,17 @@ const CardNav = ({
         </div>
       </nav>
       
-      {/* Mobile Menu Dropdown */}
+            {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div className="mobile-menu-dropdown">
           <div className="mobile-menu-content">
             {links.map((link, index) => {
+              // @ts-ignore
               const sectionId = link.href.startsWith('#') ? link.href.substring(1) : null;
-              const isCurrentSection = sectionId === currentSection;
-              const shouldHide = !isAtHero && isCurrentSection;
+              // @ts-ignore
+              const isCurrentSection = typeof currentSection !== 'undefined' && sectionId === currentSection;
+              // @ts-ignore
+              const shouldHide = typeof isAtHero !== 'undefined' && !isAtHero && isCurrentSection;
               
               return (
                 <button
@@ -210,13 +222,16 @@ const CardNav = ({
                 </button>
               );
             })}
-            <button
-              type="button"
-              className="mobile-cta-button mb-4"
-              onClick={() => scrollToSection('/business', true)}
-            >
-              Business
-            </button>
+            
+            {!isBusinessRoute && (
+              <button
+                type="button"
+                className="mobile-cta-button mb-4"
+                onClick={() => scrollToSection('/business', true)}
+              >
+                Business
+              </button>
+            )}
 
             <button
               type="button"

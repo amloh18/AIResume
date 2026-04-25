@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Logo from '@/components/ui/Logo';
 import {
-  LayoutDashboard, BarChart3, Users, Settings, LogOut, ArrowLeft, Activity, Mail, Database, CreditCard, Shield, Menu, X, Sparkles, FileText, MessageSquare, Bell
+  LayoutDashboard, BarChart3, Users, Settings, LogOut, ArrowLeft, Activity, Mail, Database, CreditCard, Shield, Menu, X, Sparkles, FileText, MessageSquare, Bell, Briefcase, UserCircle
 } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -65,9 +65,15 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
       ]
     },
     {
+      title: 'PORTALS',
+      items: [
+        { id: 'consumer', label: 'Consumer Dashboard', icon: UserCircle, action: () => router.push('/dashboard') },
+        { id: 'b2b', label: 'B2B Gateway', icon: Briefcase, action: () => router.push('/b2b/dashboard') },
+      ]
+    },
+    {
       title: 'GENERAL',
       items: [
-        { id: 'back', label: 'Back to Site', icon: ArrowLeft, action: () => router.push('/') },
         { id: 'logout', label: 'Logout', icon: LogOut, action: handleSignOut },
       ]
     }

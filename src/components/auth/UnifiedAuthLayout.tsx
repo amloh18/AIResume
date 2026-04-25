@@ -29,8 +29,9 @@ export default function UnifiedAuthLayout({
   showBackButton = false,
   backHref = '/',
   backText = 'Back to Home',
-  isModal = false
-}: UnifiedAuthLayoutProps & { isModal?: boolean }) {
+  isModal = false,
+  variant = 'default'
+}: UnifiedAuthLayoutProps & { isModal?: boolean, variant?: 'default' | 'b2b' | 'admin' }) {
   if (isModal) {
     return (
       <div className="w-full p-6 sm:p-8 bg-white dark:bg-[#141810]">
@@ -38,6 +39,133 @@ export default function UnifiedAuthLayout({
           <Logo size="lg" showText={true} theme="auto" />
         </div>
         {children}
+      </div>
+    );
+  }
+
+  if (variant === 'admin') {
+    return (
+      <div className="min-h-screen flex bg-gray-50 dark:bg-slate-900">
+        {/* Left Side - 50% - Admin Branding */}
+        <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden bg-white dark:bg-slate-950 border-r border-gray-200 dark:border-white/5 items-center justify-center">
+          {/* Cyber grid / technical background accent */}
+          <div className="absolute inset-0 opacity-[0.03] dark:opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 via-transparent to-transparent opacity-50" />
+          
+          <div className="relative z-10 flex flex-col w-full p-12 max-w-2xl">
+            <div className="flex items-center gap-3 mb-16 drop-shadow-sm">
+              <Logo size="lg" showText={true} theme="auto" />
+              <span className="px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">
+                System Admin
+              </span>
+            </div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
+                Central <br/>
+                <span className="text-indigo-600 dark:text-indigo-400">Command Center.</span>
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-400 font-medium">
+                Manage users, monitor metrics, and control system health.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Right Side - Auth Form */}
+        <div className="w-full lg:basis-1/2 lg:shrink-0 lg:grow-0 flex items-center justify-center px-4 py-12 relative">
+          <div className="w-full max-w-md">
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-xl border border-gray-200 dark:border-white/10 shadow-2xl p-8"
+            >
+              <div className="mb-8 lg:hidden flex items-center justify-center gap-3">
+                <Logo size="md" showText={true} theme="auto" />
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">
+                  System Admin
+                </span>
+              </div>
+              <div className="text-center">
+                {children}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (variant === 'b2b') {
+    return (
+      <div className="min-h-screen flex bg-gray-50 dark:bg-[#0A0A0A]">
+        {/* Left Side - 50% - B2B Branding */}
+        <div className="hidden lg:flex basis-1/2 shrink-0 grow-0 relative overflow-hidden bg-white dark:bg-black border-r border-gray-200 dark:border-white/10 items-center justify-center">
+          {/* Glassmorphism accent */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#80FF00]/10 via-transparent to-transparent opacity-50" />
+          
+          <div className="relative z-10 flex flex-col w-full p-12 max-w-2xl">
+            <div className="flex items-center gap-3 mb-16 drop-shadow-sm">
+              <Logo size="lg" showText={true} theme="auto" />
+              <span className="px-2.5 py-1 text-xs font-semibold bg-[#80FF00]/20 text-[#4C9900] dark:text-[#80FF00] rounded-full border border-[#80FF00]/30">
+                B2B Gateway
+              </span>
+            </div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
+              <h1 className="text-5xl font-bold tracking-tight text-gray-900 dark:text-white mb-6">
+                Intelligent ATS <br/>
+                <span className="text-[#5AB300] dark:text-[#80FF00]">Scoring Engine.</span>
+              </h1>
+              <p className="text-xl text-gray-600 dark:text-gray-400 font-medium">
+                Seamless API integration and visual dashboard for enterprise teams.
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Right Side - Auth Form */}
+        <div className="w-full lg:basis-1/2 lg:shrink-0 lg:grow-0 flex items-center justify-center px-4 py-12 relative">
+          {showBackButton && (
+            <div className="absolute top-8 left-8">
+              <Link
+                href={backHref}
+                className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-white/60 dark:hover:text-white transition-colors duration-200"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span className="text-sm">{backText}</span>
+              </Link>
+            </div>
+          )}
+
+          <div className="w-full max-w-md">
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="bg-white/60 dark:bg-black/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-white/10 shadow-2xl p-8"
+            >
+              <div className="mb-8 lg:hidden flex items-center justify-center gap-3">
+                <Logo size="md" showText={true} theme="auto" />
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#80FF00]/20 text-[#4C9900] dark:text-[#80FF00] rounded-full border border-[#80FF00]/30">
+                  B2B Gateway
+                </span>
+              </div>
+              <div className="text-center">
+                {children}
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     );
   }

@@ -4,6 +4,7 @@ import { EnhancedResumeJSON } from '@/types/enhanced-resume-schema';
 
 export interface ICV extends Document {
   userId: mongoose.Types.ObjectId; // MongoDB ObjectId linking to User collection
+  tenantId?: mongoose.Types.ObjectId; // B2B Tenant ID for isolation
   title: string;
   cvData: UnifiedCVDataStructure; // Using unified schema (legacy)
   resumeData?: EnhancedResumeJSON; // NEW: Enhanced resume data with unique IDs
@@ -75,6 +76,11 @@ const cvSchema = new Schema<ICV>({
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  tenantId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Tenant',
+    index: true // Fast lookup for B2B queries
   },
   title: {
     type: String,

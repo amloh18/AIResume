@@ -12,7 +12,8 @@ import {
   Sun,
   Moon,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Briefcase
 } from 'lucide-react';
 import UserAvatar from './UserAvatar';
 import { useTheme } from '@/lib/contexts/ThemeContext';
@@ -27,6 +28,10 @@ interface UserAvatarDropdownProps {
     subscription?: {
       planName: string;
       status: string;
+    };
+    b2b?: {
+      tenantId: string | any;
+      role: string;
     };
   };
   openUpward?: boolean;
@@ -301,6 +306,23 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                   Settings
                 </span>
               </button>
+
+              {user?.b2b?.tenantId && (
+                <button
+                  data-dropdown-content
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOpen(false);
+                    router.push('/b2b/dashboard');
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left cursor-pointer"
+                >
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    B2B Dashboard
+                  </span>
+                </button>
+              )}
 
               <div className="flex items-center justify-between px-4 py-2.5" data-dropdown-content>
                 <div className="flex items-center gap-3">

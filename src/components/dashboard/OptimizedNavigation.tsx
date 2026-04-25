@@ -549,6 +549,31 @@ const OptimizedNavigation: React.FC = () => {
         </div>
       </nav>
 
+      {/* B2B Dashboard Button - Show for B2B users and Admins */}
+      {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
+        <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
+          <motion.button
+            onClick={() => {
+              if (isMobileMenuOpen) {
+                setIsOpen(false);
+              }
+              router.push('/b2b/dashboard');
+            }}
+            className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20`}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Briefcase className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
+            <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
+              <div className="text-base lg:text-sm font-medium truncate">B2B Gateway</div>
+              <div className="text-sm lg:text-xs opacity-80 truncate mt-0.5">
+                Switch to Business Portal
+              </div>
+            </div>
+          </motion.button>
+        </div>
+      )}
+
       {/* Admin Button - Only show for admin users */}
       {isAdmin && (
         <div className={`px-6 pb-4 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
@@ -1062,6 +1087,8 @@ const OptimizedNavigation: React.FC = () => {
                     </div>
                   </motion.button>
 
+                  {/* B2B Dashboard (Removed from here, now in bottom section) */}
+                  
                   {/* Theme - Icon button for xl, toggle for expanded desktop */}
                   {/* xl: Icon button only */}
                   <motion.button

@@ -13,7 +13,7 @@ import { generateAndSendTwoFactorCode, isTwoFactorEnabled } from '@/lib/services
  */
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, portal } = await request.json();
 
     if (!email || !password) {
       return NextResponse.json(
@@ -24,6 +24,39 @@ export async function POST(request: NextRequest) {
 
     // Authenticate user
     const authResult = await UserService.authenticateUser(email, password);
+
+    if (authResult.user) {
+      // Enforce portal isolation
+      const role = authResult.user.role;
+      // Use any to bypass strict typing issues with mongoose lean documents
+      const isB2b = !!(authResult.user as any).b2b?.tenantId || !!(authResult.user as any).isB2b;
+      const isAdmin = role === 'admin' || role === 'superadmin';
+
+      if (portal === 'admin' && !isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized. Please use the consumer login.', code: 'UNAUTHORIZED_PORTAL' },
+          { status: 403 }
+        );
+      }
+      if (portal === 'b2b' && !isB2b) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized. Please use the consumer login.', code: 'UNAUTHORIZED_PORTAL' },
+          { status: 403 }
+        );
+      }
+      if (portal === 'default' && isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized. Please use the admin login.', code: 'UNAUTHORIZED_PORTAL' },
+          { status: 403 }
+        );
+      }
+      if (portal === 'default' && isB2b && !isAdmin) {
+        return NextResponse.json(
+          { success: false, error: 'Unauthorized. Please use the B2B login.', code: 'UNAUTHORIZED_PORTAL' },
+          { status: 403 }
+        );
+      }
+    }
 
     if (!authResult.user || authResult.error) {
       // Parse error message to determine error code for frontend handling
