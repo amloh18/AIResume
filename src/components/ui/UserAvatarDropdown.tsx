@@ -319,7 +319,7 @@ const UserAvatarDropdown: React.FC<UserAvatarDropdownProps> = ({ user, openUpwar
                 >
                   <Briefcase className="h-4 w-4 text-primary" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">
-                    B2B Dashboard
+                    HR Dashboard
                   </span>
                 </button>
               )}

@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Download, Mail, Phone, MapPin, Briefcase, GraduationCap, Code, FileText, CheckCircle, XCircle, FileQuestion, Calendar } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Loader2, ArrowLeft, Download, Mail, Phone, MapPin, Briefcase, GraduationCap, Code, FileText, CheckCircle, XCircle, FileQuestion, Calendar, Trash2, Share2, Star, MessageSquare, Send, Banknote } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
 import CVPreviewContent from '@/components/cv-preview/CVPreviewContent';
@@ -21,9 +23,27 @@ export default function CandidateDetailPage() {
   const [candidate, setCandidate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'analysis' | 'preview' | 'interview'>('preview');
+  const [activeTab, setActiveTab] = useState<'analysis' | 'preview' | 'interview' | 'scorecard' | 'communication' | 'offer'>('preview');
 
   const [generatingGuide, setGeneratingGuide] = useState(false);
+  
+  // New States
+  const [sharing, setSharing] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+  
+  // Scorecard State
+  const [rating, setRating] = useState(0);
+  const [notes, setNotes] = useState('');
+  const [savingScorecard, setSavingScorecard] = useState(false);
+
+  // Communication State
+  const [message, setMessage] = useState('');
+  const [sendingMsg, setSendingMsg] = useState(false);
+
+  // Offer State
+  const [offerSalary, setOfferSalary] = useState('');
+  const [offerStartDate, setOfferStartDate] = useState('');
+  const [savingOffer, setSavingOffer] = useState(false);
 
   const fetchCandidate = async () => {
     try {
@@ -32,6 +52,14 @@ export default function CandidateDetailPage() {
 
       if (data.success) {
         setCandidate(data.data);
+        if (data.data.metadata?.humanScorecard) {
+          setRating(data.data.metadata.humanScorecard.rating || 0);
+          setNotes(data.data.metadata.humanScorecard.notes || '');
+        }
+        if (data.data.metadata?.offerDetails) {
+          setOfferSalary(data.data.metadata.offerDetails.salary || '');
+          setOfferStartDate(data.data.metadata.offerDetails.startDate || '');
+        }
       } else {
         toast.error(data.error || 'Failed to fetch candidate');
         router.push('/b2b/dashboard/roster');
@@ -104,6 +132,116 @@ export default function CandidateDetailPage() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this candidate?')) return;
+    
+    try {
+      const res = await fetch(`/api/b2b/roster/${candidateId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success('Candidate deleted successfully');
+        router.push('/b2b/dashboard/roster');
+      } else {
+        toast.error(data.error || 'Failed to delete candidate');
+      }
+    } catch (err) {
+      toast.error('An error occurred');
+    }
+  };
+
+  const handleShare = async () => {
+    setSharing(true);
+    try {
+      const res = await fetch(`/api/b2b/roster/${candidateId}/share`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        const url = `${window.location.origin}/shared/candidate/${data.data.token}`;
+        setShareUrl(url);
+        navigator.clipboard.writeText(url);
+        toast.success('Share link copied to clipboard!');
+      } else {
+        toast.error(data.error || 'Failed to generate link');
+      }
+    } catch (err) {
+      toast.error('An error occurred');
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleSaveScorecard = async () => {
+    setSavingScorecard(true);
+    try {
+      const res = await fetch(`/api/b2b/roster/${candidateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: { humanScorecard: { rating, notes } } })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Scorecard saved successfully');
+        setCandidate(data.data);
+      }
+    } catch (err) {
+      toast.error('Failed to save scorecard');
+    } finally {
+      setSavingScorecard(false);
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!message.trim()) return;
+    setSendingMsg(true);
+    try {
+      const newComm = {
+        id: Date.now().toString(),
+        type: 'email',
+        message,
+        date: new Date(),
+        sentBy: 'HR Team'
+      };
+      const existingComms = candidate.metadata?.communications || [];
+      const res = await fetch(`/api/b2b/roster/${candidateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: { communications: [newComm, ...existingComms] } })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Message sent & logged');
+        setCandidate(data.data);
+        setMessage('');
+      }
+    } catch (err) {
+      toast.error('Failed to send message');
+    } finally {
+      setSendingMsg(false);
+    }
+  };
+
+  const handleGenerateOffer = async () => {
+    setSavingOffer(true);
+    try {
+      const res = await fetch(`/api/b2b/roster/${candidateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ metadata: { offerDetails: { salary: offerSalary, startDate: offerStartDate, status: 'draft' } } })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Offer details saved');
+        setCandidate(data.data);
+      }
+    } catch (err) {
+      toast.error('Failed to save offer');
+    } finally {
+      setSavingOffer(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -150,12 +288,24 @@ export default function CandidateDetailPage() {
               <SelectItem value="hired">Hired</SelectItem>
             </SelectContent>
           </Select>
+          <Button variant="outline" className="gap-2 bg-primary/10 text-primary border-primary/20 hover:bg-primary/20" onClick={handleShare} disabled={sharing}>
+            {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
+            Share Profile
+          </Button>
           {candidate.resumeUrl && (
             <Button variant="outline" onClick={() => window.open(candidate.resumeUrl, '_blank')}>
               <Download className="h-4 w-4 mr-2" />
               Original CV
             </Button>
           )}
+          <Button 
+            variant="outline" 
+            className="gap-2 text-destructive border-destructive hover:bg-destructive/10"
+            onClick={handleDelete}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -254,10 +404,10 @@ export default function CandidateDetailPage() {
 
         {/* Right Column - Analysis & Experience or Preview */}
         <div className="md:col-span-2 space-y-6">
-          <div className="flex items-center gap-2 border-b dark:border-gray-800 pb-2">
+          <div className="flex items-center gap-2 border-b dark:border-gray-800 pb-2 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('preview')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                 activeTab === 'preview' 
                   ? 'bg-primary/10 text-primary border-b-2 border-primary' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -267,17 +417,17 @@ export default function CandidateDetailPage() {
             </button>
             <button
               onClick={() => setActiveTab('analysis')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap ${
                 activeTab === 'analysis' 
                   ? 'bg-primary/10 text-primary border-b-2 border-primary' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
               }`}
             >
-              Analysis & Extracted Data
+              Extracted Data
             </button>
             <button
               onClick={() => setActiveTab('interview')}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 ${
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
                 activeTab === 'interview' 
                   ? 'bg-primary/10 text-primary border-b-2 border-primary' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
@@ -287,6 +437,36 @@ export default function CandidateDetailPage() {
               {candidate.metadata?.interviewGuide && (
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('scorecard')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'scorecard' 
+                  ? 'bg-primary/10 text-primary border-b-2 border-primary' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              Scorecard
+            </button>
+            <button
+              onClick={() => setActiveTab('communication')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'communication' 
+                  ? 'bg-primary/10 text-primary border-b-2 border-primary' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              Communication
+            </button>
+            <button
+              onClick={() => setActiveTab('offer')}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors flex items-center gap-2 whitespace-nowrap ${
+                activeTab === 'offer' 
+                  ? 'bg-primary/10 text-primary border-b-2 border-primary' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+              }`}
+            >
+              Offer
             </button>
           </div>
 
@@ -353,6 +533,155 @@ export default function CandidateDetailPage() {
                       ))}
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </div>
+          ) : activeTab === 'scorecard' ? (
+            <div className="space-y-6">
+              <Card className={`border-primary/20 shadow-sm ${glassCard}`}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Star className="h-5 w-5 text-primary" /> Human Scorecard
+                  </CardTitle>
+                  <CardDescription>Leave your evaluation notes after interviewing the candidate.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Overall Rating</label>
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onClick={() => setRating(star)}
+                          className={`p-1 rounded-md transition-colors ${rating >= star ? 'text-amber-500' : 'text-gray-300 hover:text-amber-300'}`}
+                        >
+                          <Star className={`w-8 h-8 ${rating >= star ? 'fill-current' : ''}`} />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Interview Notes</label>
+                    <Textarea 
+                      placeholder="What were their strengths? Any red flags?" 
+                      className="min-h-[200px]"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleSaveScorecard} disabled={savingScorecard}>
+                    {savingScorecard ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                    Save Scorecard
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : activeTab === 'communication' ? (
+            <div className="space-y-6">
+              <Card className={`shadow-sm ${glassCard}`}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" /> Communication History
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-3 bg-muted/30 p-4 rounded-xl border">
+                    <label className="text-sm font-medium">Send Email / Add Note</label>
+                    <Textarea 
+                      placeholder="Draft an email or log a call..." 
+                      className="min-h-[100px] bg-background"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                    />
+                    <div className="flex justify-end">
+                      <Button onClick={handleSendMessage} disabled={sendingMsg || !message.trim()} className="gap-2">
+                        {sendingMsg ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        Send Message
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t dark:border-gray-800">
+                    <h4 className="text-sm font-semibold">History</h4>
+                    {(!candidate.metadata?.communications || candidate.metadata.communications.length === 0) ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No communications logged yet.</p>
+                    ) : (
+                      <div className="space-y-4">
+                        {candidate.metadata.communications.map((comm: any, i: number) => (
+                          <div key={i} className="flex gap-4">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0 mt-1">
+                              <Mail className="w-5 h-5" />
+                            </div>
+                            <div className="flex-1 bg-white dark:bg-gray-900 border rounded-xl p-4 shadow-sm">
+                              <div className="flex justify-between items-start mb-2">
+                                <span className="font-semibold text-sm">{comm.sentBy}</span>
+                                <span className="text-xs text-muted-foreground">{new Date(comm.date).toLocaleString()}</span>
+                              </div>
+                              <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{comm.message}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : activeTab === 'offer' ? (
+            <div className="space-y-6">
+              <Card className={`shadow-sm ${glassCard}`}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Banknote className="h-5 w-5 text-primary" /> Offer Letter Generator
+                  </CardTitle>
+                  <CardDescription>Draft an offer and specify compensation details.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Proposed Salary</label>
+                      <Input 
+                        placeholder="$120,000 / year" 
+                        value={offerSalary}
+                        onChange={(e) => setOfferSalary(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">Proposed Start Date</label>
+                      <Input 
+                        type="date"
+                        value={offerStartDate}
+                        onChange={(e) => setOfferStartDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Mock Offer Letter Preview */}
+                  <div className="mt-8 p-8 border rounded-xl bg-white dark:bg-gray-950 font-serif text-gray-800 dark:text-gray-200">
+                    <div className="text-center mb-8">
+                      <h2 className="text-2xl font-bold">Offer of Employment</h2>
+                    </div>
+                    <p className="mb-4">Dear {candidate.firstName},</p>
+                    <p className="mb-4">
+                      We are thrilled to offer you the position of <strong>{candidate.metadata?.jobTitle || 'Professional'}</strong>. 
+                      Based on your excellent interviews and AI-verified skills in {cv?.skills?.[0]?.keywords?.slice(0, 2).join(', ') || 'your field'}, 
+                      we believe you will be a fantastic addition to our team.
+                    </p>
+                    <p className="mb-4">
+                      <strong>Compensation:</strong> {offerSalary || '[Salary]'}
+                      <br/>
+                      <strong>Start Date:</strong> {offerStartDate ? new Date(offerStartDate).toLocaleDateString() : '[Date]'}
+                    </p>
+                    <p>We look forward to welcoming you.</p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t">
+                    <Button variant="outline">Preview PDF</Button>
+                    <Button onClick={handleGenerateOffer} disabled={savingOffer}>
+                      {savingOffer ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                      Save Offer Details
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>

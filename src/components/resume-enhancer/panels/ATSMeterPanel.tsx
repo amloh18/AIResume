@@ -3,7 +3,8 @@ import { useATS } from '@/contexts/ATSContext';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle, ChevronRight, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScore';
+import { AnimatedScore } from '@/components/ui/AnimatedScore';
+import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 
 interface ATSMeterPanelProps {
@@ -329,12 +330,12 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
         </div>
       )}
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <MetricCard title="Keywords" value={metrics.keywords} />
-        <MetricCard title="Impact words" value={metrics.impactWords} />
-        <MetricCard title="ATS Format" value={metrics.atsFormat} />
-        <MetricCard title="Readability" value={metrics.readability} />
+      {/* Metrics Breakdown */}
+      <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10 mb-6 space-y-4">
+        <ScoreBreakdown label="Keywords" value={metrics.keywords} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
+        <ScoreBreakdown label="Impact words" value={metrics.impactWords} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
+        <ScoreBreakdown label="ATS Format" value={metrics.atsFormat} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
+        <ScoreBreakdown label="Readability" value={metrics.readability} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
       </div>
 
       {/* Formatting Feedback (Live Offline Checks) */}
@@ -518,30 +519,5 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
   );
 };
 
-const MetricCard = ({ title, value }: { title: string; value: number }) => {
-  const safeValue = Math.max(0, Math.min(100, Math.round(value)));
-  const color = safeValue >= 75 ? '#10b981' : safeValue >= 50 ? '#eab308' : '#ef4444';
-  const darkColor = safeValue >= 75 ? '#80FF00' : safeValue >= 50 ? '#eab308' : '#ef4444';
-  
-  return (
-    <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 border border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-      <div className="flex justify-between items-end mb-2.5">
-        <span className="text-xs text-gray-600 dark:text-gray-300 font-medium tracking-wide">{title}</span>
-        <span className="text-sm font-bold text-gray-900 dark:text-white">{safeValue}%</span>
-      </div>
-      <div className="w-full h-1.5 bg-gray-200 dark:bg-black/50 rounded-full overflow-hidden border border-gray-300 dark:border-white/5">
-        <div 
-          className="h-full rounded-full transition-all duration-1000 ease-out"
-          style={{ width: `${safeValue}%`, backgroundColor: 'var(--metric-color, #10b981)', boxShadow: `0 0 10px var(--metric-color, #10b981)40` }}
-          ref={(el) => {
-            if (el) {
-              el.style.setProperty('--metric-color', document.documentElement.classList.contains('dark') ? darkColor : color);
-            }
-          }}
-        />
-      </div>
-    </div>
-  );
-};
 
 export default ATSMeterPanel;

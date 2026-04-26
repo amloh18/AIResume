@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, Filter, ChevronLeft, ChevronRight, Eye, UploadCloud } from 'lucide-react';
+import { Loader2, Search, Filter, ChevronLeft, ChevronRight, Eye, UploadCloud, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { AICVParser } from '@/lib/services/aiCVParser';
 import { useUnifiedAuth } from '@/lib/hooks/useUnifiedAuth';
@@ -92,6 +92,26 @@ export default function RosterPage() {
       case 'rejected': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
       case 'hired': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
       default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this candidate?')) return;
+    
+    try {
+      const res = await fetch(`/api/b2b/roster/${id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        toast.success('Candidate deleted successfully');
+        fetchCandidates();
+      } else {
+        toast.error(data.error || 'Failed to delete candidate');
+      }
+    } catch (err) {
+      toast.error('An error occurred');
     }
   };
 
@@ -326,14 +346,24 @@ export default function RosterPage() {
                         {format(new Date(candidate.createdAt), 'MMM d, yyyy')}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => router.push(`/b2b/dashboard/roster/${candidate._id}`)}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          View
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => router.push(`/b2b/dashboard/roster/${candidate._id}`)}
+                          >
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            className="text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDelete(candidate._id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))

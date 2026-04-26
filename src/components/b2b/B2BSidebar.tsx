@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { LayoutDashboard, KeyRound, PlaySquare, Settings, LogOut, ArrowLeft, Users, Shield, Menu, X, Briefcase } from 'lucide-react';
+import { LayoutDashboard, KeyRound, PlaySquare, Settings, LogOut, ArrowLeft, Users, Shield, Menu, X, Briefcase, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -38,6 +38,12 @@ export default function B2BSidebar({ userRole }: B2BSidebarProps) {
       href: '/b2b/dashboard/roster',
       icon: Users,
       roles: ['admin', 'recruiter', 'member'],
+    },
+    {
+      name: 'Careers Page',
+      href: '/b2b/dashboard/careers-page',
+      icon: Globe,
+      roles: ['admin', 'recruiter'],
     },
     {
       name: 'API Keys & Webhooks',
@@ -84,9 +90,8 @@ export default function B2BSidebar({ userRole }: B2BSidebarProps) {
         <div className="p-6 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/80">
-              CVCircle B2B
+              CVCircle HR
             </h2>
-            <p className="text-sm text-muted-foreground mt-1 capitalize">{userRole} Portal</p>
           </div>
           <button 
             className="lg:hidden p-2 -mr-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted"

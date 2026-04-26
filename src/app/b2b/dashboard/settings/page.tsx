@@ -3,6 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { redirect } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import ATSIntegrationsManager from '@/components/b2b/ATSIntegrationsManager';
+import TeamManagement from '@/components/b2b/TeamManagement';
 
 const glassCard = "bg-white/40 dark:bg-black/40 backdrop-blur-xl border-white/40 dark:border-white/10 shadow-lg";
 
@@ -45,20 +46,7 @@ export default async function SettingsPage() {
         <ATSIntegrationsManager />
       </div>
 
-      <Card className={glassCard}>
-        <CardHeader>
-          <CardTitle>Team Management</CardTitle>
-          <CardDescription>Invite and manage users who have access to this B2B dashboard.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
-            Team management functionality will be available soon.
-          </p>
-          <button className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md text-sm font-medium hover:bg-secondary/80" disabled>
-            Invite Member
-          </button>
-        </CardContent>
-      </Card>
+      <TeamManagement />
 
       <Card className={glassCard}>
         <CardHeader>

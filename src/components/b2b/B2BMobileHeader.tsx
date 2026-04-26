@@ -16,7 +16,7 @@ export default function B2BMobileHeader({ userRole }: { userRole: string }) {
     if (pathname.startsWith('/b2b/dashboard/api-keys')) return 'API Keys & Webhooks';
     if (pathname.startsWith('/b2b/dashboard/sandbox')) return 'Sandbox UI';
     if (pathname.startsWith('/b2b/dashboard/settings')) return 'Settings';
-    return 'B2B Dashboard';
+    return 'HR Dashboard';
   };
 
   return (
@@ -29,9 +29,6 @@ export default function B2BMobileHeader({ userRole }: { userRole: string }) {
           <Menu className="w-6 h-6" />
         </button>
         <span className="font-semibold">{getPageTitle()}</span>
-      </div>
-      <div className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-md capitalize font-medium">
-        {userRole}
       </div>
     </div>
   );
