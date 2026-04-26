@@ -67,3 +67,10 @@ Thumbs.db
 
 # images
 /public/images/image_asset
+
+# Plans
+*plan*
+plan-*
+
+# Markdown files
+*.md

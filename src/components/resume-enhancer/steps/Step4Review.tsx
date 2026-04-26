@@ -18,7 +18,7 @@ import { getDefaultPaperSize } from '@/lib/services/paperSizeService';
 import type { DateFormatStyle } from '@/lib/utils/textFormatting';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
-import { COVER_LETTER_TEMPLATES } from '@/lib/templates/cover-letter-templates';
+import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch, goToStep } = useResumeEnhancer();
@@ -358,19 +358,19 @@ export default function Step4Review() {
                   <h3 className="text-sm font-bold text-green-500 mb-4">Score Breakdown</h3>
                   {isJourneyCV ? (
                     <div className="space-y-3">
-                      <ScoreBar label="Keyword Match" value={scoreResult?.atsScore?.keywordMatch || 0} max={40} />
-                      <ScoreBar label="Formatting" value={scoreResult?.atsScore?.formatting || 0} max={20} />
-                      <ScoreBar label="Alignment" value={scoreResult?.atsScore?.sectionAlignment || 0} max={15} />
-                      <ScoreBar label="Recency" value={scoreResult?.atsScore?.recency || 0} max={15} />
-                      <ScoreBar label="Contact Info" value={scoreResult?.atsScore?.contactability || 0} max={10} />
+                      <ScoreBreakdown label="Keyword Match" value={scoreResult?.atsScore?.keywordMatch || 0} max={40} />
+                      <ScoreBreakdown label="Formatting" value={scoreResult?.atsScore?.formatting || 0} max={20} />
+                      <ScoreBreakdown label="Alignment" value={scoreResult?.atsScore?.sectionAlignment || 0} max={15} />
+                      <ScoreBreakdown label="Recency" value={scoreResult?.atsScore?.recency || 0} max={15} />
+                      <ScoreBreakdown label="Contact Info" value={scoreResult?.atsScore?.contactability || 0} max={10} />
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      <ScoreBar label="Completeness" value={scoreResult?.cvScore?.completeness || 0} max={25} />
-                      <ScoreBar label="Impact Verbs" value={scoreResult?.cvScore?.impactVerbs || 0} max={20} />
-                      <ScoreBar label="Quantification" value={scoreResult?.cvScore?.quantification || 0} max={20} />
-                      <ScoreBar label="Formatting" value={scoreResult?.cvScore?.formatting || 0} max={15} />
-                      <ScoreBar label="Readability" value={scoreResult?.cvScore?.readability || 0} max={20} />
+                      <ScoreBreakdown label="Completeness" value={scoreResult?.cvScore?.completeness || 0} max={25} />
+                      <ScoreBreakdown label="Impact Verbs" value={scoreResult?.cvScore?.impactVerbs || 0} max={20} />
+                      <ScoreBreakdown label="Quantification" value={scoreResult?.cvScore?.quantification || 0} max={20} />
+                      <ScoreBreakdown label="Formatting" value={scoreResult?.cvScore?.formatting || 0} max={15} />
+                      <ScoreBreakdown label="Readability" value={scoreResult?.cvScore?.readability || 0} max={20} />
                     </div>
                   )}
                 </div>
@@ -722,26 +722,3 @@ export default function Step4Review() {
   );
 }
 
-/**
- * Score bar component for breakdown display
- */
-function ScoreBar({ label, value, max }: { label: string; value: number; max: number }) {
-  const percentage = (value / max) * 100;
-
-  return (
-    <div className="flex items-center gap-4">
-      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-24 truncate">{label}</span>
-      <div className="flex-1 h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-          className="h-full rounded-full bg-[#8bc34a]"
-        />
-      </div>
-      <span className="text-sm font-bold text-gray-500 dark:text-gray-400 w-16 text-right">
-        {value} / {max}
-      </span>
-    </div>
-  );
-}

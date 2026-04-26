@@ -6,8 +6,8 @@ import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
 import B2BMobileHeader from '@/components/b2b/B2BMobileHeader';
 
 export const metadata = {
-  title: 'B2B Dashboard - CVCircle',
-  description: 'Manage your B2B account, API keys, and sandbox.',
+  title: 'HR Dashboard - CVCircle',
+  description: 'Manage your HR account, API keys, and sandbox.',
 };
 
 export default async function B2BDashboardLayout({

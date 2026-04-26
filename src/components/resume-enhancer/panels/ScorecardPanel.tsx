@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import type { AnalysisMode } from '@/lib/utils/analysis-mode';
 import type { ScoreResult, CVScoreBreakdown, ATSScoreBreakdown } from '@/lib/utils/cv-scoring';
+import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 
 // ============================================================================
 // Types
@@ -126,20 +127,6 @@ export default function ScorecardPanel({
         ? (isJourneyCV && scoreResult.atsScore ? scoreResult.atsScore.total : scoreResult.cvScore.total)
         : (atsResult?.score ?? 0);
 
-    const renderMetricBar = (label: string, value: number, max: number, colorClass: string = 'bg-[#80FF00]') => (
-        <div key={label} className="space-y-1">
-            <div className="flex justify-between text-[10px]">
-                <span className="text-white/70">{label}</span>
-                <span className="text-white/90 font-medium">{value}/{max}</span>
-            </div>
-            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                <div
-                    className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
-                    style={{ width: `${Math.min((value / max) * 100, 100)}%` }}
-                />
-            </div>
-        </div>
-    );
 
     const renderScoreRing = (size: string = 'w-24 h-24') => (
         <div className="text-center">
@@ -186,11 +173,11 @@ export default function ScorecardPanel({
             return (
                 <div className="space-y-2">
                     <div className="space-y-1.5">
-                        {renderMetricBar('Keywords (K)', scoreResult.atsScore.keywordMatch, 40, 'bg-[#80FF00]')}
-                        {renderMetricBar('Formatting (F)', scoreResult.atsScore.formatting, 20, 'bg-[#80FF00]')}
-                        {renderMetricBar('Section Alignment (S)', scoreResult.atsScore.sectionAlignment, 15, 'bg-[#80FF00]')}
-                        {renderMetricBar('Recency (R)', scoreResult.atsScore.recency, 15, 'bg-[#80FF00]')}
-                        {renderMetricBar('Contactability (C)', scoreResult.atsScore.contactability, 10, 'bg-[#80FF00]')}
+                        <ScoreBreakdown label="Keywords" value={scoreResult.atsScore.keywordMatch} max={40} compact={true} colorVariant="green" />
+                        <ScoreBreakdown label="Formatting" value={scoreResult.atsScore.formatting} max={20} compact={true} colorVariant="green" />
+                        <ScoreBreakdown label="Alignment" value={scoreResult.atsScore.sectionAlignment} max={15} compact={true} colorVariant="green" />
+                        <ScoreBreakdown label="Recency" value={scoreResult.atsScore.recency} max={15} compact={true} colorVariant="green" />
+                        <ScoreBreakdown label="Contact" value={scoreResult.atsScore.contactability} max={10} compact={true} colorVariant="green" />
                     </div>
                 </div>
             );
@@ -201,11 +188,11 @@ export default function ScorecardPanel({
             return (
                 <div className="space-y-2">
                     <div className="space-y-1.5">
-                        {renderMetricBar('Completeness (C)', cvScore.completeness, 25, 'bg-blue-500')}
-                        {renderMetricBar('Impact Verbs (I)', cvScore.impactVerbs, 20, 'bg-blue-500')}
-                        {renderMetricBar('Quantification (Q)', cvScore.quantification, 20, 'bg-blue-500')}
-                        {renderMetricBar('Formatting (F)', cvScore.formatting, 15, 'bg-blue-500')}
-                        {renderMetricBar('Readability (R)', cvScore.readability, 20, 'bg-blue-500')}
+                        <ScoreBreakdown label="Completeness" value={cvScore.completeness} max={25} compact={true} colorVariant="blue" />
+                        <ScoreBreakdown label="Impact Verbs" value={cvScore.impactVerbs} max={20} compact={true} colorVariant="blue" />
+                        <ScoreBreakdown label="Quantification" value={cvScore.quantification} max={20} compact={true} colorVariant="blue" />
+                        <ScoreBreakdown label="Formatting" value={cvScore.formatting} max={15} compact={true} colorVariant="blue" />
+                        <ScoreBreakdown label="Readability" value={cvScore.readability} max={20} compact={true} colorVariant="blue" />
                     </div>
                 </div>
             );
@@ -283,11 +270,11 @@ export default function ScorecardPanel({
                             <span className="text-xl font-bold text-white">{scoreResult.cvScore.total}</span>
                         </div>
                         <div className="space-y-2">
-                            {renderMetricBar('Completeness (C)', scoreResult.cvScore.completeness, 25, 'bg-blue-500')}
-                            {renderMetricBar('Impact Verbs (I)', scoreResult.cvScore.impactVerbs, 20, 'bg-blue-500')}
-                            {renderMetricBar('Quantification (Q)', scoreResult.cvScore.quantification, 20, 'bg-blue-500')}
-                            {renderMetricBar('Formatting (F)', scoreResult.cvScore.formatting, 15, 'bg-blue-500')}
-                            {renderMetricBar('Readability (R)', scoreResult.cvScore.readability, 20, 'bg-blue-500')}
+                            <ScoreBreakdown label="Completeness" value={scoreResult.cvScore.completeness} max={25} compact={true} colorVariant="blue" />
+                            <ScoreBreakdown label="Impact Verbs" value={scoreResult.cvScore.impactVerbs} max={20} compact={true} colorVariant="blue" />
+                            <ScoreBreakdown label="Quantification" value={scoreResult.cvScore.quantification} max={20} compact={true} colorVariant="blue" />
+                            <ScoreBreakdown label="Formatting" value={scoreResult.cvScore.formatting} max={15} compact={true} colorVariant="blue" />
+                            <ScoreBreakdown label="Readability" value={scoreResult.cvScore.readability} max={20} compact={true} colorVariant="blue" />
                         </div>
                         {scoreResult.cvScore.validityMultiplier < 1 && (
                             <div className="text-xs text-yellow-400 pt-1 border-t border-white/10">
@@ -311,11 +298,11 @@ export default function ScorecardPanel({
                             <span className="text-xl font-bold text-white">{scoreResult.atsScore.total}</span>
                         </div>
                         <div className="space-y-2">
-                            {renderMetricBar('Keywords (K)', scoreResult.atsScore.keywordMatch, 40, 'bg-[#80FF00]')}
-                            {renderMetricBar('Formatting (F)', scoreResult.atsScore.formatting, 20, 'bg-[#80FF00]')}
-                            {renderMetricBar('Section Alignment (S)', scoreResult.atsScore.sectionAlignment, 15, 'bg-[#80FF00]')}
-                            {renderMetricBar('Recency (R)', scoreResult.atsScore.recency, 15, 'bg-[#80FF00]')}
-                            {renderMetricBar('Contactability (C)', scoreResult.atsScore.contactability, 10, 'bg-[#80FF00]')}
+                            <ScoreBreakdown label="Keywords" value={scoreResult.atsScore.keywordMatch} max={40} compact={true} colorVariant="green" />
+                            <ScoreBreakdown label="Formatting" value={scoreResult.atsScore.formatting} max={20} compact={true} colorVariant="green" />
+                            <ScoreBreakdown label="Alignment" value={scoreResult.atsScore.sectionAlignment} max={15} compact={true} colorVariant="green" />
+                            <ScoreBreakdown label="Recency" value={scoreResult.atsScore.recency} max={15} compact={true} colorVariant="green" />
+                            <ScoreBreakdown label="Contact" value={scoreResult.atsScore.contactability} max={10} compact={true} colorVariant="green" />
                         </div>
                         {scoreResult.atsScore.parsabilityMultiplier < 1 && (
                             <div className="text-xs text-yellow-400 pt-1 border-t border-white/10">

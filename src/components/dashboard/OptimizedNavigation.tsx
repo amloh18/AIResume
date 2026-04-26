@@ -549,7 +549,7 @@ const OptimizedNavigation: React.FC = () => {
         </div>
       </nav>
 
-      {/* B2B Dashboard Button - Show for B2B users and Admins */}
+      {/* HR Dashboard Button - Show for B2B users and Admins */}
       {(userData?.b2b?.tenantId || userData?.isB2b || isAdmin) && (
         <div className={`px-6 pb-2 ${isDesktopExpanded ? 'lg:px-4' : 'lg:px-2'}`}>
           <motion.button
@@ -562,10 +562,11 @@ const OptimizedNavigation: React.FC = () => {
             className={`w-full flex items-center gap-4 px-5 py-4 rounded-xl transition-all duration-200 text-left ${isDesktopExpanded ? 'lg:px-4 lg:justify-start' : 'lg:px-3 lg:py-3 lg:justify-center'} bg-[rgb(129,255,0)]/10 text-[#4C9900] dark:text-[rgb(129,255,0)] hover:bg-[rgb(129,255,0)]/20`}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            title={!isDesktopExpanded ? 'HR Dashboard' : undefined}
           >
             <Briefcase className="w-6 h-6 lg:w-5 lg:h-5 flex-shrink-0" />
             <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-              <div className="text-base lg:text-sm font-medium truncate">B2B Gateway</div>
+              <div className="text-base lg:text-sm font-medium truncate">HR Dashboard</div>
               <div className="text-sm lg:text-xs opacity-80 truncate mt-0.5">
                 Switch to Business Portal
               </div>

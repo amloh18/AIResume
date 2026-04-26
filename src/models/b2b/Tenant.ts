@@ -15,6 +15,13 @@ export interface ITenant extends Document {
     webhookSecret?: string;
     allowedOrigins?: string[];
     dataRetentionDays?: number; // 30, 60, or 90
+    careersPage?: {
+      slug?: string; // Unique URL slug e.g. /careers/acme
+      brandColor?: string; // Hex color
+      logoUrl?: string;
+      companyDescription?: string;
+      isPublished?: boolean;
+    };
   };
   createdAt: Date;
   updatedAt: Date;
@@ -34,7 +41,14 @@ const tenantSchema = new Schema<ITenant>({
     webhookUrl: { type: String, trim: true },
     webhookSecret: { type: String, trim: true },
     allowedOrigins: [{ type: String, trim: true }],
-    dataRetentionDays: { type: Number, default: 30 }
+    dataRetentionDays: { type: Number, default: 30 },
+    careersPage: {
+      slug: { type: String, trim: true, unique: true, sparse: true, lowercase: true },
+      brandColor: { type: String, default: '#4C9900' }, // Default to primary green
+      logoUrl: { type: String, trim: true },
+      companyDescription: { type: String },
+      isPublished: { type: Boolean, default: false }
+    }
   }
 }, { timestamps: true });
 

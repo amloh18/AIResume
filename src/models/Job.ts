@@ -21,6 +21,7 @@ export interface IJob extends Document {
 
   // Active vs. Archived categorization for limit enforcement
   isArchived: boolean; // If true, doesn't count against active job limit
+  isPublic: boolean; // For B2B careers page
   applicationDate?: Date;
   deadline?: Date;
   notes?: string;
@@ -163,6 +164,10 @@ const jobSchema = new Schema<IJob>({
   isArchived: {
     type: Boolean,
     default: false
+  },
+  isPublic: {
+    type: Boolean,
+    default: true
   },
   applicationDate: {
     type: Date
