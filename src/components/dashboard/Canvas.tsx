@@ -2488,7 +2488,7 @@ const Canvas: React.FC = () => {
                     </div>
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <div className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-sm">
-                        <Edit2 className="w-4 h-4 text-orange-500" />
+                        <Edit className="w-4 h-4 text-orange-500" />
                       </div>
                     </div>
                   </div>

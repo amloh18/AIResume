@@ -27,7 +27,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const value = getNestedValue(data, path) || '';
 
   useEffect(() => {
-    if (!isEditing && contentRef.current) {
+    if (contentRef.current) {
       let displayValue = typeof value === 'string' ? value : '';
       
       if (isDate) {
@@ -42,12 +42,26 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
       }
 
       const relevantIssues = aiIssues.filter((i: any) => i.path === path);
+      if (isEditing && relevantIssues.length === 0) return;
       if (relevantIssues.length > 0) {
         relevantIssues.forEach((issue: any) => {
           if (issue.targetText) {
             const regex = new RegExp(`(${escapeRegExp(issue.targetText)})`, 'g');
-            const highlightClass = issue.id === activeIssueId ? 'bg-yellow-300 text-black shadow-sm' : 'bg-yellow-100/70 border-b-2 border-yellow-400 cursor-pointer text-gray-900';
-            displayValue = displayValue.replace(regex, `<mark class="${highlightClass} rounded-sm px-0.5 transition-all" data-issue="${issue.id}">$1</mark>`);
+            const typeColors: Record<string, string> = {
+              complex_word: 'rgba(168, 85, 247, 0.4)',
+              weakening: 'rgba(59, 130, 246, 0.4)',
+              passive_voice: 'rgba(34, 197, 94, 0.4)',
+              lengthy_sentence: 'rgba(234, 179, 8, 0.4)',
+              complex_sentence: 'rgba(239, 68, 68, 0.4)',
+              spelling_variant: 'rgba(239, 68, 68, 0.4)'
+            };
+            const bg = typeColors[issue.type] || 'rgba(234, 179, 8, 0.35)';
+            const highlightClass = issue.id === activeIssueId ? 'text-black shadow-sm' : 'border-b-2 border-white/30 cursor-pointer text-gray-900';
+            const title = issue.suggestion ? `${issue.message || ''} Fix: ${issue.suggestion}` : (issue.message || 'Suggestion');
+            displayValue = displayValue.replace(
+              regex,
+              `<mark class="${highlightClass} rounded-sm px-0.5 transition-all" style="background-color:${bg}" data-issue="${issue.id}" data-suggestion="${(issue.suggestion || '').replace(/"/g, '&quot;')}" title="${title.replace(/"/g, '&quot;')}">$1</mark>`
+            );
           }
         });
       }
@@ -59,7 +73,14 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   const handleKeyDown = (e: React.KeyboardEvent) => { if (!multiline && e.key === 'Enter') e.preventDefault(); };
   const handleFocus = () => { if (readOnly) return; setIsEditing(true); if (setFocusedRef) setFocusedRef(contentRef.current); };
   const handleBlur = () => { if (readOnly) return; setIsEditing(false); if (setFocusedRef) setTimeout(() => setFocusedRef(null), 200); };
-  const handleClick = (e: React.MouseEvent) => { if ((e.target as HTMLElement).tagName === 'MARK' && onIssueClick) onIssueClick((e.target as HTMLElement).getAttribute('data-issue')); };
+  const handleClick = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).tagName === 'MARK' && onIssueClick) {
+      const el = e.target as HTMLElement;
+      const id = el.getAttribute('data-issue');
+      if (!id) return;
+      onIssueClick(id, el.getBoundingClientRect());
+    }
+  };
   const handlePaste = (e: React.ClipboardEvent) => {
     if (readOnly) return;
     e.preventDefault();
@@ -239,9 +260,9 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
     return (
-      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`cv-page-breakable relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`} style={{ marginBottom: 'var(--cv-section-gap, 16px)' }}>
+      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`cv-page-breakable relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`} style={isHeader ? {} : { marginBottom: 'var(--cv-section-gap, 16px)' }}>
       {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-emerald-50 border-2 border-dashed border-emerald-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
-        <div className={`relative ${!isHeader && !readOnly ? 'mt-4' : ''} hover:z-30 group/inner w-full`}>
+        <div className={`relative hover:z-30 group/inner w-full`}>
         {controls}
         <div className={`p-2 pointer-events-auto snippet-content relative pb-2 z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
             {!readOnly && <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>}

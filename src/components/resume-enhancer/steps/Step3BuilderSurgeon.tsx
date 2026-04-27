@@ -4,6 +4,9 @@ import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, us
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
+import { downloadAsPDF } from '@/lib/utils/download';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import DownloadModal from '@/components/ui/DownloadModal';
 import {
   Sparkles,
   Component, Eye, Target, ZoomIn, ZoomOut, Plus, Shuffle, Palette, X
@@ -77,7 +80,7 @@ export interface Step3BuilderSurgeonRef {
 
 const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurgeonProps>(
   ({ onComplete, onActiveSectionChange }, ref) => {
-    const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap } = useResumeEnhancer();
+    const { state, dispatch, convertToJourney, loadCV, getAnalysisModeInfo, setTemplate, setAtsScoreCap, goToStep } = useResumeEnhancer();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -87,6 +90,14 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [showJobParserDialog, setShowJobParserDialog] = useState(false);
     const [isATSUnlockDismissed, setIsATSUnlockDismissed] = useState(false);
     const [totalPages, setTotalPages] = useState(1);
+    const [showDownloadModal, setShowDownloadModal] = useState(false);
+
+    // Listen for download modal event from Canvas
+    useEffect(() => {
+      const handleDownloadEvent = () => setShowDownloadModal(true);
+      window.addEventListener('open-download-modal', handleDownloadEvent);
+      return () => window.removeEventListener('open-download-modal', handleDownloadEvent);
+    }, []);
 
     const cvPreviewRef = useRef<HTMLDivElement>(null);
     const sidePanelRef = useRef<HTMLDivElement>(null);
@@ -94,6 +105,10 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const canvasBuilderRef = useRef<any>(null);
     const lastSavedSectionTitlesRef = useRef<string>('');
     const hasLoadedUserSectionTitlesRef = useRef(false);
+
+    // Auto-save refs
+    const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const lastSavedCvDataStrRef = useRef<string>('');
 
     // Floating Editor State
     const [activeEditorSectionId, setActiveEditorSectionId] = useState<string | null>(null);
@@ -108,6 +123,93 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       if (!state.cvData) return null;
       return validateCVPreview(state.cvData);
     }, [state.cvData]);
+
+    const { openPaymentModal } = usePaymentModal();
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
+      if (!state.selectedTemplate) {
+        toast.error('Please select a template first in the Review step');
+        goToStep(4);
+        return;
+      }
+      setIsDownloading(true);
+      try {
+        const baseName = state.cvTitle || 'CV';
+        if (format === 'pdf') {
+          const filename = `${baseName}.pdf`;
+          let previewElement: HTMLElement | null = null;
+          if (cvPreviewRef.current) {
+            previewElement = cvPreviewRef.current.querySelector('.cv-document') as HTMLElement || cvPreviewRef.current;
+          }
+          await downloadAsPDF(
+            previewElement || cvPreviewRef.current || document.body,
+            filename,
+            state.cvId || undefined,
+            { paperSize: state.paperSize || 'A4', orientation: 'portrait', jobTitle: state.jobData?.title || state.targetRole }
+          );
+          toast.success('Downloaded successfully!');
+        } else {
+          toast.error('DOCX download not supported yet');
+        }
+      } catch (err: any) {
+        console.error('Download error:', err);
+        if (err.message?.includes('Payment Required') || err.status === 402) {
+          openPaymentModal({ triggerContext: 'cv-download-limit', returnUrl: window.location.href });
+        } else {
+          toast.error('Failed to download CV');
+        }
+      } finally {
+        setIsDownloading(false);
+      }
+    };
+
+    // Auto-Save Effect
+    useEffect(() => {
+      if (!state.cvData || !state.cvId) return;
+
+      const currentCvDataStr = JSON.stringify(state.cvData);
+      
+      // Initialize on first load to prevent immediate save
+      if (!lastSavedCvDataStrRef.current) {
+        lastSavedCvDataStrRef.current = currentCvDataStr;
+        return;
+      }
+
+      // If data hasn't changed, don't save
+      if (currentCvDataStr === lastSavedCvDataStrRef.current) {
+        return;
+      }
+
+      // Clear existing timer
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+
+      // Set new debounce timer
+      autoSaveTimerRef.current = setTimeout(async () => {
+        try {
+          const response = await fetch(`/api/cvs/${state.cvId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cvData: state.cvData })
+          });
+          
+          if (response.ok) {
+            lastSavedCvDataStrRef.current = currentCvDataStr;
+            console.log('CV Auto-saved successfully');
+          }
+        } catch (err) {
+          console.error('CV Auto-save failed:', err);
+        }
+      }, 2000); // 2-second debounce
+
+      return () => {
+        if (autoSaveTimerRef.current) {
+          clearTimeout(autoSaveTimerRef.current);
+        }
+      };
+    }, [state.cvData, state.cvId]);
 
     useEffect(() => {
       if (hasLoadedUserSectionTitlesRef.current) return;
@@ -1211,6 +1313,26 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
             }
           }}
         />
+
+        {showDownloadModal && (
+          <DownloadModal
+            isOpen={showDownloadModal}
+            onClose={() => setShowDownloadModal(false)}
+            onDownload={async (documentType: any, format: any) => {
+              if (documentType === 'cv') {
+                await handleDownload(format);
+              }
+              setShowDownloadModal(false);
+            }}
+            onPaywallRequired={() => {
+              openPaymentModal({ triggerContext: 'cv-download-limit', returnUrl: window.location.href });
+              setShowDownloadModal(false);
+            }}
+            hasCV={!!state.cvData}
+            isDownloading={isDownloading}
+            cvId={state.cvId}
+          />
+        )}
 
       </div >
     );

@@ -20,6 +20,7 @@ interface WYSIWYGEditorProps {
   showToolbar?: boolean;
   hasAnnotation?: boolean;
   reviewMode?: boolean;
+  grammarLocale?: 'us' | 'uk';
 }
 
 // Hook to get toolbar props for external rendering
@@ -128,7 +129,8 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   fieldType = 'other',
   showToolbar = false,
   hasAnnotation = false,
-  reviewMode = false
+  reviewMode = false,
+  grammarLocale
 }) => {
   // Use the WYSIWYG hook directly - hooks must be called unconditionally
   const {
@@ -155,6 +157,11 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
   // Apply grammar highlights when reviewMode is true
   useEffect(() => {
     if (reviewMode && editorRef.current) {
+      if (grammarLocale) {
+        editorRef.current.dataset.grammarLocale = grammarLocale;
+      } else {
+        delete editorRef.current.dataset.grammarLocale;
+      }
       highlightGrammarIssues(editorRef.current); // The function fetches issues and applies them
       // We don't trigger handleContentChange here to avoid saving spans
     } else if (!reviewMode && editorRef.current) {
@@ -177,14 +184,19 @@ const WYSIWYGEditor: React.FC<WYSIWYGEditorProps> = ({
       e.preventDefault();
       e.stopPropagation();
       const issueData = JSON.parse(target.dataset.issueData) as GrammarIssue;
-      
+
+      if (issueData.suggestion) {
+        handleApplySuggestion(issueData);
+        return;
+      }
+
       const wrapperRect = editorWrapperRef.current?.getBoundingClientRect();
       const targetRect = target.getBoundingClientRect();
-      
+
       if (wrapperRect) {
         setCardPos({
           top: targetRect.bottom - wrapperRect.top + 5,
-          left: Math.min(targetRect.left - wrapperRect.left, wrapperRect.width - 300) // keep within view
+          left: Math.min(targetRect.left - wrapperRect.left, wrapperRect.width - 300)
         });
         setActiveIssue(issueData);
       }

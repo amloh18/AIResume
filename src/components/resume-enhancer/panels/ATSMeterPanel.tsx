@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { AnimatedScore } from '@/components/ui/AnimatedScore';
 import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
+import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 interface ATSMeterPanelProps {
   onOpenJobParser: () => void;
@@ -15,6 +16,13 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
   const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
+
+  const offlineScore = useMemo(() => {
+    if (state.cvData) {
+      return CentralScoreManager.getInstance().getScoreSync(state.cvData);
+    }
+    return null;
+  }, [state.cvData]);
 
   const handleStartCoaching = async () => {
     const jobId = state.journeyId || state.jobData?._id || state.jobData?.id;
@@ -39,7 +47,8 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
 
   const hasJobDesc = !!(state.jobData?.jobDescription || state.jobData?.description || state.jobData?.jd);
   
-  const score = atsScore || 0;
+  const score = hasJobDesc ? (atsScore || offlineScore?.cvScore.total || 0) : (offlineScore?.cvScore.total || 0);
+  const scoreLabel = hasJobDesc ? 'ATS Match Score' : 'CV Score';
   
   // Extract keywords and missing skills
   const extractedSkills = useMemo(() => {
@@ -275,7 +284,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
               size="lg" 
               className="text-5xl font-black tracking-tighter drop-shadow-sm dark:drop-shadow-md text-gray-900 dark:text-white" 
             />
-            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1">ATS Score</span>
+            <span className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest mt-1 text-center px-2">{scoreLabel}</span>
           </div>
         </div>
         
