@@ -1,4 +1,10 @@
-export type IssueType = 'complex_word' | 'weakening' | 'passive_voice' | 'lengthy_sentence' | 'complex_sentence';
+export type IssueType =
+  | 'complex_word'
+  | 'weakening'
+  | 'passive_voice'
+  | 'lengthy_sentence'
+  | 'complex_sentence'
+  | 'spelling_variant';
 
 export interface GrammarIssue {
   id: string;
@@ -24,6 +30,15 @@ const DICTIONARIES = {
   ],
   passive_voice: [
     { pattern: /\b(is|was|are|were|be|being|been)\s+([a-z]+ed)\b/gi, message: 'Consider using active voice' },
+  ],
+  spelling_variant_us: [
+    { pattern: /\b(analysed|analysing)\b/gi, suggestion: (m: string) => (m.toLowerCase() === 'analysed' ? 'analyzed' : 'analyzing') },
+    { pattern: /\b(colour)\b/gi, suggestion: 'color' },
+    { pattern: /\b(favourite)\b/gi, suggestion: 'favorite' },
+    { pattern: /\b(optimise|optimised|optimising)\b/gi, suggestion: (m: string) => m.toLowerCase().replace('optimis', 'optimiz') },
+    { pattern: /\b(organisation|organisations)\b/gi, suggestion: (m: string) => m.toLowerCase().replace('organisation', 'organization') },
+    { pattern: /\b(centre|centres)\b/gi, suggestion: (m: string) => m.toLowerCase().replace('centre', 'center') },
+    { pattern: /\b(behaviour)\b/gi, suggestion: 'behavior' }
   ]
 };
 
@@ -31,8 +46,18 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
-export function analyzeText(text: string): GrammarIssue[] {
+function matchCase(original: string, replacement: string) {
+  if (!original) return replacement;
+  const first = original[0];
+  if (first && first.toUpperCase() === first) {
+    return replacement[0].toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
+export function analyzeText(text: string, opts?: { locale?: 'us' | 'uk' }): GrammarIssue[] {
   const issues: GrammarIssue[] = [];
+  const locale = opts?.locale || 'us';
 
   // 1. Dictionary checks
   // Complex words
@@ -81,6 +106,24 @@ export function analyzeText(text: string): GrammarIssue[] {
       });
     }
   });
+
+  if (locale === 'us') {
+    DICTIONARIES.spelling_variant_us.forEach(({ pattern, suggestion }) => {
+      let match;
+      while ((match = pattern.exec(text)) !== null) {
+        const suggested = typeof suggestion === 'function' ? suggestion(match[0]) : suggestion;
+        issues.push({
+          id: generateId(),
+          type: 'spelling_variant',
+          startIndex: match.index,
+          endIndex: match.index + match[0].length,
+          text: match[0],
+          suggestion: matchCase(match[0], suggested),
+          message: `US spelling: replace "${match[0]}" with "${matchCase(match[0], suggested)}".`
+        });
+      }
+    });
+  }
 
   // 2. Sentence length and complexity
   // A simple sentence tokenizer (split by . ! ?)

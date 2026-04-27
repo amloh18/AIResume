@@ -626,6 +626,13 @@ export async function POST(request: NextRequest) {
     const hardcodedTemplate = getTemplateById(finalTemplateId);
 
     if (!hardcodedTemplate) {
+      if (!finalTemplateId || typeof finalTemplateId !== 'string' || !mongoose.Types.ObjectId.isValid(finalTemplateId)) {
+        console.log('❌ CV POST API - Template not found:', finalTemplateId);
+        return NextResponse.json(
+          { success: false, error: 'Template not found' },
+          { status: 400 }
+        );
+      }
       const template = await Template.findById(finalTemplateId);
       if (!template) {
         console.log('❌ CV POST API - Template not found:', finalTemplateId);
@@ -667,9 +674,11 @@ export async function POST(request: NextRequest) {
     if (hardcodedTemplate) {
       templateName = hardcodedTemplate.name || '';
     } else if (finalTemplateId) {
-      const template = await Template.findById(finalTemplateId);
-      if (template) {
-        templateName = template.name || '';
+      if (typeof finalTemplateId === 'string' && mongoose.Types.ObjectId.isValid(finalTemplateId)) {
+        const template = await Template.findById(finalTemplateId);
+        if (template) {
+          templateName = template.name || '';
+        }
       }
     }
 

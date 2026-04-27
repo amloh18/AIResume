@@ -373,12 +373,13 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // Vercel deployment optimizations
   trailingSlash: false,
+  
+  transpilePackages: ['next-auth'],
 
   // External packages for server-side rendering
   serverExternalPackages: [
     'mongoose',
     'firebase-admin',
-    'next-auth',
     'openid-client',
     'pdf2pic',
     'pdf-parse',

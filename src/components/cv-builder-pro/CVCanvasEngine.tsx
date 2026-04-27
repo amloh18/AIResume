@@ -3,11 +3,13 @@
 
 import React, { useState, useEffect, useRef, useImperativeHandle, forwardRef, useMemo } from 'react';
 import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles } from 'lucide-react';
-import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES } from './registry';
+import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
 import ListEntry from './components/ListEntry';
-import { generateId, setNestedValue, getNestedValue } from './helpers';
+import { generateId, setNestedValue, getNestedValue, escapeRegExp } from './helpers';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import { analyzeText } from '@/lib/grammar/engine';
 
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
@@ -34,6 +36,7 @@ export interface CVCanvasBuilderRef {
 // ==========================================
 const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSuggestion, cvData, handleDataChange }: any) => {
   const [pos, setPos] = useState({ top: -1000, left: 0 });
+  const { openPaymentModal } = usePaymentModal();
 
   useEffect(() => {
     const updatePos = () => {
@@ -89,7 +92,21 @@ const FloatingAICard = ({ pointSuggestion, setPointSuggestion, handleFetchSugges
           </div>
         ) : pointSuggestion.error === 'usage_limit_reached' ? (
           <div className="text-sm text-red-400">
-            You have reached your AI usage limit for the current plan. <a href="/pricing" className="underline font-bold text-red-300">Upgrade Plan</a> to continue using Thinkhard AI features.
+            You have reached your AI usage limit for the current plan.{' '}
+            <button
+              type="button"
+              onClick={() =>
+                openPaymentModal({
+                  preselectedPlanKey: 'pro_monthly',
+                  triggerContext: 'ai-contextual-suggestion-limit',
+                  returnUrl: window.location.href
+                })
+              }
+              className="underline font-bold text-red-300"
+            >
+              Upgrade Plan
+            </button>{' '}
+            to continue using Thinkhard AI features.
           </div>
         ) : pointSuggestion.error ? (
           <div className="text-sm text-red-400">{pointSuggestion.error}</div>
@@ -165,6 +182,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     return () => clearTimeout(timer);
   }, [design, activeTemplate, zones, readOnly]);
   const [aiIssues, setAiIssues] = useState<any[]>([]);
+  const [grammarIssues, setGrammarIssues] = useState<any[]>([]);
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const [cvScore, setCvScore] = useState(100);
   const [pointSuggestion, setPointSuggestion] = useState<{ path: string, text: string, node?: HTMLElement, loading?: boolean, originalText?: string, error?: string } | null>(null);
@@ -199,82 +217,104 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     const container = document.querySelector('.cv-document-wrapper');
     if (!container) return;
 
+    let debounceTimer: ReturnType<typeof setTimeout>;
+
     const paginate = () => {
       const doc = container.querySelector('.cv-document') as HTMLElement;
       if (!doc) return;
-      
-      const PAGE_HEIGHT = design.pageSize === 'Letter' ? 1056 : 1122.5; // 11in vs 297mm at 96 DPI
-      const PAGE_GAP = 40; // Visual gap between pages in px
-      const EFFECTIVE_HEIGHT = PAGE_HEIGHT + PAGE_GAP; 
-      const PAGE_MARGIN = design.pageMargin || 40; // Use actual design margin
-      
-      // Target both sections and individual items to prevent gap overlap
-      const items = Array.from(doc.querySelectorAll('.cv-page-breakable, .cv-item, .cv-keep-with-next, .section-header'));
-      
-      // Reset margins first
-      items.forEach((item: any) => {
-        item.style.marginTop = '';
-      });
 
-        // Small delay to allow DOM to recalculate after reset
+      // A4: 297mm at 96dpi = 1122.5px | Letter: 11in at 96dpi = 1056px
+      const PAGE_HEIGHT = design.pageSize === 'Letter' ? 1056 : 1122.5;
+      // Visual gap rendered between pages in the canvas (matches cv-page-visualizer gradient)
+      const PAGE_GAP = 40;
+      // Total height of one "page slot" (printable + gap)
+      const EFFECTIVE_HEIGHT = PAGE_HEIGHT + PAGE_GAP;
+      // Margin on each page edge — content must not enter this zone
+      const PAGE_MARGIN = design.pageMargin || 40;
+      // Minimum content height to be worth pushing (avoid pushing tiny orphans)
+      const MIN_PUSH_HEIGHT = 20;
+
+      // Collect all breakable elements
+      const items = Array.from(
+        doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
+      ) as HTMLElement[];
+
+      // --- PASS 1: Reset all injected margins so we measure natural positions ---
+      items.forEach(item => { item.style.marginTop = ''; });
+
+      // --- PASS 2: measure + apply in a single rAF after DOM has settled ---
       requestAnimationFrame(() => {
-        let maxBottom = 0;
         const docRect = doc.getBoundingClientRect();
-        // Calculate true scale to avoid pushing bugs from CSS transforms
-        const scale = docRect.width / doc.offsetWidth;
+        // Scale factor when canvas is zoomed
+        const scale = docRect.width > 0 ? docRect.width / doc.offsetWidth : 1;
 
-        items.forEach((item: any) => {
+        let maxBottom = 0;
+
+        items.forEach(item => {
           const itemRect = item.getBoundingClientRect();
+          // Position relative to document top, in unscaled document coordinates
           const top = (itemRect.top - docRect.top) / scale;
           const height = itemRect.height / scale;
           const bottom = top + height;
-          
-          const cycleStart = Math.floor(top / EFFECTIVE_HEIGHT);
-          const visibleEnd = (cycleStart * EFFECTIVE_HEIGHT) + PAGE_HEIGHT - PAGE_MARGIN;
-          const nextCycleStart = ((cycleStart + 1) * EFFECTIVE_HEIGHT) + PAGE_MARGIN;
-          
-          // If it crosses the bottom margin boundary and fits on a single page, push it
-          if (bottom > visibleEnd && height < (PAGE_HEIGHT - PAGE_MARGIN * 2)) {
-            const pushAmount = nextCycleStart - top;
-            item.style.marginTop = `${pushAmount}px`;
+
+          // Which page does this item's top fall on?
+          // We work in "true" document space (not gap-adjusted) so we must find
+          // which page cycle the item belongs to.
+          const pageIndex = Math.floor(top / EFFECTIVE_HEIGHT);
+
+          // The bottom of the printable zone on this page (before bottom margin)
+          const pageContentBottom = pageIndex * EFFECTIVE_HEIGHT + PAGE_HEIGHT - PAGE_MARGIN;
+
+          // The top of the printable zone on the NEXT page (after top margin)
+          const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_MARGIN;
+
+          // Push the item to the next page if:
+          // 1. Its bottom overflows into the bottom margin of the current page
+          // 2. The item fits on a single page
+          // 3. The item is tall enough to be worth pushing
+          if (
+            bottom > pageContentBottom &&
+            height < (PAGE_HEIGHT - PAGE_MARGIN * 2) &&
+            height > MIN_PUSH_HEIGHT
+          ) {
+            const pushAmount = nextPageContentTop - top;
+            if (pushAmount > 0) {
+              item.style.marginTop = `${pushAmount}px`;
+            }
           }
+
+          // Track the furthest-down element for page count
+          const currentBottom = (item.getBoundingClientRect().bottom - docRect.top) / scale;
+          if (currentBottom > maxBottom) maxBottom = currentBottom;
         });
 
-        // Calculate total pages and force container height
-        requestAnimationFrame(() => {
-          const newDocRect = doc.getBoundingClientRect();
-          items.forEach((item: any) => {
-            const itemBottom = (item.getBoundingClientRect().bottom - newDocRect.top) / scale;
-            if (itemBottom > maxBottom) maxBottom = itemBottom;
-          });
-          const totalPages = Math.max(1, Math.ceil((maxBottom - 1) / EFFECTIVE_HEIGHT));
-          
-          // Only update if changed to prevent unnecessary re-renders/jitters
-          setTotalPagesCount(prev => prev !== totalPages ? totalPages : prev);
-          
-          const newHeight = `${totalPages * EFFECTIVE_HEIGHT}px`;
-          if (doc.style.height !== newHeight) {
-            doc.style.height = newHeight;
-          }
-        });
+        // Calculate total pages needed
+        const totalPages = Math.max(1, Math.ceil(maxBottom / EFFECTIVE_HEIGHT));
+
+        setTotalPagesCount(prev => prev !== totalPages ? totalPages : prev);
+
+        const newHeight = `${totalPages * EFFECTIVE_HEIGHT}px`;
+        if (doc.style.height !== newHeight) {
+          doc.style.height = newHeight;
+        }
       });
     };
 
-    // Run pagination
-    const timer = setTimeout(paginate, 100);
-    
-    // Also run on resize
+    // Initial run with a short delay to let React finish painting
+    const initTimer = setTimeout(paginate, 120);
+
+    // Re-run on any size change (content grows/shrinks)
     const ro = new ResizeObserver(() => {
-      // Debounce the observer
-      clearTimeout(timer);
-      setTimeout(paginate, 50);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(paginate, 60);
     });
-    
+
     const docElement = container.querySelector('.cv-document');
     if (docElement) ro.observe(docElement);
-    
+
     return () => {
-      clearTimeout(timer);
+      clearTimeout(initTimer);
+      clearTimeout(debounceTimer);
       ro.disconnect();
     };
   }, [cvData, templateAnimKey, design, activeTemplate]);
@@ -318,6 +358,39 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     handleDataChange(pointSuggestion.path, text);
     setPointSuggestion(null);
   };
+
+  useEffect(() => {
+    if (!focusedNode) return;
+    let path = focusedNode.getAttribute('data-path');
+    if (!path) {
+      const parentWithPath = focusedNode.closest('[data-path]');
+      if (parentWithPath) path = parentWithPath.getAttribute('data-path');
+    }
+    if (!path) return;
+
+    const timer = setTimeout(() => {
+      const rawValue = getNestedValue(cvData, path) || '';
+      const temp = document.createElement('div');
+      temp.innerHTML = typeof rawValue === 'string' ? rawValue : String(rawValue || '');
+      const text = temp.textContent || '';
+      if (!text.trim()) {
+        setGrammarIssues([]);
+        return;
+      }
+      const issues = analyzeText(text, { locale: 'us' }).map((issue: any) => ({
+        id: `grammar:${path}:${issue.startIndex}:${issue.endIndex}:${issue.type}`,
+        category: 'grammar',
+        type: issue.type,
+        path,
+        targetText: issue.text,
+        suggestion: issue.suggestion,
+        message: issue.message
+      }));
+      setGrammarIssues(issues);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [cvData, focusedNode]);
 
   const handleFetchSuggestion = async (type: 'star' | 'tone', tone?: string) => {
     if (!pointSuggestion) return;
@@ -459,19 +532,45 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
     switch (layoutType) {
       case '1-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="h-max" style={{ padding: 'var(--cv-page-margin)' }}>{renderZone('main', 'w-full min-w-0')}</div></div>;
-      case '2-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 0 }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
+      case '2-col': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: safeZones['header'] ? 'var(--cv-section-gap, 16px)' : 'var(--cv-page-margin)' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
       case 'sidebar-left': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div></div>;
       case 'sidebar-left-dark': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="absolute left-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', true)}</div><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div></div>;
       case 'sidebar-right': return <div className="w-full shadow-2xl mx-auto flex cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}><div className="w-[68%] min-w-0 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: '5mm', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('main', 'h-max')}</div><div className="absolute right-0 top-0 bottom-0 w-[32%] z-0" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200 relative z-10" style={{ paddingLeft: '5mm', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)' }}>{renderZone('sidebar', 'h-max', false)}</div></div>;
-      case 'top-sidebar-left': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="absolute left-[var(--cv-page-margin)] top-[6mm] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200" style={{ paddingRight: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div></div></div>;
-      case 'top-sidebar-right': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '6mm' }}><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div><div className="absolute right-[var(--cv-page-margin)] top-[6mm] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200" style={{ paddingLeft: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div></div></div>;
-      case 'hybrid-split': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: '6mm', paddingBottom: 0 }}>{renderZone('main', 'w-full min-w-0')}</div><div className="flex h-max gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: '2mm' }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
+      case 'top-sidebar-left': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}><div className="absolute left-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-r border-slate-200" style={{ paddingRight: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div></div></div>;
+      case 'top-sidebar-right': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document relative" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div className="relative z-10" style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div className="flex h-max gap-8 relative z-10" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)' }}><div className="w-[68%] min-w-0">{renderZone('main', 'h-max')}</div><div className="absolute right-[var(--cv-page-margin)] top-[var(--cv-section-gap,16px)] bottom-[var(--cv-page-margin)] w-[calc(32%-1rem)] rounded-lg z-[-1]" style={{ backgroundColor: 'var(--cv-sidebar-bg)' }}></div><div className="w-[32%] min-w-0 border-l border-slate-200" style={{ paddingLeft: '5mm' }}>{renderZone('sidebar', 'h-max', false)}</div></div></div>;
+      case 'hybrid-split': return <div className="w-full shadow-2xl mx-auto flex flex-col cv-document" style={{ width: 'var(--cv-page-width)', minHeight: 'var(--cv-page-height)', backgroundColor: 'transparent' }}>{safeZones['header'] && <div style={{ paddingTop: 'var(--cv-page-margin)', paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 0 }}>{renderZone('header', 'w-full min-w-0')}</div>}<div style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingTop: 'var(--cv-section-gap, 16px)', paddingBottom: 0 }}>{renderZone('main', 'w-full min-w-0')}</div><div className="flex h-max gap-8" style={{ paddingLeft: 'var(--cv-page-margin)', paddingRight: 'var(--cv-page-margin)', paddingBottom: 'var(--cv-page-margin)', paddingTop: 0 }}><div className="flex-1 min-w-0">{renderZone('left', 'h-max')}</div><div className="flex-1 min-w-0">{renderZone('right', 'h-max')}</div></div></div>;
       default: return <div>Layout not found</div>;
     }
   };
 
   return (
-    <CanvasContext.Provider value={{ cvData, design, handleDataChange, setFocusedNode, aiIssues, activeIssueId, onIssueClick: (id: string) => { setActiveIssueId(id); setActiveSidebar('ai'); } }}>
+    <CanvasContext.Provider
+      value={{
+        cvData,
+        design,
+        handleDataChange,
+        setFocusedNode,
+        aiIssues: [...aiIssues, ...grammarIssues],
+        activeIssueId,
+        onIssueClick: (id: string) => {
+          const all = [...aiIssues, ...grammarIssues];
+          const issue = all.find((i: any) => i.id === id);
+          if (issue?.category === 'grammar' && issue.suggestion) {
+            const currentValue = getNestedValue(cvData, issue.path);
+            const fixedValue =
+              typeof currentValue === 'string'
+                ? currentValue.replace(new RegExp(escapeRegExp(issue.targetText), 'g'), issue.suggestion)
+                : currentValue;
+            handleDataChange(issue.path, fixedValue);
+            setGrammarIssues(prev => prev.filter((i: any) => i.id !== issue.id));
+            if (activeIssueId === issue.id) setActiveIssueId(null);
+            return;
+          }
+          setActiveIssueId(id);
+          setActiveSidebar('ai');
+        }
+      }}
+    >
       <div className={`h-full w-full flex font-sans overflow-hidden transition-colors duration-300 ${readOnly ? '' : bgApp}`}>
         {!readOnly && <FloatingToolbar targetNode={focusedNode} onSuggestPoint={handleSuggestPoint} />}
 
@@ -546,8 +645,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         {!readOnly && activeSidebar === 'data' && (
           <div className={`w-[600px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
             <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}><h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><FileJson size={18} className={brandGreen}/> Raw JSON</h3><button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button></div>
-            <div className="flex-1 overflow-hidden relative">
-              <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} />
+            <div className="flex-1 overflow-hidden relative flex flex-col">
+              <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} onChange={(newData) => onDataChange(newData)} />
             </div>
           </div>
         )}
@@ -704,9 +803,58 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         const previewData = getPreviewData(cvData);
         const currentCategories = Object.values(zones).flat().map((z: any) => SNIPPETS[z.type]?.category).filter(Boolean);
 
+        // Calculate Recommended Family
+        const getRecommendedFamily = () => {
+          const allTypes = Object.values(zones).flat().map((z: any) => z.type);
+          const familyCounts: Record<string, number> = {};
+          
+          allTypes.forEach(type => {
+            const suffix = type.split('-').slice(1).join('-'); // e.g. 'timeline', 'split', 'standard'
+            for (const [family, keywords] of Object.entries(SNIPPET_FAMILIES)) {
+              if (keywords.some(k => type.includes(k) || suffix === k.replace('-', ''))) {
+                familyCounts[family] = (familyCounts[family] || 0) + 1;
+              }
+            }
+          });
+          
+          let dominantFamily = null;
+          let maxCount = 0;
+          for (const [family, count] of Object.entries(familyCounts)) {
+            if (count > maxCount && count >= 2) { // Need at least 2 to establish a pattern
+              maxCount = count;
+              dominantFamily = family;
+            }
+          }
+          return dominantFamily;
+        };
+        const recommendedFamily = getRecommendedFamily();
+
+        // Filter and Sort Snippets
+        const filteredSnippets = Object.values(SNIPPETS).filter(s => 
+          replacingSnippet.isAdd 
+            ? (!currentCategories.includes(s.category) && (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory)) 
+            : s.category === replacingSnippet.category
+        ).filter(Boolean);
+
+        // Sort: Recommended first -> Current -> Others
+        const sortedSnippets = [...filteredSnippets].sort((a, b) => {
+          const isACurrent = a.id === replacingSnippet.currentType;
+          const isBCurrent = b.id === replacingSnippet.currentType;
+          if (isACurrent) return -1;
+          if (isBCurrent) return 1;
+          
+          if (recommendedFamily) {
+            const isARecommended = SNIPPET_FAMILIES[recommendedFamily].some(k => a.id.includes(k));
+            const isBRecommended = SNIPPET_FAMILIES[recommendedFamily].some(k => b.id.includes(k));
+            if (isARecommended && !isBRecommended) return -1;
+            if (!isARecommended && isBRecommended) return 1;
+          }
+          return 0;
+        });
+
         return (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-            <div className={`rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
+            <div className={`rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[90vh] border ${isDarkUI ? 'bg-[#141414] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
               <div className={`p-4 border-b flex justify-between items-center ${isDarkUI ? 'bg-[#111] border-[#2a2a2a]' : 'bg-white border-gray-200'}`}>
                 <h3 className={`font-bold text-base flex items-center gap-2 ${textPrimary}`}>{replacingSnippet.isAdd ? <PlusCircle size={18} className="text-emerald-500"/> : <RefreshCw size={18} className="text-blue-500"/>}{replacingSnippet.isAdd ? 'Add Snippet' : `Replace ${replacingSnippet.category}`}</h3>
                 <button onClick={() => setReplacingSnippet(null)} className={`p-1.5 rounded-full ${isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333]' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'} transition-colors`}><X size={18}/></button>
@@ -721,23 +869,44 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
                 </div>
               )}
               <div className={`p-5 overflow-y-auto flex-1 custom-scrollbar ${isDarkUI ? 'bg-[#0a0a0a]' : 'bg-gray-100'}`}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {Object.values(SNIPPETS).filter(s => replacingSnippet.isAdd ? (!currentCategories.includes(s.category) && (!replacingSnippet.filterCategory || s.category === replacingSnippet.filterCategory)) : s.category === replacingSnippet.category).map(snippet => {
-                    if (!snippet) return null;
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {sortedSnippets.map(snippet => {
                     const targetZoneId = replacingSnippet.zoneId;
                     const isTargetDark = activeTemplate.type.includes('dark') && targetZoneId === 'sidebar';
                     const isSidebar = ['sidebar', 'left', 'right'].includes(targetZoneId);
                     const styleKey = isSidebar && activeTemplate.sidebarTitleStyle ? activeTemplate.sidebarTitleStyle : activeTemplate.titleStyle;
                     const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
+                    
                     const isCurrent = snippet.id === replacingSnippet.currentType;
+                    const isRecommended = recommendedFamily && SNIPPET_FAMILIES[recommendedFamily].some(k => snippet.id.includes(k));
+                    const isATS = ATS_SNIPPETS.includes(snippet.id);
+                    
+                    // Dynamic scaling based on category to prevent tiny previews
+                    const isHeader = snippet.category === 'Header';
+                    const isCompact = ['Languages', 'Interests', 'Skills', 'Awards'].includes(snippet.category);
+                    const scale = isHeader ? 0.6 : 0.65;
+                    const wrapperWidth = isSidebar ? '200%' : (isHeader ? '166%' : '153%');
+                    const height = isHeader ? '160px' : (isCompact ? '180px' : '240px');
+
                     return (
-                      <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400')}`}>
-                        <div className={`p-4 flex justify-between items-center z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}><div><div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div><div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div></div>{isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[10px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}</div>
+                      <div key={snippet.id} onClick={() => executeReplaceOrAdd(snippet.id)} className={`group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden flex flex-col hover:-translate-y-1 hover:shadow-xl ${isDarkUI ? 'bg-[#111]' : 'bg-white'} ${isCurrent ? 'border-emerald-500 ring-2 ring-emerald-500/20' : (isRecommended && !isCurrent ? 'border-amber-400 ring-2 ring-amber-400/20' : (isDarkUI ? 'border-[#333] hover:border-gray-500' : 'border-gray-200 hover:border-gray-400'))}`}>
+                        <div className={`p-4 flex flex-col gap-2 z-10 ${isDarkUI ? 'bg-[#111]' : 'bg-white'}`}>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className={`font-bold text-[15px] ${textPrimary}`}>{snippet.name}</div>
+                              <div className={`text-[10px] mt-1 font-semibold uppercase tracking-wider ${textMuted}`}>{snippet.category}</div>
+                            </div>
+                            <div className="flex flex-col gap-1 items-end">
+                              {isCurrent && <span className="bg-emerald-500/20 text-emerald-500 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase">CURRENT</span>}
+                              {isRecommended && !isCurrent && <span className="bg-amber-400/20 text-amber-600 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase flex items-center gap-1"><Sparkles size={10}/> FOR YOUR STYLE</span>}
+                              {isATS && <span className="bg-blue-500/10 text-blue-600 border border-blue-500/20 text-[9px] px-2 py-1 rounded font-bold tracking-widest uppercase flex items-center gap-1"><Check size={10}/> ATS READY</span>}
+                            </div>
+                          </div>
+                        </div>
                         
-                        {/* Live Thumbnail Preview logic from snippet render inside modal */}
-                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height: '220px', backgroundColor: '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
-                          <div className="absolute top-0 left-0 w-[200%] h-[200%] origin-top-left pointer-events-none px-8 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document text-gray-900" style={{ transform: 'scale(0.5)' }}>
-                            <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} />
+                        <div className="relative w-full overflow-hidden border-t border-gray-800" style={{ height, backgroundColor: isTargetDark ? design.sidebarBgColor : '#f9f9f9', '--cv-font': design.font, '--cv-base-size': `${design.fontSize}px`, '--cv-spacing': design.spacing, '--cv-accent': design.accentColor, '--cv-sidebar-bg': design.sidebarBgColor, '--cv-section-gap': `${design.sectionGap}px` } as React.CSSProperties}>
+                          <div className={`absolute top-0 left-0 origin-top-left pointer-events-none px-6 py-6 opacity-95 group-hover:opacity-100 transition-opacity cv-document ${isTargetDark ? 'text-gray-200' : 'text-gray-900'}`} style={{ width: wrapperWidth, transform: `scale(${scale})` }}>
+                            <snippet.render data={previewData} Editable={ReadOnlyWrapper} zoneId={targetZoneId} isDark={isTargetDark} design={design} showIcons={true} layoutZones={zones} Title={({ titleKey }: any) => <TitleRenderer isDark={isTargetDark}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>} moveEntry={() => {}} deleteEntry={() => {}} />
                           </div>
                         </div>
                       </div>
@@ -750,6 +919,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         );
       })()}
 
+
       {/* Global CSS Variables */}
       <style dangerouslySetInnerHTML={{__html: `
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&family=Roboto+Mono:wght@300;400;500;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap');
@@ -761,7 +931,7 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           --cv-page-margin: ${design.pageMargin}px; 
           --cv-page-width: ${design.pageSize === 'Letter' ? '8.5in' : '210mm'};
           --cv-page-height: ${design.pageSize === 'Letter' ? '11in' : '297mm'};
-          --cv-section-gap: ${design.sectionGap};
+          --cv-section-gap: ${design.sectionGap}px;
         }
         .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }

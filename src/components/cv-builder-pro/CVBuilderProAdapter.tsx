@@ -34,7 +34,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
     }
 
     // Map work -> experience
-    if (cvData.work) {
+    if (Array.isArray(cvData.work)) {
       translated.experience = cvData.work.map((w: any) => ({
         id: w.id || `exp-${Date.now()}-${Math.random()}`,
         role: w.position,
@@ -45,7 +45,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
     }
     
     // Map education
-    if (cvData.education) {
+    if (Array.isArray(cvData.education)) {
       translated.education = cvData.education.map((e: any) => ({
         id: e.id || `edu-${Date.now()}-${Math.random()}`,
         degree: e.studyType ? `${e.studyType} in ${e.area}` : e.area,
@@ -169,7 +169,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       }
     });
 
-    if (updatedCanvasData?.experience) {
+    if (Array.isArray(updatedCanvasData?.experience)) {
       newCvData.work = updatedCanvasData.experience.map((exp: any) => {
         let summary = '';
         let highlights: string[] = [];
@@ -200,7 +200,7 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       delete newCvData.experience;
     }
     
-    if (updatedCanvasData?.education) {
+    if (Array.isArray(updatedCanvasData?.education)) {
       newCvData.education = updatedCanvasData.education.map((edu: any) => {
         let studyType = edu.degree;
         let area = '';
@@ -220,26 +220,38 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       delete newCvData.education_temp; // Clean up temp key if used
     }
 
-    if (updatedCanvasData?.skills && typeof updatedCanvasData.skills === 'object' && !Array.isArray(updatedCanvasData.skills)) {
-      const newSkills: any[] = [];
-      if (updatedCanvasData.skills.languages && typeof updatedCanvasData.skills.languages === 'string') {
-        newSkills.push({ name: 'Core Languages', keywords: updatedCanvasData.skills.languages.split(',').map((s: string) => s.trim()).filter(Boolean) });
+    if (updatedCanvasData?.skills) {
+      if (typeof updatedCanvasData.skills === 'object' && !Array.isArray(updatedCanvasData.skills)) {
+        const newSkills: any[] = [];
+        if (updatedCanvasData.skills.languages && typeof updatedCanvasData.skills.languages === 'string') {
+          newSkills.push({ name: 'Core Languages', keywords: updatedCanvasData.skills.languages.split(',').map((s: string) => s.trim()).filter(Boolean) });
+        }
+        if (updatedCanvasData.skills.frameworks && typeof updatedCanvasData.skills.frameworks === 'string') {
+          newSkills.push({ name: 'Frameworks', keywords: updatedCanvasData.skills.frameworks.split(',').map((s: string) => s.trim()).filter(Boolean) });
+        }
+        if (updatedCanvasData.skills.tools && typeof updatedCanvasData.skills.tools === 'string') {
+          newSkills.push({ name: 'Tools & Tech', keywords: updatedCanvasData.skills.tools.split(',').map((s: string) => s.trim()).filter(Boolean) });
+        }
+        newCvData.skills = newSkills;
+      } else if (Array.isArray(updatedCanvasData.skills)) {
+        newCvData.skills = updatedCanvasData.skills;
       }
-      if (updatedCanvasData.skills.frameworks && typeof updatedCanvasData.skills.frameworks === 'string') {
-        newSkills.push({ name: 'Frameworks', keywords: updatedCanvasData.skills.frameworks.split(',').map((s: string) => s.trim()).filter(Boolean) });
-      }
-      if (updatedCanvasData.skills.tools && typeof updatedCanvasData.skills.tools === 'string') {
-        newSkills.push({ name: 'Tools & Tech', keywords: updatedCanvasData.skills.tools.split(',').map((s: string) => s.trim()).filter(Boolean) });
-      }
-      newCvData.skills = newSkills;
     }
 
-    if (updatedCanvasData?.languages && typeof updatedCanvasData.languages === 'string') {
-      newCvData.languages = updatedCanvasData.languages.split(',').map((l: string) => ({ language: l.trim(), fluency: '' })).filter((l: any) => l.language);
+    if (updatedCanvasData?.languages) {
+      if (typeof updatedCanvasData.languages === 'string') {
+        newCvData.languages = updatedCanvasData.languages.split(',').map((l: string) => ({ language: l.trim(), fluency: '' })).filter((l: any) => l.language);
+      } else if (Array.isArray(updatedCanvasData.languages)) {
+        newCvData.languages = updatedCanvasData.languages.map((l: any) => typeof l === 'string' ? { language: l.trim(), fluency: '' } : l);
+      }
     }
 
-    if (updatedCanvasData?.interests && typeof updatedCanvasData.interests === 'string') {
-      newCvData.interests = updatedCanvasData.interests.split(',').map((i: string) => ({ name: i.trim(), keywords: [] })).filter((i: any) => i.name);
+    if (updatedCanvasData?.interests) {
+      if (typeof updatedCanvasData.interests === 'string') {
+        newCvData.interests = updatedCanvasData.interests.split(',').map((i: string) => ({ name: i.trim(), keywords: [] })).filter((i: any) => i.name);
+      } else if (Array.isArray(updatedCanvasData.interests)) {
+        newCvData.interests = updatedCanvasData.interests.map((i: any) => typeof i === 'string' ? { name: i.trim(), keywords: [] } : i);
+      }
     }
 
     onDataChange(newCvData);

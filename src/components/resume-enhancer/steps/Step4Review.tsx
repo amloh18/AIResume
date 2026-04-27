@@ -35,6 +35,12 @@ export default function Step4Review() {
   const containerRef = useRef<HTMLDivElement>(null);
   const cvMeasureRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleDownloadEvent = () => setShowDownloadModal(true);
+    window.addEventListener('open-download-modal', handleDownloadEvent);
+    return () => window.removeEventListener('open-download-modal', handleDownloadEvent);
+  }, []);
+
   // Auto-fit zoom to container width
   useEffect(() => {
     const calculateFitZoom = () => {

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Loader2, Info, Lock } from 'lucide-react';
 import { useCredits } from '@/lib/hooks/useCredits';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface AISuggestion {
   method: string;
@@ -35,6 +36,7 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
 }) => {
   const [showDetailed, setShowDetailed] = useState(true);
   const { credits } = useCredits();
+  const { openPaymentModal } = usePaymentModal();
 
   const isPro = ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(credits?.planKey || 'free');
   const isTrial = credits?.planKey === 'trialing';
@@ -89,12 +91,19 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
               <p className="text-sm text-gray-200 mb-6 max-w-[250px] text-center">
                 Upgrade to Pro to unlock unlimited contextual AI suggestions.
               </p>
-              <a
-                href="/dashboard/pricing"
+              <button
+                type="button"
+                onClick={() =>
+                  openPaymentModal({
+                    preselectedPlanKey: 'pro_monthly',
+                    triggerContext: 'ai-suggestions-locked',
+                    returnUrl: window.location.href
+                  })
+                }
                 className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors text-sm"
               >
                 Upgrade to Pro
-              </a>
+              </button>
             </div>
           )}
           <div className="flex items-center justify-between mb-3">
@@ -189,4 +198,3 @@ export const AISuggestionsPanel: React.FC<AISuggestionsPanelProps> = ({
     </AnimatePresence>
   );
 };
-

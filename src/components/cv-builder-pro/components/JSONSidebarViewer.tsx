@@ -99,42 +99,44 @@ const JSONNode = ({ keyName, value, path, level, isLast, focusedPath, expandedPa
   );
 };
 
-export const JSONSidebarViewer = ({ data, focusedPath }: { data: any, focusedPath: string | null }) => {
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+export const JSONSidebarViewer = ({ data, focusedPath, onChange }: { data: any, focusedPath: string | null, onChange?: (newData: any) => void }) => {
+  const [jsonText, setJsonText] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (focusedPath) {
-      const parts = focusedPath.split('.');
-      const pathsToExpand = new Set<string>();
-      let currentPath = '';
-      
-      parts.forEach(part => {
-        currentPath = currentPath ? `${currentPath}.${part}` : part;
-        pathsToExpand.add(currentPath);
-      });
-      
-      setExpandedPaths(pathsToExpand);
-    } else {
-      setExpandedPaths(new Set());
+    // Only update the local text if it successfully parses to the same data (prevents cursor jumping)
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (JSON.stringify(parsed) === JSON.stringify(data)) return;
+    } catch (e) {
+      // If currently invalid, ignore data updates? Or overwrite? 
+      // Overwrite if external changes happen.
     }
-  }, [focusedPath]);
+    setJsonText(JSON.stringify(data, null, 2));
+    setError(null);
+  }, [data]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const text = e.target.value;
+    setJsonText(text);
+    try {
+      const parsed = JSON.parse(text);
+      setError(null);
+      if (onChange) onChange(parsed);
+    } catch (err: any) {
+      setError(err.message);
+    }
+  };
 
   return (
-    <div className="w-full h-full overflow-y-auto custom-scrollbar p-4 bg-[#0a0a0a] text-gray-300">
-      <div className="text-gray-500 mb-1">{'{'}</div>
-      {Object.entries(data).map(([k, v], index, arr) => (
-        <JSONNode 
-          key={k}
-          keyName={k}
-          value={v}
-          path={k}
-          level={1}
-          isLast={index === arr.length - 1}
-          focusedPath={focusedPath}
-          expandedPaths={expandedPaths}
-        />
-      ))}
-      <div className="text-gray-500 mt-1">{'}'}</div>
+    <div className="w-full h-full flex flex-col bg-[#0a0a0a] text-gray-300">
+      {error && <div className="bg-red-900/50 border-b border-red-500/50 text-red-400 p-2 text-xs font-mono">{error}</div>}
+      <textarea
+        className="flex-1 w-full bg-transparent outline-none p-4 font-mono text-[11px] leading-relaxed resize-none custom-scrollbar"
+        value={jsonText}
+        onChange={handleChange}
+        spellCheck={false}
+      />
     </div>
   );
 };

@@ -5,7 +5,7 @@ import {
   MinimalHeader, 
   HeaderSnippetProps 
 } from './snippets/headers/HeaderSnippets';
-import RichTextEditor from '@/components/ui/RichTextEditor';
+import WYSIWYGEditor from '@/components/ui/WYSIWYGEditor';
 
 interface CoverLetterLayoutEngineProps {
   headerProps: HeaderSnippetProps;
@@ -14,6 +14,7 @@ interface CoverLetterLayoutEngineProps {
   templateType?: 'classic' | 'modern' | 'minimal';
   isEditing?: boolean;
   onBodyChange?: (content: string) => void;
+  pageFormat?: 'a4' | 'letter';
 }
 
 export default function CoverLetterLayoutEngine({
@@ -22,7 +23,8 @@ export default function CoverLetterLayoutEngine({
   footerContent,
   templateType = 'modern',
   isEditing = false,
-  onBodyChange
+  onBodyChange,
+  pageFormat = 'a4'
 }: CoverLetterLayoutEngineProps) {
 
   const HeaderComponent = useMemo(() => {
@@ -45,43 +47,49 @@ export default function CoverLetterLayoutEngine({
   // Splitting body content into paragraphs if it's plain text
   const paragraphs = !isHtml ? bodyContent.split('\n\n').filter(p => p.trim() !== '') : [];
 
+  const maxWidthClass = pageFormat === 'letter' ? 'max-w-[816px]' : 'max-w-[794px]';
+  const pageRatio = pageFormat === 'letter' ? '129.41cqw' : '141.43cqw';
+
   return (
     <div 
-      className="w-full max-w-[794px] mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-gray-800 transition-all duration-500 ease-in-out relative cover-letter-document" 
+      className={`w-full ${maxWidthClass} mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-gray-800 transition-all duration-500 ease-in-out relative cover-letter-document`}
       style={{ 
-        // Set container type for children to use cqw for precise A4 page breaks
+        // Set container type for children to use cqw for precise A4/Letter page breaks
         containerType: 'inline-size',
       }}
     >
       {/* 
-        We use a wrapper to ensure the minimum height matches exactly one A4 page.
-        141.43cqw is the exact proportional height of A4 (297/210 = 1.41428) based on the container width.
+        We use a wrapper to ensure the minimum height matches exactly one page.
       */}
       <div 
         className="flex-1 flex flex-col relative w-full"
-        style={{ minHeight: '141.43cqw' }}
+        style={{ minHeight: pageRatio }}
       >
         {/* Page break indicators (visual only for multiple pages) */}
         <div className="absolute inset-0 pointer-events-none z-0 opacity-100" 
              style={{ 
-               backgroundSize: '100% 141.43cqw', 
-               backgroundImage: 'linear-gradient(to bottom, transparent calc(141.43cqw - 12px), #f8fafc calc(141.43cqw - 12px), #e2e8f0 calc(141.43cqw - 2px), #94a3b8 141.43cqw)' 
+               backgroundSize: `100% ${pageRatio}`, 
+               backgroundImage: `linear-gradient(to bottom, transparent calc(${pageRatio} - 12px), #f8fafc calc(${pageRatio} - 12px), #e2e8f0 calc(${pageRatio} - 2px), #94a3b8 ${pageRatio})` 
              }} 
         />
 
         <div className="flex-1 flex flex-col relative z-10 py-[8cqw] px-[10cqw] sm:px-[12cqw] min-h-full">
           {/* Render Selected Header Snippet */}
-          <HeaderComponent {...headerProps} />
+          <div className={`${isEditing ? 'border-dashed border-2 border-emerald-500/50 hover:bg-emerald-50/10 rounded-lg transition-colors p-2 -mx-2 -mt-2 cursor-pointer' : ''}`}>
+            <HeaderComponent {...headerProps} />
+          </div>
 
           {/* Body Layout - Single Column Responsive */}
           {isEditing ? (
-            <div className={`flex-1 mt-8 mb-12`}>
-              <RichTextEditor 
-                content={bodyContent} 
-                onChange={onBodyChange || (() => {})} 
-                className={`bg-transparent border-0 ring-1 ring-lime-500/50 rounded-lg p-4 ${fontClass} ${leadingClass}`}
-                style={{ minHeight: '40cqw' }}
-              />
+            <div className={`flex-1 mt-8 mb-12`} style={{ minHeight: '40cqw' }}>
+               <WYSIWYGEditor
+                 value={bodyContent}
+                 onChange={onBodyChange || (() => {})}
+                 className={`bg-transparent border-dashed border-2 border-emerald-500/50 hover:bg-emerald-50/10 rounded-lg p-2 ${fontClass} ${leadingClass} transition-colors h-full`}
+                 showToolbar={true}
+                 reviewMode={true}
+                 grammarLocale="us"
+               />
             </div>
           ) : (
           <div className={`flex-1 flex flex-col space-y-6 ${fontClass} ${leadingClass} text-[15px] text-gray-800 tracking-wide mt-8 mb-12`}>

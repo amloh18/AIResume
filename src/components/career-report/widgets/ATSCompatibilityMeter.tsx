@@ -6,6 +6,7 @@ import { CheckCircle, XCircle, AlertCircle, Lock } from 'lucide-react';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { useCredits } from '@/lib/hooks/useCredits';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface ATSCompatibilityMeterProps {
   cvData?: UnifiedCVDataStructure;
@@ -32,6 +33,7 @@ const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
   industrySpecialization
 }) => {
   const { credits } = useCredits();
+  const { openPaymentModal } = usePaymentModal();
 
   // Use CentralScoreManager to get the actual ATS score if cvData is available
   const scoreResult = useMemo(() => {
@@ -112,12 +114,19 @@ const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
           <p className="text-gray-600 dark:text-gray-300 mb-6 max-w-md">
             You've reached your free AI analysis limit. Upgrade to Pro for unlimited deep ATS scoring, keyword mapping, and resume optimization.
           </p>
-          <a
-            href="/dashboard/pricing"
+          <button
+            type="button"
+            onClick={() =>
+              openPaymentModal({
+                preselectedPlanKey: 'pro_monthly',
+                triggerContext: 'ats-compatibility-locked',
+                returnUrl: window.location.href
+              })
+            }
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors"
           >
             Upgrade to Pro
-          </a>
+          </button>
         </div>
         <div className="opacity-40 pointer-events-none select-none filter blur-[2px]">
           <div className="flex items-center gap-3 mb-6">
@@ -249,4 +258,3 @@ const ATSCompatibilityMeter: React.FC<ATSCompatibilityMeterProps> = ({
 };
 
 export default ATSCompatibilityMeter;
-

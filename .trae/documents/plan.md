@@ -1,59 +1,47 @@
-# Plan: Implement Luxury Blank State and Snippet Gravity Sidebar
+# Plan: Enhance ATS Score, Auto-Save, and CV Sidebar Tools
 
 ## Summary
-Transform the empty state of list-based form sections (Work Experience, Education, Projects, etc.) from a simple "+ Add" button to a high-end "Skeleton UX". Update input placeholders to be directive and instructional. Introduce a "Snippet Gravity" sidebar for quick skill injections, and refine the rich text editor's empty state with a breathing AI suggestion button.
+The goal is to make the AI analysis sidebar robust, real-time, and free for basic checks, while providing a clear conversion path for ATS scoring by asking for a Job Description (JD). The CV should auto-save seamlessly. The Raw JSON tool needs to be editable and reflect live changes. Finally, the download button in the sidebar must open the download modal.
 
 ## Current State Analysis
-- **Empty States:** List-based sections currently show a simple dashed "+ Add another [Section]" button when empty.
-- **Placeholders:** Input placeholders are generic (e.g., "Senior Product Manager", "Tech Corp").
-- **Rich Text Editor:** The `WYSIWYGEditor` has a fixed small height and generic placeholders.
-- **AI Suggestion Button:** The ✨ Suggest button in the `WYSIWYGToolbar` is static.
-- **Sidebar:** There is no sidebar for quick snippet insertion in the form view.
+- **ATS Score**: `ATSMeterPanel` relies on the `ATSContext` which calls an API for scoring. If no JD is linked, it still labels the score "ATS Score" and doesn't dynamically calculate it offline.
+- **Grammar & Format**: Currently uses a basic `checkSyntaxAndGrammar` utility. Needs to be more robust but remain offline and free.
+- **Auto-Save**: The CV editor (`CVCanvasEngine`) updates the local React state (`cvData`) instantly, but there is no consistent debounced auto-save to the database for authenticated users during the editing flow.
+- **Raw JSON Tool**: `JSONSidebarViewer` is completely read-only, rendering a custom JSON tree.
+- **Download Button**: Dispatches a `open-download-modal` CustomEvent from `CVCanvasEngine`, but no component listens for this event to actually show the modal.
 
 ## Proposed Changes
 
-### 1. `EmptyStateSkeleton` Component
-- **File:** `src/components/ui/EmptyStateSkeleton.tsx` (New)
-- **What/Why/How:** Create a reusable skeleton component for empty list states. It will display light gray rounded bars mimicking a filled entry, with a centered, high-contrast Lime Green "+" button and the micro-copy: "Add your first [item] to unlock career analytics."
+### 1. Robust & Dynamic Score System (`src/components/resume-enhancer/panels/ATSMeterPanel.tsx`)
+- Use the offline `CentralScoreManager.getInstance().getScoreSync(state.cvData, state.jobData)` to compute scores instantly.
+- If a Job Description is linked, display the `atsScore.total` and label it **"ATS Match Score"**.
+- If no Job Description is linked, display the `cvScore.total` and label it **"CV Score"**. Keep the existing "Paste Job Description" prompt to encourage conversion.
 
-### 2. Apply Skeletons to List-Based Sections
-- **Files:** 
-  - `src/components/forms/WorkExperienceSection.tsx`
-  - `src/components/forms/EducationSection.tsx`
-  - `src/components/forms/ProjectsSection.tsx`
-  - `src/components/forms/VolunteerSection.tsx`
-  - `src/components/forms/CertificatesSection.tsx`
-  - `src/components/forms/PublicationsSection.tsx`
-  - `src/components/forms/AwardsSection.tsx`
-- **What/Why/How:** When `safeData.length === 0`, render the `EmptyStateSkeleton` instead of the basic "+ Add" button.
+### 2. Enhanced Offline Grammar & Format Checks (`src/lib/utils/offline-grammar-check.ts`)
+- Add more robust checks to `checkSyntaxAndGrammar` (e.g., capitalization at the start of sentences, consistent bullet point punctuation, checking for "weasel words").
+- Keep this running completely offline so it's always free and requires no AI credits.
 
-### 3. Contextual "Magic" Placeholders
-- **Files:** Same form section files as above.
-- **What/Why/How:** Update the `placeholder` props for all inputs and the `WYSIWYGEditor`.
-  - **Work Experience:** Job Title `e.g., "Lead Solutions Architect"`, Company `e.g., "Global Tech Solutions"`, Summary `Start with a strong verb... (e.g., Orchestrated a cloud migration that reduced latency by 30%)`.
-  - **Education:** Degree `e.g., "Master of Science"`, Field `e.g., "Computer Science"`, Institution `e.g., "Stanford University"`, Summary `Start with an achievement... (e.g., Graduated top 5% of class)`.
-  - **Projects:** Name `e.g., "E-commerce Platform"`, Summary `Start with the impact... (e.g., Built a scalable backend serving 10k+ users)`.
+### 3. Real-time Auto-Save (`src/components/resume-enhancer/steps/Step3BuilderSurgeon.tsx`)
+- Implement a `useEffect` that listens to `state.cvData`.
+- Use a 2-second debounce interval. When the user stops typing, automatically trigger a `fetch('/api/cvs/[id]', { method: 'PUT', body: JSON.stringify({ cvData }) })` to save the CV to the database.
+- This ensures the CV is saved locally on every stroke (via context) and to the database without disrupting the user.
 
-### 4. Refine `WYSIWYGEditor` UI
-- **Files:** `src/components/ui/WYSIWYGEditor.tsx`, `src/components/ui/WYSIWYGToolbar.tsx`, `src/app/globals.css`
-- **What/Why/How:** 
-  - Increase the default minimum height of the editor (e.g., `minHeight: '150px'`).
-  - Add a custom `@keyframes breathe` to `globals.css` that scales from 1.0 to 1.05.
-  - In `WYSIWYGToolbar.tsx`, apply the `animate-[breathe_2s_ease-in-out_infinite]` class to the ✨ Suggest button when the editor is completely empty.
-  - Fade the toolbar to 50% opacity when the editor is not focused.
+### 4. Editable Raw JSON Tool (`src/components/cv-builder-pro/components/JSONSidebarViewer.tsx`)
+- Replace the read-only JSON tree with a controlled `<textarea>`.
+- Parse the input on change; if valid, call `onDataChange` to update the live CV immediately.
+- Add error state handling so invalid JSON doesn't crash the app or overwrite data incorrectly.
 
-### 5. "Snippet Gravity" Sidebar
-- **File:** `src/components/forms/SnippetGravitySidebar.tsx` (New), `src/components/forms/WorkExperienceSection.tsx`
-- **What/Why/How:** Create a persistent right-hand panel that displays a "Recommended for you" stack of skill pills based on the current Job Title. When a user clicks a pill, it appends the text to the `summary` field of that work experience entry. Integrate this sidebar into the `SortableWorkItem` layout using a flex/grid structure (hidden on smaller screens, visible on desktop).
+### 5. Fix Download Modal (`src/components/resume-enhancer/steps/Step3BuilderSurgeon.tsx`)
+- Add a `useEffect` event listener for `open-download-modal`.
+- When triggered, toggle the state to show the `DownloadModal` component (which may need to be imported or handled similarly to how it is in `Step4Review.tsx`).
 
 ## Assumptions & Decisions
-- The Skeleton Empty State will replace the existing "+ Add" button *only* when the list is completely empty. The "+ Add another" button will still appear below existing items.
-- The Snippet Gravity Sidebar will initially be implemented for the Work Experience section, as it relies heavily on the "Job Title" context to recommend relevant skills.
-- Snippet insertion will intelligently append to the HTML content of the WYSIWYG editor (e.g., inserting before the closing `</p>` tag).
+- **Auto-Save**: A 2-second debounce is optimal for balancing database load and saving user progress.
+- **JSON Editor**: A simple textarea is sufficient for raw JSON editing. Syntax highlighting can be skipped to keep it lightweight and robust.
+- **Scoring**: Bypassing the API for basic CV scoring saves AI credits and provides instant feedback, fulfilling the requirement for a robust, real-time, free tier.
 
 ## Verification Steps
-1. Open the Interactive CV Form and clear all entries in the Work Experience section. Verify the Skeleton Empty State appears with the lime green "+" button.
-2. Click the "+" button and verify a new empty entry appears with the new Contextual Magic Placeholders.
-3. Focus on the Description text area and verify the toolbar becomes 100% opaque, and the ✨ Suggest button pulses (breathes).
-4. Type a Job Title (e.g., "Software Engineer") and verify the Snippet Gravity Sidebar on the right updates with relevant skills.
-5. Click a recommended skill pill and verify it is appended to the Description text area.
+1. Open the CV builder and type in any field. Wait 2 seconds and verify a network request is made to save the CV.
+2. Open the Raw JSON sidebar, edit a value, and verify the visual CV updates immediately.
+3. Click the "Download PDF" button in the sidebar and verify the download modal appears.
+4. Check the AI Analysis sidebar. Verify it shows "CV Score" when no JD is linked, and "ATS Match Score" when a JD is linked.

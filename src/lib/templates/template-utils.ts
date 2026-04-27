@@ -5,6 +5,7 @@
  */
 
 import { ALL_TEMPLATE_V2 } from './v2/template-definitions';
+import { CANVAS_TEMPLATES } from '@/components/cv-builder-pro/registry';
 import { ITemplate } from '@/types/template';
 
 // Map TemplateV2 to ITemplate for legacy support
@@ -40,6 +41,39 @@ function mapV2ToITemplate(v2: any): ITemplate {
   };
 }
 
+// Map CanvasTemplate to ITemplate for backward compatibility
+function mapCanvasTemplateToITemplate(canvasTemplate: any): ITemplate {
+  return {
+    id: canvasTemplate.id,
+    _id: canvasTemplate.id,
+    name: canvasTemplate.name,
+    description: `A ${canvasTemplate.type} layout template`,
+    thumbnail: '', 
+    category: 'cv',
+    categories: ['cv'],
+    tier: 'free',
+    layoutType: canvasTemplate.type === '1-col' ? 'one-column' : 'two-column',
+    globalStyles: {
+      fontFamily: 'Inter, sans-serif',
+      primaryColor: '#000000',
+      secondaryColor: '#666666',
+      backgroundColor: '#ffffff',
+      fontSize: '10pt',
+      lineHeight: '1.5',
+      spacing: 16,
+      borderRadius: '4px',
+      boxShadow: 'none',
+      customCSS: ''
+    },
+    availableSections: [],
+    isActive: true,
+    isDefault: false,
+    isPublished: true,
+    globalAccess: true,
+    version: 3
+  };
+}
+
 /**
  * Get template data by ID, checking both hardcoded templates and database
  */
@@ -53,6 +87,11 @@ export function getTemplateById(templateId: string): ITemplate | null {
     return mapV2ToITemplate(v2Template);
   }
 
+  const canvasTemplate = CANVAS_TEMPLATES.find(t => t.id === templateId);
+  if (canvasTemplate) {
+    return mapCanvasTemplateToITemplate(canvasTemplate);
+  }
+
   return null;
 }
 
@@ -61,12 +100,14 @@ export function getTemplateById(templateId: string): ITemplate | null {
  * Templates are returned with resolved thumbnail URLs
  */
 export function getAllTemplates(): ITemplate[] {
-  return ALL_TEMPLATE_V2.map(mapV2ToITemplate);
+  const v2Templates = ALL_TEMPLATE_V2.map(mapV2ToITemplate);
+  const canvasTemplates = CANVAS_TEMPLATES.map(mapCanvasTemplateToITemplate);
+  return [...v2Templates, ...canvasTemplates];
 }
 
 /**
  * Check if a template ID refers to a hardcoded template
  */
 export function isHardcodedTemplate(templateId: string): boolean {
-  return ALL_TEMPLATE_V2.some(t => t.id === templateId);
+  return ALL_TEMPLATE_V2.some(t => t.id === templateId) || CANVAS_TEMPLATES.some(t => t.id === templateId);
 }

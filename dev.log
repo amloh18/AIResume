@@ -14,3 +14,2913 @@
 
   Reload env: .env.local
   Reload env: .env.local
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+[next-auth][warn][DEBUG_ENABLED] 
+https://next-auth.js.org/warnings#debug_enabled
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 3.1s (next.js: 2.4s, proxy.ts: 65ms, application-code: 602ms)
+🔗 Redis connecting...
+✅ Redis connected successfully
+[DEBUG] Public route accessed { pathname: '/', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET / 200 in 258ms (next.js: 116ms, proxy.ts: 25ms, application-code: 117ms)
+🔗 Redis connecting...
+✅ Redis connected successfully
+❌ Redis connection error: read ECONNRESET
+❌ Redis connection error: read ECONNRESET
+🔗 Redis connecting...
+🔗 Redis connecting...
+✅ Redis connected successfully
+✅ Redis connected successfully
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 218ms (next.js: 65ms, proxy.ts: 32ms, application-code: 121ms)
+🔗 Redis connecting...
+✅ Redis connected successfully
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 58ms (next.js: 8ms, proxy.ts: 7ms, application-code: 43ms)
+❌ Redis connection error: read ECONNRESET
+❌ Redis connection error: read ECONNRESET
+❌ Redis connection error: read ECONNRESET
+🔗 Redis connecting...
+🔗 Redis connecting...
+🔗 Redis connecting...
+✅ Redis connected successfully
+✅ Redis connected successfully
+✅ Redis connected successfully
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 79ms (next.js: 18ms, proxy.ts: 18ms, application-code: 43ms)
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 58ms (next.js: 8ms, proxy.ts: 5ms, application-code: 44ms)
+[DEBUG] Public route accessed { pathname: '/dashboard', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard 200 in 273ms (next.js: 110ms, proxy.ts: 6ms, application-code: 158ms)
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 51ms (next.js: 7ms, proxy.ts: 11ms, application-code: 34ms)
+[DEBUG] Public route accessed { pathname: '/dashboard', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard 200 in 49ms (next.js: 7ms, proxy.ts: 9ms, application-code: 32ms)
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+🔗 Cold start - connecting to MongoDB...
+🔍 Connection URI: mongodb+srv://***:***@cluster0.ta7jxv7.mongodb.net/cvcircle?retryWrites=true&w=majority&appName=Cluster0
+✅ MongoDB connected successfully
+✅ Connected to MongoDB successfully
+📊 Database: cvcircle
+🌐 Host: ac-r2a7yph-shard-00-00.ta7jxv7.mongodb.net:27017
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '812873804'
+}
+ GET /dashboard/canvas 200 in 3.0s (next.js: 9ms, proxy.ts: 8ms, application-code: 3.0s)
+[DEBUG] Public route accessed { pathname: '/api/pricing-plans', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user/billing-data', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+[browser] Uncaught Error: Switched to client rendering because the server rendering errored:
+
+Cannot read properties of null (reading 'useState')
+[browser] 🚫 NotificationContext - SSE setup blocked: {
+  isAuthenticated: [33mfalse[39m,
+  isWindow: [33mtrue[39m,
+  pathname: [32m'/dashboard/canvas'[39m,
+  status: [32m'authenticated'[39m
+} (src/lib/utils/consoleLogger.ts:85:30)
+[DEBUG] Public route accessed { pathname: '/api/cvs', method: 'GET' }
+🔍 CV API - Starting GET request
+[DEBUG] Public route accessed { pathname: '/api/cover-letters', method: 'GET' }
+🔗 Redis connecting...
+✅ Redis connected successfully
+✅ Connected to MongoDB successfully
+📊 Database: cvcircle
+🌐 Host: ac-r2a7yph-shard-00-00.ta7jxv7.mongodb.net:27017
+[browser] Regional pricing fetch timeout, using fallback (src/lib/utils/consoleLogger.ts:85:30)
+[browser] Regional pricing fetch timeout, using fallback (src/lib/utils/consoleLogger.ts:85:30)
+[browser] Regional pricing fetch timeout, using fallback (src/lib/utils/consoleLogger.ts:85:30)
+🔍 CV API - Database connected
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+ GET /api/cover-letters 400 in 3.8s (next.js: 28ms, proxy.ts: 2ms, application-code: 3.8s)
+[DEBUG] Public route accessed { pathname: '/api/jobs', method: 'GET' }
+🔍 Jobs list request received
+♻️  Reusing existing MongoDB connection (cached)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+[browser] Default pricing fetch timeout (src/lib/utils/consoleLogger.ts:85:30)
+[browser] Default pricing fetch timeout (src/lib/utils/consoleLogger.ts:85:30)
+[browser] Default pricing fetch timeout (src/lib/utils/consoleLogger.ts:85:30)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Auth check: { hasAuth: true, email: 'amarl@cvcircle.io' }
+🔍 CV API - User info: { userEmail: 'amarl@cvcircle.io', userId: '6973c4b7795ed692040346d3' }
+🔍 CV API - Base query: { userId: new ObjectId('6973c4b7795ed692040346d3') }
+🔍 CV API - Executing database query
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+✅ User API - Completed in 5094ms
+ GET /api/user 200 in 6.3s (next.js: 1100ms, proxy.ts: 131ms, application-code: 5.1s)
+[DEBUG] Public route accessed { pathname: '/api/analytics/progress', method: 'GET' }
+Progress API: Request received { range: '30d' }
+🔍 CV API - Query executed, found CVs: 6
+🔍 CV API - CV 1: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 2: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 3: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 4: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 5: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'master',
+  journeyId: undefined
+}
+🔍 CV API - CV 6: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'standalone',
+  journeyId: undefined
+}
+✅ Web session verified for user: 6973c4b7795ed692040346d3
+♻️  Reusing existing MongoDB connection (cached)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-27T07:40:10.618Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    atsScore: 41,
+    atsScoreDate: 2026-04-27T07:40:10.618Z
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6c: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.810Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6a: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.750Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab66: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.687Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab64: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  rawIsMaster: true,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: true,
+    lastModified: 2026-01-31T13:49:47.496Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+  }
+}
+🔍 CV API - CV Type determination for 697e0879178abfd7b8cc0862: {
+  rawCvType: 'master',
+  dbCvType: 'master',
+  journeyId: undefined,
+  isMaster: true,
+  inferredCvType: 'master',
+  finalCvType: 'master'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-02-05T13:16:15.676Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.225Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+  }
+}
+🔍 CV API - CV Type determination for 6984981d83ebb4bcc0bf9182: {
+  rawCvType: 'standalone',
+  dbCvType: 'standalone',
+  journeyId: undefined,
+  isMaster: undefined,
+  inferredCvType: 'standalone',
+  finalCvType: 'standalone'
+}
+🔍 CV API - Final transformed CVs: [
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6c'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-27T07:40:10.618Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      atsScore: 41,
+      atsScoreDate: 2026-04-27T07:40:10.618Z
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6a'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.810Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab66'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.750Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab64'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.687Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('697e0879178abfd7b8cc0862'),
+    title: 'Graphic Designer - Aishwarya Shah',
+    isMaster: true,
+    metadata: {
+      isMaster: true,
+      lastModified: 2026-01-31T13:49:47.496Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+    }
+  },
+  {
+    id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+    title: 'Director - Business Development - Charu Mishra | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-02-05T13:16:15.676Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+    }
+  }
+]
+ GET /api/cvs?projection=summary 200 in 5.6s (next.js: 52ms, proxy.ts: 4ms, application-code: 5.6s)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Jobs API - No status filter, returning all jobs
+🔍 Jobs API - Query: {
+  "userId": "6973c4b7795ed692040346d3",
+  "isArchived": {
+    "$ne": true
+  }
+}
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/@vite/client', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '812873804'
+}
+ GET /@vite/client 404 in 77ms (next.js: 34ms, proxy.ts: 1887µs, application-code: 41ms)
+[DEBUG] Public route accessed { pathname: '/api/cvs/master', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+♻️  Reusing existing MongoDB connection (cached)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+✅ Jobs API - Retrieved 1 job(s) (total matching: 1) for user 6973c4b7795ed692040346d3
+🔍 Jobs API - Sample job statuses: [
+  {
+    id: new ObjectId('69e62390bd39f005f1906eb7'),
+    status: 'created',
+    title: '(27) Human resources | LinkedIn'
+  }
+]
+ GET /api/jobs?limit=all 200 in 3.0s (next.js: 103ms, proxy.ts: 2ms, application-code: 2.9s)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Master CV API - Using explicit userId: 6973c4b7795ed692040346d3
+🔍 Master CV API - User ID: 6973c4b7795ed692040346d3
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/billing-data 200 in 8.3s (next.js: 1133ms, proxy.ts: 5ms, application-code: 7.1s)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+ GET /api/pricing-plans 200 in 8.6s (next.js: 308ms, proxy.ts: 12ms, application-code: 8.3s)
+🔍 Master CV API - No ai-career-report master CV found, using oldest CV as fallback
+♻️  Reusing existing MongoDB connection (cached)
+Progress API: Using userId from authenticated user {
+  userId: '6973c4b7795ed692040346d3',
+  userIdQuery: {
+    '$in': [
+      new ObjectId('6973c4b7795ed692040346d3'),
+      '6973c4b7795ed692040346d3'
+    ]
+  },
+  startDate: '2026-03-28T00:00:00.000Z',
+  startDateUTC: '2026-03-28T00:00:00.000Z'
+}
+[DEBUG] Public route accessed { pathname: '/api/promotional-offers/active', method: 'GET' }
+Progress API: Processing aggregation results {
+  jobsDataCount: 2,
+  cvsDataCount: 5,
+  coverLettersDataCount: 1,
+  sampleJobsData: [ { _id: '2026-04-22', count: 1 }, { _id: '2026-04-20', count: 1 } ],
+  dateKeysCount: 30,
+  sampleDateKeys: [ '2026-03-28', '2026-03-29', '2026-03-30' ]
+}
+Progress API: CVs data date not found in range: 2026-04-27
+Progress API: CVs data date not found in range: 2026-01-31
+Progress API: CVs data date not found in range: 2026-02-05
+Progress API: Optimized aggregation complete {
+  totalJobs: 2,
+  totalCVs: 9,
+  totalCoverLetters: 4,
+  progressDataPoints: 30,
+  sampleData: [
+    { date: '2026-03-28', jobs: 0, cvs: 0, coverLetters: 0 },
+    { date: '2026-03-29', jobs: 0, cvs: 0, coverLetters: 0 },
+    { date: '2026-03-30', jobs: 0, cvs: 0, coverLetters: 0 }
+  ],
+  dateRange: {
+    start: '2026-03-28T00:00:00.000Z',
+    end: '2026-04-27T07:44:45.667Z'
+  }
+}
+ GET /api/analytics/progress?userId=6973c4b7795ed692040346d3&period=week 200 in 2.4s (next.js: 65ms, proxy.ts: 5ms, application-code: 2.4s)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 379ms (next.js: 22ms, proxy.ts: 14ms, application-code: 343ms)
+♻️  Reusing existing MongoDB connection (cached)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+🔍 Master CV API - Using oldest CV as master CV fallback: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  createdAt: 2026-01-31T13:49:45.752Z
+}
+🔍 Master CV API - Query executed, result: {
+  found: true,
+  masterCVId: new ObjectId('697e0879178abfd7b8cc0862'),
+  masterCVUserId: new ObjectId('6973c4b7795ed692040346d3'),
+  masterCVTitle: 'Graphic Designer - Aishwarya Shah',
+  isMaster: undefined,
+  metadataIsMaster: true,
+  createdVia: 'resume-enhancer',
+  hasBasics: true,
+  basicsName: 'Aishwarya Shah',
+  basicsKeys: [
+    'name',     'label',
+    'email',    'phone',
+    'url',      'summary',
+    'image',    'location',
+    'profiles'
+  ]
+}
+ GET /api/cvs/master?userId=6973c4b7795ed692040346d3 200 in 1185ms (next.js: 33ms, proxy.ts: 1745µs, application-code: 1150ms)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/promotional-offers/active?userType=all 200 in 405ms (next.js: 34ms, proxy.ts: 3ms, application-code: 368ms)
+[DEBUG] Public route accessed { pathname: '/api/promotional-offers/active', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/promotional-offers/active?userType=all 200 in 371ms (next.js: 3ms, proxy.ts: 6ms, application-code: 363ms)
+[DEBUG] Public route accessed { pathname: '/api/promotional-offers/active', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/pricing-plans', method: 'GET' }
+ GET /api/pricing-plans 200 in 18ms (next.js: 12ms, proxy.ts: 3ms, application-code: 3ms)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cvs', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cover-letters', method: 'GET' }
+🔍 CV API - Starting GET request
+ GET /api/promotional-offers/active?userType=all 200 in 385ms (next.js: 3ms, proxy.ts: 5ms, application-code: 377ms)
+[DEBUG] Public route accessed { pathname: '/api/cv-draft/load', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Database connected
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Cover Letter API - Executing database query for user: 6973c4b7795ed692040346d3
+♻️  Reusing existing MongoDB connection (cached)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 313ms (next.js: 19ms, proxy.ts: 4ms, application-code: 290ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Cover Letter API - Query executed, found cover letters: 4
+ GET /api/user/usage-limits 200 in 9.9s (next.js: 1053ms, proxy.ts: 3ms, application-code: 8.8s)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 285ms (next.js: 6ms, proxy.ts: 3ms, application-code: 276ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+ GET /api/cover-letters?userId=6973c4b7795ed692040346d3 200 in 598ms (next.js: 17ms, proxy.ts: 7ms, application-code: 574ms)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+📦 Loaded CV draft from database: {
+  draftId: '69e71d8f6548742156395a8c',
+  userId: '6973c4b7795ed692040346d3',
+  currentStep: 1,
+  hasCvData: true,
+  hasAiAnalysis: false
+}
+ GET /api/cv-draft/load 200 in 676ms (next.js: 38ms, proxy.ts: 3ms, application-code: 635ms)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 283ms (next.js: 4ms, proxy.ts: 4ms, application-code: 275ms)
+🔍 CV API - Auth check: { hasAuth: true, email: 'amarl@cvcircle.io' }
+🔍 CV API - User info: { userEmail: 'amarl@cvcircle.io', userId: '6973c4b7795ed692040346d3' }
+🔍 CV API - Base query: { userId: new ObjectId('6973c4b7795ed692040346d3') }
+🔍 CV API - Executing database query
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/pricing-plans', method: 'GET' }
+ GET /api/pricing-plans 200 in 29ms (next.js: 10ms, proxy.ts: 16ms, application-code: 3ms)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 305ms (next.js: 14ms, proxy.ts: 17ms, application-code: 274ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Query executed, found CVs: 6
+🔍 CV API - CV 1: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 2: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 3: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 4: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 5: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'master',
+  journeyId: undefined
+}
+🔍 CV API - CV 6: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'standalone',
+  journeyId: undefined
+}
+ GET /api/user/usage-limits 200 in 2.7s (next.js: 63ms, proxy.ts: 17ms, application-code: 2.6s)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 289ms (next.js: 20ms, proxy.ts: 4ms, application-code: 265ms)
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-27T07:40:10.618Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    atsScore: 41,
+    atsScoreDate: 2026-04-27T07:40:10.618Z
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6c: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.810Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6a: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.750Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab66: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.687Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab64: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  rawIsMaster: true,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: true,
+    lastModified: 2026-01-31T13:49:47.496Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+  }
+}
+🔍 CV API - CV Type determination for 697e0879178abfd7b8cc0862: {
+  rawCvType: 'master',
+  dbCvType: 'master',
+  journeyId: undefined,
+  isMaster: true,
+  inferredCvType: 'master',
+  finalCvType: 'master'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-02-05T13:16:15.676Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.225Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+  }
+}
+🔍 CV API - CV Type determination for 6984981d83ebb4bcc0bf9182: {
+  rawCvType: 'standalone',
+  dbCvType: 'standalone',
+  journeyId: undefined,
+  isMaster: undefined,
+  inferredCvType: 'standalone',
+  finalCvType: 'standalone'
+}
+🔍 CV API - Final transformed CVs: [
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6c'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-27T07:40:10.618Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      atsScore: 41,
+      atsScoreDate: 2026-04-27T07:40:10.618Z
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6a'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.810Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab66'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.750Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab64'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.687Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('697e0879178abfd7b8cc0862'),
+    title: 'Graphic Designer - Aishwarya Shah',
+    isMaster: true,
+    metadata: {
+      isMaster: true,
+      lastModified: 2026-01-31T13:49:47.496Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+    }
+  },
+  {
+    id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+    title: 'Director - Business Development - Charu Mishra | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-02-05T13:16:15.676Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+    }
+  }
+]
+ GET /api/cvs?userId=6973c4b7795ed692040346d3&projection=summary 200 in 1460ms (next.js: 17ms, proxy.ts: 6ms, application-code: 1437ms)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/application-journey', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+🔍 User API - Returning cached data
+ GET /api/user 200 in 279ms (next.js: 4ms, proxy.ts: 7ms, application-code: 268ms)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+○ Compiling /api/application-journey ...
+♻️  Reusing existing MongoDB connection (cached)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+✅ Web session verified for user: 6973c4b7795ed692040346d3
+🔍 CV Journey API - Using authenticated user: 6973c4b7795ed692040346d3 (session)
+🔍 CV Journey API - Base query: { userId: new ObjectId('6973c4b7795ed692040346d3') }
+🔍 CV Journey API - Batch query for CV IDs: 6
+🔍 CV Journey API - Executing database query
+🔍 CV Journey API - Query executed, found journeys: 1
+🔍 CV Journey API - Fetched 1 job statuses for enrichment
+ GET /api/application-journey?userId=6973c4b7795ed692040346d3&cvIds=69e66d165079e95f3b55ab6c,69e66d165079e95f3b55ab6a,69e66d165079e95f3b55ab66,69e66d165079e95f3b55ab64,6984981d83ebb4bcc0bf9182,697e0879178abfd7b8cc0862 200 in 12.4s (next.js: 10.7s, proxy.ts: 5ms, application-code: 1640ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1070ms (next.js: 9ms, proxy.ts: 14ms, application-code: 1046ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 200 in 3.2s (next.js: 5ms, proxy.ts: 4ms, application-code: 3.2s)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1119ms (next.js: 7ms, proxy.ts: 4ms, application-code: 1107ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1069ms (next.js: 8ms, proxy.ts: 7ms, application-code: 1055ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 200 in 2.9s (next.js: 6ms, proxy.ts: 6ms, application-code: 2.9s)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1120ms (next.js: 4ms, proxy.ts: 3ms, application-code: 1113ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1044ms (next.js: 5ms, proxy.ts: 6ms, application-code: 1033ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 200 in 3.3s (next.js: 4ms, proxy.ts: 5ms, application-code: 3.2s)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1059ms (next.js: 4ms, proxy.ts: 7ms, application-code: 1048ms)
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for one of the following reasons:
+1. You might have mismatching versions of React and the renderer (such as React DOM)
+2. You might be breaking the Rules of Hooks
+3. You might have more than one copy of React in the same app
+See https://react.dev/link/invalid-hook-call for tips about how to debug and fix this problem.
+⨯ TypeError: Cannot read properties of null (reading 'useState')
+    at ignore-listed frames {
+  digest: '1169023564'
+}
+ GET /dashboard/canvas 200 in 73ms (next.js: 10ms, proxy.ts: 8ms, application-code: 55ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1068ms (next.js: 3ms, proxy.ts: 4ms, application-code: 1062ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 200 in 3.0s (next.js: 8ms, proxy.ts: 9ms, application-code: 3.0s)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1049ms (next.js: 7ms, proxy.ts: 9ms, application-code: 1033ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 304 in 1649ms (next.js: 4ms, proxy.ts: 5ms, application-code: 1639ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/user/usage-limits 200 in 3.1s (next.js: 4ms, proxy.ts: 7ms, application-code: 3.1s)
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://172.20.10.12:3001
+- Environments: .env.local
+✓ Ready in 382ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+- Experiments (use with caution):
+  · optimizePackageImports
+
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/auth/session', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+○ Compiling /api/user/usage-limits ...
+[next-auth][warn][DEBUG_ENABLED] 
+https://next-auth.js.org/warnings#debug_enabled
+🔗 Cold start - connecting to MongoDB...
+🔍 Connection URI: mongodb+srv://***:***@cluster0.ta7jxv7.mongodb.net/cvcircle?retryWrites=true&w=majority&appName=Cluster0
+🔗 Redis connecting...
+✅ Redis connected successfully
+🔗 Redis connecting...
+✅ MongoDB connected successfully
+✅ Connected to MongoDB successfully
+📊 Database: cvcircle
+🌐 Host: ac-r2a7yph-shard-00-00.ta7jxv7.mongodb.net:27017
+[next-auth][warn][DEBUG_ENABLED] 
+https://next-auth.js.org/warnings#debug_enabled
+🔗 Redis connecting...
+✅ Redis connected successfully
+✅ Connected to MongoDB successfully
+📊 Database: cvcircle
+🌐 Host: ac-r2a7yph-shard-00-00.ta7jxv7.mongodb.net:27017
+ GET /api/auth/session 200 in 10.6s (next.js: 4.6s, proxy.ts: 85ms, application-code: 5.9s)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+🔍 CVCheckRedirect - Rendering {
+  isChecking: true,
+  hasMasterCV: false,
+  userId: '6973c4b7795ed692040346d3'
+}
+ GET /dashboard/canvas 200 in 12.3s (next.js: 6.9s, proxy.ts: 6ms, application-code: 5.5s)
+[DEBUG] Public route accessed { pathname: '/api/auth/session', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+ GET /api/user/usage-limits 200 in 12.5s (next.js: 3.5s, proxy.ts: 84ms, application-code: 8.8s)
+[DEBUG] Public route accessed { pathname: '/api/auth/_log', method: 'POST' }
+ POST /api/auth/_log 200 in 82ms (next.js: 30ms, proxy.ts: 30ms, application-code: 22ms)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/@vite/client', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/pricing-plans', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/user/billing-data', method: 'GET' }
+[browser] 🚫 NotificationContext - SSE setup blocked: {
+  isAuthenticated: [33mfalse[39m,
+  isWindow: [33mtrue[39m,
+  pathname: [32m'/dashboard/canvas'[39m,
+  status: [32m'authenticated'[39m
+} (src/lib/utils/consoleLogger.ts:85:30)
+[DEBUG] Public route accessed { pathname: '/api/cvs', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cover-letters', method: 'GET' }
+🔍 CV API - Starting GET request
+ GET /@vite/client 404 in 465ms (next.js: 122ms, proxy.ts: 9ms, application-code: 334ms)
+[DEBUG] Public route accessed { pathname: '/api/jobs', method: 'GET' }
+🔍 Jobs list request received
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Database connected
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/cover-letters 400 in 437ms (next.js: 58ms, proxy.ts: 22ms, application-code: 357ms)
+[DEBUG] Public route accessed { pathname: '/api/analytics/progress', method: 'GET' }
+Progress API: Request received { range: '30d' }
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+🔗 Redis connecting...
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+✅ User API - Completed in 840ms
+ GET /api/user 200 in 962ms (next.js: 99ms, proxy.ts: 18ms, application-code: 845ms)
+[DEBUG] Public route accessed { pathname: '/api/pricing/regional', method: 'GET' }
+✅ Web session verified for user: 6973c4b7795ed692040346d3
+🔍 CV API - Auth check: { hasAuth: true, email: 'amarl@cvcircle.io' }
+🔍 CV API - User info: { userEmail: 'amarl@cvcircle.io', userId: '6973c4b7795ed692040346d3' }
+🔍 CV API - Base query: { userId: new ObjectId('6973c4b7795ed692040346d3') }
+🔍 CV API - Executing database query
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Jobs API - No status filter, returning all jobs
+🔍 Jobs API - Query: {
+  "userId": "6973c4b7795ed692040346d3",
+  "isArchived": {
+    "$ne": true
+  }
+}
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Query executed, found CVs: 6
+🔍 CV API - CV 1: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 2: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 3: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 4: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 5: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'master',
+  journeyId: undefined
+}
+🔍 CV API - CV 6: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'standalone',
+  journeyId: undefined
+}
+♻️  Reusing existing MongoDB connection (cached)
+Progress API: Using userId from authenticated user {
+  userId: '6973c4b7795ed692040346d3',
+  userIdQuery: {
+    '$in': [
+      new ObjectId('6973c4b7795ed692040346d3'),
+      '6973c4b7795ed692040346d3'
+    ]
+  },
+  startDate: '2026-03-28T00:00:00.000Z',
+  startDateUTC: '2026-03-28T00:00:00.000Z'
+}
+ GET /api/pricing/regional?countryCode=IN 200 in 641ms (next.js: 36ms, proxy.ts: 5ms, application-code: 600ms)
+✅ Jobs API - Retrieved 1 job(s) (total matching: 1) for user 6973c4b7795ed692040346d3
+🔍 Jobs API - Sample job statuses: [
+  {
+    id: new ObjectId('69e62390bd39f005f1906eb7'),
+    status: 'created',
+    title: '(27) Human resources | LinkedIn'
+  }
+]
+ GET /api/jobs?limit=all 200 in 1291ms (next.js: 77ms, proxy.ts: 1723µs, application-code: 1211ms)
+[DEBUG] Public route accessed { pathname: '/api/user/usage-limits', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cvs/master', method: 'GET' }
+ GET /api/user/billing-data 200 in 1645ms (next.js: 125ms, proxy.ts: 19ms, application-code: 1501ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-27T07:40:10.618Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    atsScore: 41,
+    atsScoreDate: 2026-04-27T07:40:10.618Z
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6c: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.810Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6a: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.750Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab66: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.687Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab64: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  rawIsMaster: true,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: true,
+    lastModified: 2026-01-31T13:49:47.496Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+  }
+}
+🔍 CV API - CV Type determination for 697e0879178abfd7b8cc0862: {
+  rawCvType: 'master',
+  dbCvType: 'master',
+  journeyId: undefined,
+  isMaster: true,
+  inferredCvType: 'master',
+  finalCvType: 'master'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-02-05T13:16:15.676Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.225Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+  }
+}
+🔍 CV API - CV Type determination for 6984981d83ebb4bcc0bf9182: {
+  rawCvType: 'standalone',
+  dbCvType: 'standalone',
+  journeyId: undefined,
+  isMaster: undefined,
+  inferredCvType: 'standalone',
+  finalCvType: 'standalone'
+}
+🔍 CV API - Final transformed CVs: [
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6c'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-27T07:40:10.618Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      atsScore: 41,
+      atsScoreDate: 2026-04-27T07:40:10.618Z
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6a'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.810Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab66'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.750Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab64'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.687Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('697e0879178abfd7b8cc0862'),
+    title: 'Graphic Designer - Aishwarya Shah',
+    isMaster: true,
+    metadata: {
+      isMaster: true,
+      lastModified: 2026-01-31T13:49:47.496Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+    }
+  },
+  {
+    id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+    title: 'Director - Business Development - Charu Mishra | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-02-05T13:16:15.676Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+    }
+  }
+]
+ GET /api/cvs?projection=summary 200 in 1687ms (next.js: 65ms, proxy.ts: 123ms, application-code: 1499ms)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/api/pricing/regional', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+Progress API: Processing aggregation results {
+  jobsDataCount: 2,
+  cvsDataCount: 5,
+  coverLettersDataCount: 1,
+  sampleJobsData: [ { _id: '2026-04-20', count: 1 }, { _id: '2026-04-22', count: 1 } ],
+  dateKeysCount: 30,
+  sampleDateKeys: [ '2026-03-28', '2026-03-29', '2026-03-30' ]
+}
+Progress API: CVs data date not found in range: 2026-02-05
+Progress API: CVs data date not found in range: 2026-01-31
+Progress API: CVs data date not found in range: 2026-04-27
+Progress API: Optimized aggregation complete {
+  totalJobs: 2,
+  totalCVs: 9,
+  totalCoverLetters: 4,
+  progressDataPoints: 30,
+  sampleData: [
+    { date: '2026-03-28', jobs: 0, cvs: 0, coverLetters: 0 },
+    { date: '2026-03-29', jobs: 0, cvs: 0, coverLetters: 0 },
+    { date: '2026-03-30', jobs: 0, cvs: 0, coverLetters: 0 }
+  ],
+  dateRange: {
+    start: '2026-03-28T00:00:00.000Z',
+    end: '2026-04-27T07:49:53.717Z'
+  }
+}
+ GET /api/analytics/progress?userId=6973c4b7795ed692040346d3&period=week 200 in 1314ms (next.js: 36ms, proxy.ts: 2ms, application-code: 1275ms)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Master CV API - Using explicit userId: 6973c4b7795ed692040346d3
+🔍 Master CV API - User ID: 6973c4b7795ed692040346d3
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/pricing/regional?countryCode=IN 200 in 285ms (next.js: 978µs, proxy.ts: 1335µs, application-code: 283ms)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+🔍 User API - Returning cached data
+ GET /api/user 200 in 383ms (next.js: 1127µs, proxy.ts: 1457µs, application-code: 380ms)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+[DEBUG] Public route accessed { pathname: '/api/pricing/regional', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Master CV API - No ai-career-report master CV found, using oldest CV as fallback
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/pricing/regional?countryCode=IN 200 in 310ms (next.js: 11ms, proxy.ts: 104ms, application-code: 195ms)
+ GET /api/pricing-plans 200 in 2.5s (next.js: 60ms, proxy.ts: 17ms, application-code: 2.4s)
+[DEBUG] Public route accessed { pathname: '/api/promotional-offers/active', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Master CV API - Using oldest CV as master CV fallback: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  createdAt: 2026-01-31T13:49:45.752Z
+}
+🔍 Master CV API - Query executed, result: {
+  found: true,
+  masterCVId: new ObjectId('697e0879178abfd7b8cc0862'),
+  masterCVUserId: new ObjectId('6973c4b7795ed692040346d3'),
+  masterCVTitle: 'Graphic Designer - Aishwarya Shah',
+  isMaster: undefined,
+  metadataIsMaster: true,
+  createdVia: 'resume-enhancer',
+  hasBasics: true,
+  basicsName: 'Aishwarya Shah',
+  basicsKeys: [
+    'name',     'label',
+    'email',    'phone',
+    'url',      'summary',
+    'image',    'location',
+    'profiles'
+  ]
+}
+ GET /api/cvs/master?userId=6973c4b7795ed692040346d3 200 in 951ms (next.js: 30ms, proxy.ts: 3ms, application-code: 918ms)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/promotional-offers/active?userType=all 200 in 432ms (next.js: 32ms, proxy.ts: 5ms, application-code: 395ms)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/api/promotional-offers/active', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/promotional-offers/active?userType=all 200 in 413ms (next.js: 6ms, proxy.ts: 7ms, application-code: 400ms)
+[DEBUG] Public route accessed { pathname: '/api/promotional-offers/active', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+ GET /api/promotional-offers/active?userType=all 200 in 393ms (next.js: 3ms, proxy.ts: 5ms, application-code: 385ms)
+[DEBUG] Public route accessed { pathname: '/api/pricing-plans', method: 'GET' }
+ GET /api/pricing-plans 200 in 10ms (next.js: 3ms, proxy.ts: 3ms, application-code: 4ms)
+[DEBUG] Public route accessed { pathname: '/api/pricing-plans', method: 'GET' }
+ GET /api/pricing-plans 200 in 9ms (next.js: 2ms, proxy.ts: 3ms, application-code: 3ms)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cvs', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cover-letters', method: 'GET' }
+[DEBUG] Public route accessed { pathname: '/api/cv-draft/load', method: 'GET' }
+🔍 CV API - Starting GET request
+♻️  Reusing existing MongoDB connection (cached)
+🔍 Cover Letter API - Executing database query for user: 6973c4b7795ed692040346d3
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Database connected
+🔍 User API - Returning cached data
+ GET /api/user 200 in 289ms (next.js: 15ms, proxy.ts: 4ms, application-code: 270ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+🔍 Cover Letter API - Query executed, found cover letters: 4
+♻️  Reusing existing MongoDB connection (cached)
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 272ms (next.js: 2ms, proxy.ts: 3ms, application-code: 267ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+ GET /api/cover-letters?userId=6973c4b7795ed692040346d3 200 in 593ms (next.js: 17ms, proxy.ts: 7ms, application-code: 569ms)
+ GET /api/user/usage-limits 200 in 3.1s (next.js: 3ms, proxy.ts: 3ms, application-code: 3.1s)
+♻️  Reusing existing MongoDB connection (cached)
+📦 Loaded CV draft from database: {
+  draftId: '69e71d8f6548742156395a8c',
+  userId: '6973c4b7795ed692040346d3',
+  currentStep: 1,
+  hasCvData: true,
+  hasAiAnalysis: false
+}
+ GET /api/cv-draft/load 200 in 721ms (next.js: 29ms, proxy.ts: 14ms, application-code: 677ms)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 272ms (next.js: 3ms, proxy.ts: 3ms, application-code: 267ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+🔍 CV API - Auth check: { hasAuth: true, email: 'amarl@cvcircle.io' }
+🔍 CV API - User info: { userEmail: 'amarl@cvcircle.io', userId: '6973c4b7795ed692040346d3' }
+🔍 CV API - Base query: { userId: new ObjectId('6973c4b7795ed692040346d3') }
+🔍 CV API - Executing database query
+🔍 User API - Returning cached data
+ GET /api/user 200 in 285ms (next.js: 11ms, proxy.ts: 6ms, application-code: 269ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+🔍 CV API - Query executed, found CVs: 6
+🔍 CV API - CV 1: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 2: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 3: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 4: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f')
+}
+🔍 CV API - CV 5: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'master',
+  journeyId: undefined
+}
+🔍 CV API - CV 6: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  status: 'draft',
+  userId: new ObjectId('6973c4b7795ed692040346d3'),
+  cvType: 'standalone',
+  journeyId: undefined
+}
+[DEBUG] Public route accessed { pathname: '/dashboard/canvas', method: 'GET' }
+🔍 CVCheckRedirect - Rendering { isChecking: true, hasMasterCV: false, userId: undefined }
+ GET /dashboard/canvas 200 in 62ms (next.js: 5ms, proxy.ts: 4ms, application-code: 53ms)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 271ms (next.js: 2ms, proxy.ts: 2ms, application-code: 266ms)
+[DEBUG] Public route accessed { pathname: '/api/user', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+♻️  Reusing existing MongoDB connection (cached)
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6c'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-27T07:40:10.618Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    atsScore: 41,
+    atsScoreDate: 2026-04-27T07:40:10.618Z
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6c: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab6a'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.810Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab6a: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab66'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.750Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab66: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('69e66d165079e95f3b55ab64'),
+  title: 'a Time_(27) Human resources | LinkedIn | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-04-20T18:14:46.687Z,
+    createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    starred: false,
+    createdVia: 'journey',
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false
+  }
+}
+🔍 CV API - CV Type determination for 69e66d165079e95f3b55ab64: {
+  rawCvType: 'journey',
+  dbCvType: 'journey',
+  journeyId: new ObjectId('69e66d035079e95f3b55aa9f'),
+  isMaster: undefined,
+  inferredCvType: 'journey',
+  finalCvType: 'journey'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('697e0879178abfd7b8cc0862'),
+  title: 'Graphic Designer - Aishwarya Shah',
+  isMaster: true,
+  rawIsMaster: true,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: true,
+    lastModified: 2026-01-31T13:49:47.496Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.233Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+  }
+}
+🔍 CV API - CV Type determination for 697e0879178abfd7b8cc0862: {
+  rawCvType: 'master',
+  dbCvType: 'master',
+  journeyId: undefined,
+  isMaster: true,
+  inferredCvType: 'master',
+  finalCvType: 'master'
+}
+🔍 CV API - Transforming CV: {
+  id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+  title: 'Director - Business Development - Charu Mishra | CV',
+  isMaster: false,
+  rawIsMaster: false,
+  isMasterType: 'boolean',
+  fullMetadata: {
+    isMaster: false,
+    lastModified: 2026-02-05T13:16:15.676Z,
+    tags: [],
+    isPublic: false,
+    viewCount: 0,
+    downloadCount: 0,
+    createdVia: 'resume-enhancer',
+    starred: false,
+    atsScoreCap: 100,
+    isUserMaster: false,
+    fresherMode: false,
+    thumbnailGeneratedAt: 2026-04-19T15:44:46.225Z,
+    thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+  }
+}
+🔍 CV API - CV Type determination for 6984981d83ebb4bcc0bf9182: {
+  rawCvType: 'standalone',
+  dbCvType: 'standalone',
+  journeyId: undefined,
+  isMaster: undefined,
+  inferredCvType: 'standalone',
+  finalCvType: 'standalone'
+}
+🔍 CV API - Final transformed CVs: [
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6c'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-27T07:40:10.618Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      atsScore: 41,
+      atsScoreDate: 2026-04-27T07:40:10.618Z
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab6a'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.810Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab66'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.750Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('69e66d165079e95f3b55ab64'),
+    title: 'a Time_(27) Human resources | LinkedIn | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-04-20T18:14:46.687Z,
+      createdFrom: new ObjectId('697e0879178abfd7b8cc0862'),
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg',
+      thumbnailGeneratedAt: undefined,
+      starred: false,
+      createdVia: 'journey',
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false
+    }
+  },
+  {
+    id: new ObjectId('697e0879178abfd7b8cc0862'),
+    title: 'Graphic Designer - Aishwarya Shah',
+    isMaster: true,
+    metadata: {
+      isMaster: true,
+      lastModified: 2026-01-31T13:49:47.496Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/697e0879178abfd7b8cc0862-1776613485268.svg'
+    }
+  },
+  {
+    id: new ObjectId('6984981d83ebb4bcc0bf9182'),
+    title: 'Director - Business Development - Charu Mishra | CV',
+    isMaster: false,
+    metadata: {
+      isMaster: false,
+      lastModified: 2026-02-05T13:16:15.676Z,
+      tags: [],
+      isPublic: false,
+      viewCount: 0,
+      downloadCount: 0,
+      createdVia: 'resume-enhancer',
+      starred: false,
+      atsScoreCap: 100,
+      isUserMaster: false,
+      fresherMode: false,
+      thumbnailGeneratedAt: undefined,
+      thumbnailUrl: 'https://cvcircle.s3.eu-north-1.amazonaws.com/thumbnails/6973c4b7795ed692040346d3/6984981d83ebb4bcc0bf9182-1776613485277.svg'
+    }
+  }
+]
+ GET /api/cvs?userId=6973c4b7795ed692040346d3&projection=summary 200 in 1408ms (next.js: 17ms, proxy.ts: 7ms, application-code: 1385ms)
+♻️  Reusing existing MongoDB connection (cached)
+[DEBUG] Public route accessed { pathname: '/api/application-journey', method: 'GET' }
+♻️  Reusing existing MongoDB connection (cached)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+♻️  Reusing existing MongoDB connection (cached)
+🔍 User API - Returning cached data
+ GET /api/user 200 in 302ms (next.js: 1721µs, proxy.ts: 1428µs, application-code: 299ms)
+❌ CVThumbnailService - Error generating thumbnail: CastError: Cast to ObjectId failed for value "zurich-minimalist" (type string) at path "_id" for model "Template"
+    at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+    at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+  58 |       } else {
+  59 |         // Try database template
+> 60 |         template = await Template.findById(cv.templateId);
+     |                    ^
+  61 |       }
+  62 |       
+  63 |       if (!template) { {
+  stringValue: '"zurich-minimalist"',
+  messageFormat: undefined,
+  kind: 'ObjectId',
+  value: 'zurich-minimalist',
+  path: '_id',
+  reason: BSONError: input must be a 24 character hex string, 12 byte Uint8Array, or an integer
+      at async CVThumbnailService.generateAndSaveThumbnail (src/lib/services/cvThumbnailService.ts:60:20)
+      at async Immediate.<anonymous> (src/app/api/cvs/route.ts:180:13)
+    58 |       } else {
+    59 |         // Try database template
+  > 60 |         template = await Template.findById(cv.templateId);
+       |                    ^
+    61 |       }
+    62 |       
+    63 |       if (!template) {,
+  valueType: 'string'
+}
+✅ Auth - NextAuth session found: amarl@cvcircle.io
+♻️  Reusing existing MongoDB connection (cached)
+✅ Web session verified for user: 6973c4b7795ed692040346d3
+🔍 CV Journey API - Using authenticated user: 6973c4b7795ed692040346d3 (session)
+🔍 CV Journey API - Base query: { userId: new ObjectId('6973c4b7795ed692040346d3') }
+🔍 CV Journey API - Batch query for CV IDs: 6
+🔍 CV Journey API - Executing database query
+🔍 CV Journey API - Query executed, found journeys: 1
+🔍 CV Journey API - Fetched 1 job statuses for enrichment
+ GET /api/application-journey?userId=6973c4b7795ed692040346d3&cvIds=69e66d165079e95f3b55ab6c,69e66d165079e95f3b55ab6a,69e66d165079e95f3b55ab66,69e66d165079e95f3b55ab64,6984981d83ebb4bcc0bf9182,697e0879178abfd7b8cc0862 200 in 1653ms (next.js: 52ms, proxy.ts: 1347µs, application-code: 1600ms)
+⚠️ MongoDB disconnected
+⚠️ MongoDB disconnected
+🛑 MongoDB connection closed through app termination (SIGTERM)
+[?25h

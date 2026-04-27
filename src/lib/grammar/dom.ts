@@ -6,7 +6,65 @@ interface TextNodeInfo {
   end: number;
 }
 
+function getSelectionOffsets(root: HTMLElement) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  if (!root.contains(range.startContainer) || !root.contains(range.endContainer)) return null;
+
+  const preStart = range.cloneRange();
+  preStart.selectNodeContents(root);
+  preStart.setEnd(range.startContainer, range.startOffset);
+  const start = preStart.toString().length;
+
+  const preEnd = range.cloneRange();
+  preEnd.selectNodeContents(root);
+  preEnd.setEnd(range.endContainer, range.endOffset);
+  const end = preEnd.toString().length;
+
+  return { start, end };
+}
+
+function restoreSelectionOffsets(root: HTMLElement, offsets: { start: number; end: number }) {
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  let node: Node | null = walker.nextNode();
+  let current = 0;
+  let startNode: Text | null = null;
+  let endNode: Text | null = null;
+  let startOffset = 0;
+  let endOffset = 0;
+
+  while (node) {
+    const textNode = node as Text;
+    const len = textNode.data.length;
+
+    if (!startNode && offsets.start <= current + len) {
+      startNode = textNode;
+      startOffset = Math.max(0, offsets.start - current);
+    }
+    if (!endNode && offsets.end <= current + len) {
+      endNode = textNode;
+      endOffset = Math.max(0, offsets.end - current);
+      break;
+    }
+
+    current += len;
+    node = walker.nextNode();
+  }
+
+  if (!startNode || !endNode) return;
+  const range = document.createRange();
+  range.setStart(startNode, Math.min(startOffset, startNode.length));
+  range.setEnd(endNode, Math.min(endOffset, endNode.length));
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 export function highlightGrammarIssues(root: HTMLElement) {
+  const selectionOffsets = getSelectionOffsets(root);
   // First, remove existing highlights
   const existingSpans = root.querySelectorAll('span.grammar-highlight');
   existingSpans.forEach(span => {
@@ -52,7 +110,8 @@ export function highlightGrammarIssues(root: HTMLElement) {
 
   // Re-run analyzeText on fullText to get correct offsets for the DOM text
   const { analyzeText } = require('./engine');
-  const domIssues = analyzeText(fullText);
+  const locale = (root as any).dataset?.grammarLocale as 'us' | 'uk' | undefined;
+  const domIssues = analyzeText(fullText, { locale });
 
   // Apply highlights from back to front to avoid messing up offsets
   const sortedIssues = [...domIssues].sort((a: any, b: any) => b.startIndex - a.startIndex);
@@ -63,6 +122,7 @@ export function highlightGrammarIssues(root: HTMLElement) {
     passive_voice: 'rgba(34, 197, 94, 0.4)', // green
     lengthy_sentence: 'rgba(234, 179, 8, 0.4)', // yellow
     complex_sentence: 'rgba(239, 68, 68, 0.4)', // red
+    spelling_variant: 'rgba(239, 68, 68, 0.4)' // red
   };
 
   for (const issue of sortedIssues) {
@@ -112,10 +172,15 @@ export function highlightGrammarIssues(root: HTMLElement) {
       span.style.backgroundColor = color;
       span.style.borderRadius = '2px';
       span.style.cursor = 'pointer';
+      span.title = issue.suggestion ? `${issue.message}\nFix: ${issue.suggestion}` : issue.message;
 
       highlightNode.parentNode?.insertBefore(span, highlightNode);
       span.appendChild(highlightNode);
     }
+  }
+
+  if (selectionOffsets) {
+    restoreSelectionOffsets(root, selectionOffsets);
   }
 
   return domIssues;

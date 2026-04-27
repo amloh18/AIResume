@@ -16,6 +16,7 @@ import { getFieldPathLabel } from '@/lib/utils/fieldPathLabels';
 import LiveKeywordValidator from '@/components/resume-enhancer/LiveKeywordValidator';
 import { suppressFix, getSuppressedFixes } from '@/lib/services/fix-suppression-service';
 import { useATS } from '@/contexts/ATSContext';
+import { usePaymentModal } from '@/contexts/PaymentModalContext';
 
 interface SurgeonReportModalProps {
   isOpen: boolean;
@@ -107,6 +108,7 @@ function whyItMatters(fix?: FixAnnotation) {
 
 export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: SurgeonReportModalProps) {
   const { state, dispatch } = useResumeEnhancer();
+  const { openPaymentModal } = usePaymentModal();
   const {
     surgeonAnalysis: contextSurgeonAnalysis,
     atsScore,
@@ -702,9 +704,19 @@ export default function SurgeonReportModal({ isOpen, onClose, onReviewAndFix }: 
                   <AlertTriangle className="w-4 h-4" />
                   <span>Free limit reached. Showing Grammar & Clarity only.</span>
                 </div>
-                <a href="/dashboard/pricing" className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-full font-medium transition-colors">
+                <button
+                  type="button"
+                  onClick={() =>
+                    openPaymentModal({
+                      preselectedPlanKey: 'pro_monthly',
+                      triggerContext: 'surgeon-report-restricted',
+                      returnUrl: window.location.href
+                    })
+                  }
+                  className="text-xs bg-amber-500 hover:bg-amber-600 text-white px-3 py-1 rounded-full font-medium transition-colors"
+                >
                   Upgrade to Pro
-                </a>
+                </button>
               </div>
             )}
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">

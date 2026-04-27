@@ -14,6 +14,7 @@ export function checkSyntaxAndGrammar(cvData: any): FormattingIssue[] {
     
     // Strip HTML tags for checking
     const plainText = text.replace(/<[^>]*>?/gm, '');
+    if (!plainText.trim()) return;
 
     // Check 1: Double spaces
     if (/\s{2,}/.test(plainText)) {
@@ -47,7 +48,7 @@ export function checkSyntaxAndGrammar(cvData: any): FormattingIssue[] {
     }
 
     // Check 4: Passive voice patterns
-    const passivePatterns = /\b(was responsible for|helped with|assisted in)\b/i;
+    const passivePatterns = /\b(was responsible for|helped with|assisted in|duties included)\b/i;
     if (passivePatterns.test(plainText)) {
       issues.push({
         id: `passive-voice-${fieldPath}`,
@@ -56,22 +57,70 @@ export function checkSyntaxAndGrammar(cvData: any): FormattingIssue[] {
         field: fieldPath
       });
     }
+
+    // Check 5: Weasel words / weak words
+    const weaselWords = /\b(stuff|things|various|a lot|many|some|good|great|bad)\b/i;
+    if (weaselWords.test(plainText)) {
+      issues.push({
+        id: `weasel-words-${fieldPath}`,
+        type: 'style',
+        message: `Avoid weak or vague words like "stuff" or "things" in ${fieldName}. Be specific.`,
+        field: fieldPath
+      });
+    }
+
+    // Check 6: Sentences not starting with capital letters (heuristic)
+    const sentences = plainText.split(/[.!?]\s+/);
+    for (const sentence of sentences) {
+      if (sentence && sentence.trim().length > 0) {
+        const firstChar = sentence.trim()[0];
+        if (firstChar >= 'a' && firstChar <= 'z') {
+          issues.push({
+            id: `capitalization-${fieldPath}`,
+            type: 'grammar',
+            message: `Ensure sentences start with a capital letter in ${fieldName}.`,
+            field: fieldPath
+          });
+          break;
+        }
+      }
+    }
   };
 
-  // Check Summary
-  checkText(cvData.basics?.summary, 'basics.summary', 'Professional Summary');
+  // Check summary
+  if (cvData.basics?.summary) {
+    checkText(cvData.basics.summary, 'basics.summary', 'Professional Summary');
+  }
 
-  // Check Work Experience
+  // Check work experience descriptions and highlights
   if (Array.isArray(cvData.work)) {
     cvData.work.forEach((job: any, index: number) => {
-      checkText(job.summary, `work[${index}].summary`, `Work Experience #${index + 1} Description`);
+      if (job.summary) {
+        checkText(job.summary, `work[${index}].summary`, `Work Experience (${job.name || 'Company'}) Summary`);
+      }
+      if (Array.isArray(job.highlights)) {
+        job.highlights.forEach((highlight: string, hIndex: number) => {
+          checkText(highlight, `work[${index}].highlights[${hIndex}]`, `Work Experience (${job.name || 'Company'}) Bullet Point`);
+        });
+      }
     });
   }
 
-  // Check Projects
+  // Check education
+  if (Array.isArray(cvData.education)) {
+    cvData.education.forEach((edu: any, index: number) => {
+      if (edu.description) {
+        checkText(edu.description, `education[${index}].description`, `Education (${edu.institution || 'School'}) Description`);
+      }
+    });
+  }
+
+  // Check projects
   if (Array.isArray(cvData.projects)) {
     cvData.projects.forEach((proj: any, index: number) => {
-      checkText(proj.description, `projects[${index}].description`, `Project #${index + 1} Description`);
+      if (proj.description) {
+        checkText(proj.description, `projects[${index}].description`, `Project (${proj.name || 'Name'}) Description`);
+      }
     });
   }
 
