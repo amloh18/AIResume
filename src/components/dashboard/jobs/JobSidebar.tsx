@@ -23,6 +23,7 @@ import { useRouter } from 'next/navigation';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import UpgradeCard from '../UpgradeCard';
+import { isJobStale, getFollowUpNudge, calculateSuccessProbability, getMarketSalaryComparison } from '@/lib/utils/jobIntelligence';
 
 interface JobApplication {
   id: string;
@@ -111,23 +112,32 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [emailSentStatus, setEmailSentStatus] = useState<Record<number, boolean>>({});
 
   // Dynamic data hooks
-  const { insights, loading: insightsLoading } = useJobInsights(job.id);
+  const jobId = job.id || job._id;
+  const { insights, loading: insightsLoading } = useJobInsights(jobId);
   const fallbacks = useJobFallbacks();
 
+  const successProb = calculateSuccessProbability(job as any);
+  const nudge = getFollowUpNudge(job as any);
+  
+  // Use fallbacks defaultSalary for comparison if insights doesn't have marketAverageSalary
+  const marketAverage = 75000; // Generic fallback
+  const salaryComp = getMarketSalaryComparison(job.salary, marketAverage);
+
   const loadJourneysForJob = async () => {
-    if (!user?.id || !job?.id) return;
+    const jobId = job.id || job._id;
+    if (!user?.id || !jobId) return;
 
     setLoadingJourneys(true);
     try {
-      console.log('🔍 Loading journeys for job:', job.id);
-      const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id}`, user.id);
+      console.log('🔍 Loading journeys for job:', jobId);
+      const response = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${jobId}`, user.id);
       const result = await response.json();
 
       if (result.success && result.data.journeys) {
         console.log('✅ Loaded journeys for job:', result.data.journeys);
         setJourneys(result.data.journeys);
       } else {
-        console.log('ℹ️ No journeys found for job:', job.id);
+        console.log('ℹ️ No journeys found for job:', jobId);
         setJourneys([]);
       }
     } catch (error) {
@@ -549,7 +559,9 @@ ${userName}`
         interviewDate = new Date();
         interviewDate.setDate(interviewDate.getDate() + 1); // Default to tomorrow
       }
-      interviewDate.setHours(0, 0, 0, 0);
+      if (interviewDate) {
+        interviewDate.setHours(0, 0, 0, 0);
+      }
 
       // Before interview: 1 day before interview date (or today if interview is today/tomorrow)
       const prepDate = new Date(interviewDate);
@@ -609,13 +621,14 @@ ${userName}`
       }
 
       // Check if journey already exists for this job
-      const existingJourney = journeys.find(j => j.jobId === job.id);
+      const currentJobId = job.id || job._id;
+      const existingJourney = journeys.find(j => j.jobId === currentJobId);
 
       if (existingJourney) {
         // If journey exists but job is still in draft, move it to created
         if (job.status === 'draft') {
           try {
-            const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+            const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${currentJobId}`, user.id, {
               method: 'PUT',
               headers: {
                 'Content-Type': 'application/json',
@@ -643,7 +656,7 @@ ${userName}`
       // Journeys and documents should only be created for jobs in 'created' status or later
       if (job.status === 'draft') {
         try {
-          const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+          const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${currentJobId}`, user.id, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -675,8 +688,8 @@ ${userName}`
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          jobId: job.id,
-          jobTitle: job.jobTitle,
+          jobId: job.id || job._id,
+          jobTitle: job.jobTitle || job.title,
           company: job.company,
           cvId: null, // Will be set later
           coverLetterId: null, // Will be set later
@@ -760,7 +773,7 @@ ${userName}`
     try {
       setIsMovingToCreated(true);
 
-      const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+      const statusResponse = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1054,7 +1067,7 @@ ${userName}`
         return;
       }
 
-      const response = await authenticatedFetchWithUserId(`/api/jobs/${job.id}`, user.id, {
+      const response = await authenticatedFetchWithUserId(`/api/jobs/${jobId}`, user.id, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1658,6 +1671,18 @@ ${userName}`
                           </div>
 
                           <div className="flex items-center justify-between gap-2 min-w-0">
+                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Success Prob.</span>
+                            <span className={`px-2 py-1 rounded-full text-xs font-bold flex-shrink-0 ${
+                                successProb >= 70 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                successProb >= 40 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                                successProb >= 20 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                                'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                              }`}>
+                              {successProb}%
+                            </span>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Priority</span>
                             <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${job.priority === 'high' ? 'bg-red-500 text-white' :
                               job.priority === 'medium' ? 'bg-yellow-500 text-white' :
@@ -1720,13 +1745,30 @@ ${userName}`
 
                           <div className="flex items-center justify-between gap-2 min-w-0">
                             <span className="text-gray-500 dark:text-gray-400 text-xs truncate min-w-0">Market Comp.</span>
-                            <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
-                              {insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown'}
+                            <span className={`text-xs text-right flex-shrink-0 truncate font-medium ${
+                                salaryComp.comparison === 'above' ? 'text-green-600 dark:text-green-400' :
+                                salaryComp.comparison === 'below' ? 'text-red-600 dark:text-red-400' :
+                                'text-gray-900 dark:text-white'
+                              }`}>
+                              {salaryComp.comparison !== 'unknown' ? salaryComp.text : (insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown')}
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Smart Nudges */}
+                    {nudge && (
+                      <div className="min-w-0 w-full overflow-hidden">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 truncate">Smart Actions</h3>
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-3 min-w-0 w-full overflow-hidden">
+                          <div className="flex items-start gap-2">
+                            <TrendingUp size={16} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-sm text-blue-800 dark:text-blue-300">{nudge}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1811,7 +1853,7 @@ ${userName}`
             onClose={() => setShowEditJobSidebar(false)}
             onJobSaved={handleEditJobSaved}
             editingJob={{
-              id: job.id,
+              id: job.id || job._id,
               userId: job.userId,
               jobTitle: job.jobTitle,
               company: job.company,

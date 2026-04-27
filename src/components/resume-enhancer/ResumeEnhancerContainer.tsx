@@ -44,6 +44,7 @@ import { AnimatedScore, AnimatedProgressBar } from '@/components/ui/AnimatedScor
 import JobCard from './JobCard';
 import JobRoleCard from './JobRoleCard';
 import JobSidebar from '@/components/dashboard/jobs/JobSidebar';
+import EditJobSidebar from '@/components/dashboard/jobs/EditJobSidebar';
 import JobParserDialog from '@/components/dashboard/jobs/JobParserDialog';
 import AuthPromptModal from './AuthPromptModal';
 import { CVJourney } from '@/types/cv';
@@ -117,6 +118,7 @@ export default function ResumeEnhancerContainer({
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [isScoreAnalysisCompact, setIsScoreAnalysisCompact] = useState(false);
   const [showJobSidebar, setShowJobSidebar] = useState(false);
+  const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [journeysForJob, setJourneysForJob] = useState<CVJourney[]>([]);
@@ -143,17 +145,43 @@ export default function ResumeEnhancerContainer({
   } = useATS();
 
   useEffect(() => {
-    const handleOpenJobSidebar = () => setShowJobSidebar(true);
+    const handleOpenJobSidebar = () => {
+      const currentJob = state.jobData;
+      if (currentJob && (currentJob.id || currentJob._id)) {
+        setSelectedJob(currentJob);
+        setShowJobSidebar(true);
+      } else {
+        setShowEditJobSidebar(true);
+      }
+    };
     const handleShowTemplateOverlay = () => setShowTemplateOverlay(true);
+    const handleOpenCoverLetter = () => goToStep(4);
+    const handleOpenAtsScanner = () => {
+      goToStep(3);
+      // Wait for step 3 to mount then open sidebar
+      setTimeout(() => {
+        const currentJob = state.jobData;
+        if (currentJob && (currentJob.id || currentJob._id)) {
+          setSelectedJob(currentJob);
+          setShowJobSidebar(true);
+        } else {
+          setShowEditJobSidebar(true);
+        }
+      }, 100);
+    };
     
     window.addEventListener('open-job-sidebar', handleOpenJobSidebar);
     window.addEventListener('show-template-overlay', handleShowTemplateOverlay);
+    window.addEventListener('open-cover-letter', handleOpenCoverLetter);
+    window.addEventListener('open-ats-scanner', handleOpenAtsScanner);
     
     return () => {
       window.removeEventListener('open-job-sidebar', handleOpenJobSidebar);
       window.removeEventListener('show-template-overlay', handleShowTemplateOverlay);
+      window.removeEventListener('open-cover-letter', handleOpenCoverLetter);
+      window.removeEventListener('open-ats-scanner', handleOpenAtsScanner);
     };
-  }, []);
+  }, [goToStep, state.jobData]);
 
   // Calculate JD reference status
   const jdText =
@@ -2837,6 +2865,28 @@ export default function ResumeEnhancerContainer({
               } catch (error) {
                 console.error('Error refreshing journeys:', error);
               }
+            }
+          }}
+        />
+      )}
+
+      {/* Edit Job Sidebar Overlay */}
+      {showEditJobSidebar && (
+        <EditJobSidebar
+          isOpen={showEditJobSidebar}
+          onClose={() => setShowEditJobSidebar(false)}
+          userId={userId}
+          editingJob={state.jobData && !state.jobData.id && !state.jobData._id ? state.jobData as any : undefined}
+          onJobSaved={(savedJob) => {
+            setShowEditJobSidebar(false);
+            // After saving, we can set it as the active job
+            setSelectedJob(savedJob);
+            // Optionally, also update state.jobData
+            dispatch({ type: 'SET_JOB_DATA', payload: savedJob });
+            const savedJobAny = savedJob as any;
+            if (savedJobAny.journeyId && !state.journeyId) {
+              dispatch({ type: 'SET_JOURNEY_ID', payload: savedJobAny.journeyId });
+              dispatch({ type: 'SET_CV_TYPE', payload: 'journey' });
             }
           }}
         />

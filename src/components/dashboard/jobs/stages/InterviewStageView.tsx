@@ -197,7 +197,7 @@ const InterviewStageView: React.FC<InterviewStageViewProps> = ({
                   <td className="px-6 py-4 whitespace-nowrap">
                     {nextInterview ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 capitalize">
-                        {nextInterview.type.replace('-', ' ')}
+                        {(nextInterview.type || 'Unknown').replace('-', ' ')}
                       </span>
                     ) : (
                       <span className="text-gray-400">-</span>

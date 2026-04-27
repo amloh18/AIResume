@@ -9,10 +9,10 @@ import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
 
 interface ATSMeterPanelProps {
-  onOpenJobParser: () => void;
+  // onOpenJobParser is replaced by event dispatching
 }
 
-export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser }) => {
+export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
@@ -450,7 +450,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onOpenJobParser();
+                    window.dispatchEvent(new CustomEvent('open-job-sidebar'));
                   }}
                   className="flex-1 py-2 text-[11px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 dark:bg-[#80FF00]/10 dark:text-[#80FF00] dark:hover:bg-[#80FF00]/20 rounded-lg transition-colors border border-emerald-600 dark:border-[#80FF00]/30"
                 >
@@ -471,7 +471,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
             <div className="relative z-10">
               <p className="text-xs text-emerald-700 dark:text-white/60 mb-3">Add a job description to get specific ATS feedback and keyword matches.</p>
               <button 
-                onClick={onOpenJobParser}
+                onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
                 className="w-full py-2 text-xs font-bold text-emerald-700 dark:text-[#11140e] bg-emerald-200 dark:bg-[#80FF00] hover:bg-emerald-300 dark:hover:bg-[#99ff33] rounded-lg transition-colors shadow-[0_0_10px_rgba(128,255,0,0.2)]"
               >
                 Paste Job Description

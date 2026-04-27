@@ -161,7 +161,7 @@ const OfferStageView: React.FC<OfferStageViewProps> = ({
                           />
                         ) : null}
                         <span style={{ display: job.companyLogo ? 'none' : 'block' }}>
-                          {job.company.substring(0, 2).toUpperCase()}
+                          {(job.company || 'NA').substring(0, 2).toUpperCase()}
                         </span>
                       </div>
                       <span className="text-sm font-semibold text-gray-900 dark:text-white">{job.company}</span>

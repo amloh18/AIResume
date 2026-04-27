@@ -18,9 +18,11 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   actionType?: string;
+  actionUrl?: string;
   actionData?: any;
   interactive?: boolean;
   priority?: NotificationPriority;
+  category?: string;
   expiresAt?: Date;
   persistent?: boolean;
   channels?: NotificationChannel[];
@@ -140,9 +142,11 @@ class NotificationService {
       title: params.title,
       message: params.message,
       actionType: params.actionType,
+      actionUrl: params.actionUrl,
       actionData: params.actionData || {},
       interactive: params.interactive || false,
       priority: params.priority || 'medium',
+      category: params.category,
       expiresAt: params.expiresAt,
       persistent: params.persistent || false,
       channels,

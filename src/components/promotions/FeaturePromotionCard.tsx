@@ -53,9 +53,16 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
         returnUrl: window.location.href,
       });
       handleDismiss();
-    } else {
+    } else if (promotion.ctaRoute.startsWith('action:')) {
+      // Trigger a custom event instead of navigation
+      const action = promotion.ctaRoute.replace('action:', '');
+      window.dispatchEvent(new CustomEvent(action));
+      handleDismiss();
+    } else if (promotion.ctaRoute) {
       // Regular navigation
       router.push(promotion.ctaRoute);
+      handleDismiss();
+    } else {
       handleDismiss();
     }
   };
@@ -83,7 +90,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
           transition={{ duration: 0.3, ease: 'easeOut' }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
-          className="fixed bottom-4 right-4 z-50 w-96 max-w-[calc(100vw-2rem)] bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl border border-red-200 dark:border-red-500/30 overflow-hidden"
+          className="fixed bottom-0 sm:bottom-4 right-0 sm:right-4 z-50 w-full sm:w-96 max-w-[calc(100vw-1rem)] bg-white dark:bg-[#1a1a1a] rounded-t-2xl sm:rounded-xl shadow-2xl border border-red-200 dark:border-red-500/30 overflow-hidden m-2 sm:m-0"
           role="dialog"
           aria-labelledby="promotion-title"
           aria-describedby="promotion-description"
@@ -119,7 +126,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
               {/* Title */}
               <h3
                 id="promotion-title"
-                className="text-xl font-bold text-black"
+                className="text-xl font-bold text-gray-900 dark:text-white"
               >
                 {promotion.title}
               </h3>
@@ -127,7 +134,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
               {/* Description */}
               <p
                 id="promotion-description"
-                className="text-sm text-black"
+                className="text-sm text-gray-900 dark:text-white"
               >
                 {promotion.description}
               </p>
@@ -138,7 +145,7 @@ export default function FeaturePromotionCard({ promotion, onDismiss }: FeaturePr
                   {promotion.benefits.map((benefit, index) => (
                     <li key={index} className="flex items-start gap-2">
                       <CheckCircle2 className="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 flex-shrink-0" />
-                      <span className="text-sm text-black">
+                      <span className="text-sm text-gray-900 dark:text-white">
                         {benefit}
                       </span>
                     </li>
