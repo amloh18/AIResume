@@ -137,7 +137,7 @@ interface Step1ParserProps {
 export default function Step1Parser({ onComplete, userHasMasterCV = false, mode = 'create', cvType, isGuestMode = false }: Step1ParserProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText } = useResumeEnhancer();
+  const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
   const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -760,9 +760,28 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     whileInView={{ opacity: 1, scale: 1, y: 0 }}
                     viewport={{ once: true }}
                     onClick={() => {
-                      // Navigate to editor with the draft
-                      // Use window.location.href to force a full reload and guarantee the draft loads
-                      window.location.href = `/editor?mode=create&resumeDraft=true`;
+                      if (draftCV) {
+                        if (draftCV.cvData) {
+                          dispatch({ type: 'SET_CV_DATA', payload: draftCV.cvData });
+                        }
+                        if (draftCV.template) {
+                          dispatch({ type: 'SET_TEMPLATE', payload: draftCV.template });
+                          dispatch({ type: 'SET_SELECTED_TEMPLATE', payload: draftCV.template });
+                        }
+                        if (draftCV.cvTitle) {
+                          dispatch({ type: 'SET_CV_TITLE', payload: draftCV.cvTitle });
+                        }
+                        if (draftCV.targetRole && draftCV.seniorityLevel) {
+                          dispatch({ type: 'SET_ROLE_CONTEXT', payload: { targetRole: draftCV.targetRole, seniorityLevel: draftCV.seniorityLevel } });
+                        }
+                        
+                        if (!draftCV.template || draftCV.currentStep === 2) {
+                          goToStep(1); // Since step 2 is an overlay
+                          window.dispatchEvent(new CustomEvent('show-template-overlay'));
+                        } else {
+                          goToStep(Math.max(3, draftCV.currentStep || 3) as 1 | 2 | 3 | 4 | 5);
+                        }
+                      }
                     }}
                     className="group cursor-pointer flex flex-col gap-3 relative"
                   >
@@ -781,6 +800,26 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         
                         <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-orange-500 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
                           <Edit2 className="w-5 h-5 text-white" />
+                        </div>
+
+                        <div 
+                          className="absolute bottom-4 right-4 z-40 w-10 h-10 bg-red-500/80 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-red-600"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Are you sure you want to delete this draft?')) {
+                              try {
+                                const response = await fetch('/api/cv-draft/delete', { method: 'DELETE' });
+                                if (response.ok) {
+                                  setDraftCV(null);
+                                  cachedDraftCV = null;
+                                }
+                              } catch (err) {
+                                console.error('Failed to delete draft:', err);
+                              }
+                            }
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </div>
                       </div>
                     </div>

@@ -47,14 +47,15 @@ export default function CoverLetterLayoutEngine({
   // Splitting body content into paragraphs if it's plain text
   const paragraphs = !isHtml ? bodyContent.split('\n\n').filter(p => p.trim() !== '') : [];
 
-  const maxWidthClass = pageFormat === 'letter' ? 'max-w-[816px]' : 'max-w-[794px]';
-  const pageRatio = pageFormat === 'letter' ? '129.41cqw' : '141.43cqw';
+  const width = pageFormat === 'letter' ? '8.5in' : '210mm';
+  const minHeight = pageFormat === 'letter' ? '11in' : '297mm';
 
   return (
     <div 
-      className={`w-full ${maxWidthClass} mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-gray-800 transition-all duration-500 ease-in-out relative cover-letter-document`}
+      className={`mx-auto bg-white dark:bg-white shadow-2xl flex flex-col text-gray-800 transition-all duration-500 ease-in-out relative cover-letter-document cv-document`}
       style={{ 
-        // Set container type for children to use cqw for precise A4/Letter page breaks
+        width,
+        minHeight,
         containerType: 'inline-size',
       }}
     >
@@ -63,13 +64,13 @@ export default function CoverLetterLayoutEngine({
       */}
       <div 
         className="flex-1 flex flex-col relative w-full"
-        style={{ minHeight: pageRatio }}
+        style={{ minHeight }}
       >
         {/* Page break indicators (visual only for multiple pages) */}
         <div className="absolute inset-0 pointer-events-none z-0 opacity-100" 
              style={{ 
-               backgroundSize: `100% ${pageRatio}`, 
-               backgroundImage: `linear-gradient(to bottom, transparent calc(${pageRatio} - 12px), #f8fafc calc(${pageRatio} - 12px), #e2e8f0 calc(${pageRatio} - 2px), #94a3b8 ${pageRatio})` 
+               backgroundSize: `100% ${minHeight}`, 
+               backgroundImage: `linear-gradient(to bottom, transparent calc(${minHeight} - 40px), #f8fafc calc(${minHeight} - 40px), transparent calc(${minHeight} - 40px), transparent ${minHeight})` 
              }} 
         />
 

@@ -303,7 +303,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
 
       {/* Mode Transition Panel */}
       {state.modeTransitionData && (
-        <div className="mb-6 bg-blue-50 dark:bg-[#1a1f2e] border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 relative overflow-hidden shadow-sm">
+        <div className="mb-6 bg-blue-50 dark:bg-[#1a1f2e] border border-blue-200 dark:border-blue-500/20 rounded-xl p-4 relative shadow-sm">
           <div className="absolute top-2 right-2">
             <button 
               onClick={handleDismissTransition}
@@ -313,12 +313,12 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = ({ onOpenJobParser })
             </button>
           </div>
           
-          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-400 flex items-center gap-2 mb-2">
+          <h4 className="text-sm font-bold text-blue-900 dark:text-blue-400 flex items-center gap-2 mb-2 pr-8">
             <RefreshCw className="w-4 h-4" />
             Analysis Mode Change
           </h4>
           
-          <p className="text-xs text-blue-700 dark:text-blue-300/80 mb-4 leading-relaxed pr-6">
+          <p className="text-xs text-blue-700 dark:text-blue-300/80 mb-4 leading-relaxed pr-8">
             Analysis will change from <span className="font-semibold">{state.modeTransitionData.fromMode}</span> to <span className="font-semibold">{state.modeTransitionData.toMode}</span>.
           </p>
           
