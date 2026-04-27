@@ -144,8 +144,15 @@ export default function ResumeEnhancerContainer({
 
   useEffect(() => {
     const handleOpenJobSidebar = () => setShowJobSidebar(true);
+    const handleShowTemplateOverlay = () => setShowTemplateOverlay(true);
+    
     window.addEventListener('open-job-sidebar', handleOpenJobSidebar);
-    return () => window.removeEventListener('open-job-sidebar', handleOpenJobSidebar);
+    window.addEventListener('show-template-overlay', handleShowTemplateOverlay);
+    
+    return () => {
+      window.removeEventListener('open-job-sidebar', handleOpenJobSidebar);
+      window.removeEventListener('show-template-overlay', handleShowTemplateOverlay);
+    };
   }, []);
 
   // Calculate JD reference status
@@ -1844,6 +1851,8 @@ export default function ResumeEnhancerContainer({
         template: state.selectedTemplate,
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
+    } else if (hasUnsavedChanges) {
+      handleSmartSave();
     }
 
     goToStep(4);
@@ -1864,6 +1873,8 @@ export default function ResumeEnhancerContainer({
         template: state.selectedTemplate,
         cvTitle: state.cvTitle
       }).catch(err => console.error('Failed to save draft:', err));
+    } else if (hasUnsavedChanges) {
+      handleSmartSave();
     }
 
     goToStep(5);
@@ -1917,9 +1928,7 @@ export default function ResumeEnhancerContainer({
   const handleBackStep = () => {
     if (state.currentStep <= 1) return;
     if (hasUnsavedChanges) {
-      setPendingNavigation({ type: 'step', target: state.currentStep - 1 });
-      setShowSaveWarningModal(true);
-      return;
+      handleSmartSave();
     }
     goToStep(state.currentStep - 1);
   };
@@ -1936,11 +1945,9 @@ export default function ResumeEnhancerContainer({
   const handleExit = () => {
     if (state.currentStep > 1) {
       if (hasUnsavedChanges) {
-        setPendingNavigation({ type: 'step', target: 1 });
-        setShowSaveWarningModal(true);
-      } else {
-        goToStep(1);
+        handleSmartSave();
       }
+      goToStep(1);
       return;
     }
 

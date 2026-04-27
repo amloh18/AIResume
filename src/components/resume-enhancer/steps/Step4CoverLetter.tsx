@@ -254,27 +254,70 @@ export default function Step4CoverLetter({ onComplete }: Step4CoverLetterProps) 
       </div>
       
       {/* Right Panel (AI Tools & Controls) */}
-      <div className="hidden lg:flex flex-col w-80 shrink-0 h-full relative z-10 gap-4 overflow-y-auto custom-scrollbar">
+      <div className="hidden lg:flex flex-col w-80 shrink-0 h-[calc(100vh-64px)] relative z-10 gap-4 overflow-y-auto custom-scrollbar pb-8">
         
         {/* Context Cards */}
-        <div className="flex gap-2">
-          <div className="flex-1 bg-white dark:bg-[#1a230f] rounded-xl shadow-sm border border-gray-100 dark:border-white/5 p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-lime-600 dark:text-lime-400">
-              <Target className="w-4 h-4" />
-              <h4 className="text-xs font-bold uppercase tracking-wider">Target Role</h4>
-            </div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={state.targetRole || 'Not Set'}>
-              {state.targetRole || 'Not Set'}
-            </p>
+        <div className="flex flex-col gap-3">
+          <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-xl p-4 border border-emerald-200 dark:border-[#80FF00]/20 relative overflow-hidden group shrink-0">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-[#80FF00]/10 rounded-full blur-xl pointer-events-none group-hover:bg-[#80FF00]/20 transition-colors duration-500" />
+            <h4 className="text-emerald-700 dark:text-[#80FF00] font-bold text-[10px] tracking-[0.15em] uppercase flex items-center gap-1.5 mb-2 relative z-10">
+              <Target className="w-3.5 h-3.5" />
+              Target Role Context
+            </h4>
+            {hasJD ? (
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-emerald-900 dark:text-white font-bold text-sm truncate" title={state.targetRole || 'Not Set'}>
+                    {state.targetRole || 'Not Set'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-emerald-700 dark:text-[#80FF00]/80 text-[10px] font-bold uppercase tracking-wider mb-3">
+                  <span>Linked to Job Description</span>
+                  <CheckCircle className="w-3 h-3" />
+                </div>
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                  className="w-full py-1.5 text-xs font-bold text-emerald-700 dark:text-[#11140e] bg-emerald-200 dark:bg-[#80FF00] hover:bg-emerald-300 dark:hover:bg-[#99ff33] rounded-lg transition-colors shadow-[0_0_10px_rgba(128,255,0,0.2)]"
+                >
+                  View Job Details
+                </button>
+              </div>
+            ) : (
+              <div className="relative z-10">
+                <p className="text-xs text-emerald-700 dark:text-white/60 mb-3">Add a job description to get specific ATS feedback and keyword matches.</p>
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('open-job-sidebar'))}
+                  className="w-full py-2 text-xs font-bold text-emerald-700 dark:text-[#11140e] bg-emerald-200 dark:bg-[#80FF00] hover:bg-emerald-300 dark:hover:bg-[#99ff33] rounded-lg transition-colors shadow-[0_0_10px_rgba(128,255,0,0.2)]"
+                >
+                  Paste Job Description
+                </button>
+              </div>
+            )}
           </div>
-          <div className="flex-1 bg-white dark:bg-[#1a230f] rounded-xl shadow-sm border border-gray-100 dark:border-white/5 p-4 flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
-              <HelpCircle className="w-4 h-4" />
-              <h4 className="text-xs font-bold uppercase tracking-wider">Interview Prep</h4>
+
+          <div className="bg-blue-50 dark:bg-blue-900/10 rounded-xl p-4 border border-blue-200 dark:border-blue-500/20 relative overflow-hidden group shrink-0">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-blue-500/10 rounded-full blur-xl pointer-events-none group-hover:bg-blue-500/20 transition-colors duration-500" />
+            <h4 className="text-blue-700 dark:text-blue-400 font-bold text-[10px] tracking-[0.15em] uppercase flex items-center gap-1.5 mb-2 relative z-10">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Prep for Interview?
+            </h4>
+            <div className="relative z-10 flex flex-col gap-2">
+              <p className="text-xs text-blue-700 dark:text-white/60">
+                Get AI-generated interview questions and answers tailored to this specific job description.
+              </p>
+              <button 
+                disabled={!hasJD}
+                className={`w-full py-2 text-xs font-bold rounded-lg transition-all shadow-sm flex items-center justify-center gap-1.5 ${
+                  hasJD 
+                    ? 'text-blue-800 dark:text-white bg-blue-200 dark:bg-blue-600 hover:bg-blue-300 dark:hover:bg-blue-500 shadow-blue-500/20' 
+                    : 'text-gray-400 bg-gray-100 dark:bg-gray-800 cursor-not-allowed opacity-70'
+                }`}
+              >
+                {!hasJD && <AlertTriangle className="w-3 h-3" />}
+                {hasJD ? 'Generate Prep Kit' : 'Needs Job Description'}
+              </button>
             </div>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
-              {hasJD ? 'Ready' : 'Needs JD'}
-            </p>
           </div>
         </div>
 

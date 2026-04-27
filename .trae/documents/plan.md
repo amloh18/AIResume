@@ -1,47 +1,46 @@
-# Plan: Enhance ATS Score, Auto-Save, and CV Sidebar Tools
+# Plan for Fixing Editor Dashboard, Cover Letter Layout, and Step Navigation
 
 ## Summary
-The goal is to make the AI analysis sidebar robust, real-time, and free for basic checks, while providing a clear conversion path for ATS scoring by asking for a Job Description (JD). The CV should auto-save seamlessly. The Raw JSON tool needs to be editable and reflect live changes. Finally, the download button in the sidebar must open the download modal.
+This plan addresses the issues with the Resume Enhancer workflow, including the Draft CV loading logic in the Step 1 dashboard, Cover Letter (Step 4) layout and sidebar parity with Step 3, and removing the intrusive save dialog during internal step navigation. 
 
 ## Current State Analysis
-- **ATS Score**: `ATSMeterPanel` relies on the `ATSContext` which calls an API for scoring. If no JD is linked, it still labels the score "ATS Score" and doesn't dynamically calculate it offline.
-- **Grammar & Format**: Currently uses a basic `checkSyntaxAndGrammar` utility. Needs to be more robust but remain offline and free.
-- **Auto-Save**: The CV editor (`CVCanvasEngine`) updates the local React state (`cvData`) instantly, but there is no consistent debounced auto-save to the database for authenticated users during the editing flow.
-- **Raw JSON Tool**: `JSONSidebarViewer` is completely read-only, rendering a custom JSON tree.
-- **Download Button**: Dispatches a `open-download-modal` CustomEvent from `CVCanvasEngine`, but no component listens for this event to actually show the modal.
+- **Step 1 Dashboard**: Clicking a draft CV sometimes reads `draftCV.currentStep === 1`, which causes `goToStep(1)` and keeps the user on the dashboard instead of taking them to the editor.
+- **Cover Letter (Step 4)**: The layout lacks the `.cv-document` A4 white page styling. The right sidebar lacks `h-screen overflow-y-auto` and static job cards instead of functional cards. The "Target Role Context" card's button is not wired to dispatch the `open-job-sidebar` event.
+- **Step Navigation**: `RibbonStepIndicator` triggers `showSaveWarningModal(true)` if there are unsaved changes, even for internal step switching, instead of seamlessly auto-saving.
 
 ## Proposed Changes
 
-### 1. Robust & Dynamic Score System (`src/components/resume-enhancer/panels/ATSMeterPanel.tsx`)
-- Use the offline `CentralScoreManager.getInstance().getScoreSync(state.cvData, state.jobData)` to compute scores instantly.
-- If a Job Description is linked, display the `atsScore.total` and label it **"ATS Match Score"**.
-- If no Job Description is linked, display the `cvScore.total` and label it **"CV Score"**. Keep the existing "Paste Job Description" prompt to encourage conversion.
+### 1. Fix Step 1 Dashboard & Draft Loading
+- **File**: `src/components/resume-enhancer/steps/Step1Parser.tsx`
+- **What/How**:
+  - Update the `onClick` handler for the Draft CV card to dispatch `SET_CV_DATA`, `SET_TEMPLATE`, and other context.
+  - Fix the routing logic: If the draft lacks a template, dispatch a `show-template-overlay` event to open Step 2. Otherwise, navigate to `Math.max(3, draftCV.currentStep || 3)` so the user always lands in the builder (Step 3) or higher, never getting stuck on Step 1.
+  - Verify the existing "Delete Draft" button is visible and properly wired to `DELETE /api/cv-draft/delete`.
 
-### 2. Enhanced Offline Grammar & Format Checks (`src/lib/utils/offline-grammar-check.ts`)
-- Add more robust checks to `checkSyntaxAndGrammar` (e.g., capitalization at the start of sentences, consistent bullet point punctuation, checking for "weasel words").
-- Keep this running completely offline so it's always free and requires no AI credits.
+### 2. Fix Step Navigation & Auto-Save
+- **File**: `src/components/resume-enhancer/ResumeEnhancerContainer.tsx`
+- **What/How**:
+  - Add an event listener for `show-template-overlay` to set `setShowTemplateOverlay(true)`.
+  - Update `onStepClick` in `<RibbonStepIndicator>`: If there are unsaved changes, call `handleSmartSave()` and proceed immediately to `goToStep(step)` without showing `showSaveWarningModal`. The modal should only trigger on `handleExit`.
 
-### 3. Real-time Auto-Save (`src/components/resume-enhancer/steps/Step3BuilderSurgeon.tsx`)
-- Implement a `useEffect` that listens to `state.cvData`.
-- Use a 2-second debounce interval. When the user stops typing, automatically trigger a `fetch('/api/cvs/[id]', { method: 'PUT', body: JSON.stringify({ cvData }) })` to save the CV to the database.
-- This ensures the CV is saved locally on every stroke (via context) and to the database without disrupting the user.
-
-### 4. Editable Raw JSON Tool (`src/components/cv-builder-pro/components/JSONSidebarViewer.tsx`)
-- Replace the read-only JSON tree with a controlled `<textarea>`.
-- Parse the input on change; if valid, call `onDataChange` to update the live CV immediately.
-- Add error state handling so invalid JSON doesn't crash the app or overwrite data incorrectly.
-
-### 5. Fix Download Modal (`src/components/resume-enhancer/steps/Step3BuilderSurgeon.tsx`)
-- Add a `useEffect` event listener for `open-download-modal`.
-- When triggered, toggle the state to show the `DownloadModal` component (which may need to be imported or handled similarly to how it is in `Step4Review.tsx`).
+### 3. Enhance Cover Letter Layout & Sidebar (Step 4)
+- **File**: `src/components/resume-enhancer/steps/Step4CoverLetter.tsx`
+- **What/How**:
+  - Update the right sidebar wrapper to `h-[calc(100vh-64px)] overflow-y-auto` to enable internal scrolling while remaining fixed to viewport height.
+  - Replace the static "Target Role" and "Interview Prep" cards with the functional components used in `ATSMeterPanel.tsx`. 
+  - Wire the "Paste Job Description" button to trigger `window.dispatchEvent(new CustomEvent('open-job-sidebar'))` so it properly opens the job details overlay.
+- **File**: `src/components/cover-letter-engine/CoverLetterLayoutEngine.tsx`
+- **What/How**:
+  - Ensure the Cover Letter wrapper uses the `.cv-document` class, `bg-white`, and `shadow-2xl`, mirroring the A4 canvas scaling from the CV Builder.
 
 ## Assumptions & Decisions
-- **Auto-Save**: A 2-second debounce is optimal for balancing database load and saving user progress.
-- **JSON Editor**: A simple textarea is sufficient for raw JSON editing. Syntax highlighting can be skipped to keep it lightweight and robust.
-- **Scoring**: Bypassing the API for basic CV scoring saves AI credits and provides instant feedback, fulfilling the requirement for a robust, real-time, free tier.
+- Auto-save (`handleSmartSave`) is reliable enough to run in the background during step transitions without blocking the user.
+- The `open-job-sidebar` event is already handled correctly in `ResumeEnhancerContainer.tsx`.
+- Drafts with `currentStep < 3` should resume at Step 3 (or Step 2 if no template) to guarantee the user enters the editing flow.
 
 ## Verification Steps
-1. Open the CV builder and type in any field. Wait 2 seconds and verify a network request is made to save the CV.
-2. Open the Raw JSON sidebar, edit a value, and verify the visual CV updates immediately.
-3. Click the "Download PDF" button in the sidebar and verify the download modal appears.
-4. Check the AI Analysis sidebar. Verify it shows "CV Score" when no JD is linked, and "ATS Match Score" when a JD is linked.
+1. Navigate to `/editor` (Step 1). Click a Draft CV and ensure it loads into Step 3 (or the Template Overlay if no template is selected).
+2. Delete a draft from the Step 1 dashboard and verify it disappears.
+3. Edit the CV in Step 3, then click Step 4 in the top ribbon. Verify it transitions smoothly without a save dialog.
+4. In Step 4, verify the Cover Letter renders as a white A4 page. Check that the right sidebar scrolls internally.
+5. Click "Paste Job Description" in the Step 4 Target Role card and verify the job details overlay opens.
