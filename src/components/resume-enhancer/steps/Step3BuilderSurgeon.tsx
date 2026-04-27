@@ -1163,7 +1163,7 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           
           {/* ATS Meter Panel on the right */}
           <div className="hidden lg:flex flex-col w-[352px] shrink-0 h-full relative z-10 gap-3">
-            <ATSMeterPanel onOpenJobParser={() => setShowJobParserDialog(true)} />
+            <ATSMeterPanel />
           </div>
 
         </div >

@@ -44,6 +44,7 @@ import { defaultCoverLetterService } from '@/lib/services/defaultCoverLetterServ
 import DownloadModal, { DocumentType, FormatType } from '@/components/ui/DownloadModal';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { useATS } from '@/contexts/ATSContext';
+import DocumentPreviewSidebar from './jobs/DocumentPreviewSidebar';
 
 interface Journey {
   id: string;
@@ -112,7 +113,7 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
 }) => {
   const { isDark } = useTheme();
   const { state, updateJourneyStatus, updateJobInfo, updateCurrentStep, updateCVId, updateCoverLetterId, updateAtsScore, updateCurrentJobId, endJourney } = useJobJourney();
-  const { hasAI } = useUserPlan();
+  const { hasAI, userProfile } = useUserPlan();
   const { data: session } = useSession();
   const router = useRouter();
   const { openPaymentModal } = usePaymentModal();
@@ -157,6 +158,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
   const [showDownloadDropdown, setShowDownloadDropdown] = React.useState(false);
   const [downloadModalOpen, setDownloadModalOpen] = React.useState(false);
   const [isDownloading, setIsDownloading] = React.useState(false);
+  const [previewDocumentType, setPreviewDocumentType] = React.useState<'cv' | 'coverLetter' | null>(null);
+  const [previewDocumentData, setPreviewDocumentData] = React.useState<any>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
 
   // Job details state
   const [jobDetails, setJobDetails] = React.useState<any | null>(null);
@@ -2455,9 +2459,23 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCV ? 'Ready for editing' : 'Document linked'}
                           </p>
-                          {/* Only show Edit button - but hide for post-application stages */}
-                          {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && journey.status !== 'completed' && (
-                            <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-3 mt-2">
+                            {linkedCV && (
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDocumentType('cv');
+                                  setPreviewDocumentData(linkedCV.cvData || linkedCV);
+                                  setPreviewOpen(true);
+                                }}
+                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                              >
+                                <Eye className="h-3 w-3" />
+                                Preview
+                              </motion.button>
+                            )}
+                            {/* Only show Edit button - but hide for post-application stages */}
+                            {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && journey.status !== 'completed' && (
                               <motion.button
                                 onClick={() => {
                                   // Navigate to resume-enhancer in journey mode
@@ -2474,8 +2492,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                 <ExternalLink className="h-3 w-3" />
                                 Edit
                               </motion.button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -2657,9 +2675,28 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                           <p className="text-xs text-white/60">
                             {linkedCoverLetter ? 'Ready for download' : 'Document linked'}
                           </p>
-                          {/* Only show Edit button - but hide for post-application stages */}
-                          {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && (
-                            <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-3 mt-2">
+                            {linkedCoverLetter && (
+                              <motion.button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setPreviewDocumentType('coverLetter');
+                                  setPreviewDocumentData(linkedCoverLetter);
+                                  setPreviewOpen(true);
+                                }}
+                                className={`text-xs flex items-center gap-1 ${liveProgress.status === 'completed'
+                                  ? 'text-blue-400 hover:text-blue-300'
+                                  : 'text-lime-400 hover:text-lime-300'
+                                  }`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                              >
+                                <Eye className="h-3 w-3" />
+                                Preview
+                              </motion.button>
+                            )}
+                            {/* Only show Edit button - but hide for post-application stages */}
+                            {(!jobDetails?.status || !['applied', 'interview', 'offer', 'rejected'].includes(jobDetails.status)) && (
                               <motion.button
                                 onClick={() => {
                                   if (userProfile?.currentPlanKey === 'free' || !userProfile?.subscription || userProfile.subscription.status !== 'active') {
@@ -2691,8 +2728,8 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                                 <ExternalLink className="h-3 w-3" />
                                 Edit
                               </motion.button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -3533,6 +3570,15 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
           });
           setDownloadModalOpen(false);
         }}
+      />
+
+      <DocumentPreviewSidebar
+        isOpen={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        documentType={previewDocumentType!}
+        documentData={previewDocumentData}
+        cvData={linkedCV?.cvData || linkedCV}
+        jobData={jobDetails}
       />
     </motion.div>
   );

@@ -915,66 +915,21 @@ export async function PUT(
       }
     }
 
-    // Send notification when job moves to interview stage
-    if (body.status === 'interview' && previousStatus !== 'interview') {
+    // Trigger NotificationService for specific stage changes
+    if (body.status && previousStatus !== body.status && ['interview', 'offer', 'rejected'].includes(body.status)) {
       try {
         const notificationService = (await import('@/lib/services/notificationService')).default;
-        await notificationService.createNotification({
-          userId: userId,
-          type: 'interview_follow_up',
-          title: '🎉 Interview Scheduled!',
-          message: `Congratulations! You have an interview for ${job.jobTitle} at ${job.company}. Don't forget to send a follow-up email after the interview to show your continued interest.`,
-          actionType: 'review_job',
-          actionData: {
-            jobId: job._id.toString(),
-            url: `/dashboard?jobId=${job._id}`,
-          },
-          interactive: true,
-          priority: 'high',
-          channels: ['in-app'],
-          persistent: false,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Expires in 7 days
-          metadata: {
-            jobId: job._id.toString(),
-            jobTitle: job.jobTitle,
-            company: job.company,
-            reminderType: 'follow_up_email',
-          },
-        });
-        console.log('✅ Job Update API - Notification sent for interview stage');
-      } catch (notificationError) {
-        console.error('⚠️ Job Update API - Failed to send interview notification (non-critical):', notificationError);
-      }
-    }
-
-    // Send notification when job receives an offer
-    if (body.status === 'offer' && previousStatus !== 'offer') {
-      try {
-        const notificationService = (await import('@/lib/services/notificationService')).default;
-        await notificationService.createNotification({
-          userId: userId,
-          type: 'achievement',
-          title: '🎊 Job Offer Received!',
-          message: `Amazing news! You received an offer for ${job.jobTitle} at ${job.company}. Review the details and make your decision.`,
-          actionType: 'review_job',
-          actionData: {
-            jobId: job._id.toString(),
-            url: `/dashboard?jobId=${job._id}`,
-          },
-          interactive: true,
-          priority: 'urgent',
-          channels: ['in-app', 'email'],
-          persistent: true,
-          expiresAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // Expires in 14 days
-          metadata: {
-            jobId: job._id.toString(),
-            jobTitle: job.jobTitle,
-            company: job.company,
-          },
-        });
-        console.log('✅ Job Update API - Notification sent for job offer');
-      } catch (notificationError) {
-        console.error('⚠️ Job Update API - Failed to send offer notification (non-critical):', notificationError);
+        const capitalizedStatus = body.status.charAt(0).toUpperCase() + body.status.slice(1);
+        const capitalizedPrevStatus = previousStatus ? previousStatus.charAt(0).toUpperCase() + previousStatus.slice(1) : 'Unknown';
+        await notificationService.notifyJobStageMoved(
+          userId,
+          job.jobTitle,
+          job._id.toString(),
+          capitalizedStatus,
+          capitalizedPrevStatus
+        );
+      } catch (notifError) {
+        console.error('Failed to send stage move notification:', notifError);
       }
     }
 
