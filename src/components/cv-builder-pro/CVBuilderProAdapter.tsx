@@ -10,6 +10,9 @@ interface CVBuilderProAdapterProps {
   onTemplateChange?: (newTemplate: ITemplate) => void;
   theme?: 'dark' | 'light';
   readOnly?: boolean;
+  cvId?: string | null;
+  jobId?: string | null;
+  role?: string | null;
 }
 
 const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
@@ -53,7 +56,7 @@ const normalizeSkillsText = (value: any): string => {
     .join(', ');
 };
 
-const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false }: CVBuilderProAdapterProps, ref) => {
+const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false, cvId, jobId, role }: CVBuilderProAdapterProps, ref) => {
   // Bridge the data format if needed. Currently, UnifiedCVDataStructure might have .work instead of .experience.
   const canvasData = useMemo(() => {
     if (!cvData) return null;
@@ -354,6 +357,9 @@ const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterPr
       onTemplateChange={onTemplateChange}
       theme={theme}
       readOnly={readOnly}
+      cvId={cvId}
+      jobId={jobId}
+      role={role}
     />
   );
 });

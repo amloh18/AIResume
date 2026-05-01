@@ -1149,6 +1149,9 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
                 ref={canvasBuilderRef}
                 cvData={state.cvData}
                 template={state.selectedTemplate}
+                cvId={state.cvId}
+                jobId={state.jobData?.id || state.jobData?._id || null}
+                role={state.jobData?.jobTitle || state.jobData?.title || state.targetRole || null}
                 onDataChange={(updatedData: any) => {
                   dispatch({ type: 'SET_CV_DATA', payload: updatedData });
                 }}
