@@ -182,7 +182,7 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
     if (!targetNode) return null;
     return (
       <div className="fixed z-50 bg-white shadow-2xl border border-gray-200 rounded-lg flex items-center p-1.5 gap-1 transform -translate-x-1/2 transition-all duration-200 animate-fade-in-up font-sans" style={{ top: pos.top, left: pos.left }} onMouseDown={(e) => e.preventDefault()}>
-        {canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Skills"><Wand2 size={14}/> ✨ Suggest Skills</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
+        {canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint('skills'); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-700 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Get AI skill suggestions"><Wand2 size={14}/> AI Skills</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
         {canSuggest && !canSuggestSkills && (<><button onClick={(e) => { e.preventDefault(); onSuggestPoint(); }} className="py-1.5 px-2 hover:bg-emerald-50 rounded text-emerald-600 flex items-center gap-1.5 font-bold text-xs border border-emerald-200 transition-colors" title="Suggest Contextual Point"><Wand2 size={14}/> ✨ Suggest</button><div className="w-px h-5 bg-gray-200 mx-1"></div></>)}
       <button onClick={(e) => execCmd(e, 'bold')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Bold"><Bold size={16}/></button>
       <button onClick={(e) => execCmd(e, 'italic')} className="p-1.5 hover:bg-gray-100 rounded text-gray-700 transition-colors" title="Italic"><Italic size={16}/></button>
@@ -198,38 +198,90 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   );
 };
 
-export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones }: any) => {
+let transparentDragImage: HTMLImageElement | null = null;
+
+const getTransparentDragImage = () => {
+  if (transparentDragImage) return transparentDragImage;
+  const image = new Image();
+  image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>');
+  transparentDragImage = image;
+  return image;
+};
+
+const buildSnippetPreviewMarkup = (source: HTMLElement) => {
+  const clone = source.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('.no-print').forEach((node) => node.remove());
+  clone.querySelectorAll('[contenteditable="true"]').forEach((node) => {
+    node.removeAttribute('contenteditable');
+  });
+  clone.style.margin = '0';
+  clone.style.transform = 'none';
+  clone.style.opacity = '1';
+  clone.style.pointerEvents = 'none';
+  clone.style.width = `${source.offsetWidth}px`;
+  clone.style.maxWidth = `${source.offsetWidth}px`;
+  return clone.outerHTML;
+};
+
+export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvData, EditableWrapper, moveSnippet, removeSnippet, onReplace, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, isDark, activeTemplate, layoutZones, onOpenSkillsSuggestions, isDropAllowed }: any) => {
   const ctx = React.useContext(CanvasContext);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
   if (!instance || !instance.type) return null;
   const SnippetComponent = SNIPPETS[instance.type] || SNIPPETS['summary-clean']; // Fallback
   if (!SnippetComponent) return null; // Safe guard if fallback fails
   const isDropTarget = dragState?.overZoneId === zoneId && dragState?.overIndex === index;
   const isBeingDragged = dragState?.isDragging && dragState?.sourceZoneId === zoneId && dragState?.sourceIndex === index;
   const isHeader = SnippetComponent?.category === 'Header';
+  const isSkillsSnippet = SnippetComponent?.category === 'Skills';
   const primaryTitleKey = (SnippetComponent?.category || '').toLowerCase();
   const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
   const showDropLine = !readOnly && isDropTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
 
+  useEffect(() => {
+    if (!confirmingRemove) return undefined;
+    const timer = window.setTimeout(() => setConfirmingRemove(false), 3000);
+    return () => window.clearTimeout(timer);
+  }, [confirmingRemove]);
+
+  const handleRemoveSnippet = () => {
+    if (!confirmingRemove) {
+      setConfirmingRemove(true);
+      return;
+    }
+    removeSnippet(zoneId, index);
+    setConfirmingRemove(false);
+  };
+
   const handleDragStart = (e: React.DragEvent) => {
     if (isHeader || readOnly) return;
-    const ghost = (e.currentTarget as HTMLElement).cloneNode(true) as HTMLElement;
-    ghost.style.backgroundColor = isDark ? '#1f2937' : '#ffffff';
-    ghost.style.color = isDark ? 'white' : 'black';
-    ghost.style.padding = '20px';
-    ghost.style.borderRadius = '12px';
-    ghost.style.boxShadow = '0 25px 50px -12px rgba(0,0,0,0.5)';
-    ghost.style.width = `${(e.currentTarget as HTMLElement).offsetWidth}px`;
-    ghost.style.position = 'absolute';
-    ghost.style.top = '-1000px';
-    document.body.appendChild(ghost);
-    e.dataTransfer.setDragImage(ghost, 20, 20);
+    const sourceElement = e.currentTarget as HTMLElement;
+    const previewMarkup = buildSnippetPreviewMarkup(sourceElement);
     e.dataTransfer.setData('application/json', JSON.stringify({ source: 'canvas', zoneId, index, instance }));
-    setTimeout(() => { document.body.removeChild(ghost); document.dispatchEvent(new CustomEvent('snippet-drag-start', { detail: { zoneId, index } })); }, 10);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setDragImage(getTransparentDragImage(), 0, 0);
+    document.dispatchEvent(new CustomEvent('snippet-drag-start', {
+      detail: {
+        zoneId,
+        index,
+        instance,
+        pointer: { x: e.clientX, y: e.clientY },
+        previewMarkup,
+        width: sourceElement.offsetWidth,
+        height: sourceElement.offsetHeight,
+        label: SnippetComponent?.name || 'Section',
+      }
+    }));
   };
   const handleDragEnd = () => document.dispatchEvent(new CustomEvent('snippet-drag-end'));
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation();
     if (isHeader || readOnly) return;
+    try {
+      const raw = e.dataTransfer.getData('application/json');
+      if (raw && isDropAllowed && !isDropAllowed(zoneId, JSON.parse(raw))) {
+        return;
+      }
+    } catch {}
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const midY = rect.top + rect.height / 2;
     const insertIndex = e.clientY < midY ? index : index + 1;
@@ -256,12 +308,13 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
     <div className="absolute -top-4 right-0 opacity-0 group-hover/inner:opacity-100 transition-opacity flex items-center bg-white border border-gray-200 shadow-sm rounded-md overflow-hidden z-[50] no-print font-sans">
       {isHeader && <button onClick={onTogglePhoto} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#eff6ff] text-[#3b82f6] font-medium text-[12px] md:text-[13px] transition-colors bg-white" title="Toggle Photo"><ImageIcon size={14}/> {!isNarrow && 'Photo'}</button>}
       {canAddListEntry && <button onClick={() => onAddListEntry(SnippetComponent.category)} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#f0fdf4] text-emerald-600 font-medium text-[12px] md:text-[13px] border-l border-[#3b82f6]/20 transition-colors bg-white"><Plus size={14}/> {!isNarrow && 'Add'}</button>}
+      {isSkillsSnippet && <button onClick={onOpenSkillsSuggestions} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-emerald-50 text-emerald-700 font-medium text-[12px] md:text-[13px] border-l border-emerald-100 transition-colors bg-white" title="Get AI skill suggestions"><Wand2 size={14}/> {!isNarrow && 'AI Skills'}</button>}
       <button onClick={() => onReplace(zoneId, index, instance.type)} className="flex items-center gap-1.5 px-2 md:px-3 py-2 hover:bg-[#eff6ff] text-[#3b82f6] font-medium text-[12px] md:text-[13px] border-l border-[#3b82f6]/20 transition-colors bg-white"><RefreshCw size={14}/> {!isNarrow && 'Replace'}</button>
       {!isHeader && (
         <>
           <button onClick={() => moveSnippet(zoneId, index, -1)} className="px-1.5 md:px-2.5 py-1 hover:bg-[#eff6ff] text-[#3b82f6] border-l border-[#3b82f6]/20 transition-colors h-full bg-white" title="Move Section Up"><ChevronUp size={16}/></button>
           <button onClick={() => moveSnippet(zoneId, index, 1)} className="px-1.5 md:px-2.5 py-1 hover:bg-[#eff6ff] text-[#3b82f6] border-l border-[#3b82f6]/20 transition-colors h-full bg-white" title="Move Section Down"><ChevronDown size={16}/></button>
-          <button onClick={() => removeSnippet(zoneId, index)} className="px-1.5 md:px-2.5 py-1 hover:bg-red-50 text-red-500 border-l border-[#3b82f6]/20 transition-colors h-full bg-white" title="Delete Section"><Trash2 size={16}/></button>
+          <button onClick={handleRemoveSnippet} className={`px-1.5 md:px-2.5 py-1 border-l transition-colors h-full ${confirmingRemove ? 'bg-red-600 text-white border-red-700 hover:bg-red-700' : 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800'}`} title={confirmingRemove ? 'Click again to delete section' : 'Delete Section'} aria-label={confirmingRemove ? 'Confirm delete section' : 'Delete section'}><Trash2 size={16}/></button>
           <div className="px-1.5 md:px-2.5 py-1 cursor-grab text-[#3b82f6] hover:bg-[#eff6ff] transition-colors h-full flex items-center bg-white border-l border-[#3b82f6]/20" title="Drag to reorder"><GripVertical size={16}/></div>
         </>
       )}
@@ -270,8 +323,8 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
     return (
-      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-30 scale-95' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-8' : 'mt-0'}`} style={isHeader ? {} : { marginBottom: 'var(--cv-section-gap, 16px)' }}>
-      {showDropLine && <div className="absolute -top-6 left-0 w-full h-4 bg-emerald-50 border-2 border-dashed border-emerald-400 rounded flex items-center justify-center pointer-events-none z-30"></div>}
+      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-0 pointer-events-none' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-10' : 'mt-0'}`} style={isHeader ? {} : { marginBottom: 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}>
+      {showDropLine && <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span></div>}
         <div className={`relative hover:z-30 group/inner w-full`}>
         {controls}
         <div className={`p-2 pointer-events-auto snippet-content relative pb-2 z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
@@ -289,26 +342,68 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   );
 };
 
-export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "" }: any) => {
+export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableWrapper, handleDrop, moveSnippet, removeSnippet, onReplace, onAddSnippet, onTogglePhoto, onAddListEntry, moveEntry, deleteEntry, dragState, activeTemplate, layoutZones, isDark = false, className = "", onOpenSkillsSuggestions, isDropAllowed }: any) => {
   const [isOverZone, setIsOverZone] = useState(false);
-  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsOverZone(true); if (e.target === e.currentTarget && !readOnly) document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: blocks.length } })); };
-  const onDragLeave = () => setIsOverZone(false);
-  const onDrop = (e: React.DragEvent) => { e.preventDefault(); setIsOverZone(false); if (readOnly) return; try { const dataStr = e.dataTransfer.getData('application/json'); if (dataStr) handleDrop(zoneId, JSON.parse(dataStr), dragState?.overIndex); } catch {} document.dispatchEvent(new CustomEvent('snippet-drag-end')); };
+  const [dropIntent, setDropIntent] = useState<'valid' | 'invalid' | null>(null);
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOverZone(true);
+    if (readOnly) return;
+    let canDropHere = true;
+    try {
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (dataStr && isDropAllowed) {
+        canDropHere = isDropAllowed(zoneId, JSON.parse(dataStr));
+      }
+    } catch {
+      canDropHere = true;
+    }
+    setDropIntent(canDropHere ? 'valid' : 'invalid');
+    if (canDropHere && e.target === e.currentTarget) {
+      document.dispatchEvent(new CustomEvent('snippet-drag-over', { detail: { zoneId, index: blocks.length } }));
+    }
+  };
+  const onDragLeave = () => { setIsOverZone(false); setDropIntent(null); };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsOverZone(false);
+    if (readOnly) return;
+    try {
+      const dataStr = e.dataTransfer.getData('application/json');
+      if (dataStr) {
+        const dragData = JSON.parse(dataStr);
+        if (!isDropAllowed || isDropAllowed(zoneId, dragData)) {
+          handleDrop(zoneId, dragData, dragState?.overIndex);
+        }
+      }
+    } catch {}
+    setDropIntent(null);
+    document.dispatchEvent(new CustomEvent('snippet-drag-end'));
+  };
   const isAppendTarget = dragState?.overZoneId === zoneId && dragState?.overIndex === blocks.length;
   const showAppendLine = !readOnly && isAppendTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
   
   // Highlight empty zones or all zones during drag for hybrid layouts
   const isDragging = dragState?.isDragging;
-  const dragHighlightClass = isDragging && !readOnly ? 'min-h-[120px] border-2 border-dashed border-gray-200/50 rounded-lg bg-gray-50/30' : 'min-h-[100px]';
+  const dragHighlightClass = isDragging && !readOnly ? 'min-h-[120px] border-2 border-dashed rounded-2xl bg-gray-50/40' : 'min-h-[100px]';
+  const dropStateClass = dropIntent === 'invalid'
+    ? '!border-red-400 !bg-red-50/70 shadow-[0_0_0_1px_rgba(239,68,68,0.15)]'
+    : dropIntent === 'valid'
+      ? '!border-emerald-400 !bg-emerald-50/60 shadow-[0_0_0_1px_rgba(16,185,129,0.15)]'
+      : isOverZone && !readOnly
+        ? '!border-emerald-300 !bg-emerald-50/50'
+        : isDragging && !readOnly
+          ? 'border-gray-200/70'
+          : 'border-transparent';
 
   return (
     <div className="relative group/zone flex flex-col h-full">
-      <div className={`${dragHighlightClass} transition-all duration-300 pb-6 ${isOverZone && !readOnly ? '!bg-emerald-50/50 !border-emerald-300' : ''} ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
-        {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 italic pointer-events-none border-2 border-dashed border-gray-200 rounded-lg m-2 no-print">Empty Zone</div>}
+      <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-6 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+        {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex flex-col gap-2 items-center justify-center text-sm text-gray-400 pointer-events-none border-2 border-dashed border-gray-200 rounded-2xl m-2 no-print"><span className="font-semibold text-gray-500">Empty Zone</span><span className="text-xs uppercase tracking-[0.22em]">{dropIntent === 'invalid' ? 'Not Allowed Here' : 'Drop A Section Here'}</span></div>}
         <div className="flex flex-col gap-1">
-          {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={layoutZones} isDark={isDark} />)}
+          {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={layoutZones} isDark={isDark} onOpenSkillsSuggestions={onOpenSkillsSuggestions} isDropAllowed={isDropAllowed} />)}
         </div>
-        {showAppendLine && <div className="w-full h-4 bg-emerald-50 border-2 border-dashed border-emerald-400 rounded mt-4 pointer-events-none"></div>}
+        {showAppendLine && <div className="w-full min-h-[34px] bg-emerald-50/95 border-2 border-dashed border-emerald-400 rounded-xl mt-4 pointer-events-none shadow-[0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Insert Here</span></div>}
       </div>
       {!readOnly && (
         <div className="opacity-0 group-hover/zone:opacity-100 transition-opacity flex justify-center py-2 relative z-10 no-print">

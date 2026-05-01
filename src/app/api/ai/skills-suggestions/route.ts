@@ -97,18 +97,21 @@ function convertAISuggestionsToCategories(suggestions: any[]): SkillCategory[] {
 
 export async function POST(req: NextRequest) {
   try {
-    const { cvId, jobId, role } = await req.json();
+    const { cvId, jobId, role, cvData: providedCvData } = await req.json();
 
-    if (!cvId) {
-      return NextResponse.json({ success: false, error: 'CV ID is required' }, { status: 400 });
+    if (!cvId && !providedCvData) {
+      return NextResponse.json({ success: false, error: 'CV ID or CV data is required' }, { status: 400 });
     }
 
-    const cv = await UnifiedCVService.getCV(cvId);
-    if (!cv?.cvData) {
-      return NextResponse.json({ success: false, error: 'CV not found' }, { status: 404 });
+    let cvData = providedCvData;
+    if (!cvData && cvId) {
+      const cv = await UnifiedCVService.getCV(cvId);
+      if (!cv?.cvData) {
+        return NextResponse.json({ success: false, error: 'CV not found' }, { status: 404 });
+      }
+      cvData = cv.cvData;
     }
 
-    const cvData = cv.cvData;
     const existingSkills = extractExistingSkills(cvData);
 
     let resolvedRole = typeof role === 'string' && role.trim().length > 0 ? role.trim() : 'General';
