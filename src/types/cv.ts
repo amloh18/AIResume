@@ -231,6 +231,26 @@ export interface CVJourney {
     completedAt?: Date;
     data?: any;
   }>;
+  generationState?: {
+    status: 'queued' | 'in_progress' | 'completed' | 'failed';
+    mode: 'tailored' | 'fallback';
+    reasonCode: string;
+    title: string;
+    summary: string;
+    supportMessage: string;
+    nextAction: 'wait' | 'review' | 'retry' | 'upgrade' | 'edit_manually' | 'contact_support';
+    nextActionLabel: string;
+    isTailoredEligible: boolean;
+    aiCreditsRemaining?: number;
+    aiCreditsLimit?: number;
+    fallbackCreated?: boolean;
+    failureMessage?: string;
+    documents: {
+      cv: 'queued' | 'created' | 'failed';
+      coverLetter: 'queued' | 'created' | 'failed';
+    };
+    updatedAt: string;
+  };
   metadata: {
     createdAt: Date;
     updatedAt: Date;

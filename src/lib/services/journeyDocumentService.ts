@@ -2,12 +2,55 @@ import mongoose from 'mongoose';
 import { ApplicationJourney, CV, CoverLetter, JobApplication } from '@/models';
 import { callAIWithFallback } from '@/lib/utils/ai-api-helper';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import creditService from '@/lib/services/creditService';
+import { aiCoverLetterService } from '@/lib/services/aiCoverLetterService';
+import {
+  createCompletedGenerationState,
+  createFailedGenerationState,
+  createInProgressGenerationState,
+  deriveCompanyType,
+  fillTrackerPrompt,
+  getJourneyGenerationEntitlement,
+  serializeExperienceForPrompt
+} from '@/lib/utils/journey-generation';
+import { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent } from '@/lib/utils/coverLetterUtils';
 
 export interface CreateJourneyDocumentsResult {
   success: boolean;
   cvId: string | null;
   coverLetterId: string | null;
   error?: string;
+  generationState?: any;
+}
+
+function getTrackerCvGenerationReason(options: {
+  wasTailored: boolean;
+  tailoringRequested: boolean;
+}) {
+  if (options.wasTailored) {
+    return 'Generated from tracker prompt using Master CV and job description';
+  }
+
+  if (options.tailoringRequested) {
+    return 'Generated from Master CV after tailored generation could not be completed';
+  }
+
+  return 'Generated as a non-tailored fallback from Master CV';
+}
+
+function getTrackerCoverLetterGenerationReason(options: {
+  wasTailored: boolean;
+  tailoringRequested: boolean;
+}) {
+  if (options.wasTailored) {
+    return 'Generated with tracker cover letter prompt using verified CV and job data';
+  }
+
+  if (options.tailoringRequested) {
+    return 'Created as a fallback draft after tailored cover letter generation could not be completed';
+  }
+
+  return 'Created as a non-tailored fallback draft from existing Master CV context';
 }
 
 /**
@@ -61,12 +104,29 @@ export async function createJourneyDocuments(
 
     // Update journey reference to use fresh data
     const currentJourney = freshJourney || journey;
+    let generationEntitlement = await getJourneyGenerationEntitlement(userId);
+    const usesMeteredTailoring = generationEntitlement.isTailoredEligible && generationEntitlement.aiCreditsLimit !== -1;
+    if (usesMeteredTailoring) {
+      const aiCreditSpent = await creditService.spendCredit(userId, 'ai_generation');
+      if (!aiCreditSpent) {
+        generationEntitlement = await getJourneyGenerationEntitlement(userId);
+      }
+    }
+    const shouldTailorDocuments = generationEntitlement.mode === 'tailored';
+    currentJourney.generationState = createInProgressGenerationState(generationEntitlement);
+    currentJourney.metadata.updatedAt = new Date();
+    await currentJourney.save();
 
     // Get job details
     const job = await JobApplication.findById(currentJourney.jobId);
 
     if (!job) {
       currentJourney.status = 'creation_failed';
+      currentJourney.generationState = createFailedGenerationState(
+        generationEntitlement,
+        'The job description for this journey could not be found.',
+        { fallbackCreated: false }
+      );
       currentJourney.metadata.updatedAt = new Date();
       await currentJourney.save();
 
@@ -80,6 +140,9 @@ export async function createJourneyDocuments(
 
     let cvId: string | null = currentJourney.cvId;
     let coverLetterId: string | null = currentJourney.coverLetterId;
+    let usedFallbackContent = !shouldTailorDocuments;
+    let cvWasTailored = false;
+    let coverLetterWasTailored = false;
 
     // EDGE CASE 1: Race Condition - Check if CV is already linked (atomic check)
     // Refresh journey from DB one more time to get latest state before checking
@@ -142,27 +205,27 @@ export async function createJourneyDocuments(
             console.log('✅ Journey Document Service - Using Executive Professional template as default');
           }
 
-          // Deep copy cvData to preserve structure/content map
-          // This ensures structure and content are properly preserved during duplication
+          // Deep copy cvData to preserve structure/content map.
           let duplicatedCvData = masterCV.cvData ? JSON.parse(JSON.stringify(masterCV.cvData)) : masterCV.cvData;
 
-          // TAILOR CV CONTENT
-          try {
-            console.log('🚀 Journey Document Service - Tailoring CV content for job...');
-            const tailoredCvData = await tailorCVContent(duplicatedCvData, job);
-            if (tailoredCvData) {
-              duplicatedCvData = tailoredCvData;
-              console.log('✅ Journey Document Service - CV content tailored successfully');
+          if (shouldTailorDocuments) {
+            try {
+              console.log('🚀 Journey Document Service - Tailoring CV content for job...');
+              const tailoredCvData = await tailorCVContent(duplicatedCvData, job);
+              if (tailoredCvData) {
+                duplicatedCvData = tailoredCvData;
+                cvWasTailored = true;
+                console.log('✅ Journey Document Service - CV content tailored successfully');
+              }
+            } catch (tailorError) {
+              console.error('⚠️ Journey Document Service - Failed to tailor CV content, using master CV content:', tailorError);
+              usedFallbackContent = true;
             }
-          } catch (tailorError) {
-            console.error('⚠️ Journey Document Service - Failed to tailor CV content, using master CV content:', tailorError);
-            // Fallback to master CV content is already set in duplicatedCvData
+          } else {
+            console.log('ℹ️ Journey Document Service - Creating non-tailored CV fallback from master CV');
           }
 
-          // Ensure structure and content are preserved
           if (duplicatedCvData && !duplicatedCvData.structure) {
-            // If master CV doesn't have structure, it will be initialized in studio
-            // But we preserve all existing data
             console.log('⚠️ Journey Document Service - Master CV missing structure, will be initialized in studio');
           }
 
@@ -182,11 +245,16 @@ export async function createJourneyDocuments(
             metadata: {
               ...masterCV.metadata,
               isMaster: false,
-              createdVia: 'journey', // CVs created from master CV in journey should have createdVia: 'journey'
+              createdVia: 'journey',
               lastModified: new Date(),
               createdFrom: masterCV._id,
               viewCount: 0,
-              downloadCount: 0
+              downloadCount: 0,
+              generationMode: cvWasTailored ? 'tailored' : 'fallback',
+              generationReason: getTrackerCvGenerationReason({
+                wasTailored: cvWasTailored,
+                tailoringRequested: shouldTailorDocuments
+              })
             }
           });
 
@@ -228,6 +296,7 @@ export async function createJourneyDocuments(
           await currentJourney.save();
 
           console.log('✅ Journey Document Service - Standalone CV linked to journey:', cvId);
+          usedFallbackContent = true;
         } else {
           // EDGE CASE 5: No source CV exists - Create basic CV structure
           console.error('❌ Journey Document Service - No master CV or standalone CV found');
@@ -265,6 +334,7 @@ export async function createJourneyDocuments(
 
           const savedCV = await basicCV.save();
           cvId = savedCV._id.toString();
+          usedFallbackContent = true;
           console.log('⚠️ Journey Document Service - Basic CV structure created as fallback:', cvId);
         }
       }
@@ -345,9 +415,6 @@ export async function createJourneyDocuments(
         };
       }
 
-      // Generate cover letter using new format: header, body, footer
-      const { formatCoverLetterHeader, formatCoverLetterFooter, mergeCoverLetterContent } = require('@/lib/utils/coverLetterUtils');
-
       // Generate header from CV and job data
       let header = '';
       let footer = '';
@@ -372,18 +439,17 @@ export async function createJourneyDocuments(
         console.error('⚠️ Journey Document Service - Failed to generate header/footer:', headerFooterError);
       }
 
-      // Generate body content using AI
-      try {
-        console.log('🚀 Journey Document Service - Generating cover letter body with AI...');
+      if (shouldTailorDocuments) {
+        try {
+          console.log('🚀 Journey Document Service - Generating tailored cover letter body with AI...');
+          const promptOverride = fillTrackerPrompt('tailored_cover_letter', {
+            position: currentJourney.jobTitle,
+            company: currentJourney.company,
+            experience: serializeExperienceForPrompt(cvDataWithAnalysis),
+            'job description': job.jobDescription || job.description || ''
+          });
 
-        // Call cover letter generation API with cvData including metadata
-        const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        console.log('🔗 Journey Document Service - Calling cover letter API at:', `${baseUrl}/api/ai/cover-letter-generate`);
-
-        const generateResponse = await fetch(`${baseUrl}/api/ai/cover-letter-generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          const generatedCoverLetter = await aiCoverLetterService.generateModularCoverLetter({
             cvData: cvDataWithAnalysis,
             jobData: {
               title: currentJourney.jobTitle,
@@ -392,57 +458,40 @@ export async function createJourneyDocuments(
               ...job.toObject()
             },
             recipientName: 'Hiring Manager',
-            companyName: currentJourney.company
-          })
-        });
-
-        console.log('📬 Journey Document Service - Cover letter API response status:', generateResponse.status);
-
-        if (generateResponse.ok) {
-          const generateResult = await generateResponse.json();
-          console.log('📄 Journey Document Service - Cover letter API result:', {
-            success: generateResult.success,
-            hasBody: !!generateResult.body,
-            hasContent: !!generateResult.content,
-            bodyLength: generateResult.body?.length || 0,
-            contentLength: generateResult.content?.length || 0
+            companyName: currentJourney.company,
+            promptOverride
           });
 
-          if (generateResult.success && (generateResult.body || generateResult.content)) {
-            body = generateResult.body || generateResult.content;
-            console.log('✅ Journey Document Service - Cover letter body generated successfully, length:', body.length);
-          } else {
-            console.log('⚠️ Journey Document Service - Cover letter API returned success but no body/content');
-          }
-        } else {
-          const errorText = await generateResponse.text();
-          console.error('❌ Journey Document Service - Cover letter API failed:', generateResponse.status, errorText);
+          body = generatedCoverLetter.legacyBody;
+          coverLetterWasTailored = true;
+          console.log('✅ Journey Document Service - Tailored cover letter body generated successfully');
+        } catch (generateError) {
+          console.error('⚠️ Journey Document Service - Failed to generate tailored cover letter body, using fallback:', generateError);
+          usedFallbackContent = true;
         }
-      } catch (generateError) {
-        console.error('⚠️ Journey Document Service - Failed to generate cover letter body, using template:', generateError);
       }
 
-      // Fallback to template if AI generation failed
       if (!body) {
-        // Check if user has any existing cover letters (to use as template)
         const existingCoverLetter = await CoverLetter.findOne({
           userId: new mongoose.Types.ObjectId(userId)
         }).sort({ createdAt: -1 });
 
-        if (existingCoverLetter && existingCoverLetter.body) {
+        if (!shouldTailorDocuments && existingCoverLetter && existingCoverLetter.body) {
           body = existingCoverLetter.body;
-          console.log('✅ Journey Document Service - Using existing cover letter body as template:', existingCoverLetter._id);
+          console.log('✅ Journey Document Service - Using existing cover letter body as non-tailored fallback:', existingCoverLetter._id);
         } else {
-          // Create default template body content (ONLY body with salutation, no header/footer)
+          if (shouldTailorDocuments) {
+            usedFallbackContent = true;
+          }
           const recipientName = job?.contactPerson || currentJourney.contactPerson || 'Hiring Manager';
           body = `Dear ${recipientName},
 
-I am writing to express my strong interest in the ${currentJourney.jobTitle} position at ${currentJourney.company}. With my background and experience, I am excited about the opportunity to contribute to your team.
+I am writing to express my interest in the ${currentJourney.jobTitle} position at ${currentJourney.company}. This version is based on my existing Master CV and is intended as a solid starting point for this application.
 
-I am particularly drawn to ${currentJourney.company} and am confident that my skills and experience make me a strong candidate for this position.
+My background includes relevant experience and strengths that I can bring to the role, and I would welcome the opportunity to explain how that experience could support your team.
 
-I would welcome the opportunity to discuss how my qualifications align with your needs.`;
-          console.log('✅ Journey Document Service - Using default cover letter body template');
+Thank you for your time and consideration. I would welcome the opportunity to discuss my fit for the role.`;
+          console.log('✅ Journey Document Service - Using default cover letter body fallback');
         }
       }
 
@@ -478,7 +527,12 @@ I would welcome the opportunity to discuss how my qualifications align with your
             lastModified: new Date(),
             viewCount: 0,
             downloadCount: 0,
-            generatedWithAI: !!body && body !== ''
+            generatedWithAI: coverLetterWasTailored,
+            generationMode: coverLetterWasTailored ? 'tailored' : 'fallback',
+            generationReason: getTrackerCoverLetterGenerationReason({
+              wasTailored: coverLetterWasTailored,
+              tailoringRequested: shouldTailorDocuments
+            })
           }
         });
 
@@ -493,6 +547,21 @@ I would welcome the opportunity to discuss how my qualifications align with your
     currentJourney.cvId = cvId;
     currentJourney.coverLetterId = coverLetterId;
     currentJourney.status = 'ready';
+    currentJourney.generationState = shouldTailorDocuments && usedFallbackContent
+      ? createFailedGenerationState(
+        generationEntitlement,
+        'We could not finish tailored generation, but fallback drafts were created instead.',
+        {
+          fallbackCreated: true,
+          cvCreated: Boolean(cvId),
+          coverLetterCreated: Boolean(coverLetterId)
+        }
+      )
+      : createCompletedGenerationState(generationEntitlement, {
+        fallbackCreated: usedFallbackContent,
+        cvCreated: Boolean(cvId),
+        coverLetterCreated: Boolean(coverLetterId)
+      });
     currentJourney.currentStep = Math.max(currentJourney.currentStep, 4); // At least step 4 (CV and Cover Letter created)
 
     // Update step statuses (mapping: Step 2 = CV, Step 3 = ATS, Step 4 = Cover Letter)
@@ -548,11 +617,17 @@ I would welcome the opportunity to discuss how my qualifications align with your
       // Get job details for notification
       const job = await JobApplication.findById(currentJourney.jobId);
       if (job) {
+        const documentsReadyMessage = shouldTailorDocuments && !usedFallbackContent
+          ? `Your tailored CV and tailored cover letter for ${job.jobTitle} at ${job.company} are ready. Review them in Studio before you apply.`
+          : shouldTailorDocuments
+            ? `We created fallback application drafts for ${job.jobTitle} at ${job.company} after tailored generation ran into a problem. Review them now or retry later.`
+            : `Your non-tailored fallback CV and cover letter for ${job.jobTitle} at ${job.company} are ready to review.`;
+
         await notificationService.createNotification({
           userId: userId,
           type: 'documents_ready',
-          title: '✨ Your Documents Are Ready!',
-          message: `Your tailored CV and cover letter for ${job.jobTitle} at ${job.company} are ready. Edit them in Studio or apply to the job now!`,
+          title: shouldTailorDocuments && !usedFallbackContent ? 'Your Tailored Documents Are Ready' : 'Your Tracker Documents Are Ready',
+          message: documentsReadyMessage,
           actionType: 'review_job',
           actionData: {
             jobId: job._id.toString(),
@@ -569,6 +644,8 @@ I would welcome the opportunity to discuss how my qualifications align with your
             journeyId: journeyId,
             jobTitle: job.jobTitle,
             company: job.company,
+            generationMode: currentJourney.generationState?.mode,
+            generationStatus: currentJourney.generationState?.status,
           },
         });
         console.log('✅ Journey Document Service - Notification sent for documents ready');
@@ -581,7 +658,8 @@ I would welcome the opportunity to discuss how my qualifications align with your
     return {
       success: true,
       cvId,
-      coverLetterId
+      coverLetterId,
+      generationState: currentJourney.generationState
     };
 
   } catch (error) {
@@ -592,6 +670,16 @@ I would welcome the opportunity to discuss how my qualifications align with your
       const journey = await ApplicationJourney.findById(journeyId);
       if (journey) {
         journey.status = 'creation_failed';
+        const failedEntitlement = await getJourneyGenerationEntitlement(userId);
+        journey.generationState = createFailedGenerationState(
+          failedEntitlement,
+          error instanceof Error ? error.message : 'Unknown error',
+          {
+            fallbackCreated: Boolean(journey.cvId || journey.coverLetterId),
+            cvCreated: Boolean(journey.cvId),
+            coverLetterCreated: Boolean(journey.coverLetterId)
+          }
+        );
         journey.metadata.updatedAt = new Date();
         await journey.save();
       }
@@ -615,48 +703,14 @@ async function tailorCVContent(cvData: UnifiedCVDataStructure, jobData: any): Pr
   try {
     const jobDescription = jobData.jobDescription || jobData.description || '';
     const jobTitle = jobData.title || jobData.jobTitle || 'Target Role';
-    const company = jobData.company || jobData.companyName || 'Target Company';
+    const prompt = `${fillTrackerPrompt('tailored_resume', {
+      'target position': jobTitle,
+      'type of company': deriveCompanyType(jobData),
+      'job description': jobDescription,
+      'resume content': JSON.stringify(cvData)
+    })}
 
-    const prompt = `
-**Role**: Senior Executive Career Architect & ATS Algorithm Expert.
-**Goal**: Transform a multi-section Master CV JSON into a Tailored CV JSON that positions the candidate as the "Ideal Hire" (Top 1% match) regardless of domain pivots, seniority gaps, or skill-set outliers.
-
-### 1. LOGICAL GATES (PRIORITY EXECUTION)
-- **Tenure Protection**: Calculate (Current Year - Earliest Start Date). If total years < JD Requirement, you MUST include all roles (even outliers/internships). Never omit a role that contributes to the minimum duration threshold.
-- **Evidence Verification**: You are FORBIDDEN from adding technical tools (e.g., Python, SQL) not present in the Master CV. You may only use functional synonyms (e.g., "Data Cleaning" for "Data Governance").
-- **Reverse Chronology**: Maintain strict newest-to-oldest order for Experience, Projects, and Education.
-
-### 2. SECTION-SPECIFIC TAILORING
-- **Summary**: Write a 3-sentence "Hook." Sentence 1: Total years + target role title. Sentence 2: The "Bridge" between user skills and the JD's specific problem. Sentence 3: Alignment with company culture (e.g., "Simpler, Better, Faster").
-- **Work Experience**: Transform every bullet into: [Power Verb] + [JD Context] + [Quantifiable Result]. 
-    - *If Overskilled*: Focus on "Execution" and "Efficiency." 
-    - *If Underskilled*: Focus on "Learning Agility" and "Technical Logic Foundations."
-- **Projects**: Rewrite project descriptions to sound like professional business solutions. Prioritize projects that utilize tools mentioned in the JD.
-- **Education**: If the degree field is unrelated to the JD, highlight relevant modules, thesis topics, or honors that prove analytical or logical rigor.
-
-### 3. DOMAIN & SENIORITY "SPIN" (OUTLIER HANDLING)
-- **Functional Translation**: For career pivoters, translate domain-specific tasks into universal business value. 
-    - (Example: Web Dev "API Integration" -> "Streamlined cross-platform data connectivity and integrity").
-- **Level Calibration**: Match the "Seniority Vibe." For Junior roles, emphasize "Hands-on tools" and "supporting teams." For Senior roles, emphasize "ROI," "Scalability," and "Stakeholder influence."
-
-### 4. OUTPUT CONSTRAINTS (API STABILITY)
-- **Zero Prose**: Return ONLY valid JSON. No conversational text.
-- **Schema Lock**: Maintain exact 1:1 key-value mapping from the Input JSON.
-- **Title Optimization**: Adjust titles slightly to match JD nomenclature ONLY if truthful (e.g., "Analyst" to "Sales Data Analyst").
-- **Metric Retention**: 100% of numerical data from the Master CV must be carried over.
-
-TARGET JOB:
-Title: ${jobTitle}
-Company: ${company}
-Description: ${jobDescription}
-
-CANDIDATE CV DATA (JSON):
-${JSON.stringify(cvData)}
-
-OUTPUT FORMAT:
-Return ONLY the valid JSON of the tailored CV data. The structure must match the input JSON structure exactly (UnifiedCVDataStructure).
-Do not include any markdown formatting or explanation. Just the JSON.
-    `;
+Return ONLY valid JSON with the exact same structure as the input UnifiedCVDataStructure. Do not include markdown or explanation.`;
 
     const aiResponse = await callAIWithFallback({
       prompt,

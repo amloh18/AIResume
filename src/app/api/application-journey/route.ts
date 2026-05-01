@@ -6,6 +6,10 @@ import type { IApplicationJourney } from '@/models/ApplicationJourney';
 import { createErrorResponse } from '@/lib/db-utils';
 import mongoose from 'mongoose';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
+import {
+  createQueuedGenerationState,
+  getJourneyGenerationEntitlement
+} from '@/lib/utils/journey-generation';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 
@@ -275,6 +279,7 @@ export async function GET(request: NextRequest) {
       company: journey.company,
       journeyType: journey.journeyType,
       steps: journey.steps,
+      generationState: journey.generationState,
       metadata: journey.metadata,
       createdAt: journey.createdAt,
       updatedAt: journey.updatedAt
@@ -297,14 +302,17 @@ export async function GET(request: NextRequest) {
       journeysNeedingDocuments.forEach(journey => {
         const journeyId = journey._id.toString();
 
-        // Update status to processing_documents if not already
-        if (journey.status !== 'processing_documents') {
-          ApplicationJourney.findByIdAndUpdate(journeyId, {
-            status: 'processing_documents',
-            'metadata.updatedAt': new Date()
-          }).catch(err => {
-            console.error(`❌ Application Journey API - Failed to update journey status for ${journeyId}:`, err);
-          });
+        // Refresh queue state so overlay messaging matches the recovery path
+        if (journey.status !== 'processing_documents' || !journey.generationState) {
+          getJourneyGenerationEntitlement(userId)
+            .then((generationEntitlement) => ApplicationJourney.findByIdAndUpdate(journeyId, {
+              status: 'processing_documents',
+              generationState: createQueuedGenerationState(generationEntitlement),
+              'metadata.updatedAt': new Date()
+            }))
+            .catch(err => {
+              console.error(`❌ Application Journey API - Failed to update journey status for ${journeyId}:`, err);
+            });
         }
 
         // Trigger document creation in background
@@ -509,6 +517,7 @@ export async function POST(request: NextRequest) {
     // Determine if documents need to be created
     const needsDocuments = !cvId && !coverLetterId;
     const initialStatus = needsDocuments ? 'processing_documents' : 'in-progress';
+    const generationEntitlement = await getJourneyGenerationEntitlement(userId);
 
     // Prepare journey data for creation
     const journeyData = {
@@ -555,6 +564,7 @@ export async function POST(request: NextRequest) {
           data: {}
         }
       ],
+      generationState: needsDocuments ? createQueuedGenerationState(generationEntitlement) : undefined,
       metadata: {
         createdAt: new Date(),
         updatedAt: new Date(),

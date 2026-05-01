@@ -151,45 +151,6 @@ export default function ResumeEnhancerContainer({
     refreshAll
   } = useATS();
 
-  useEffect(() => {
-    const handleOpenJobSidebar = () => {
-      const currentJob = state.jobData;
-      if (currentJob && (currentJob.id || currentJob._id)) {
-        setSelectedJob(currentJob);
-        setShowJobSidebar(true);
-      } else {
-        setShowEditJobSidebar(true);
-      }
-    };
-    const handleShowTemplateOverlay = () => setShowTemplateOverlay(true);
-    const handleOpenCoverLetter = () => goToStep(4);
-    const handleOpenAtsScanner = () => {
-      goToStep(3);
-      // Wait for step 3 to mount then open sidebar
-      setTimeout(() => {
-        const currentJob = state.jobData;
-        if (currentJob && (currentJob.id || currentJob._id)) {
-          setSelectedJob(currentJob);
-          setShowJobSidebar(true);
-        } else {
-          setShowEditJobSidebar(true);
-        }
-      }, 100);
-    };
-    
-    window.addEventListener('open-job-sidebar', handleOpenJobSidebar);
-    window.addEventListener('show-template-overlay', handleShowTemplateOverlay);
-    window.addEventListener('open-cover-letter', handleOpenCoverLetter);
-    window.addEventListener('open-ats-scanner', handleOpenAtsScanner);
-    
-    return () => {
-      window.removeEventListener('open-job-sidebar', handleOpenJobSidebar);
-      window.removeEventListener('show-template-overlay', handleShowTemplateOverlay);
-      window.removeEventListener('open-cover-letter', handleOpenCoverLetter);
-      window.removeEventListener('open-ats-scanner', handleOpenAtsScanner);
-    };
-  }, [goToStep, state.jobData]);
-
   // Calculate JD reference status
   const jdText =
     (typeof state.jobData?.description === 'string' && state.jobData.description) ||
@@ -233,6 +194,68 @@ export default function ResumeEnhancerContainer({
   const isStandaloneCV = state.cvType === 'standalone';
   const scoreLabel = isMasterCV ? 'CV score' : (isJourneyCV ? 'ATS score' : 'CV score');
   const openIssuesCount = (state.fixAnnotations || []).filter((f) => f.status === 'open').length;
+
+  const coverLetterBlockedMessage = 'Cover letter editing is unavailable for Master CVs. Use a journey or standalone CV to write a job-specific cover letter.';
+
+  const goToStepSafely = useCallback((step: 1 | 2 | 3 | 4 | 5, options?: { silent?: boolean }) => {
+    if (step === 4 && isMasterCV) {
+      if (!options?.silent) {
+        toast.error(coverLetterBlockedMessage);
+      }
+      goToStep(3);
+      return false;
+    }
+
+    goToStep(step);
+    return true;
+  }, [coverLetterBlockedMessage, goToStep, isMasterCV]);
+
+  useEffect(() => {
+    const handleOpenJobSidebar = () => {
+      const currentJob = state.jobData;
+      if (currentJob && (currentJob.id || currentJob._id)) {
+        setSelectedJob(currentJob);
+        setShowJobSidebar(true);
+      } else {
+        setShowEditJobSidebar(true);
+      }
+    };
+    const handleShowTemplateOverlay = () => setShowTemplateOverlay(true);
+    const handleOpenCoverLetter = () => {
+      goToStepSafely(4);
+    };
+    const handleOpenAtsScanner = () => {
+      goToStepSafely(3, { silent: true });
+      // Wait for step 3 to mount then open sidebar
+      setTimeout(() => {
+        const currentJob = state.jobData;
+        if (currentJob && (currentJob.id || currentJob._id)) {
+          setSelectedJob(currentJob);
+          setShowJobSidebar(true);
+        } else {
+          setShowEditJobSidebar(true);
+        }
+      }, 100);
+    };
+
+    window.addEventListener('open-job-sidebar', handleOpenJobSidebar);
+    window.addEventListener('show-template-overlay', handleShowTemplateOverlay);
+    window.addEventListener('open-cover-letter', handleOpenCoverLetter);
+    window.addEventListener('open-ats-scanner', handleOpenAtsScanner);
+
+    return () => {
+      window.removeEventListener('open-job-sidebar', handleOpenJobSidebar);
+      window.removeEventListener('show-template-overlay', handleShowTemplateOverlay);
+      window.removeEventListener('open-cover-letter', handleOpenCoverLetter);
+      window.removeEventListener('open-ats-scanner', handleOpenAtsScanner);
+    };
+  }, [goToStepSafely, state.jobData]);
+
+  useEffect(() => {
+    if (isMasterCV && state.currentStep === 4) {
+      goToStepSafely(3, { silent: true });
+    }
+  }, [goToStepSafely, isMasterCV, state.currentStep]);
 
   // Extract ATS keywords from ATS context or skill gap analysis
   const atsKeywords = useMemo(() => {
@@ -514,7 +537,7 @@ export default function ResumeEnhancerContainer({
     
     if (pendingNavigation) {
       if (pendingNavigation.type === 'step') {
-        goToStep(pendingNavigation.target as number);
+        goToStepSafely(pendingNavigation.target as 1 | 2 | 3 | 4 | 5);
       } else {
         router.push(pendingNavigation.target as string);
       }
@@ -622,10 +645,10 @@ export default function ResumeEnhancerContainer({
             // Restore step (step 2 was template overlay, go to step 1 and show overlay)
             if (draft.currentStep) {
               if (draft.currentStep === 2) {
-                goToStep(1);
+                goToStepSafely(1, { silent: true });
                 setShowTemplateOverlay(true);
               } else {
-                goToStep(draft.currentStep as 1 | 2 | 3 | 4);
+                goToStepSafely(draft.currentStep as 1 | 2 | 3 | 4);
               }
             }
 
@@ -663,7 +686,7 @@ export default function ResumeEnhancerContainer({
 
       loadDraft();
     }
-  }, [isGuestMode, restoreDraft, dispatch, goToStep, setRoleContext]);
+  }, [goToStepSafely, isGuestMode, restoreDraft, dispatch, setRoleContext]);
 
   // Guest mode: Auto-save draft
   useEffect(() => {
@@ -947,7 +970,7 @@ export default function ResumeEnhancerContainer({
     const initializeEnhancer = async () => {
       if (requestedStep === 1 && !restoreDraft) {
         resetState();
-        goToStep(1);
+        goToStepSafely(1, { silent: true });
         initializedRef.current = { mode: 'create', cvId: undefined };
         setIsLoading(false);
         return;
@@ -1086,21 +1109,24 @@ export default function ResumeEnhancerContainer({
           dispatch({ type: 'SET_MODE', payload: 'edit' });
           
           if (mode === 'edit-cover-letter') {
-            goToStep(4);
-            setCompletedSteps([1, 2, 3]);
+            const allowedCoverLetterStep = !isMasterCV && resolvedCvType !== 'master';
+            goToStepSafely(allowedCoverLetterStep ? 4 : 3, { silent: false });
+            setCompletedSteps(allowedCoverLetterStep ? [1, 2, 3] : [1, 2]);
           } else {
             // Skip to Step 3 for editing
-            goToStep(3);
+            goToStepSafely(3, { silent: true });
             setCompletedSteps([1, 2]);
           }
 
           // Update URL to include mode parameter
           // For master CVs, use 'edit-master' mode in URL
-          const urlMode = mode === 'edit-cover-letter' ? 'edit-cover-letter' : (resolvedCvType === 'master' ? 'edit-master' : 'edit');
+          const urlMode = mode === 'edit-cover-letter' && resolvedCvType !== 'master'
+            ? 'edit-cover-letter'
+            : (resolvedCvType === 'master' ? 'edit-master' : 'edit');
           const currentParams = new URLSearchParams(window.location.search);
-          if (!currentParams.has('mode')) {
+          if (currentParams.get('mode') !== urlMode || currentParams.get('cvId') !== actualCvId) {
             currentParams.set('mode', urlMode);
-            currentParams.set('cvId', cvId);
+            currentParams.set('cvId', actualCvId);
             const newUrl = `${pathname}?${currentParams.toString()}`;
             router.replace(newUrl);
           }
@@ -1339,7 +1365,7 @@ export default function ResumeEnhancerContainer({
 
         // Only go to step 1 if we are starting fresh (create mode, no ID) and not restoring draft
         if (mode === 'create' && !cvId && !journeyId && !restoreDraft) {
-          goToStep(1);
+          goToStepSafely(1, { silent: true });
         }
 
         // Mark as initialized
@@ -1348,7 +1374,7 @@ export default function ResumeEnhancerContainer({
     };
 
     initializeEnhancer();
-  }, [mode, cvId, journeyId, restoreDraft, requestedStep, resetState, goToStep]);
+  }, [mode, cvId, journeyId, restoreDraft, requestedStep, resetState, goToStepSafely]);
 
   const handleStep1Complete = (cvData: UnifiedCVDataStructure) => {
     dispatch({ type: 'SET_CV_DATA', payload: cvData });
@@ -1895,6 +1921,11 @@ export default function ResumeEnhancerContainer({
 
 
   const handleStep3Complete = () => {
+    if (isMasterCV) {
+      toast.error(coverLetterBlockedMessage);
+      return;
+    }
+
     setCompletedSteps([...completedSteps, 3]);
 
     // Guest mode: Save draft before moving to Step 4
@@ -1913,7 +1944,7 @@ export default function ResumeEnhancerContainer({
       handleSmartSave();
     }
 
-    goToStep(4);
+    goToStepSafely(4, { silent: true });
   };
 
   const handleStep4Complete = () => {
@@ -2673,8 +2704,8 @@ export default function ResumeEnhancerContainer({
             </motion.button>
           )}
 
-          {/* Continue to Cover Letter button - only show on Step 3 */}
-          {state.currentStep === 3 && (
+          {/* Continue to Cover Letter button - only show on Step 3 for non-master CVs */}
+          {state.currentStep === 3 && !isMasterCV && (
             <button
               onClick={handleStep3Complete}
               className="p-1.5 sm:px-4 sm:py-1.5 bg-white text-black dark:bg-white/10 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 border border-gray-200 dark:border-white/20 rounded-full text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-md hover:shadow-lg hover:scale-105"

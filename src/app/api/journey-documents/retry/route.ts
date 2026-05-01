@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { ApplicationJourney } from '@/models';
+import {
+  createQueuedGenerationState,
+  getJourneyGenerationEntitlement
+} from '@/lib/utils/journey-generation';
 
 /**
  * Retry endpoint to re-trigger document creation for a journey
@@ -57,6 +61,8 @@ export async function POST(request: NextRequest) {
     }
 
     journey.status = 'processing_documents';
+    const generationEntitlement = await getJourneyGenerationEntitlement(userId);
+    journey.generationState = createQueuedGenerationState(generationEntitlement);
     journey.metadata.updatedAt = new Date();
     await journey.save();
 
@@ -80,7 +86,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Document creation retry triggered'
+      message: 'Document creation retry triggered',
+      generationState: journey.generationState
     });
 
   } catch (error: any) {
@@ -91,4 +98,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

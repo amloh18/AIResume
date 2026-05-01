@@ -5,6 +5,10 @@ import { JobApplication } from '@/models';
 import jwt from 'jsonwebtoken';
 import type { MyJwtPayload } from '@/types/jwt-payload';
 import mongoose from 'mongoose';
+import {
+  createQueuedGenerationState,
+  getJourneyGenerationEntitlement
+} from '@/lib/utils/journey-generation';
 
 export async function GET(
   request: NextRequest,
@@ -638,11 +642,15 @@ export async function PUT(
       }
     }
 
+    let trackerGenerationPreview: any = null;
+
     // Create ApplicationJourney after credit is spent (only if moved to created)
     if (previousStatus === 'draft' && newStatus === 'created') {
       try {
         const { ApplicationJourney } = await import('@/models');
         const { createJourneyDocuments } = await import('@/lib/services/journeyDocumentService');
+        const generationEntitlement = await getJourneyGenerationEntitlement(userId);
+        trackerGenerationPreview = createQueuedGenerationState(generationEntitlement);
 
         // Check if journey already exists for this job
         const existingJourney = await ApplicationJourney.findOne({
@@ -721,6 +729,7 @@ export async function PUT(
             lastWorkedOn: new Date(),
             atsScoreHistory: [],
             downloadHistory: [],
+            generationState: trackerGenerationPreview,
             metadata: {
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -740,7 +749,9 @@ export async function PUT(
               userId: userId,
               type: 'documents_ready',
               title: 'Generating Your Documents',
-              message: `We're creating your tailored CV and cover letter for ${job.jobTitle} at ${job.company}. You'll be notified when they're ready!`,
+              message: generationEntitlement.mode === 'tailored'
+                ? `We're generating a tailored CV and cover letter for ${job.jobTitle} at ${job.company} using your Master CV and this job description.`
+                : `We're generating a non-tailored CV and cover letter for ${job.jobTitle} at ${job.company} based on your Master CV because tailored generation is unavailable right now.`,
               actionType: 'review_job',
               actionData: {
                 jobId: job._id.toString(),
@@ -758,6 +769,7 @@ export async function PUT(
                 jobTitle: job.jobTitle,
                 company: job.company,
                 status: 'generating',
+                generationMode: generationEntitlement.mode,
               },
             });
             console.log('✅ Job Update API - Notification sent for document generation started');
@@ -795,13 +807,19 @@ export async function PUT(
           console.log(`ℹ️ Job Update API - Journey already exists for job ${resolvedParams.id}, skipping creation`);
 
           // If existing journey doesn't have documents yet, trigger document creation
-          if (!existingJourney.cvId && !existingJourney.coverLetterId && existingJourney.status !== 'processing_documents') {
+          if (!existingJourney.cvId && !existingJourney.coverLetterId && (existingJourney.status !== 'processing_documents' || !existingJourney.generationState)) {
             console.log(`🚀 Job Update API - Existing journey found without documents, triggering document creation for journey: ${existingJourney._id}`);
 
-            // Update journey status to processing_documents
+            // Refresh queue state so retry/recovery messaging stays accurate
             await ApplicationJourney.updateOne(
               { _id: existingJourney._id },
-              { $set: { status: 'processing_documents' } }
+              {
+                $set: {
+                  status: 'processing_documents',
+                  generationState: createQueuedGenerationState(generationEntitlement),
+                  'metadata.updatedAt': new Date()
+                }
+              }
             );
 
             // Trigger document creation in background
@@ -1016,6 +1034,7 @@ export async function PUT(
     // Extension expects response.data to be the job object directly, not nested
     return NextResponse.json({
       success: true,
+      trackerGeneration: trackerGenerationPreview,
       data: serializedJob, // Extension expects data to be the job directly
       job: serializedJob // Keep for backwards compatibility
     });
