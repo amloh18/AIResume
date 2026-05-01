@@ -84,7 +84,7 @@ export default function ResumeEnhancerContainer({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { state, dispatch, goToStep, loadCV, setRoleContext } = useResumeEnhancer();
+  const { state, dispatch, goToStep, loadCV, setRoleContext, resetState } = useResumeEnhancer();
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showTemplateOverlay, setShowTemplateOverlay] = useState(false);
   const [showRoleModal, setShowRoleModal] = useState(false);
@@ -134,6 +134,13 @@ export default function ResumeEnhancerContainer({
   const [isTransferringDraft, setIsTransferringDraft] = useState(false);
   const [showSaveWarningModal, setShowSaveWarningModal] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<{ type: 'step' | 'path', target: number | string } | null>(null);
+  const requestedStep = useMemo(() => {
+    const rawStep = searchParams.get('step');
+    const parsed = Number(rawStep);
+    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5
+      ? (parsed as 1 | 2 | 3 | 4 | 5)
+      : null;
+  }, [searchParams]);
 
   // Use ATS Context for shared ATS data
   const {
@@ -475,6 +482,21 @@ export default function ResumeEnhancerContainer({
     // Close menu when mouse leaves menu content
     setIsUserMenuExpanded(false);
   };
+
+  const openEditorDashboard = useCallback(() => {
+    resetState();
+    goToStep(1);
+
+    const currentParams = new URLSearchParams(searchParams.toString());
+    currentParams.delete('cvId');
+    currentParams.delete('journeyId');
+    currentParams.delete('clId');
+    currentParams.delete('coverLetterId');
+    currentParams.delete('mode');
+    currentParams.set('step', '1');
+
+    router.replace(`${pathname}?${currentParams.toString()}`);
+  }, [goToStep, pathname, resetState, router, searchParams]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -892,7 +914,7 @@ export default function ResumeEnhancerContainer({
         // Force the URL back to what it was to keep them on the page
         window.history.pushState(null, '', window.location.href);
         // Navigate internally
-        goToStep(1);
+        openEditorDashboard();
       }
     };
 
@@ -900,7 +922,7 @@ export default function ResumeEnhancerContainer({
     window.history.replaceState(null, '', window.location.href);
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [state.currentStep, goToStep]);
+  }, [openEditorDashboard, state.currentStep]);
 
   // Initialize based on mode
   useEffect(() => {
@@ -923,6 +945,14 @@ export default function ResumeEnhancerContainer({
     }
 
     const initializeEnhancer = async () => {
+      if (requestedStep === 1 && !restoreDraft) {
+        resetState();
+        goToStep(1);
+        initializedRef.current = { mode: 'create', cvId: undefined };
+        setIsLoading(false);
+        return;
+      }
+
       if (mode === 'edit' || mode === 'edit-master' || mode === 'edit-cover-letter') {
         let actualCvId = cvId;
         let coverLetterData: any = null;
@@ -1318,7 +1348,7 @@ export default function ResumeEnhancerContainer({
     };
 
     initializeEnhancer();
-  }, [mode, cvId, journeyId, restoreDraft]);
+  }, [mode, cvId, journeyId, restoreDraft, requestedStep, resetState, goToStep]);
 
   const handleStep1Complete = (cvData: UnifiedCVDataStructure) => {
     dispatch({ type: 'SET_CV_DATA', payload: cvData });
@@ -1975,7 +2005,7 @@ export default function ResumeEnhancerContainer({
       if (hasUnsavedChanges) {
         handleSmartSave();
       }
-      goToStep(1);
+      openEditorDashboard();
       return;
     }
 
@@ -2720,7 +2750,7 @@ export default function ResumeEnhancerContainer({
                       <Step1Parser
                         onComplete={handleStep1Complete}
                         userHasMasterCV={state.hasMasterCV}
-                        mode={mode as any}
+                        mode={'create'}
                         cvType={state.cvType}
                         isGuestMode={isGuestMode}
                       />

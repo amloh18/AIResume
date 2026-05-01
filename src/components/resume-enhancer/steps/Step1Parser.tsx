@@ -7,7 +7,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import { Upload, FileText, Edit3, CheckCircle2, Loader2, Briefcase, Sparkles, AlertTriangle, FolderOpen, Edit2 } from 'lucide-react';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
-import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
+import { UnifiedCVDataStructure, DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
 import { InfoTooltip } from '@/components/ui/tooltip';
 import JDInputPanel from '@/components/resume-enhancer/JDInputPanel';
@@ -258,6 +258,12 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     }
   }, [fetchExistingCVs, fetchExistingCoverLetters, fetchDraftCV, user]);
 
+  useEffect(() => {
+    if (existingCVs.length === 0) return;
+    const hasMaster = existingCVs.some((cv) => cv.cvType === 'master');
+    dispatch({ type: 'SET_HAS_MASTER_CV', payload: hasMaster });
+  }, [dispatch, existingCVs]);
+
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     if (topSectionRef.current) {
@@ -418,6 +424,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     // For manual entry, use default empty CV data
     // User will fill in forms in next steps
     // This will be a fresher by default (no work experience yet)
+    const freshCvData = JSON.parse(JSON.stringify(DEFAULT_UNIFIED_CV_DATA)) as UnifiedCVDataStructure;
     setFresherMode(true);
     dispatch({ type: 'SET_FRESHER_MODE', payload: true });
 
@@ -428,8 +435,8 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
       dispatch({ type: 'SET_IS_USER_MASTER', payload: true });
     }
 
-    dispatch({ type: 'SET_CV_DATA', payload: state.cvData });
-    onComplete(state.cvData);
+    dispatch({ type: 'SET_CV_DATA', payload: freshCvData });
+    onComplete(freshCvData);
   };
 
   /**

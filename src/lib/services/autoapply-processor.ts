@@ -43,7 +43,7 @@ const ApplicationQueueSchema = new mongoose.Schema({
 
 // User Quota Tracking Schema
 const UserQuotaSchema = new mongoose.Schema({
-  userId: { type: String, required: true, unique: true, index: true },
+  userId: { type: String, required: true, unique: true },
   hourlyApplications: [{
     timestamp: { type: Date, default: Date.now },
     count: { type: Number, default: 1 }
@@ -89,7 +89,7 @@ const UserQuotaSchema = new mongoose.Schema({
 
 // Rate Limiter Schema for External APIs
 const ExternalApiRateLimitSchema = new mongoose.Schema({
-  apiProvider: { type: String, required: true, unique: true, index: true },
+  apiProvider: { type: String, required: true, unique: true },
   requests: [{
     timestamp: { type: Date, default: Date.now }
   }],

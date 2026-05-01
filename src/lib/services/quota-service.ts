@@ -116,8 +116,7 @@ const ApplicationQuotaSchema = new mongoose.Schema<IApplicationQuota>({
   timestamps: true,
 });
 
-// Index for efficient queries
-ApplicationQuotaSchema.index({ userId: 1 });
+// Indexes for efficient quota window queries
 ApplicationQuotaSchema.index({ userId: 1, 'hourlyApplications.windowStart': 1 });
 ApplicationQuotaSchema.index({ userId: 1, 'dailyApplications.windowStart': 1 });
 

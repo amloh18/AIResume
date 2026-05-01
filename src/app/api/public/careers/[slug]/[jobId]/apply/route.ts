@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
-import { parseDocument } from '@/lib/services/aiCVParser';
+import { robustDocumentParser } from '@/app/api/cv/parse/route';
 import B2BCandidate from '@/models/b2b/B2BCandidate';
 
 export async function POST(req: NextRequest, { params }: { params: { slug: string, jobId: string } }) {
@@ -19,8 +19,12 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
     
     const buffer = Buffer.from(await file.arrayBuffer());
     
-    // Parse the document using AI
-    const cvData = await parseDocument(buffer, file.type, file.name);
+    // Parse the document using the shared server-side CV pipeline
+    const parseResult = await robustDocumentParser(buffer, file.type);
+    if (parseResult.error || !parseResult.cvData) {
+      throw new Error(parseResult.error || 'Failed to parse uploaded CV');
+    }
+    const cvData = parseResult.cvData;
 
     // Save candidate
     const newCandidate = await B2BCandidate.create({

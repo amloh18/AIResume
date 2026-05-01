@@ -21,9 +21,7 @@ async function initializeSentry() {
   try {
     // Dynamic import to avoid bundling Sentry in development or Edge Runtime
     if (process.env.NODE_ENV === 'production' && process.env.SENTRY_DSN) {
-      // Use variable-based import to prevent static analysis by Edge bundlers
-      const sentryModule = '@sentry/nextjs';
-      Sentry = await import(sentryModule);
+      Sentry = await import('@sentry/nextjs');
       
       Sentry.init({
         dsn: process.env.SENTRY_DSN,
