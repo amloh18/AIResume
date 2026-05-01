@@ -35,6 +35,26 @@ export interface IApplicationJourney extends Document {
   }>;
   journeyDuration?: number; // in minutes
   applicationDate?: Date; // when moved to applied
+  generationState?: {
+    status: 'queued' | 'in_progress' | 'completed' | 'failed';
+    mode: 'tailored' | 'fallback';
+    reasonCode: string;
+    title: string;
+    summary: string;
+    supportMessage: string;
+    nextAction: string;
+    nextActionLabel: string;
+    isTailoredEligible: boolean;
+    aiCreditsRemaining?: number;
+    aiCreditsLimit?: number;
+    fallbackCreated?: boolean;
+    failureMessage?: string;
+    documents: {
+      cv: 'queued' | 'created' | 'failed';
+      coverLetter: 'queued' | 'created' | 'failed';
+    };
+    updatedAt: string;
+  };
   metadata: {
     createdAt: Date;
     updatedAt: Date;
@@ -172,6 +192,9 @@ const ApplicationJourneySchema = new Schema<IApplicationJourney>({
   applicationDate: {
     type: Date
     // Note: Index defined as standalone below
+  },
+  generationState: {
+    type: Schema.Types.Mixed
   },
   metadata: {
     createdAt: {

@@ -5,6 +5,7 @@ export interface ModularCoverLetterGenerationParams {
     jobData: any;
     recipientName?: string;
     companyName?: string;
+    promptOverride?: string;
 }
 
 export const aiCoverLetterService = {
@@ -12,13 +13,15 @@ export const aiCoverLetterService = {
         cvData,
         jobData,
         recipientName,
-        companyName
+        companyName,
+        promptOverride
     }: ModularCoverLetterGenerationParams): Promise<{ structuredContent: any; legacyBody: string }> {
-        const prompt = createModularCoverLetterPrompt({
+        const prompt = createCoverLetterPrompt({
             cvData,
             jobData,
             recipientName,
-            companyName
+            companyName,
+            promptOverride
         });
 
         console.log('🤖 aiCoverLetterService - Generating modular cover letter...');
@@ -43,6 +46,72 @@ export const aiCoverLetterService = {
         };
     }
 };
+
+function createCoverLetterPrompt({
+    cvData,
+    jobData,
+    recipientName,
+    companyName,
+    promptOverride
+}: {
+    cvData: any;
+    jobData: any;
+    recipientName?: string;
+    companyName?: string;
+    promptOverride?: string;
+}) {
+    if (!promptOverride) {
+        return createModularCoverLetterPrompt({
+            cvData,
+            jobData,
+            recipientName,
+            companyName
+        });
+    }
+
+    const targetCompany = companyName || jobData?.company || 'Target Company';
+    const targetLocation = jobData?.location || '';
+
+    return `${promptOverride}
+
+### Output JSON Format
+You must return only valid JSON matching this schema:
+{
+  "header": {
+    "recipient": "Hiring Manager",
+    "company": "${targetCompany}",
+    "location": "${targetLocation}"
+  },
+  "sections": {
+    "introduction": {
+      "title": "The Hook",
+      "text": "[Generated Intro]"
+    },
+    "experience_bridge_1": {
+      "title": "Key Skill 1",
+      "jd_context": "[Requirement from JD]",
+      "text": "[Persuasive Paragraph]"
+    },
+    "experience_bridge_2": {
+      "title": "Key Skill 2",
+      "jd_context": "[Requirement from JD]",
+      "text": "[Persuasive Paragraph]"
+    },
+    "motivation": {
+      "title": "Why This Role",
+      "text": "[Generated Motivation]"
+    },
+    "closing": {
+      "title": "Next Steps",
+      "text": "[Generated Closing]"
+    }
+  },
+  "metadata": {
+    "primary_keywords": ["Keyword1", "Keyword2"],
+    "tone": "Ambitious/Analytical"
+  }
+}`;
+}
 
 // --- Helper Functions (Logic moved from previously modified route) ---
 

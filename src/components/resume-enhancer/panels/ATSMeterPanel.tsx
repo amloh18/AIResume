@@ -9,6 +9,7 @@ import { AnimatedScore } from '@/components/ui/AnimatedScore';
 import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { checkSyntaxAndGrammar } from '@/lib/utils/offline-grammar-check';
 import { CentralScoreManager } from '@/lib/pill-engine/CentralScoreManager';
+import { getAnalysisModeDescription, getAnalysisModeLabel } from '@/lib/utils/analysis-mode';
 
 interface ATSMeterPanelProps {
   // onOpenJobParser is replaced by event dispatching
@@ -18,6 +19,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const { atsScore, atsAnalysis, isATSLoading, refreshATSScore } = useATS();
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
+  const isMasterCV = state.cvType === 'master';
 
   const offlineScore = useMemo(() => {
     if (state.cvData) {
@@ -79,6 +81,49 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const formattingIssues = useMemo(() => {
     return checkSyntaxAndGrammar(state.cvData);
   }, [state.cvData]);
+
+  const purposeCard = useMemo(() => {
+    const analysisMode = state.analysisModeInfo?.mode || state.analysisMode || 'insufficient-data';
+    const modeLabel = getAnalysisModeLabel(analysisMode);
+    const modeDescription = getAnalysisModeDescription(analysisMode, state.cvType);
+
+    if (isMasterCV) {
+      return {
+        title: 'Master CV purpose',
+        summary: 'This version is your source document. Keep it broad, complete, and aligned to the role direction you want to grow into.',
+        bullets: [
+          'Include your full experience, achievements, and transferable skills.',
+          'Optimize for role fit and overall quality, not one specific job posting.',
+          'Use this as the base for tailored job-specific CVs later.'
+        ],
+        modeLabel
+      };
+    }
+
+    if (state.cvType === 'journey') {
+      return {
+        title: 'CV purpose',
+        summary: 'This version is tailored for one job application, so the analysis focuses on ATS match against that job description.',
+        bullets: [
+          'Mirror the job requirements with relevant keywords and evidence.',
+          'Prioritize the most relevant experience for this application.',
+          'Keep details focused on what helps this job match score.'
+        ],
+        modeLabel
+      };
+    }
+
+    return {
+      title: 'CV purpose',
+      summary: modeDescription || 'This version is a flexible CV you can use for general applications or adapt further for specific roles.',
+      bullets: [
+        'Keep the story clear and easy to scan.',
+        'Add role context for stronger role-based guidance.',
+        'Add a job description when you want ATS-focused feedback.'
+      ],
+      modeLabel
+    };
+  }, [isMasterCV, state.analysisMode, state.analysisModeInfo?.mode, state.cvType]);
 
   // Formatting feedback
   const feedback = useMemo(() => {
@@ -358,6 +403,32 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
         </div>
       )}
 
+      {/* CV Purpose Card */}
+      <div className="mb-6 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/40 rounded-xl p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Target className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+              {purposeCard.title}
+            </h4>
+            <p className="text-xs text-slate-600 dark:text-slate-300/80 mt-1 leading-relaxed">
+              {purposeCard.summary}
+            </p>
+          </div>
+          <span className="shrink-0 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300 border border-sky-200 dark:border-sky-500/20">
+            {purposeCard.modeLabel}
+          </span>
+        </div>
+        <div className="space-y-2">
+          {purposeCard.bullets.map((bullet) => (
+            <div key={bullet} className="flex items-start gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-1.5 shrink-0" />
+              <p className="text-xs text-slate-700 dark:text-slate-200/85 leading-relaxed">{bullet}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Metrics Breakdown */}
       <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10 mb-6 space-y-4">
         <ScoreBreakdown label={metrics.primaryLabel} value={metrics.keywords} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
@@ -500,7 +571,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
         </div>
 
         {/* Cover Letter CTA Banner */}
-        {hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
+        {!isMasterCV && hasJobDesc && (state.journeyId || state.jobData?._id || state.jobData?.id) && (
           <div className="bg-orange-50 dark:bg-orange-900/10 rounded-xl p-4 border border-orange-200 dark:border-orange-500/20 relative overflow-hidden group shrink-0">
             <div className="absolute -right-4 -top-4 w-16 h-16 bg-orange-500/10 rounded-full blur-xl pointer-events-none" />
             <div className="relative z-10 flex flex-col">

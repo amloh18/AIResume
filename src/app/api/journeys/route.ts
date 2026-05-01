@@ -3,6 +3,10 @@ import { getConnection } from '@/lib/database';
 import { JobApplication, CV, CoverLetter, ApplicationJourney } from '@/models';
 import { createErrorResponse } from '@/lib/db-utils';
 import { createJourneyDocuments } from '@/lib/services/journeyDocumentService';
+import {
+  createQueuedGenerationState,
+  getJourneyGenerationEntitlement
+} from '@/lib/utils/journey-generation';
 
 // Extend global type for cache
 declare global {
@@ -125,14 +129,17 @@ export async function GET(request: NextRequest) {
       journeysNeedingDocuments.forEach(journey => {
         const journeyId = (journey._id as any).toString();
         
-        // Update status to processing_documents if not already
-        if (journey.status !== 'processing_documents') {
-          ApplicationJourney.findByIdAndUpdate(journeyId, {
-            status: 'processing_documents',
-            'metadata.updatedAt': new Date()
-          }).catch(err => {
-            console.error(`❌ Journeys API - Failed to update journey status for ${journeyId}:`, err);
-          });
+        // Refresh queue state so overlay messaging matches the recovery path
+        if (journey.status !== 'processing_documents' || !journey.generationState) {
+          getJourneyGenerationEntitlement(userId)
+            .then((generationEntitlement) => ApplicationJourney.findByIdAndUpdate(journeyId, {
+              status: 'processing_documents',
+              generationState: createQueuedGenerationState(generationEntitlement),
+              'metadata.updatedAt': new Date()
+            }))
+            .catch(err => {
+              console.error(`❌ Journeys API - Failed to update journey status for ${journeyId}:`, err);
+            });
         }
         
         // Trigger document creation in background

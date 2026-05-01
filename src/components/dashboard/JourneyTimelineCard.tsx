@@ -64,6 +64,26 @@ interface Journey {
   journeyDuration?: number;
   atsScoreHistory?: Array<{ score: number; calculatedAt: string }>;
   downloadHistory?: Array<{ downloadedAt: string; fileType: string }>;
+  generationState?: {
+    status: 'queued' | 'in_progress' | 'completed' | 'failed';
+    mode: 'tailored' | 'fallback';
+    reasonCode: string;
+    title: string;
+    summary: string;
+    supportMessage: string;
+    nextAction: 'wait' | 'review' | 'retry' | 'upgrade' | 'edit_manually' | 'contact_support';
+    nextActionLabel: string;
+    isTailoredEligible: boolean;
+    aiCreditsRemaining?: number;
+    aiCreditsLimit?: number;
+    fallbackCreated?: boolean;
+    failureMessage?: string;
+    documents: {
+      cv: 'queued' | 'created' | 'failed';
+      coverLetter: 'queued' | 'created' | 'failed';
+    };
+    updatedAt: string;
+  };
   _debug?: {
     linkedCVId?: string;
     linkedCVMetadata?: any;
@@ -199,6 +219,40 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
     cvId: journey.cvId, // Always use database cvId
     coverLetterId: journey.coverLetterId, // Always use database coverLetterId
     status: journey.status
+  };
+  const generationState = journey.generationState;
+  const isGenerationFailure = generationState?.status === 'failed';
+  const generationAccentClasses = isGenerationFailure
+    ? 'border-red-500/30 bg-red-500/10 text-red-200'
+    : generationState?.mode === 'fallback'
+      ? 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+      : 'border-lime-500/30 bg-lime-500/10 text-lime-100';
+  const generationBadgeLabel = generationState
+    ? `${generationState.mode === 'tailored' ? 'Tailored' : 'Fallback'} ${generationState.status.replace('_', ' ')}`
+    : null;
+
+  const handleGenerationAction = () => {
+    if (!generationState) {
+      return;
+    }
+
+    switch (generationState.nextAction) {
+      case 'retry':
+        handleRetryDocuments();
+        return;
+      case 'upgrade':
+        openPaymentModal({ preselectedPlanKey: 'pro_monthly', triggerContext: 'tracker-generation' });
+        return;
+      case 'edit_manually':
+      case 'review':
+        onResume(journey);
+        return;
+      case 'contact_support':
+        window.open('mailto:support@cvcircle.app?subject=Tracker%20document%20generation%20support', '_blank');
+        return;
+      default:
+        return;
+    }
   };
 
   // Load user documents
@@ -821,7 +875,12 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
       });
 
       if (response.ok) {
-        toast.success('Document creation retry triggered');
+        const result = await response.json();
+        toast.success(result?.generationState?.summary || 'Document creation retry triggered');
+        onUpdateJourney?.(journey.id, {
+          status: 'processing_documents',
+          generationState: result?.generationState
+        });
         // Start polling again
         if (onRefresh) {
           setTimeout(() => onRefresh(), 1000);
@@ -2369,6 +2428,55 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
               } overflow-hidden`}
           >
             <div className="px-6 py-4">
+              {generationState && (
+                <div className={`mb-4 rounded-xl border p-4 ${generationAccentClasses}`}>
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isGenerationFailure ? (
+                          <AlertTriangle className="h-4 w-4" />
+                        ) : generationState.mode === 'tailored' ? (
+                          <Sparkles className="h-4 w-4" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4" />
+                        )}
+                        <p className="text-sm font-semibold">{generationState.title}</p>
+                        {generationBadgeLabel && (
+                          <span className="rounded-full border border-current/20 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide">
+                            {generationBadgeLabel}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm">{generationState.summary}</p>
+                      <p className="text-xs opacity-90">{generationState.supportMessage}</p>
+                      {generationState.failureMessage && (
+                        <p className="text-xs opacity-80">{generationState.failureMessage}</p>
+                      )}
+                    </div>
+
+                    {generationState.nextAction !== 'wait' && (
+                      <motion.button
+                        onClick={handleGenerationAction}
+                        className="inline-flex items-center gap-2 rounded-lg border border-current/20 px-3 py-2 text-xs font-medium transition-colors hover:bg-white/10"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {generationState.nextAction === 'retry' ? (
+                          <RefreshCw className="h-3 w-3" />
+                        ) : generationState.nextAction === 'upgrade' ? (
+                          <Sparkles className="h-3 w-3" />
+                        ) : generationState.nextAction === 'contact_support' ? (
+                          <Mail className="h-3 w-3" />
+                        ) : (
+                          <Eye className="h-3 w-3" />
+                        )}
+                        {generationState.nextActionLabel}
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 {/* Step 1: Job */}
                 <div className={`p-3 rounded-lg border ${liveProgress.status === 'completed'
@@ -2457,7 +2565,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             {linkedCV?.title || `CV ${journey.cvId.slice(-6)}`}
                           </p>
                           <p className="text-xs text-white/60">
-                            {linkedCV ? 'Ready for editing' : 'Document linked'}
+                            {generationState?.mode === 'fallback'
+                              ? 'Non-tailored fallback draft ready'
+                              : linkedCV
+                                ? 'Tailored draft ready for editing'
+                                : 'Document linked'}
                           </p>
                           <div className="flex items-center gap-3 mt-2">
                             {linkedCV && (
@@ -2501,23 +2613,31 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
-                        <p className="text-xs text-blue-400 font-medium">Creating CV...</p>
+                        <p className="text-xs text-blue-400 font-medium">
+                          {generationState?.mode === 'fallback' ? 'Creating fallback CV...' : 'Creating tailored CV...'}
+                        </p>
                       </div>
-                      <p className="text-xs text-white/60">Please wait while we create your CV</p>
+                      <p className="text-xs text-white/60">
+                        {generationState?.summary || 'Please wait while we create your CV'}
+                      </p>
                     </div>
                   ) : journey.status === 'creation_failed' ? (
                     <div className="space-y-2">
-                      <p className="text-xs text-red-400 font-medium">Failed to create CV</p>
-                      <p className="text-xs text-red-300">Document creation encountered an error</p>
+                      <p className="text-xs text-red-400 font-medium">
+                        {generationState?.title || 'Failed to create CV'}
+                      </p>
+                      <p className="text-xs text-red-300">
+                        {generationState?.supportMessage || 'Document creation encountered an error'}
+                      </p>
                       <motion.button
-                        onClick={handleRetryDocuments}
+                        onClick={handleGenerationAction}
                         disabled={isRetryingDocuments}
                         className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium rounded transition-colors border border-red-500/30 disabled:opacity-50"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         {isRetryingDocuments ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                        Retry
+                        {generationState?.nextActionLabel || 'Retry'}
                       </motion.button>
                     </div>
                   ) : !hasMasterCV ? (
@@ -2538,7 +2658,9 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     </div>
                   ) : (
                     <div className="space-y-1">
-                      <p className="text-xs text-white/60">Creating CV...</p>
+                      <p className="text-xs text-white/60">
+                        {generationState?.summary || 'Creating CV...'}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -2673,7 +2795,11 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                             {linkedCoverLetter?.title || `Cover Letter ${journey.coverLetterId.slice(-6)}`}
                           </p>
                           <p className="text-xs text-white/60">
-                            {linkedCoverLetter ? 'Ready for download' : 'Document linked'}
+                            {generationState?.mode === 'fallback'
+                              ? 'Fallback draft ready for review'
+                              : linkedCoverLetter
+                                ? 'Tailored draft ready for review'
+                                : 'Document linked'}
                           </p>
                           <div className="flex items-center gap-3 mt-2">
                             {linkedCoverLetter && (
@@ -2737,23 +2863,31 @@ const JourneyTimelineCard: React.FC<JourneyTimelineCardProps> = ({
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <RefreshCw className="h-3 w-3 animate-spin text-blue-400" />
-                        <p className="text-xs text-blue-400 font-medium">Creating Cover Letter...</p>
+                        <p className="text-xs text-blue-400 font-medium">
+                          {generationState?.mode === 'fallback' ? 'Creating fallback Cover Letter...' : 'Creating tailored Cover Letter...'}
+                        </p>
                       </div>
-                      <p className="text-xs text-white/60">Please wait while we create your cover letter</p>
+                      <p className="text-xs text-white/60">
+                        {generationState?.supportMessage || 'Please wait while we create your cover letter'}
+                      </p>
                     </div>
                   ) : journey.status === 'creation_failed' ? (
                     <div className="space-y-2">
-                      <p className="text-xs text-red-400 font-medium">Failed to create Cover Letter</p>
-                      <p className="text-xs text-red-300">Document creation encountered an error</p>
+                      <p className="text-xs text-red-400 font-medium">
+                        {generationState?.title || 'Failed to create Cover Letter'}
+                      </p>
+                      <p className="text-xs text-red-300">
+                        {generationState?.supportMessage || 'Document creation encountered an error'}
+                      </p>
                       <motion.button
-                        onClick={handleRetryDocuments}
+                        onClick={handleGenerationAction}
                         disabled={isRetryingDocuments}
                         className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-medium rounded transition-colors border border-red-500/30 disabled:opacity-50"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         {isRetryingDocuments ? <RefreshCw className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                        Retry
+                        {generationState?.nextActionLabel || 'Retry'}
                       </motion.button>
                     </div>
                   ) : cvNotFound ? (

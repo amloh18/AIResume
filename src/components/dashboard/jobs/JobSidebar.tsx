@@ -79,6 +79,14 @@ interface JobSidebarProps {
   onRefresh: () => void;
 }
 
+interface TrackerGenerationPreview {
+  mode: 'tailored' | 'fallback';
+  entitlementReasonCode?: 'tailored_available' | 'ai_credits_exhausted' | 'subscription_inactive';
+  title: string;
+  summary: string;
+  supportMessage: string;
+}
+
 const JobSidebar: React.FC<JobSidebarProps> = ({
   job,
   journeys: initialJourneys,
@@ -102,6 +110,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
   const [interviewPrepOpen, setInterviewPrepOpen] = useState(false);
+  const [trackerGenerationPreview, setTrackerGenerationPreview] = useState<TrackerGenerationPreview | null>(null);
 
   // EditJobSidebar state for layered sidebar
   const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
@@ -122,6 +131,50 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   // Use fallbacks defaultSalary for comparison if insights doesn't have marketAverageSalary
   const marketAverage = 75000; // Generic fallback
   const salaryComp = getMarketSalaryComparison(job.salary, marketAverage);
+
+  useEffect(() => {
+    const loadTrackerGenerationPreview = async () => {
+      if (!user?.id || job.status !== 'draft') {
+        return;
+      }
+
+      try {
+        const response = await authenticatedFetch('/api/jobs/tracker-generation-preview');
+        const result = await response.json();
+        const preview = result?.preview;
+
+        if (result?.success && preview) {
+          setTrackerGenerationPreview({
+            mode: preview.mode,
+            entitlementReasonCode: result.entitlementReasonCode,
+            title: preview.title,
+            summary: preview.summary,
+            supportMessage: preview.supportMessage
+          });
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to load tracker generation preview:', error);
+        setTrackerGenerationPreview({
+          mode: 'tailored',
+          title: 'Documents will be generated',
+          summary: 'Moving this job to Created will start CV and cover letter generation for this tracker journey.',
+          supportMessage: 'The tracker will show whether the generated drafts are tailored or fallback once processing begins.'
+        });
+      }
+    };
+
+    loadTrackerGenerationPreview();
+  }, [job.status, user?.id]);
+
+  const draftToCreatedMessaging = useMemo(() => {
+    return trackerGenerationPreview || {
+      mode: 'tailored' as const,
+      title: 'Documents will be generated',
+      summary: 'Moving this job to Created will start CV and cover letter generation for this tracker journey.',
+      supportMessage: 'The tracker will show whether the generated drafts are tailored or fallback once processing begins.'
+    };
+  }, [trackerGenerationPreview]);
 
   const loadJourneysForJob = async () => {
     const jobId = job.id || job._id;
@@ -639,7 +692,8 @@ ${userName}`
             });
 
             if (statusResponse.ok) {
-              toast.success('Job moved to created stage!');
+              const statusResult = await statusResponse.json();
+              toast.success(statusResult?.trackerGeneration?.summary || draftToCreatedMessaging.summary);
               await onRefresh();
               return;
             }
@@ -672,7 +726,8 @@ ${userName}`
             return;
           }
 
-          toast.success('Job moved to created stage!');
+          const statusResult = await statusResponse.json();
+          toast.success(statusResult?.trackerGeneration?.summary || draftToCreatedMessaging.summary);
           // Refresh job data to get updated status
           await onRefresh();
         } catch (error) {
@@ -825,7 +880,8 @@ ${userName}`
         return;
       }
 
-      toast.success('Job moved to created stage!');
+      const statusResult = await statusResponse.json();
+      toast.success(statusResult?.trackerGeneration?.summary || draftToCreatedMessaging.summary);
 
       // Dispatch credit update event to refresh membership card
       window.dispatchEvent(new CustomEvent('creditsUpdated'));
@@ -1287,7 +1343,7 @@ ${userName}`
                       <ul className="text-left text-sm text-gray-600 dark:text-white/70 mb-6 space-y-2 max-w-md mx-auto">
                         <li className="flex items-start gap-2">
                           <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
-                          <span>Create a tailored CV and cover letter for this job</span>
+                          <span>{draftToCreatedMessaging.summary}</span>
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
@@ -1295,11 +1351,15 @@ ${userName}`
                         </li>
                         <li className="flex items-start gap-2">
                           <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
-                          <span>Track your application progress</span>
+                          <span>{draftToCreatedMessaging.supportMessage}</span>
                         </li>
                       </ul>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                        This action requires a Pro membership.
+                        {draftToCreatedMessaging.mode === 'tailored'
+                          ? 'Tailored generation is currently available for this tracker journey.'
+                          : draftToCreatedMessaging.entitlementReasonCode === 'ai_credits_exhausted'
+                            ? 'Tracker creation is still available, but this journey will start with non-tailored fallback drafts because your tailoring allowance is exhausted right now.'
+                            : 'Tracker creation is still available, but this journey will start with non-tailored fallback drafts because tailored generation is not included in your current access.'}
                       </p>
                       <motion.button
                         onClick={handleMoveToCreated}
@@ -1337,7 +1397,8 @@ ${userName}`
                                 : new Date(cvJourney.metadata.updatedAt).toISOString(),
                               atsScore: cvJourney.atsScore,
                               cvId: cvJourney.cvId,
-                              coverLetterId: cvJourney.coverLetterId
+                              coverLetterId: cvJourney.coverLetterId,
+                              generationState: cvJourney.generationState
                             };
 
                             return (

@@ -9,6 +9,10 @@ import { formatExtensionError, formatExtensionSuccess, ExtensionErrorCode } from
 import { ErrorCode, createErrorNextResponse } from '@/lib/utils/error-codes';
 import { setCorsHeaders, handleCorsPreflight } from '@/lib/utils/cors-helpers';
 import { authenticateRequest } from '@/lib/utils/auth-helpers-api';
+import {
+  createQueuedGenerationState,
+  getJourneyGenerationEntitlement
+} from '@/lib/utils/journey-generation';
 
 const formatDateForResponse = (value: Date | string | null | undefined): string | undefined => {
   if (!value) {
@@ -681,6 +685,7 @@ export async function POST(request: NextRequest) {
         // Determine if documents need to be created
         const needsDocuments = true; // Always create documents when job is added
         const initialStatus = needsDocuments ? 'processing_documents' : 'in-progress';
+        const generationEntitlement = await getJourneyGenerationEntitlement(normalizedUserId.toString());
 
         const journeyData = {
           journeyId: `journey_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -730,6 +735,7 @@ export async function POST(request: NextRequest) {
           lastWorkedOn: new Date(),
           atsScoreHistory: [],
           downloadHistory: [],
+          generationState: needsDocuments ? createQueuedGenerationState(generationEntitlement) : undefined,
           metadata: {
             createdAt: new Date(),
             updatedAt: new Date(),

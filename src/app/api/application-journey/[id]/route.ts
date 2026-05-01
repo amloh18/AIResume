@@ -144,6 +144,7 @@ export async function GET(
       atsScore: journey.atsScore,
       jobTitle: journey.jobTitle,
       company: journey.company,
+      generationState: journey.generationState,
       createdAt: journey.createdAt,
       updatedAt: journey.updatedAt
     };
@@ -307,6 +308,7 @@ export async function PUT(
           status: journey.status,
           currentStep: journey.currentStep,
           atsScore: journey.atsScore,
+          generationState: journey.generationState,
           updatedAt: journey.metadata.updatedAt
         }
       }
@@ -320,4 +322,3 @@ export async function PUT(
     );
   }
 }
-
