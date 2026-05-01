@@ -209,31 +209,31 @@ const SECTION_ICONS: any = {
 export const TITLE_STYLES: Record<string, React.FC<{ children: React.ReactNode; isDark: boolean; showIcons?: boolean; titleKey?: string }>> = {
   'standard': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-item-avoid ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'cv-accent-border text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'minimal': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 cv-item-avoid ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 cv-keep-with-next ${isDark ? 'text-white' : 'cv-accent-text'} flex items-center gap-2`}>{Icon && <Icon size={16} />}{children}</h3>;
   },
   'accent': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-item-avoid ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-3 border-b-[1.5px] pb-1.5 cv-keep-with-next ${isDark ? 'text-white border-slate-700' : 'text-gray-900 border-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'boxed': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <div className={`inline-flex items-center gap-2 border px-2 py-1 mb-3 ${TYPOGRAPHY.date} cv-item-avoid ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
+    return <div className={`inline-flex items-center gap-2 border px-2 py-1 mb-3 ${TYPOGRAPHY.date} cv-keep-with-next ${isDark ? 'border-slate-500 text-slate-200' : 'border-gray-800 text-gray-800'}`}>{Icon && <Icon size={14} />}{children}</div>;
   },
   'sidebar-default': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 border-b pb-1 cv-item-avoid ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-2 border-b pb-1 cv-keep-with-next ${isDark ? 'text-slate-300 border-slate-600' : 'text-gray-800 border-gray-300'} flex items-center gap-2`}>{Icon && <Icon size={14} />}{children}</h3>;
   },
   'designer': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-4 cv-item-avoid ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
+    return <h3 className={`${TYPOGRAPHY.sectionTitle} mb-4 cv-keep-with-next ${isDark ? 'text-white' : 'text-gray-800'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3>;
   },
   'lines': ({ children, isDark, showIcons, titleKey }) => {
     const Icon = showIcons && titleKey && SECTION_ICONS[titleKey] ? SECTION_ICONS[titleKey] : null;
-    return <div className="flex items-center gap-4 mb-4 cv-item-avoid"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
+    return <div className="flex items-center gap-4 mb-4 cv-keep-with-next"><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div><h3 className={`${TYPOGRAPHY.sectionTitle} mb-0 ${isDark ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>{Icon && <Icon size={16} className="cv-accent-text" />}{children}</h3><div className={`h-px flex-1 ${isDark ? 'bg-slate-700' : 'bg-gray-300'}`}></div></div>;
   },
 };
 
