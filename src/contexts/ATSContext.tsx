@@ -8,6 +8,13 @@ export interface ATSAnalysis {
   matchedKeywords?: string[];
   strengths: string[];
   suggestions: string[];
+  extractedKeywords?: string[];
+  warnings?: string[];
+  keywordAnalysis?: any;
+  scoreResult?: any;
+  formatScore?: number;
+  actionVerbsCount?: number;
+  readabilityScore?: number;
   factorBreakdown?: {
     hardKeywords: { score: number; weight: number; matched: number; total: number };
     jobTitles: { score: number; weight: number; matched: boolean };
@@ -72,7 +79,7 @@ interface ATSContextState {
 interface ATSContextValue extends ATSContextState {
   // ATS Score methods
   updateATSScore: (score: number, analysis: ATSAnalysis, cvId: string, journeyId?: string, jobId?: string) => Promise<void>;
-  refreshATSScore: (cvId: string, jobId?: string, userId?: string) => Promise<number | null>;
+  refreshATSScore: (cvId?: string, jobId?: string, userId?: string) => Promise<number | null>;
 
   // Surgeon Analysis methods
   updateSurgeonAnalysis: (analysis: SurgeonAnalysis, cvId: string) => Promise<void>;
@@ -141,13 +148,21 @@ export function ATSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Refresh ATS Score from database
-  const refreshATSScore = useCallback(async (cvId: string, jobId?: string, userId?: string) => {
+  const refreshATSScore = useCallback(async (cvId?: string, jobId?: string, userId?: string) => {
     try {
       setState(prev => ({ ...prev, isATSLoading: true, atsError: null }));
 
-      if (!jobId) {
+      const effectiveCvId = cvId || state.cvId;
+      const effectiveJobId = jobId || state.jobId;
+
+      if (!effectiveCvId) {
+        setState(prev => ({ ...prev, isATSLoading: false }));
+        return null;
+      }
+
+      if (!effectiveJobId) {
         // Try to get score from CV metadata
-        const response = await fetch(`/api/cvs/${cvId}`);
+        const response = await fetch(`/api/cvs/${effectiveCvId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data?.cv?.metadata?.atsScore !== undefined) {
@@ -156,8 +171,8 @@ export function ATSProvider({ children }: { children: ReactNode }) {
               ...prev,
               atsScore: score,
               isATSLoading: false,
-              cvId,
-              jobId: jobId || prev.jobId,
+              cvId: effectiveCvId,
+              jobId: effectiveJobId || prev.jobId,
             }));
             return score;
           }
@@ -167,7 +182,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
         const response = await fetch('/api/ats/calculate-score', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cvId, jobId, userId }),
+          body: JSON.stringify({ cvId: effectiveCvId, jobId: effectiveJobId, userId }),
         });
 
         if (response.ok) {
@@ -177,8 +192,16 @@ export function ATSProvider({ children }: { children: ReactNode }) {
             const analysis: ATSAnalysis = {
               score,
               missingKeywords: result.data.missingKeywords || [],
+              matchedKeywords: result.data.matchedKeywords || result.data.strengths || [],
               strengths: result.data.strengths || [],
               suggestions: result.data.suggestions || [],
+              extractedKeywords: result.data.keywordAnalysis?.extractedKeywords || [],
+              warnings: result.data.warnings || [],
+              keywordAnalysis: result.data.keywordAnalysis,
+              scoreResult: result.data.scoreResult,
+              formatScore: result.data.scoreResult?.atsScore ? Math.round((result.data.scoreResult.atsScore.formatting / 20) * 100) : undefined,
+              actionVerbsCount: result.data.scoreResult?.cvScore?.impactVerbs,
+              readabilityScore: result.data.scoreResult?.cvScore ? Math.round((result.data.scoreResult.cvScore.readability / 20) * 100) : undefined,
               factorBreakdown: result.data.factorBreakdown || result.data.analysis?.factorBreakdown,
               knockOutFactors: result.data.knockOutFactors || result.data.analysis?.knockOutFactors,
               updatedAt: new Date().toISOString(),
@@ -190,8 +213,8 @@ export function ATSProvider({ children }: { children: ReactNode }) {
               atsAnalysis: analysis,
               isATSLoading: false,
               lastUpdated: new Date(),
-              cvId,
-              jobId,
+              cvId: effectiveCvId,
+              jobId: effectiveJobId,
             }));
             return score;
           }
@@ -209,7 +232,7 @@ export function ATSProvider({ children }: { children: ReactNode }) {
       }));
       return null;
     }
-  }, []);
+  }, [state.cvId, state.jobId]);
 
   // Update Surgeon Analysis - saves to database and updates context
   const updateSurgeonAnalysis = useCallback(async (
@@ -351,4 +374,3 @@ export function useATS() {
   }
   return context;
 }
-

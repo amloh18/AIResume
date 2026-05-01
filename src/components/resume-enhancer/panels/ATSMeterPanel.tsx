@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo } from 'react';
 import { useATS } from '@/contexts/ATSContext';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
@@ -90,13 +92,13 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
     if (!atsAnalysis) return defaultFeedback;
     
     const items = [];
-    if (atsAnalysis.formatScore > 80) {
+    if ((atsAnalysis.formatScore || 0) > 80) {
       items.push({ text: 'Clean, ATS-friendly format', type: 'success' });
     } else {
       items.push({ text: 'Format issues detected', type: 'warning' });
     }
     
-    if (atsAnalysis.actionVerbsCount > 10) {
+    if ((atsAnalysis.actionVerbsCount || 0) > 10) {
       items.push({ text: 'Good use of action verbs', type: 'success' });
     } else {
       items.push({ text: 'Add more action verbs', type: 'warning' });
@@ -112,24 +114,41 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
     return items.length > 0 ? items : defaultFeedback;
   }, [atsAnalysis]);
   const metrics = useMemo(() => {
-    if (atsAnalysis) {
-      // Use real data if available
+    const scoreResult = atsAnalysis?.scoreResult || offlineScore;
+    const cvBreakdown = scoreResult?.cvScore;
+    const atsBreakdown = scoreResult?.atsScore;
+
+    if (hasJobDesc && atsBreakdown) {
       return {
-        keywords: atsAnalysis.keywordMatchRate || 0,
-        impactWords: atsAnalysis.actionVerbsCount ? Math.min(100, atsAnalysis.actionVerbsCount * 5) : 0,
-        atsFormat: atsAnalysis.formatScore || 0,
-        readability: atsAnalysis.readabilityScore || 0,
+        primaryLabel: 'Keywords',
+        formatLabel: 'ATS Format',
+        keywords: Math.round((atsBreakdown.keywordMatch / 40) * 100),
+        impactWords: cvBreakdown ? Math.round((cvBreakdown.impactVerbs / 20) * 100) : 0,
+        atsFormat: Math.round((atsBreakdown.formatting / 20) * 100),
+        readability: cvBreakdown ? Math.round((cvBreakdown.readability / 20) * 100) : 0,
       };
     }
-    
-    // Return 0 if no analysis is present
+
+    if (cvBreakdown) {
+      return {
+        primaryLabel: 'Completeness',
+        formatLabel: 'Formatting',
+        keywords: Math.round((cvBreakdown.completeness / 25) * 100),
+        impactWords: Math.round((cvBreakdown.impactVerbs / 20) * 100),
+        atsFormat: Math.round((cvBreakdown.formatting / 15) * 100),
+        readability: Math.round((cvBreakdown.readability / 20) * 100),
+      };
+    }
+
     return {
+      primaryLabel: hasJobDesc ? 'Keywords' : 'Completeness',
+      formatLabel: hasJobDesc ? 'ATS Format' : 'Formatting',
       keywords: 0,
       impactWords: 0,
       atsFormat: 0,
       readability: 0,
     };
-  }, [atsAnalysis]);
+  }, [atsAnalysis, hasJobDesc, offlineScore]);
 
   // Determine stroke color based on score
   const strokeColor = score >= 75 ? '#80FF00' : score >= 50 ? '#eab308' : '#ef4444';
@@ -141,7 +160,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
     if (!skillName) return;
     
     // Add skill to state
-    const currentSkills = Array.isArray(state.cvData?.skills) ? [...state.cvData.skills] : [];
+    const currentSkills: any[] = Array.isArray(state.cvData?.skills) ? [...state.cvData.skills] : [];
     
     // Check if "Core Skills" or similar category exists, otherwise create or use first
     let targetCategoryIndex = currentSkills.findIndex((c: any) => 
@@ -155,14 +174,14 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
     }
     
     if (targetCategoryIndex >= 0) {
-      const category = { ...currentSkills[targetCategoryIndex] };
-      // Check if skill already exists in keywords array
-      if (!category.keywords) category.keywords = [];
-      if (!category.skills) category.skills = []; // Support for older formats
+      const category: any = { ...currentSkills[targetCategoryIndex] };
+      if (!Array.isArray(category.skills)) {
+        category.skills = Array.isArray(category.keywords) ? [...category.keywords] : [];
+      }
       
-      const existingKeywords = category.keywords || category.skills || [];
-      if (!existingKeywords.includes(skillName)) {
-        category.keywords = [...existingKeywords, skillName];
+      const existingSkills = category.skills || [];
+      if (!existingSkills.includes(skillName)) {
+        category.skills = [...existingSkills, skillName];
         
         // Ensure cvData.skills is updated with the modified category
         const newSkills = [...currentSkills];
@@ -181,7 +200,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
       const newCategory = {
         id: crypto.randomUUID(),
         category: 'Core Skills',
-        keywords: [skillName]
+        skills: [skillName]
       };
       
       dispatch({
@@ -228,7 +247,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
           AI Analysis
         </h3>
         <button 
-          onClick={() => refreshATSScore()}
+          onClick={() => refreshATSScore(state.cvId || undefined, state.jobData?._id || state.jobData?.id || undefined)}
           disabled={isATSLoading}
           className="p-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white disabled:opacity-50 shadow-sm"
           title="Refresh Analysis"
@@ -341,9 +360,9 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
       {/* Metrics Breakdown */}
       <div className="bg-gray-50 dark:bg-white/5 rounded-xl p-4 border border-gray-200 dark:border-white/10 mb-6 space-y-4">
-        <ScoreBreakdown label="Keywords" value={metrics.keywords} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
+        <ScoreBreakdown label={metrics.primaryLabel} value={metrics.keywords} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
         <ScoreBreakdown label="Impact words" value={metrics.impactWords} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
-        <ScoreBreakdown label="ATS Format" value={metrics.atsFormat} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
+        <ScoreBreakdown label={metrics.formatLabel} value={metrics.atsFormat} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
         <ScoreBreakdown label="Readability" value={metrics.readability} max={100} displayType="percentage" colorVariant="dynamic" compact={true} />
       </div>
 

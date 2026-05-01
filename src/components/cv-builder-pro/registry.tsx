@@ -44,7 +44,7 @@ export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, alig
 
   const addLink = (key: string, value: string | undefined, node: React.ReactNode) => {
     if (!isVisible(key)) return;
-    if (value) {
+    if (value && typeof value === 'string') {
       const normalized = value.toLowerCase().replace(/^(https?:\/\/)?(www\.)?/, '').replace(/\/$/, '').trim();
       if (seenValues.has(normalized)) return;
       seenValues.add(normalized);
@@ -84,6 +84,111 @@ export const ContactLinks = ({ data, Editable, isNarrow, showIcons, design, alig
     </>
   );
 };
+
+const LEGACY_SKILL_GROUP_LABELS: Record<string, string> = {
+  languages: 'Core Languages',
+  frameworks: 'Frameworks',
+  tools: 'Tools & Tech',
+  databases: 'Databases',
+  soft: 'Soft Skills',
+};
+
+const splitSkillsText = (value: any): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item: any) => {
+        if (typeof item === 'string') return item.trim();
+        if (item && typeof item === 'object') return (item.name || item.skill || item.label || '').trim();
+        return '';
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof value !== 'string') {
+    return [];
+  }
+
+  return value
+    .split(/[,\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
+const clampSkillRating = (value: any, fallback = 4) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(5, Math.max(1, Math.round(numeric)));
+};
+
+const normalizeSkillGroups = (rawSkills: any) => {
+  if (Array.isArray(rawSkills)) {
+    return rawSkills
+      .map((group: any, index: number) => {
+        if (typeof group === 'string') {
+          const skills = splitSkillsText(group);
+          return {
+            category: 'Skills',
+            skillsText: group,
+            skills,
+            rating: undefined,
+            pathCategory: `skills.${index}.category`,
+            pathSkills: `skills.${index}.skillsText`,
+          };
+        }
+
+        const skillsText = typeof group?.skillsText === 'string'
+          ? group.skillsText
+          : splitSkillsText(group?.skills || group?.keywords || []).join(', ');
+
+        const skills = splitSkillsText(skillsText);
+        return {
+          category: group?.category || group?.name || `Skills ${index + 1}`,
+          skillsText,
+          skills,
+          rating: typeof group?.rating === 'number' ? group.rating : undefined,
+          pathCategory: `skills.${index}.category`,
+          pathSkills: `skills.${index}.skillsText`,
+        };
+      })
+      .filter((group) => group.category || group.skills.length > 0 || group.skillsText);
+  }
+
+  if (rawSkills && typeof rawSkills === 'object') {
+    return Object.entries(rawSkills)
+      .filter(([, value]) => typeof value === 'string' && value.trim())
+      .map(([key, value]) => ({
+        category: LEGACY_SKILL_GROUP_LABELS[key] || key,
+        skillsText: value as string,
+        skills: splitSkillsText(value),
+        rating: undefined,
+        pathCategory: null,
+        pathSkills: `skills.${key}`,
+      }));
+  }
+
+  if (typeof rawSkills === 'string' && rawSkills.trim()) {
+    return [{
+      category: 'Skills',
+      skillsText: rawSkills,
+      skills: splitSkillsText(rawSkills),
+      rating: undefined,
+      pathCategory: null,
+      pathSkills: 'skills',
+    }];
+  }
+
+  return [];
+};
+
+const flattenSkillItems = (rawSkills: any) => (
+  normalizeSkillGroups(rawSkills).flatMap((group) =>
+    group.skills.map((label, index) => ({
+      label,
+      category: group.category,
+      rating: clampSkillRating(group.rating, 5 - (index % 3)),
+    }))
+  )
+);
 
 const SECTION_ICONS: any = {
   summary: User,
@@ -461,24 +566,58 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }},
 
   // === SKILLS (6) ===
-  'skills-tags': { id: 'skills-tags', name: 'Text Blocks', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => (
-    <div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="mb-3 cv-mb-sm"><div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Languages</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path="skills.languages" /></div></div><div className="mb-3 cv-mb-sm"><div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Frameworks</div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}><Editable path="skills.frameworks" /></div></div></div>
-  )},
+  'skills-tags': { id: 'skills-tags', name: 'Text Blocks', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
+    const groups = normalizeSkillGroups(data?.skills);
+    if (groups.length === 0) return null;
+    return (
+      <div className="snippet-anim cv-section cv-item-avoid">
+        <Title titleKey="skills" />
+        <div className="flex flex-col gap-3 cv-gap-sm">
+          {groups.map((group, index) => (
+            <div key={`${group.category}-${index}`} className="cv-keep-with-next">
+              <div className={`${TYPOGRAPHY.itemTitle} mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+              </div>
+              <div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }},
   'skills-pills': { id: 'skills-pills', name: 'Solid Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const allSkills = [...(data.skills?.languages || '').split(','), ...(data.skills?.frameworks || '').split(',')].map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: string, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill}</span>))}</div></div>);
+    const allSkills = flattenSkillItems(data?.skills);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-3 py-1.5 text-xs font-semibold rounded-md border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
   }},
   'skills-round-pills': { id: 'skills-round-pills', name: 'Round Pills', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const allSkills = [...(data.skills?.languages || '').split(','), ...(data.skills?.frameworks || '').split(',')].map((s: string) => s.trim()).filter(Boolean);
-    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: string, i: number) => (<span key={i} className={`px-4 py-1.5 text-xs font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill}</span>))}</div></div>);
+    const allSkills = flattenSkillItems(data?.skills);
+    return (<div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-wrap gap-2 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<span key={i} className={`px-4 py-1.5 text-xs font-semibold rounded-full border ${isDark ? 'bg-slate-700 border-slate-600 text-slate-200' : 'bg-slate-100 border-slate-200 text-slate-700'}`}>{skill.label}</span>))}</div></div>);
   }},
   'skills-dots': { id: 'skills-dots', name: 'Dot Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const allSkills = [...(data.skills?.languages || '').split(',')].map((s: string) => s.trim()).filter(Boolean).slice(0, 6);
-    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: string, i: number) => { const rating = i % 2 === 0 ? 5 : 4; return (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>); })}</div></div>);
+    const allSkills = flattenSkillItems(data?.skills).slice(0, 6);
+    return (<div className="snippet-anim w-full cv-section cv-item-avoid"><Title titleKey="skills" /><div className="grid grid-cols-1 gap-y-2 gap-x-4 cv-gap-sm">{allSkills.map((skill: any, i: number) => (<div key={i} className={`flex justify-between items-center ${TYPOGRAPHY.body}`}><span className={`truncate font-medium ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{skill.label}</span><div className="flex gap-1.5">{[...Array(5)].map((_, dotIdx) => (<div key={dotIdx} className={`w-2 h-2 rounded-full ${dotIdx < skill.rating ? 'cv-accent-bg' : (isDark ? 'bg-slate-700' : 'bg-gray-200')}`}></div>))}</div></div>))}</div></div>);
   }},
-  'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => (
-    <div className="snippet-anim cv-section cv-item-avoid"><Title titleKey="skills" /><div className="flex flex-col gap-2 cv-gap-sm"><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>Core Languages:</span><Editable path="skills.languages" /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>Frameworks:</span><Editable path="skills.frameworks" /></div><div className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>Tools & Tech:</span><Editable path="skills.tools" /></div></div></div>
-  )},
+  'skills-category-inline': { id: 'skills-category-inline', name: 'Category Inline', category: 'Skills', render: ({ data, Editable, isDark, Title }: any) => {
+    const groups = normalizeSkillGroups(data?.skills);
+    if (groups.length === 0) return null;
+    return (
+      <div className="snippet-anim cv-section cv-item-avoid">
+        <Title titleKey="skills" />
+        <div className="flex flex-col gap-2 cv-gap-sm">
+          {groups.map((group, index) => (
+            <div key={`${group.category}-${index}`} className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <span className={`${TYPOGRAPHY.itemTitle} ${isDark ? 'text-gray-100' : 'text-gray-900'} mr-2`}>
+                {group.pathCategory ? <Editable path={group.pathCategory} nowrap /> : group.category}
+              </span>
+              {group.pathSkills ? <Editable path={group.pathSkills} /> : group.skillsText}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }},
 
   // === LANGUAGES ===
   'languages-comma': { id: 'languages-comma', name: 'Comma Separated', category: 'Languages', render: ({ data, Editable, isDark, Title }: any) => (
@@ -728,36 +867,25 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // NEW SNIPPETS — SKILLS (5 new)
   // =======================================================
   ,'skills-grouped-sections': { id: 'skills-grouped-sections', name: 'Grouped by Category', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const skills = data?.skills || {};
-    const groups = [
-      { key: 'languages', label: 'Languages' }, { key: 'frameworks', label: 'Frameworks' },
-      { key: 'tools', label: 'Tools' }, { key: 'databases', label: 'Databases' }, { key: 'soft', label: 'Soft Skills' }
-    ].filter(g => skills[g.key]);
-    if (groups.length === 0 && !skills.languages) return null;
-    const allItems = groups.length > 0 ? groups : [{ key: 'languages', label: 'All Skills' }];
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{allItems.map(g => (<div key={g.key}><div className={`text-[9px] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{g.label}</div><div className="flex flex-wrap gap-1.5">{(skills[g.key] || '').split(',').map((s: string, i: number) => (<span key={i} className={`text-[11px] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{s.trim()}</span>))}</div></div>))}</div></div>);
+    const groups = normalizeSkillGroups(data?.skills);
+    if (groups.length === 0) return null;
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-3">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[9px] uppercase tracking-widest font-bold mb-1.5 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[11px] px-2.5 py-0.5 rounded-md font-medium ${isDark ? 'bg-slate-700 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'skills-star-rating': { id: 'skills-star-rating', name: 'Star Rating', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const raw = data?.skills?.languages || data?.skills || '';
-    const items = typeof raw === 'string' ? raw.split(',').filter(Boolean).slice(0,8) : [];
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: string, i: number) => { const lvl = 5 - (i % 3 === 0 ? 0 : i % 3 === 1 ? 1 : 2); return (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.trim()}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= lvl ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>)})}</div></div>);
+    const items = flattenSkillItems(data?.skills).slice(0, 8);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-2">{items.map((skill: any, i: number) => (<div key={i} className="flex justify-between items-center"><span className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{skill.label}</span><div className="flex gap-0.5">{[1,2,3,4,5].map(s => (<span key={s} className={`text-[13px] ${s <= skill.rating ? 'cv-accent-text' : (isDark ? 'text-slate-700' : 'text-gray-200')}`}>★</span>))}</div></div>))}</div></div>);
   }}
   ,'skills-two-col-list': { id: 'skills-two-col-list', name: 'Two Column List', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const raw = data?.skills?.languages || data?.skills || '';
-    const items = typeof raw === 'string' ? raw.split(',').filter(Boolean) : [];
-    const half = Math.ceil(items.length / 2);
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((s: string, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{s.trim()}</div>))}</div></div>);
+    const items = flattenSkillItems(data?.skills);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="grid grid-cols-2 gap-x-4 gap-y-1">{items.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-1.5 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[10px] shrink-0">●</span>{skill.label}</div>))}</div></div>);
   }}
   ,'skills-accent-badges': { id: 'skills-accent-badges', name: 'Accent Solid Badges', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const raw = data?.skills?.languages || data?.skills || '';
-    const items = typeof raw === 'string' ? raw.split(',').filter(Boolean) : [];
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((s: string, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{s.trim()}</span>))}</div></div>);
+    const items = flattenSkillItems(data?.skills);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-wrap gap-1.5">{items.map((skill: any, i: number) => (<span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-md cv-accent-bg text-white tracking-wide">{skill.label}</span>))}</div></div>);
   }}
   ,'skills-compact-inline': { id: 'skills-compact-inline', name: 'Compact Inline All', category: 'Skills', render: ({ data, isDark, Title }: any) => {
-    const skills = data?.skills || {};
-    const all = ['languages','frameworks','tools','databases','soft'].flatMap(k => skills[k] ? (skills[k] as string).split(',') : []).filter(Boolean);
-    if (all.length === 0 && skills.languages) all.push(...(skills.languages as string).split(',').filter(Boolean));
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((s,i) => <span key={i}>{s.trim()}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
+    const all = flattenSkillItems(data?.skills);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><p className={`${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'} leading-relaxed`}>{all.map((skill: any, i: number) => <span key={i}>{skill.label}{i < all.length-1 && <span className={`mx-1.5 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
   }}
 
   // =======================================================
@@ -847,7 +975,7 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   }}
   ,'interests-minimal-bold': { id: 'interests-minimal-bold', name: 'Minimal Bold List', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><p className={`${TYPOGRAPHY.body} font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{items.map((item, i) => <span key={i}>{item.trim()}{i < items.length - 1 && <span className={`mx-1.5 font-normal ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="interests" /><p className={`${TYPOGRAPHY.body} font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>{items.map((item: string, i: number) => <span key={i}>{item.trim()}{i < items.length - 1 && <span className={`mx-1.5 font-normal ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>·</span>}</span>)}</p></div>);
   }}
   ,'interests-card': { id: 'interests-card', name: 'Card Layout', category: 'Interests', render: ({ data, isDark, Title }: any) => {
     const items = typeof data?.interests === 'string' ? data.interests.split(',').filter(Boolean) : []; if (items.length === 0) return null;
@@ -862,13 +990,9 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
   // NEW SNIPPETS — SIDEBAR (5 new)
   // =======================================================
   ,'sidebar-skills-grouped': { id: 'sidebar-skills-grouped', name: 'Skills by Group', category: 'Sidebar', render: ({ data, isDark, Title }: any) => {
-    const skills = data?.skills || {};
-    const groups = [
-      { key: 'languages', label: 'Languages' }, { key: 'frameworks', label: 'Frameworks' },
-      { key: 'tools', label: 'Tools' }
-    ].filter(g => skills[g.key]);
+    const groups = normalizeSkillGroups(data?.skills);
     if (groups.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map(g => (<div key={g.key}><div className={`text-[10px] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{g.label}</div><div className="flex flex-wrap gap-1.5">{(skills[g.key] || '').split(',').map((s: string, i: number) => (<span key={i} className={`text-[11px] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{s.trim()}</span>))}</div></div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-4">{groups.map((group, index) => (<div key={`${group.category}-${index}`}><div className={`text-[10px] uppercase tracking-widest font-bold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'} border-b pb-1 ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>{group.category}</div><div className="flex flex-wrap gap-1.5">{group.skills.map((skill: string, i: number) => (<span key={i} className={`text-[11px] px-2 py-1 rounded font-medium ${isDark ? 'bg-slate-800 text-gray-300' : 'bg-gray-100 text-gray-700'}`}>{skill}</span>))}</div></div>))}</div></div>);
   }}
   ,'sidebar-bio': { id: 'sidebar-bio', name: 'Mini Bio', category: 'Sidebar', render: ({ data, Editable, isDark, Title }: any) => (
     <div className="snippet-anim cv-section">
@@ -892,10 +1016,9 @@ export const SNIPPETS: Record<string, { id: string; name: string; category: stri
     </div>
   )}
   ,'sidebar-tech-list': { id: 'sidebar-tech-list', name: 'Tech Stack List', category: 'Sidebar', render: ({ data, isDark, Title }: any) => {
-    const skills = data?.skills || {};
-    const all = ['languages','frameworks','tools'].flatMap(k => skills[k] ? (skills[k] as string).split(',') : []).filter(Boolean);
+    const all = flattenSkillItems(data?.skills);
     if (all.length === 0) return null;
-    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-1.5">{all.map((s,i) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[12px]">✓</span>{s.trim()}</div>))}</div></div>);
+    return (<div className="snippet-anim cv-section"><Title titleKey="skills" /><div className="flex flex-col gap-1.5">{all.map((skill: any, i: number) => (<div key={i} className={`flex items-center gap-2 ${TYPOGRAPHY.body} ${isDark ? 'text-gray-300' : 'text-gray-700'}`}><span className="cv-accent-text text-[12px]">✓</span>{skill.label}</div>))}</div></div>);
   }}
   ,'sidebar-social-links': { id: 'sidebar-social-links', name: 'Social Links', category: 'Sidebar', render: ({ data, Editable, isDark, Title, showIcons, design }: any) => (
     <div className="snippet-anim cv-section">

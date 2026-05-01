@@ -36,7 +36,7 @@ export default function UnifiedAuthLayout({
     return (
       <div className="w-full p-6 sm:p-8 bg-white dark:bg-[#141810]">
         <div className="mb-8 flex justify-center">
-          <Logo size="lg" showText={true} theme="auto" />
+          <Logo size="lg" />
         </div>
         {children}
       </div>
@@ -54,7 +54,7 @@ export default function UnifiedAuthLayout({
           
           <div className="relative z-10 flex flex-col w-full p-12 max-w-2xl">
             <div className="flex items-center gap-3 mb-16 drop-shadow-sm">
-              <Logo size="lg" showText={true} theme="auto" />
+              <Logo size="lg" />
               <span className="px-2.5 py-1 text-xs font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">
                 System Admin
               </span>
@@ -86,7 +86,7 @@ export default function UnifiedAuthLayout({
               className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-xl border border-gray-200 dark:border-white/10 shadow-2xl p-8"
             >
               <div className="mb-8 lg:hidden flex items-center justify-center gap-3">
-                <Logo size="md" showText={true} theme="auto" />
+                <Logo size="md" />
                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 rounded-full border border-indigo-500/20">
                   System Admin
                 </span>
@@ -111,7 +111,7 @@ export default function UnifiedAuthLayout({
           
           <div className="relative z-10 flex flex-col w-full p-12 max-w-2xl">
             <div className="flex items-center gap-3 mb-16 drop-shadow-sm">
-              <Logo size="lg" showText={true} theme="auto" />
+              <Logo size="lg" />
               <span className="px-2.5 py-1 text-xs font-semibold bg-[#80FF00]/20 text-[#4C9900] dark:text-[#80FF00] rounded-full border border-[#80FF00]/30">
                 B2B Gateway
               </span>
@@ -155,7 +155,7 @@ export default function UnifiedAuthLayout({
               className="bg-white/60 dark:bg-black/40 backdrop-blur-xl rounded-xl border border-white/20 dark:border-white/10 shadow-2xl p-8"
             >
               <div className="mb-8 lg:hidden flex items-center justify-center gap-3">
-                <Logo size="md" showText={true} theme="auto" />
+                <Logo size="md" />
                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-[#80FF00]/20 text-[#4C9900] dark:text-[#80FF00] rounded-full border border-[#80FF00]/30">
                   B2B Gateway
                 </span>
@@ -187,7 +187,7 @@ export default function UnifiedAuthLayout({
         <div className="relative z-10 flex flex-col w-full p-12">
           {/* Logo in Top Left */}
           <div className="flex items-center gap-3 mb-auto drop-shadow-lg">
-            <Logo size="lg" showText={true} theme="dark" />
+            <Logo size="lg" />
           </div>
 
           {/* Center Text Highlight Heading */}
@@ -242,7 +242,7 @@ export default function UnifiedAuthLayout({
           >
             {/* Card Header with Logo - Only show on mobile */}
             <div className="mb-8 lg:hidden flex justify-center">
-              <Logo size="md" showText={true} theme="auto" />
+              <Logo size="md" />
             </div>
 
             {/* Card Content */}

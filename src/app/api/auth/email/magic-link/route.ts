@@ -186,9 +186,6 @@ export async function POST(request: NextRequest) {
               <div class="header" style="margin-bottom: 30px;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
                   <img src="${logoUrl}" alt="CVCircle Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
-                  <div class="logo" style="font-size: 28px; font-weight: 700; margin: 0; line-height: 1.2;">
-                    <span class="logo-cv" style="color: rgb(129, 255, 0);">CV</span><span class="logo-circle" style="color: #ffffff;">Circle</span>
-                  </div>
                 </div>
                 <p style="color: rgba(255, 255, 255, 0.6); margin: 5px 0 0 0; font-size: 14px; line-height: 1.4;">Professional CV Builder</p>
               </div>

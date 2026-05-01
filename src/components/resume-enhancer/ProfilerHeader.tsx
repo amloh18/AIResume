@@ -42,9 +42,7 @@ export default function ProfilerHeader() {
             <div className="max-w-7xl mx-auto flex items-center justify-between">
                 {/* Logo & Profile Info */}
                 <div className="flex items-center gap-8">
-                    <div className="w-32">
-                        <Logo />
-                    </div>
+                    <Logo size="md" />
 
                     <div className="h-10 w-px bg-black/10 dark:bg-white/20" />
 

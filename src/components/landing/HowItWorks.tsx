@@ -7,6 +7,7 @@ import Image from 'next/image';
 const HowItWorks = () => {
   const [activeStep, setActiveStep] = useState(0);
   const [progress, setProgress] = useState(0);
+  const progressRef = React.useRef(0);
   const STEP_DURATION = 5000; // 5 seconds per step
 
   const features = React.useMemo(() => [
@@ -37,30 +38,35 @@ const HowItWorks = () => {
     },
   ], []);
 
-  // Auto-advance timer with progress tracking (empties from 100% to 0%)
   useEffect(() => {
-    // Reset progress to 100 when step changes
+    progressRef.current = 100;
     setProgress(100);
 
-    const timer = setInterval(() => {
-      setProgress((prev) => {
-        const newProgress = prev - (100 / (STEP_DURATION / 50)); // Decrease every 50ms
-        if (newProgress <= 0) {
-          // Move to next step and reset to full
-          setActiveStep((current) => (current + 1) % features.length);
-          return 100;
-        }
-        return newProgress;
-      });
-    }, 50);
+    const stepMs = 50;
+    const delta = 100 / (STEP_DURATION / stepMs);
 
-    return () => clearInterval(timer);
-  }, [features.length, activeStep]);
+    const timer = window.setInterval(() => {
+      const next = progressRef.current - delta;
+
+      if (next <= 0) {
+        progressRef.current = 100;
+        setProgress(100);
+        setActiveStep((current) => (current + 1) % features.length);
+        return;
+      }
+
+      progressRef.current = next;
+      setProgress(next);
+    }, stepMs);
+
+    return () => window.clearInterval(timer);
+  }, [features.length]);
 
   // Reset progress when step changes manually
   const handleStepClick = (index: number) => {
     setActiveStep(index);
-    setProgress(100); // Start full when manually clicking
+    progressRef.current = 100;
+    setProgress(100);
   };
 
   return (
