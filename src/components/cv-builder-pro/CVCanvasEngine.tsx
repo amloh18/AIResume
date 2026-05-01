@@ -234,16 +234,13 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       // Minimum content height to be worth pushing (avoid pushing tiny orphans)
       const MIN_PUSH_HEIGHT = 20;
 
-      // Collect all breakable elements
-      const items = Array.from(
-        doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
-      ).filter((item) => {
-        const parentBreakable = item.parentElement?.closest('.cv-page-breakable, .cv-keep-with-next');
-        return !parentBreakable;
-      }) as HTMLElement[];
+      // Collect all potential breakable elements (sections, items, headers)
+      const allBreakables = Array.from(
+        doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next, .cv-section')
+      ) as HTMLElement[];
 
       // --- PASS 1: Reset all injected margins so we measure natural positions ---
-      items.forEach(item => { item.style.marginTop = ''; });
+      allBreakables.forEach(item => { item.style.marginTop = ''; });
 
       // --- PASS 2: measure + apply in a single rAF after DOM has settled ---
       requestAnimationFrame(() => {
@@ -252,8 +249,23 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         const scale = docRect.width > 0 ? docRect.width / doc.offsetWidth : 1;
 
         let maxBottom = 0;
+        const pushedElements = new Set<HTMLElement>();
 
-        items.forEach(item => {
+        allBreakables.forEach(item => {
+          // If an ancestor was already pushed, we don't need to push this item individually
+          // because it has already been carried over to the next page by the parent.
+          let parent = item.parentElement;
+          let isAncestorPushed = false;
+          while (parent && parent !== doc) {
+            if (pushedElements.has(parent)) {
+              isAncestorPushed = true;
+              break;
+            }
+            parent = parent.parentElement;
+          }
+
+          if (isAncestorPushed) return;
+
           const itemRect = item.getBoundingClientRect();
           // Position relative to document top, in unscaled document coordinates
           const top = (itemRect.top - docRect.top) / scale;
@@ -261,8 +273,6 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           const bottom = top + height;
 
           // Which page does this item's top fall on?
-          // We work in "true" document space (not gap-adjusted) so we must find
-          // which page cycle the item belongs to.
           const pageIndex = Math.floor(top / EFFECTIVE_HEIGHT);
 
           // The bottom of the printable zone on this page (before bottom margin)
@@ -271,18 +281,40 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           // The top of the printable zone on the NEXT page (after top margin)
           const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_MARGIN;
 
-          // Push the item to the next page if:
-          // 1. Its bottom overflows into the bottom margin of the current page
-          // 2. The item fits on a single page
-          // 3. The item is tall enough to be worth pushing
+          // Determine if we need to push
+          let shouldPush = false;
           if (
             bottom > pageContentBottom &&
             height < (PAGE_HEIGHT - PAGE_MARGIN * 2) &&
             height > MIN_PUSH_HEIGHT
           ) {
+            shouldPush = true;
+          } else if (item.classList.contains('cv-keep-with-next')) {
+            // Check if the next DOM sibling (or next breakable) crosses the boundary
+            // Since we collected allBreakables in document order, the next element in the array
+            // is likely the one following this header.
+            const nextItem = allBreakables[allBreakables.indexOf(item) + 1];
+            if (nextItem && !pushedElements.has(nextItem)) {
+              const nextItemRect = nextItem.getBoundingClientRect();
+              const nextTop = (nextItemRect.top - docRect.top) / scale;
+              const nextHeight = nextItemRect.height / scale;
+              const nextBottom = nextTop + nextHeight;
+              
+              if (
+                nextBottom > pageContentBottom &&
+                nextHeight < (PAGE_HEIGHT - PAGE_MARGIN * 2) &&
+                nextHeight > MIN_PUSH_HEIGHT
+              ) {
+                shouldPush = true;
+              }
+            }
+          }
+
+          if (shouldPush) {
             const pushAmount = nextPageContentTop - top;
             if (pushAmount > 0) {
               item.style.marginTop = `${pushAmount}px`;
+              pushedElements.add(item);
             }
           }
 
