@@ -37,7 +37,6 @@ const BASE_TEMPLATE = (content: string, title: string) => `
     .header { padding: 30px 20px; text-align: center; }
     .logo-container { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; gap: 10px; }
     .logo-img { height: 32px; width: auto; vertical-align: middle; }
-    .logo-text { color: ${THEME.text}; font-weight: bold; font-size: 24px; text-decoration: none; letter-spacing: -0.5px; vertical-align: middle; margin-left: 10px; }
     .content { background-color: ${THEME.card}; padding: 40px 30px; border-radius: 16px; margin: 0 20px; border: 1px solid ${THEME.border}; }
     h1 { color: ${THEME.text}; margin-top: 0; font-size: 24px; font-weight: 700; line-height: 1.3; }
     p { color: ${THEME.textMuted}; line-height: 1.6; font-size: 16px; margin-bottom: 24px; }
@@ -66,7 +65,6 @@ const BASE_TEMPLATE = (content: string, title: string) => `
     <div class="header">
       <a href="{{appUrl}}" class="logo-container">
         <img src="{{appUrl}}/images/logo.png" alt="CVCircle" class="logo-img" />
-        <span class="logo-text">CVCircle</span>
       </a>
     </div>
     <div class="content">

@@ -237,7 +237,10 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       // Collect all breakable elements
       const items = Array.from(
         doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
-      ) as HTMLElement[];
+      ).filter((item) => {
+        const parentBreakable = item.parentElement?.closest('.cv-page-breakable, .cv-keep-with-next');
+        return !parentBreakable;
+      }) as HTMLElement[];
 
       // --- PASS 1: Reset all injected margins so we measure natural positions ---
       items.forEach(item => { item.style.marginTop = ''; });

@@ -483,7 +483,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               className="fixed top-16 left-0 right-0 z-[110] bg-white dark:bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/5 py-3 px-8 flex items-center justify-between shadow-xl"
             >
               <div className="flex items-center gap-4">
-                <Logo size="sm" showText={false} />
+                <Logo size="sm" />
                 <div>
                   <h4 className="text-sm font-bold text-gray-900 dark:text-white">Build Your Resume</h4>
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Quick actions</p>

@@ -248,12 +248,8 @@ const Footer = () => {
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             >
               <div className="flex items-center justify-center flex-shrink-0 rounded-xl overflow-hidden">
-                <Logo size="lg" showText={false} />
+                <Logo size="lg" />
               </div>
-              <span className="text-4xl font-bold flex items-center leading-none" style={{ letterSpacing: '-0.5px' }}>
-                <span className="text-[#81ff00]">CV</span>
-                <span className="text-white">Circle</span>
-              </span>
             </motion.div>
             <p className="text-white/70 leading-relaxed max-w-sm text-base">
               Empowering job seekers with modern tools to create stunning CVs,

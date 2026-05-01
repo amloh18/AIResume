@@ -326,9 +326,6 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
               <div style="margin-bottom: 30px;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 10px;">
                   <img src="${getEmailImageUrl('/images/logo.png')}" alt="CVCircle Logo" width="40" height="40" style="display: block; max-width: 40px; height: auto;">
-                  <h1 style="margin: 0; font-size: 28px; font-weight: 700; line-height: 1.2;">
-                    <span style="color: rgb(129, 255, 0);">CV</span><span style="color: #ffffff;">Circle</span>
-                  </h1>
                 </div>
                 <p style="color: rgba(255, 255, 255, 0.6); margin: 5px 0 0 0; font-size: 14px; line-height: 1.4;">Professional CV Builder</p>
               </div>

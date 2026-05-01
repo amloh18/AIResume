@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { Settings, Menu, X } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getTopBarClasses } from '@/lib/utils/themeUtils';
@@ -57,10 +56,10 @@ const TopBar: React.FC<TopBarProps> = ({
           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
             <div className="tablet:hidden">
-              <Logo size="md" showText={false} />
+              <Logo size="md" />
             </div>
             <div className="hidden tablet:block">
-              <Logo size="md" showText={true} theme="dark" />
+              <Logo size="md" />
             </div>
           </div>
 

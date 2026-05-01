@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle } from 'lucide-react';
+import Logo from '@/components/ui/Logo';
 
 interface SEOPageLayoutProps {
   children: React.ReactNode;
@@ -27,10 +28,7 @@ export default function SEOPageLayout({
         <div className="max-w-7xl mx-auto px-4 tablet:px-6 desktop:px-8">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#81ff00] rounded-lg flex items-center justify-center">
-                <span className="text-black font-bold text-sm">CV</span>
-              </div>
-              <span className="text-white font-bold text-lg">CVCircle</span>
+              <Logo size="md" />
             </Link>
             <div className="hidden md:flex items-center gap-8">
               <Link href="/#features" className="text-gray-400 hover:text-white transition-colors text-sm">Features</Link>

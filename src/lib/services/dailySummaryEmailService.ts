@@ -147,11 +147,10 @@ class DailySummaryEmailService {
   <!-- Main Container -->
   <div style="max-width: 600px; margin: 0 auto; background-color: #141810; border-radius: 16px; overflow: hidden; margin-top: 20px; margin-bottom: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);">
     
-    <!-- Header with Logo and Text -->
+    <!-- Header -->
     <div style="background-color: #141810; padding: 30px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
       <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px;">
         <img src="${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/images/logo.png" alt="CVCircle" style="height: 40px; display: block;">
-        <span style="color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">CVCircle</span>
       </div>
       <p style="color: #757575; margin: 0; font-size: 14px;">${date}</p>
     </div>

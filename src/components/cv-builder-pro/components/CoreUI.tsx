@@ -104,6 +104,14 @@ export const EditableField = ({ data: explicitData, path, multiline, onChange: e
   else if (lowerPath.includes('location')) emptyText = "Location";
   else if (lowerPath.includes('website')) emptyText = "Website / Link";
   else if (lowerPath.includes('linkedin')) emptyText = "LinkedIn";
+  else if (lowerPath.includes('.profiles.') && lowerPath.endsWith('.url')) {
+    const profilePath = path.split('.').slice(0, -1).join('.');
+    const network = String(getNestedValue(data, `${profilePath}.network`) || '').toLowerCase();
+    if (network.includes('linkedin')) emptyText = "LinkedIn";
+    else if (network.includes('github')) emptyText = "GitHub";
+    else if (network.includes('twitter')) emptyText = "Twitter";
+    else emptyText = "Profile link";
+  }
   
   // General placeholders
   else if (lowerPath.includes('summary')) emptyText = "Summary/Objective";

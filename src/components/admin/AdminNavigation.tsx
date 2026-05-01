@@ -91,7 +91,7 @@ export default function AdminNavigation({ activeTab, activeSubTab, onTabChange, 
 
       {/* Logo Area */}
       <div className="p-6 pb-2 flex items-center justify-between">
-        <Logo size="md" showText={true} />
+        <Logo size="md" />
       </div>
       <div className="px-6 mb-6">
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-wider">

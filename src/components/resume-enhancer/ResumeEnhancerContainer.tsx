@@ -2530,7 +2530,7 @@ export default function ResumeEnhancerContainer({
               className="group flex items-center pr-12 hover:opacity-80 transition-all duration-300"
             >
               <div className="flex items-center gap-3">
-                <Logo size="sm" showText={true} theme={theme === 'dark' ? 'dark' : 'light'} />
+                <Logo size="sm" />
                 
                 <div className="flex items-center gap-1.5 sm:gap-3">
                   {state.currentStep === 1 && (

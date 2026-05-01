@@ -1205,7 +1205,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 <div className="p-8 tablet:p-12 max-w-2xl mx-auto h-full flex flex-col bg-[#f3f2ee] dark:bg-[#141810] rounded-l-2xl">
                 {/* Logo */}
                 <div className="mb-8 flex items-center gap-3">
-                  <Logo size="md" showText={true} />
+                  <Logo size="md" />
                 </div>
 
                 {/* Main Heading */}

@@ -97,16 +97,12 @@ const CardNav = ({
             aria-label="Go to top"
             type="button"
           >
-            <div className="logo-image-wrapper">
-              <Logo size="md" showText={false} />
-            </div>
-            <span className="logo-text relative" aria-label={logo}>
-              <span className="logo-cv">CV</span>
-              <span className="logo-circle">Circle</span>
+            <div className="logo-image-wrapper relative">
+              <Logo size="md" />
               {isBusinessRoute && (
                 <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
               )}
-            </span>
+            </div>
           </button>
 
           <div className="nav-links">

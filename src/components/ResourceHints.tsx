@@ -9,24 +9,6 @@ import { useEffect } from 'react';
  */
 export default function ResourceHints() {
   useEffect(() => {
-    // Preload critical fonts
-    const fontPreload = document.createElement('link');
-    fontPreload.rel = 'preload';
-    fontPreload.href = 'https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@300;400;500;600;700;800;900&display=swap';
-    fontPreload.as = 'style';
-    document.head.appendChild(fontPreload);
-
-    // Preconnect to Google Fonts
-    const fontPreconnect = document.createElement('link');
-    fontPreconnect.rel = 'preconnect';
-    fontPreconnect.href = 'https://fonts.googleapis.com';
-    document.head.appendChild(fontPreconnect);
-
-    const fontDnsPrefetch = document.createElement('link');
-    fontDnsPrefetch.rel = 'dns-prefetch';
-    fontDnsPrefetch.href = 'https://fonts.gstatic.com';
-    document.head.appendChild(fontDnsPrefetch);
-
     // DNS prefetch for external domains
     const s3Prefetch1 = document.createElement('link');
     s3Prefetch1.rel = 'dns-prefetch';
@@ -66,4 +48,3 @@ export default function ResourceHints() {
 
   return null;
 }
-

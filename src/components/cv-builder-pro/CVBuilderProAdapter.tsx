@@ -1,5 +1,5 @@
 import React, { useMemo, useCallback, forwardRef } from 'react';
-import CVCanvasEngine from './CVCanvasEngine';
+import CVCanvasEngine, { CVCanvasBuilderRef } from './CVCanvasEngine';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { ITemplate } from '@/types/template';
 
@@ -12,7 +12,48 @@ interface CVBuilderProAdapterProps {
   readOnly?: boolean;
 }
 
-const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false }: CVBuilderProAdapterProps, ref) => {
+const buildRichTextDescription = (summary?: string, highlights?: string[]) => {
+  const parts: string[] = [];
+  const trimmedSummary = typeof summary === 'string' ? summary.trim() : '';
+  const normalizedHighlights = Array.isArray(highlights)
+    ? highlights.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean)
+    : [];
+
+  if (trimmedSummary) {
+    parts.push(`<p>${trimmedSummary}</p>`);
+  }
+
+  if (normalizedHighlights.length > 0) {
+    parts.push(`<ul>${normalizedHighlights.map((item) => `<li>${item}</li>`).join('')}</ul>`);
+  }
+
+  return parts.join('');
+};
+
+const stripHtml = (value: string) => value.replace(/<[^>]+>/g, '').trim();
+
+const normalizeSkillsText = (value: any): string => {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (!Array.isArray(value)) {
+    return '';
+  }
+
+  return value
+    .map((item: any) => {
+      if (typeof item === 'string') return item.trim();
+      if (item && typeof item === 'object') {
+        return item.name || item.skill || item.label || '';
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join(', ');
+};
+
+const CVBuilderProAdapter = forwardRef<CVCanvasBuilderRef, CVBuilderProAdapterProps>(({ cvData, template, onDataChange, onTemplateChange, theme, readOnly = false }: CVBuilderProAdapterProps, ref) => {
   // Bridge the data format if needed. Currently, UnifiedCVDataStructure might have .work instead of .experience.
   const canvasData = useMemo(() => {
     if (!cvData) return null;
@@ -27,9 +68,15 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
       if (!translated.basics.title && translated.basics.label) {
         translated.basics.title = translated.basics.label;
       }
+      if (!translated.basics.website && translated.basics.url) {
+        translated.basics.website = translated.basics.url;
+      }
       if (Array.isArray(translated.basics.profiles)) {
         const linkedin = translated.basics.profiles.find((p: any) => p.network?.toLowerCase() === 'linkedin');
-        if (linkedin) translated.basics.linkedin = linkedin.url;
+        if (linkedin) {
+          translated.basics.linkedin = linkedin.url || linkedin.username || '';
+          translated.basics.profiles = translated.basics.profiles.filter((p: any) => p.network?.toLowerCase() !== 'linkedin');
+        }
       }
     }
 
@@ -39,8 +86,9 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
         id: w.id || `exp-${Date.now()}-${Math.random()}`,
         role: w.position,
         company: w.name,
-        date: w.startDate && w.endDate ? `${w.startDate} - ${w.endDate}` : w.startDate || w.endDate || '',
-        description: w.summary ? `<p>${w.summary}</p>` + (Array.isArray(w.highlights) && w.highlights.length ? `<ul>${w.highlights.map((h: string) => `<li>${h}</li>`).join('')}</ul>` : '') : (Array.isArray(w.highlights) && w.highlights.length ? `<ul>${w.highlights.map((h: string) => `<li>${h}</li>`).join('')}</ul>` : ''),
+        startDate: w.startDate || '',
+        endDate: w.endDate || '',
+        description: buildRichTextDescription(w.summary, w.highlights),
       }));
     }
     
@@ -50,42 +98,30 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
         id: e.id || `edu-${Date.now()}-${Math.random()}`,
         degree: e.studyType ? `${e.studyType} in ${e.area}` : e.area,
         institution: e.institution,
-        date: e.startDate && e.endDate ? `${e.startDate} - ${e.endDate}` : e.startDate || e.endDate || '',
-        description: e.score ? `<p>Score: ${e.score}</p>` : '',
+        startDate: e.startDate || '',
+        endDate: e.endDate || '',
+        description: [e.score ? `Score: ${e.score}` : '', e.description || ''].filter(Boolean).join('\n'),
       }));
     }
 
-    // Map skills from Array to Object
+    // Keep skills structured so category + skill pairs survive canvas edits.
     if (Array.isArray(cvData.skills)) {
-      const skillsObj: any = { languages: '', frameworks: '', tools: '' };
-      cvData.skills.forEach((skillGrp: any) => {
+      translated.skills = cvData.skills.map((skillGrp: any, index: number) => {
         if (typeof skillGrp === 'string') {
-          // If it's just an array of strings, dump them all into languages for now
-          skillsObj.languages = skillsObj.languages ? skillsObj.languages + ', ' + skillGrp : skillGrp;
-          return;
+          return {
+            id: `skill-${index}`,
+            category: 'Skills',
+            skillsText: skillGrp,
+          };
         }
-        
-        const name = (skillGrp.name || '').toLowerCase();
-        const keywordsStr = Array.isArray(skillGrp.keywords) ? skillGrp.keywords.join(', ') : (typeof skillGrp.keywords === 'string' ? skillGrp.keywords : '');
-        
-        if (!keywordsStr) return; // don't add empty strings with commas
 
-        if (name.includes('language') || name.includes('core')) {
-          skillsObj.languages = skillsObj.languages ? skillsObj.languages + ', ' + keywordsStr : keywordsStr;
-        } else if (name.includes('framework') || name.includes('library')) {
-          skillsObj.frameworks = skillsObj.frameworks ? skillsObj.frameworks + ', ' + keywordsStr : keywordsStr;
-        } else {
-          skillsObj.tools = skillsObj.tools ? skillsObj.tools + ', ' + keywordsStr : keywordsStr;
-        }
+        return {
+          ...skillGrp,
+          id: skillGrp.id || `skill-${index}`,
+          category: skillGrp.category || skillGrp.name || `Skills ${index + 1}`,
+          skillsText: normalizeSkillsText(skillGrp.skills || skillGrp.keywords || []),
+        };
       });
-      // Fallback if no specific categories were found but skills exist
-      if (!skillsObj.languages && !skillsObj.frameworks && !skillsObj.tools && cvData.skills.length > 0) {
-        skillsObj.languages = cvData.skills.map((s: any) => {
-          if (typeof s === 'string') return s;
-          return Array.isArray(s.keywords) ? s.keywords.join(', ') : s.name;
-        }).filter(Boolean).join(', ');
-      }
-      translated.skills = skillsObj;
     }
 
     if (Array.isArray(cvData.languages)) {
@@ -125,30 +161,52 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
     
     // Copy simple scalar fields back from updatedCanvasData.basics to newCvData.basics
     if (updatedCanvasData.basics) {
-      Object.keys(updatedCanvasData.basics).forEach(key => {
-        // Skip location and linkedin because they might be special in UnifiedCVDataStructure
+      const updatedBasics = updatedCanvasData.basics;
+      const profileEntries = Array.isArray(updatedBasics.profiles) ? updatedBasics.profiles : [];
+      const nonLinkedInProfiles = profileEntries.filter((p: any) => p?.network?.toLowerCase() !== 'linkedin');
+
+      Object.keys(updatedBasics).forEach(key => {
         if (key === 'location') {
           if (!newCvData.basics.location) newCvData.basics.location = {};
-          if (typeof updatedCanvasData.basics.location === 'string') {
+          if (typeof updatedBasics.location === 'string') {
             newCvData.basics.location = {
-              city: updatedCanvasData.basics.location,
+              city: updatedBasics.location,
               countryCode: '',
               region: ''
             };
           }
-        } else if (key === 'linkedin') {
-          // If profiles array doesn't exist, create it
-          if (!newCvData.basics.profiles) newCvData.basics.profiles = [];
-          const linkedinProfile = newCvData.basics.profiles.find((p: any) => p.network?.toLowerCase() === 'linkedin');
-          if (linkedinProfile) {
-            linkedinProfile.url = updatedCanvasData.basics.linkedin;
-          } else {
-            newCvData.basics.profiles.push({ network: 'LinkedIn', url: updatedCanvasData.basics.linkedin });
-          }
-        } else {
-          newCvData.basics[key] = updatedCanvasData.basics[key];
+          return;
         }
+
+        if (key === 'title') {
+          newCvData.basics.label = updatedBasics.title;
+          (newCvData.basics as any).title = updatedBasics.title;
+          return;
+        }
+
+        if (key === 'website') {
+          newCvData.basics.url = updatedBasics.website;
+          (newCvData.basics as any).website = updatedBasics.website;
+          return;
+        }
+
+        if (key === 'linkedin' || key === 'profiles') {
+          return;
+        }
+
+        newCvData.basics[key] = updatedBasics[key];
       });
+
+      if (updatedBasics.linkedin) {
+        nonLinkedInProfiles.push({
+          network: 'LinkedIn',
+          username: '',
+          url: updatedBasics.linkedin
+        });
+      }
+
+      newCvData.basics.profiles = nonLinkedInProfiles;
+      (newCvData.basics as any).linkedin = updatedBasics.linkedin || '';
     }
 
     // Copy sectionTitles and metadata
@@ -191,8 +249,8 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
           id: exp.id,
           position: exp.role,
           name: exp.company,
-          startDate: exp.date ? exp.date.split(' - ')[0].trim() : '',
-          endDate: exp.date && exp.date.includes(' - ') ? exp.date.split(' - ')[1].trim() : '',
+          startDate: exp.startDate || '',
+          endDate: exp.endDate || '',
           summary,
           highlights
         };
@@ -207,34 +265,62 @@ const CVBuilderProAdapter = forwardRef(({ cvData, template, onDataChange, onTemp
         if (edu.degree && edu.degree.includes(' in ')) {
           [studyType, area] = edu.degree.split(' in ');
         }
+
+        const descriptionLines = stripHtml(edu.description || '')
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+        const scoreLine = descriptionLines.find((line) => /^score:/i.test(line));
+        const remainingDescription = descriptionLines
+          .filter((line) => line !== scoreLine)
+          .join('\n');
+
         return {
           id: edu.id,
           studyType: studyType?.trim() || '',
           area: area?.trim() || '',
           institution: edu.institution,
-          startDate: edu.date ? edu.date.split(' - ')[0]?.trim() : '',
-          endDate: edu.date && edu.date.includes(' - ') ? edu.date.split(' - ')[1]?.trim() : '',
-          score: edu.description ? edu.description.replace(/<[^>]+>/g, '').replace('Score: ', '').trim() : ''
+          startDate: edu.startDate || '',
+          endDate: edu.endDate || '',
+          score: scoreLine ? scoreLine.replace(/^score:\s*/i, '').trim() : '',
+          description: remainingDescription
         };
       });
       delete newCvData.education_temp; // Clean up temp key if used
     }
 
     if (updatedCanvasData?.skills) {
-      if (typeof updatedCanvasData.skills === 'object' && !Array.isArray(updatedCanvasData.skills)) {
+      if (Array.isArray(updatedCanvasData.skills)) {
+        newCvData.skills = updatedCanvasData.skills
+          .map((group: any) => {
+            const skillsText = typeof group.skillsText === 'string'
+              ? group.skillsText
+              : normalizeSkillsText(group.skills || group.keywords || []);
+
+            const skills = skillsText
+              .split(/[,\n]/)
+              .map((item: string) => item.trim())
+              .filter(Boolean);
+
+            return {
+              category: (group.category || '').trim(),
+              skills,
+              ...(typeof group.rating === 'number' ? { rating: group.rating } : {})
+            };
+          })
+          .filter((group: any) => group.category || group.skills.length > 0);
+      } else if (typeof updatedCanvasData.skills === 'object') {
         const newSkills: any[] = [];
         if (updatedCanvasData.skills.languages && typeof updatedCanvasData.skills.languages === 'string') {
-          newSkills.push({ name: 'Core Languages', keywords: updatedCanvasData.skills.languages.split(',').map((s: string) => s.trim()).filter(Boolean) });
+          newSkills.push({ category: 'Core Languages', skills: updatedCanvasData.skills.languages.split(',').map((s: string) => s.trim()).filter(Boolean) });
         }
         if (updatedCanvasData.skills.frameworks && typeof updatedCanvasData.skills.frameworks === 'string') {
-          newSkills.push({ name: 'Frameworks', keywords: updatedCanvasData.skills.frameworks.split(',').map((s: string) => s.trim()).filter(Boolean) });
+          newSkills.push({ category: 'Frameworks', skills: updatedCanvasData.skills.frameworks.split(',').map((s: string) => s.trim()).filter(Boolean) });
         }
         if (updatedCanvasData.skills.tools && typeof updatedCanvasData.skills.tools === 'string') {
-          newSkills.push({ name: 'Tools & Tech', keywords: updatedCanvasData.skills.tools.split(',').map((s: string) => s.trim()).filter(Boolean) });
+          newSkills.push({ category: 'Tools & Tech', skills: updatedCanvasData.skills.tools.split(',').map((s: string) => s.trim()).filter(Boolean) });
         }
         newCvData.skills = newSkills;
-      } else if (Array.isArray(updatedCanvasData.skills)) {
-        newCvData.skills = updatedCanvasData.skills;
       }
     }
 
