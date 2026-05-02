@@ -4,11 +4,52 @@ import Template from '@/models/Template';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { getS3Client, getS3PublicUrl } from '@/lib/s3-client';
 import { getTemplateById } from '@/lib/templates/template-utils';
+import { normalizeCvDataForCanvas } from '@/lib/utils/cv-canvas-normalizer';
+import mongoose from 'mongoose';
 
 /**
  * Service to generate and save CV thumbnails to S3
  */
 export class CVThumbnailService {
+  static async saveProvidedThumbnailSvg(
+    cvId: string,
+    userId: string,
+    svgContent: string
+  ): Promise<string | null> {
+    try {
+      await getConnection();
+
+      const cv = await CV.findOne({ _id: cvId, userId });
+      if (!cv) {
+        console.log('❌ CVThumbnailService - CV not found for provided SVG:', { cvId, userId });
+        return null;
+      }
+
+      const normalizedSvg = normalizeSvgPayload(svgContent);
+      if (!normalizedSvg) {
+        console.warn('⚠️ CVThumbnailService - Provided SVG payload was empty');
+        return null;
+      }
+
+      const thumbnailUrl = await this.uploadThumbnailSvg({
+        svgContent: normalizedSvg,
+        userId: cv.userId?.toString() || userId,
+        cvId: cv._id?.toString() || cvId,
+        keyPrefix: 'cv-snapshot-',
+      });
+
+      await CV.findByIdAndUpdate(cvId, {
+        'metadata.thumbnailUrl': thumbnailUrl,
+        'metadata.thumbnailGeneratedAt': new Date()
+      });
+
+      return thumbnailUrl;
+    } catch (error) {
+      console.error('❌ CVThumbnailService - Error saving provided SVG thumbnail:', error);
+      return null;
+    }
+  }
+
   /**
    * Generate and save thumbnail for a CV
    * @param cvId - CV ID
@@ -55,7 +96,7 @@ export class CVThumbnailService {
       
       if (hardcodedTemplate) {
         template = hardcodedTemplate;
-      } else {
+      } else if (mongoose.Types.ObjectId.isValid(templateIdStr)) {
         // Try database template
         template = await Template.findById(cv.templateId);
       }
@@ -93,44 +134,53 @@ export class CVThumbnailService {
     try {
       // Generate SVG-based thumbnail
       const svgContent = this.generateCVThumbnailSVG(cv, template);
-      
-      // Get S3 client
-      const s3Client = getS3Client();
-
-      // Create S3 key for thumbnail
-      const userId = cv.userId?.toString() || 'unknown';
-      const cvId = cv._id?.toString() || 'unknown';
-      const timestamp = Date.now();
-      const s3Key = `thumbnails/${userId}/${cvId}-${timestamp}.svg`;
-
-      // Upload SVG to S3
-      const command = new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET_NAME!,
-        Key: s3Key,
-        ContentType: 'image/svg+xml',
-        Body: Buffer.from(svgContent),
-        Metadata: {
-          cvId: cvId,
-          userId: userId,
-          generatedAt: new Date().toISOString(),
-        },
+      return await this.uploadThumbnailSvg({
+        svgContent,
+        userId: cv.userId?.toString() || 'unknown',
+        cvId: cv._id?.toString() || 'unknown',
       });
-
-      await s3Client.send(command);
-
-      // Return public URL
-      return getS3PublicUrl(s3Key);
     } catch (error) {
       console.error('❌ CVThumbnailService - Error creating CV thumbnail:', error);
       return '';
     }
   }
 
+  private static async uploadThumbnailSvg({
+    svgContent,
+    userId,
+    cvId,
+    keyPrefix = '',
+  }: {
+    svgContent: string;
+    userId: string;
+    cvId: string;
+    keyPrefix?: string;
+  }): Promise<string> {
+    const s3Client = getS3Client();
+    const timestamp = Date.now();
+    const s3Key = `thumbnails/${userId}/${keyPrefix}${cvId}-${timestamp}.svg`;
+
+    const command = new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET_NAME!,
+      Key: s3Key,
+      ContentType: 'image/svg+xml',
+      Body: Buffer.from(svgContent),
+      Metadata: {
+        cvId,
+        userId,
+        generatedAt: new Date().toISOString(),
+      },
+    });
+
+    await s3Client.send(command);
+    return getS3PublicUrl(s3Key);
+  }
+
   /**
    * Generate SVG content for CV thumbnail
    */
   private static generateCVThumbnailSVG(cv: any, template: any): string {
-    const cvData = cv.cvData || {};
+    const cvData = normalizeCvDataForCanvas(cv.cvData) || cv.cvData || {};
     const templateStyles = template.globalStyles || {};
     
     const width = 300;
@@ -144,13 +194,16 @@ export class CVThumbnailService {
     const phone = cvData.basics?.phone || 'Phone';
     
     // Get work experience (first 2 items)
-    const workItems = cvData.work?.slice(0, 2) || [];
+    const workItems = (cvData.experience || cvData.work || []).slice(0, 2);
     
     // Get education (first 2 items)
     const educationItems = cvData.education?.slice(0, 2) || [];
     
     // Get skills (first 8 items)
-    const skills = cvData.skills?.slice(0, 8).map((skill: any) => skill.name || skill).join(', ') || '';
+    const skills = (cvData.skills || [])
+      .slice(0, 8)
+      .map((skill: any) => skill.skillsText || skill.name || skill.category || skill)
+      .join(', ') || '';
     
     // Template colors and styles
     const primaryColor = templateStyles.primaryColor || '#333';
@@ -226,3 +279,20 @@ export class CVThumbnailService {
   }
 }
 
+function normalizeSvgPayload(svgContent: string): string {
+  if (!svgContent) return '';
+
+  if (svgContent.startsWith('data:image/svg+xml;base64,')) {
+    return Buffer.from(svgContent.replace('data:image/svg+xml;base64,', ''), 'base64').toString('utf-8');
+  }
+
+  if (svgContent.startsWith('data:image/svg+xml;charset=utf-8,')) {
+    return decodeURIComponent(svgContent.replace('data:image/svg+xml;charset=utf-8,', ''));
+  }
+
+  if (svgContent.startsWith('data:image/svg+xml,')) {
+    return decodeURIComponent(svgContent.replace('data:image/svg+xml,', ''));
+  }
+
+  return svgContent;
+}

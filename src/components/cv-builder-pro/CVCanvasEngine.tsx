@@ -387,6 +387,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
     if (!container) return;
 
     let debounceTimer: ReturnType<typeof setTimeout>;
+    const MAX_REASONABLE_PAGES = 50;
+    const MIN_SCALE = 0.25;
 
     const paginate = () => {
       const doc = container.querySelector('.cv-document') as HTMLElement;
@@ -400,24 +402,52 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
       // Minimum content height to be worth pushing (avoid pushing tiny orphans)
       const MIN_PUSH_HEIGHT = 20;
 
-      // Collect all potential breakable elements (sections, items, headers)
-      const allBreakables = Array.from(
-        doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next, .cv-section')
+      // Collect only item- and top-level keep-with-next targets.
+      const rawBreakables = Array.from(
+        doc.querySelectorAll('.cv-page-breakable, .cv-keep-with-next')
       ) as HTMLElement[];
+
+      const allBreakables = rawBreakables.filter((item) => {
+        if (!item.isConnected) return false;
+        if (
+          item.classList.contains('cv-keep-with-next') &&
+          item.parentElement?.closest('.cv-page-breakable')
+        ) {
+          return false;
+        }
+        return true;
+      });
+
+      const measureElement = (element: HTMLElement, docRect: DOMRect, scale: number) => {
+        const itemRect = element.getBoundingClientRect();
+        const top = (itemRect.top - docRect.top) / scale;
+        const height = itemRect.height / scale;
+        const bottom = top + height;
+        return { top, height, bottom };
+      };
 
       // --- PASS 1: Reset all injected margins so we measure natural positions ---
       allBreakables.forEach(item => { item.style.marginTop = ''; });
+      doc.style.height = '';
 
       // --- PASS 2: measure + apply in a single rAF after DOM has settled ---
       requestAnimationFrame(() => {
         const docRect = doc.getBoundingClientRect();
         // Scale factor when canvas is zoomed
-        const scale = docRect.width > 0 ? docRect.width / doc.offsetWidth : 1;
+        const scale = docRect.width > 0 && doc.offsetWidth > 0 ? docRect.width / doc.offsetWidth : 1;
+
+        if (!Number.isFinite(scale) || scale < MIN_SCALE || !Number.isFinite(EFFECTIVE_HEIGHT) || EFFECTIVE_HEIGHT <= 0) {
+          console.warn('CVCanvasEngine pagination skipped due to invalid layout metrics', {
+            scale,
+            effectiveHeight: EFFECTIVE_HEIGHT,
+          });
+          return;
+        }
 
         let maxBottom = 0;
         const pushedElements = new Set<HTMLElement>();
 
-        allBreakables.forEach(item => {
+        allBreakables.forEach((item, index) => {
           // If an ancestor was already pushed, we don't need to push this item individually
           // because it has already been carried over to the next page by the parent.
           let parent = item.parentElement;
@@ -432,11 +462,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
           if (isAncestorPushed) return;
 
-          const itemRect = item.getBoundingClientRect();
-          // Position relative to document top, in unscaled document coordinates
-          const top = (itemRect.top - docRect.top) / scale;
-          const height = itemRect.height / scale;
-          const bottom = top + height;
+          const { top, height, bottom } = measureElement(item, docRect, scale);
+
+          if (![top, height, bottom].every(Number.isFinite)) return;
 
           // Which page does this item's top fall on?
           const pageIndex = Math.floor(top / EFFECTIVE_HEIGHT);
@@ -459,12 +487,9 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             // Check if the next DOM sibling (or next breakable) crosses the boundary
             // Since we collected allBreakables in document order, the next element in the array
             // is likely the one following this header.
-            const nextItem = allBreakables[allBreakables.indexOf(item) + 1];
+            const nextItem = allBreakables[index + 1];
             if (nextItem && !pushedElements.has(nextItem)) {
-              const nextItemRect = nextItem.getBoundingClientRect();
-              const nextTop = (nextItemRect.top - docRect.top) / scale;
-              const nextHeight = nextItemRect.height / scale;
-              const nextBottom = nextTop + nextHeight;
+              const { height: nextHeight, bottom: nextBottom } = measureElement(nextItem, docRect, scale);
               
               if (
                 nextBottom > pageContentBottom &&
@@ -477,8 +502,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           }
 
           if (shouldPush) {
-            const pushAmount = nextPageContentTop - top;
-            if (pushAmount > 0) {
+            const pushAmount = Math.min(nextPageContentTop - top, EFFECTIVE_HEIGHT);
+            if (Number.isFinite(pushAmount) && pushAmount > 0) {
               item.style.marginTop = `${pushAmount}px`;
               pushedElements.add(item);
             }
@@ -490,8 +515,24 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
         });
 
         // Calculate total pages needed
-        const measuredBottom = Math.max(maxBottom, doc.scrollHeight / (scale || 1));
-        const totalPages = Math.max(1, Math.ceil(measuredBottom / EFFECTIVE_HEIGHT));
+        const naturalScrollHeight = doc.scrollHeight / scale;
+        const measuredBottom = Math.max(maxBottom, naturalScrollHeight);
+        if (!Number.isFinite(measuredBottom) || measuredBottom <= 0) {
+          console.warn('CVCanvasEngine pagination aborted due to invalid measured bottom', { measuredBottom });
+          return;
+        }
+
+        const totalPages = Math.min(
+          MAX_REASONABLE_PAGES,
+          Math.max(1, Math.ceil(measuredBottom / EFFECTIVE_HEIGHT))
+        );
+
+        if (totalPages === MAX_REASONABLE_PAGES && measuredBottom / EFFECTIVE_HEIGHT > MAX_REASONABLE_PAGES) {
+          console.warn('CVCanvasEngine pagination capped suspicious page count', {
+            measuredBottom,
+            effectiveHeight: EFFECTIVE_HEIGHT,
+          });
+        }
 
         setTotalPagesCount(prev => prev !== totalPages ? totalPages : prev);
 

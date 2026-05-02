@@ -287,14 +287,8 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
             }
           }}
         >
-          {/* CV Preview - Use live rendering with TemplateRenderer if cvData and template are available, otherwise fallback to S3 thumbnail */}
-          {cv.cvData && cv.template ? (
-            <CVPreviewThumbnail
-              cvData={cv.cvData}
-              template={cv.template as ITemplate}
-              className="rounded-xl"
-            />
-          ) : thumbnailUrl ? (
+          {/* CV Preview - Prefer stored snapshot and only fall back to live render when needed */}
+          {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`CV Preview: ${cv.title}`}
@@ -336,6 +330,12 @@ const CVCardOverlayComponent: React.FC<CVCardOverlayProps> = ({
                   setThumbnailUrl(null);
                 }
               }}
+            />
+          ) : cv.cvData && cv.template ? (
+            <CVPreviewThumbnail
+              cvData={cv.cvData}
+              template={cv.template as ITemplate}
+              className="rounded-xl"
             />
           ) : thumbnailLoading ? (
             /* Loading state */
