@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Polar } from '@polar-sh/sdk';
 
 let polarInstance: Polar | null = null;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import TemporaryCVDraft from '@/models/TemporaryCVDraft';

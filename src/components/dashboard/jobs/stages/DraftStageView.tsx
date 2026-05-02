@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FileText, Building, MapPin, TrendingUp, Sparkles, DollarSign, MoreHorizontal, Award, Globe, Calendar } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 interface JobApplication {
   id: string;
@@ -44,10 +43,8 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
     e.stopPropagation();
     try {
       await onCreateJourney(job);
-      toast.success('CV and Cover Letter journey created!');
     } catch (error) {
       console.error('Error creating journey:', error);
-      toast.error('Failed to create journey. Please try again.');
     }
   };
 
@@ -218,4 +215,3 @@ const DraftStageView: React.FC<DraftStageViewProps> = ({
 };
 
 export default DraftStageView;
-

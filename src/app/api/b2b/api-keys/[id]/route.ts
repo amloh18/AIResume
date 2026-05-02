@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import ApiKey from '@/models/b2b/ApiKey';
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -15,7 +15,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
       return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
     }
 
-    const apiKeyId = params.id;
+    const { id: apiKeyId } = await params;
     if (!apiKeyId) {
       return NextResponse.json({ error: 'API Key ID is required' }, { status: 400 });
     }

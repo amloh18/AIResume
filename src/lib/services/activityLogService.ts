@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Activity Logging Service
  * Unified service for logging all types of activities

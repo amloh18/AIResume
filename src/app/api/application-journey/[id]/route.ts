@@ -90,7 +90,7 @@ export async function GET(
       journeyQuery.journeyId = journeyId;
     }
     
-    const journey = await ApplicationJourney.findOne(journeyQuery).lean();
+    const journey = await ApplicationJourney.findOne(journeyQuery).lean<any>();
     
     if (!journey) {
       return NextResponse.json(
@@ -106,7 +106,7 @@ export async function GET(
         ? JobApplication.findOne({
             _id: journey.jobId,
             userId: new mongoose.Types.ObjectId(userId)
-          }).lean()
+          }).lean<any>()
         : Promise.resolve(null),
       
       // Load CV data
@@ -114,7 +114,7 @@ export async function GET(
         ? CV.findOne({
             _id: journey.cvId,
             userId: new mongoose.Types.ObjectId(userId)
-          }).lean()
+          }).lean<any>()
         : Promise.resolve(null),
       
       // Load cover letter data
@@ -122,7 +122,7 @@ export async function GET(
         ? CoverLetter.findOne({
             _id: journey.coverLetterId,
             userId: new mongoose.Types.ObjectId(userId)
-          }).lean()
+          }).lean<any>()
         : Promise.resolve(null)
     ]);
 

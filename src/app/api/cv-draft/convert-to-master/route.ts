@@ -340,7 +340,7 @@ export async function POST(request: NextRequest) {
       }
 
     // Verify data was saved correctly by re-fetching
-    const verifyCV = await CV.findById(existingMasterCV._id).lean();
+    const verifyCV = await CV.findById(existingMasterCV._id).lean<any>();
     console.log('✅ Verification after save - Master CV sections:', {
       work: verifyCV?.cvData?.work?.length || 0,
       education: verifyCV?.cvData?.education?.length || 0,
@@ -478,7 +478,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ Convert to Master CV - Direct MongoDB insert successful');
       
       // Fetch the saved CV to return
-      const savedCV = await CV.findById(insertResult.insertedId).lean();
+      const savedCV = await CV.findById(insertResult.insertedId).lean<any>();
       masterCV = savedCV as any;
     } catch (insertError) {
       console.error('❌ Convert to Master CV - Direct insert failed, trying Mongoose save:', insertError);
@@ -491,7 +491,7 @@ export async function POST(request: NextRequest) {
 
     // Verify data was saved correctly by re-fetching
     const cvIdToVerify = masterCV._id || (masterCV as any).id || (masterCV as any)._id;
-    let verifyCV = await CV.findById(cvIdToVerify).lean();
+    let verifyCV = await CV.findById(cvIdToVerify).lean<any>();
     console.log('✅ Verification after save - Master CV sections:', {
       work: verifyCV?.cvData?.work?.length || 0,
       education: verifyCV?.cvData?.education?.length || 0,
@@ -535,7 +535,7 @@ export async function POST(request: NextRequest) {
       console.log('🔄 Attempted recovery with direct update using completeCVData');
       
       // Re-fetch after recovery and update verifyCV
-      verifyCV = await CV.findById(cvIdToVerify).lean();
+      verifyCV = await CV.findById(cvIdToVerify).lean<any>();
       console.log('✅ After recovery - Master CV sections:', {
         work: verifyCV?.cvData?.work?.length || 0,
         education: verifyCV?.cvData?.education?.length || 0,
@@ -599,4 +599,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

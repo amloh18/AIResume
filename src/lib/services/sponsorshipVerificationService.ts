@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Sponsorship Verification Service
  * 

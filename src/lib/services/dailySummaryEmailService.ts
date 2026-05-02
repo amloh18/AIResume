@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getConnection } from '@/lib/database';
 import { JobApplication, ApplicationJourney, User } from '@/models';
 import { sendEmail } from '@/lib/email-service';

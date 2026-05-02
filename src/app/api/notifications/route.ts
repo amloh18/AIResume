@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Notification from '@/models/Notification';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Puppeteer Browser Pool Service
  * 

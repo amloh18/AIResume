@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Loader2, Lightbulb, MessageSquare, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
+import type { TrackerSidebarActionPayload } from './trackerSidebarConfig';
 
 interface InterviewQuestion {
   question: string;
@@ -23,6 +24,7 @@ interface InterviewPrepSidebarProps {
   jobId: string;
   jobTitle: string;
   company: string;
+  actionContext?: TrackerSidebarActionPayload | null;
 }
 
 const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
@@ -30,7 +32,8 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
   onClose,
   jobId,
   jobTitle,
-  company
+  company,
+  actionContext = null,
 }) => {
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -327,6 +330,11 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
                   <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                     {jobTitle} at {company}
                   </p>
+                  {actionContext && (
+                    <p className="text-[11px] uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500">
+                      {actionContext.stage} stage context
+                    </p>
+                  )}
                 </div>
               </div>
               <button
@@ -554,4 +562,3 @@ const InterviewPrepSidebar: React.FC<InterviewPrepSidebarProps> = ({
 };
 
 export default InterviewPrepSidebar;
-

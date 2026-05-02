@@ -6,7 +6,7 @@ import crypto from 'crypto';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -14,11 +14,12 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await getConnection();
     const tenantId = authResult.user.b2b.tenantId;
 
     const candidate = await B2BCandidate.findOne({
-      _id: params.id,
+      _id: id,
       tenantId
     });
 

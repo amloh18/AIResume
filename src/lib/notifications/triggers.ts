@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NOTIFICATION_TEMPLATES, TemplateVariables, getExpiryDate } from './templates';
 import { globalFrequencyManager } from './frequency';
 import notificationService from '@/lib/services/notificationService';

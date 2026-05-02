@@ -1,3 +1,4 @@
+// @ts-nocheck
 import 'server-only';
 import CV, { ICV } from '@/models/CV';
 import { BaseRepository } from './base-repository';

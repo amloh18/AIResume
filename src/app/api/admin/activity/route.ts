@@ -17,7 +17,16 @@ export async function GET(request: NextRequest) {
       ApplicationJourney.find().sort({ createdAt: -1 }).limit(5).select('status createdAt').lean()
     ]);
 
-    const activities = [];
+    const activities: Array<{
+      id: string;
+      type: string;
+      title: string;
+      description: string;
+      timestamp: Date;
+      icon: string;
+      status: string;
+      priority: string;
+    }> = [];
 
     // Add user activities
     recentUsers.forEach((user, index) => {

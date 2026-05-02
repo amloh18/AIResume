@@ -316,7 +316,7 @@ const getDefaultCVData = (): UnifiedCVDataStructure => ({
 const getInitialState = (): AICareerReportState => {
   // Note: loadFromStorage is now async, but we can't use async in getInitialState
   // The provider will handle loading from database on mount
-  const savedData = null;
+  const savedData = loadFromLocalStorage();
   
   // Log what we're restoring for debugging
   if (savedData) {

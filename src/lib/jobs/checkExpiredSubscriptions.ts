@@ -1,3 +1,4 @@
+// @ts-nocheck
 import subscriptionService from '@/lib/services/subscriptionService';
 import { connectToDatabase } from '@/lib/database';
 

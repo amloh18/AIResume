@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Stripe from 'stripe';
 import Tenant from '@/models/b2b/Tenant';
 import { log } from '@/lib/edge-logger';

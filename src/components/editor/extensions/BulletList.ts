@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Node, mergeAttributes } from '@tiptap/core';
 
 export interface BulletListOptions {

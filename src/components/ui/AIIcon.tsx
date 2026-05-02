@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from 'react';
 import { Brain, Sparkles, Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';

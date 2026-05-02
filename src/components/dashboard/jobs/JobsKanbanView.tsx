@@ -27,6 +27,10 @@ import InterviewStageView from "./stages/InterviewStageView";
 import OfferStageView from "./stages/OfferStageView";
 import RejectedStageView from "./stages/RejectedStageView";
 import JobKanbanCard from "./JobKanbanCard";
+import {
+  routeTrackerCardAction,
+  type TrackerSidebarOpenContext,
+} from "./trackerSidebarConfig";
 
 interface JobApplication {
   id: string;
@@ -94,7 +98,7 @@ interface JobsKanbanViewProps {
   setShowBulkActions: (show: boolean) => void;
   draggedJob: string | null;
   zoomedStage: string | null;
-  onJobClick: (job: JobApplication) => void;
+  onJobClick: (job: JobApplication, context?: TrackerSidebarOpenContext) => void;
   onStageClick: (stageStatus: string) => void;
   onDragStart: (e: React.DragEvent, jobId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
@@ -136,7 +140,7 @@ const ExpiredJobsAccordion: React.FC<{
   selectedJobs: Set<string>;
   draggedJob: string | null;
   isJobDraggable: (job: JobApplication) => boolean;
-  onJobClick: (job: JobApplication) => void;
+  onJobClick: (job: JobApplication, context?: TrackerSidebarOpenContext) => void;
   onDragStart: (e: React.DragEvent, jobId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
@@ -198,27 +202,17 @@ const ExpiredJobsAccordion: React.FC<{
                 onDragStart={onDragStart}
                 onDragEnd={onDragEnd}
                 onDragOver={onDragOver}
-                onAction={(action, job, e) => {
-                  if (action === "generate_docs") {
-                    onCreateJourney && onCreateJourney(job as any);
-                  } else if (action === "inject_data") {
-                    onImproveATS?.(job as any);
-                  } else if (action === "download") {
-                    onDownload?.(job as any);
-                  } else if (action === "move_interview") {
-                    onJobStatusUpdate && onJobStatusUpdate(job.id, "interview");
-                  } else if (action === "accept_offer") {
-                    onJobStatusUpdate && onJobStatusUpdate(job.id, "accepted");
-                  } else if (action === "decline_offer") {
-                    onJobStatusUpdate && onJobStatusUpdate(job.id, "rejected");
-                  } else if (action === "archive") {
-                    onJobStatusUpdate && onJobStatusUpdate(job.id, "withdrawn");
-                  } else if (
-                    action === "view_notes" ||
-                    action === "add_feedback"
-                  ) {
-                    onJobClick(job as any);
-                  }
+                onAction={(action, job) => {
+                  routeTrackerCardAction({
+                    action: action as any,
+                    job: job as any,
+                    onCreateJourney: onCreateJourney as any,
+                    onImproveATS: onImproveATS as any,
+                    onDownload: onDownload as any,
+                    onJobStatusUpdate: onJobStatusUpdate as any,
+                    onOpenSidebar: onJobClick as any,
+                    getJobId: (targetJob) => targetJob.id,
+                  });
                 }}
               />
             );
@@ -594,61 +588,17 @@ const JobsKanbanView: React.FC<JobsKanbanViewProps> = ({
                                       onDragStart={onDragStart}
                                       onDragEnd={onDragEnd}
                                       onDragOver={onDragOver}
-                                      onAction={(action, job, e) => {
-                                        // Handle actions from the card
-                                        if (action === "generate_docs") {
-                                          onCreateJourney &&
-                                            onCreateJourney(job);
-                                        } else if (action === "inject_data") {
-                                          // Logic to show inject data popup
-                                          onImproveATS?.(job);
-                                        } else if (action === "download") {
-                                          // Logic to open download modal
-                                          onDownload?.(job);
-                                        } else if (
-                                          action === "move_interview"
-                                        ) {
-                                          onJobStatusUpdate &&
-                                            onJobStatusUpdate(
-                                              job.id,
-                                              "interview",
-                                            );
-                                        } else if (action === "log_activity") {
-                                          console.log(
-                                            "Log activity for",
-                                            job.id,
-                                          );
-                                        } else if (
-                                          action === "view_notes" ||
-                                          action === "add_feedback"
-                                        ) {
-                                          onJobClick(job); // Open sidebar
-                                        } else if (
-                                          action === "interview_prep"
-                                        ) {
-                                          console.log(
-                                            "Interview Prep for",
-                                            job.id,
-                                          );
-                                        } else if (action === "accept_offer") {
-                                          onJobStatusUpdate &&
-                                            onJobStatusUpdate(
-                                              job.id,
-                                              "accepted",
-                                            );
-                                        } else if (action === "decline_offer") {
-                                          onJobStatusUpdate &&
-                                            onJobStatusUpdate(
-                                              job.id,
-                                              "rejected",
-                                            );
-                                        } else if (action === "archive") {
-                                          onJobStatusUpdate &&
-                                            onJobStatusUpdate(
-                                              job.id,
-                                              "withdrawn",
-                                            );
-                                        }
+                                      onAction={(action, job) => {
+                                        routeTrackerCardAction({
+                                          action: action as any,
+                                          job,
+                                          onCreateJourney,
+                                          onImproveATS,
+                                          onDownload,
+                                          onJobStatusUpdate: onJobStatusUpdate as any,
+                                          onOpenSidebar: onJobClick,
+                                          getJobId: (targetJob) => targetJob.id,
+                                        });
                                       }}
                                     />
                                   );

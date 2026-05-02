@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 
 /**

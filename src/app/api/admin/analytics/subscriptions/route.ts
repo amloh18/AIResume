@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
           $group: {
             _id: '$subscription.purchaseRegion',
             count: { $sum: 1 },
-            revenue: { $sum: '$subscription.purchasePrice' || 0 },
+            revenue: { $sum: { $ifNull: ['$subscription.purchasePrice', 0] } },
             plans: {
               $push: {
                 planKey: '$subscription.planKey',
@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
           $group: {
             _id: '$subscription.planKey',
             count: { $sum: 1 },
-            revenue: { $sum: '$subscription.purchasePrice' || 0 },
-            avgPrice: { $avg: '$subscription.purchasePrice' || 0 },
+            revenue: { $sum: { $ifNull: ['$subscription.purchasePrice', 0] } },
+            avgPrice: { $avg: { $ifNull: ['$subscription.purchasePrice', 0] } },
             regions: {
               $push: '$subscription.purchaseRegion'
             },
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
           $group: {
             _id: '$subscription.status',
             count: { $sum: 1 },
-            revenue: { $sum: '$subscription.purchasePrice' || 0 },
+            revenue: { $sum: { $ifNull: ['$subscription.purchasePrice', 0] } },
             plans: {
               $push: '$subscription.planKey'
             }
@@ -164,8 +164,8 @@ export async function GET(request: NextRequest) {
       {
         $group: {
           _id: null,
-          totalRevenue: { $sum: '$subscription.purchasePrice' || 0 },
-          avgRevenue: { $avg: '$subscription.purchasePrice' || 0 }
+          totalRevenue: { $sum: { $ifNull: ['$subscription.purchasePrice', 0] } },
+          avgRevenue: { $avg: { $ifNull: ['$subscription.purchasePrice', 0] } }
         }
       }
     ];
@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
         $group: {
           _id: null,
           totalDayPasses: { $sum: '$dayPassCount' },
-          totalRevenue: { $sum: '$purchasePrice' || 0 },
+          totalRevenue: { $sum: { $ifNull: ['$purchasePrice', 0] } },
           uniqueUsers: { $sum: 1 }
         }
       }
@@ -222,4 +222,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-

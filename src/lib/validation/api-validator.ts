@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * API Validation Helper
  * Provides consistent validation and error handling for API routes

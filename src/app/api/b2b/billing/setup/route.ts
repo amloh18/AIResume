@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(result);
   } catch (error: any) {
-    log.error('Error in B2B billing setup endpoint', { error: error.message });
+    log.error('Error in B2B billing setup endpoint', error);
     return NextResponse.json({ error: 'Failed to set up billing', details: error.message }, { status: 500 });
   }
 }

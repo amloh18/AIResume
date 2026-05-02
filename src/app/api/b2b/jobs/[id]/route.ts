@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import Job from '@/models/Job';
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -15,8 +15,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { id } = await params;
     await getConnection();
-    const job = await Job.findOne({ _id: params.id, tenantId: user.b2b.tenantId }).lean();
+    const job = await Job.findOne({ _id: id, tenantId: user.b2b.tenantId }).lean();
     
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -40,11 +41,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     await getConnection();
 
     const job = await Job.findOneAndUpdate(
-      { _id: params.id, tenantId: user.b2b.tenantId },
+      { _id: id, tenantId: user.b2b.tenantId },
       { $set: body },
       { new: true }
     );
@@ -59,7 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -71,8 +73,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Forbidden. Admin or Recruiter required.' }, { status: 403 });
     }
 
+    const { id } = await params;
     await getConnection();
-    const job = await Job.findOneAndDelete({ _id: params.id, tenantId: user.b2b.tenantId });
+    const job = await Job.findOneAndDelete({ _id: id, tenantId: user.b2b.tenantId });
 
     if (!job) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });

@@ -12,7 +12,7 @@ const revokedTokens = new Set<string>();
 /**
  * Add token to blacklist (for logout/revocation)
  */
-export function revokeToken(token: string): void {
+function revokeToken(token: string): void {
   revokedTokens.add(token);
   // Clean up old tokens periodically (keep last 1000)
   if (revokedTokens.size > 1000) {

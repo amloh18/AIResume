@@ -3,18 +3,19 @@ import { getConnection } from '@/lib/database';
 import B2BCandidate from '@/models/b2b/B2BCandidate';
 import Tenant from '@/models/b2b/Tenant';
 
-export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
     await getConnection();
+    const { token } = await params;
     const candidate = await B2BCandidate.findOne({
-      'metadata.shareToken': params.token
-    }).lean();
+      'metadata.shareToken': token
+    }).lean<any>();
 
     if (!candidate) {
       return NextResponse.json({ error: 'Candidate not found or link expired' }, { status: 404 });
     }
 
-    const tenant = await Tenant.findById(candidate.tenantId).lean();
+    const tenant = await Tenant.findById(candidate.tenantId).lean<any>();
 
     // Sanitize data for public viewing
     const publicData = {
@@ -51,14 +52,15 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
     await getConnection();
+    const { token } = await params;
     const body = await req.json();
     const { feedback, status } = body;
 
     const candidate = await B2BCandidate.findOne({
-      'metadata.shareToken': params.token
+      'metadata.shareToken': token
     });
 
     if (!candidate) {

@@ -5,7 +5,7 @@ import B2BCandidate from '@/models/b2b/B2BCandidate';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -13,11 +13,12 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await getConnection();
     const tenantId = authResult.user.b2b.tenantId;
 
     const candidate = await B2BCandidate.findOne({
-      _id: params.id,
+      _id: id,
       tenantId
     }).lean();
 
@@ -36,7 +37,7 @@ export async function GET(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -44,11 +45,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await getConnection();
     const tenantId = authResult.user.b2b.tenantId;
 
     const candidate = await B2BCandidate.findOneAndDelete({
-      _id: params.id,
+      _id: id,
       tenantId
     });
 
@@ -67,7 +69,7 @@ export async function DELETE(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const authResult = await getAuthenticatedUser();
@@ -75,6 +77,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
     await getConnection();
     const tenantId = authResult.user.b2b.tenantId;
     const body = await req.json();
@@ -92,7 +95,7 @@ export async function PATCH(
     }
 
     const candidate = await B2BCandidate.findOneAndUpdate(
-      { _id: params.id, tenantId },
+      { _id: id, tenantId },
       { $set: updateData },
       { new: true }
     ).lean();

@@ -54,7 +54,7 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
 
     const countryPricing = await CountryPricing.findOne({
       countryCode: cacheKey
-    }).lean();
+    }).lean<any>();
 
     if (!countryPricing) {
       console.warn(`Country pricing not found for: ${cacheKey}`);
@@ -170,7 +170,7 @@ export async function getCountryPricingById(
   try {
     await getConnection();
     
-    const countryPricing = await CountryPricing.findById(countryPricingId).lean();
+    const countryPricing = await CountryPricing.findById(countryPricingId).lean<any>();
     
     if (!countryPricing) {
       console.warn(`Country pricing not found for ID: ${countryPricingId}`);
@@ -224,7 +224,7 @@ export async function getAllCountryPricing(): Promise<CountryPricingData[]> {
   try {
     await getConnection();
 
-    const allPricing = await CountryPricing.find({}).lean();
+    const allPricing = await CountryPricing.find({}).lean<any[]>();
 
     return allPricing.map(cp => ({
       countryCode: cp.countryCode,
@@ -269,4 +269,3 @@ export async function getAllCountryPricing(): Promise<CountryPricingData[]> {
 export function clearCountryPricingCache(): void {
   pricingCache.clear();
 }
-

@@ -282,7 +282,7 @@ export async function generateStaticParams() {
 }
 
 // Generate metadata for each role page
-export async function generateMetadata({ params }: { params: { role: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ role: string }> }): Promise<Metadata> {
   const { role } = await params
   const data = roleData[role]
   
@@ -317,7 +317,7 @@ export async function generateMetadata({ params }: { params: { role: string } })
   }
 }
 
-export default async function RolePage({ params }: { params: { role: string } }) {
+export default async function RolePage({ params }: { params: Promise<{ role: string }> }) {
   const { role } = await params
   const data = roleData[role]
   

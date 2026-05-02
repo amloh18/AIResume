@@ -30,7 +30,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({
 
   const getBarColor = () => {
     if (colorVariant === 'dynamic') {
-      if (percentage >= 80) return 'bg-[#80FF00]';
+      if (percentage >= 80) return 'bg-emerald-500';
       if (percentage >= 60) return 'bg-yellow-500';
       return 'bg-red-500';
     }
@@ -61,7 +61,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({
           className={`h-full rounded-full ${barColor} shadow-[0_0_8px_rgba(0,0,0,0.1)]`}
           style={{
             boxShadow: colorVariant === 'dynamic' ? `0 0 10px ${
-              percentage >= 80 ? 'rgba(128,255,0,0.3)' : 
+              percentage >= 80 ? 'rgba(34,197,94,0.25)' : 
               percentage >= 60 ? 'rgba(234,179,8,0.3)' : 
               'rgba(239,68,68,0.3)'
             }` : undefined
@@ -75,7 +75,7 @@ export const ScoreBreakdown: React.FC<ScoreBreakdownProps> = ({
           compact ? 'text-[10px] w-12' : 'text-sm w-16'
         } ${
           colorVariant === 'dynamic' 
-            ? percentage >= 80 ? 'text-[#80FF00]' : percentage >= 60 ? 'text-yellow-500' : 'text-red-500'
+            ? percentage >= 80 ? 'text-emerald-500 dark:text-emerald-400' : percentage >= 60 ? 'text-yellow-500' : 'text-red-500'
             : 'text-gray-500 dark:text-gray-400'
         }`}
       >

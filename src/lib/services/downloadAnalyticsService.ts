@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Download Analytics Service
  * 

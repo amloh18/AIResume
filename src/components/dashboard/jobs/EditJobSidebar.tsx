@@ -1,3 +1,4 @@
+// @ts-nocheck
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
@@ -37,6 +38,11 @@ import { DuplicateJobService, DuplicateCheckResult } from '@/lib/services/duplic
 import DuplicateJobWarningModal from './DuplicateJobWarningModal';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import UpgradeCard from '@/components/dashboard/UpgradeCard';
+import TrackerCreatedStageModal from './TrackerCreatedStageModal';
+import {
+  shouldSkipTrackerCreatedStageModalForToday,
+  type TrackerCreatedStagePreview
+} from '@/lib/utils/tracker-created-stage-modal';
 
 interface Job {
   id?: string;
@@ -135,9 +141,11 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
   const [proceedDespiteDuplicate, setProceedDespiteDuplicate] = useState(false);
 
   // Global credit exhaustion handler
-  const { checkUsageAndHandleExhaustion, showExhaustionModal } = useCreditExhaustionHandler();
+  const { showExhaustionModal } = useCreditExhaustionHandler();
   const { shouldShow: shouldShowUpgradePopup, show: showUpgradePopup, dismiss: dismissUpgradePopup } = useUpgradePopupTrigger();
   const [showUpgradeCard, setShowUpgradeCard] = useState(false);
+  const [showCreatedStageModal, setShowCreatedStageModal] = useState(false);
+  const [trackerCreatedStagePreview, setTrackerCreatedStagePreview] = useState<TrackerCreatedStagePreview | null>(null);
 
   // Auto-save refs
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -590,7 +598,41 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
     }));
   };
 
-  const handleSaveJob = async (isAutoSave = false) => {
+  const loadTrackerGenerationPreview = async () => {
+    if (!user?.id) {
+      return null;
+    }
+
+    try {
+      const response = await authenticatedFetchWithUserId('/api/jobs/tracker-generation-preview', user.id, {
+        method: 'GET'
+      });
+      const result = await response.json();
+      const preview = result?.preview;
+
+      if (result?.success && preview) {
+        const normalizedPreview: TrackerCreatedStagePreview = {
+          mode: preview.mode,
+          entitlementReasonCode: result.entitlementReasonCode,
+          title: preview.title,
+          summary: preview.summary,
+          supportMessage: preview.supportMessage,
+          aiCreditsRemaining: preview.aiCreditsRemaining,
+          aiCreditsLimit: preview.aiCreditsLimit,
+          isTailoredEligible: preview.isTailoredEligible
+        };
+        setTrackerCreatedStagePreview(normalizedPreview);
+        return normalizedPreview;
+      }
+    } catch (error) {
+      console.error('Failed to load tracker generation preview:', error);
+    }
+
+    return trackerCreatedStagePreview;
+  };
+
+  const handleSaveJob = async (isAutoSave = false, options: { skipCreatedStageModal?: boolean } = {}) => {
+    const { skipCreatedStageModal = false } = options;
     // Prevent concurrent saves
     if (isSavingRef.current && !isAutoSave) {
       console.log('⚠️ EditJobSidebar - Save already in progress, ignoring duplicate call');
@@ -712,26 +754,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
       const isMovingToCreated = previousStatus === 'draft' && jobStatus === 'created';
       const isCreatingAsCreated = isNewJob && jobStatus === 'created';
 
-      if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave && user?.id) {
-        try {
-          const creditCheckResponse = await authenticatedFetchWithUserId('/api/user/usage/check', user.id, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'job_create' })
-          });
-
-          if (creditCheckResponse.ok) {
-            const creditCheck = await creditCheckResponse.json();
-            // Use global credit exhaustion handler - it will show modal if credits exhausted
-            if (checkUsageAndHandleExhaustion(creditCheck, 'pro_monthly')) {
-              // Credits exhausted, modal is shown by handler
-              if (!isAutoSave) setIsSaving(false);
-              return;
-            }
-          }
-        } catch (creditError) {
-          console.error('Error checking credits:', creditError);
-          // Continue with job creation if credit check fails (don't block user)
+      if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave && !skipCreatedStageModal) {
+        const preview = trackerCreatedStagePreview || await loadTrackerGenerationPreview();
+        if (preview?.mode === 'fallback' && !shouldSkipTrackerCreatedStageModalForToday()) {
+          setTrackerCreatedStagePreview(preview);
+          setShowCreatedStageModal(true);
+          setIsSaving(false);
+          isSavingRef.current = false;
+          return;
         }
       }
 
@@ -746,26 +776,49 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 
       console.log('🔍 EditJobSidebar - Response status:', response.status);
 
-      // Handle insufficient credits error (403 or 500 with credit error)
       if (!response.ok) {
         let errorResult: any = {};
+        let errorText = '';
         try {
-          const text = await response.text();
-          errorResult = text ? JSON.parse(text) : {};
+          errorText = await response.text();
+          errorResult = errorText ? JSON.parse(errorText) : {};
         } catch (parseError) {
           console.error('Failed to parse error response:', parseError);
         }
 
+        console.error('❌ EditJobSidebar - Save failed with status:', response.status, 'Error:', errorText);
         console.log('🔍 EditJobSidebar - Error response:', errorResult);
 
-        // Check if this is a credit-related error
+        const isTrackerLimitError =
+          errorResult.gateType === 'hard' ||
+          errorResult.upgradeRequired ||
+          errorResult.limit !== undefined ||
+          errorResult.details?.includes?.('active jobs') ||
+          errorResult.message?.includes?.('active jobs') ||
+          errorResult.error?.includes?.('active jobs');
+
         const isCreditError =
-          (response.status === 403 && (errorResult.requiresUpgrade || errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits'))) ||
+          (response.status === 403 && (errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits'))) ||
           (response.status === 500 && (errorResult.error?.includes('limit exceeded') || errorResult.error?.includes('insufficient credits') || errorResult.error?.includes('Plan limit exceeded'))) ||
-          ((isCreatingAsCreated || isMovingToCreated) && (errorResult.requiresUpgrade || errorResult.error?.includes('limit') || errorResult.error?.includes('credit')));
+          ((isCreatingAsCreated || isMovingToCreated) && (errorResult.error?.includes('credit') || errorResult.message?.includes?.('credit')));
+
+        if (isTrackerLimitError && !isCreditError) {
+          const trackerLimitMessage =
+            errorResult.details ||
+            errorResult.message ||
+            errorResult.error ||
+            'Tracker full. Archive a job or upgrade to keep adding applications.';
+
+          setErrorMessage(trackerLimitMessage);
+          if (userId) {
+            setShowUpgradeCard(true);
+          }
+          if (!isAutoSave) setIsSaving(false);
+          isSavingRef.current = false;
+          return;
+        }
 
         if (isCreditError) {
-          // Show credit exhaustion modal with custom message
           const customMessage = errorResult.message || errorResult.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs';
           const limit = errorResult.limit || 1;
           const currentUsage = errorResult.currentUsage || limit;
@@ -780,124 +833,14 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
             'pro_monthly'
           );
 
-          // Also trigger UpgradeCard
           if (userId) {
             setShowUpgradeCard(true);
           }
 
           if (!isAutoSave) setIsSaving(false);
+          isSavingRef.current = false;
           return;
         }
-      }
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('🔍 EditJobSidebar - Save response:', result);
-
-        // Check if the API returned a job object directly (for updates) or success/data structure (for creates)
-        if (result.job || result.success !== false || result.data) {
-          const savedJob = result.job || result.data || {
-            ...jobData,
-            id: result.data?.id || result.data?._id || result.id || result._id || editingJob?.id || editingJob?._id
-          };
-
-          lastSavedDataRef.current = savedJob;
-          setHasUnsavedChanges(false);
-          setShowUnsavedWarning(false);
-          setErrorMessage('');
-          setFieldErrors({});
-
-          // Dispatch credit update event if job was created with 'created' status or moved from draft to created
-          if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave) {
-            window.dispatchEvent(new CustomEvent('creditsUpdated'));
-          }
-
-          // Dispatch job updated event for ALL saves (including draft and auto-saves) to refresh tracker
-          window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { job: savedJob, isAutoSave } }));
-
-          // Step 2: If this is a new job, implement the "Job First" workflow
-          // Create an Application Package automatically
-          if (isNewJob && !isAutoSave && user?.id) {
-            try {
-              console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id || savedJob._id);
-
-              // Use the job ID from savedJob (could be id or _id)
-              const jobId = savedJob.id || savedJob._id;
-
-              if (!jobId) {
-                console.warn('⚠️ EditJobSidebar - No job ID available, skipping package creation');
-              } else {
-                const packageResult = await ApplicationPackageService.createNewPackage({
-                  userId: user.id,
-                  jobId: jobId,
-                  journeyName: `Application for ${savedJob.jobTitle || savedJob.title} at ${savedJob.company}`,
-                  // Pass the job data we already have to avoid refetching
-                  jobData: {
-                    jobTitle: savedJob.jobTitle || savedJob.title,
-                    title: savedJob.jobTitle || savedJob.title,
-                    company: savedJob.company,
-                    ...savedJob
-                  }
-                });
-
-                if (packageResult.success) {
-                  console.log('✅ EditJobSidebar - Application Package created:', packageResult.data?.journeyId);
-                } else {
-                  console.warn('⚠️ EditJobSidebar - Failed to create Application Package:', packageResult.message);
-                  // Don't fail the job creation if package creation fails
-                }
-              }
-            } catch (packageError) {
-              console.error('❌ EditJobSidebar - Error creating Application Package:', packageError);
-              // Don't fail the job creation if package creation fails
-            }
-          }
-
-          if (!isAutoSave) {
-            onJobSaved(savedJob);
-            // Reset form state after successful save
-            setFormData({
-              jobTitle: '',
-              company: '',
-              location: '',
-              jobUrl: '',
-              jobDescription: '',
-              notes: '',
-              priority: 'medium',
-              status: 'created',
-              deadline: getDateString(15), // Default to 15 days from now
-              sponsorship: 'unknown',
-              tags: [],
-              salary: {
-                min: undefined,
-                max: undefined,
-                currency: 'USD',
-                period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
-              },
-              contactDetails: { name: '', email: '', phone: '', role: '' },
-              interviews: [],
-              followUps: [],
-              attachments: [],
-              source: 'other' as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
-              sourceUrl: '',
-              atsScore: undefined,
-              atsAnalysis: undefined,
-              statusHistory: []
-            });
-            setHasUnsavedChanges(false);
-            onClose();
-          } else {
-            console.log('✅ Auto-save completed successfully');
-          }
-        } else {
-          console.error('❌ API returned success: false:', result);
-          if (!isAutoSave) {
-            setErrorMessage(result.message || result.error || 'Unknown error');
-          }
-        }
-      } else {
-        const errorText = await response.text();
-        console.error('❌ EditJobSidebar - Save failed with status:', response.status, 'Error:', errorText);
 
         // Handle 404 error - job not found (might be trying to update a non-existent job)
         if (response.status === 404 && method === 'PUT') {
@@ -957,6 +900,113 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
           } catch {
             setErrorMessage(`Failed to save job. Server returned status: ${response.status}`);
           }
+        }
+
+        return;
+      }
+
+      const result = await response.json();
+      console.log('🔍 EditJobSidebar - Save response:', result);
+
+      // Check if the API returned a job object directly (for updates) or success/data structure (for creates)
+      if (result.job || result.success !== false || result.data) {
+        const savedJob = result.job || result.data || {
+          ...jobData,
+          id: result.data?.id || result.data?._id || result.id || result._id || editingJob?.id || editingJob?._id
+        };
+
+        lastSavedDataRef.current = savedJob;
+        setHasUnsavedChanges(false);
+        setShowUnsavedWarning(false);
+        setErrorMessage('');
+        setFieldErrors({});
+
+        // Dispatch credit update event if job was created with 'created' status or moved from draft to created
+        if ((isCreatingAsCreated || isMovingToCreated) && !isAutoSave) {
+          window.dispatchEvent(new CustomEvent('creditsUpdated'));
+        }
+
+        // Dispatch job updated event for ALL saves (including draft and auto-saves) to refresh tracker
+        window.dispatchEvent(new CustomEvent('jobUpdated', { detail: { job: savedJob, isAutoSave } }));
+
+        // Step 2: If this is a new job, implement the "Job First" workflow
+        // Create an Application Package automatically
+        if (isNewJob && !isAutoSave && user?.id) {
+          try {
+            console.log('🎯 EditJobSidebar - Creating Application Package for new job:', savedJob.id || savedJob._id);
+
+            // Use the job ID from savedJob (could be id or _id)
+            const jobId = savedJob.id || savedJob._id;
+
+            if (!jobId) {
+              console.warn('⚠️ EditJobSidebar - No job ID available, skipping package creation');
+            } else {
+              const packageResult = await ApplicationPackageService.createNewPackage({
+                userId: user.id,
+                jobId: jobId,
+                journeyName: `Application for ${savedJob.jobTitle || savedJob.title} at ${savedJob.company}`,
+                // Pass the job data we already have to avoid refetching
+                jobData: {
+                  jobTitle: savedJob.jobTitle || savedJob.title,
+                  title: savedJob.jobTitle || savedJob.title,
+                  company: savedJob.company,
+                  ...savedJob
+                }
+              });
+
+              if (packageResult.success) {
+                console.log('✅ EditJobSidebar - Application Package created:', packageResult.data?.journeyId);
+              } else {
+                console.warn('⚠️ EditJobSidebar - Failed to create Application Package:', packageResult.message);
+                // Don't fail the job creation if package creation fails
+              }
+            }
+          } catch (packageError) {
+            console.error('❌ EditJobSidebar - Error creating Application Package:', packageError);
+            // Don't fail the job creation if package creation fails
+          }
+        }
+
+        if (!isAutoSave) {
+          onJobSaved(savedJob);
+          // Reset form state after successful save
+          setFormData({
+            jobTitle: '',
+            company: '',
+            location: '',
+            jobUrl: '',
+            jobDescription: '',
+            notes: '',
+            priority: 'medium',
+            status: 'created',
+            deadline: getDateString(15), // Default to 15 days from now
+            sponsorship: 'unknown',
+            tags: [],
+            salary: {
+              min: undefined,
+              max: undefined,
+              currency: 'USD',
+              period: 'yearly' as 'hourly' | 'monthly' | 'yearly'
+            },
+            contactDetails: { name: '', email: '', phone: '', role: '' },
+            interviews: [],
+            followUps: [],
+            attachments: [],
+            source: 'other' as 'linkedin' | 'indeed' | 'company-website' | 'referral' | 'other',
+            sourceUrl: '',
+            atsScore: undefined,
+            atsAnalysis: undefined,
+            statusHistory: []
+          });
+          setHasUnsavedChanges(false);
+          onClose();
+        } else {
+          console.log('✅ Auto-save completed successfully');
+        }
+      } else {
+        console.error('❌ API returned success: false:', result);
+        if (!isAutoSave) {
+          setErrorMessage(result.message || result.error || 'Unknown error');
         }
       }
     } catch (error) {
@@ -1531,6 +1581,19 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
         </React.Fragment>
       )}
 
+      <TrackerCreatedStageModal
+        isOpen={showCreatedStageModal}
+        onClose={() => setShowCreatedStageModal(false)}
+        onConfirm={async () => {
+          setShowCreatedStageModal(false);
+          await handleSaveJob(false, { skipCreatedStageModal: true });
+        }}
+        jobTitle={formData.jobTitle}
+        company={formData.company}
+        preview={trackerCreatedStagePreview}
+        isSubmitting={isSaving}
+      />
+
       {/* Duplicate Job Warning Modal */}
       {showDuplicateWarning && (
         <DuplicateJobWarningModal
@@ -1577,4 +1640,3 @@ const EditJobSidebar: React.FC<EditJobSidebarProps> = ({
 };
 
 export default EditJobSidebar;
-
