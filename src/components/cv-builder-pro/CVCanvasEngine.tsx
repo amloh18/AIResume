@@ -1008,7 +1008,8 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
             }}
           >
           {readOnly ? (
-            <div className="cv-document-wrapper text-gray-900" style={canvasStyleVars}>
+            <div className="cv-document-wrapper relative text-gray-900" style={canvasStyleVars}>
+              <div className="cv-page-visualizer"></div>
               {renderCanvasLayout()}
             </div>
           ) : (
