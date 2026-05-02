@@ -416,19 +416,19 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
       {/* CV Purpose Card */}
       <div className="mb-6 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/40 rounded-xl p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1">
             <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-start gap-2 leading-snug">
-              <Target className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-              <span className="min-w-0">
-                <span>{purposeCard.title}</span>
-                <span className="ml-2 text-sm font-normal text-slate-600 dark:text-slate-300/80">
+              <Target className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+              <span className="min-w-0 flex-1 whitespace-normal break-words">
+                <span className="font-bold text-slate-900 dark:text-white">{purposeCard.title}</span>
+                <span className="ml-2 inline text-sm font-normal leading-6 text-slate-600 dark:text-slate-300/80">
                   {purposeCard.summary}
                 </span>
               </span>
             </h4>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 md:justify-end">
             <span className="inline-flex w-fit shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em] bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300 border border-sky-200 dark:border-sky-500/20">
               {purposeCard.modeLabel}
             </span>
