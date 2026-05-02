@@ -10,7 +10,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { cvData, template, format, userId, cvId, jobId } = await request.json();
+    const {
+      cvData,
+      template,
+      format,
+      userId,
+      cvId,
+      jobId,
+      paperSize = 'A4',
+      orientation = 'portrait',
+      filename
+    } = await request.json();
 
     if (userId !== session.user.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -25,10 +35,18 @@ export async function POST(request: NextRequest) {
 
     switch (format) {
       case 'pdf':
-        exportResult = await generatePDFExport(cvData, template);
+        exportResult = await generatePDFExport(cvData, template, {
+          paperSize,
+          orientation,
+          filename
+        });
         break;
       case 'docx':
-        exportResult = await generateDOCXExport(cvData, template);
+        exportResult = await generateDOCXExport(cvData, template, {
+          paperSize,
+          orientation,
+          filename
+        });
         break;
       case 'json':
         exportResult = await generateJSONExport(cvData, template);
@@ -76,7 +94,15 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generatePDFExport(cvData: any, template: any) {
+async function generatePDFExport(
+  cvData: any,
+  template: any,
+  options: {
+    paperSize?: 'A4' | 'Letter';
+    orientation?: 'portrait' | 'landscape';
+    filename?: string;
+  } = {}
+) {
   // Use the existing PDFService for consistent PDF generation
   // This ensures the exported PDF matches the preview exactly
   try {
@@ -94,8 +120,8 @@ async function generatePDFExport(cvData: any, template: any) {
     };
     
     const blob = await PDFService.generatePDF(cvData, compatibleTemplate, {
-      paperSize: 'A4',
-      orientation: 'portrait'
+      paperSize: options.paperSize || 'A4',
+      orientation: options.orientation || 'portrait'
     });
     
     // Convert Blob to Buffer for Next.js response
@@ -105,7 +131,7 @@ async function generatePDFExport(cvData: any, template: any) {
     return {
       buffer: pdfBuffer,
       mimeType: 'application/pdf',
-      filename: `${cvData.basics?.name || 'CV'}.pdf`
+      filename: `${options.filename || cvData.basics?.name || 'CV'}.pdf`
     };
   } catch (error) {
     console.error('PDF generation failed, falling back to HTML:', error);
@@ -122,7 +148,15 @@ async function generatePDFExport(cvData: any, template: any) {
   }
 }
 
-async function generateDOCXExport(cvData: any, template: any) {
+async function generateDOCXExport(
+  cvData: any,
+  template: any,
+  options: {
+    paperSize?: 'A4' | 'Letter';
+    orientation?: 'portrait' | 'landscape';
+    filename?: string;
+  } = {}
+) {
   // Use the existing DOCXService for consistent DOCX generation
   // This ensures all CV sections are properly exported
   try {
@@ -140,8 +174,8 @@ async function generateDOCXExport(cvData: any, template: any) {
     };
     
     const blob = await docxService.generateDOCX(cvData, compatibleTemplate, {
-      paperSize: 'A4',
-      orientation: 'portrait',
+      paperSize: options.paperSize || 'A4',
+      orientation: options.orientation || 'portrait',
       format: 'docx'
     });
     
@@ -152,7 +186,7 @@ async function generateDOCXExport(cvData: any, template: any) {
     return {
       buffer: docxBuffer,
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      filename: `${cvData.basics?.name || 'CV'}.docx`
+      filename: `${options.filename || cvData.basics?.name || 'CV'}.docx`
     };
   } catch (error) {
     console.error('DOCX generation failed:', error);
