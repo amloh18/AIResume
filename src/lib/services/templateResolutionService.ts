@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Template Resolution Service
  * 

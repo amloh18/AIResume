@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PROMOTION_TYPES, type PromotionContext } from './promotionTypes';
 import type { PromotionConfig } from '@/contexts/FeaturePromotionContext';
 

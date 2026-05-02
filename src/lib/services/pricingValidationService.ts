@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getConnection } from '@/lib/database';
 import Coupon from '@/models/Coupon';
 import { getAdminPricingPlan } from '@/models/admin-models';

@@ -50,7 +50,7 @@ function getTrackerCoverLetterGenerationReason(options: {
     return 'Created as a fallback draft after tailored cover letter generation could not be completed';
   }
 
-  return 'Created as a non-tailored fallback draft from existing Master CV context';
+  return 'Created as a non-tailored fallback draft with header only from Master CV context';
 }
 
 /**
@@ -472,17 +472,11 @@ export async function createJourneyDocuments(
       }
 
       if (!body) {
-        const existingCoverLetter = await CoverLetter.findOne({
-          userId: new mongoose.Types.ObjectId(userId)
-        }).sort({ createdAt: -1 });
-
-        if (!shouldTailorDocuments && existingCoverLetter && existingCoverLetter.body) {
-          body = existingCoverLetter.body;
-          console.log('✅ Journey Document Service - Using existing cover letter body as non-tailored fallback:', existingCoverLetter._id);
+        if (!shouldTailorDocuments) {
+          body = '';
+          console.log('✅ Journey Document Service - Using header-only cover letter fallback for non-tailored generation');
         } else {
-          if (shouldTailorDocuments) {
-            usedFallbackContent = true;
-          }
+          usedFallbackContent = true;
           const recipientName = job?.contactPerson || currentJourney.contactPerson || 'Hiring Manager';
           body = `Dear ${recipientName},
 

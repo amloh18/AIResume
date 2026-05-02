@@ -1186,9 +1186,17 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
+              className="relative flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
+              <button
+                onClick={onClose}
+                className="absolute top-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0 z-20"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" />
+              </button>
+
               {/* Left Side - Features & Info */}
               <motion.div
                 initial={{ x: '-100%', opacity: 0 }}
@@ -1285,16 +1293,8 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 mass: 0.8,
                 delay: 0.1
               }}
-              className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto relative"
+              className="w-full tablet:w-1/2 bg-[#f3f2ee] dark:bg-[#141810] overflow-y-auto"
             >
-              {/* Close Button */}
-              <button
-                onClick={onClose}
-                className="absolute top-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0 z-10"
-              >
-                <X className="w-5 h-5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" />
-              </button>
-
               <div className="p-4 tablet:p-6 max-w-5xl mx-auto bg-[#f3f2ee] dark:bg-[#141810] rounded-lg">
 
                 {/* Header */}

@@ -11,14 +11,6 @@ const nextConfig: NextConfig = {
   devIndicators: {
     position: 'bottom-right',
   },
-  images: {
-    remotePatterns: [
-      {
-        protocol: 'https',
-        hostname: 'coresg-normal.trae.ai',
-      },
-    ],
-  },
   // Simplified webpack configuration to fix React hooks error
   webpack: (config, { dev, isServer }) => {
     // Import webpack once
@@ -234,6 +226,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'coresg-normal.trae.ai',
+      },
       {
         protocol: 'https',
         hostname: '*.s3.*.amazonaws.com',

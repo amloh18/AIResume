@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Force HMR update
 import { motion, AnimatePresence } from 'framer-motion';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -15,6 +15,7 @@ import { ApplicationTrackerSkeleton } from '@/components/ui/OptimizedSkeletons';
 import { CVJourney } from '@/types/cv';
 import JobSidebar from './jobs/JobSidebar';
 import EditJobSidebar from './jobs/EditJobSidebar';
+import type { TrackerSidebarOpenContext } from './jobs/trackerSidebarConfig';
 import JobCreationPaywall from '@/components/payment/JobCreationPaywall';
 import JobsHeader from './jobs/JobsHeader';
 
@@ -22,6 +23,7 @@ import JobsListView from './jobs/JobsListView';
 import JobsKanbanView from './jobs/JobsKanbanView';
 import JobsFilters from './jobs/JobsFilters';
 import JobParserDialog from './jobs/JobParserDialog';
+import TrackerCreatedStageModal from './jobs/TrackerCreatedStageModal';
 import DownloadModal from '@/components/ui/DownloadModal';
 import { useJobsPersistence } from '@/lib/hooks/useJobsPersistence';
 import { useJobsKeyboardShortcuts } from '@/lib/hooks/useJobsKeyboardShortcuts';
@@ -29,6 +31,10 @@ import { useFocusMode } from '@/lib/hooks/useFocusMode';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
+import {
+  shouldSkipTrackerCreatedStageModalForToday,
+  type TrackerCreatedStagePreview,
+} from '@/lib/utils/tracker-created-stage-modal';
 
 interface JobApplication {
   id: string;
@@ -94,6 +100,7 @@ const JobsTracker: React.FC = () => {
   const [journeys, setJourneys] = useState<CVJourney[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedJob, setSelectedJob] = useState<JobApplication | null>(null);
+  const [sidebarOpenContext, setSidebarOpenContext] = useState<TrackerSidebarOpenContext | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
@@ -155,6 +162,8 @@ const JobsTracker: React.FC = () => {
   const [isUpdatingJobStatus, setIsUpdatingJobStatus] = useState<Set<string>>(new Set());
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [downloadJobId, setDownloadJobId] = useState<string | null>(null);
+  const [trackerCreatedStagePreview, setTrackerCreatedStagePreview] = useState<TrackerCreatedStagePreview | null>(null);
+  const [pendingCreatedStageJob, setPendingCreatedStageJob] = useState<JobApplication | null>(null);
 
   // Load data on component mount
   useEffect(() => {
@@ -222,6 +231,67 @@ const JobsTracker: React.FC = () => {
       console.error('Error loading CV context:', error);
     }
   };
+
+  const loadTrackerGenerationPreview = useCallback(async () => {
+    if (!userId) {
+      return null;
+    }
+
+    try {
+      const response = await authenticatedFetch('/api/jobs/tracker-generation-preview');
+      const result = await response.json();
+      const preview = result?.preview;
+
+      if (result?.success && preview) {
+        const normalizedPreview: TrackerCreatedStagePreview = {
+          mode: preview.mode,
+          entitlementReasonCode: result.entitlementReasonCode,
+          title: preview.title,
+          summary: preview.summary,
+          supportMessage: preview.supportMessage,
+          aiCreditsRemaining: preview.aiCreditsRemaining,
+          aiCreditsLimit: preview.aiCreditsLimit,
+          isTailoredEligible: preview.isTailoredEligible
+        };
+        setTrackerCreatedStagePreview(normalizedPreview);
+        return normalizedPreview;
+      }
+    } catch (error) {
+      console.error('Failed to load tracker generation preview:', error);
+    }
+
+    const fallbackPreview: TrackerCreatedStagePreview = {
+      mode: 'tailored',
+      title: 'Documents will be generated',
+      summary: 'Moving this job to Created will start CV and cover letter generation for this tracker journey.',
+      supportMessage: 'The tracker will show whether the generated drafts are tailored or fallback once processing begins.'
+    };
+    setTrackerCreatedStagePreview(fallbackPreview);
+    return fallbackPreview;
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      loadTrackerGenerationPreview();
+    }
+  }, [loadTrackerGenerationPreview, userId]);
+
+  const shouldOpenCreatedStageModal = useCallback(async (job: JobApplication) => {
+    if (job.status !== 'draft') {
+      return false;
+    }
+
+    const preview = trackerCreatedStagePreview || await loadTrackerGenerationPreview();
+    if (
+      preview?.mode === 'fallback' &&
+      !shouldSkipTrackerCreatedStageModalForToday()
+    ) {
+      setPendingCreatedStageJob(job);
+      return true;
+    }
+
+    return false;
+  }, [loadTrackerGenerationPreview, trackerCreatedStagePreview]);
 
 
   const loadData = async () => {
@@ -666,7 +736,7 @@ const JobsTracker: React.FC = () => {
           interviews: [],
           followUps: [],
           attachments: []
-        } as JobApplication);
+        } as unknown as JobApplication);
         setShowAddJobModal(true);
       });
     } catch (error) {
@@ -682,15 +752,35 @@ const JobsTracker: React.FC = () => {
     toast.success(editingJob ? 'Job updated successfully!' : 'Job added successfully!');
   };
 
-  const handleJobClick = (job: JobApplication) => {
+  const handleJobClick = (job: JobApplication, openContext?: TrackerSidebarOpenContext) => {
     setSelectedJob(job);
+    setSidebarOpenContext(openContext || null);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setSelectedJob(null);
+    setSidebarOpenContext(null);
   };
+
+  useEffect(() => {
+    if (!showModal || !selectedJob) return;
+
+    const selectedJobId = selectedJob.id || selectedJob._id;
+    const refreshedJob = jobs.find(job => (job.id || job._id) === selectedJobId);
+
+    if (!refreshedJob) {
+      setShowModal(false);
+      setSelectedJob(null);
+      setSidebarOpenContext(null);
+      return;
+    }
+
+    if (refreshedJob !== selectedJob) {
+      setSelectedJob(refreshedJob);
+    }
+  }, [jobs, selectedJob, showModal]);
 
   const handleViewModeChange = (mode: 'kanban' | 'list') => {
     setViewMode(mode);
@@ -798,68 +888,83 @@ const JobsTracker: React.FC = () => {
     }
   };
 
-  const handleCreateJourney = async (job: JobApplication) => {
+  const moveDraftJobToCreated = useCallback(async (job: JobApplication) => {
+    const jobKey = job.id || job._id;
+    setIsUpdatingJobStatus(prev => new Set(prev).add(jobKey));
+
+    try {
+      const response = await authenticatedFetchWithUserId(`/api/jobs/${jobKey}`, userId || undefined, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'created'
+        }),
+      });
+
+      if (!response.ok) {
+        let errorData: any = {};
+        try {
+          const text = await response.text();
+          errorData = text ? JSON.parse(text) : {};
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+        }
+
+        const isCreditError =
+          (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
+          (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
+          (response.status === 500) ||
+          (errorData.error?.includes('limit') || errorData.error?.includes('credit'));
+
+        if (isCreditError) {
+          const limit = errorData.limit || 1;
+          const currentUsage = errorData.currentUsage || limit;
+          const creditsRemaining = Math.max(0, limit - currentUsage);
+
+          showExhaustionModal(
+            {
+              creditsRemaining,
+              limit,
+              reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
+            },
+            'pro_monthly'
+          );
+          throw new Error('This feature requires a Pro membership to create a journey');
+        }
+
+        console.error('Failed to move job to created stage:', response.status, errorData);
+        throw new Error(errorData.error || errorData.message || 'Failed to move job to created stage');
+      }
+
+      const result = await response.json();
+
+      window.dispatchEvent(new CustomEvent('creditsUpdated'));
+      toast.success(result?.trackerGeneration?.summary || 'CV and cover letter generation started.');
+      await loadData();
+
+      return result;
+    } finally {
+      setIsUpdatingJobStatus(prev => {
+        const next = new Set(prev);
+        next.delete(jobKey);
+        return next;
+      });
+    }
+  }, [loadData, showExhaustionModal, userId]);
+
+  const handleCreateJourney = useCallback(async (job: JobApplication) => {
     try {
       // IMPORTANT: Move job to 'created' status FIRST (this checks credits and creates journey automatically)
       // The API route will automatically create the journey when moving from draft to created
       if (job.status === 'draft') {
-        const response = await authenticatedFetchWithUserId(`/api/jobs/${job.id || job._id}`, userId || undefined, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            status: 'created'
-          }),
-        });
-
-        if (!response.ok) {
-          let errorData: any = {};
-          try {
-            const text = await response.text();
-            errorData = text ? JSON.parse(text) : {};
-          } catch (parseError) {
-            // Only log parse errors, not the actual error response
-            console.error('Failed to parse error response:', parseError);
-          }
-
-          // Check if this is a credit-related error
-          // When moving from draft to created, 500 errors are likely credit-related
-          const isCreditError =
-            (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
-            (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
-            (response.status === 500) || // Assume 500 errors when moving draft->created are credit issues
-            (errorData.error?.includes('limit') || errorData.error?.includes('credit'));
-
-          if (isCreditError) {
-            const limit = errorData.limit || 1;
-            const currentUsage = errorData.currentUsage || limit;
-            const creditsRemaining = Math.max(0, limit - currentUsage);
-
-            showExhaustionModal(
-              {
-                creditsRemaining,
-                limit,
-                reason: errorData.message || errorData.error || 'Buy premium plans to create automatic CV and CL with ATS for multiple jobs'
-              },
-              'pro_monthly'
-            );
-            throw new Error('This feature requires a Pro membership to create a journey');
-          }
-
-          // Only log non-credit errors to console
-          console.error('Failed to move job to created stage:', response.status, errorData);
-          throw new Error(errorData.error || errorData.message || 'Failed to move job to created stage');
+        const shouldPauseForInfo = await shouldOpenCreatedStageModal(job);
+        if (shouldPauseForInfo) {
+          return;
         }
 
-        // Job status updated successfully - API route automatically creates journey
-        toast.success('CV and Cover Letter journey created!');
-
-        // Dispatch credit update event to refresh membership card
-        window.dispatchEvent(new CustomEvent('creditsUpdated'));
-
-        // Refresh data
-        await loadData();
+        await moveDraftJobToCreated(job);
       } else {
         // Job is already in 'created' or later stage, check if journey exists
         const checkJourneyResponse = await authenticatedFetchWithUserId(`/api/application-journey?jobId=${job.id || job._id}`, userId || undefined, {
@@ -911,13 +1016,16 @@ const JobsTracker: React.FC = () => {
       console.error('Error creating journey:', error);
 
       // Don't show toast if it's a credit error (paywall already shown)
-      if (!error?.message?.includes('Insufficient credits')) {
+      if (
+        !error?.message?.includes('Insufficient credits') &&
+        !error?.message?.includes('requires a Pro membership')
+      ) {
         toast.error(error?.message || 'Failed to create journey. Please try again.');
       }
 
       throw error;
     }
-  };
+  }, [loadData, moveDraftJobToCreated, shouldOpenCreatedStageModal, userId]);
 
   const handleJobStatusUpdate = async (jobId: string, newStatus: string) => {
     try {
@@ -1017,6 +1125,14 @@ const JobsTracker: React.FC = () => {
     }
 
     const originalStatus = job.status;
+    const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
+
+    if (isDraftToCreated) {
+      const shouldPauseForInfo = await shouldOpenCreatedStageModal(job);
+      if (shouldPauseForInfo) {
+        return;
+      }
+    }
 
     // Mark job as being updated to prevent data refresh from overwriting
     setIsUpdatingJobStatus(prev => new Set(prev).add(currentDraggedJob));
@@ -1048,7 +1164,6 @@ const JobsTracker: React.FC = () => {
 
           // Check if this is a credit-related error
           // When moving from draft to created, 500 errors are likely credit-related
-          const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
           const isCreditError =
             (response.status === 403 && (errorData.requiresUpgrade || errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
             (response.status === 500 && (errorData.error?.includes('limit exceeded') || errorData.error?.includes('insufficient credits') || errorData.error?.includes('Plan limit exceeded'))) ||
@@ -1094,7 +1209,6 @@ const JobsTracker: React.FC = () => {
           const result = await response.json();
           if (result.error || (result.success === false)) {
             // Check if this is a credit-related error
-            const isDraftToCreated = originalStatus === 'draft' && newStatus === 'created';
             const isCreditError =
               result.requiresUpgrade ||
               result.error?.includes('limit exceeded') ||
@@ -1476,6 +1590,7 @@ const JobsTracker: React.FC = () => {
           journeys={getJobJourneys(selectedJob.id)}
           onClose={handleCloseModal}
           onRefresh={loadData}
+          openContext={sidebarOpenContext || undefined}
         />
       )}
 
@@ -1493,6 +1608,27 @@ const JobsTracker: React.FC = () => {
           limit={paywallInfo.limit}
         />
       )}
+
+      <TrackerCreatedStageModal
+        isOpen={Boolean(pendingCreatedStageJob)}
+        onClose={() => setPendingCreatedStageJob(null)}
+        onConfirm={async () => {
+          if (!pendingCreatedStageJob) {
+            return;
+          }
+
+          const jobToCreate = pendingCreatedStageJob;
+          setPendingCreatedStageJob(null);
+          await moveDraftJobToCreated(jobToCreate);
+        }}
+        jobTitle={pendingCreatedStageJob?.jobTitle || pendingCreatedStageJob?.title}
+        company={pendingCreatedStageJob?.company}
+        preview={trackerCreatedStagePreview}
+        isSubmitting={Boolean(
+          pendingCreatedStageJob &&
+          isUpdatingJobStatus.has(pendingCreatedStageJob.id || pendingCreatedStageJob._id)
+        )}
+      />
 
       {/* Download Modal */}
       {showDownloadModal && downloadJobId && (
@@ -1552,4 +1688,3 @@ const JobsTracker: React.FC = () => {
 };
 
 export default JobsTracker;
-

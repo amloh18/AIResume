@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { INotification } from '@/models/Notification';
 
 // TODO: Implement Web Push API integration

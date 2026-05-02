@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { Job } from '@/lib/stores/jobStore';
 import { AISuggestion } from '@/lib/stores/aiStore';

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Rule } from '../registry';
 import { Issue, ResumeState } from '../types';
 

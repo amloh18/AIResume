@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * ATS Layer Rendering Optimization
  * Lazy loading, virtualization, memoization

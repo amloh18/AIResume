@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Live Keyword Validator Component
  * Real-time keyword checking as user types

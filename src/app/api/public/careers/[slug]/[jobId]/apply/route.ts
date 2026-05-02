@@ -3,9 +3,9 @@ import { getConnection } from '@/lib/database';
 import { robustDocumentParser } from '@/app/api/cv/parse/route';
 import B2BCandidate from '@/models/b2b/B2BCandidate';
 
-export async function POST(req: NextRequest, { params }: { params: { slug: string, jobId: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string, jobId: string }> }) {
   try {
-    const { tenantId, jobId } = params as any; // Passed as query params from the client actually, or we can resolve it again.
+    const { jobId } = await params;
     
     const formData = await req.formData();
     const file = formData.get('file') as File;
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       cvData,
       status: 'new',
       metadata: {
-        jobId: params.jobId,
+        jobId,
         source: 'careers_page'
       }
     });

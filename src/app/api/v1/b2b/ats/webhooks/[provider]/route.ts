@@ -4,8 +4,8 @@ import B2BIntegration from '@/models/b2b/B2BIntegration';
 import B2BCandidate from '@/models/b2b/B2BCandidate';
 import crypto from 'crypto';
 
-export async function POST(req: Request, { params }: { params: { provider: string } }) {
-  const { provider } = params;
+export async function POST(req: Request, { params }: { params: Promise<{ provider: string }> }) {
+  const { provider } = await params;
 
   if (!['greenhouse', 'lever'].includes(provider)) {
     return NextResponse.json({ error: 'Invalid ATS provider' }, { status: 400 });

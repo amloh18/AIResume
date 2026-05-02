@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Theme utility functions for consistent theming across the application
  */

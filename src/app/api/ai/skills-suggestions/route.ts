@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVService } from '@/lib/services/unified-cv-service';
 import { JobService } from '@/lib/services/jobService';

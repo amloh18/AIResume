@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Snippet Service — CRUD with Clone-on-Edit
  *

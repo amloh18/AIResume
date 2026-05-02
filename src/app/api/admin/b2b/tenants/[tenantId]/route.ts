@@ -3,10 +3,10 @@ import { getConnection } from '@/lib/database';
 import Tenant from '@/models/b2b/Tenant';
 import { log } from '@/lib/edge-logger';
 
-export async function PATCH(req: NextRequest, { params }: { params: { tenantId: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ tenantId: string }> }) {
   try {
     await getConnection();
-    const { tenantId } = params;
+    const { tenantId } = await params;
     const body = await req.json();
     const { isActive, rateLimit, subscriptionTier } = body;
 

@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -15,13 +15,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const { role } = body;
 
     await getConnection();
 
     const userToUpdate = await User.findOneAndUpdate(
-      { _id: params.id, 'b2b.tenantId': adminUser.b2b.tenantId },
+      { _id: id, 'b2b.tenantId': adminUser.b2b.tenantId },
       { $set: { 'b2b.role': role } },
       { new: true }
     );
@@ -36,7 +37,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const authResult = await getAuthenticatedUser();
     if (!authResult) {
@@ -48,8 +49,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
       return NextResponse.json({ error: 'Forbidden. Admin access required.' }, { status: 403 });
     }
 
+    const { id } = await params;
     // Don't let the admin remove themselves
-    if (adminUser._id.toString() === params.id) {
+    if (adminUser._id.toString() === id) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 });
     }
 
@@ -57,7 +59,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     
     // Remove the b2b object entirely from the user
     const userToRemove = await User.findOneAndUpdate(
-      { _id: params.id, 'b2b.tenantId': adminUser.b2b.tenantId },
+      { _id: id, 'b2b.tenantId': adminUser.b2b.tenantId },
       { $unset: { b2b: 1 } },
       { new: true }
     );

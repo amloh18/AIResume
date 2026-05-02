@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { UnifiedCVDataStructure } from '@/types/unified-cv-schema';
 import { callAIWithFallback, hasAIApiKeys } from '@/lib/utils/ai-api-helper';

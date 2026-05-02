@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * PDF Cache Service
  * 

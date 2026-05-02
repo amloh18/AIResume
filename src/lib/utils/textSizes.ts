@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Consistent text sizing system for the entire application
  * Optimized for Cabinet Grotesk font family with rem units

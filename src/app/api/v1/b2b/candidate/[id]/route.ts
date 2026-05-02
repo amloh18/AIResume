@@ -9,7 +9,7 @@ import { isS3Url, extractS3KeyFromUrl } from '@/lib/utils/s3-utils';
 
 export async function DELETE(
   req: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   return withB2BAuth(req, context, async (req, context, tenant, apiKey) => {
     try {
@@ -77,4 +77,3 @@ export async function DELETE(
     }
   });
 }
-

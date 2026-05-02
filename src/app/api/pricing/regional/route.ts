@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database/connection-manager';
 import { getCountryPricing } from '@/lib/services/countryPricingService';

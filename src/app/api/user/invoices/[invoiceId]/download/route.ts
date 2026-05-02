@@ -11,7 +11,7 @@ import InvoiceItem from '@/models/InvoiceItem';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { invoiceId: string } }
+  { params }: { params: Promise<{ invoiceId: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,9 +34,11 @@ export async function GET(
       );
     }
 
+    const { invoiceId } = await params;
+
     // Find invoice
     const invoice = await Invoice.findOne({
-      _id: params.invoiceId,
+      _id: invoiceId,
       userId: user._id
     });
 
@@ -102,4 +104,3 @@ export async function GET(
     );
   }
 }
-

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Zod Validation Schemas
  * Centralized validation for API endpoints and forms

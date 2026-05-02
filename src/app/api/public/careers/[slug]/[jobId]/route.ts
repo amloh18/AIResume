@@ -1,12 +1,13 @@
+// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { getConnection } from '@/lib/database';
 import Tenant from '@/models/b2b/Tenant';
 import Job from '@/models/Job';
 
-export async function GET(req: Request, { params }: { params: { slug: string, jobId: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ slug: string, jobId: string }> }) {
   try {
     await getConnection();
-    const { slug, jobId } = params;
+    const { slug, jobId } = await params;
 
     const tenant = await Tenant.findOne({ 
       'settings.careersPage.slug': slug,

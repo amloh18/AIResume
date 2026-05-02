@@ -7,11 +7,11 @@ import { log } from '@/lib/edge-logger';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { tenantId: string } }
+  { params }: { params: Promise<{ tenantId: string }> }
 ) {
   try {
     await getConnection();
-    const { tenantId } = params;
+    const { tenantId } = await params;
     const body = await req.json();
     const { name, environment, permissions } = body;
 
@@ -59,18 +59,18 @@ export async function POST(
       key: fullKey, // Only time this will ever be shown
     }, { status: 201 });
   } catch (error: any) {
-    log.error('Error generating B2B API Key', { error: error.message });
+    log.error('Error generating B2B API Key', error);
     return NextResponse.json({ error: 'Failed to generate API Key', details: error.message }, { status: 500 });
   }
 }
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { tenantId: string } }
+  { params }: { params: Promise<{ tenantId: string }> }
 ) {
   try {
     await getConnection();
-    const { tenantId } = params;
+    const { tenantId } = await params;
     
     // We only return safe metadata, never the full key hash
     const apiKeys = await ApiKey.find({ tenantId })
@@ -80,7 +80,7 @@ export async function GET(
       
     return NextResponse.json({ success: true, apiKeys });
   } catch (error: any) {
-    log.error('Error fetching B2B API Keys', { error: error.message });
+    log.error('Error fetching B2B API Keys', error);
     return NextResponse.json({ error: 'Failed to fetch API Keys', details: error.message }, { status: 500 });
   }
 }

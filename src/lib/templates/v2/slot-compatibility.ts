@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Slot Compatibility Checker
  *

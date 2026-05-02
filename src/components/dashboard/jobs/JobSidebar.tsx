@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { authenticatedFetch, authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
-  Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp
+  Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
+  Eye, ArrowRight, Sparkles
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -24,6 +25,17 @@ import { useCreditExhaustionHandler } from '@/hooks/useCreditExhaustionHandler';
 import { useUpgradePopupTrigger } from '@/lib/hooks/useUpgradePopupTrigger';
 import UpgradeCard from '../UpgradeCard';
 import { isJobStale, getFollowUpNudge, calculateSuccessProbability, getMarketSalaryComparison } from '@/lib/utils/jobIntelligence';
+import TrackerCreatedStageModal from './TrackerCreatedStageModal';
+import {
+  shouldSkipTrackerCreatedStageModalForToday,
+  type TrackerCreatedStagePreview,
+} from '@/lib/utils/tracker-created-stage-modal';
+import {
+  buildTrackerSidebarConfig,
+  type TrackerSidebarActionId,
+  type TrackerSidebarActionPayload,
+  type TrackerSidebarOpenContext,
+} from './trackerSidebarConfig';
 
 interface JobApplication {
   id: string;
@@ -77,21 +89,15 @@ interface JobSidebarProps {
   journeys: CVJourney[];
   onClose: () => void;
   onRefresh: () => void;
-}
-
-interface TrackerGenerationPreview {
-  mode: 'tailored' | 'fallback';
-  entitlementReasonCode?: 'tailored_available' | 'ai_credits_exhausted' | 'subscription_inactive';
-  title: string;
-  summary: string;
-  supportMessage: string;
+  openContext?: TrackerSidebarOpenContext;
 }
 
 const JobSidebar: React.FC<JobSidebarProps> = ({
   job,
   journeys: initialJourneys,
   onClose,
-  onRefresh
+  onRefresh,
+  openContext,
 }) => {
   const { user } = useUnifiedAuth();
   const router = useRouter();
@@ -110,7 +116,12 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
   const [interviewPrepOpen, setInterviewPrepOpen] = useState(false);
-  const [trackerGenerationPreview, setTrackerGenerationPreview] = useState<TrackerGenerationPreview | null>(null);
+  const [trackerGenerationPreview, setTrackerGenerationPreview] = useState<TrackerCreatedStagePreview | null>(null);
+  const [showCreatedStageModal, setShowCreatedStageModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsModalView, setDetailsModalView] = useState<'details' | 'insights'>('details');
+  const [activeActionId, setActiveActionId] = useState<TrackerSidebarActionId | null>(null);
+  const [activeActionPayload, setActiveActionPayload] = useState<TrackerSidebarActionPayload | null>(null);
 
   // EditJobSidebar state for layered sidebar
   const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
@@ -119,6 +130,7 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [showEmailSentDialog, setShowEmailSentDialog] = useState(false);
   const [currentTimelineIndex, setCurrentTimelineIndex] = useState<number | null>(null);
   const [emailSentStatus, setEmailSentStatus] = useState<Record<number, boolean>>({});
+  const appliedOpenContextRef = useRef<string | null>(null);
 
   // Dynamic data hooks
   const jobId = job.id || job._id;
@@ -132,40 +144,47 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const marketAverage = 75000; // Generic fallback
   const salaryComp = getMarketSalaryComparison(job.salary, marketAverage);
 
-  useEffect(() => {
-    const loadTrackerGenerationPreview = async () => {
-      if (!user?.id || job.status !== 'draft') {
-        return;
-      }
+  const loadTrackerGenerationPreview = useCallback(async () => {
+    if (!user?.id || job.status !== 'draft') {
+      return null;
+    }
 
-      try {
-        const response = await authenticatedFetch('/api/jobs/tracker-generation-preview');
-        const result = await response.json();
-        const preview = result?.preview;
+    try {
+      const response = await authenticatedFetch('/api/jobs/tracker-generation-preview');
+      const result = await response.json();
+      const preview = result?.preview;
 
-        if (result?.success && preview) {
-          setTrackerGenerationPreview({
-            mode: preview.mode,
-            entitlementReasonCode: result.entitlementReasonCode,
-            title: preview.title,
-            summary: preview.summary,
-            supportMessage: preview.supportMessage
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('Failed to load tracker generation preview:', error);
-        setTrackerGenerationPreview({
-          mode: 'tailored',
-          title: 'Documents will be generated',
-          summary: 'Moving this job to Created will start CV and cover letter generation for this tracker journey.',
-          supportMessage: 'The tracker will show whether the generated drafts are tailored or fallback once processing begins.'
-        });
+      if (result?.success && preview) {
+        const normalizedPreview: TrackerCreatedStagePreview = {
+          mode: preview.mode,
+          entitlementReasonCode: result.entitlementReasonCode,
+          title: preview.title,
+          summary: preview.summary,
+          supportMessage: preview.supportMessage,
+          aiCreditsRemaining: preview.aiCreditsRemaining,
+          aiCreditsLimit: preview.aiCreditsLimit,
+          isTailoredEligible: preview.isTailoredEligible
+        };
+        setTrackerGenerationPreview(normalizedPreview);
+        return normalizedPreview;
       }
+    } catch (error) {
+      console.error('Failed to load tracker generation preview:', error);
+    }
+
+    const fallbackPreview: TrackerCreatedStagePreview = {
+      mode: 'tailored',
+      title: 'Documents will be generated',
+      summary: 'Moving this job to Created will start CV and cover letter generation for this tracker journey.',
+      supportMessage: 'The tracker will show whether the generated drafts are tailored or fallback once processing begins.'
     };
-
-    loadTrackerGenerationPreview();
+    setTrackerGenerationPreview(fallbackPreview);
+    return fallbackPreview;
   }, [job.status, user?.id]);
+
+  useEffect(() => {
+    loadTrackerGenerationPreview();
+  }, [loadTrackerGenerationPreview]);
 
   const draftToCreatedMessaging = useMemo(() => {
     return trackerGenerationPreview || {
@@ -659,6 +678,76 @@ ${userName}`
     return timelines[job.status as keyof typeof timelines] || [];
   };
 
+  const stageItems = useMemo(() => {
+    const items = [
+      { key: 'draft', label: 'Draft' },
+      { key: 'created', label: 'Created' },
+      { key: 'applied', label: 'Applied' },
+      { key: 'screening', label: 'Screening' },
+      { key: 'interview', label: 'Interview' },
+      { key: 'offer', label: 'Offer' },
+      { key: 'accepted', label: 'Accepted' }
+    ];
+
+    const currentIndex = items.findIndex(item => item.key === job.status);
+
+    return items.map((item, index) => ({
+      ...item,
+      isCurrent: item.key === job.status,
+      isCompleted: currentIndex > -1 ? index < currentIndex : false,
+      isUpcoming: currentIndex > -1 ? index > currentIndex : true
+    }));
+  }, [job.status]);
+
+  const terminalStageLabel = useMemo(() => {
+    if (job.status === 'rejected') return 'Rejected';
+    if (job.status === 'withdrawn') return 'Withdrawn';
+    return null;
+  }, [job.status]);
+
+  const primaryJourney = useMemo(() => {
+    if (!journeys.length) return null;
+
+    return [...journeys]
+      .filter(journey => journey.id)
+      .sort((a, b) => new Date(b.metadata?.updatedAt || b.updatedAt || 0).getTime() - new Date(a.metadata?.updatedAt || a.updatedAt || 0).getTime())[0];
+  }, [journeys]);
+
+  const generationState = primaryJourney?.generationState;
+  const keywordMatchScore = insights?.keywordMatchScore ?? job.atsScore ?? 0;
+  const followUpTimeline = useMemo(() => getFollowUpTimeline(job), [job]);
+  const activeJourneyForPayload = useMemo(() => {
+    if (!activeActionPayload?.journeyId) {
+      return primaryJourney;
+    }
+
+    return journeys.find(journey => journey.id === activeActionPayload.journeyId) || primaryJourney;
+  }, [activeActionPayload?.journeyId, journeys, primaryJourney]);
+  const isRecruiterVisibilityStage = job.status === 'applied' || job.status === 'screening';
+  const hasRecruiterEmail = Boolean(job.contactDetails?.email);
+  const recruiterVisibilitySteps = useMemo(() => {
+    if (!isRecruiterVisibilityStage) return [];
+
+    return [
+      'You can send a ready email for high chances of visibility to the recruiter.',
+      hasRecruiterEmail
+        ? `Current path: we can open a draft to ${job.contactDetails?.email} with the role context already filled in.`
+        : 'Current limit: no recruiter email is saved for this job yet, so the draft opens without a recipient.',
+      hasRecruiterEmail
+        ? 'Manual fallback: review the draft, send it from your inbox, then log the follow-up here.'
+        : 'Manual fallback: copy the draft, add a recruiter email in Job Details, or send the same message on LinkedIn.',
+    ];
+  }, [hasRecruiterEmail, isRecruiterVisibilityStage, job.contactDetails?.email]);
+  const formatStageLabel = useCallback((stage?: string) => {
+    if (!stage) return 'Unknown stage';
+    return stage.charAt(0).toUpperCase() + stage.slice(1);
+  }, []);
+
+  const openDetailsView = (view: 'details' | 'insights') => {
+    setDetailsModalView(view);
+    setShowDetailsModal(true);
+  };
+
   const handleCreateJourney = async () => {
     if (isCreatingJourney) return; // Prevent multiple clicks
 
@@ -822,7 +911,7 @@ ${userName}`
     console.log('✅ ApplicationJourneyModal - Journey updated in local state');
   };
 
-  const handleMoveToCreated = async () => {
+  const executeMoveToCreated = async () => {
     if (isMovingToCreated || !user?.id) return;
 
     try {
@@ -907,6 +996,21 @@ ${userName}`
     } finally {
       setIsMovingToCreated(false);
     }
+  };
+
+  const handleMoveToCreated = async () => {
+    if (isMovingToCreated || !user?.id) return;
+
+    const preview = trackerGenerationPreview || await loadTrackerGenerationPreview();
+    if (
+      preview?.mode === 'fallback' &&
+      !shouldSkipTrackerCreatedStageModalForToday()
+    ) {
+      setShowCreatedStageModal(true);
+      return;
+    }
+
+    await executeMoveToCreated();
   };
 
 
@@ -1235,6 +1339,129 @@ ${userName}`
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
+  const sidebarConfig = useMemo(() => buildTrackerSidebarConfig({
+    job,
+    primaryJourney: primaryJourney as any,
+    trackerGenerationPreview,
+    insights,
+    successProb,
+    keywordMatchScore,
+    nudge,
+    followUpAction: followUpTimeline[0]?.action || null,
+    formattedDeadline: formatJobDate(job.deadline, 'No deadline set'),
+    formattedJobUrl: formatJobUrl(job.jobUrl, 'No URL provided'),
+    handlers: {
+      move_to_created: handleMoveToCreated,
+      preview_free_output: () => setShowCreatedStageModal(true),
+      edit_job: handleOpenEditModal,
+      create_journey: handleCreateJourney,
+      continue_journey: () => primaryJourney && handleContinueJourney(primaryJourney as any),
+      open_details: () => openDetailsView('details'),
+      open_insights: () => openDetailsView('insights'),
+      open_interview_prep: () => setInterviewPrepOpen(true),
+      archive_job: handleArchiveJob,
+      duplicate_job: handleDuplicateJob,
+    },
+  }), [
+    job,
+    primaryJourney,
+    trackerGenerationPreview,
+    insights,
+    successProb,
+    keywordMatchScore,
+    nudge,
+    followUpTimeline,
+    handleMoveToCreated,
+    handleOpenEditModal,
+    handleCreateJourney,
+    handleArchiveJob,
+    handleDuplicateJob,
+  ]);
+
+  const runSidebarAction = useCallback(async (actionId: TrackerSidebarActionId) => {
+    const payload = sidebarConfig.actionPayloads[actionId] || null;
+    setActiveActionId(actionId);
+    setActiveActionPayload(payload);
+
+    switch (actionId) {
+      case 'move_to_created':
+        await handleMoveToCreated();
+        return;
+      case 'preview_free_output':
+        setShowCreatedStageModal(true);
+        return;
+      case 'edit_job':
+        handleOpenEditModal();
+        return;
+      case 'create_journey':
+        await handleCreateJourney();
+        return;
+      case 'continue_journey':
+        if (primaryJourney) {
+          handleContinueJourney(primaryJourney as any);
+        }
+        return;
+      case 'open_details':
+        openDetailsView('details');
+        return;
+      case 'open_insights':
+        openDetailsView('insights');
+        return;
+      case 'open_interview_prep':
+        setInterviewPrepOpen(true);
+        return;
+      case 'archive_job':
+        await handleArchiveJob();
+        return;
+      case 'duplicate_job':
+        await handleDuplicateJob();
+        return;
+      default:
+        return;
+    }
+  }, [
+    handleArchiveJob,
+    handleCreateJourney,
+    handleDuplicateJob,
+    handleMoveToCreated,
+    handleOpenEditModal,
+    openDetailsView,
+    primaryJourney,
+    sidebarConfig.actionPayloads,
+  ]);
+
+  useEffect(() => {
+    if (!openContext) {
+      appliedOpenContextRef.current = null;
+      return;
+    }
+
+    const contextKey = JSON.stringify(openContext);
+    if (appliedOpenContextRef.current === contextKey) {
+      return;
+    }
+
+    appliedOpenContextRef.current = contextKey;
+
+    if (openContext.preferredDetailsView) {
+      setActiveActionId(openContext.preferredDetailsView === 'insights' ? 'open_insights' : 'open_details');
+      setActiveActionPayload(
+        sidebarConfig.actionPayloads[
+          openContext.preferredDetailsView === 'insights' ? 'open_insights' : 'open_details'
+        ] || null
+      );
+      openDetailsView(openContext.preferredDetailsView);
+      return;
+    }
+
+    if (openContext.highlightAction === 'open_interview_prep' && job.status === 'interview') {
+      setActiveActionId('open_interview_prep');
+      setActiveActionPayload(sidebarConfig.actionPayloads.open_interview_prep || null);
+      setInterviewPrepOpen(true);
+    }
+  }, [job.status, openContext, sidebarConfig.actionPayloads]);
+
+  const journeyCardData = sidebarConfig.journeyCard;
   return (
     <AnimatePresence>
       <>
@@ -1327,512 +1554,342 @@ ${userName}`
 
           {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
-            <div className="space-y-6 px-6 py-4">
-              {/* Row 1: CV Journeys Section or Move to Created Button (for draft jobs) */}
-              <div>
-                {job.status === 'draft' ? (
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-6">
-                    <div className="text-center">
-                      <Target size={48} className="text-gray-400 dark:text-white/40 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        Start CV Journey
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-white/70 mb-4 max-w-md mx-auto">
-                        Move this job to the "Created" stage to start your CV journey. This will:
-                      </p>
-                      <ul className="text-left text-sm text-gray-600 dark:text-white/70 mb-6 space-y-2 max-w-md mx-auto">
-                        <li className="flex items-start gap-2">
-                          <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
-                          <span>{draftToCreatedMessaging.summary}</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
-                          <span>Run ATS analysis to optimize your application</span>
-                        </li>
-                        <li className="flex items-start gap-2">
-                          <CheckCircle size={16} className="text-lime-500 dark:text-[#80FF00] flex-shrink-0 mt-0.5" />
-                          <span>{draftToCreatedMessaging.supportMessage}</span>
-                        </li>
-                      </ul>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                        {draftToCreatedMessaging.mode === 'tailored'
-                          ? 'Tailored generation is currently available for this tracker journey.'
-                          : draftToCreatedMessaging.entitlementReasonCode === 'ai_credits_exhausted'
-                            ? 'Tracker creation is still available, but this journey will start with non-tailored fallback drafts because your tailoring allowance is exhausted right now.'
-                            : 'Tracker creation is still available, but this journey will start with non-tailored fallback drafts because tailored generation is not included in your current access.'}
-                      </p>
-                      <motion.button
-                        onClick={handleMoveToCreated}
-                        disabled={isMovingToCreated}
-                        className="px-6 py-3 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-                        whileHover={{ scale: isMovingToCreated ? 1 : 1.02 }}
-                        whileTap={{ scale: isMovingToCreated ? 1 : 0.98 }}
-                      >
-                        {isMovingToCreated ? 'Moving to Created...' : 'Move to Created Stage'}
-                      </motion.button>
-                    </div>
+            <div className="space-y-6 px-6 py-5 pb-8">
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Stages</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Application timeline</h3>
                   </div>
-                ) : (
-                  <>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">🎯 CV Journeys for this Job</h3>
+                  {terminalStageLabel && (
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                      {terminalStageLabel}
+                    </span>
+                  )}
+                </div>
 
-                    {journeys.length > 0 ? (
-                      <div className="space-y-4">
-                        {journeys
-                          .filter(cvJourney => cvJourney.id)
-                          .map((cvJourney, index) => {
-                            const journey = {
-                              id: cvJourney.id,
-                              jobId: cvJourney.jobId,
-                              jobTitle: cvJourney.jobTitle,
-                              company: cvJourney.company,
-                              status: cvJourney.status as 'in-progress' | 'completed',
-                              currentStep: cvJourney.currentStep,
-                              totalSteps: cvJourney.totalSteps,
-                              createdAt: cvJourney.metadata.createdAt instanceof Date
-                                ? cvJourney.metadata.createdAt.toISOString()
-                                : new Date(cvJourney.metadata.createdAt).toISOString(),
-                              updatedAt: cvJourney.metadata.updatedAt instanceof Date
-                                ? cvJourney.metadata.updatedAt.toISOString()
-                                : new Date(cvJourney.metadata.updatedAt).toISOString(),
-                              atsScore: cvJourney.atsScore,
-                              cvId: cvJourney.cvId,
-                              coverLetterId: cvJourney.coverLetterId,
-                              generationState: cvJourney.generationState
-                            };
-
-                            return (
-                              <JourneyTimelineCard
-                                key={journey.id || `journey-${index}`}
-                                journey={journey}
-                                onResume={handleContinueJourney}
-                                onDownload={handleApplyNow}
-                                onRefresh={onRefresh}
-                                onUpdateJourney={handleUpdateJourney}
-                              />
-                            );
-                          })}
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-[#1b2218]">
+                  <div className="grid gap-3 md:grid-cols-7">
+                    {stageItems.map((stage, index) => (
+                      <div key={stage.key} className="relative">
+                        {index < stageItems.length - 1 && (
+                          <div className={`absolute left-[calc(50%+18px)] right-[-18px] top-4 hidden h-[2px] md:block ${
+                            stage.isCompleted ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-white/10'
+                          }`} />
+                        )}
+                        <div className={`rounded-2xl border px-3 py-3 transition-colors ${
+                          stage.isCurrent
+                            ? 'border-blue-200 bg-blue-50 dark:border-blue-500/40 dark:bg-blue-500/10'
+                            : stage.isCompleted
+                              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10'
+                              : 'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-[#20281d]'
+                        }`}>
+                          <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
+                            stage.isCurrent
+                              ? 'bg-blue-600 text-white'
+                              : stage.isCompleted
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-gray-200 text-gray-600 dark:bg-white/10 dark:text-gray-300'
+                          }`}>
+                            {stage.isCompleted ? <CheckCircle size={14} /> : index + 1}
+                          </div>
+                          <p className={`text-sm font-semibold capitalize ${
+                            stage.isCurrent ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
+                          }`}>
+                            {stage.label}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {stage.isCurrent ? 'Current stage' : stage.isCompleted ? 'Completed' : 'Upcoming'}
+                          </p>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Target size={32} className="text-gray-400 dark:text-white/40 mx-auto mb-3" />
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">No CV Journeys Started</h4>
-                        <p className="text-gray-600 dark:text-white/70 text-xs mb-3">
-                          Create your first CV journey to start preparing for this job application.
-                        </p>
-                        <motion.button
-                          onClick={handleCreateJourney}
-                          disabled={isCreatingJourney}
-                          className="px-4 py-2 bg-[#80FF00] hover:bg-[#70e600] text-black rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          whileHover={{ scale: isCreatingJourney ? 1 : 1.02 }}
-                          whileTap={{ scale: isCreatingJourney ? 1 : 0.98 }}
-                        >
-                          {isCreatingJourney ? 'Creating Journey...' : 'Create New CV Journey'}
-                        </motion.button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-
-              {/* Row 2: Follow-up & Templates Section - Horizontal Ribbon */}
-              {(isFollowUpNeeded(job) || job.status === 'applied' || job.status === 'screening' || job.status === 'interview' || job.status === 'offer' || job.status === 'accepted' || job.status === 'rejected') && (
-                <div>
-                  <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                    {/* Header */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <Mail size={18} className="text-lime-600 dark:text-[#80FF00]" />
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Follow-up & Templates</h3>
-                    </div>
-
-                    {/* Horizontal Timeline Ribbon */}
-                    {getFollowUpTimeline(job).length > 0 && (
-                      <div className="flex flex-col sm:flex-row gap-4">
-                        {getFollowUpTimeline(job).map((timeline, index) => {
-                          const isEmailSent = emailSentStatus[index] === true;
-                          return (
-                            <div
-                              key={index}
-                              className={`flex-1 rounded-lg p-4 border shadow-sm transition-colors ${isEmailSent
-                                ? 'bg-lime-50 dark:bg-lime-500/10 border-lime-300 dark:border-lime-500/50'
-                                : 'bg-white dark:bg-[#1A201A] border-lime-200 dark:border-lime-500/30'
-                                }`}
-                            >
-                              <div className="flex items-start gap-3 mb-3">
-                                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isEmailSent
-                                  ? 'bg-lime-500 dark:bg-lime-500/30'
-                                  : 'bg-lime-100 dark:bg-lime-500/20'
-                                  }`}>
-                                  <span className={`font-semibold text-xs ${isEmailSent
-                                    ? 'text-white'
-                                    : 'text-lime-600 dark:text-[#80FF00]'
-                                    }`}>
-                                    {index + 1}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className={`text-xs font-semibold mb-1 ${isEmailSent
-                                    ? 'text-lime-700 dark:text-lime-300'
-                                    : 'text-lime-600 dark:text-[#80FF00]'
-                                    }`}>
-                                    {timeline.day}
-                                  </div>
-                                  <div className="text-sm text-gray-700 dark:text-gray-300">
-                                    {timeline.action}
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Action Button - Email or View Prep */}
-                              {job.status === 'interview' && timeline.action.includes('View Prep') ? (
-                                <motion.button
-                                  onClick={() => setInterviewPrepOpen(true)}
-                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-500/80 dark:bg-purple-600/60 hover:bg-purple-600/80 dark:hover:bg-purple-700/70 text-white rounded-lg text-xs font-medium transition-colors"
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  <Target size={14} />
-                                  View Prep
-                                </motion.button>
-                              ) : getEmailTemplate(job) ? (
-                                <motion.button
-                                  onClick={() => handleOpenEmail(index)}
-                                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-lime-500/80 dark:bg-[#80FF00]/60 hover:bg-lime-600/80 dark:hover:bg-[#80FF00]/70 text-white rounded-lg text-xs font-medium transition-colors"
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                >
-                                  <Mail size={14} />
-                                  Send Email
-                                </motion.button>
-                              ) : null}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-              )}
+              </section>
 
-              {/* Row 3: Two Column Layout */}
-              <div className="flex flex-col lg:flex-row gap-6 pb-6 min-w-0 w-full">
-                {/* Column 1: Job Description, Job Info, Notes */}
-                <div className="w-full lg:flex-[3] lg:flex-shrink min-w-0">
-                  <div className="space-y-6">
-                    {/* Job Description */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Description</h3>
-                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                        <div className="text-gray-700 dark:text-gray-300 text-sm space-y-3 max-h-96 overflow-y-auto scrollbar-hide">
-                          {job.jobDescription ? (
-                            <div className="whitespace-pre-wrap font-mono text-xs">
-                              {job.jobDescription}
-                            </div>
-                          ) : (
-                            <div className="text-center py-8">
-                              <FileText size={48} className="text-gray-500 mx-auto mb-4" />
-                              <p className="text-gray-500 text-sm">
-                                No job description provided yet.
-                              </p>
-                              <p className="text-gray-600 text-xs mt-2">
-                                Add a job description in the job details to see it here.
-                              </p>
-                            </div>
-                          )}
+              <section className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Journey Card</p>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">What matters right now</h3>
+                  </div>
+                  <span className={`rounded-full px-3 py-1 text-xs font-semibold ${journeyCardData.accentClasses}`}>
+                    {journeyCardData.eyebrow}
+                  </span>
+                </div>
+
+                <div className={`rounded-[28px] border p-6 shadow-sm ${journeyCardData.toneClasses}`}>
+                  <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-emerald-600 shadow-sm dark:bg-white/10">
+                          {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
+                        </div>
+                        <div>
+                          <h4 className="text-2xl font-semibold text-gray-900 dark:text-white">{journeyCardData.title}</h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-300">{journeyCardData.summary}</p>
                         </div>
                       </div>
-                    </div>
 
-                    {/* Job Info */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Job Info</h3>
-                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                        <div className="space-y-4">
-                          {job.location && (
-                            <div className="flex items-center gap-2">
-                              <MapPin size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Location</span>
-                                <p className="text-sm text-gray-900 dark:text-white">{job.location}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {job.jobUrl && (
-                            <div className="flex items-center gap-2">
-                              <ExternalLink size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Job URL</span>
-                                <div className="flex items-center gap-2">
-                                  <a
-                                    href={job.jobUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-sm text-lime-600 dark:text-[#80FF00] hover:underline truncate"
-                                  >
-                                    {job.jobUrl}
-                                  </a>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {job.salary && (job.salary.min || job.salary.max) && (
-                            <div className="flex items-center gap-2">
-                              <DollarSign size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Salary</span>
-                                <p className="text-sm text-gray-900 dark:text-white">
-                                  {formatJobSalary(job.salary, fallbacks.defaultSalary)}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-
-                          {job.applicationDate && (
-                            <div className="flex items-center gap-2">
-                              <Calendar size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Application Date</span>
-                                <p className="text-sm text-gray-900 dark:text-white">{formatDate(job.applicationDate)}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {job.deadline && (
-                            <div className="flex items-center gap-2">
-                              <Calendar size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Deadline</span>
-                                <p className="text-sm text-gray-900 dark:text-white">{formatDate(job.deadline)}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {job.jobType && (
-                            <div className="flex items-center gap-2">
-                              <Briefcase size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Job Type</span>
-                                <p className="text-sm text-gray-900 dark:text-white capitalize">{job.jobType}</p>
-                              </div>
-                            </div>
-                          )}
-
-                          {job.source && (
-                            <div className="flex items-center gap-2">
-                              <Building2 size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                              <div className="flex-1">
-                                <span className="text-xs text-gray-600 dark:text-white/60">Source</span>
-                                <p className="text-sm text-gray-900 dark:text-white capitalize">{job.source}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Contact Details Section */}
-                    {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Contact Details</h3>
-                        <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                          <div className="space-y-4">
-                            {job.contactDetails.name && (
-                              <div className="flex items-center gap-2">
-                                <User size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <span className="text-xs text-gray-600 dark:text-white/60">Name</span>
-                                  <p className="text-sm text-gray-900 dark:text-white">{job.contactDetails.name}</p>
-                                </div>
-                              </div>
-                            )}
-
-                            {job.contactDetails.email && (
-                              <div className="flex items-center gap-2">
-                                <Mail size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-xs text-gray-600 dark:text-white/60">Email</span>
-                                  <div className="flex items-center gap-2">
-                                    <a
-                                      href={`mailto:${job.contactDetails.email}`}
-                                      className="text-sm text-lime-600 dark:text-[#80FF00] hover:underline truncate"
-                                    >
-                                      {job.contactDetails.email}
-                                    </a>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {job.contactDetails.phone && (
-                              <div className="flex items-center gap-2">
-                                <Phone size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <span className="text-xs text-gray-600 dark:text-white/60">Phone</span>
-                                  <a
-                                    href={`tel:${job.contactDetails.phone}`}
-                                    className="text-sm text-gray-900 dark:text-white hover:text-lime-600 dark:hover:text-[#80FF00]"
-                                  >
-                                    {job.contactDetails.phone}
-                                  </a>
-                                </div>
-                              </div>
-                            )}
-
-                            {job.contactDetails.role && (
-                              <div className="flex items-center gap-2">
-                                <Briefcase size={16} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <span className="text-xs text-gray-600 dark:text-white/60">Role</span>
-                                  <p className="text-sm text-gray-900 dark:text-white">{job.contactDetails.role}</p>
-                                </div>
-                              </div>
-                            )}
+                      <div className="space-y-3">
+                        {journeyCardData.bullets.map((bullet, index) => (
+                          <div key={`${bullet}-${index}`} className="flex items-start gap-3">
+                            <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                            <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">{bullet}</p>
                           </div>
-                        </div>
+                        ))}
                       </div>
-                    )}
 
-                    {/* Notes Section */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Notes</h3>
-                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-4">
-                        {job.notes ? (
-                          <p className="text-gray-700 dark:text-gray-300 text-sm whitespace-pre-wrap">{job.notes}</p>
-                        ) : (
-                          <p className="text-gray-500 dark:text-gray-500 text-sm italic">No notes added yet</p>
+                      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+                        <motion.button
+                          onClick={() => void runSidebarAction(journeyCardData.primaryActionId)}
+                          disabled={isMovingToCreated || isCreatingJourney}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-5 py-3 text-sm font-semibold text-black shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {journeyCardData.primaryLabel}
+                          <ArrowRight className="h-4 w-4" />
+                        </motion.button>
+                        {journeyCardData.secondaryAction && journeyCardData.secondaryLabel && (
+                          <motion.button
+                            onClick={() => journeyCardData.secondaryActionId && void runSidebarAction(journeyCardData.secondaryActionId)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.98 }}
+                          >
+                            {journeyCardData.secondaryLabel}
+                          </motion.button>
                         )}
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Column 2: Application Insights, Job Insights */}
-                <div className="w-full lg:w-[25%] lg:flex-[1] lg:flex-shrink-0 lg:flex-grow-0 lg:min-w-[250px] lg:max-w-[300px] border-t lg:border-t-0 lg:border-l border-gray-200 dark:border-white/10 lg:pl-6 box-border overflow-hidden">
-                  <div className="space-y-6 pt-6 lg:pt-0 w-full overflow-hidden">
-                    {/* Application Insights */}
-                    <div className="min-w-0 w-full overflow-hidden">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 truncate">Application Insights</h3>
-                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-3 min-w-0 w-full overflow-hidden">
-                        <div className="space-y-3 min-w-0 w-full">
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Status</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${job.status === 'applied' ? 'bg-lime-500 text-white' :
-                              job.status === 'interview' ? 'bg-blue-500 text-white' :
-                                job.status === 'offer' ? 'bg-purple-500 text-white' :
-                                  job.status === 'rejected' ? 'bg-red-500 text-white' :
-                                    'bg-gray-500 text-white'
-                              }`}>
-                              {job.status === 'applied' ? 'In Progress' :
-                                job.status === 'interview' ? 'Interview' :
-                                  job.status === 'offer' ? 'Offer' :
-                                    job.status === 'rejected' ? 'Rejected' :
-                                      'Created'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Success Prob.</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-bold flex-shrink-0 ${
-                                successProb >= 70 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                successProb >= 40 ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                successProb >= 20 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                              }`}>
-                              {successProb}%
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Priority</span>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${job.priority === 'high' ? 'bg-red-500 text-white' :
-                              job.priority === 'medium' ? 'bg-yellow-500 text-white' :
-                                'bg-gray-500 text-white'
-                              }`}>
-                              {job.priority?.charAt(0).toUpperCase() + job.priority?.slice(1) || 'Medium'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Sponsorship</span>
-                            <span className="text-gray-900 dark:text-white/80 text-xs text-right flex-shrink-0 truncate">
-                              {job.sponsorship === 'yes' ? 'Required' :
-                                job.sponsorship === 'no' ? 'Not Required' :
-                                  'Unknown'}
-                            </span>
-                          </div>
-
-                          {job.tags && job.tags.length > 0 && (
-                            <div>
-                              <span className="text-gray-600 dark:text-white/60 block mb-2">Tags</span>
-                              <div className="flex flex-wrap gap-2">
-                                {job.tags.map((tag, index) => (
-                                  <span key={index} className="px-2 py-1 bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white/80 rounded text-xs">
-                                    {tag}
-                                  </span>
-                                ))}
+                    <div className="space-y-4">
+                      {sidebarConfig.sections.showJourneySnapshot && (
+                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[#20281d]">
+                          <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Journey Snapshot</p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {journeyCardData.stats.map((stat) => (
+                              <div key={stat.label} className="rounded-xl bg-gray-50 px-3 py-3 dark:bg-[#181f16]">
+                                <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{stat.label}</p>
+                                <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">{stat.value}</p>
                               </div>
-                            </div>
-                          )}
+                            ))}
+                          </div>
                         </div>
-                      </div>
+                      )}
+
+                      {sidebarConfig.sections.showTrackerJourneySummary && (
+                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[#20281d]">
+                          <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">Tracker Journey</p>
+                            <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {loadingJourneys ? 'Loading...' : primaryJourney ? 'Active' : 'Not started'}
+                            </span>
+                          </div>
+                          <div className="mt-3 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                            {primaryJourney ? (
+                              <>
+                                <div className="flex items-center justify-between">
+                                  <span>Journey status</span>
+                                  <span className="font-medium capitalize text-gray-900 dark:text-white">
+                                    {primaryJourney.status?.replace(/_/g, ' ') || 'In progress'}
+                                  </span>
+                                </div>
+                                {typeof primaryJourney.currentStep === 'number' && typeof primaryJourney.totalSteps === 'number' && (
+                                  <div className="flex items-center justify-between">
+                                    <span>Current step</span>
+                                    <span className="font-medium text-gray-900 dark:text-white">
+                                      {primaryJourney.currentStep}/{primaryJourney.totalSteps}
+                                    </span>
+                                  </div>
+                                )}
+                                {(primaryJourney.updatedAt || primaryJourney.metadata?.updatedAt) && (
+                                  <div className="flex items-center justify-between">
+                                    <span>Last updated</span>
+                                    <span className="font-medium text-gray-900 dark:text-white">
+                                      {formatJobDate(primaryJourney.updatedAt || primaryJourney.metadata?.updatedAt)}
+                                    </span>
+                                  </div>
+                                )}
+                              </>
+                            ) : (
+                              <p className="leading-6">
+                                {sidebarConfig.trackerJourneyEmptyState}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
-
-                    {/* Job Insights */}
-                    <div className="min-w-0 w-full overflow-hidden">
-                      <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 truncate">Job Insights</h3>
-                      <div className="bg-gray-50 dark:bg-[#232f1c] border border-gray-200 dark:border-lime-500/20 rounded-2xl p-3 min-w-0 w-full overflow-hidden">
-                        <div className="space-y-3 min-w-0">
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Keyword Match</span>
-                            <span className="text-lime-600 dark:text-[#80FF00] font-semibold text-xs flex-shrink-0">
-                              {insightsLoading ? '...' : `${insights?.keywordMatchScore || 0}%`}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Hiring Trend</span>
-                            <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
-                              {insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-600 dark:text-white/60 text-xs truncate min-w-0">Skills Gap</span>
-                            <span className="text-gray-900 dark:text-white text-xs text-right flex-shrink-0 truncate">
-                              {insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2 min-w-0">
-                            <span className="text-gray-500 dark:text-gray-400 text-xs truncate min-w-0">Market Comp.</span>
-                            <span className={`text-xs text-right flex-shrink-0 truncate font-medium ${
-                                salaryComp.comparison === 'above' ? 'text-green-600 dark:text-green-400' :
-                                salaryComp.comparison === 'below' ? 'text-red-600 dark:text-red-400' :
-                                'text-gray-900 dark:text-white'
-                              }`}>
-                              {salaryComp.comparison !== 'unknown' ? salaryComp.text : (insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Smart Nudges */}
-                    {nudge && (
-                      <div className="min-w-0 w-full overflow-hidden">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-3 truncate">Smart Actions</h3>
-                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-3 min-w-0 w-full overflow-hidden">
-                          <div className="flex items-start gap-2">
-                            <TrendingUp size={16} className="text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm text-blue-800 dark:text-blue-300">{nudge}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
+              </section>
+
+              {isRecruiterVisibilityStage && (
+                <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1b2218]">
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Outreach that keeps this application visible</h3>
+                    </div>
+                    <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">
+                      {job.status === 'screening' ? 'Screening follow-up' : 'Applied follow-up'}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+                    <div className="space-y-3">
+                      {recruiterVisibilitySteps.map((step, index) => (
+                        <div key={`${step}-${index}`} className="flex items-start gap-3">
+                          <Mail className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" />
+                          <p className="text-sm leading-6 text-gray-700 dark:text-gray-300">{step}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="space-y-3 rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#181f16]">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">Current action path</p>
+                        <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-gray-300">
+                          {hasRecruiterEmail
+                            ? 'Open the draft email now, then confirm whether you sent it so the tracker can keep the timeline honest.'
+                            : 'Use the manual fallback first: copy the draft, add a recruiter email, or send the same message through LinkedIn.'}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <button
+                          onClick={() => handleOpenEmail(0)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#80FF00] px-4 py-3 text-sm font-semibold text-black shadow-sm transition hover:brightness-95"
+                        >
+                          <Mail className="h-4 w-4" />
+                          {hasRecruiterEmail ? 'Open Recruiter Email Draft' : 'Open Manual Outreach Draft'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveActionId('open_details');
+                            setActiveActionPayload(sidebarConfig.actionPayloads.open_details || null);
+                            setShowEmailTemplate(!showEmailTemplate);
+                          }}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#20281d] dark:text-white dark:hover:bg-[#273021]"
+                        >
+                          {showEmailTemplate ? 'Hide Manual Script' : 'View Manual Script'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {showEmailTemplate && (
+                    <div className="mt-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-[#181f16]">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-white">Manual outreach fallback</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Subject: {getEmailSubject(job)}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleCopyToClipboard(getEmailSubject(job), 'subject')}
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
+                          >
+                            Copy Subject
+                          </button>
+                          <button
+                            onClick={() => handleCopyToClipboard(getEmailTemplate(job), 'email')}
+                            className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-white dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#20281d]"
+                          >
+                            Copy Message
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-3 whitespace-pre-wrap rounded-xl bg-white px-4 py-4 text-sm leading-6 text-gray-700 dark:bg-[#20281d] dark:text-gray-300">
+                        {getEmailTemplate(job)}
+                      </div>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {(sidebarConfig.sections.showJobDetails || sidebarConfig.sections.showInsights) && (
+                <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+                  {sidebarConfig.sections.showJobDetails && (
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1b2218]">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Details</p>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Core job information</h3>
+                        </div>
+                        <button
+                          onClick={() => void runSidebarAction('open_details')}
+                          className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                        >
+                          View Full Details
+                        </button>
+                      </div>
+
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {sidebarConfig.detailRows.map((row) => (
+                          <div
+                            key={row.label}
+                            className={`space-y-1 ${row.label === 'Job URL' ? 'sm:col-span-2' : ''}`}
+                          >
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">{row.label}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="min-w-0 truncate text-sm font-medium text-gray-900 dark:text-white">{row.value}</p>
+                              {row.label === 'Job URL' && job.jobUrl && (
+                                <a
+                                  href={job.jobUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="shrink-0 text-emerald-600 hover:text-emerald-700 dark:text-[#80FF00]"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {sidebarConfig.sections.showInsights && (
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1b2218]">
+                      <div className="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Application Insights</p>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Performance snapshot</h3>
+                        </div>
+                        <button
+                          onClick={() => void runSidebarAction('open_insights')}
+                          className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-white/10 dark:text-white dark:hover:bg-[#273021]"
+                        >
+                          View Full Insights
+                        </button>
+                      </div>
+
+                      {sidebarConfig.insightRows.length > 0 ? (
+                        <div className="space-y-3">
+                          {sidebarConfig.insightRows.map((row) => (
+                            <div key={row.label} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3 dark:bg-[#181f16]">
+                              <span className="text-sm text-gray-600 dark:text-gray-300">{row.label}</span>
+                              <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                {row.label === 'Match Score' && insightsLoading ? '...' : row.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-sm leading-6 text-gray-600 dark:border-white/10 dark:bg-[#181f16] dark:text-gray-300">
+                          {sidebarConfig.insightsEmptyState}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </section>
+              )}
             </div>
           </div>
         </motion.div>
@@ -1903,6 +1960,227 @@ ${userName}`
                   )}
                 </motion.button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {showDetailsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[101] bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+            onClick={() => setShowDetailsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0, y: 12 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.96, opacity: 0, y: 12 }}
+              className="w-full max-w-4xl rounded-[28px] border border-gray-200 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#171d15]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+                    {detailsModalView === 'details' ? 'Job Details' : 'Application Insights'}
+                  </p>
+                  <h3 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                    {job.jobTitle || job.title} at {job.company}
+                  </h3>
+                  {activeActionPayload && (
+                    <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                      Viewing {formatStageLabel(activeActionPayload.stage)} context
+                      {activeJourneyForPayload?.id ? ` with journey ${activeJourneyForPayload.id.slice(0, 8)}` : ' without a linked journey yet'}.
+                    </p>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="rounded-xl p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mb-6 flex gap-2 rounded-2xl bg-gray-100 p-1 dark:bg-[#222a1f]">
+                <button
+                  onClick={() => setDetailsModalView('details')}
+                  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                    detailsModalView === 'details'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  Job Details
+                </button>
+                <button
+                  onClick={() => setDetailsModalView('insights')}
+                  className={`flex-1 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                    detailsModalView === 'insights'
+                      ? 'bg-white text-gray-900 shadow-sm dark:bg-[#2a3326] dark:text-white'
+                      : 'text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  Application Insights
+                </button>
+              </div>
+
+              {activeActionPayload && (
+                <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-white/10 dark:bg-[#20281d] dark:text-gray-300">
+                  {activeActionId === 'open_insights'
+                    ? `Insights are filtered to the ${formatStageLabel(activeActionPayload.stage)} stage for this tracker item.`
+                    : `This panel opened from the ${formatStageLabel(activeActionPayload.stage)} stage and keeps the current job, journey, and entitlement context together.`}
+                </div>
+              )}
+
+              {detailsModalView === 'details' ? (
+                <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+                  <div className="space-y-5">
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Core Details</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-start gap-3">
+                          <Building2 className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Company</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{job.company}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <MapPin className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Location</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{job.location || fallbacks.defaultLocation}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Briefcase className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Type</p>
+                            <p className="text-sm font-medium capitalize text-gray-900 dark:text-white">{job.jobType || job.type || 'Not specified'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <DollarSign className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Salary</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{formatJobSalary(job.salary, fallbacks.defaultSalary)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <Calendar className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Deadline</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">{formatJobDate(job.deadline, 'No deadline set')}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-3">
+                          <ExternalLink className="mt-0.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                          <div className="min-w-0">
+                            <p className="text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Job URL</p>
+                            {job.jobUrl ? (
+                              <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" className="truncate text-sm font-medium text-emerald-600 hover:underline dark:text-[#80FF00]">
+                                {job.jobUrl}
+                              </a>
+                            ) : (
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">No URL provided</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {job.contactDetails && (job.contactDetails.name || job.contactDetails.email || job.contactDetails.phone || job.contactDetails.role) && (
+                      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                        <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Contact Details</h4>
+                        <div className="space-y-4">
+                          {job.contactDetails.name && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Name:</span> {job.contactDetails.name}</p>}
+                          {job.contactDetails.role && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Role:</span> {job.contactDetails.role}</p>}
+                          {job.contactDetails.email && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Email:</span> {job.contactDetails.email}</p>}
+                          {job.contactDetails.phone && <p className="text-sm text-gray-700 dark:text-gray-300"><span className="font-medium text-gray-900 dark:text-white">Phone:</span> {job.contactDetails.phone}</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-5">
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Job Description</h4>
+                      <div className="max-h-[260px] overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        {job.jobDescription || fallbacks.defaultJobDescription}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                      <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Notes</h4>
+                      <div className="whitespace-pre-wrap text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        {job.notes || 'No notes added yet.'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                    <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Application Snapshot</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Status</span>
+                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.status}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Success Probability</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{successProb}%</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Priority</span>
+                        <span className="text-sm font-semibold capitalize text-gray-900 dark:text-white">{job.priority || 'medium'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Sponsorship</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {job.sponsorship === 'yes' ? 'Provided' : job.sponsorship === 'no' ? 'Not provided' : 'Unknown'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Match Score</span>
+                        <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{insightsLoading ? '...' : `${keywordMatchScore}%`}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-white/10 dark:bg-[#20281d]">
+                    <h4 className="mb-4 text-base font-semibold text-gray-900 dark:text-white">Deeper Insights</h4>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Hiring Trend</span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.companyHiringTrend || 'Unknown'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Skills Gap</span>
+                        <span className="text-right text-sm font-semibold text-gray-900 dark:text-white">{insightsLoading ? '...' : insights?.skillsGap || 'Unable to analyze'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Market Competitiveness</span>
+                        <span className={`text-right text-sm font-semibold ${
+                          salaryComp.comparison === 'above'
+                            ? 'text-green-600 dark:text-green-400'
+                            : salaryComp.comparison === 'below'
+                              ? 'text-red-600 dark:text-red-400'
+                              : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {salaryComp.comparison !== 'unknown' ? salaryComp.text : (insightsLoading ? '...' : insights?.marketCompetitiveness || 'Unknown')}
+                        </span>
+                      </div>
+                      {nudge && (
+                        <div className="rounded-xl bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                          <span className="font-semibold">Smart action:</span> {nudge}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
@@ -2009,8 +2287,22 @@ ${userName}`
             jobId={job.id || job._id}
             jobTitle={job.jobTitle || job.title || ''}
             company={job.company}
+            actionContext={activeActionPayload}
           />
         )}
+        <TrackerCreatedStageModal
+          isOpen={showCreatedStageModal}
+          onClose={() => setShowCreatedStageModal(false)}
+          onConfirm={async () => {
+            setShowCreatedStageModal(false);
+            await executeMoveToCreated();
+          }}
+          jobTitle={job.jobTitle || job.title}
+          company={job.company}
+          preview={trackerGenerationPreview}
+          isSubmitting={isMovingToCreated}
+          actionContext={activeActionPayload}
+        />
       </>
     </AnimatePresence>
   );

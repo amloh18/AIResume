@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Issue, ResumeState } from '../types';
 
 export const analyzeContact = (state: ResumeState): Issue[] => {

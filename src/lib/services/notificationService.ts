@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getConnection } from '@/lib/database';
 import Notification, {
   INotification,

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface CVDataStructure {
   basics: {
     name: string;

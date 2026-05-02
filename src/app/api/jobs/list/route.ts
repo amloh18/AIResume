@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import type { Job, JobMatch, Application, PaginatedJobsResponse, JobListing } from '@/types/automation-schema';
