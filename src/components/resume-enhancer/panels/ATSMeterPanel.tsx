@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useATS } from '@/contexts/ATSContext';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { Target, FileText, Briefcase, Plus, RefreshCw, Loader2, Zap, CheckCircle2, AlertTriangle, ChevronRight, X } from 'lucide-react';
@@ -20,6 +20,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   const { state, dispatch, goToStep } = useResumeEnhancer();
   const router = useRouter();
   const isMasterCV = state.cvType === 'master';
+  const [isPurposeCardExpanded, setIsPurposeCardExpanded] = useState(true);
 
   const offlineScore = useMemo(() => {
     if (state.cvData) {
@@ -124,6 +125,16 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
       modeLabel
     };
   }, [isMasterCV, state.analysisMode, state.analysisModeInfo?.mode, state.cvType]);
+
+  useEffect(() => {
+    setIsPurposeCardExpanded(true);
+
+    const timer = window.setTimeout(() => {
+      setIsPurposeCardExpanded(false);
+    }, 60_000);
+
+    return () => window.clearTimeout(timer);
+  }, [purposeCard.summary, purposeCard.title, state.cvType, state.cvId]);
 
   // Formatting feedback
   const feedback = useMemo(() => {
@@ -405,28 +416,44 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
       {/* CV Purpose Card */}
       <div className="mb-6 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-700/40 rounded-xl p-4 shadow-sm">
-        <div className="flex flex-col gap-3 mb-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <h4 className="text-base font-bold text-slate-900 dark:text-white flex items-start gap-2 leading-snug">
               <Target className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-              <span>{purposeCard.title}</span>
+              <span className="min-w-0">
+                <span>{purposeCard.title}</span>
+                <span className="ml-2 text-sm font-normal text-slate-600 dark:text-slate-300/80">
+                  {purposeCard.summary}
+                </span>
+              </span>
             </h4>
-            <p className="text-sm text-slate-600 dark:text-slate-300/80 mt-2 leading-7 max-w-none">
-              {purposeCard.summary}
-            </p>
           </div>
-          <span className="inline-flex w-fit shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em] bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300 border border-sky-200 dark:border-sky-500/20">
-            {purposeCard.modeLabel}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex w-fit shrink-0 px-3 py-1.5 rounded-full text-[11px] font-semibold uppercase tracking-[0.14em] bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300 border border-sky-200 dark:border-sky-500/20">
+              {purposeCard.modeLabel}
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsPurposeCardExpanded((current) => !current)}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-700/50 dark:bg-slate-900/40 dark:text-slate-300 dark:hover:bg-slate-800/70"
+              aria-expanded={isPurposeCardExpanded}
+              aria-label={isPurposeCardExpanded ? 'Collapse CV purpose card' : 'Expand CV purpose card'}
+            >
+              <span>{isPurposeCardExpanded ? 'Collapse' : 'Expand'}</span>
+              <ChevronRight className={`h-3.5 w-3.5 transition-transform ${isPurposeCardExpanded ? 'rotate-90' : ''}`} />
+            </button>
+          </div>
         </div>
-        <div className="space-y-3">
-          {purposeCard.bullets.map((bullet) => (
-            <div key={bullet} className="flex items-start gap-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-2.5 shrink-0" />
-              <p className="text-sm text-slate-700 dark:text-slate-200/85 leading-7">{bullet}</p>
-            </div>
-          ))}
-        </div>
+        {isPurposeCardExpanded && (
+          <div className="mt-3 space-y-3">
+            {purposeCard.bullets.map((bullet) => (
+              <div key={bullet} className="flex items-start gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-sky-500 mt-2.5 shrink-0" />
+                <p className="text-sm text-slate-700 dark:text-slate-200/85 leading-7">{bullet}</p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Metrics Breakdown */}
