@@ -444,74 +444,89 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
           return;
         }
 
-        let maxBottom = 0;
-        const pushedElements = new Set<HTMLElement>();
+        const printableHeight = PAGE_HEIGHT - PAGE_TOP_PADDING - PAGE_BOTTOM_PADDING;
+        const MAX_PAGINATION_PASSES = 5;
 
-        allBreakables.forEach((item, index) => {
-          // If an ancestor was already pushed, we don't need to push this item individually
-          // because it has already been carried over to the next page by the parent.
-          let parent = item.parentElement;
-          let isAncestorPushed = false;
-          while (parent && parent !== doc) {
-            if (pushedElements.has(parent)) {
-              isAncestorPushed = true;
-              break;
+        for (let pass = 0; pass < MAX_PAGINATION_PASSES; pass += 1) {
+          let didChange = false;
+          const pushedElements = new Set<HTMLElement>();
+
+          allBreakables.forEach((item, index) => {
+            // If an ancestor was already pushed, we don't need to push this item individually
+            // because it has already been carried over to the next page by the parent.
+            let parent = item.parentElement;
+            let isAncestorPushed = false;
+            while (parent && parent !== doc) {
+              if (pushedElements.has(parent)) {
+                isAncestorPushed = true;
+                break;
+              }
+              parent = parent.parentElement;
             }
-            parent = parent.parentElement;
-          }
 
-          if (isAncestorPushed) return;
+            if (isAncestorPushed) return;
 
-          const { top, height, bottom } = measureElement(item, docRect, scale);
+            const { top, height, bottom } = measureElement(item, docRect, scale);
+            if (![top, height, bottom].every(Number.isFinite)) return;
 
-          if (![top, height, bottom].every(Number.isFinite)) return;
+            const pageIndex = Math.max(0, Math.floor(top / EFFECTIVE_HEIGHT));
+            const pageContentTop = pageIndex * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
+            const pageContentBottom = pageIndex * EFFECTIVE_HEIGHT + PAGE_HEIGHT - PAGE_BOTTOM_PADDING;
+            const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
 
-          // Which page does this item's top fall on?
-          const pageIndex = Math.floor(top / EFFECTIVE_HEIGHT);
+            let requiredPush = 0;
 
-          // The bottom of the printable zone on this page (before bottom margin)
-          const pageContentBottom = pageIndex * EFFECTIVE_HEIGHT + PAGE_HEIGHT - PAGE_BOTTOM_PADDING;
+            // If an entry starts inside the reserved top margin band for a page,
+            // move it down so the new page starts cleanly.
+            if (pageIndex > 0 && top < pageContentTop) {
+              requiredPush = Math.max(requiredPush, pageContentTop - top);
+            }
 
-          // The top of the printable zone on the NEXT page (after top margin)
-          const nextPageContentTop = (pageIndex + 1) * EFFECTIVE_HEIGHT + PAGE_TOP_PADDING;
-
-          // Determine if we need to push
-          let shouldPush = false;
-          if (
-            bottom > pageContentBottom &&
-            height < (PAGE_HEIGHT - PAGE_TOP_PADDING - PAGE_BOTTOM_PADDING) &&
-            height > MIN_PUSH_HEIGHT
-          ) {
-            shouldPush = true;
-          } else if (item.classList.contains('cv-keep-with-next')) {
-            // Check if the next DOM sibling (or next breakable) crosses the boundary
-            // Since we collected allBreakables in document order, the next element in the array
-            // is likely the one following this header.
-            const nextItem = allBreakables[index + 1];
-            if (nextItem && !pushedElements.has(nextItem)) {
-              const { height: nextHeight, bottom: nextBottom } = measureElement(nextItem, docRect, scale);
-              
-              if (
-                nextBottom > pageContentBottom &&
-                nextHeight < (PAGE_HEIGHT - PAGE_TOP_PADDING - PAGE_BOTTOM_PADDING) &&
-                nextHeight > MIN_PUSH_HEIGHT
-              ) {
-                shouldPush = true;
+            // If an entry crosses the printable bottom area and can fit on the next page,
+            // move the whole block instead of letting it disappear into the visual gap.
+            if (
+              bottom > pageContentBottom &&
+              height < printableHeight &&
+              height > MIN_PUSH_HEIGHT
+            ) {
+              requiredPush = Math.max(requiredPush, nextPageContentTop - top);
+            } else if (item.classList.contains('cv-keep-with-next')) {
+              // Keep section headers with the first block that follows them.
+              const nextItem = allBreakables[index + 1];
+              if (nextItem && !pushedElements.has(nextItem)) {
+                const { height: nextHeight, bottom: nextBottom } = measureElement(nextItem, docRect, scale);
+                if (
+                  nextBottom > pageContentBottom &&
+                  nextHeight < printableHeight &&
+                  nextHeight > MIN_PUSH_HEIGHT
+                ) {
+                  requiredPush = Math.max(requiredPush, nextPageContentTop - top);
+                }
               }
             }
-          }
 
-          if (shouldPush) {
-            const pushAmount = Math.min(nextPageContentTop - top, EFFECTIVE_HEIGHT);
-            if (Number.isFinite(pushAmount) && pushAmount > 0) {
-              item.style.marginTop = `${pushAmount}px`;
+            const normalizedPush = Math.min(requiredPush, EFFECTIVE_HEIGHT);
+            if (Number.isFinite(normalizedPush) && normalizedPush > 0) {
+              const nextMarginTop = `${normalizedPush}px`;
+              if (item.style.marginTop !== nextMarginTop) {
+                item.style.marginTop = nextMarginTop;
+                didChange = true;
+              }
               pushedElements.add(item);
             }
-          }
+          });
 
-          // Track the furthest-down element for page count
+          if (!didChange) {
+            break;
+          }
+        }
+
+        let maxBottom = 0;
+        allBreakables.forEach((item) => {
           const currentBottom = (item.getBoundingClientRect().bottom - docRect.top) / scale;
-          if (currentBottom > maxBottom) maxBottom = currentBottom;
+          if (Number.isFinite(currentBottom) && currentBottom > maxBottom) {
+            maxBottom = currentBottom;
+          }
         });
 
         // Calculate total pages needed
