@@ -280,14 +280,8 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
             }
           }}
         >
-          {/* Master CV Preview - Use live rendering with TemplateRenderer if cvData and template are available, otherwise fallback to S3 thumbnail */}
-          {masterCV?.cvData && masterCV?.template ? (
-            <CVPreviewThumbnail
-              cvData={masterCV.cvData}
-              template={masterCV.template as ITemplate}
-              className="rounded-xl"
-            />
-          ) : thumbnailUrl ? (
+          {/* Master CV Preview - Prefer stored snapshot and only fall back to live render when needed */}
+          {thumbnailUrl ? (
             <img
               src={thumbnailUrl}
               alt={`Master CV Preview: ${masterCV.title}`}
@@ -324,6 +318,12 @@ const MasterCVCardOverlayComponent: React.FC<MasterCVCardOverlayProps> = ({
                   setThumbnailUrl(null);
                 }
               }}
+            />
+          ) : masterCV?.cvData && masterCV?.template ? (
+            <CVPreviewThumbnail
+              cvData={masterCV.cvData}
+              template={masterCV.template as ITemplate}
+              className="rounded-xl"
             />
           ) : thumbnailLoading ? (
             /* Loading state */

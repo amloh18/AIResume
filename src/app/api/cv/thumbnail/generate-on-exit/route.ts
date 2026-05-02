@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { cvId, forceRegenerate = true } = body;
+    const { cvId, forceRegenerate = true, svgContent } = body;
 
     if (!cvId) {
       return NextResponse.json(
@@ -49,6 +49,17 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🖼️ Thumbnail Exit API - Generating thumbnail for CV:', { cvId, userId });
+
+    if (svgContent) {
+      await getConnection();
+      const thumbnailUrl = await CVThumbnailService.saveProvidedThumbnailSvg(cvId, userId, svgContent);
+
+      return NextResponse.json({
+        success: !!thumbnailUrl,
+        thumbnailUrl,
+        message: thumbnailUrl ? 'Thumbnail saved' : 'Failed to save thumbnail'
+      }, thumbnailUrl ? undefined : { status: 500 });
+    }
 
     // Generate thumbnail (non-blocking, runs in background)
     // Use setImmediate for Node.js or setTimeout for browser environments
@@ -67,11 +78,13 @@ export async function POST(request: NextRequest) {
     const generateThumbnail = async () => {
       try {
         await getConnection();
-        const thumbnailUrl = await CVThumbnailService.generateAndSaveThumbnail(
-          cvId,
-          userId,
-          forceRegenerate
-        );
+        const thumbnailUrl = svgContent
+          ? await CVThumbnailService.saveProvidedThumbnailSvg(cvId, userId, svgContent)
+          : await CVThumbnailService.generateAndSaveThumbnail(
+              cvId,
+              userId,
+              forceRegenerate
+            );
         
         if (thumbnailUrl) {
           console.log('✅ Thumbnail Exit API - Thumbnail generated successfully:', thumbnailUrl);
@@ -84,11 +97,13 @@ export async function POST(request: NextRequest) {
         setTimeout(async () => {
           try {
             await getConnection();
-            const thumbnailUrl = await CVThumbnailService.generateAndSaveThumbnail(
-              cvId,
-              userId,
-              forceRegenerate
-            );
+            const thumbnailUrl = svgContent
+              ? await CVThumbnailService.saveProvidedThumbnailSvg(cvId, userId, svgContent)
+              : await CVThumbnailService.generateAndSaveThumbnail(
+                  cvId,
+                  userId,
+                  forceRegenerate
+                );
             if (thumbnailUrl) {
               console.log('✅ Thumbnail Exit API - Retry successful');
             } else {
@@ -100,11 +115,15 @@ export async function POST(request: NextRequest) {
             setTimeout(async () => {
               try {
                 await getConnection();
-                await CVThumbnailService.generateAndSaveThumbnail(
-                  cvId,
-                  userId,
-                  forceRegenerate
-                );
+                if (svgContent) {
+                  await CVThumbnailService.saveProvidedThumbnailSvg(cvId, userId, svgContent);
+                } else {
+                  await CVThumbnailService.generateAndSaveThumbnail(
+                    cvId,
+                    userId,
+                    forceRegenerate
+                  );
+                }
                 console.log('✅ Thumbnail Exit API - Final retry completed');
               } catch (finalError) {
                 console.error('❌ Thumbnail Exit API - Final retry failed:', finalError);
@@ -131,4 +150,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

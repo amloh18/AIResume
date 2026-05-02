@@ -236,6 +236,8 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
   const primaryTitleKey = (SnippetComponent?.category || '').toLowerCase();
   const isNarrow = ['sidebar', 'left', 'right'].includes(zoneId);
   const showDropLine = !readOnly && isDropTarget && !(dragState.sourceZoneId === zoneId && (dragState.overIndex === dragState.sourceIndex || dragState.overIndex === dragState.sourceIndex + 1));
+  const zoneBlockCount = Array.isArray(layoutZones?.[zoneId]) ? layoutZones[zoneId].length : 0;
+  const isLastSnippetInZone = index === Math.max(0, zoneBlockCount - 1);
 
   useEffect(() => {
     if (!confirmingRemove) return undefined;
@@ -323,11 +325,11 @@ export const CanvasSnippet = ({ readOnly = false, instance, index, zoneId, cvDat
 
   const content = SnippetComponent.render({ data: cvData, Editable: EditableWrapper, zoneId, isDark, Title, moveEntry, deleteEntry, showIcons: ctx?.design?.showContactIcons ?? true, design: ctx?.design, activeTemplate, layoutZones });
     return (
-      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-0 pointer-events-none' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-10' : 'mt-0'}`} style={isHeader ? {} : { marginBottom: 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}>
+      <div draggable={!isHeader && !readOnly} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragOver={handleDragOver} className={`relative group/snippet transition-all duration-300 ease-in-out ${!isHeader && !readOnly ? 'cursor-move' : ''} snippet-anim ${isBeingDragged ? 'opacity-0 pointer-events-none' : 'opacity-100 scale-100'} ${showDropLine ? 'mt-10' : 'mt-0'}`} style={isHeader ? {} : { marginBottom: isLastSnippetInZone ? 0 : 'var(--cv-section-gap, 16px)', visibility: isBeingDragged ? 'hidden' : 'visible' }}>
       {showDropLine && <div className="absolute -top-8 left-0 w-full min-h-[30px] rounded-xl border-2 border-dashed border-emerald-400 bg-emerald-50/95 shadow-[0_0_0_1px_rgba(16,185,129,0.1),0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center pointer-events-none z-30 animate-pulse"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Drop Section Here</span></div>}
         <div className={`relative hover:z-30 group/inner w-full`}>
         {controls}
-        <div className={`p-2 pointer-events-auto snippet-content relative pb-2 z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
+        <div className={`px-2 py-1 pointer-events-auto snippet-content relative z-10 w-full ${!content && !readOnly ? 'min-h-[60px] flex flex-col justify-center' : ''}`}>
             {!readOnly && <div className="absolute left-[-1px] right-[-1px] top-[-1px] bottom-[-1px] bg-emerald-50/10 opacity-0 group-hover/inner:opacity-100 pointer-events-none transition-all duration-200 z-[-1] border border-transparent group-hover/inner:border-emerald-400 group-hover/inner:border-dashed shadow-none group-hover/inner:shadow-sm rounded-md group-hover/inner:rounded-tr-none group-hover/inner:rounded-tl-none transition-shadow"></div>}
           {content || (!readOnly && (
             <div className="text-center opacity-40 select-none cursor-pointer hover:opacity-80 transition-opacity p-4 border border-dashed border-gray-300 rounded-lg mt-2" onClick={() => onAddListEntry(SnippetComponent.category)}>
@@ -398,9 +400,9 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
 
   return (
     <div className="relative group/zone flex flex-col h-full">
-      <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-6 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
+      <div className={`${dragHighlightClass} ${dropStateClass} transition-all duration-300 pb-0 ${className}`} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}>
         {blocks.length === 0 && !readOnly && <div className="absolute inset-0 flex flex-col gap-2 items-center justify-center text-sm text-gray-400 pointer-events-none border-2 border-dashed border-gray-200 rounded-2xl m-2 no-print"><span className="font-semibold text-gray-500">Empty Zone</span><span className="text-xs uppercase tracking-[0.22em]">{dropIntent === 'invalid' ? 'Not Allowed Here' : 'Drop A Section Here'}</span></div>}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-0">
           {blocks.map((instance: any, index: number) => <CanvasSnippet readOnly={readOnly} key={instance?.id || `snippet-${index}`} instance={instance} index={index} zoneId={zoneId} cvData={cvData} EditableWrapper={EditableWrapper} moveSnippet={moveSnippet} removeSnippet={removeSnippet} onReplace={onReplace} onTogglePhoto={onTogglePhoto} onAddListEntry={onAddListEntry} moveEntry={moveEntry} deleteEntry={deleteEntry} dragState={dragState} activeTemplate={activeTemplate} layoutZones={layoutZones} isDark={isDark} onOpenSkillsSuggestions={onOpenSkillsSuggestions} isDropAllowed={isDropAllowed} />)}
         </div>
         {showAppendLine && <div className="w-full min-h-[34px] bg-emerald-50/95 border-2 border-dashed border-emerald-400 rounded-xl mt-4 pointer-events-none shadow-[0_10px_30px_rgba(16,185,129,0.12)] flex items-center justify-center"><span className="px-3 py-1 rounded-full bg-white text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-700">Insert Here</span></div>}
@@ -421,7 +423,7 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
   const renderZone = (zoneId: string, className: string, isDark = false) => {
     const snippets = template.zones[zoneId] || [];
     return (
-      <div className={className}>
+      <div className={`flex flex-col ${className}`}>
         {snippets.map((type: string, index: number) => {
           const SnippetComponent = SNIPPETS[type] || SNIPPETS['summary-clean'];
           if (!SnippetComponent) return null;
@@ -429,7 +431,8 @@ export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design
           const styleKey = isSidebar && template.sidebarTitleStyle ? template.sidebarTitleStyle : template.titleStyle;
           const TitleRenderer = TITLE_STYLES[styleKey] || TITLE_STYLES['standard'];
           const Title = ({ titleKey, overrideClass }: any) => overrideClass ? <h3 className={overrideClass}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></h3> : <TitleRenderer isDark={isDark} showIcons={defaultDesign.showHeaderIcons} titleKey={titleKey}><ReadOnlyWrapper path={`sectionTitles.${titleKey}`} nowrap /></TitleRenderer>;
-          return <div key={index} className="cv-page-breakable pointer-events-none" style={{ marginBottom: 'var(--cv-section-gap, 16px)' }}><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showContactIcons} design={defaultDesign} /></div>;
+          const isLastSnippet = index === snippets.length - 1;
+          return <div key={index} className="cv-page-breakable pointer-events-none" style={{ marginBottom: isLastSnippet ? 0 : 'var(--cv-section-gap, 16px)' }}><SnippetComponent.render data={cvData} Editable={ReadOnlyWrapper} zoneId={zoneId} isDark={isDark} Title={Title} moveEntry={() => {}} deleteEntry={() => {}} showIcons={defaultDesign.showContactIcons} design={defaultDesign} /></div>;
         })}
       </div>
     );

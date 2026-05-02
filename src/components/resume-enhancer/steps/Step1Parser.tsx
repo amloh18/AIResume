@@ -70,12 +70,7 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
       className="w-full aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-[2rem] border border-gray-200 dark:border-white/10 transition-all duration-500 shadow-md flex flex-col relative overflow-hidden group-hover:shadow-xl group-hover:border-lime-500/40 group-hover:scale-[1.02]"
     >
       {isInView ? (
-        !isCoverLetter && item.cvData && templateObj ? (
-           <div className="w-full h-full opacity-90 bg-white relative">
-             <div className="absolute inset-0 pointer-events-none z-10" />
-             <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
-           </div>
-        ) : thumbnailUrl ? (
+        thumbnailUrl ? (
            <img 
              src={thumbnailUrl} 
              alt={item.title} 
@@ -102,6 +97,11 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
                }
              }}
            />
+        ) : !isCoverLetter && item.cvData && templateObj ? (
+           <div className="w-full h-full opacity-90 bg-white relative">
+             <div className="absolute inset-0 pointer-events-none z-10" />
+             <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
+           </div>
         ) : (
           // Generic fallback
           <div className="w-full h-full p-6 flex flex-col gap-3 bg-white/5">

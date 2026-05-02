@@ -61,6 +61,10 @@ import ModeValidationBanner from '@/components/resume-enhancer/components/ModeVa
 import ModeTransitionDialog from '@/components/resume-enhancer/components/ModeTransitionDialog';
 import { getAnalysisModeWithValidation, hasAnalysisContextChanged, type AnalysisMode } from '@/lib/utils/analysis-mode';
 import { invalidateStep1Cache } from './steps/Step1Parser';
+import {
+  queueCvThumbnailSnapshotUpload,
+  saveCvThumbnailSnapshot,
+} from '@/lib/utils/cv-thumbnail-snapshot';
 
 interface ResumeEnhancerContainerProps {
   userId: string;
@@ -506,7 +510,22 @@ export default function ResumeEnhancerContainer({
     setIsUserMenuExpanded(false);
   };
 
+  const queueCurrentThumbnailSnapshot = useCallback((targetCvId?: string | null) => {
+    const snapshotCvId = targetCvId || state.cvId || cvId || null;
+    if (isGuestMode || !snapshotCvId || !state.cvData || !state.selectedTemplate) {
+      return;
+    }
+
+    queueCvThumbnailSnapshotUpload({
+      cvId: snapshotCvId,
+      cvData: state.cvData,
+      template: state.selectedTemplate,
+      forceRegenerate: true,
+    });
+  }, [cvId, isGuestMode, state.cvData, state.cvId, state.selectedTemplate]);
+
   const openEditorDashboard = useCallback(() => {
+    queueCurrentThumbnailSnapshot();
     resetState();
     goToStep(1);
 
@@ -517,9 +536,8 @@ export default function ResumeEnhancerContainer({
     currentParams.delete('coverLetterId');
     currentParams.delete('mode');
     currentParams.set('step', '1');
-
     router.replace(`${pathname}?${currentParams.toString()}`);
-  }, [goToStep, pathname, resetState, router, searchParams]);
+  }, [goToStep, pathname, queueCurrentThumbnailSnapshot, resetState, router, searchParams]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -533,6 +551,8 @@ export default function ResumeEnhancerContainer({
   const confirmNavigation = async (saveBeforeLeaving: boolean) => {
     if (saveBeforeLeaving) {
       await handleSmartSave();
+    } else {
+      queueCurrentThumbnailSnapshot();
     }
     
     if (pendingNavigation) {
@@ -2459,6 +2479,20 @@ export default function ResumeEnhancerContainer({
           }
       }
       
+      const thumbnailCvId = savedCvId || effectiveCvId;
+      if (thumbnailCvId && state.selectedTemplate) {
+        try {
+          await saveCvThumbnailSnapshot({
+            cvId: thumbnailCvId,
+            cvData: state.cvData,
+            template: state.selectedTemplate,
+            forceRegenerate: true,
+          });
+        } catch (thumbnailError) {
+          console.warn('Failed to save CV thumbnail snapshot after explicit save', thumbnailError);
+        }
+      }
+
       // Invalidate step 1 cache so it re-fetches when navigating back to step 1
       invalidateStep1Cache();
 
