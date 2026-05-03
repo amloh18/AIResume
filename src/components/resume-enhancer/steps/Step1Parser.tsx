@@ -629,8 +629,8 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     <Briefcase className="w-12 h-12 text-lime-500" />
                   </div>
                   <div>
-                    <h3 className="text-3xl font-black text-white mb-3 tracking-tight">Apply to Job</h3>
-                    <p className="text-gray-400 text-base font-medium leading-relaxed">
+                    <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Apply to Job</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-base font-medium leading-relaxed">
                       Auto-tailor your Master CV <br />
                       to any job description.
                     </p>

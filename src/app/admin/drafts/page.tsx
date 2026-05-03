@@ -16,13 +16,13 @@ export default function AdminDraftsPage() {
   useEffect(() => {
     // Redirect if not authenticated or not an admin
     if (status === 'unauthenticated') {
-      window.location.href = '/sign-in';
+      window.location.href = '/admin/login';
       return;
     }
 
     if (status === 'authenticated' && !isAdmin) {
       console.error('User is not an admin');
-      window.location.href = '/sign-in';
+      window.location.href = '/dashboard';
       return;
     }
   }, [status, isAdmin]);

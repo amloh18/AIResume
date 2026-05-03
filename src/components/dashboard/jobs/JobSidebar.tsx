@@ -8,7 +8,7 @@ import {
   X, Briefcase, MapPin, DollarSign, Calendar, ExternalLink,
   FileText, CheckCircle, Clock, AlertCircle, Plus, Edit, Trash2,
   Target, Building2, Star, Copy, Archive, ChevronDown, User, Mail, Phone, TrendingUp,
-  Eye, ArrowRight, Sparkles
+  Eye, ArrowRight, Sparkles, Loader2
 } from 'lucide-react';
 
 // Ensure all icons are properly tree-shaken and available
@@ -16,7 +16,7 @@ import {
 import JourneyTimelineCard from '../JourneyTimelineCard';
 import JobInfoContent from '../JobInfoContent';
 import EditJobSidebar from './EditJobSidebar';
-import InterviewPrepSidebar from './InterviewPrepSidebar';
+import DocumentPreviewSidebar from './DocumentPreviewSidebar';
 import toast from 'react-hot-toast';
 import { useJobInsights, useJobFallbacks, formatJobDate, formatJobSalary, formatJobUrl } from '@/hooks/useJobInsights';
 import { CVJourney } from '@/types/cv';
@@ -115,13 +115,17 @@ const JobSidebar: React.FC<JobSidebarProps> = ({
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [cvData, setCvData] = useState<any>(null);
   const [loadingCV, setLoadingCV] = useState(false);
-  const [interviewPrepOpen, setInterviewPrepOpen] = useState(false);
   const [trackerGenerationPreview, setTrackerGenerationPreview] = useState<TrackerCreatedStagePreview | null>(null);
   const [showCreatedStageModal, setShowCreatedStageModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [detailsModalView, setDetailsModalView] = useState<'details' | 'insights'>('details');
   const [activeActionId, setActiveActionId] = useState<TrackerSidebarActionId | null>(null);
   const [activeActionPayload, setActiveActionPayload] = useState<TrackerSidebarActionPayload | null>(null);
+  const [previewDocumentType, setPreviewDocumentType] = useState<'cv' | 'coverLetter' | null>(null);
+  const [previewDocumentData, setPreviewDocumentData] = useState<any>(null);
+  const [previewTemplate, setPreviewTemplate] = useState<any>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState<'cv' | 'coverLetter' | null>(null);
 
   // EditJobSidebar state for layered sidebar
   const [showEditJobSidebar, setShowEditJobSidebar] = useState(false);
@@ -678,33 +682,6 @@ ${userName}`
     return timelines[job.status as keyof typeof timelines] || [];
   };
 
-  const stageItems = useMemo(() => {
-    const items = [
-      { key: 'draft', label: 'Draft' },
-      { key: 'created', label: 'Created' },
-      { key: 'applied', label: 'Applied' },
-      { key: 'screening', label: 'Screening' },
-      { key: 'interview', label: 'Interview' },
-      { key: 'offer', label: 'Offer' },
-      { key: 'accepted', label: 'Accepted' }
-    ];
-
-    const currentIndex = items.findIndex(item => item.key === job.status);
-
-    return items.map((item, index) => ({
-      ...item,
-      isCurrent: item.key === job.status,
-      isCompleted: currentIndex > -1 ? index < currentIndex : false,
-      isUpcoming: currentIndex > -1 ? index > currentIndex : true
-    }));
-  }, [job.status]);
-
-  const terminalStageLabel = useMemo(() => {
-    if (job.status === 'rejected') return 'Rejected';
-    if (job.status === 'withdrawn') return 'Withdrawn';
-    return null;
-  }, [job.status]);
-
   const primaryJourney = useMemo(() => {
     if (!journeys.length) return null;
 
@@ -716,6 +693,88 @@ ${userName}`
   const generationState = primaryJourney?.generationState;
   const keywordMatchScore = insights?.keywordMatchScore ?? job.atsScore ?? 0;
   const followUpTimeline = useMemo(() => getFollowUpTimeline(job), [job]);
+  const formatTimelineDate = useCallback((date?: string | Date | null) => {
+    if (!date) return 'Not reached';
+
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return 'Not reached';
+    }
+
+    return parsedDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: parsedDate.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined,
+    });
+  }, []);
+  const getStageTransitionDate = useCallback((stageKey: string) => {
+    if (stageKey === 'draft') {
+      return job.createdAt || null;
+    }
+
+    const matchingHistory = (job.statusHistory || [])
+      .filter((entry: any) => entry?.status === stageKey && entry?.changedAt)
+      .sort(
+        (a: any, b: any) =>
+          new Date(a.changedAt).getTime() - new Date(b.changedAt).getTime(),
+      );
+
+    if (matchingHistory.length > 0) {
+      return matchingHistory[0].changedAt;
+    }
+
+    if (stageKey === job.status) {
+      return job.updatedAt || null;
+    }
+
+    return null;
+  }, [job.createdAt, job.status, job.statusHistory, job.updatedAt]);
+  const stageItems = useMemo(() => {
+    const normalizedTimelineStatus = job.status === 'screening' ? 'applied' : job.status;
+    const items = [
+      { key: 'draft', label: 'Draft' },
+      { key: 'created', label: 'Created' },
+      { key: 'applied', label: 'Applied' },
+      { key: 'interview', label: 'Interview' },
+      { key: 'offer', label: 'Offer' },
+      { key: job.status === 'rejected' ? 'rejected' : 'accepted', label: job.status === 'rejected' ? 'Rejected' : 'Accepted' }
+    ];
+
+    const currentIndex = items.findIndex(item => item.key === normalizedTimelineStatus);
+    const lastReachedIndex = items.reduce((lastIndex, item, index) => {
+      return getStageTransitionDate(item.key) ? index : lastIndex;
+    }, -1);
+
+    return items.map((item, index) => ({
+      ...item,
+      isCurrent: currentIndex > -1 ? item.key === normalizedTimelineStatus : false,
+      isCompleted:
+        currentIndex > -1
+          ? index < currentIndex
+          : index <= lastReachedIndex,
+      isUpcoming:
+        currentIndex > -1
+          ? index > currentIndex
+          : index > lastReachedIndex,
+      stageDate: getStageTransitionDate(item.key),
+      statusLabel:
+        job.status === 'screening' && item.key === 'applied'
+          ? 'In screening'
+          : item.key === normalizedTimelineStatus
+            ? 'Current stage'
+            : currentIndex > -1
+              ? index < currentIndex
+                ? 'Completed'
+                : 'Upcoming'
+              : index <= lastReachedIndex
+                ? 'Completed'
+                : 'Upcoming',
+    }));
+  }, [getStageTransitionDate, job.status]);
+  const terminalStageLabel = useMemo(() => {
+    if (job.status === 'withdrawn') return 'Withdrawn';
+    return null;
+  }, [job.status]);
   const activeJourneyForPayload = useMemo(() => {
     if (!activeActionPayload?.journeyId) {
       return primaryJourney;
@@ -742,6 +801,62 @@ ${userName}`
     if (!stage) return 'Unknown stage';
     return stage.charAt(0).toUpperCase() + stage.slice(1);
   }, []);
+  const handleOpenInterviewCoach = useCallback(() => {
+    if (!jobId) return;
+    router.push(`/dashboard/interview/${jobId}`);
+  }, [jobId, router]);
+  const handleOpenDocumentPreview = useCallback(async (documentType: 'cv' | 'coverLetter') => {
+    if (!user?.id || !primaryJourney) {
+      return;
+    }
+
+    const targetId = documentType === 'cv' ? primaryJourney.cvId : primaryJourney.coverLetterId;
+    if (!targetId) {
+      return;
+    }
+
+    try {
+      setPreviewLoading(documentType);
+
+      if (documentType === 'cv') {
+        const response = await authenticatedFetchWithUserId(`/api/cvs/${targetId}`, user.id);
+        const result = await response.json();
+        const linkedCV = result?.data?.cv || result?.cv;
+
+        if (!response.ok || !linkedCV) {
+          throw new Error(result?.error || 'Failed to load CV preview');
+        }
+
+        setPreviewDocumentType('cv');
+        setPreviewDocumentData(linkedCV.cvData || linkedCV);
+        setPreviewTemplate(linkedCV.template || null);
+        setPreviewOpen(true);
+        return;
+      }
+
+      const response = await authenticatedFetchWithUserId(`/api/cover-letters/${targetId}`, user.id);
+      const result = await response.json();
+      const linkedCoverLetter = result?.coverLetter || result?.data?.coverLetter;
+
+      if (!response.ok || !linkedCoverLetter) {
+        throw new Error(result?.error || 'Failed to load cover letter preview');
+      }
+
+      setPreviewDocumentType('coverLetter');
+      setPreviewDocumentData(linkedCoverLetter);
+      setPreviewTemplate(null);
+      setPreviewOpen(true);
+    } catch (error) {
+      console.error(`Failed to load ${documentType} preview:`, error);
+      toast.error(
+        documentType === 'cv'
+          ? 'Failed to open CV preview.'
+          : 'Failed to open cover letter preview.',
+      );
+    } finally {
+      setPreviewLoading(null);
+    }
+  }, [primaryJourney, user?.id]);
 
   const openDetailsView = (view: 'details' | 'insights') => {
     setDetailsModalView(view);
@@ -883,13 +998,17 @@ ${userName}`
   const handleContinueJourney = (journey: any) => {
     // Navigate to editor with journey context
     const returnUrl = `/dashboard/tracker?journeyId=${journey.id}`;
-    if (journey.atsScore && journey.atsScore >= 80 && journey.coverLetterId) {
-      // If ATS score is good and cover letter exists, open cover letter
-      router.push(`/editor?journeyId=${journey.id}&documentType=cl&mode=cledit&returnUrl=${encodeURIComponent(returnUrl)}`);
-    } else {
-      // Default to CV editing
-      router.push(`/editor?journeyId=${journey.id}&documentType=cv&mode=cvedit&returnUrl=${encodeURIComponent(returnUrl)}`);
+    const params = new URLSearchParams();
+    params.set('mode', 'journey');
+    params.set('journeyId', journey.id);
+    params.set('step', '3');
+    params.set('returnUrl', returnUrl);
+
+    if (journey.cvId) {
+      params.set('cvId', journey.cvId);
     }
+
+    router.push(`/editor?${params.toString()}`);
   };
 
   const handleApplyNow = (journey: any) => {
@@ -1358,7 +1477,7 @@ ${userName}`
       continue_journey: () => primaryJourney && handleContinueJourney(primaryJourney as any),
       open_details: () => openDetailsView('details'),
       open_insights: () => openDetailsView('insights'),
-      open_interview_prep: () => setInterviewPrepOpen(true),
+        open_interview_prep: handleOpenInterviewCoach,
       archive_job: handleArchiveJob,
       duplicate_job: handleDuplicateJob,
     },
@@ -1376,6 +1495,7 @@ ${userName}`
     handleCreateJourney,
     handleArchiveJob,
     handleDuplicateJob,
+    handleOpenInterviewCoach,
   ]);
 
   const runSidebarAction = useCallback(async (actionId: TrackerSidebarActionId) => {
@@ -1408,7 +1528,7 @@ ${userName}`
         openDetailsView('insights');
         return;
       case 'open_interview_prep':
-        setInterviewPrepOpen(true);
+        handleOpenInterviewCoach();
         return;
       case 'archive_job':
         await handleArchiveJob();
@@ -1426,6 +1546,7 @@ ${userName}`
     handleMoveToCreated,
     handleOpenEditModal,
     openDetailsView,
+    handleOpenInterviewCoach,
     primaryJourney,
     sidebarConfig.actionPayloads,
   ]);
@@ -1457,9 +1578,9 @@ ${userName}`
     if (openContext.highlightAction === 'open_interview_prep' && job.status === 'interview') {
       setActiveActionId('open_interview_prep');
       setActiveActionPayload(sidebarConfig.actionPayloads.open_interview_prep || null);
-      setInterviewPrepOpen(true);
+      handleOpenInterviewCoach();
     }
-  }, [job.status, openContext, sidebarConfig.actionPayloads]);
+  }, [handleOpenInterviewCoach, job.status, openContext, sidebarConfig.actionPayloads]);
 
   const journeyCardData = sidebarConfig.journeyCard;
   return (
@@ -1599,7 +1720,10 @@ ${userName}`
                             {stage.label}
                           </p>
                           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                            {stage.isCurrent ? 'Current stage' : stage.isCompleted ? 'Completed' : 'Upcoming'}
+                            {stage.statusLabel}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            {formatTimelineDate(stage.stageDate)}
                           </p>
                         </div>
                       </div>
@@ -1711,6 +1835,31 @@ ${userName}`
                                     <span className="font-medium text-gray-900 dark:text-white">
                                       {formatJobDate(primaryJourney.updatedAt || primaryJourney.metadata?.updatedAt)}
                                     </span>
+                                  </div>
+                                )}
+                                {(primaryJourney.cvId || primaryJourney.coverLetterId) && (
+                                  <div className="border-t border-gray-200 pt-3 dark:border-white/10">
+                                    <p className="mb-2 text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+                                      Ready previews
+                                    </p>
+                                    <div className="flex flex-wrap gap-2">
+                                      <button
+                                        onClick={() => void handleOpenDocumentPreview('cv')}
+                                        disabled={!primaryJourney.cvId || previewLoading === 'cv'}
+                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#273021]"
+                                      >
+                                        {previewLoading === 'cv' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                                        Preview CV
+                                      </button>
+                                      <button
+                                        onClick={() => void handleOpenDocumentPreview('coverLetter')}
+                                        disabled={!primaryJourney.coverLetterId || previewLoading === 'coverLetter'}
+                                        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-gray-200 dark:hover:bg-[#273021]"
+                                      >
+                                        {previewLoading === 'coverLetter' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
+                                        Preview Cover Letter
+                                      </button>
+                                    </div>
                                   </div>
                                 )}
                               </>
@@ -2279,17 +2428,6 @@ ${userName}`
           />
         )}
 
-        {/* Interview Prep Sidebar */}
-        {job.status === 'interview' && (
-          <InterviewPrepSidebar
-            isOpen={interviewPrepOpen}
-            onClose={() => setInterviewPrepOpen(false)}
-            jobId={job.id || job._id}
-            jobTitle={job.jobTitle || job.title || ''}
-            company={job.company}
-            actionContext={activeActionPayload}
-          />
-        )}
         <TrackerCreatedStageModal
           isOpen={showCreatedStageModal}
           onClose={() => setShowCreatedStageModal(false)}
@@ -2302,6 +2440,15 @@ ${userName}`
           preview={trackerGenerationPreview}
           isSubmitting={isMovingToCreated}
           actionContext={activeActionPayload}
+        />
+        <DocumentPreviewSidebar
+          isOpen={previewOpen && !!previewDocumentType}
+          onClose={() => setPreviewOpen(false)}
+          documentType={previewDocumentType || 'cv'}
+          documentData={previewDocumentData}
+          cvData={cvData || previewDocumentData}
+          jobData={job}
+          template={previewTemplate}
         />
       </>
     </AnimatePresence>
