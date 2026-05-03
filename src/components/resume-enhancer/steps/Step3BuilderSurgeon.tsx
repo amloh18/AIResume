@@ -497,7 +497,15 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
 
     // Journey Validation Effect - Ensure job data integrity
     React.useEffect(() => {
-      // If we have a journey CV but no JD, prompt user
+      const hasLinkedTrackerJob = Boolean(state.jobData?.id || state.jobData?._id || state.journeyId);
+
+      // Do not auto-open the profiler when this builder is already attached to a tracker job.
+      // Users can still open and update the job manually from the editor.
+      if (hasLinkedTrackerJob) {
+        return;
+      }
+
+      // If we have a journey CV stub without usable JD context, prompt user to add it.
       if (state.cvType === 'journey' && state.jobData && !jdText && !state.jobData.jobDescription) {
         setShowJobParserDialog(true);
       }

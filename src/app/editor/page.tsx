@@ -20,19 +20,25 @@ function ResumeEnhancerPageContent() {
 
   // Get parameters from URL and sanitize them (avoid literal 'undefined' strings)
   const typeParam = searchParams.get('type');
-  const modeParam = searchParams.get('mode');
+  const rawModeParam = searchParams.get('mode');
+  const rawCvId = searchParams.get('cvId');
+  const rawJourneyId = searchParams.get('journeyId');
+  const normalizedLegacyMode =
+    rawModeParam === 'cvedit'
+      ? (rawJourneyId ? 'journey' : 'edit')
+      : rawModeParam === 'cledit'
+        ? 'edit-cover-letter'
+        : rawModeParam;
   let mode: 'create' | 'edit' | 'edit-master' | 'journey' | 'edit-cover-letter' | 'create-cover-letter' =
-    (modeParam === 'edit' || modeParam === 'edit-master' || modeParam === 'journey' || modeParam === 'edit-cover-letter' || modeParam === 'create-cover-letter')
-      ? modeParam
+    (normalizedLegacyMode === 'edit' || normalizedLegacyMode === 'edit-master' || normalizedLegacyMode === 'journey' || normalizedLegacyMode === 'edit-cover-letter' || normalizedLegacyMode === 'create-cover-letter')
+      ? normalizedLegacyMode
       : 'create';
   
   const rawClId = searchParams.get('clId') || searchParams.get('coverLetterId');
   const clId = (rawClId && rawClId !== 'undefined') ? rawClId : undefined;
   
-  const rawCvId = searchParams.get('cvId');
   const cvId = (rawCvId && rawCvId !== 'undefined') ? rawCvId : undefined;
   
-  const rawJourneyId = searchParams.get('journeyId');
   const journeyId = (rawJourneyId && rawJourneyId !== 'undefined') ? rawJourneyId : undefined;
   
   const restoreDraftParam = searchParams.get('restoreDraft') === 'true' || searchParams.get('resumeDraft') === 'true';
