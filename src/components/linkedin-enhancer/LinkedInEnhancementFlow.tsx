@@ -29,7 +29,7 @@ import { LINKEDIN_COLORS } from '@/types/linkedin';
 export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackToDashboard?: () => void }) {
     const router = useRouter();
     const { state, dispatch, setTone, selectCv, triggerEnhancement } = useLinkedInEnhancer();
-    const [availableCvs, setAvailableCvs] = useState<CVSelectionItem[]>([]);
+     const [availableCvs, setAvailableCvs] = useState<CVSelectionItem[]>([]);
     const [initialLoadComplete, setInitialLoadComplete] = useState(false);
     const [userProfileImage, setUserProfileImage] = useState<string | null>(null);
     const [showInsights, setShowInsights] = useState(false);
@@ -42,6 +42,8 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         skills_matrix: true,
         languages: true
     });
+    const [isFetchingFromLinkedIn, setIsFetchingFromLinkedIn] = useState(false);
+    const [fetchError, setFetchError] = useState<string | null>(null);
     
     // Modal states
     const [isBrowserModalOpen, setIsBrowserModalOpen] = useState(false);
@@ -171,12 +173,68 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         }
     }, [dispatch, triggerEnhancement]);
 
-    // Handle CV selection change
+     // Handle CV selection change
     const handleCvSelect = useCallback(async (id: string, type: 'master' | 'standalone') => {
         selectCv(id, type);
         dispatch({ type: 'SET_LOADING', payload: true });
         await loadCvData(id, type);
     }, [selectCv, loadCvData, dispatch]);
+
+    // Fetch CV data from LinkedIn
+    const handleFetchFromLinkedIn = useCallback(async () => {
+        setIsFetchingFromLinkedIn(true);
+        setFetchError(null);
+        
+        try {
+            const response = await fetch('/api/linkedin/import');
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to fetch from LinkedIn');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.data) {
+                // Transform the LinkedIn data to LinkedIn sections
+                const sections = transformCvToLinkedInSections(data.data);
+                
+                // Create a temporary CV entry
+                const tempCv: CVSelectionItem = {
+                    id: `linkedin_${Date.now()}`,
+                    name: 'LinkedIn Profile',
+                    type: 'standalone',
+                    updatedAt: new Date().toISOString(),
+                };
+                
+                // Add to available CVs and select it
+                setAvailableCvs([tempCv]);
+                selectCv(tempCv.id, tempCv.type);
+                
+                // Load the data
+                dispatch({
+                    type: 'LOAD_CV_DATA',
+                    payload: { sections, cvId: tempCv.id, cvType: tempCv.type },
+                });
+                
+                // Trigger enhancement
+                requestAnimationFrame(() => {
+                    triggerEnhancement(tempCv.id, tempCv.type, false);
+                });
+                
+                dispatch({ type: 'SET_LOADING', payload: false });
+            } else {
+                throw new Error(data.error || 'Failed to fetch from LinkedIn');
+            }
+        } catch (error: any) {
+            console.error('LinkedIn fetch error:', error);
+            setFetchError(error.message || 'Failed to fetch from LinkedIn');
+            dispatch({ type: 'SET_ERROR', payload: 'Failed to fetch from LinkedIn' });
+            dispatch({ type: 'SET_LOADING', payload: false });
+        } finally {
+            setIsFetchingFromLinkedIn(false);
+        }
+    }, [dispatch, selectCv, triggerEnhancement]);
 
     // Handle regenerate
     const handleRegenerate = useCallback(() => {
@@ -330,7 +388,7 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
         <div
             className="min-h-screen flex flex-col bg-[#f3f2ee] dark:bg-[#1a230f]"
         >
-            {/* Header */}
+             {/* Header */}
             <LinkedInHeader
                 availableCvs={availableCvs}
                 selectedCvId={state.selectedCvId}
@@ -340,6 +398,8 @@ export default function LinkedInEnhancementFlow({ onBackToDashboard }: { onBackT
                 currentTone={state.user_context.tone_selection}
                 onToneChange={setTone}
                 onToneChangeWithRegenerate={handleToneChangeWithRegenerate}
+                onFetchFromLinkedIn={handleFetchFromLinkedIn}
+                isFetchingFromLinkedIn={isFetchingFromLinkedIn}
             />
 
             {/* Main Content */}
