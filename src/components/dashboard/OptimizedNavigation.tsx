@@ -290,6 +290,15 @@ const OptimizedNavigation: React.FC = () => {
     }
   }, [router, isMobileMenuOpen, setIsOpen]);
 
+  // Handle logo click - navigate to home for guests, dashboard for logged in users
+  const handleLogoClick = useCallback(() => {
+    if (userData?.id) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/');
+    }
+  }, [router, userData?.id]);
+
   // Handle sign out
   const handleSignOut = async () => {
     if (isMobileMenuOpen) {
@@ -383,39 +392,37 @@ const OptimizedNavigation: React.FC = () => {
         {isDesktopExpanded ? <ChevronLeft className="w-4 h-4 text-gray-500" /> : <ChevronRight className="w-4 h-4 text-gray-500" />}
       </button>
 
-      {/* Header */}
-      <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
-        <motion.button
-          onClick={() => {
-            handleNavigation('analytics');
-          }}
-          className="flex items-center gap-3 hover:opacity-90 transition-opacity"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          aria-label="Home Dashboard"
-        >
+       {/* Header */}
+       <div className={`flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 lg:border-b-0 ${isDesktopExpanded ? 'lg:p-6 lg:justify-start' : 'lg:p-4 lg:justify-center'} relative`}>
+         <motion.button
+           onClick={handleLogoClick}
+           className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+           whileHover={{ scale: 1.05 }}
+           whileTap={{ scale: 0.95 }}
+           aria-label="Home Dashboard"
+         >
           {/* Logo Icon & Text */}
-          <div className="flex items-center">
-            <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
-              <Logo size="md" />
-            </div>
-            <div className={`hidden ${!isDesktopExpanded ? 'lg:flex' : ''}`}>
-              <Logo size="md" />
-            </div>
-          </div>
-        </motion.button>
+           <div className="flex items-center">
+             <div className={`flex items-center ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
+               <Logo size="md" />
+             </div>
+             <div className={`hidden ${!isDesktopExpanded ? 'lg:flex' : ''}`}>
+               <Logo size="md" />
+             </div>
+           </div>
+         </motion.button>
 
-        {/* Close Button - Only visible on mobile */}
-        <motion.button
-          onClick={() => setIsOpen(false)}
-          className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -mr-2"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          aria-label="Close menu"
-        >
-          <X className="w-6 h-6" />
-        </motion.button>
-      </div>
+         {/* Close Button - Only visible on mobile */}
+         <motion.button
+           onClick={() => setIsOpen(false)}
+           className="lg:hidden text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -mr-2"
+           whileHover={{ scale: 1.1 }}
+           whileTap={{ scale: 0.9 }}
+           aria-label="Close menu"
+         >
+           <X className="w-6 h-6" />
+         </motion.button>
+       </div>
 
       {/* Navigation */}
       <nav className={`flex-1 p-6 space-y-2 overflow-y-auto scrollbar-hide ${isDesktopExpanded ? 'lg:p-4 lg:space-y-1' : 'lg:p-2 lg:space-y-1'}`}>

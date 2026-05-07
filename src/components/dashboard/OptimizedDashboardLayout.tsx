@@ -28,29 +28,29 @@ const DashboardContent: React.FC<{ children?: React.ReactNode }> = ({ children }
       <div className="flex h-screen">
         {/* Desktop Sidebar - Hidden on sm/md, visible on lg and up */}
         {/* Render sidebar as a standard flex child on desktop so it pushes content naturally */}
-        <div
-          data-dashboard-sidebar
-          className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-40 lg:py-0 lg:px-0 ${
-            isDesktopExpanded ? 'lg:w-[230px]' : 'lg:w-[88px]'
-          } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
-        >
-          <OptimizedNavigation />
-        </div>
+         <div
+           data-dashboard-sidebar
+           className={`hidden lg:flex lg:flex-col lg:sticky lg:top-0 lg:h-screen lg:z-40 lg:py-0 lg:px-0 ${
+             isDesktopExpanded ? 'lg:w-[280px]' : 'lg:w-[84px]'
+           } overflow-visible pointer-events-auto transition-all duration-300 flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#141810]`}
+         >
+           <OptimizedNavigation />
+         </div>
 
-        {/* Mobile/Small Screen Full-Screen Menu - Hidden on lg and up */}
-        <AnimatePresence>
-          {isMobileMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2 }}
-              className="fixed inset-0 z-40 bg-white dark:bg-[#141810] lg:hidden"
-            >
-              <OptimizedNavigation />
-            </motion.div>
-          )}
-        </AnimatePresence>
+{/* Mobile/Small Screen Full-Screen Menu - Hidden on lg and up */}
+          <AnimatePresence>
+            {isMobileMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="fixed inset-0 z-40 bg-white dark:bg-[#141810] lg:hidden"
+              >
+                <OptimizedNavigation />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
         {/* Main Content - Always render shell to prevent CLS */}
         {/* Removed padding-left hacks since the sticky sidebar naturally pushes this flex-1 container */}

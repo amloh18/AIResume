@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import JobsDashboard from '@/components/dashboard/JobsDashboard';
 import JobsLoadingState from '@/components/dashboard/JobsDashboard/JobsLoadingState';
+import RouteGuard from '@/components/auth/RouteGuard';
 
 export const metadata = {
   title: 'Jobs - CV Circle',
@@ -11,7 +12,9 @@ export default function JobsPage() {
   return (
     <div className="min-h-screen bg-[#f3f2ee] dark:bg-[#1a230f] p-4 lg:p-6">
       <Suspense fallback={<JobsLoadingState />}>
-        <JobsDashboard />
+        <RouteGuard requireAuth={true}>
+          <JobsDashboard />
+        </RouteGuard>
       </Suspense>
     </div>
   );

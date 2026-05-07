@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 const STORAGE_KEY = 'feature-promotion-state';
+const SESSION_SHOWN_KEY = 'feature-promotion-session-shown';
 const PROMOTION_COOLDOWN_MS = 300000; // 5 minutes between promotions
 
 interface DismissedPromotion {
@@ -167,6 +168,13 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
 
   // Check if we can show a promotion (cooldown check)
   const canShowPromotion = useCallback((): boolean => {
+    if (typeof window === 'undefined') return false;
+
+    // Don't show if already shown in this session (not on refresh)
+    if (sessionStorage.getItem(SESSION_SHOWN_KEY)) {
+      return false;
+    }
+
     const now = Date.now();
     const timeSinceLastPromotion = now - state.lastPromotionShown;
     return timeSinceLastPromotion >= PROMOTION_COOLDOWN_MS;
@@ -181,6 +189,12 @@ export function FeaturePromotionProvider({ children }: { children: React.ReactNo
       }
 
       setCurrentPromotion(promotion);
+      
+      // Mark as shown in this session
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem(SESSION_SHOWN_KEY, 'true');
+      }
+
       setState((prev) => {
         const newState: PromotionState = {
           ...prev,

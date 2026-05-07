@@ -23,14 +23,14 @@ const IMAGE_URLS = {
 export const PROMOTION_TYPES: PromotionConfig[] = [
   {
     id: 'cover-letter-cv-editing',
-    title: 'Nail the Introduction',
-    description: 'A great CV deserves a tailored cover letter. Generate one instantly based on your profile.',
+    title: 'Complete the Winning Duo',
+    description: 'A great CV tells them what you\'ve done. A tailored cover letter tells them why you\'re the one. Let\'s draft a narrative that sticks.',
     benefits: [
-      'Matches your exact CV data',
-      'AI-tailored for the specific role',
-      'Boosts callback rates by 40%'
+      'AI-generated based on your exact profile',
+      'Tailored to this specific job description',
+      'Stand out from 90% of other applicants'
     ],
-    ctaText: 'Generate Cover Letter',
+    ctaText: 'Draft Cover Letter',
     ctaRoute: 'action:open-cover-letter',
     imageUrl: IMAGE_URLS.coverLetter,
     contexts: ['cv-editing'],
@@ -39,14 +39,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'cover-letter-cv-viewing',
-    title: 'Complete Your Application',
-    description: 'Don\'t stop at the CV. Attach a personalized cover letter to stand out.',
+    title: 'Your Story, Perfected',
+    description: 'Don\'t leave your application half-finished. A personalized cover letter bridges the gap between your resume and the hiring manager.',
     benefits: [
-      'Increase application success rate',
-      'Show genuine interest in the role',
-      'Highlight key achievements'
+      'Showcase your personality and "why"',
+      'Directly address job requirements',
+      'Professional formatting that matches your CV'
     ],
-    ctaText: 'Write Cover Letter',
+    ctaText: 'Add Cover Letter',
     ctaRoute: 'action:open-cover-letter',
     imageUrl: IMAGE_URLS.coverLetter,
     contexts: ['cv-viewing'],
@@ -55,14 +55,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'ats-analysis-job',
-    title: 'Beat the ATS Robot',
-    description: 'Ensure your resume gets seen by a human. Run an instant ATS match against this job.',
+    title: 'Is Your Resume Invisible?',
+    description: '75% of resumes are filtered out by ATS before a human ever sees them. Scan your CV against this job to ensure you make the cut.',
     benefits: [
-      'Uncover missing keywords',
-      'Fix formatting issues',
-      'Get actionable improvements'
+      'Find missing industry keywords',
+      'Identify formatting red flags',
+      'Get an instant ATS match score'
     ],
-    ctaText: 'Scan Resume',
+    ctaText: 'Scan for ATS Match',
     ctaRoute: 'action:open-ats-scanner',
     imageUrl: IMAGE_URLS.atsAnalysis,
     contexts: ['job-tracking', 'ats-analysis'],
@@ -71,14 +71,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'cv-creation-no-cv',
-    title: 'Build Your Master CV',
-    description: 'Start tracking jobs the right way. Build a professional CV in minutes.',
+    title: 'Build Your Foundation',
+    description: 'Tracking jobs is easier when you have a Master CV to pull from. Build your professional foundation in minutes with our AI assistant.',
     benefits: [
-      'Auto-fill applications',
-      'ATS-friendly formats',
-      'AI content suggestions'
+      'Auto-fill job applications later',
+      'One-click tailoring for any role',
+      'Professional, recruiter-vetted formats'
     ],
-    ctaText: 'Create CV',
+    ctaText: 'Create Master CV',
     ctaRoute: '/editor',
     imageUrl: IMAGE_URLS.cvCreation,
     contexts: ['job-tracking', 'dashboard'],
@@ -87,14 +87,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'upgrade-credit-low',
-    title: 'Keep the Momentum Going',
-    description: 'You\'re running low on credits. Upgrade to Pro for unlimited AI tailoring and job tracking.',
+    title: 'Keep Your Edge Sharp',
+    description: 'You\'re doing great, but your AI credits are running low. Upgrade to Pro for unlimited tailoring and never miss an opportunity.',
     benefits: [
-      'Unlimited tailored resumes',
-      'Unlimited cover letters',
-      'Priority 24/7 support'
+      'Unlimited AI Resume Tailoring',
+      'Unlimited Cover Letters',
+      'Early access to new AI features'
     ],
-    ctaText: 'Upgrade to Pro',
+    ctaText: 'Go Pro & Save',
     ctaRoute: 'payment-modal:pro_monthly',
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['credit-low'],
@@ -103,14 +103,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'upgrade-credit-exhausted',
-    title: 'Action Required: Out of Credits',
-    description: 'You\'ve used all your AI credits. Upgrade to Pro to continue generating tailored content.',
+    title: 'Don\'t Let the Momentum Stop',
+    description: 'You\'ve reached your free limit. Pro members get hired 3x faster with unlimited access to our full AI toolkit.',
     benefits: [
-      'Unlimited tailored resumes',
-      'Unlimited cover letters',
-      'Priority 24/7 support'
+      'Unlimited Smart Tailoring',
+      'Deep ATS Optimization',
+      'Priority AI Processing'
     ],
-    ctaText: 'Upgrade to Pro',
+    ctaText: 'Unlock Unlimited Access',
     ctaRoute: 'payment-modal:pro_monthly',
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['credit-exhausted'],
@@ -119,14 +119,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'upgrade-free-user',
-    title: 'Supercharge Your Job Search',
-    description: 'Tired of applying into the void? Pro users get hired 3x faster with our AI toolkit.',
+    title: 'Land Your Dream Role Faster',
+    description: 'Stop sending the same resume everywhere. Pro users use AI to tailor every application and get 3x more interviews.',
     benefits: [
-      'Unlimited AI resume tailoring',
-      'Advanced ATS analysis',
-      'Automated cover letters'
+      'Unlimited Smart Tailoring',
+      'Deep ATS Optimization',
+      'Premium Resume Templates'
     ],
-    ctaText: 'Unlock Premium',
+    ctaText: 'Supercharge My Search',
     ctaRoute: 'payment-modal:pro_monthly',
     imageUrl: IMAGE_URLS.upgrade,
     contexts: ['free-user', 'dashboard'],
@@ -135,14 +135,14 @@ export const PROMOTION_TYPES: PromotionConfig[] = [
   },
   {
     id: 'job-tracking-no-jobs',
-    title: 'Stop Losing Track of Apps',
-    description: 'Manage your job search pipeline efficiently in one organized board.',
+    title: 'The Smarter Way to Search',
+    description: 'Spreadsheets are for accounting. Use our Job Tracker to manage your pipeline, deadlines, and follow-ups in one place.',
     benefits: [
-      'Track status and deadlines',
-      'Get interview reminders',
-      'Analyze application success'
+      'Visual Kanban progress board',
+      'Save jobs from any website',
+      'Never miss a follow-up deadline'
     ],
-    ctaText: 'Add First Job',
+    ctaText: 'Add Your First Job',
     ctaRoute: '/dashboard/tracker?action=add-job',
     imageUrl: IMAGE_URLS.jobTracking,
     contexts: ['dashboard'],

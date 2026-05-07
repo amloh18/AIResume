@@ -253,7 +253,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
                 </g>
               );
             }}
-            name="Jobs"
+            name="Applications"
             animationDuration={1000}
             animationEasing="ease-in-out"
             opacity={filter === 'all' || filter === 'jobs' ? 1 : 0.3}
@@ -295,7 +295,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
                 </g>
               );
             }}
-            name="Cover Letters"
+            name="Interviews"
             animationDuration={1000}
             animationEasing="ease-in-out"
             opacity={filter === 'all' || filter === 'coverLetters' ? 1 : 0.3}
@@ -321,17 +321,30 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
 
   return (
     <div
-      className="bg-white dark:bg-[#111317] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full"
+      className="bg-white dark:bg-[#111317] rounded-3xl p-4 md:p-5 shadow-sm border border-gray-100 dark:border-white/5 h-full flex flex-col w-full"
       data-analytics-widget="progress-tracking"
     >
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-        <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-400/20 to-blue-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
             <TrendingUp className="h-4 w-4 text-blue-400" />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0">
             <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">Progress Tracking</h2>
-            <p className="text-gray-600 dark:text-white/60 text-[11px] truncate">Activity over time</p>
+            <div className="flex items-center gap-3 mt-0.5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]"></div>
+                <span className="text-gray-500 dark:text-white/60 text-[10px] uppercase font-bold tracking-wider">Applications</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#10B981]"></div>
+                <span className="text-gray-500 dark:text-white/60 text-[10px] uppercase font-bold tracking-wider">CVs</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]"></div>
+                <span className="text-gray-500 dark:text-white/60 text-[10px] uppercase font-bold tracking-wider">Interviews</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -343,9 +356,9 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
               onChange={(value) => setFilter(value as any)}
               options={[
                 { value: 'all', label: 'All' },
-                { value: 'jobs', label: 'Jobs' },
+                { value: 'jobs', label: 'Apps' },
                 { value: 'cvs', label: 'CVs' },
-                { value: 'coverLetters', label: 'Docs' },
+                { value: 'coverLetters', label: 'Intv' },
               ]}
               theme="blue"
               size="sm"
@@ -368,23 +381,7 @@ const ProgressTrackingWidget: React.FC<ProgressTrackingWidgetProps> = ({ userId 
       </div>
 
       {/* Chart */}
-      <div className="flex-1 min-h-[220px] bg-white/5 rounded-lg p-2 sm:p-4 relative">
-        {/* Labels in upper right corner */}
-        <div className="absolute top-2 right-2 z-10 flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] sm:text-[11px] font-medium max-w-[calc(100%-1rem)] sm:max-w-none">
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#10B981] flex-shrink-0"></div>
-            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">CVs</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#8b5cf6] flex-shrink-0"></div>
-            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap hidden sm:inline">Cover Letters</span>
-            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap sm:hidden">CL</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-[#3b82f6] flex-shrink-0"></div>
-            <span className="text-gray-700 dark:text-gray-300 whitespace-nowrap">Jobs</span>
-          </div>
-        </div>
+      <div className="flex-1 min-h-[160px] bg-white/5 rounded-lg p-2 sm:p-4 relative">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <div className="w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>

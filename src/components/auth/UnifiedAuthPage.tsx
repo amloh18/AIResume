@@ -205,21 +205,22 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       return '/admin';
     }
 
-    // Check if user is B2B
-    const isB2b = !!(user as any).b2b?.tenantId || !!(user as any).isB2b;
-    if (isB2b) {
-      // Check if B2B user needs to complete onboarding
-      const needsOnboarding = !(user as any).b2b?.setupComplete;
-      const isAdmin = user.role === 'admin' || user.role === 'superadmin';
-      
-      if (needsOnboarding && isAdmin) {
-        // B2B admin needs to complete onboarding
-        return '/b2b/onboarding';
+      // Check if user is B2B
+      const isB2b = !!(user as any).b2b?.tenantId || !!(user as any).isB2b;
+      if (isB2b) {
+        // Check if B2B user needs to complete onboarding
+        // setupComplete may be undefined for existing users, treat as false
+        const needsOnboarding = !(user as any).b2b?.setupComplete;
+        const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+        
+        if (needsOnboarding && isAdmin) {
+          // B2B admin needs to complete onboarding
+          return '/b2b/onboarding';
+        }
+        
+        // Regular B2B user goes to dashboard
+        return '/b2b/dashboard';
       }
-      
-      // Regular B2B user goes to dashboard
-      return '/b2b/dashboard';
-    }
 
     // Regular user goes to standard dashboard
     return defaultUrl;

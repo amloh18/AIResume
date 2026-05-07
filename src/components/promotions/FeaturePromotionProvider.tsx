@@ -12,6 +12,11 @@ function PromotionRenderer() {
 
   // Select and show promotion when context changes
   useEffect(() => {
+    // DO NOT show for Admin or B2B users
+    if (contextData.isAdmin || contextData.isB2B) {
+      return;
+    }
+
     // Only check for promotions if we don't have one showing and cooldown has passed
     if (!currentPromotion && canShowPromotion()) {
       const promotion = selectPromotion({
@@ -34,10 +39,10 @@ function PromotionRenderer() {
           return;
         }
         
-        // Small delay to avoid showing immediately on page load
+        // Increased delay to avoid showing immediately on page load
         const timer = setTimeout(() => {
           showPromotion(promotion);
-        }, 2000); // 2 second delay
+        }, 5000); // 5 second delay
 
         return () => clearTimeout(timer);
       }
@@ -52,6 +57,8 @@ function PromotionRenderer() {
     contextData.hasCV,
     contextData.hasJobs,
     contextData.isPaidUser,
+    contextData.isAdmin,
+    contextData.isB2B,
     isDismissed,
     canShowPromotion,
     showPromotion,

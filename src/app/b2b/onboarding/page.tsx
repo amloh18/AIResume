@@ -172,13 +172,21 @@ const B2BOnboardingPage = () => {
   const completeOnboarding = async (skipped = false) => {
     setIsLoading(true);
     try {
-      // In a real app, you would send this data to your backend
-      // For now, we'll simulate the completion
-      console.log('Onboarding data:', formData);
-      console.log('Skipped:', skipped);
+      // Send onboarding completion to backend
+      const response = await fetch('/api/user/b2b-onboarding-complete', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to complete onboarding');
+      }
+
+      const result = await response.json();
+      console.log('Onboarding completed:', result);
 
       // Redirect to dashboard
       router.push('/b2b/dashboard');
