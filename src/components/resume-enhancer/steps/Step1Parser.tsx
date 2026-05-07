@@ -16,6 +16,8 @@ import { authenticatedFetchWithUserId } from '@/lib/utils/apiUtils';
 import CVPreviewThumbnail from '@/components/dashboard/CVPreviewThumbnail';
 import { useInView } from 'framer-motion';
 import { getAllTemplates } from '@/lib/templates/template-utils';
+import { ThumbnailGenerator } from '@/components/resume-enhancer/ThumbnailGenerator';
+import SmartJDModal from '@/components/resume-enhancer/SmartJDModal';
 
 // Global cache to prevent refetching when navigating between steps
 let cachedExistingCVs: ExistingCV[] | null = null;
@@ -53,6 +55,7 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
   const isInView = useInView(ref, { once: true, margin: "200px" });
 
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(item.metadata?.thumbnailUrl || item.thumbnailUrl || null);
+  const [showGenerator, setShowGenerator] = useState(false);
   
   const templateObj = React.useMemo(() => {
     if (item.template) return item.template;
@@ -64,44 +67,81 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
     return null;
   }, [item.template, item.templateId]);
 
+  const handleThumbnailGenerated = (url: string) => {
+    setThumbnailUrl(url);
+    setShowGenerator(false);
+  };
+
   return (
     <div 
       ref={ref}
       className="w-full aspect-[1/1.414] bg-gray-50 dark:bg-black/40 rounded-[2rem] border border-gray-200 dark:border-white/10 transition-all duration-500 shadow-md flex flex-col relative overflow-hidden group-hover:shadow-xl group-hover:border-lime-500/40 group-hover:scale-[1.02]"
     >
       {isInView ? (
-        thumbnailUrl ? (
-           <img 
-             src={thumbnailUrl} 
-             alt={item.title} 
-             className="w-full h-full object-cover bg-white" 
-             onError={(e) => {
-               const target = e.target as HTMLImageElement;
-               const currentSrc = target.src;
-               if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
-                 // Extract key and fetch presigned URL
-                 fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
-                   .then(res => res.json())
-                   .then(data => {
-                     if (data.url && data.url !== currentSrc) {
-                       setThumbnailUrl(data.url);
-                     } else {
-                       setThumbnailUrl(null);
-                     }
-                   })
-                   .catch(() => {
-                     setThumbnailUrl(null);
-                   });
-               } else {
-                 setThumbnailUrl(null);
-               }
-             }}
-           />
+        thumbnailUrl && !showGenerator ? (
+          <img 
+            src={thumbnailUrl} 
+            alt={item.title} 
+            className="w-full h-full object-cover bg-white" 
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              const currentSrc = target.src;
+              if (currentSrc.includes('s3.amazonaws.com') || currentSrc.includes('s3.')) {
+                // Extract key and fetch presigned URL
+                fetch(`/api/files/${encodeURIComponent(currentSrc.split('.amazonaws.com/')[1] || '')}`)
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.url && data.url !== currentSrc) {
+                      setThumbnailUrl(data.url);
+                    } else {
+                      setThumbnailUrl(null);
+                      setShowGenerator(true);
+                    }
+                  })
+                  .catch(() => {
+                    setThumbnailUrl(null);
+                    setShowGenerator(true);
+                  });
+              } else {
+                setThumbnailUrl(null);
+                setShowGenerator(true);
+              }
+            }}
+          />
         ) : !isCoverLetter && item.cvData && templateObj ? (
-           <div className="w-full h-full opacity-90 bg-white relative">
-             <div className="absolute inset-0 pointer-events-none z-10" />
-             <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
-           </div>
+          <div className="w-full h-full relative">
+            {showGenerator ? (
+              <div className="absolute inset-0 p-4">
+                <ThumbnailGenerator
+                  cvData={item.cvData}
+                  template={templateObj}
+                  onThumbnailGenerated={handleThumbnailGenerated}
+                  className="h-full"
+                />
+              </div>
+            ) : (
+              <div className="w-full h-full opacity-90 bg-white relative">
+                <div className="absolute inset-0 pointer-events-none z-10" />
+                <CVPreviewThumbnail cvData={item.cvData} template={templateObj} />
+              </div>
+            )}
+            {/* Regenerate button */}
+            {!showGenerator && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowGenerator(true);
+                }}
+                className="absolute top-2 right-2 w-8 h-8 bg-black/50 backdrop-blur-md rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black/70 z-20"
+                title="Regenerate thumbnail"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                  <path d="M21 3v5h-5"/>
+                </svg>
+              </button>
+            )}
+          </div>
         ) : (
           // Generic fallback
           <div className="w-full h-full p-6 flex flex-col gap-3 bg-white/5">
@@ -109,9 +149,9 @@ const LazyThumbnail = ({ item, isCoverLetter = false }: { item: any, isCoverLett
             <div className="h-3 w-3/4 bg-gray-300 dark:bg-white/20 rounded-full" />
             <div className="h-2 w-1/2 bg-gray-200 dark:bg-white/10 rounded-full" />
             <div className="mt-auto space-y-2">
-               <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
-               <div className="h-1.5 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
-               <div className="h-1.5 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+              <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full" />
+              <div className="h-1.5 w-5/6 bg-gray-100 dark:bg-white/5 rounded-full" />
+              <div className="h-1.5 w-4/6 bg-gray-100 dark:bg-white/5 rounded-full" />
             </div>
           </div>
         )
@@ -139,7 +179,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   const searchParams = useSearchParams();
   const { state, dispatch, setFresherMode, detectFresherMode, determineCVType, setJdText, goToStep } = useResumeEnhancer();
   const { user } = useUnifiedAuth();
-  const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | null>(null);
+  const [parseMethod, setParseMethod] = useState<'upload' | 'manual' | 'job' | 'linkedin' | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'parsing' | 'success' | 'error'>('idle');
@@ -151,6 +191,8 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   const [isLoadingCVs, setIsLoadingCVs] = useState(false);
   const [draftCV, setDraftCV] = useState<any>(null);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isLinkedInImporting, setIsLinkedInImporting] = useState(false);
+  const [linkedInImportError, setLinkedInImportError] = useState('');
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const topSectionRef = React.useRef<HTMLDivElement>(null);
   
@@ -177,6 +219,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     { label: 'Extracting education...', progress: 85 },
     { label: 'Finalizing structure...', progress: 95 }
   ]);
+  const [showSmartJDModal, setShowSmartJDModal] = useState(false);
 
   // Set hasMasterCV in context on mount
   useEffect(() => {
@@ -421,8 +464,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   };
 
   const handleManualEntry = () => {
-    // For manual entry, use default empty CV data
-    // User will fill in forms in next steps
+    // Navigate to step 2 (template selection) with fresh CV data
     // This will be a fresher by default (no work experience yet)
     const freshCvData = JSON.parse(JSON.stringify(DEFAULT_UNIFIED_CV_DATA)) as UnifiedCVDataStructure;
     setFresherMode(true);
@@ -436,32 +478,93 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     }
 
     dispatch({ type: 'SET_CV_DATA', payload: freshCvData });
-    onComplete(freshCvData);
+    
+    // Navigate to step 2 (template selection)
+    router.push('/editor?step=2');
+  };
+
+  /**
+   * Handle LinkedIn import
+   */
+  const handleLinkedInImport = async () => {
+    setIsLinkedInImporting(true);
+    setLinkedInImportError('');
+    setUploadProgress(0);
+    setUploadStatus('uploading');
+
+    try {
+      // Simulate progress
+      setUploadProgress(20);
+      
+      const response = await fetch('/api/linkedin/import');
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to import from LinkedIn');
+      }
+
+      const data = await response.json();
+
+      if (data.success && data.data) {
+        setUploadProgress(80);
+        
+        // Wait a moment to show progress
+        setTimeout(() => {
+          setUploadProgress(100);
+          setUploadStatus('success');
+          setIsLinkedInImporting(false);
+          
+          // Complete parsing with LinkedIn data
+          completeParsing(data.data, false);
+        }, 500);
+      } else {
+        throw new Error(data.error || 'Failed to import from LinkedIn');
+      }
+    } catch (error: any) {
+      console.error('LinkedIn import error:', error);
+      setUploadStatus('error');
+      setLinkedInImportError(error.message || 'Failed to import from LinkedIn');
+      setIsLinkedInImporting(false);
+    }
   };
 
   /**
    * Handle JD input for Journey CV flow
    */
-  const handleJDSubmit = (jdText: string) => {
-    setJdText(jdText);
-    setShowJDInput(false);
-    // JD submitted - now need to get CV data (upload or manual)
-    // Proceed to upload option to continue the flow
-    setParseMethod('upload');
+  const handleSmartJDSubmit = (data: { title: string; experienceLevel: string; jobDescription: string }) => {
+    const { title, experienceLevel, jobDescription } = data;
+    
+    // Set job data in context
+    dispatch({
+      type: 'SET_JOB_DATA',
+      payload: {
+        title,
+        jobTitle: title,
+        company: 'Target Company',
+        description: jobDescription,
+        jobDescription,
+        experienceLevel
+      }
+    });
+
+    // Set JD text
+    setJdText(jobDescription);
+    
+    // Navigate to editor step 3
+    router.push('/editor?mode=journey&step=3');
   };
 
   const handleStartWithJob = () => {
-    setShowJDInput(true);
+    setShowSmartJDModal(true);
   };
 
-  // Show JD input as a magic paste modal if user chose to start with a job
-  if (showJDInput) {
+  // Show Smart JD modal if user chose to start with a job
+  if (showSmartJDModal) {
     return (
-      <JDInputPanel
-        isModal={true}
-        onSubmit={handleJDSubmit}
-        onCancel={() => setShowJDInput(false)}
-        showJourneyIndicator={true}
+      <SmartJDModal
+        isOpen={showSmartJDModal}
+        onClose={() => setShowSmartJDModal(false)}
+        onSubmit={handleSmartJDSubmit}
       />
     );
   }
@@ -586,7 +689,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               </div>
             </motion.button>
 
-            {/* Manual Entry Option */}
+             {/* Manual Entry Option */}
             <motion.button
               whileHover={{ y: -12, scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -608,6 +711,39 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 <span className="text-[10px] font-black px-4 py-1.5 bg-blue-500/10 text-blue-500 rounded-full group-hover:bg-blue-500 group-hover:text-white transition-all">
                   STEP-BY-STEP
                 </span>
+              </div>
+            </motion.button>
+
+            {/* LinkedIn Import Option */}
+            <motion.button
+              whileHover={{ y: -12, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setParseMethod('linkedin')}
+              disabled={!user}
+              className={`group relative bg-white dark:bg-[#141810] rounded-[2.5rem] p-12 shadow-2xl border overflow-hidden text-left flex flex-col items-center justify-center text-center transition-all ${user 
+                ? 'border-blue-200 dark:border-blue-500/20 hover:border-blue-500' 
+                : 'border-gray-200 dark:border-white/5 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className="relative flex flex-col items-center space-y-8">
+                <div className="w-24 h-24 bg-blue-500/20 border border-blue-500/40 rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
+                  <svg className="w-12 h-12 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Import from LinkedIn</h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-base font-medium leading-relaxed">
+                    Import your profile data <br />
+                    directly from LinkedIn.
+                  </p>
+                </div>
+                {!user && (
+                  <span className="text-[10px] font-black px-4 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-600 rounded-full">
+                    Sign in required
+                  </span>
+                )}
               </div>
             </motion.button>
 
@@ -993,15 +1129,43 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     Choose File
                   </span>
                 </label>
-                <p className="text-sm text-[color:var(--text-tertiary)] mt-4">
-                  Supports PDF, DOCX, and image files (max 10MB)
-                </p>
-                <button
-                  onClick={() => setParseMethod(null)}
-                  className="mt-6 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
-                >
-                  ← Back to options
-                </button>
+                 <p className="text-sm text-[color:var(--text-tertiary)] mt-4">
+                   Supports PDF, DOCX, and image files (max 10MB)
+                 </p>
+                 
+                 {/* LinkedIn Import Option */}
+                 {user ? (
+                   <>
+                     <div className="my-8 border-t border-gray-200 dark:border-white/10" />
+                     <div className="text-center">
+                       <p className="text-sm text-[color:var(--text-tertiary)] mb-4">Or import directly from LinkedIn</p>
+                       <button
+                         onClick={handleLinkedInImport}
+                         disabled={isLinkedInImporting}
+                         className="inline-flex items-center gap-2 px-6 py-3 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                       >
+                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                           <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                         </svg>
+                         {isLinkedInImporting ? 'Importing...' : 'Import from LinkedIn'}
+                       </button>
+                       {linkedInImportError && (
+                         <p className="text-red-400 text-sm mt-2">{linkedInImportError}</p>
+                       )}
+                     </div>
+                   </>
+                 ) : (
+                   <p className="text-sm text-[color:var(--text-tertiary)] mt-4">
+                     Sign in to import from LinkedIn
+                   </p>
+                 )}
+                 
+                 <button
+                   onClick={() => setParseMethod(null)}
+                   className="mt-6 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+                 >
+                   ← Back to options
+                 </button>
               </div>
             )}
 

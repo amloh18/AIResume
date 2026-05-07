@@ -4,6 +4,7 @@ import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import AppleProvider from 'next-auth/providers/apple';
+import LinkedInProvider from 'next-auth/providers/linkedin';
 import { getCache, setCache, invalidateCache } from '@/lib/cache';
 import { UserService, AuthenticatedUser } from './user-service';
 import VerificationToken from '@/models/VerificationToken';
@@ -12,6 +13,8 @@ import { getConnection } from '@/lib/database';
 import User from '@/models/User';
 import { headers } from 'next/headers';
 import { detectUserRegion } from '@/lib/services/regionDetectionService';
+import { encryptToken, decryptToken } from './token-encryption';
+import fetch from 'node-fetch';
 
 /**
  * Unified Authentication Service
@@ -148,6 +151,36 @@ export class UnifiedAuthService {
               });
               return null;
             }
+          },
+        }       ),
+
+        LinkedInProvider({
+          clientId: process.env.LINKEDIN_CLIENT_ID || '',
+          clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+          authorization: {
+            params: {
+              scope: 'r_liteprofile r_emailaddress w_member_social',
+            },
+          },
+          profile(profile) {
+            // Extract profile picture from nested displayImage~ object
+            let imageUrl = '';
+            if (profile.profilePicture?.['displayImage~']?.elements) {
+              const elements = profile.profilePicture['displayImage~'].elements;
+              if (elements.length > 0 && elements[0].identifiers?.length > 0) {
+                imageUrl = elements[0].identifiers[0].identifier;
+              }
+            }
+            
+            return {
+              id: profile.id || '',
+              name: `${profile.localizedFirstName || ''} ${profile.localizedLastName || ''}`.trim() || profile.id || '',
+              email: profile.emailAddress || '',
+              image: imageUrl,
+              role: 'user' as const,
+              type: 'user' as const,
+              isB2b: false,
+            };
           },
         }),
 
@@ -390,10 +423,56 @@ export class UnifiedAuthService {
       ],
 
       callbacks: {
-        async signIn({ user, account, profile }) {
+         async signIn({ user, account, profile }) {
           // Handle OAuth sign-in
-          if (account?.provider === 'google' || account?.provider === 'apple') {
+          if (account?.provider === 'google' || account?.provider === 'apple' || account?.provider === 'linkedin') {
             try {
+              let linkedInAccessToken: string | undefined;
+              let linkedInId: string | undefined;
+              
+              // For LinkedIn, we need to fetch the full profile to get email
+              // since the initial profile might not have it
+              if (account.provider === 'linkedin') {
+                linkedInAccessToken = account.access_token as string;
+                linkedInId = account.providerAccountId;
+                
+                // Fetch full LinkedIn profile to get email and complete data
+                try {
+                  const profileRes = await fetch('https://api.linkedin.com/v2/me', {
+                    headers: {
+                      'Authorization': `Bearer ${linkedInAccessToken}`,
+                      'X-Restli-Protocol-Version': '2.0.0',
+                    },
+                  });
+                  
+                  if (profileRes.ok) {
+                    const linkedInProfile = await profileRes.json();
+                    // Update user data with LinkedIn profile info
+                    user.id = linkedInProfile.id || user.id;
+                    user.name = `${linkedInProfile.localizedFirstName || ''} ${linkedInProfile.localizedLastName || ''}`.trim() || user.name;
+                    
+                    // Fetch email separately
+                    const emailRes = await fetch('https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))', {
+                      headers: {
+                        'Authorization': `Bearer ${linkedInAccessToken}`,
+                        'X-Restli-Protocol-Version': '2.0.0',
+                      },
+                    });
+                    
+                    if (emailRes.ok) {
+                      const emailData = await emailRes.json();
+                      const emailAddress = emailData.elements?.[0]?.['handle~']?.emailAddress;
+                      if (emailAddress) {
+                        user.email = emailAddress;
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('LinkedIn profile fetch error:', error);
+                  // Continue with basic profile data
+                }
+              }
+              
               const oauthUser = await UserService.findOrCreateOAuthUser({
                 email: user.email || '',
                 name: user.name || '',
@@ -404,6 +483,11 @@ export class UnifiedAuthService {
 
               if (oauthUser) {
                 user.id = oauthUser.id;
+                // Store LinkedIn-specific data in user object for JWT callback
+                if (linkedInAccessToken) {
+                  (user as any).linkedInId = linkedInId;
+                  (user as any).linkedInAccessToken = linkedInAccessToken;
+                }
               }
 
               return !!oauthUser;
@@ -416,7 +500,7 @@ export class UnifiedAuthService {
           return true;
         },
 
-        async jwt({ token, user }) {
+         async jwt({ token, user }) {
           // Initial sign-in - store minimal data only (id, email)
           // CRITICAL: Keep JWT token minimal to prevent cookie size issues
           // The JWT token is what gets stored in the cookie, so it must be tiny
@@ -439,6 +523,20 @@ export class UnifiedAuthService {
             if (userType === 'admin') {
               const name = user.name || (user.email as string)?.split('@')[0] || 'Admin';
               token.name = String(name).substring(0, 100); // Limit name length
+            }
+
+            // Store LinkedIn-specific data if present (encrypted)
+            if ((user as any).linkedInId) {
+              token.linkedInId = String((user as any).linkedInId).substring(0, 100);
+            }
+            if ((user as any).linkedInAccessToken) {
+              try {
+                // Encrypt token before storing in JWT
+                token.linkedInAccessToken = encryptToken((user as any).linkedInAccessToken);
+              } catch (error) {
+                console.error('Failed to encrypt LinkedIn token:', error);
+                // Don't fail the entire auth if encryption fails
+              }
             }
 
             // Explicitly remove image from token - it can be large
@@ -469,6 +567,14 @@ export class UnifiedAuthService {
             cleanedToken.isB2b = !!token.isB2b;
           }
 
+          // Store LinkedIn data in token (encrypted)
+          if (token.linkedInId) {
+            cleanedToken.linkedInId = String(token.linkedInId).substring(0, 100);
+          }
+          if (token.linkedInAccessToken) {
+            cleanedToken.linkedInAccessToken = token.linkedInAccessToken;
+          }
+
           // Log token size for debugging (should be < 500 bytes)
           const tokenSize = JSON.stringify(cleanedToken).length;
           if (tokenSize > 1000) {
@@ -479,7 +585,7 @@ export class UnifiedAuthService {
           return cleanedToken;
         },
 
-        async session({ session, token }) {
+         async session({ session, token }) {
           // Check if this is an admin user first
           const isAdmin = token.type === 'admin' || token.role === 'admin' || token.role === 'superadmin';
 
@@ -520,6 +626,20 @@ export class UnifiedAuthService {
                   (session.user as any).planKey = 'free';
                   (session.user as any).subscriptionStatus = 'inactive';
                   (session.user as any).isB2b = !!token.isB2b;
+                }
+                
+                // Add LinkedIn data to session if present in token
+                if (token.linkedInId) {
+                  (session.user as any).linkedInId = token.linkedInId;
+                }
+                if (token.linkedInAccessToken) {
+                  try {
+                    // Decrypt token for use in server-side API calls
+                    (session.user as any).linkedInAccessToken = decryptToken(token.linkedInAccessToken as string);
+                  } catch (error) {
+                    console.error('Failed to decrypt LinkedIn token for session:', error);
+                    // Don't fail the entire session if decryption fails
+                  }
                 }
               } catch (error) {
                 console.error('❌ Error in session callback:', error);

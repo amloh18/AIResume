@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mail, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import CodeInput from './CodeInput';
 
 interface CodeVerificationScreenProps {
@@ -92,8 +92,19 @@ export default function CodeVerificationScreen({
 
   return (
     <div className="text-center">
+      {/* Back Button */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 lg:left-8 flex items-center gap-2 text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-medium hidden sm:inline">Back to Login</span>
+        </button>
+      )}
+
       {/* Email Icon with Animation */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-8 mt-16 lg:mt-0">
         <div className="w-20 h-20 rounded-none flex items-center justify-center border-2 border-[#88E03F]">
           <motion.div
             animate={{ 

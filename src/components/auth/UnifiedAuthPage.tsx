@@ -718,7 +718,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
-  const handleAppleAuth = async () => {
+   const handleAppleAuth = async () => {
     setIsLoading(true);
     setError('');
 
@@ -727,6 +727,19 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     } catch (error: any) {
       console.error('Apple auth error:', error);
       setError('Failed to sign in with Apple. Please try again.');
+      setIsLoading(false);
+    }
+  };
+
+  const handleLinkedInAuth = async () => {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await signIn('linkedin', { callbackUrl: callbackUrl });
+    } catch (error: any) {
+      console.error('LinkedIn auth error:', error);
+      setError('Failed to sign in with LinkedIn. Please try again.');
       setIsLoading(false);
     }
   };
@@ -1002,10 +1015,11 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
-  const socialButtons = (mode !== 'magic-link' && mode !== 'verify-code' && layoutVariant === 'default') ? (
+   const socialButtons = (mode !== 'magic-link' && mode !== 'verify-code' && layoutVariant === 'default') ? (
     <SocialAuthButtons
       onGoogleAuth={handleGoogleAuth}
       onAppleAuth={handleAppleAuth}
+      onLinkedInAuth={handleLinkedInAuth}
       onMagicLinkAuth={mode === 'signin' ? () => switchMode('magic-link') : undefined}
       isLoading={isLoading}
       mode={mode === 'signup' ? 'signup' : 'signin'}
@@ -1096,9 +1110,9 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     <UnifiedAuthLayout
       title={getTitle()}
       subtitle={getSubtitle()}
-      showBackButton={!isModal && mode !== 'signin' && mode !== 'signup'}
-      backHref="/"
-      backText="Back to Home"
+      showBackButton={!isModal && mode === 'verify-code'}
+      backHref="/sign-in"
+      backText="Back to Login"
       isModal={isModal}
       variant={layoutVariant}
     >

@@ -7,6 +7,7 @@ interface SocialAuthButtonsProps {
   onGoogleAuth: () => void;
   onAppleAuth?: () => void;
   onMagicLinkAuth?: () => void; // Now sends code instead of magic link
+  onLinkedInAuth?: () => void;
   isLoading: boolean;
   mode: 'signin' | 'signup';
 }
@@ -15,6 +16,7 @@ export default function SocialAuthButtons({
   onGoogleAuth,
   onAppleAuth,
   onMagicLinkAuth,
+  onLinkedInAuth,
   isLoading,
   mode
 }: SocialAuthButtonsProps) {
@@ -37,6 +39,23 @@ export default function SocialAuthButtons({
         </svg>
         {isLoading ? 'Signing in...' : `Continue with Google`}
       </motion.button>
+
+      {/* LinkedIn Sign In/Up Button */}
+      {onLinkedInAuth && (
+        <motion.button
+          type="button"
+          onClick={onLinkedInAuth}
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-3 bg-[#0a66c2] hover:bg-[#004182] border border-[#0a66c2] hover:border-[#004182] text-white py-3 px-6 rounded-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+          {isLoading ? 'Signing in...' : `Continue with LinkedIn`}
+        </motion.button>
+      )}
 
       {/* Apple Sign In/Up Button */}
       {onAppleAuth && (
@@ -66,11 +85,12 @@ export default function SocialAuthButtons({
           whileTap={{ scale: 0.98 }}
         >
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 0,1 16,12A4,4 0 0,1 12,16A4,4 0 0,1 8,12A4,4 0 0,1 12,8Z" />
+            <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12A6,6 0 0,0 12,18A6,6 0 0,0 18,12A6,6 0 0,0 12,6Z" />
           </svg>
           {isLoading ? 'Sending code...' : 'Send me a code'}
         </motion.button>
       )}
     </div>
   );
+
 }
