@@ -33,6 +33,7 @@ export default function CodeVerificationScreen({
   const [code, setCode] = useState('');
   const [cooldown, setCooldown] = useState(cooldownSeconds);
   const [canResend, setCanResend] = useState(cooldownSeconds === 0);
+  const [sessionExpiry, setSessionExpiry] = useState<Date | null>(null);
 
   // Handle cooldown timer
   useEffect(() => {
@@ -45,6 +46,13 @@ export default function CodeVerificationScreen({
       setCanResend(true);
     }
   }, [cooldown]);
+
+  // Set session expiry (10 minutes from now) for display purposes
+  useEffect(() => {
+    if (!sessionExpiry) {
+      setSessionExpiry(new Date(Date.now() + 10 * 60 * 1000));
+    }
+  }, []);
 
   const handleCodeChange = (newCode: string) => {
     setCode(newCode);
@@ -90,6 +98,81 @@ export default function CodeVerificationScreen({
     }
   };
 
+  const getErrorDisplay = () => {
+    if (!error) return null;
+    
+    // Check if it's a max attempts error
+    if (error.includes('Too many failed attempts')) {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-none"
+        >
+          <div className="flex items-center justify-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-400" />
+            <p className="text-red-400 text-sm">
+              Too many failed attempts. Please request a new code to continue.
+            </p>
+          </div>
+        </motion.div>
+      );
+    }
+
+    // Generic error display
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-none"
+      >
+        <div className="flex items-center justify-center gap-2">
+          <AlertCircle className="w-4 h-4 text-red-400" />
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const getAttemptWarning = () => {
+    if (remainingAttempts <= 0) return null;
+    
+    // Show warning on 3rd attempt (2 remaining) or fewer
+    if (remainingAttempts <= 2) {
+      return (
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-none">
+          <p className="text-yellow-400 text-sm text-center">
+            Multiple failed attempts will require a new code.
+          </p>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
+  const getExpiryTime = () => {
+    if (!sessionExpiry) return null;
+    const now = new Date();
+    const diff = Math.max(0, Math.floor((sessionExpiry.getTime() - now.getTime()) / 1000));
+    const minutes = Math.floor(diff / 60);
+    const seconds = diff % 60;
+    
+    if (diff <= 0) {
+      return (
+        <p className="text-red-400 text-sm text-center">
+          Code has expired. Please request a new code.
+        </p>
+      );
+    }
+    
+    return (
+      <p className="text-gray-400 text-sm text-center">
+        Code expires in {minutes}:{seconds.toString().padStart(2, '0')}
+      </p>
+    );
+  };
+
   return (
     <div className="text-center">
       {/* Back Button */}
@@ -108,7 +191,7 @@ export default function CodeVerificationScreen({
         <div className="w-20 h-20 rounded-none flex items-center justify-center border-2 border-[#88E03F]">
           <motion.div
             animate={{ 
-              scale: [1, 1.1, 1],
+              scale: [1, 1.1, 1], 
               rotate: [0, 5, -5, 0]
             }}
             transition={{ 
@@ -154,28 +237,14 @@ export default function CodeVerificationScreen({
         />
       </div>
 
-      {/* Attempt Counter */}
-      {remainingAttempts < 5 && (
-        <div className="mb-4">
-          <p className="text-yellow-400 text-sm">
-            {remainingAttempts} attempts remaining
-          </p>
-        </div>
-      )}
+      {/* Expiry Timer */}
+      {getExpiryTime()}
+
+      {/* Attempt Warning */}
+      {getAttemptWarning()}
 
       {/* Error Message */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-none"
-        >
-          <div className="flex items-center justify-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400" />
-            <p className="text-red-400 text-sm">{error}</p>
-          </div>
-        </motion.div>
-      )}
+      {getErrorDisplay()}
 
       {/* Success Message */}
       {success && (
@@ -213,3 +282,4 @@ export default function CodeVerificationScreen({
     </div>
   );
 }
+

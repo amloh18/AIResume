@@ -3,6 +3,8 @@
  * Falls back to in-memory rate limiting if Redis is not available
  */
 
+import crypto from 'crypto';
+
 interface RateLimitConfig {
   windowMs: number; // Time window in milliseconds
   maxRequests: number; // Maximum requests per window
@@ -59,9 +61,9 @@ class RedisRateLimiter {
 
         // Add timeout to the connection attempt
         const connectPromise = this.redis.connect();
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Redis connection timeout (5s)')), 5000);
-        });
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Redis connection timeout (5s)')), 5000)
+        );
 
         await Promise.race([connectPromise, timeoutPromise]);
       } else {
@@ -250,6 +252,8 @@ class RedisRateLimiter {
     // Authentication limits
     AUTH_LOGIN: { windowMs: 15 * 60 * 1000, maxRequests: 5 }, // 5 login attempts per 15 minutes
     AUTH_PASSWORD_RESET: { windowMs: 60 * 60 * 1000, maxRequests: 3 }, // 3 password resets per hour
+    AUTH_TWO_FACTOR: { windowMs: 10 * 60 * 1000, maxRequests: 3 }, // 3 2FA codes per 10 minutes per user
+    AUTH_TWO_FACTOR_IP: { windowMs: 10 * 60 * 1000, maxRequests: 10 }, // 10 2FA codes per 10 minutes per IP
 
     // File upload limits
     UPLOAD: { windowMs: 60 * 1000, maxRequests: 5 }, // 5 uploads per minute
@@ -287,10 +291,36 @@ class RedisRateLimiter {
   async checkAdminLimit(identifier: string): Promise<RateLimitResult> {
     return this.checkLimit(identifier, RedisRateLimiter.CONFIGS.ADMIN);
   }
+
+  /**
+   * Check 2FA rate limit for a user (dual-key: user + IP)
+   * Both user-based and IP-based limits must pass
+   */
+  async checkTwoFactorRateLimit(
+    userId: string,
+    ipAddress?: string
+  ): Promise<{ allowed: boolean; userLimit?: RateLimitResult; ipLimit?: RateLimitResult }> {
+    const userKey = `2fa:user:${userId}`;
+    const userResult = await this.checkLimit(userKey, RedisRateLimiter.CONFIGS.AUTH_TWO_FACTOR);
+
+    let ipResult: RateLimitResult | undefined;
+    if (ipAddress) {
+      // Simple IP hash to avoid storing raw IPs
+      const ipHash = crypto.createHash('sha256').update(ipAddress).digest('hex').substring(0, 16);
+      const ipKey = `2fa:ip:${ipHash}`;
+      ipResult = await this.checkLimit(ipKey, RedisRateLimiter.CONFIGS.AUTH_TWO_FACTOR_IP);
+    }
+
+    return {
+      allowed: userResult.allowed && (!ipResult || ipResult.allowed),
+      userLimit: userResult,
+      ipLimit: ipResult,
+    };
+  }
 }
 
 // Create singleton instance
-export const redisRateLimiter = new RedisRateLimiter();
+const redisRateLimiter = new RedisRateLimiter();
 
 // Export convenience functions
 export const rateLimit = {
@@ -301,6 +331,8 @@ export const rateLimit = {
   checkUpload: (identifier: string) => redisRateLimiter.checkUploadLimit(identifier),
   checkEmail: (identifier: string) => redisRateLimiter.checkEmailLimit(identifier),
   checkAdmin: (identifier: string) => redisRateLimiter.checkAdminLimit(identifier),
+  checkTwoFactorRateLimit: (userId: string, ipAddress?: string) => 
+    redisRateLimiter.checkTwoFactorRateLimit(userId, ipAddress),
   reset: (identifier: string, config: RateLimitConfig) => redisRateLimiter.resetLimit(identifier, config),
   getInfo: (identifier: string, config: RateLimitConfig) => redisRateLimiter.getLimitInfo(identifier, config)
 };

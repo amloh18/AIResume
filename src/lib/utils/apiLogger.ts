@@ -48,7 +48,7 @@ export async function logAPIRequest(
 /**
  * Get client IP from request
  */
-function getClientIP(request: NextRequest): string | undefined {
+export function getClientIP(request: NextRequest): string | undefined {
   const forwarded = request.headers.get('x-forwarded-for');
   if (forwarded) {
     return forwarded.split(',')[0].trim();

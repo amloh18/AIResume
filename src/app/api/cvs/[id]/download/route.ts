@@ -8,7 +8,7 @@ import { downloadAnalyticsService } from '@/lib/services/downloadAnalyticsServic
 import { getTemplateById, getAllTemplates } from '@/lib/templates/template-utils';
 import { Template } from '@/models';
 import mongoose from 'mongoose';
-import { redisRateLimiter } from '@/lib/redis-rate-limiter';
+import redisRateLimiter from '@/lib/redis-rate-limiter';
 import { configService } from '@/lib/services/configService';
 import { validateDownloadParams, sanitizeFilename, validateFileSize } from '@/lib/utils/downloadValidation';
 // Safely import logger to handle potential circular dependencies

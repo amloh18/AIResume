@@ -41,7 +41,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
   const [success, setSuccess] = useState('');
   const [email, setEmail] = useState('');
   const [verificationType, setVerificationType] = useState<'email-verification' | 'passwordless-login' | 'password-reset'>('email-verification');
-  const [remainingAttempts, setRemainingAttempts] = useState(5);
+  const [remainingAttempts, setRemainingAttempts] = useState(3);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [emailExists, setEmailExists] = useState<boolean | null>(null);
   const [checkingEmail, setCheckingEmail] = useState(false);
@@ -162,9 +162,11 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
+        // Determine redirect URL based on user role
+        const redirectUrl = await determineRedirectUrl(verifyResult.user, callbackUrl);
         setTimeout(() => {
           if (!isModal) {
-            window.location.href = callbackUrl;
+            window.location.href = redirectUrl;
           }
         }, 1000);
       } else {
@@ -192,6 +194,37 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
     }
   };
 
+  /**
+   * Determine the appropriate redirect URL based on user role and setup status
+   */
+  const determineRedirectUrl = async (user: any, defaultUrl: string): Promise<string> => {
+    // If user is admin, check if they need to see the dashboard selector
+    if (user.role === 'admin' || user.role === 'superadmin') {
+      // Check if admin has already seen the selector (stored in localStorage client-side)
+      // This will be handled by the admin layout component
+      return '/admin';
+    }
+
+    // Check if user is B2B
+    const isB2b = !!(user as any).b2b?.tenantId || !!(user as any).isB2b;
+    if (isB2b) {
+      // Check if B2B user needs to complete onboarding
+      const needsOnboarding = !(user as any).b2b?.setupComplete;
+      const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+      
+      if (needsOnboarding && isAdmin) {
+        // B2B admin needs to complete onboarding
+        return '/b2b/onboarding';
+      }
+      
+      // Regular B2B user goes to dashboard
+      return '/b2b/dashboard';
+    }
+
+    // Regular user goes to standard dashboard
+    return defaultUrl;
+  };
+
 
   const handleSignUp = async (formData: Record<string, string>) => {
     const response = await fetch('/api/auth/register-user', {
@@ -214,7 +247,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
       setVerificationType('email-verification');
       setMode('verify-code');
       setCooldownSeconds(60);
-      setRemainingAttempts(5);
+      setRemainingAttempts(3);
       setSuccess('Account created! Please check your email for the verification code.');
     } else {
       setError(result.message || 'Failed to create account. Please try again.');
@@ -250,7 +283,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         setVerificationType(type);
         setMode('verify-code');
         setCooldownSeconds(60);
-        setRemainingAttempts(5);
+        setRemainingAttempts(3);
       } else {
         setError(result.message || 'Failed to send verification code. Please try again.');
       }
@@ -282,7 +315,16 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
         const verifyResult = await verifyResponse.json();
 
         if (!verifyResult.success) {
-          setError(verifyResult.error || 'Invalid code. Please try again.');
+          // Check if it's a max attempts error
+          if (verifyResult.error && verifyResult.error.includes('Too many failed attempts')) {
+            setError(verifyResult.error);
+            // Force clear the session and UI
+            setTwoFactorSessionId(null);
+            setTwoFactorUserId(null);
+            setRemainingAttempts(0);
+          } else {
+            setError(verifyResult.error || 'Invalid or expired code. Please try again.');
+          }
           return;
         }
 
@@ -619,9 +661,11 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
           setEmail('');
           setSuccess('');
           setError('');
+          setRemainingAttempts(3);
         }, 2000);
       } else {
         setError(result.error || 'Failed to reset password. Please try again.');
+        setRemainingAttempts(result.remainingAttempts || 0);
       }
     } catch (error: any) {
       console.error('Password reset error:', error);
@@ -694,6 +738,7 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
       if (result.success) {
         setSuccess('verification-resent');
+        setRemainingAttempts(3);
       } else {
         setError(result.message || 'Failed to resend verification email. Please try again.');
       }

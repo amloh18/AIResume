@@ -189,6 +189,14 @@ const userSettingsSchema = new Schema<IUserSettings>({
       type: String,
       select: false // Never include in queries by default
     }],
+    twoFactorRecoveryCodes: [{
+      type: String,
+      select: false // Never include in queries by default
+    }],
+    twoFactorRecoveryUsed: [{
+      type: String,
+      select: false // Never include in queries by default
+    }],
     lastPasswordChange: Date,
     loginAttempts: {
       type: Number,
