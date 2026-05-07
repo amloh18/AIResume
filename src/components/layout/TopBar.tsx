@@ -53,13 +53,17 @@ const TopBar: React.FC<TopBarProps> = ({
             </button>
           )}
 
-          {/* Logo/Brand */}
+           {/* Logo/Brand */}
           <div className="flex items-center gap-3">
             <div className="tablet:hidden">
-              <Logo size="md" />
+              <button onClick={() => router.push('/')} className="p-1 -ml-2">
+                <Logo size="md" />
+              </button>
             </div>
             <div className="hidden tablet:block">
-              <Logo size="md" />
+              <button onClick={() => router.push('/')} className="p-1 -ml-2">
+                <Logo size="md" />
+              </button>
             </div>
           </div>
 

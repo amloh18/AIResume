@@ -163,6 +163,7 @@ export interface IUser extends Document {
   b2b?: {
     tenantId: mongoose.Types.ObjectId;
     role: 'admin' | 'recruiter' | 'member';
+    setupComplete?: boolean;
   };
 
   createdAt: Date;

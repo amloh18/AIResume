@@ -818,6 +818,11 @@ export class UnifiedAuthService {
         planKey: userDoc.currentPlanKey || 'free',
         subscriptionStatus: (userDoc as any).subscription?.status || 'inactive',
         isB2b: !!userDoc.b2b?.tenantId || !!(userDoc as any).isB2b,
+        b2b: userDoc.b2b ? {
+          tenantId: userDoc.b2b.tenantId,
+          role: userDoc.b2b.role,
+          setupComplete: userDoc.b2b.setupComplete || false,
+        } : undefined,
       };
 
       // Cache for 5 minutes

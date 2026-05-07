@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { usePricingPlans } from '@/lib/hooks/usePricingPlans';
 import { useBillingData } from '@/lib/hooks/useBillingData';
+import RouteGuard from '@/components/auth/RouteGuard';
 import {
   User,
   Trash2,
@@ -38,7 +39,6 @@ import {
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import Pricing from '@/components/landing/Pricing';
 import UniversalPaymentModal from '@/components/payment/UniversalPaymentModal';
-import RouteGuard from '@/components/auth/RouteGuard';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import AddPaymentMethodModal from '@/components/payment/AddPaymentMethodModal';
 // TwoFactorModal removed - 2FA not implemented yet
@@ -2078,7 +2078,9 @@ export default function SettingsPage() {
   return (
     <ErrorBoundary>
       <Suspense fallback={null}>
-        <SettingsContent />
+        <RouteGuard requireAuth={true}>
+          <SettingsContent />
+        </RouteGuard>
       </Suspense>
     </ErrorBoundary>
   );

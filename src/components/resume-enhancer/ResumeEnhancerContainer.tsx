@@ -2052,10 +2052,10 @@ export default function ResumeEnhancerContainer({
     }
   };
 
-  const handleExit = () => {
+  const handleExit = async () => {
     if (state.currentStep > 1) {
       if (hasUnsavedChanges) {
-        handleSmartSave();
+        await handleSmartSave();
       }
       openEditorDashboard();
       return;

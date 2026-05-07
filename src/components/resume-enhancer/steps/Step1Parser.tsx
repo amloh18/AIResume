@@ -221,10 +221,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   ]);
   const [showSmartJDModal, setShowSmartJDModal] = useState(false);
 
-  // Set hasMasterCV in context on mount
-  useEffect(() => {
-    dispatch({ type: 'SET_HAS_MASTER_CV', payload: userHasMasterCV });
-  }, [userHasMasterCV, dispatch]);
+  // Set hasMasterCV in context on mount - REDUNDANT: removed to prevent loops
+  // useEffect(() => {
+  //   dispatch({ type: 'SET_HAS_MASTER_CV', payload: userHasMasterCV });
+  // }, [userHasMasterCV, dispatch]);
 
   // Fetch existing CVs on mount
   const fetchExistingCVs = useCallback(async () => {
@@ -304,8 +304,11 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   useEffect(() => {
     if (existingCVs.length === 0) return;
     const hasMaster = existingCVs.some((cv) => cv.cvType === 'master');
-    dispatch({ type: 'SET_HAS_MASTER_CV', payload: hasMaster });
-  }, [dispatch, existingCVs]);
+    // Only dispatch if the value is actually different from current state to prevent loops
+    if (state.hasMasterCV !== hasMaster) {
+      dispatch({ type: 'SET_HAS_MASTER_CV', payload: hasMaster });
+    }
+  }, [dispatch, existingCVs, state.hasMasterCV]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
@@ -529,7 +532,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
   };
 
   /**
-   * Handle JD input for Journey CV flow
+   * Handle JD input for Journey CV or Cover Letter flow
    */
   const handleSmartJDSubmit = (data: { title: string; experienceLevel: string; jobDescription: string }) => {
     const { title, experienceLevel, jobDescription } = data;
@@ -550,8 +553,12 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
     // Set JD text
     setJdText(jobDescription);
     
-    // Navigate to editor step 3
-    router.push('/editor?mode=journey&step=3');
+    // Navigate to correct step based on intent
+    if (activeTab === 'cvs') {
+      router.push('/editor?mode=journey&step=3');
+    } else {
+      router.push('/editor?mode=create-cover-letter&step=4');
+    }
   };
 
   const handleStartWithJob = () => {
@@ -590,30 +597,34 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -100, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="fixed top-16 left-0 right-0 z-[110] bg-white dark:bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/5 py-3 px-8 flex items-center justify-between shadow-xl"
+              className="fixed top-16 left-0 right-0 z-[110] bg-white dark:bg-[#141810] border-b border-gray-200 dark:border-white/5 py-3 px-4 sm:px-8 flex items-center justify-between shadow-xl"
             >
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 sm:gap-4">
                 <Logo size="sm" />
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">Build Your Resume</h4>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Quick actions</p>
+                <div className="hidden xs:block">
+                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                    {activeTab === 'cvs' ? 'Build Your Resume' : 'Lets build your COver lEtter'}
+                  </h4>
+                  <p className="text-[9px] sm:text-[10px] text-gray-500 dark:text-gray-400 font-medium">Quick actions</p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <button 
                    onClick={() => setParseMethod('upload')}
-                   className="flex items-center gap-2 px-5 py-2 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-full text-xs font-bold transition-all shadow-lg hover:shadow-lime-500/20"
+                   className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-lg hover:shadow-lime-500/20"
                 >
-                  <Upload className="w-3.5 h-3.5" />
-                  Upload
+                  <Upload className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden xxs:inline">{activeTab === 'cvs' ? 'Upload' : 'Import'}</span>
+                  <span className="xxs:hidden">UP</span>
                 </button>
                 <button 
-                   onClick={() => handleManualEntry()}
-                   className="flex items-center gap-2 px-5 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 rounded-full text-xs font-bold transition-all shadow-sm"
+                   onClick={() => activeTab === 'cvs' ? handleManualEntry() : router.push('/editor?mode=create-cover-letter&step=2')}
+                   className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-900 dark:text-white border border-gray-200 dark:border-white/10 rounded-full text-[10px] sm:text-xs font-bold transition-all shadow-sm"
                 >
-                  <Edit3 className="w-3.5 h-3.5" />
-                  Start Fresh
+                  <Edit3 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                  <span className="hidden xxs:inline">Start Fresh</span>
+                  <span className="xxs:hidden">New</span>
                 </button>
               </div>
             </motion.div>
@@ -621,21 +632,27 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
         </AnimatePresence>
 
         {/* Top Section */}
-        <div ref={topSectionRef} className="snap-start snap-always w-full min-h-[85vh] flex flex-col justify-center pt-12 pb-12">
-          <div className="w-full max-w-6xl mx-auto px-8">
+        <div ref={topSectionRef} className="snap-start snap-always w-full min-h-[85vh] flex flex-col justify-center pt-8 sm:pt-12 pb-8 sm:pb-12">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-8">
             <motion.div
             style={{ 
               scale: headerScale,
               opacity: headerOpacity,
               y: headerY
             }}
-            className="text-center mb-20 origin-bottom"
+            className="text-center mb-12 sm:mb-20 origin-bottom"
           >
-            <h2 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white mb-6 tracking-tighter leading-none whitespace-nowrap">
-                Let's Build Your <span className="text-lime-500 italic relative">Resume</span>
+            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-gray-900 dark:text-white mb-4 sm:mb-6 tracking-tighter leading-tight sm:leading-none">
+                {activeTab === 'cvs' ? (
+                  <>Let's Build Your <span className="text-lime-500 italic relative">Resume</span></>
+                ) : (
+                  <>Lets build your <span className="text-lime-500 italic relative">COver lEtter</span></>
+                )}
               </h2>
-            <p className="text-xl text-gray-400 font-medium max-w-2xl mx-auto leading-relaxed">
-              Design a high-performance resume that bypasses ATS filters and lands you the interview.
+            <p className="text-lg sm:text-xl text-gray-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">
+              {activeTab === 'cvs' 
+                ? 'Design a high-performance resume that bypasses ATS filters and lands you the interview.'
+                : 'Craft a compelling narrative that connects your experience to the job and grabs attention.'}
             </p>
 
             {/* Journey mode indicator if JD was already provided */}
@@ -643,141 +660,226 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="inline-flex items-center gap-2 mt-8 px-6 py-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl shadow-xl shadow-purple-500/5"
+                className="inline-flex items-center gap-2 mt-6 sm:mt-8 px-4 sm:px-6 py-2.5 sm:py-3 bg-purple-500/10 border border-purple-500/20 rounded-2xl shadow-xl shadow-purple-500/5 mx-4"
               >
-                <Sparkles className="w-4 h-4 text-purple-500" />
-                <span className="text-sm font-bold text-purple-500">
+                <Sparkles className="w-3.5 h-3.5 sm:w-4 h-4 text-purple-500" />
+                <span className="text-xs sm:text-sm font-bold text-purple-500">
                   Journey Mode Active: Auto-tailoring to Job Description
                 </span>
               </motion.div>
             )}
           </motion.div>
 
-          {/* Action Cards Grid - Now always 3 columns if userHasMasterCV exists */}
-          <motion.div 
-            style={{
-              scale: cardsScale,
-              y: cardsY,
-              opacity: cardsOpacity
-            }}
-            className={`grid gap-8 origin-top ${userHasMasterCV ? 'md:grid-cols-3' : 'md:grid-cols-2 max-w-4xl mx-auto'}`}
-          >
-            {/* Upload Option */}
-            <motion.button
-              whileHover={{ y: -12, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setParseMethod('upload')}
-              className="group relative bg-white dark:bg-[#141810] rounded-[2.5rem] p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative flex flex-col items-center space-y-8">
-                <div className="w-24 h-24 bg-lime-500 text-black rounded-[2rem] flex items-center justify-center shadow-2xl shadow-lime-500/30 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500">
-                  <Upload className="w-12 h-12 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Upload</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-base font-medium leading-relaxed">
-                    Import your existing resume. <br />
-                    We'll handle the rest.
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <span className="text-[10px] font-black px-4 py-1.5 bg-black/5 dark:bg-white/10 rounded-full text-gray-400 group-hover:text-lime-500 transition-colors">
-                    PDF / DOCX
-                  </span>
-                </div>
-              </div>
-            </motion.button>
-
-             {/* Manual Entry Option */}
-            <motion.button
-              whileHover={{ y: -12, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleManualEntry()}
-              className="group relative bg-white dark:bg-[#141810] rounded-[2.5rem] p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative flex flex-col items-center space-y-8">
-                <div className="w-24 h-24 bg-blue-500 text-white rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:-rotate-6 group-hover:scale-110 transition-all duration-500">
-                  <Edit3 className="w-12 h-12 stroke-[2.5]" />
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Start Fresh</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-base font-medium leading-relaxed">
-                    Build a winning resume <br />
-                    from scratch with AI.
-                  </p>
-                </div>
-                <span className="text-[10px] font-black px-4 py-1.5 bg-blue-500/10 text-blue-500 rounded-full group-hover:bg-blue-500 group-hover:text-white transition-all">
-                  STEP-BY-STEP
-                </span>
-              </div>
-            </motion.button>
-
-            {/* LinkedIn Import Option */}
-            <motion.button
-              whileHover={{ y: -12, scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setParseMethod('linkedin')}
-              disabled={!user}
-              className={`group relative bg-white dark:bg-[#141810] rounded-[2.5rem] p-12 shadow-2xl border overflow-hidden text-left flex flex-col items-center justify-center text-center transition-all ${user 
-                ? 'border-blue-200 dark:border-blue-500/20 hover:border-blue-500' 
-                : 'border-gray-200 dark:border-white/5 opacity-50 cursor-not-allowed'
-              }`}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <div className="relative flex flex-col items-center space-y-8">
-                <div className="w-24 h-24 bg-blue-500/20 border border-blue-500/40 rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
-                  <svg className="w-12 h-12 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Import from LinkedIn</h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-base font-medium leading-relaxed">
-                    Import your profile data <br />
-                    directly from LinkedIn.
-                  </p>
-                </div>
-                {!user && (
-                  <span className="text-[10px] font-black px-4 py-1.5 bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-600 rounded-full">
-                    Sign in required
-                  </span>
-                )}
-              </div>
-            </motion.button>
-
-            {/* Apply to Job Option - Always visible if userHasMasterCV */}
-            {userHasMasterCV && (
-              <motion.button
-                whileHover={{ y: -12, scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleStartWithJob}
-                className="group relative bg-white dark:bg-[#141810] rounded-[2.5rem] p-12 shadow-2xl border border-lime-500/30 overflow-hidden text-left flex flex-col items-center justify-center text-center"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-lime-500/20 via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="absolute -top-24 -right-24 w-64 h-64 bg-lime-500/10 blur-[100px] rounded-full" />
-                <div className="relative flex flex-col items-center space-y-8">
-                  <div className="px-4 py-1.5 bg-lime-500 text-black text-[10px] font-black rounded-full shadow-2xl shadow-lime-500/20">
-                    POWERFUL
+           {/* Action Cards Grid - Optimized for all screens */}
+           <motion.div 
+             style={{
+               scale: cardsScale,
+               y: cardsY,
+               opacity: cardsOpacity
+             }}
+             className={`grid gap-4 sm:gap-8 origin-top ${userHasMasterCV || activeTab === 'cover-letters'
+               ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' 
+               : 'grid-cols-1 sm:grid-cols-2 max-w-5xl mx-auto'}`}
+           >
+            {activeTab === 'cvs' ? (
+              <>
+                {/* Resume Cards */}
+                <motion.button
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setParseMethod('upload')}
+                  className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-lime-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-lime-500 text-black rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-lime-500/30 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500">
+                      <Upload className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Upload</h3>
+                      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                        Import your existing resume. <br className="hidden xs:block" />
+                        We'll handle the rest.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-black/5 dark:bg-white/10 rounded-full text-gray-400 group-hover:text-lime-500 transition-colors">
+                        PDF / DOCX
+                      </span>
+                    </div>
                   </div>
-                  <div className="w-24 h-24 bg-lime-500/20 border border-lime-500/40 rounded-[2.5rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
-                    <Briefcase className="w-12 h-12 text-lime-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">Apply to Job</h3>
-                    <p className="text-gray-600 dark:text-gray-400 text-base font-medium leading-relaxed">
-                      Auto-tailor your Master CV <br />
-                      to any job description.
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <span className="text-[10px] font-black px-4 py-1.5 bg-lime-500/10 text-lime-500 border border-lime-500/20 rounded-full group-hover:bg-lime-500 group-hover:text-black transition-all">
-                      ATS OPTIMIZED
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleManualEntry()}
+                  className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-500 text-white rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:-rotate-6 group-hover:scale-110 transition-all duration-500">
+                      <Edit3 className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Start Fresh</h3>
+                      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                        Build a winning resume <br className="hidden xs:block" />
+                        from scratch with AI.
+                      </p>
+                    </div>
+                    <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-blue-500/10 text-blue-500 rounded-full group-hover:bg-blue-500 group-hover:text-white transition-all">
+                      STEP-BY-STEP
                     </span>
                   </div>
-                </div>
-              </motion.button>
+                </motion.button>
+
+                {userHasMasterCV ? (
+                  <motion.button
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleStartWithJob}
+                    className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-lime-500/30 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-lime-500/20 via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-lime-500/10 blur-[100px] rounded-full" />
+                    <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                      <div className="px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500 text-black text-[9px] sm:text-[10px] font-black rounded-full shadow-2xl shadow-lime-500/20">
+                        POWERFUL
+                      </div>
+                      <div className="w-16 h-16 sm:w-24 sm:h-24 bg-lime-500/20 border border-lime-500/40 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
+                        <Briefcase className="w-8 h-8 sm:w-12 sm:h-12 text-lime-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Apply to Job</h3>
+                        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
+                          Auto-tailor your Master CV <br className="hidden xs:block" />
+                          to any job description.
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500/10 text-lime-500 border border-lime-500/20 rounded-full group-hover:bg-lime-500 group-hover:text-black transition-all">
+                          ATS OPTIMIZED
+                        </span>
+                      </div>
+                    </div>
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    whileHover={{ y: -8, scale: 1.01 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setParseMethod('linkedin')}
+                    disabled={!user}
+                    className={`group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border overflow-hidden text-left flex flex-col items-center justify-center text-center transition-all ${user 
+                      ? 'border-blue-200 dark:border-blue-500/20 hover:border-blue-500' 
+                      : 'border-gray-200 dark:border-white/5 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                      <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-500/20 border border-blue-500/40 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
+                        <svg className="w-8 h-8 sm:w-12 sm:h-12 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">LinkedIn</h3>
+                        <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                          Import your profile data <br className="hidden xs:block" />
+                          directly from LinkedIn.
+                        </p>
+                      </div>
+                      {!user && (
+                        <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-600 rounded-full">
+                          Sign in required
+                        </span>
+                      )}
+                    </div>
+                  </motion.button>
+                )}
+              </>
+            ) : (
+              <>
+                {/* Cover Letter Cards */}
+                <motion.button
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleStartWithJob}
+                  className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-lime-500/30 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-lime-500/20 via-transparent to-transparent opacity-30 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                    <div className="px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500 text-black text-[9px] sm:text-[10px] font-black rounded-full shadow-2xl shadow-lime-500/20">
+                      AI POWERED
+                    </div>
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-lime-500/20 border border-lime-500/40 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-inner group-hover:scale-110 transition-all duration-500">
+                      <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-lime-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Write with AI</h3>
+                      <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
+                        Generate a tailored letter <br className="hidden xs:block" />
+                        from a job description.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-lime-500/10 text-lime-500 border border-lime-500/20 rounded-full group-hover:bg-lime-500 group-hover:text-black transition-all">
+                        RECOMMENDED
+                      </span>
+                    </div>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => router.push('/editor?mode=create-cover-letter&step=2')}
+                  className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-blue-500 text-white rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-blue-500/30 group-hover:-rotate-6 group-hover:scale-110 transition-all duration-500">
+                      <Edit3 className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Start Fresh</h3>
+                      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                        Pick a template and <br className="hidden xs:block" />
+                        write your own story.
+                      </p>
+                    </div>
+                    <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-blue-500/10 text-blue-500 rounded-full group-hover:bg-blue-500 group-hover:text-white transition-all">
+                      BLANK TEMPLATE
+                    </span>
+                  </div>
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ y: -8, scale: 1.01 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setParseMethod('upload')}
+                  className="group relative bg-white dark:bg-[#141810] rounded-[2rem] sm:rounded-[2.5rem] p-8 sm:p-12 shadow-2xl border border-white/5 overflow-hidden text-left flex flex-col items-center justify-center text-center"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative flex flex-col items-center space-y-4 sm:space-y-8">
+                    <div className="w-16 h-16 sm:w-24 sm:h-24 bg-orange-500 text-white rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center shadow-2xl shadow-orange-500/30 group-hover:rotate-6 group-hover:scale-110 transition-all duration-500">
+                      <FolderOpen className="w-8 h-8 sm:w-12 sm:h-12 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">Import</h3>
+                      <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                        Import an existing letter <br className="hidden xs:block" />
+                        to redesign it.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-1 sm:py-1.5 bg-orange-500/10 text-orange-500 rounded-full">
+                        PDF / DOCX
+                      </span>
+                    </div>
+                  </div>
+                </motion.button>
+              </>
             )}
           </motion.div>
 
@@ -786,10 +888,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
              initial={{ opacity: 0, y: 10 }}
              whileInView={{ opacity: 1, y: 0 }}
              viewport={{ once: true }}
-             className="mt-12 mb-12 flex items-center justify-center gap-3 max-w-4xl mx-auto text-center px-8"
+             className="mt-8 sm:mt-12 mb-8 sm:mb-12 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 max-w-5xl mx-auto text-center px-4 sm:px-8"
           >
-             <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] italic flex-shrink-0">PRO TIP:</span>
-             <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+             <span className="text-[9px] sm:text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] italic flex-shrink-0">PRO TIP:</span>
+             <p className="text-[10px] sm:text-[11px] text-gray-500 font-medium leading-relaxed max-w-lg">
                {userHasMasterCV 
                  ? "Use 'Apply to Job' to automatically customize your resume for 90%+ ATS matching in seconds."
                  : "Create a Master CV first. It will act as your source-of-truth and save you hours of repetitive work."}
@@ -801,40 +903,40 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
         {/* Continue Editing Section */}
         {!isGuestMode && (
-          <div className="snap-start w-full min-h-screen pt-12 bg-[var(--bg-primary)] relative">
-            <div className="w-full max-w-6xl mx-auto px-8 pb-32">
+          <div className="snap-start w-full min-h-[80vh] pt-8 sm:pt-12 bg-[var(--bg-primary)] relative">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-8 pb-32">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
                 transition={{ type: 'spring', bounce: 0.4, duration: 0.8 }}
               >
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-6 pb-6 border-b border-gray-200/50 dark:border-white/5 sticky top-16 pt-6 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-md">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 sm:gap-8 mb-6 pb-6 border-b border-gray-200/50 dark:border-white/5 sticky top-16 pt-6 z-40 bg-[var(--bg-primary)]/95 backdrop-blur-md">
                   <div className="text-left">
-                    <div className="flex items-center gap-4 mb-3">
-                      <div className="w-12 h-12 bg-lime-500/10 rounded-2xl flex items-center justify-center shadow-inner">
-                        <FolderOpen className="w-6 h-6 text-lime-500" />
+                    <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-3">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-lime-500/10 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner">
+                        <FolderOpen className="w-5 h-5 sm:w-6 sm:h-6 text-lime-500" />
                       </div>
-                      <h3 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">
+                      <h3 className="text-2xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">
                         Continue Editing
                       </h3>
                     </div>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+                    <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium px-1">
                       Pick up where you left off with your recent resumes and cover letters.
                     </p>
                   </div>
                   
                   {/* Toggle Tab UI */}
-                  <div className="flex items-center gap-2 bg-gray-100 dark:bg-black/20 p-1.5 rounded-xl border border-gray-200 dark:border-white/5 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 bg-gray-100 dark:bg-black/20 p-1 sm:p-1.5 rounded-xl border border-gray-200 dark:border-white/5 shrink-0 w-full sm:w-auto overflow-x-auto no-scrollbar">
                      <button
                        onClick={() => setActiveTab('cvs')}
-                       className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cvs' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
+                       className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'cvs' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
                      >
                        Resumes
                      </button>
                      <button
                        onClick={() => setActiveTab('cover-letters')}
-                       className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cover-letters' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
+                       className={`flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${activeTab === 'cover-letters' ? 'bg-lime-500 text-black shadow-lg' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'}`}
                      >
                        Cover Letters
                      </button>
@@ -843,10 +945,10 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
 
                 {/* Enhanced Filters */}
               {existingCVs.length > 0 && activeTab === 'cvs' && (
-                <div className="flex flex-wrap items-center gap-1 mb-8">
+                <div className="flex flex-wrap items-center gap-1 mb-6 sm:mb-8 px-1">
                    <button 
                      onClick={() => setFilterType('all')}
-                     className={`px-4 py-2 rounded-lg text-xs font-black transition-all ${filterType === 'all' ? 'text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-white/5' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                     className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-black transition-all ${filterType === 'all' ? 'text-gray-900 dark:text-white border border-gray-200 dark:border-white/20 bg-gray-100 dark:bg-white/5' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
                    >
                      All
                    </button>
@@ -854,7 +956,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                    <InfoTooltip content="Your primary resume - the source of truth for all tailored versions.">
                      <button 
                        onClick={() => setFilterType('master')}
-                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'master' ? 'text-blue-600 dark:text-blue-500 border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/5' : 'text-gray-500 hover:text-blue-600 dark:hover:text-blue-400'}`}
+                       className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-black transition-all flex items-center gap-2 ${filterType === 'master' ? 'text-blue-600 dark:text-blue-500 border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/5' : 'text-gray-500 hover:text-blue-600 dark:hover:text-blue-400'}`}
                      >
                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'master' ? 'bg-blue-600 dark:bg-blue-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                        Master
@@ -864,7 +966,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                    <InfoTooltip content="Resumes tailored for specific job applications with ATS optimization.">
                      <button 
                        onClick={() => setFilterType('journey')}
-                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'journey' ? 'text-purple-600 dark:text-purple-500 border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/5' : 'text-gray-500 hover:text-purple-600 dark:hover:text-purple-400'}`}
+                       className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-black transition-all flex items-center gap-2 ${filterType === 'journey' ? 'text-purple-600 dark:text-purple-500 border border-purple-200 dark:border-purple-500/30 bg-purple-50 dark:bg-purple-500/5' : 'text-gray-500 hover:text-purple-600 dark:hover:text-purple-400'}`}
                      >
                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'journey' ? 'bg-purple-600 dark:bg-purple-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                        Journey
@@ -874,7 +976,7 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                    <InfoTooltip content="Standalone resumes for various purposes.">
                      <button 
                        onClick={() => setFilterType('standalone')}
-                       className={`px-4 py-2 rounded-lg text-xs font-black transition-all flex items-center gap-2 ${filterType === 'standalone' ? 'text-orange-600 dark:text-orange-500 border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/5' : 'text-gray-500 hover:text-orange-600 dark:hover:text-orange-400'}`}
+                       className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-[10px] sm:text-xs font-black transition-all flex items-center gap-2 ${filterType === 'standalone' ? 'text-orange-600 dark:text-orange-500 border border-orange-200 dark:border-orange-500/30 bg-orange-50 dark:bg-orange-500/5' : 'text-gray-500 hover:text-orange-600 dark:hover:text-orange-400'}`}
                      >
                        <div className={`w-1.5 h-1.5 rounded-full ${filterType === 'standalone' ? 'bg-orange-600 dark:bg-orange-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                        Standalone
@@ -884,17 +986,17 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                 )}
 
               {isLoadingCVs ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
                   {[1, 2, 3, 4, 5].map(i => (
-                    <div key={i} className="flex flex-col gap-3">
-                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
-                      <div className="h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
-                      <div className="h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                    <div key={i} className="flex flex-col gap-2 sm:gap-3">
+                      <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-2xl sm:rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                      <div className="h-4 sm:h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                      <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
                     </div>
                   ))}
                 </div>
               ) : activeTab === 'cvs' && (filteredCVs.length > 0 || draftCV) ? (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 px-1">
                 
                 {/* Render Draft CV if it exists */}
                 {draftCV && filterType === 'all' && (
@@ -926,27 +1028,27 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         }
                       }
                     }}
-                    className="group cursor-pointer flex flex-col gap-3 relative"
+                    className="group cursor-pointer flex flex-col gap-2 sm:gap-3 relative"
                   >
                     <div className="relative">
                       {/* A special styled thumbnail for drafts */}
-                      <div className="w-full aspect-[1/1.414] bg-orange-50 dark:bg-orange-950/20 rounded-[2rem] border-2 border-dashed border-orange-300 dark:border-orange-500/30 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-orange-500 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
-                        <FileText className="w-12 h-12 text-orange-400/50 dark:text-orange-500/30 mb-4" />
-                        <span className="text-orange-600 dark:text-orange-400 font-bold text-sm">Draft Resume</span>
+                      <div className="w-full aspect-[1/1.414] bg-orange-50 dark:bg-orange-950/20 rounded-2xl sm:rounded-[2rem] border-2 border-dashed border-orange-300 dark:border-orange-500/30 flex flex-col items-center justify-center relative overflow-hidden group-hover:border-orange-500 group-hover:bg-orange-100 dark:group-hover:bg-orange-900/30 transition-all duration-300">
+                        <FileText className="w-8 h-8 sm:w-12 sm:h-12 text-orange-400/50 dark:text-orange-500/30 mb-2 sm:mb-4" />
+                        <span className="text-orange-600 dark:text-orange-400 font-bold text-xs sm:text-sm">Draft Resume</span>
                         
-                        <div className="absolute top-4 left-4 z-30">
-                          <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-orange-500 text-white shadow-orange-500/20 flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+                          <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg bg-orange-500 text-white shadow-orange-500/20 flex items-center gap-1">
+                            <span className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-white rounded-full animate-pulse" />
                             Unsaved
                           </span>
                         </div>
                         
-                        <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-orange-500 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
-                          <Edit2 className="w-5 h-5 text-white" />
+                        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-orange-500 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                          <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
 
                         <div 
-                          className="absolute bottom-4 right-4 z-40 w-10 h-10 bg-red-500/80 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-red-600"
+                          className="absolute bottom-2 sm:bottom-4 right-2 sm:right-4 z-40 w-8 h-8 sm:w-10 sm:h-10 bg-red-500/80 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl hover:bg-red-600"
                           onClick={async (e) => {
                             e.stopPropagation();
                             if (window.confirm('Are you sure you want to delete this draft?')) {
@@ -962,18 +1064,18 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                             }
                           }}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white sm:w-5 sm:h-5"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </div>
                       </div>
                     </div>
 
-                    <div className="px-1">
-                       <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
+                    <div className="px-0.5 sm:px-1">
+                       <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-orange-600 dark:group-hover:text-orange-500 transition-colors tracking-tight">
                          {draftCV.cvTitle || 'Unfinished Resume'}
                        </h4>
-                       <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
-                         <span className="w-1.5 h-1.5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
-                         Last edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString()}
+                       <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
+                         <span className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+                         Edited {new Date(draftCV.lastSaved || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                        </p>
                     </div>
                   </motion.div>
@@ -987,13 +1089,13 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.05 }}
                     onClick={() => handleEditExistingCV(cv)}
-                    className="group cursor-pointer flex flex-col gap-3"
+                    className="group cursor-pointer flex flex-col gap-2 sm:gap-3"
                   >
                     <div className="relative">
                       <LazyThumbnail item={cv} />
                       
-                      <div className="absolute top-4 left-4 z-30">
-                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${
+                      <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+                        <span className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg ${
                           cv.cvType === 'master' ? 'bg-blue-600 text-white shadow-blue-500/20' :
                           cv.cvType === 'journey' ? 'bg-purple-600 text-white shadow-purple-500/20' :
                           'bg-orange-600 text-white shadow-orange-500/20'
@@ -1002,28 +1104,28 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                         </span>
                       </div>
                       
-                      <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-black/40 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
-                        <Edit2 className="w-5 h-5 text-white" />
+                      <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-black/40 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                        <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                       </div>
                     </div>
 
-                    <div className="px-1">
-                       <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
+                    <div className="px-0.5 sm:px-1">
+                       <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
                          {cv.title || 'Untitled Resume'}
                        </h4>
-                       <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
-                         <span className="w-1.5 h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
-                         Updated {new Date(cv.updatedAt || cv.createdAt).toLocaleDateString()}
+                       <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
+                         <span className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
+                         {new Date(cv.updatedAt || cv.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                        </p>
                     </div>
                   </motion.div>
                 ))}
               </div>
             ) : activeTab === 'cvs' ? (
-                <div className="text-center py-32 bg-black/5 dark:bg-white/[0.02] rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10">
-                  <FolderOpen className="w-20 h-20 text-gray-200 dark:text-gray-800 mx-auto mb-8 animate-bounce transition-all duration-1000" />
-                  <h4 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">No Resumes Found</h4>
-                  <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-sm mx-auto">
+                <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
+                  <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-200 dark:text-gray-800 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />
+                  <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Resumes</h4>
+                  <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xs mx-auto px-4">
                     Build your first high-performance resume using the options above.
                   </p>
                 </div>
@@ -1032,54 +1134,54 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
               {/* Cover Letters Grid */}
               {activeTab === 'cover-letters' && (
                 isLoadingCoverLetters ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 px-1">
                     {[1, 2, 3, 4, 5].map(i => (
-                      <div key={i} className="flex flex-col gap-3">
-                        <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
-                        <div className="h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
-                        <div className="h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                      <div key={i} className="flex flex-col gap-2 sm:gap-3">
+                        <div className="w-full aspect-[1/1.414] bg-gray-100 dark:bg-white/5 rounded-2xl sm:rounded-[2rem] animate-pulse border border-gray-200 dark:border-white/5" />
+                        <div className="h-4 sm:h-5 w-3/4 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
+                        <div className="h-2.5 sm:h-3 w-1/2 bg-gray-100 dark:bg-white/5 rounded animate-pulse" />
                       </div>
                     ))}
                   </div>
                 ) : existingCoverLetters && existingCoverLetters.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6 px-1">
                     {existingCoverLetters.map((cl) => (
                       <motion.div
                         key={cl.id || cl._id}
                         onClick={() => router.push(`/editor?mode=edit-cover-letter&coverLetterId=${cl.id || cl._id}`)}
-                        className="group cursor-pointer flex flex-col gap-3"
+                        className="group cursor-pointer flex flex-col gap-2 sm:gap-3"
                       >
                         <div className="relative">
                           <LazyThumbnail item={cl} isCoverLetter={true} />
                           
-                          <div className="absolute top-4 left-4 z-30">
-                            <span className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg bg-emerald-600 text-white shadow-emerald-500/20">
+                          <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-30">
+                            <span className="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider shadow-lg bg-emerald-600 text-white shadow-emerald-500/20">
                               Cover Letter
                             </span>
                           </div>
                           
-                          <div className="absolute top-4 right-4 z-30 w-10 h-10 bg-black/40 backdrop-blur-md rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
-                            <Edit2 className="w-5 h-5 text-white" />
+                          <div className="absolute top-2 sm:top-4 right-2 sm:right-4 z-30 w-8 h-8 sm:w-10 sm:h-10 bg-black/40 backdrop-blur-md rounded-lg sm:rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 shadow-2xl">
+                            <Edit2 className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                           </div>
                         </div>
 
-                        <div className="px-1">
-                           <h4 className="text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
+                        <div className="px-0.5 sm:px-1">
+                           <h4 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate group-hover:text-lime-600 dark:group-hover:text-lime-500 transition-colors tracking-tight">
                              {cl.title || 'Untitled Cover Letter'}
                            </h4>
-                           <p className="text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-2 mt-1">
-                              <span className="w-1.5 h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
-                              Updated {new Date(cl.updatedAt || cl.createdAt).toLocaleDateString()}
+                           <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 font-bold flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1">
+                              <span className="w-1 sm:w-1.5 h-1 sm:h-1.5 bg-lime-500 rounded-full shadow-[0_0_8px_rgba(132,204,22,0.5)]" />
+                              {new Date(cl.updatedAt || cl.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                            </p>
                         </div>
                       </motion.div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-32 bg-black/5 dark:bg-white/[0.02] rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10">
-                    <FolderOpen className="w-20 h-20 text-gray-400 dark:text-gray-600 mx-auto mb-8 animate-bounce transition-all duration-1000" />
-                    <h4 className="text-3xl font-black text-gray-900 dark:text-white mb-3 tracking-tight">No Cover Letters Found</h4>
-                    <p className="text-lg text-gray-600 dark:text-gray-400 font-medium max-w-sm mx-auto">
+                  <div className="text-center py-16 sm:py-32 bg-black/5 dark:bg-white/[0.02] rounded-2xl sm:rounded-[3rem] border-2 border-dashed border-gray-200 dark:border-white/10 mx-1">
+                    <FolderOpen className="w-12 h-12 sm:w-20 sm:h-20 text-gray-400 dark:text-gray-600 mx-auto mb-6 sm:mb-8 animate-bounce transition-all duration-1000" />
+                    <h4 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2 sm:mb-3 tracking-tight">No Letters</h4>
+                    <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-medium max-w-xs mx-auto px-4">
                       Create your first cover letter from the dashboard or job application journey.
                     </p>
                   </div>
@@ -1098,23 +1200,23 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
-          className="flex items-center justify-center h-full min-h-[calc(100vh-200px)]"
+          className="flex items-center justify-center h-full min-h-[calc(100vh-200px)] px-4"
         >
-          <div className="w-full max-w-2xl px-6">
+          <div className="w-full max-w-2xl">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-[#141810] rounded-2xl shadow-xl shadow-black/10 dark:shadow-black/40 p-12 border border-gray-200 dark:border-transparent"
+              className="bg-white dark:bg-[#141810] rounded-2xl sm:rounded-3xl shadow-xl shadow-black/10 dark:shadow-black/40 p-6 sm:p-12 border border-gray-200 dark:border-white/5"
             >
             {uploadStatus === 'idle' && (
               <div className="text-center">
-                <div className="w-20 h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-10 h-10 text-[#80FF00]" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-[#80FF00]/15 rounded-full flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                  <FileText className="w-8 h-8 sm:w-10 sm:h-10 text-[#80FF00]" />
                 </div>
-                <h3 className="text-2xl font-bold text-[color:var(--text-primary)] mb-4">
+                <h3 className="text-xl sm:text-2xl font-bold text-[color:var(--text-primary)] mb-2 sm:mb-4">
                   Upload Your Resume
                 </h3>
-                <p className="text-[color:var(--text-secondary)] mb-8">
+                <p className="text-sm sm:text-base text-[color:var(--text-secondary)] mb-6 sm:mb-8">
                   Drag and drop your file here or click to browse
                 </p>
                 <label className="cursor-pointer">
@@ -1125,44 +1227,44 @@ export default function Step1Parser({ onComplete, userHasMasterCV = false, mode 
                     className="hidden"
                     disabled={isUploading}
                   />
-                  <span className="inline-block px-8 py-3 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105">
+                  <span className="inline-block px-6 sm:px-8 py-2.5 sm:py-3 bg-lime-500 dark:bg-[#80FF00] hover:bg-lime-600 dark:hover:bg-[#70e600] text-black rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 text-sm sm:text-base">
                     Choose File
                   </span>
                 </label>
-                 <p className="text-sm text-[color:var(--text-tertiary)] mt-4">
-                   Supports PDF, DOCX, and image files (max 10MB)
+                 <p className="text-[10px] sm:text-xs text-[color:var(--text-tertiary)] mt-4">
+                   Supports PDF, DOCX, and images (max 10MB)
                  </p>
                  
                  {/* LinkedIn Import Option */}
                  {user ? (
                    <>
-                     <div className="my-8 border-t border-gray-200 dark:border-white/10" />
+                     <div className="my-6 sm:my-8 border-t border-gray-200 dark:border-white/10" />
                      <div className="text-center">
-                       <p className="text-sm text-[color:var(--text-tertiary)] mb-4">Or import directly from LinkedIn</p>
+                       <p className="text-xs sm:text-sm text-[color:var(--text-tertiary)] mb-4">Or import directly from LinkedIn</p>
                        <button
                          onClick={handleLinkedInImport}
                          disabled={isLinkedInImporting}
-                         className="inline-flex items-center gap-2 px-6 py-3 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+                         className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100 text-sm sm:text-base"
                        >
-                         <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                         <svg className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="currentColor">
                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
                          </svg>
-                         {isLinkedInImporting ? 'Importing...' : 'Import from LinkedIn'}
+                         {isLinkedInImporting ? 'Importing...' : 'LinkedIn Import'}
                        </button>
                        {linkedInImportError && (
-                         <p className="text-red-400 text-sm mt-2">{linkedInImportError}</p>
+                         <p className="text-red-400 text-xs mt-2">{linkedInImportError}</p>
                        )}
                      </div>
                    </>
                  ) : (
-                   <p className="text-sm text-[color:var(--text-tertiary)] mt-4">
+                   <p className="text-[10px] sm:text-xs text-[color:var(--text-tertiary)] mt-4">
                      Sign in to import from LinkedIn
                    </p>
                  )}
                  
                  <button
                    onClick={() => setParseMethod(null)}
-                   className="mt-6 text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]"
+                   className="mt-6 text-sm sm:text-base text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)] font-medium"
                  >
                    ← Back to options
                  </button>

@@ -701,21 +701,19 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(resumeEnhancerReducer, initialState);
 
   // Helper functions
-  const goToStep = (step: 1 | 2 | 3 | 4 | 5) => {
+  const goToStep = React.useCallback((step: 1 | 2 | 3 | 4 | 5) => {
     dispatch({ type: 'SET_STEP', payload: step });
-  };
+  }, []);
 
-  const nextStep = () => {
-    const next = Math.min(5, (state.currentStep + 1)) as 1 | 2 | 3 | 4 | 5;
-    dispatch({ type: 'SET_STEP', payload: next });
-  };
+  const nextStep = React.useCallback(() => {
+    dispatch({ type: 'SET_STEP', payload: (Math.min(5, (state.currentStep + 1)) as 1 | 2 | 3 | 4 | 5) });
+  }, [state.currentStep]);
 
-  const prevStep = () => {
-    const prev = Math.max(1, (state.currentStep - 1)) as 1 | 2 | 3 | 4 | 5;
-    dispatch({ type: 'SET_STEP', payload: prev });
-  };
+  const prevStep = React.useCallback(() => {
+    dispatch({ type: 'SET_STEP', payload: (Math.max(1, (state.currentStep - 1)) as 1 | 2 | 3 | 4 | 5) });
+  }, [state.currentStep]);
 
-  const runCVSurgeon = async () => {
+  const runCVSurgeon = React.useCallback(async () => {
     if (!state.targetRole || !state.seniorityLevel) return null;
     dispatch({ type: 'SET_ANALYZING', payload: true });
     try {
@@ -732,62 +730,62 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_ANALYZING', payload: false });
       throw e;
     }
-  };
+  }, [state.targetRole, state.seniorityLevel, state.cvData, state.jobData]);
 
-  const updateCVData = (data: Partial<UnifiedCVDataStructure>) => {
+  const updateCVData = React.useCallback((data: Partial<UnifiedCVDataStructure>) => {
     dispatch({ type: 'UPDATE_CV_DATA', payload: data });
-  };
+  }, []);
 
-  const setTemplate = (template: ITemplate) => {
+  const setTemplate = React.useCallback((template: ITemplate) => {
     dispatch({ type: 'SET_TEMPLATE', payload: template });
-  };
+  }, []);
 
-  const setRoleContext = (role: string, seniority: string) => {
+  const setRoleContext = React.useCallback((role: string, seniority: string) => {
     dispatch({ type: 'SET_ROLE_CONTEXT', payload: { targetRole: role, seniorityLevel: seniority } });
-  };
+  }, []);
 
-  const convertToJourney = (journeyId: string, jobData: any, coverLetterId?: string, coverLetterDraft?: string) => {
+  const convertToJourney = React.useCallback((journeyId: string, jobData: any, coverLetterId?: string, coverLetterDraft?: string) => {
     dispatch({ type: 'CONVERT_TO_JOURNEY', payload: { journeyId, jobData, coverLetterId, coverLetterDraft } });
-  };
+  }, []);
 
-  const loadCV = (cvData: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any; coverLetterId?: string }) => {
+  const loadCV = React.useCallback((cvData: { cvId: string; cvType: 'master' | 'journey' | 'standalone'; cvTitle: string; cvData: UnifiedCVDataStructure; template?: ITemplate; journeyId?: string; jobData?: any; coverLetterId?: string }) => {
     dispatch({ type: 'LOAD_CV', payload: cvData });
-  };
+  }, []);
 
-  const resetState = () => {
+  const resetState = React.useCallback(() => {
     dispatch({ type: 'RESET_STATE' });
-  };
+  }, []);
 
   // Career Ecosystem helper functions
-  const setJdText = (text: string) => {
+  const setJdText = React.useCallback((text: string) => {
     dispatch({ type: 'SET_JD_TEXT', payload: text });
-  };
+  }, []);
 
-  const clearJdText = () => {
+  const clearJdText = React.useCallback(() => {
     dispatch({ type: 'CLEAR_JD_TEXT' });
-  };
+  }, []);
 
-  const setFresherMode = (isFresher: boolean) => {
+  const setFresherMode = React.useCallback((isFresher: boolean) => {
     dispatch({ type: 'SET_FRESHER_MODE', payload: isFresher });
-  };
+  }, []);
 
-  const setAtsScoreCap = (cap: number) => {
+  const setAtsScoreCap = React.useCallback((cap: number) => {
     dispatch({ type: 'SET_ATS_SCORE_CAP', payload: cap });
-  };
+  }, []);
 
-  const setKeywordGaps = (gaps: KeywordGap[]) => {
+  const setKeywordGaps = React.useCallback((gaps: KeywordGap[]) => {
     dispatch({ type: 'SET_KEYWORD_GAPS', payload: gaps });
-  };
+  }, []);
 
-  const updateKeywordGap = (keyword: string, updates: Partial<KeywordGap>) => {
+  const updateKeywordGap = React.useCallback((keyword: string, updates: Partial<KeywordGap>) => {
     dispatch({ type: 'UPDATE_KEYWORD_GAP', payload: { keyword, updates } });
-  };
+  }, []);
 
   /**
    * Detect if the current CV data indicates "Fresher Mode"
    * (no meaningful work experience - should focus on Education/Projects)
    */
-  const detectFresherMode = (): boolean => {
+  const detectFresherMode = React.useCallback((): boolean => {
     const work = state.cvData.work;
     if (!work || !Array.isArray(work) || work.length === 0) {
       return true;
@@ -797,7 +795,7 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
       w && (w.name || w.company || w.position)
     );
     return !hasValidWork;
-  };
+  }, [state.cvData.work]);
 
   /**
    * Determine the appropriate CV type based on current state
@@ -805,7 +803,7 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
    * - No Master exists + first CV → Master
    * - Otherwise → Standalone
    */
-  const determineCVType = (): 'master' | 'journey' | 'standalone' => {
+  const determineCVType = React.useCallback((): 'master' | 'journey' | 'standalone' => {
     // If JD text is provided, this is a Journey CV
     if (state.jdText && state.jdWordCount >= 10) {
       return 'journey';
@@ -816,25 +814,25 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     }
     // Default to Standalone
     return 'standalone';
-  };
+  }, [state.jdText, state.jdWordCount, state.hasMasterCV]);
 
   /**
    * Get current analysis mode information
    * This determines how CV analysis should be performed
    */
-  const getAnalysisModeInfo = (): AnalysisModeResult => {
+  const getAnalysisModeInfo = React.useCallback((): AnalysisModeResult => {
     return getAnalysisMode(
       state.cvType,
       state.targetRole,
       state.seniorityLevel,
       state.jdText || state.jobData?.description || state.jobData?.jd
     );
-  };
+  }, [state.cvType, state.targetRole, state.seniorityLevel, state.jdText, state.jobData]);
 
   /**
    * Get enhanced analysis mode with validation and warnings (NEW)
    */
-  const getAnalysisModeWithWarnings = (): AnalysisModeInfo => {
+  const getAnalysisModeWithWarnings = React.useCallback((): AnalysisModeInfo => {
     return getAnalysisModeWithValidation(
       state.cvType,
       state.targetRole,
@@ -842,12 +840,12 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
       state.jdText || state.jobData?.description || state.jobData?.jd,
       state.jobData
     );
-  };
+  }, [state.cvType, state.targetRole, state.seniorityLevel, state.jdText, state.jobData]);
 
   /**
    * Validate and set JD text with automatic sanitization (NEW)
    */
-  const validateAndSetJD = (text: string) => {
+  const validateAndSetJD = React.useCallback((text: string) => {
     const currentModeInfo = getAnalysisModeWithWarnings();
     dispatch({ type: 'SET_JD_TEXT', payload: text });
 
@@ -868,12 +866,12 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     }
 
     dispatch({ type: 'SET_ANALYSIS_MODE_INFO', payload: newModeInfo });
-  };
+  }, [state.cvType, state.targetRole, state.seniorityLevel, state.jobData, getAnalysisModeWithWarnings]);
 
   /**
    * Validate and set role with automatic confidence check (NEW)
    */
-  const validateAndSetRole = (role: string, seniority: string) => {
+  const validateAndSetRole = React.useCallback((role: string, seniority: string) => {
     const currentModeInfo = getAnalysisModeWithWarnings();
     setRoleContext(role, seniority);
 
@@ -894,12 +892,12 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     }
 
     dispatch({ type: 'SET_ANALYSIS_MODE_INFO', payload: newModeInfo });
-  };
+  }, [state.cvType, state.jdText, state.jobData, getAnalysisModeWithWarnings, setRoleContext]);
 
   /**
    * Check if analysis should be invalidated based on context changes (NEW)
    */
-  const invalidateAnalysisIfNeeded = () => {
+  const invalidateAnalysisIfNeeded = React.useCallback(() => {
     if (!state.lastAnalysisContext) return;
 
     const currentInfo = getAnalysisModeWithWarnings();
@@ -907,9 +905,9 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'INVALIDATE_ANALYSIS' });
       dispatch({ type: 'SET_ANALYSIS_MODE_INFO', payload: currentInfo });
     }
-  };
+  }, [state.lastAnalysisContext, state.analysisModeInfo, getAnalysisModeWithWarnings]);
 
-  const contextValue: ResumeEnhancerContextType = {
+  const contextValue: ResumeEnhancerContextType = React.useMemo(() => ({
     state,
     dispatch,
     goToStep,
@@ -937,7 +935,33 @@ export function ResumeEnhancerProvider({ children }: { children: ReactNode }) {
     validateAndSetJD,
     validateAndSetRole,
     invalidateAnalysisIfNeeded
-  };
+  }), [
+    state,
+    dispatch,
+    goToStep,
+    nextStep,
+    prevStep,
+    runCVSurgeon,
+    updateCVData,
+    setTemplate,
+    setRoleContext,
+    convertToJourney,
+    loadCV,
+    resetState,
+    setJdText,
+    clearJdText,
+    setFresherMode,
+    setAtsScoreCap,
+    setKeywordGaps,
+    updateKeywordGap,
+    detectFresherMode,
+    determineCVType,
+    getAnalysisModeInfo,
+    getAnalysisModeWithWarnings,
+    validateAndSetJD,
+    validateAndSetRole,
+    invalidateAnalysisIfNeeded
+  ]);
 
   return (
     <ResumeEnhancerContext.Provider value={contextValue}>

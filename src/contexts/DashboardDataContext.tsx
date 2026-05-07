@@ -10,6 +10,24 @@ interface DashboardDataContextType {
   coverLetters: any[];
   jobs: any[];
   analytics: any;
+  profileStrength: number;
+  streak: {
+    current: number;
+    longest: number;
+    weeklyGoal: number;
+    applicationsThisWeek: number;
+  };
+  goals: {
+    monthlyGoal: number;
+    applicationsThisMonth: number;
+    cvsCreatedThisMonth: number;
+    coverLettersCreatedThisMonth: number;
+  };
+  activities: any[];
+  aiInsights: any[];
+  skillsMarket: any;
+  salaryInsights: any;
+  jobRecommendations: any[];
   // Loading states
   criticalLoading: boolean; // User/subscription data
   secondaryLoading: {
@@ -17,6 +35,14 @@ interface DashboardDataContextType {
     coverLetters: boolean;
     jobs: boolean;
     analytics: boolean;
+    profileStrength: boolean;
+    streak: boolean;
+    goals: boolean;
+    activities: boolean;
+    aiInsights: boolean;
+    skillsMarket: boolean;
+    salaryInsights: boolean;
+    jobRecommendations: boolean;
   };
   // Legacy loading for backward compatibility
   loading: boolean;
@@ -26,6 +52,14 @@ interface DashboardDataContextType {
     coverLetters?: string | null;
     jobs?: string | null;
     analytics?: string | null;
+    profileStrength?: string | null;
+    streak?: string | null;
+    goals?: string | null;
+    activities?: string | null;
+    aiInsights?: string | null;
+    skillsMarket?: string | null;
+    salaryInsights?: string | null;
+    jobRecommendations?: string | null;
   };
   // Legacy error for backward compatibility
   error: string | null;
@@ -35,6 +69,14 @@ interface DashboardDataContextType {
   refreshCoverLetters: () => Promise<void>;
   refreshJobs: () => Promise<void>;
   refreshAnalytics: () => Promise<void>;
+  refreshProfileStrength: () => Promise<void>;
+  refreshStreak: () => Promise<void>;
+  refreshGoals: () => Promise<void>;
+  refreshActivities: () => Promise<void>;
+  refreshAiInsights: () => Promise<void>;
+  refreshSkillsMarket: () => Promise<void>;
+  refreshSalaryInsights: () => Promise<void>;
+  refreshJobRecommendations: () => Promise<void>;
   refreshAll: () => Promise<void>;
 }
 
@@ -54,6 +96,34 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [jobs, setJobs] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
+  const [profileStrength, setProfileStrength] = useState<number>(0);
+  const [streak, setStreak] = useState<{
+    current: number;
+    longest: number;
+    weeklyGoal: number;
+    applicationsThisWeek: number;
+  }>({
+    current: 0,
+    longest: 0,
+    weeklyGoal: 15,
+    applicationsThisWeek: 0
+  });
+  const [goals, setGoals] = useState<{
+    monthlyGoal: number;
+    applicationsThisMonth: number;
+    cvsCreatedThisMonth: number;
+    coverLettersCreatedThisMonth: number;
+  }>({
+    monthlyGoal: 20,
+    applicationsThisMonth: 0,
+    cvsCreatedThisMonth: 0,
+    coverLettersCreatedThisMonth: 0
+  });
+  const [activities, setActivities] = useState<any[]>([]);
+  const [aiInsights, setAiInsights] = useState<any[]>([]);
+  const [skillsMarket, setSkillsMarket] = useState<any>(null);
+  const [salaryInsights, setSalaryInsights] = useState<any>(null);
+  const [jobRecommendations, setJobRecommendations] = useState<any[]>([]);
 
   // Separate loading states for critical vs secondary data
   const [criticalLoading, setCriticalLoading] = useState(true);
@@ -61,7 +131,15 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     cvs: false,
     coverLetters: false,
     jobs: false,
-    analytics: false
+    analytics: false,
+    profileStrength: false,
+    streak: false,
+    goals: false,
+    activities: false,
+    aiInsights: false,
+    skillsMarket: false,
+    salaryInsights: false,
+    jobRecommendations: false
   });
 
   const [errors, setErrors] = useState<{
@@ -69,6 +147,14 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     coverLetters?: string | null;
     jobs?: string | null;
     analytics?: string | null;
+    profileStrength?: string | null;
+    streak?: string | null;
+    goals?: string | null;
+    activities?: string | null;
+    aiInsights?: string | null;
+    skillsMarket?: string | null;
+    salaryInsights?: string | null;
+    jobRecommendations?: string | null;
   }>({});
 
   // Track if data has been loaded to prevent duplicate fetches
@@ -234,6 +320,214 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
+  const fetchProfileStrength = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/profile-strength', async () => {
+      if (loadingStates.current.get('profileStrength')) {
+        console.log('⏭️ DashboardData - Profile strength fetch already in progress, skipping');
+        return;
+      }
+
+      try {
+        loadingStates.current.set('profileStrength', true);
+        setSecondaryLoading(prev => ({ ...prev, profileStrength: true }));
+        setErrors(prev => ({ ...prev, profileStrength: null }));
+        console.log('🔍 DashboardData - Fetching profile strength');
+        const response = await authenticatedFetch(`/api/dashboard/profile-strength?userId=${userId}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+
+          if (result.success && result.data?.strength !== undefined) {
+            console.log(`✅ DashboardData - Profile strength loaded: ${result.data.strength}%`);
+            setProfileStrength(result.data.strength);
+          }
+        } else {
+          console.error('Profile strength response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
+        }
+      } catch (err: any) {
+        console.error('❌ DashboardData - Error fetching profile strength:', err);
+        const errorMsg = err.message || 'Failed to fetch profile strength';
+        setErrors(prev => ({ ...prev, profileStrength: errorMsg }));
+      } finally {
+        loadingStates.current.set('profileStrength', false);
+        setSecondaryLoading(prev => ({ ...prev, profileStrength: false }));
+      }
+    });
+  }, []);
+
+  const fetchStreak = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/streak', async () => {
+      if (loadingStates.current.get('streak')) {
+        console.log('⏭️ DashboardData - Streak fetch already in progress, skipping');
+        return;
+      }
+
+      try {
+        loadingStates.current.set('streak', true);
+        setSecondaryLoading(prev => ({ ...prev, streak: true }));
+        setErrors(prev => ({ ...prev, streak: null }));
+        console.log('🔍 DashboardData - Fetching streak');
+        const response = await authenticatedFetch(`/api/dashboard/streak?userId=${userId}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+
+          if (result.success && result.data) {
+            console.log(`✅ DashboardData - Streak loaded: ${result.data.current} days`);
+            setStreak({
+              current: result.data.current || 0,
+              longest: result.data.longest || 0,
+              weeklyGoal: result.data.weeklyGoal || 15,
+              applicationsThisWeek: result.data.applicationsThisWeek || 0
+            });
+          }
+        } else {
+          console.error('Streak response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
+        }
+      } catch (err: any) {
+        console.error('❌ DashboardData - Error fetching streak:', err);
+        const errorMsg = err.message || 'Failed to fetch streak';
+        setErrors(prev => ({ ...prev, streak: errorMsg }));
+      } finally {
+        loadingStates.current.set('streak', false);
+        setSecondaryLoading(prev => ({ ...prev, streak: false }));
+      }
+    });
+  }, []);
+
+  const fetchGoals = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/goals', async () => {
+      if (loadingStates.current.get('goals')) {
+        console.log('⏭️ DashboardData - Goals fetch already in progress, skipping');
+        return;
+      }
+
+      try {
+        loadingStates.current.set('goals', true);
+        setSecondaryLoading(prev => ({ ...prev, goals: true }));
+        setErrors(prev => ({ ...prev, goals: null }));
+        console.log('🔍 DashboardData - Fetching goals');
+        const response = await authenticatedFetch(`/api/dashboard/goals?userId=${userId}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const result = await response.json();
+
+          if (result.success && result.data) {
+            console.log(`✅ DashboardData - Goals loaded`);
+            setGoals({
+              monthlyGoal: result.data.monthlyGoal || 20,
+              applicationsThisMonth: result.data.applicationsThisMonth || 0,
+              cvsCreatedThisMonth: result.data.cvsCreatedThisMonth || 0,
+              coverLettersCreatedThisMonth: result.data.coverLettersCreatedThisMonth || 0
+            });
+          }
+        } else {
+          console.error('Goals response is not JSON. Content-Type:', contentType);
+          throw new Error('Invalid response format');
+        }
+      } catch (err: any) {
+        console.error('❌ DashboardData - Error fetching goals:', err);
+        const errorMsg = err.message || 'Failed to fetch goals';
+        setErrors(prev => ({ ...prev, goals: errorMsg }));
+      } finally {
+        loadingStates.current.set('goals', false);
+        setSecondaryLoading(prev => ({ ...prev, goals: false }));
+      }
+    });
+  }, []);
+
+  const fetchActivities = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/activities', async () => {
+      if (loadingStates.current.get('activities')) return;
+      try {
+        loadingStates.current.set('activities', true);
+        setSecondaryLoading(prev => ({ ...prev, activities: true }));
+        const response = await authenticatedFetch(`/api/dashboard/activities?userId=${userId}`);
+        const result = await response.json();
+        if (result.success) setActivities(result.data.activities);
+      } catch (err: any) {
+        setErrors(prev => ({ ...prev, activities: err.message }));
+      } finally {
+        loadingStates.current.set('activities', false);
+        setSecondaryLoading(prev => ({ ...prev, activities: false }));
+      }
+    });
+  }, []);
+
+  const fetchAiInsights = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/ai-insights', async () => {
+      if (loadingStates.current.get('aiInsights')) return;
+      try {
+        loadingStates.current.set('aiInsights', true);
+        setSecondaryLoading(prev => ({ ...prev, aiInsights: true }));
+        const response = await authenticatedFetch(`/api/dashboard/ai-insights?userId=${userId}`);
+        const result = await response.json();
+        if (result.success) setAiInsights(result.data.insights);
+      } catch (err: any) {
+        setErrors(prev => ({ ...prev, aiInsights: err.message }));
+      } finally {
+        loadingStates.current.set('aiInsights', false);
+        setSecondaryLoading(prev => ({ ...prev, aiInsights: false }));
+      }
+    });
+  }, []);
+
+  const fetchSkillsMarket = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/skills-market', async () => {
+      if (loadingStates.current.get('skillsMarket')) return;
+      try {
+        loadingStates.current.set('skillsMarket', true);
+        setSecondaryLoading(prev => ({ ...prev, skillsMarket: true }));
+        const response = await authenticatedFetch(`/api/dashboard/skills-market?userId=${userId}`);
+        const result = await response.json();
+        if (result.success) setSkillsMarket(result.data);
+      } catch (err: any) {
+        setErrors(prev => ({ ...prev, skillsMarket: err.message }));
+      } finally {
+        loadingStates.current.set('skillsMarket', false);
+        setSecondaryLoading(prev => ({ ...prev, skillsMarket: false }));
+      }
+    });
+  }, []);
+
+  const fetchSalaryInsights = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/salary-insights', async () => {
+      if (loadingStates.current.get('salaryInsights')) return;
+      try {
+        loadingStates.current.set('salaryInsights', true);
+        setSecondaryLoading(prev => ({ ...prev, salaryInsights: true }));
+        const response = await authenticatedFetch(`/api/dashboard/salary-insights?userId=${userId}`);
+        const result = await response.json();
+        if (result.success) setSalaryInsights(result.data);
+      } catch (err: any) {
+        setErrors(prev => ({ ...prev, salaryInsights: err.message }));
+      } finally {
+        loadingStates.current.set('salaryInsights', false);
+        setSecondaryLoading(prev => ({ ...prev, salaryInsights: false }));
+      }
+    });
+  }, []);
+
+  const fetchJobRecommendations = useCallback(async (userId: string) => {
+    return requestDeduplication.deduplicate('/api/dashboard/job-recommendations', async () => {
+      if (loadingStates.current.get('jobRecommendations')) return;
+      try {
+        loadingStates.current.set('jobRecommendations', true);
+        setSecondaryLoading(prev => ({ ...prev, jobRecommendations: true }));
+        const response = await authenticatedFetch(`/api/dashboard/job-recommendations?userId=${userId}`);
+        const result = await response.json();
+        if (result.success) setJobRecommendations(result.data.recommendations);
+      } catch (err: any) {
+        setErrors(prev => ({ ...prev, jobRecommendations: err.message }));
+      } finally {
+        loadingStates.current.set('jobRecommendations', false);
+        setSecondaryLoading(prev => ({ ...prev, jobRecommendations: false }));
+      }
+    });
+  }, []);
+
   const refreshCVs = useCallback(async () => {
     const userId = getUserIdForAPI(user);
     if (userId) {
@@ -262,12 +556,71 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [user, fetchAnalytics]);
 
+  const refreshProfileStrength = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      await fetchProfileStrength(userId);
+    }
+  }, [user, fetchProfileStrength]);
+
+  const refreshStreak = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      await fetchStreak(userId);
+    }
+  }, [user, fetchStreak]);
+
+  const refreshGoals = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) {
+      await fetchGoals(userId);
+    }
+  }, [user, fetchGoals]);
+
+  const refreshActivities = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) await fetchActivities(userId);
+  }, [user, fetchActivities]);
+
+  const refreshAiInsights = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) await fetchAiInsights(userId);
+  }, [user, fetchAiInsights]);
+
+  const refreshSkillsMarket = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) await fetchSkillsMarket(userId);
+  }, [user, fetchSkillsMarket]);
+
+  const refreshSalaryInsights = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) await fetchSalaryInsights(userId);
+  }, [user, fetchSalaryInsights]);
+
+  const refreshJobRecommendations = useCallback(async () => {
+    const userId = getUserIdForAPI(user);
+    if (userId) await fetchJobRecommendations(userId);
+  }, [user, fetchJobRecommendations]);
+
   const refreshAll = useCallback(async () => {
     const userId = getUserIdForAPI(user);
     if (!userId) return;
 
     console.log('🔄 DashboardData - Refreshing all data for user:', userId);
-    setSecondaryLoading({ cvs: true, coverLetters: true, jobs: true, analytics: true });
+    setSecondaryLoading({
+      cvs: true,
+      coverLetters: true,
+      jobs: true,
+      analytics: true,
+      profileStrength: true,
+      streak: true,
+      goals: true,
+      activities: true,
+      aiInsights: true,
+      skillsMarket: true,
+      salaryInsights: true,
+      jobRecommendations: true
+    });
     setErrors({});
 
     const startTime = performance.now();
@@ -277,12 +630,20 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       fetchCVs(userId),
       fetchCoverLetters(userId),
       fetchJobs(userId),
-      fetchAnalytics(userId)
+      fetchAnalytics(userId),
+      fetchProfileStrength(userId),
+      fetchStreak(userId),
+      fetchGoals(userId),
+      fetchActivities(userId),
+      fetchAiInsights(userId),
+      fetchSkillsMarket(userId),
+      fetchSalaryInsights(userId),
+      fetchJobRecommendations(userId)
     ]);
 
     const duration = Math.round(performance.now() - startTime);
     console.log(`✅ DashboardData - All secondary data loaded in ${duration}ms`);
-  }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchAnalytics]);
+  }, [user, fetchCVs, fetchCoverLetters, fetchJobs, fetchAnalytics, fetchProfileStrength, fetchStreak, fetchGoals, fetchActivities, fetchAiInsights, fetchSkillsMarket, fetchSalaryInsights, fetchJobRecommendations]);
 
   // CRITICAL PATH LOADING: Wait for auth, then load secondary data
   useEffect(() => {
@@ -316,6 +677,24 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
       setCoverLetters([]);
       setJobs([]);
       setAnalytics(null);
+      setProfileStrength(0);
+      setStreak({
+        current: 0,
+        longest: 0,
+        weeklyGoal: 15,
+        applicationsThisWeek: 0
+      });
+      setGoals({
+        monthlyGoal: 20,
+        applicationsThisMonth: 0,
+        cvsCreatedThisMonth: 0,
+        coverLettersCreatedThisMonth: 0
+      });
+      setActivities([]);
+      setAiInsights([]);
+      setSkillsMarket(null);
+      setSalaryInsights(null);
+      setJobRecommendations([]);
       setErrors({});
     }
 
@@ -343,6 +722,14 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         coverLetters,
         jobs,
         analytics,
+        profileStrength,
+        streak,
+        goals,
+        activities,
+        aiInsights,
+        skillsMarket,
+        salaryInsights,
+        jobRecommendations,
         criticalLoading,
         secondaryLoading,
         loading, // Legacy
@@ -353,6 +740,14 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
         refreshCoverLetters,
         refreshJobs,
         refreshAnalytics,
+        refreshProfileStrength,
+        refreshStreak,
+        refreshGoals,
+        refreshActivities,
+        refreshAiInsights,
+        refreshSkillsMarket,
+        refreshSalaryInsights,
+        refreshJobRecommendations,
         refreshAll
       }}
     >
