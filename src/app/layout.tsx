@@ -126,25 +126,25 @@ export const metadata: Metadata = {
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,
   },
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
-      { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
-      { url: '/images/favicon.png', sizes: '128x128', type: 'image/png' },
-    ],
-    shortcut: '/favicon.ico',
-    apple: [
-      { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
-    ],
-    other: [
-      {
-        rel: 'mask-icon',
-        url: '/images/favicon.png',
-        color: '#81ff00',
-      },
-    ],
-  },
+   icons: {
+      icon: [
+        { url: '/images/favicon.png', sizes: 'any' },
+        { url: '/images/favicon.png', sizes: '32x32', type: 'image/png' },
+        { url: '/images/favicon.png', sizes: '16x16', type: 'image/png' },
+        { url: '/images/favicon.png', sizes: '128x128', type: 'image/png' },
+      ],
+      shortcut: '/images/favicon.png',
+      apple: [
+        { url: '/images/favicon.png', sizes: '180x180', type: 'image/png' },
+      ],
+      other: [
+        {
+          rel: 'mask-icon',
+          url: '/images/favicon.png',
+          color: '#81ff00',
+        },
+      ],
+    },
   manifest: '/site.webmanifest',
   category: 'technology',
 }
