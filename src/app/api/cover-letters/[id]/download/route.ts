@@ -7,7 +7,7 @@ import { downloadAnalyticsService } from '@/lib/services/downloadAnalyticsServic
 import mongoose from 'mongoose';
 // jsPDF will be imported dynamically
 import { Document, Packer, Paragraph, TextRun, AlignmentType } from 'docx';
-import { redisRateLimiter } from '@/lib/redis-rate-limiter';
+import redisRateLimiter from '@/lib/redis-rate-limiter';
 import { configService } from '@/lib/services/configService';
 import { validateDownloadParams, sanitizeFilename, validateFileSize } from '@/lib/utils/downloadValidation';
 import { logger } from '@/lib/structured-logger';

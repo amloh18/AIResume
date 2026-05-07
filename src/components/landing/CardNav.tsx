@@ -91,14 +91,14 @@ const CardNav = ({
     <div className={`card-nav-container ${className} ${isAnySubmenuOpen ? 'submenu-open' : ''}`}>
       <nav ref={navRef} className="card-nav">
         <div className="card-nav-content">
-          <button 
+           <button 
             className="logo-container"
             onClick={handleLogoClick}
             aria-label="Go to top"
             type="button"
           >
             <div className="logo-image-wrapper relative">
-              <Logo size="md" />
+              <Logo size="md" showBoth={true} />
               {isBusinessRoute && (
                 <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
               )}

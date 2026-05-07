@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, ArrowRight, Building2, Users, Database, Mail, Check, ArrowLeft } from 'lucide-react';
-import { getAuthenticatedUser } from '@/lib/auth-helpers';
+import { useSession } from 'next-auth/react';
+import { getConnection } from '@/lib/database';
+import User from '@/models/User';
 
 interface OnboardingStep {
   id: string;
@@ -22,6 +24,7 @@ interface OnboardingStep {
 
 const B2BOnboardingPage = () => {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,17 +39,20 @@ const B2BOnboardingPage = () => {
   // Check authentication and user role on mount
   useEffect(() => {
     const checkAuth = async () => {
-      try {
-        const authResult = await getAuthenticatedUser();
-        
-        if (!authResult) {
-          router.push('/b2b/login');
-          return;
-        }
+      // Wait for session to load
+      if (status === 'loading') {
+        return;
+      }
 
+      if (status === 'unauthenticated') {
+        router.push('/b2b/login');
+        return;
+      }
+
+      if (status === 'authenticated' && session?.user) {
         // Check if user is B2B admin/owner
-        const isB2B = !!(authResult.user as any)?.b2b?.tenantId;
-        const isAdmin = authResult.user.role === 'admin' || authResult.user.role === 'superadmin';
+        const isB2B = !!(session.user as any)?.b2b?.tenantId;
+        const isAdmin = session.user.role === 'admin' || session.user.role === 'superadmin';
         
         if (!isB2B || !isAdmin) {
           // Non-admin B2B users or non-B2B users should not access this page
@@ -55,22 +61,19 @@ const B2BOnboardingPage = () => {
         }
 
         // Check if setup is already complete
-        if ((authResult.user as any)?.b2b?.setupComplete) {
+        if ((session.user as any)?.b2b?.setupComplete) {
           router.push('/b2b/dashboard');
           return;
         }
 
-        setUser(authResult.user);
-      } catch (error) {
-        console.error('Error checking auth:', error);
-        router.push('/b2b/login');
-      } finally {
-        setIsLoading(false);
+        setUser(session.user);
       }
+      
+      setIsLoading(false);
     };
 
     checkAuth();
-  }, [router]);
+  }, [status, session, router]);
 
   const onboardingSteps: OnboardingStep[] = [
     {
