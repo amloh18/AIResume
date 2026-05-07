@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateAndSendTwoFactorCode } from '@/lib/services/twoFactorService';
 import { getConnection } from '@/lib/database';
 import User from '@/models/User';
+import redisRateLimiter from '@/lib/redis-rate-limiter';
+import { getClientIP } from '@/lib/utils/apiLogger';
 
 /**
  * Generate and send 2FA code
@@ -15,6 +17,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'User ID and email are required' },
         { status: 400 }
+      );
+    }
+
+    // Check rate limit before generating code
+    const ipAddress = getClientIP(request);
+    const rateLimitResult = await redisRateLimiter.checkTwoFactorRateLimit(userId, ipAddress);
+    
+    if (!rateLimitResult.allowed) {
+      const userLimit = rateLimitResult.userLimit;
+      const resetTime = userLimit?.resetTime || Date.now() + 10 * 60 * 1000;
+      const retryAfter = Math.ceil((resetTime - Date.now()) / 1000);
+      
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Too many code generation attempts. Please wait before requesting a new code.',
+          retryAfter,
+          limitInfo: {
+            userLimit: rateLimitResult.userLimit,
+            ipLimit: rateLimitResult.ipLimit,
+          },
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': retryAfter.toString(),
+            'X-RateLimit-Limit': '3',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(resetTime).toISOString(),
+          },
+        }
       );
     }
 

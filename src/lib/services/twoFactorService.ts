@@ -2,6 +2,7 @@ import { getConnection } from '@/lib/database';
 import UserSettings from '@/models/UserSettings';
 import { sendVerificationCode } from '@/lib/email-service';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
 export interface TwoFactorSession {
   userId: string;
@@ -14,6 +15,11 @@ export interface TwoFactorSession {
 
 // In-memory store for 2FA sessions (in production, use Redis or database)
 const twoFactorSessions = new Map<string, TwoFactorSession>();
+
+// Recovery code configuration
+const RECOVERY_CODE_COUNT = 5;
+const RECOVERY_CODE_LENGTH = 8;
+const BCRYPT_SALT_ROUNDS = 10;
 
 /**
  * Generate a 4-digit verification code
@@ -115,8 +121,8 @@ export async function verifyTwoFactorCode(
       return { valid: false, error: 'Code has expired. Please sign in again.' };
     }
 
-    // Check max attempts (5 attempts)
-    if (session.attempts >= 5) {
+    // Check max attempts (3 attempts)
+    if (session.attempts >= 3) {
       twoFactorSessions.delete(sessionId);
       return { valid: false, error: 'Too many failed attempts. Please sign in again.' };
     }
@@ -126,10 +132,12 @@ export async function verifyTwoFactorCode(
 
     // Verify code
     if (session.code !== code) {
-      const remainingAttempts = 5 - session.attempts;
+      const remainingAttempts = 3 - session.attempts;
       return {
         valid: false,
-        error: `Invalid code. ${remainingAttempts > 0 ? `${remainingAttempts} attempts remaining.` : 'No attempts remaining.'}`,
+        error: remainingAttempts > 0 
+          ? 'Invalid or expired code. Please try again.' 
+          : 'Too many failed attempts. Please sign in again.',
       };
     }
 
@@ -156,6 +164,125 @@ function cleanupExpiredSessions() {
       twoFactorSessions.delete(sessionId);
     }
   });
+}
+
+/**
+ * Invalidate all 2FA sessions for a user (e.g., when resending code)
+ */
+export async function invalidateUserSessions(userId: string): Promise<void> {
+  Array.from(twoFactorSessions.entries()).forEach(([sessionId, session]) => {
+    if (session.userId === userId) {
+      twoFactorSessions.delete(sessionId);
+    }
+  });
+}
+
+/**
+ * Generate recovery codes for 2FA setup
+ */
+export function generateRecoveryCodes(): string[] {
+  const codes: string[] = [];
+  for (let i = 0; i < RECOVERY_CODE_COUNT; i++) {
+    const code = crypto.randomBytes(RECOVERY_CODE_LENGTH).toString('hex').toUpperCase();
+    codes.push(code);
+  }
+  return codes;
+}
+
+/**
+ * Hash a recovery code using bcrypt
+ */
+export async function hashRecoveryCode(code: string): Promise<string> {
+  return bcrypt.hash(code, BCRYPT_SALT_ROUNDS);
+}
+
+/**
+ * Verify a recovery code and mark it as used
+ */
+export async function verifyRecoveryCode(userId: string, code: string): Promise<boolean> {
+  try {
+    await getConnection();
+    const userSettings = await UserSettings.findOne({ userId });
+    
+    if (!userSettings?.security?.twoFactorRecoveryCodes) {
+      return false;
+    }
+
+    const { twoFactorRecoveryCodes, twoFactorRecoveryUsed = [] } = userSettings.security;
+
+    // Check if code was already used
+    const codeHash = twoFactorRecoveryCodes.find((hashedCode: string) => 
+      bcrypt.compareSync(code, hashedCode)
+    );
+
+    if (!codeHash) {
+      return false;
+    }
+
+    // Check if already used
+    if (twoFactorRecoveryUsed.includes(codeHash)) {
+      return false;
+    }
+
+    // Mark as used
+    userSettings.security.twoFactorRecoveryUsed = [...twoFactorRecoveryUsed, codeHash];
+    await userSettings.save();
+
+    return true;
+  } catch (error) {
+    console.error('Error verifying recovery code:', error);
+    return false;
+  }
+}
+
+/**
+ * Save recovery codes to user settings (hashed)
+ */
+export async function saveRecoveryCodes(userId: string, codes: string[]): Promise<void> {
+  try {
+    await getConnection();
+    const userSettings = await UserSettings.findOne({ userId });
+    
+    if (!userSettings) {
+      throw new Error('User settings not found');
+    }
+
+    const hashedCodes = await Promise.all(
+      codes.map(code => bcrypt.hash(code, BCRYPT_SALT_ROUNDS))
+    );
+
+    userSettings.security.twoFactorRecoveryCodes = hashedCodes;
+    userSettings.security.twoFactorRecoveryUsed = [];
+    await userSettings.save();
+  } catch (error) {
+    console.error('Error saving recovery codes:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get recovery codes for display (one-time only)
+ * Note: This should only be called during setup to show unhashed codes to the user
+ */
+export function getRecoveryCodesForDisplay(codes: string[]): string[] {
+  return [...codes];
+}
+
+/**
+ * Check if user has recovery codes available
+ */
+export async function hasRecoveryCodes(userId: string): Promise<boolean> {
+  try {
+    await getConnection();
+    const userSettings = await UserSettings.findOne({ userId });
+    const codes = userSettings?.security?.twoFactorRecoveryCodes || [];
+    const used = userSettings?.security?.twoFactorRecoveryUsed || [];
+    
+    return codes.length > used.length;
+  } catch (error) {
+    console.error('Error checking recovery codes:', error);
+    return false;
+  }
 }
 
 /**

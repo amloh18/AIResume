@@ -186,13 +186,13 @@ const FormModeView: React.FC<FormModeViewProps> = ({ cvData, collapsedSections, 
           isOpen={!collapsedSections.basics}
           onToggle={() => onToggleSection('basics')}
         >
-          <div className="grid grid-cols-2 gap-4">
-            <FormField label="Full Name" value={cvData.basics?.name} />
-            <FormField label="Job Title" value={cvData.basics?.label} />
-            <FormField label="Email" value={cvData.basics?.email} />
-            <FormField label="Phone" value={cvData.basics?.phone} />
-            <FormField label="Location" value={cvData.basics?.location?.city} className="col-span-2" />
-          </div>
+           <div className="grid grid-cols-4 gap-4">
+             <FormField label="Full Name" value={cvData.basics?.name} />
+             <FormField label="Job Title" value={cvData.basics?.label} />
+             <FormField label="Email" value={cvData.basics?.email} />
+             <FormField label="Phone" value={cvData.basics?.phone} />
+             <FormField label="Location" value={cvData.basics?.location?.city} className="col-span-4" />
+           </div>
           <FormField label="Summary" value={cvData.basics?.summary} multiline />
         </FormSection>
 
@@ -283,26 +283,26 @@ const FormField: React.FC<{
 );
 
 const WorkItem: React.FC<{ job: any }> = ({ job }) => (
-  <div className="p-4 bg-white dark:bg-gray-900 rounded-lg mb-3">
-    <div className="grid grid-cols-2 gap-4">
-      <FormField label="Company" value={job?.company} />
-      <FormField label="Position" value={job?.position} />
-      <FormField label="Start Date" value={job?.startDate} />
-      <FormField label="End Date" value={job?.endDate} />
-    </div>
-    <FormField label="Summary" value={job?.summary} multiline />
-  </div>
+   <div className="p-4 bg-white dark:bg-gray-900 rounded-lg mb-3">
+     <div className="grid grid-cols-4 gap-4">
+       <FormField label="Company" value={job?.company} />
+       <FormField label="Position" value={job?.position} />
+       <FormField label="Start Date" value={job?.startDate} />
+       <FormField label="End Date" value={job?.endDate} />
+     </div>
+     <FormField label="Summary" value={job?.summary} multiline />
+   </div>
 );
 
 const EducationItem: React.FC<{ edu: any }> = ({ edu }) => (
-  <div className="p-4 bg-white dark:bg-gray-900 rounded-lg mb-3">
-    <div className="grid grid-cols-2 gap-4">
-      <FormField label="Institution" value={edu?.institution} />
-      <FormField label="Degree" value={edu?.studyType} />
-      <FormField label="Area" value={edu?.area} />
-      <FormField label="End Date" value={edu?.endDate} />
-    </div>
-  </div>
+   <div className="p-4 bg-white dark:bg-gray-900 rounded-lg mb-3">
+     <div className="grid grid-cols-4 gap-4">
+       <FormField label="Institution" value={edu?.institution} />
+       <FormField label="Degree" value={edu?.studyType} />
+       <FormField label="Area" value={edu?.area} />
+       <FormField label="End Date" value={edu?.endDate} />
+     </div>
+   </div>
 );
 
 interface EditorModeViewProps {

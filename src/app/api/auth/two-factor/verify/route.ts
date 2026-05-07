@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Validate code format (4 digits)
     if (!/^\d{4}$/.test(code)) {
       return NextResponse.json(
-        { success: false, error: 'Code must be 4 digits' },
+        { success: false, error: 'Invalid code format. Please enter a 4-digit code.' },
         { status: 400 }
       );
     }
@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
     const result = await verifyTwoFactorCode(sessionId, code);
 
     if (!result.valid) {
+      // Use consistent error messages that don't reveal whether code expired or was invalid
       return NextResponse.json(
-        { success: false, error: result.error || 'Invalid code' },
+        { success: false, error: result.error || 'Invalid or expired code. Please try again.' },
         { status: 401 }
       );
     }

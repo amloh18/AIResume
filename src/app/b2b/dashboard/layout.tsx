@@ -5,11 +5,6 @@ import B2BSidebar from '@/components/b2b/B2BSidebar';
 import { MobileSidebarProvider } from '@/contexts/MobileSidebarContext';
 import B2BMobileHeader from '@/components/b2b/B2BMobileHeader';
 
-export const metadata = {
-  title: 'HR Dashboard - CVCircle',
-  description: 'Manage your HR account, API keys, and sandbox.',
-};
-
 export default async function B2BDashboardLayout({
   children,
 }: {
@@ -26,6 +21,14 @@ export default async function B2BDashboardLayout({
   if (!user.b2b || !user.b2b.tenantId) {
     // If not a B2B user, redirect to main dashboard
     redirect('/dashboard');
+  }
+
+  // Check if B2B admin needs to complete onboarding
+  const isAdmin = user.role === 'admin' || user.role === 'superadmin';
+  const needsOnboarding = !user.b2b?.setupComplete;
+  
+  if (isAdmin && needsOnboarding) {
+    redirect('/b2b/onboarding');
   }
 
   return (
