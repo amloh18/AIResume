@@ -394,16 +394,20 @@ const Footer = () => {
           viewport={{ once: true }}
         >
           <motion.div
-            className="text-white/60 text-xs flex items-center gap-2"
-            whileHover={{ scale: 1.05 }}
+            className="text-white/60 text-xs flex flex-col tablet:flex-row items-center gap-2"
+            whileHover={{ scale: 1.02 }}
           >
-            <span>© 2025 <span className="text-lime-400">CV</span><span className="text-white/60">Circle.io</span>. All rights reserved.</span>
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <Heart size={14} className="text-red-400 fill-current" />
-            </motion.div>
+            <span>© 2026 <span className="text-lime-400">CVCircle</span> by <span className="text-white">Morigrid Labs</span>. All rights reserved.</span>
+            <div className="flex items-center gap-2">
+              <span className="text-white/40 hidden tablet:inline">|</span>
+              <span className="text-white/60">Made with</span>
+              <motion.div
+                animate={{ scale: [1, 1.3, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Heart size={14} className="text-red-500 fill-current" />
+              </motion.div>
+            </div>
           </motion.div>
 
           <div className="flex space-x-8">

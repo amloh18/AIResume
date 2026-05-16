@@ -204,10 +204,9 @@ class DailySummaryEmailService {
       
     </div>
     
-    <!-- Footer -->
     <div style="background-color: #141810; padding: 20px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.08);">
       <p style="font-size: 12px; color: #757575; margin: 0;">
-        &copy; ${new Date().getFullYear()} CVCircle. All rights reserved.<br>
+        &copy; 2026 CVCircle by Morigrid Labs. All rights reserved.<br>
         You received this email because you have active job applications.
       </p>
     </div>
@@ -254,7 +253,7 @@ Upgrade here: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashbo
 View your dashboard: ${process.env.NEXT_PUBLIC_APP_URL || 'https://cvcircle.io'}/dashboard
 
 ---
-© ${new Date().getFullYear()} CVCircle. All rights reserved.
+© 2026 CVCircle by Morigrid Labs. All rights reserved.
     `.trim();
   }
 

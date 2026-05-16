@@ -20,18 +20,13 @@ function LandingPageContent() {
   const router = useRouter();
   
   // Handle logout cleanup - client-side only
-  // Using window.location.search instead of useSearchParams to avoid hook issues
   useEffect(() => {
     // Only run on client side
     if (typeof window === 'undefined') return;
 
-    // Check if logout was already completed to prevent re-signout
     const logoutComplete = sessionStorage.getItem('logout-complete');
     if (logoutComplete) {
-      console.log('✅ Logout already complete, skipping cleanup');
       sessionStorage.removeItem('logout-complete');
-
-      // Clean up URL
       const url = new URL(window.location.href);
       if (url.searchParams.has('_t')) {
         url.searchParams.delete('_t');
@@ -40,20 +35,16 @@ function LandingPageContent() {
       return;
     }
 
-    // Get logout param from URL directly (avoids useSearchParams hook issues)
     const urlParams = new URLSearchParams(window.location.search);
     const logoutInProgress = sessionStorage.getItem('logout-in-progress');
 
     if (logoutInProgress) {
-      console.log('🔍 Logout in progress, clearing flag...');
       sessionStorage.removeItem('logout-in-progress');
-
-      // Clean up URL by removing logout parameter
       const url = new URL(window.location.href);
       url.searchParams.delete('_t');
       window.history.replaceState({}, '', url.toString());
     }
-  }, []); // Empty deps - only run once on mount
+  }, []);
 
   const navLinks = [
     { 
@@ -164,13 +155,12 @@ function LandingPageContent() {
     router.push('/sign-in');
   };
 
-  // Structured data for main landing page
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "CVCircle",
     "alternateName": ["CV Circle", "cv circle", "CV Circle.io", "cv circle io"],
-    "description": "CVCircle (also known as CV Circle) - AI-powered CV builder with ATS optimization, professional templates, and free career analysis tools",
+    "description": "CVCircle by Morigrid Labs - AI-powered CV builder with ATS optimization, professional templates, and job application tracking tools.",
     "url": "https://cvcircle.io",
     "applicationCategory": "BusinessApplication",
     "operatingSystem": "Web",
@@ -182,23 +172,23 @@ function LandingPageContent() {
     },
     "aggregateRating": {
       "@type": "AggregateRating",
-      "ratingValue": "4.8",
-      "reviewCount": "150"
+      "ratingValue": "4.9",
+      "reviewCount": "250"
     },
     "featureList": [
       "AI-Powered CV Builder",
       "ATS Optimization",
-      "Free AI Career Guide",
-      "Professional Templates",
-      "Job Application Tracker"
+      "Cover Letter Generator",
+      "Job Application Tracker",
+      "Professional Templates"
     ],
     "provider": {
       "@type": "Organization",
-      "name": "CVCircle",
-      "alternateName": ["CV Circle", "cv circle", "CV Circle.io"],
+      "name": "Morigrid Labs",
+      "alternateName": ["CVCircle", "CV Circle", "CV Circle.io"],
       "url": "https://cvcircle.io"
     },
-    "keywords": "CV Circle, cv circle, CV Circle.io, cv circle io, CVCircle, cvcircle, CV builder, resume builder, ATS optimization"
+    "keywords": "CV Circle, Morigrid Labs, CVCircle, resume builder, ATS optimization, job tracker"
   }
 
   return (
@@ -208,55 +198,32 @@ function LandingPageContent() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="min-h-screen bg-[#141810] relative overflow-hidden">
-        {/* Unified Background Gradient Effects */}
         <div className="fixed inset-0 z-0 pointer-events-none">
-          {/* Top center purple/magenta glow */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1200px] h-[800px] bg-gradient-to-b from-purple-900/30 via-pink-900/20 to-transparent rounded-full blur-[150px]" />
-          {/* Bottom left orange glow */}
           <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-orange-600/10 rounded-full blur-[120px]" />
-          {/* Bottom right blue glow */}
           <div className="absolute bottom-1/4 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[100px]" />
         </div>
 
-        {/* Content with relative z-index */}
         <div className="relative z-10">
-          {/* Navigation */}
           <CardNav
             logo="CVCircle"
             links={navLinks}
             onCtaClick={handleCtaClick}
           />
 
-          {/* Hero Section */}
           <Hero />
-
-          {/* How It Works Section */}
           <HowItWorks />
-
-          {/* Features Section */}
           <Features />
-
-          {/* Product Video Section - Hidden */}
-          {/* <ProductVideo /> */}
-
-          {/* Chrome Extension Section */}
           <ChromeExtension />
-
-          {/* Testimonials Section */}
           <Testimonials />
 
-          {/* Pricing Section (Forced Dark Theme) */}
           <div className="dark">
             <Pricing onPlanSelect={(plan) => {
-              // Redirect to sign-up with plan selection
               window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
             }} />
           </div>
 
-          {/* FAQ Section */}
           <FAQ />
-
-          {/* Footer */}
           <Footer />
         </div>
       </div>

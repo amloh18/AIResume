@@ -29,10 +29,10 @@ const PrivacyPolicyContent: React.FC = () => {
           Introduction
         </h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          At CVCircle ("we," "our," or "us"), we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered CV creation and job application management platform.
+          At CVCircle ("we," "our," or "us"), a product of <strong>Morigrid Labs</strong>, we are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our AI-powered CV creation and job application management platform.
         </p>
         <p className="text-white/80 leading-relaxed">
-          By using CVCircle, you agree to the collection and use of information in accordance with this policy. This policy complies with GDPR, CCPA, and India's Digital Personal Data Protection Act 2023. If you do not agree with our policies and practices, please do not use our service.
+          By using CVCircle, you agree to the collection and use of information in accordance with this policy. This policy complies with global data protection standards, including GDPR (General Data Protection Regulation), CCPA (California Consumer Privacy Act), and India's Digital Personal Data Protection Act 2023. If you do not agree with our policies and practices, please do not use our service.
         </p>
       </div>
 
@@ -138,7 +138,7 @@ const PrivacyPolicyContent: React.FC = () => {
             </ul>
           </li>
           <li><strong>Legal Requirements:</strong> We may disclose information if required by law, court order, or government regulation, including compliance with India's DPDP Act 2023, GDPR, and CCPA.</li>
-          <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of the business transaction.</li>
+          <li><strong>Business Transfers:</strong> In the event of a merger, acquisition, or sale of assets, your information may be transferred as part of the business transaction by Morigrid Labs.</li>
           <li><strong>Safety and Security:</strong> We may share information to protect the safety and security of our users, platform, or the public, including fraud prevention.</li>
         </ul>
       </div>
@@ -217,7 +217,7 @@ const PrivacyPolicyContent: React.FC = () => {
               <li>Verification of your identity (for security purposes)</li>
             </ul>
             <p className="text-white/80 mt-3">
-              We will respond to all requests within <strong>30 days</strong> as required by GDPR and DPDP Act.
+              We will respond to all requests within <strong>30 days</strong> as required by global data protection laws.
             </p>
           </div>
         </div>
@@ -276,7 +276,7 @@ const PrivacyPolicyContent: React.FC = () => {
       <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
         <h3 className="text-2xl font-semibold mb-4">International Data Transfers</h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          Your information may be transferred to and processed in countries other than your own (including India, United States, and European Union). We ensure that such transfers comply with applicable data protection laws (GDPR, CCPA, DPDP Act) and implement appropriate safeguards, including:
+          Your information may be transferred to and processed in countries other than your own (including India, United States, and European Union). We ensure that such transfers comply with applicable data protection laws and implement appropriate safeguards, including:
         </p>
         <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
           <li>Standard Contractual Clauses (SCCs) for GDPR compliance</li>
@@ -297,7 +297,7 @@ const PrivacyPolicyContent: React.FC = () => {
       <div className="bg-white/5 backdrop-blur-sm rounded-xl p-8 mb-8 border border-white/10">
         <h3 className="text-2xl font-semibold mb-4">Changes to This Privacy Policy</h3>
         <p className="text-white/80 leading-relaxed mb-4">
-          We may update this Privacy Policy from time to time to reflect changes in our practices, legal requirements, or for other operational reasons. We will notify you of any material changes by:
+          Morigrid Labs may update this Privacy Policy from time to time to reflect changes in our practices, legal requirements, or for other operational reasons. We will notify you of any material changes by:
         </p>
         <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
           <li>Posting the new Privacy Policy on this page with an updated "Last updated" date</li>
@@ -324,19 +324,12 @@ const PrivacyPolicyContent: React.FC = () => {
           <p><strong>Email:</strong> <a href="mailto:privacy@cvcircle.io" className="text-lime-400 hover:text-lime-300 underline">privacy@cvcircle.io</a></p>
           <p><strong>Subject Line:</strong> Privacy Policy Inquiry / Data Rights Request</p>
           <p><strong>Response Time:</strong> We aim to respond to all privacy-related inquiries within 48 hours and process data rights requests within 30 days as required by law.</p>
-          <p><strong>Data Protection Officer:</strong> For GDPR-related inquiries, contact privacy@cvcircle.io</p>
+          <p><strong>Parent Company:</strong> Morigrid Labs</p>
         </div>
 
         <div className="mt-6 p-4 bg-lime-500/10 rounded-lg border border-lime-500/20">
-          <p className="text-lime-400 text-sm">
-            <strong>Note:</strong> For more information about our data practices, please also review our{' '}
-            <Link href="/legal#terms" className="underline hover:text-lime-300">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href="/legal#cookies" className="underline hover:text-lime-300">
-              Cookie Policy
-            </Link>.
+          <p className="text-lime-400 text-sm text-center">
+            © 2026 CVCircle by <strong>Morigrid Labs</strong>. All rights reserved.
           </p>
         </div>
       </div>
@@ -345,4 +338,3 @@ const PrivacyPolicyContent: React.FC = () => {
 };
 
 export default PrivacyPolicyContent;
-
