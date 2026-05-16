@@ -20,6 +20,7 @@ import CoverLetterPreview from '@/components/cv-preview/CoverLetterPreview';
 import ScoreBreakdown from '@/components/ui/ScoreBreakdown';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSession } from 'next-auth/react';
+import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
 
 export default function Step4Review() {
   const { state, setTemplate, dispatch, goToStep } = useResumeEnhancer();
@@ -237,44 +238,51 @@ export default function Step4Review() {
 
     setIsDownloading(true);
     try {
-      const userId = session?.user?.id;
-      if (!userId) {
-        throw new Error('You must be signed in to download this CV.');
-      }
-
-      const response = await fetch('/api/cv/export', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          cvData: state.cvData,
-          template: state.selectedTemplate,
-          format,
-          userId,
-          cvId: state.cvId,
-          jobId: state.jobData?._id || state.jobData?.id || state.journeyId,
-          paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
-          orientation: 'portrait',
-          filename: state.cvTitle || state.jobData?.title || state.targetRole || 'CV'
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Download failed with status ${response.status}`);
-      }
-
-      const blob = await response.blob();
       const baseName = state.cvTitle || state.jobData?.title || state.targetRole || 'CV';
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = `${baseName}.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
+
+      if (format === 'pdf') {
+        // ── WYSIWYG PDF: capture the live canvas preview from the right panel ───
+        // The server-side export uses the old TemplateRenderer which doesn’t
+        // know about canvas templates, snippets, or CSS custom properties.
+        // Capturing the DOM gives a pixel-perfect match of the preview.
+        await downloadCanvasAsPDF(`${baseName}.pdf`, {
+          paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+        });
+      } else {
+        // DOCX: server-side export generates a content-faithful Word doc
+        // (all sections, correct data; visual canvas styling not replicated).
+        const userId = session?.user?.id;
+        if (!userId) throw new Error('You must be signed in to download this CV.');
+
+        const response = await fetch('/api/cv/export', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cvData: state.cvData,
+            template: state.selectedTemplate,
+            format: 'docx',
+            userId,
+            cvId: state.cvId,
+            jobId: state.jobData?._id || state.jobData?.id || state.journeyId,
+            paperSize: state.paperSize === 'Letter' ? 'Letter' : 'A4',
+            orientation: 'portrait',
+            filename: baseName,
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Download failed with status ${response.status}`);
+        }
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `${baseName}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      }
     } catch (error) {
       console.error('Download failed:', error);
       alert(error instanceof Error ? error.message : 'Failed to download CV. Please try again.');

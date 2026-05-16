@@ -417,7 +417,15 @@ export const CanvasZone = ({ readOnly = false, zoneId, blocks, cvData, EditableW
 };
 
 export const StaticLayoutRenderer = ({ template, cvData, ReadOnlyWrapper, design }: any) => {
-  const defaultDesign = { font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e', pageMargin: 40, showContactIcons: true, showHeaderIcons: true, sidebarBgColor: '#f8fafc', sectionGap: 16, ...design };
+  // Priority: explicit design prop > saved canvas design in metadata > hardcoded defaults
+  const savedDesign = cvData?.metadata?.canvasDesign || {};
+  const defaultDesign = {
+    font: 'Inter', fontSize: 12, spacing: 1.0, accentColor: '#22c55e',
+    pageMargin: 40, showContactIcons: true, showHeaderIcons: true,
+    sidebarBgColor: '#f8fafc', sectionGap: 16,
+    ...savedDesign,  // overlay with user's saved design (fixes dashboard card thumbnails)
+    ...design,       // overlay with explicit prop (fixes template-modal thumbnails)
+  };
   const wrapperStyle = { '--cv-font': defaultDesign.font, '--cv-base-size': `${defaultDesign.fontSize}px`, '--cv-spacing': defaultDesign.spacing, '--cv-accent': defaultDesign.accentColor, '--cv-page-margin': `${defaultDesign.pageMargin}px`, '--cv-sidebar-bg': defaultDesign.sidebarBgColor, '--cv-section-gap': `${defaultDesign.sectionGap}px` } as React.CSSProperties;
 
   const renderZone = (zoneId: string, className: string, isDark = false) => {

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useImperativeHandle, forwardRef, useRef, us
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useResumeEnhancer } from '@/contexts/ResumeEnhancerContext';
 import { sanitizeErrorMessage } from '@/lib/api/error-handler';
-import { downloadAsPDF } from '@/lib/utils/download';
+import { downloadCanvasAsPDF } from '@/lib/utils/downloadCanvas';
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import DownloadModal from '@/components/ui/DownloadModal';
 import {
@@ -129,36 +129,56 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     const [isDownloading, setIsDownloading] = useState(false);
 
     const handleDownload = async (format: 'pdf' | 'docx' = 'pdf') => {
-      if (!state.selectedTemplate) {
-        toast.error('Please select a template first in the Review step');
-        goToStep(4);
-        return;
-      }
       setIsDownloading(true);
       try {
         const baseName = state.cvTitle || 'CV';
+
         if (format === 'pdf') {
-          const filename = `${baseName}.pdf`;
-          let previewElement: HTMLElement | null = null;
-          if (cvPreviewRef.current) {
-            previewElement = cvPreviewRef.current.querySelector('.cv-document') as HTMLElement || cvPreviewRef.current;
-          }
-          await downloadAsPDF(
-            previewElement || cvPreviewRef.current || document.body,
-            filename,
-            state.cvId || undefined,
-            { paperSize: state.paperSize || 'A4', orientation: 'portrait', jobTitle: state.jobData?.title || state.targetRole }
-          );
+          // ── WYSIWYG PDF: capture the live .cv-document DOM element ──────────
+          // This ensures the exported PDF is a pixel-perfect match of the canvas
+          // preview. The server-side export uses the old TemplateRenderer and
+          // does NOT know about CANVAS_TEMPLATES, SNIPPETS, or CSS variables.
+          await downloadCanvasAsPDF(`${baseName}.pdf`, {
+            paperSize: (state.paperSize as 'A4' | 'Letter') || 'A4',
+          });
           toast.success('Downloaded successfully!');
-        } else {
-          toast.error('DOCX download not supported yet');
+        } else if (format === 'docx') {
+          // DOCX: use the server export API which generates a content-faithful
+          // Word document from cvData (all sections present, visual styling differs).
+          const response = await fetch('/api/cv/export', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              cvData: state.cvData,
+              template: state.selectedTemplate,
+              format: 'docx',
+              userId: '',          // validated server-side by session
+              cvId: state.cvId,
+              paperSize: state.paperSize || 'A4',
+              filename: baseName,
+            }),
+          });
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `Export failed (${response.status})`);
+          }
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${baseName}.docx`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          toast.success('Downloaded successfully!');
         }
       } catch (err: any) {
         console.error('Download error:', err);
         if (err.message?.includes('Payment Required') || err.status === 402) {
           openPaymentModal({ triggerContext: 'cv-download-limit', returnUrl: window.location.href });
         } else {
-          toast.error('Failed to download CV');
+          toast.error(err.message ? `Download failed: ${err.message}` : 'Failed to download CV');
         }
       } finally {
         setIsDownloading(false);
