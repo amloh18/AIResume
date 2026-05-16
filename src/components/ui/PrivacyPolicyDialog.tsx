@@ -82,7 +82,7 @@ const PrivacyPolicyDialog: React.FC<PrivacyPolicyDialogProps> = ({
                     </h3>
                     <p className="text-sm text-blue-800 dark:text-blue-200">
                       Before creating your account, please read and accept our Privacy Policy and Terms of Service. 
-                      These documents explain how we handle your data and the terms governing your use of CVCircle.
+                      These documents explain how we handle your data and the terms governing your use of CVCircle, a product of <strong>Morigrid Labs</strong>.
                     </p>
                   </div>
                 </div>

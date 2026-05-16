@@ -334,7 +334,8 @@ const getBaseTemplate = (title: string, content: string, footerText?: string) =>
               
               <!-- Footer -->
               <div style="margin-top: 40px; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 12px; line-height: 1.4; border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px;">
-                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">©2024 CVCircle. All rights reserved.</p>
+                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">© 2026 CVCircle by <strong>Morigrid Labs</strong>. All rights reserved.</p>
+                <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">Made with ❤️ by Morigrid Labs</p>
                 <p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">www.cvcircle.io</p>
                 ${footerText ? `<p style="margin: 5px 0; color: rgba(255, 255, 255, 0.5); font-size: 12px;">${footerText}</p>` : ''}
               </div>

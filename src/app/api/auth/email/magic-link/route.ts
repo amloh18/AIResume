@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
 
               <div class="footer">
                 <p>This email was sent to ${email}</p>
-                <p>© 2024 CVCircle. All rights reserved.</p>
+                <p>© 2026 CVCircle by Morigrid Labs. All rights reserved.</p>
                 <p>www.cvcircle.io</p>
               </div>
             </div>
