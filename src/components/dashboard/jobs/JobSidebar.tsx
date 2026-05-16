@@ -1689,21 +1689,21 @@ ${userName}`
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-[#1b2218]">
+                <div className="rounded-2xl border border-gray-200 bg-white p-4 dark:border-emerald-500/10 dark:bg-[#131810]">
                   <div className="grid gap-3 md:grid-cols-7">
                     {stageItems.map((stage, index) => (
                       <div key={stage.key} className="relative">
                         {index < stageItems.length - 1 && (
                           <div className={`absolute left-[calc(50%+18px)] right-[-18px] top-4 hidden h-[2px] md:block ${
-                            stage.isCompleted ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-white/10'
+                            stage.isCompleted ? 'bg-emerald-400' : 'bg-gray-200 dark:bg-emerald-500/20'
                           }`} />
                         )}
                         <div className={`rounded-2xl border px-3 py-3 transition-colors ${
                           stage.isCurrent
-                            ? 'border-blue-200 bg-blue-50 dark:border-blue-500/40 dark:bg-blue-500/10'
+                            ? 'border-blue-200 bg-blue-50 dark:border-blue-500/40 dark:bg-blue-900/20'
                             : stage.isCompleted
-                              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10'
-                              : 'border-gray-200 bg-gray-50 dark:border-white/10 dark:bg-[#20281d]'
+                              ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-900/20'
+                              : 'border-gray-200 bg-gray-50 dark:border-emerald-500/5 dark:bg-[#181f16]'
                         }`}>
                           <div className={`mb-2 flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold ${
                             stage.isCurrent
@@ -1747,7 +1747,7 @@ ${userName}`
                   <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-emerald-600 shadow-sm dark:bg-white/10">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-emerald-600 shadow-sm dark:bg-[#2a3326] dark:text-emerald-400">
                           {job.status === 'draft' ? <Target className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
                         </div>
                         <div>
@@ -1791,7 +1791,7 @@ ${userName}`
 
                     <div className="space-y-4">
                       {sidebarConfig.sections.showJourneySnapshot && (
-                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[#20281d]">
+                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#1b2218]">
                           <p className="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Journey Snapshot</p>
                           <div className="grid gap-3 sm:grid-cols-2">
                             {journeyCardData.stats.map((stat) => (
@@ -1805,7 +1805,7 @@ ${userName}`
                       )}
 
                       {sidebarConfig.sections.showTrackerJourneySummary && (
-                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-white/10 dark:bg-[#20281d]">
+                        <div className="rounded-2xl border border-white/70 bg-white/80 p-4 shadow-sm dark:border-emerald-500/10 dark:bg-[#1b2218]">
                           <div className="flex items-center justify-between">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white">Tracker Journey</p>
                             <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1877,7 +1877,7 @@ ${userName}`
               </section>
 
               {isRecruiterVisibilityStage && (
-                <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1b2218]">
+                <section className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Recruiter Visibility</p>
@@ -1964,7 +1964,7 @@ ${userName}`
               {(sidebarConfig.sections.showJobDetails || sidebarConfig.sections.showInsights) && (
                 <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
                   {sidebarConfig.sections.showJobDetails && (
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1b2218]">
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Job Details</p>
@@ -2005,7 +2005,7 @@ ${userName}`
                   )}
 
                   {sidebarConfig.sections.showInsights && (
-                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-[#1b2218]">
+                    <div className="rounded-[24px] border border-gray-200 bg-white p-5 shadow-sm dark:border-emerald-500/10 dark:bg-[#131810]">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">Application Insights</p>
