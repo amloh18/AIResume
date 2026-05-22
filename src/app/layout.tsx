@@ -177,7 +177,14 @@ export default async function RootLayout({
       <body>
         <ViewportMeta />
         <ResourceHints />
-        <React.Suspense fallback={null}>
+        <React.Suspense fallback={
+          <div className="fixed inset-0 bg-[#1a230f] flex items-center justify-center z-[9999]">
+            <div className="flex flex-col items-center gap-4">
+              <div className="w-12 h-12 border-4 border-[#81ff00] border-t-transparent rounded-full animate-spin"></div>
+              <p className="text-[#81ff00] font-medium animate-pulse">Initializing CVCIRCLE...</p>
+            </div>
+          </div>
+        }>
           <ClientProviders session={session}>
             {children}
             <GlobalCommandBar />
