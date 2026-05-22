@@ -139,9 +139,10 @@ export class QuotaService {
   /**
    * Check if user can apply for a job based on quota limits
    */
-  static async checkApplicationQuota(userId: string, planType: PlanType = 'free'): Promise<QuotaStatus> {
+  static async checkApplicationQuota(userId: string, planType: string = 'free'): Promise<QuotaStatus> {
     const model = await getQuotaModel();
-    const quotas = PLAN_QUOTAS[planType];
+    const normalizedPlan = this.normalizePlanType(planType);
+    const quotas = PLAN_QUOTAS[normalizedPlan];
     
     let quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
     
@@ -179,9 +180,10 @@ export class QuotaService {
   /**
    * Check if user can fetch more jobs (monthly limit)
    */
-  static async checkJobsFetchQuota(userId: string, planType: PlanType = 'free'): Promise<QuotaStatus> {
+  static async checkJobsFetchQuota(userId: string, planType: string = 'free'): Promise<QuotaStatus> {
     const model = await getQuotaModel();
-    const quotas = PLAN_QUOTAS[planType];
+    const normalizedPlan = this.normalizePlanType(planType);
+    const quotas = PLAN_QUOTAS[normalizedPlan];
     
     let quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
     
@@ -284,12 +286,13 @@ export class QuotaService {
   /**
    * Get current quota status for UI display
    */
-  static async getQuotaDisplay(userId: string, planType: PlanType = 'free'): Promise<{
+  static async getQuotaDisplay(userId: string, planType: string = 'free'): Promise<{
     hourly: { used: number; limit: number; remaining: number };
     daily: { used: number; limit: number; remaining: number };
     monthly: { used: number; limit: number; remaining: number };
   }> {
-    const quotas = PLAN_QUOTAS[planType];
+    const normalizedPlan = this.normalizePlanType(planType);
+    const quotas = PLAN_QUOTAS[normalizedPlan];
     const model = await getQuotaModel();
     
     let quota = await model.findOne({ userId: new mongoose.Types.ObjectId(userId) });
@@ -317,6 +320,15 @@ export class QuotaService {
           : Math.max(0, quotas.jobsFetchedMonthly - monthlyJobsCount),
       },
     };
+  }
+
+  private static normalizePlanType(planType: string): PlanType {
+    if (!planType) return 'free';
+    if (planType === 'power') return 'power';
+    if (planType.startsWith('pro_') || planType === 'pro') {
+      return 'pro';
+    }
+    return 'free';
   }
 
   /**

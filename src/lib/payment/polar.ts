@@ -101,6 +101,7 @@ export class PolarService {
         success: true,
         checkoutId: checkout.id,
         checkoutUrl: checkout.url,
+        url: checkout.url,
         status: checkout.status,
         checkout: checkout,
       };

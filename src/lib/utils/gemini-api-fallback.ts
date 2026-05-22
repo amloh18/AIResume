@@ -6,6 +6,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { ActivityLogService } from '@/lib/services/activityLogService';
+import { randomUUID } from 'crypto';
 
 /**
  * Check if error is a quota/rate limit error (429)
@@ -105,6 +106,7 @@ export async function callGeminiWithAllKeysFallback(
         ? [{ role: 'user', parts: [{ text: prompt }] }]
         : prompt;
 
+      const callStart = Date.now();
       const result = await genAI.models.generateContent({
         model: modelName,
         contents,
@@ -113,6 +115,7 @@ export async function callGeminiWithAllKeysFallback(
           maxOutputTokens: options?.maxTokens || 2048,
         }
       });
+      const latencySeconds = (Date.now() - callStart) / 1000;
 
       const text = result.text || '';
 
@@ -125,7 +128,7 @@ export async function callGeminiWithAllKeysFallback(
         const inputTokens = usageMetadata?.promptTokenCount || Math.ceil(promptString.length / 4);
         const outputTokens = usageMetadata?.candidatesTokenCount || Math.ceil(text.length / 4);
         const tokensUsed = inputTokens + outputTokens;
-        
+
         // Cost constants
         const INPUT_COST_PER_1M = 0.075;
         const OUTPUT_COST_PER_1M = 0.30;
@@ -146,6 +149,29 @@ export async function callGeminiWithAllKeysFallback(
           });
         } catch (logError) {
           console.error('Failed to log AI usage:', logError);
+        }
+
+        // Capture $ai_generation event for PostHog LLM analytics
+        try {
+          const { getPostHogClient } = await import('@/lib/posthog-server');
+          const posthog = getPostHogClient();
+          const distinctId = options?.userId || 'anonymous';
+          posthog.capture({
+            distinctId,
+            event: '$ai_generation',
+            properties: {
+              $ai_trace_id: randomUUID(),
+              $ai_provider: 'google',
+              $ai_model: modelName,
+              $ai_input_tokens: inputTokens,
+              $ai_output_tokens: outputTokens,
+              $ai_latency: latencySeconds,
+              $ai_total_cost_usd: cost,
+              $ai_span_name: options?.action || options?.endpoint || 'gemini_generation',
+            },
+          });
+        } catch (phError) {
+          console.error('PostHog $ai_generation capture error (gemini):', phError);
         }
 
         return text;

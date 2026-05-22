@@ -118,7 +118,7 @@ const TermsContent: React.FC = () => {
               <li>Prices are displayed in your local currency based on regional pricing</li>
               <li>Prices are subject to change with 30 days written notice to existing subscribers</li>
               <li>Failed payments may result in service suspension until payment is resolved</li>
-              <li>Payment processing is handled securely by Stripe and Razorpay</li>
+              <li>Payment processing is handled securely by Polar.sh</li>
               <li>Refunds are subject to our Refund and Cancellation Policy</li>
             </ul>
           </div>

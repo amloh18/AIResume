@@ -41,15 +41,14 @@ export async function PUT(request: NextRequest) {
       planId,
       { 
         $set: { 
-          regionalPricing: regionalPricing.map((rp: any) => ({
-            region: rp.region,
-            currency: rp.currency,
-            billingCycle: rp.billingCycle || undefined,
-            price: rp.price,
-            displayPrice: rp.displayPrice || `${rp.currency} ${rp.price}`,
-            stripePriceId: rp.stripePriceId,
-            razorpayPlanId: rp.razorpayPlanId
-          }))
+            regionalPricing: regionalPricing.map((rp: any) => ({
+                region: rp.region,
+                currency: rp.currency,
+                billingCycle: rp.billingCycle || undefined,
+                price: rp.price,
+                displayPrice: rp.displayPrice,
+                polarPriceId: rp.polarPriceId
+            }))
         } 
       },
       { new: true }
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
     const PricingPlan = await getAdminPricingPlan();
 
     const body = await request.json();
-    const { planId, region, currency, billingCycle, price, displayPrice, stripePriceId, razorpayPlanId } = body;
+    const { planId, region, currency, billingCycle, price, displayPrice, polarPriceId } = body;
 
     if (!planId || !region || !currency || price === undefined) {
       return NextResponse.json(
@@ -117,13 +116,12 @@ export async function POST(request: NextRequest) {
     );
     
     const newRegionalPricing = {
-      region,
-      currency,
-      billingCycle: billingCycle || undefined,
-      price,
-      displayPrice: displayPrice || `${currency} ${price}`,
-      stripePriceId,
-      razorpayPlanId
+        region,
+        currency,
+        billingCycle: billingCycle || undefined,
+        price,
+        displayPrice: displayPrice || `${currency} ${price}`,
+        polarPriceId
     };
 
     if (existingIndex >= 0) {

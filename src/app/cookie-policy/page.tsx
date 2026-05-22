@@ -180,7 +180,7 @@ const CookiePolicy: React.FC = () => {
               <div>
                 <h3 className="text-lg font-medium mb-2 text-lime-400">Payment Processors</h3>
                 <p className="text-white/80">
-                  Our payment processors (Stripe, Razorpay) may use cookies to ensure secure payment processing and fraud prevention.
+                  Our payment processor (Polar.sh) may use cookies to ensure secure payment processing and fraud prevention.
                 </p>
               </div>
 

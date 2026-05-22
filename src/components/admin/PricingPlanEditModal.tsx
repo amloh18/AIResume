@@ -31,14 +31,10 @@ interface PricingPlan {
   isPopular: boolean;
   isBestValue: boolean;
   sortOrder: number;
-  stripePriceId_monthly?: string;
-  stripePriceId_quarterly?: string;
-  stripePriceId_yearly?: string;
-  stripePriceId_one_time?: string;
-  razorpayPlanId_monthly?: string;
-  razorpayPlanId_quarterly?: string;
-  razorpayPlanId_yearly?: string;
-  dayPassDuration?: number;
+  polarPriceId_monthly?: string;
+  polarPriceId_quarterly?: string;
+  polarPriceId_yearly?: string;
+  polarPriceId_one_time?: string;
 }
 
 interface PricingPlanEditModalProps {
@@ -367,20 +363,7 @@ const PricingPlanEditModal: React.FC<PricingPlanEditModalProps> = ({
                         />
                       </div>
 
-                      {formData.key === 'pro_lifetime' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Duration (hours)
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={formData.dayPassDuration || 24}
-                            onChange={(e) => handleInputChange('dayPassDuration', parseInt(e.target.value) || 24)}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-                          />
-                        </div>
-                      )}
+                      {/* No day pass duration needed for lifetime */}
                     </div>
                   </div>
 

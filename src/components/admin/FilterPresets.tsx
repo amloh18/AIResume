@@ -95,29 +95,13 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         color: 'bg-green-500/10 border-green-500/30 hover:border-green-500/50'
     },
     {
-        id: 'day-pass-users',
-        name: 'Day Pass Users',
-        description: 'Users currently on day pass plan',
-        icon: <TrendingUp className="w-5 h-5" />,
-        category: 'upsale',
-        filters: {
-            membershipPlans: ['day_pass'],
-            lastActiveRange: {
-                preset: 'last7days',
-                startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                endDate: new Date().toISOString()
-            }
-        },
-        color: 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50'
-    },
-    {
         id: 'pro-users',
         name: 'Pro Plan Members',
-        description: 'All users on pro plans (monthly/quarterly/yearly)',
+        description: 'All users on pro plans (monthly/quarterly/yearly/lifetime)',
         icon: <Heart className="w-5 h-5" />,
         category: 'retention',
         filters: {
-            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_lifetime']
+            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']
         },
         color: 'bg-pink-500/10 border-pink-500/30 hover:border-pink-500/50'
     },
@@ -156,7 +140,7 @@ const PRESET_TEMPLATES: FilterPreset[] = [
         icon: <Star className="w-5 h-5" />,
         category: 'promotional',
         filters: {
-            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_lifetime']
+            membershipPlans: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']
         },
         color: 'bg-yellow-500/10 border-yellow-500/30 hover:border-yellow-500/50'
     },

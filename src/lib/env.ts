@@ -71,9 +71,6 @@ interface EnvironmentConfig {
   STRIPE_SECRET_KEY?: string;
   STRIPE_PUBLISHABLE_KEY?: string;
   STRIPE_WEBHOOK_SECRET?: string;
-  RAZORPAY_KEY_ID?: string;
-  RAZORPAY_KEY_SECRET?: string;
-  RAZORPAY_WEBHOOK_SECRET?: string;
   
   // JWT
   JWT_SECRET?: string;
@@ -173,9 +170,6 @@ function validateEnvironment(): EnvironmentConfig {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
-    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
-    RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
     JWT_SECRET: process.env.JWT_SECRET,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -209,9 +203,6 @@ try {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
-    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
-    RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET,
     JWT_SECRET: process.env.JWT_SECRET,
     NEXT_PUBLIC_FIREBASE_API_KEY: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -232,6 +223,5 @@ console.log(`  MONGODB_URI: ${env.MONGODB_URI ? '✅' : '❌'}`);
 console.log(`  EMAIL_SERVICE: ${env.EMAIL_SERVER_HOST && env.EMAIL_SERVER_USER && env.EMAIL_SERVER_PASSWORD ? '✅' : '⚠️'}`);
 console.log(`  GEMINI_API: ${env.GEMINI_API_KEY ? '✅' : '⚠️'}`);
 console.log(`  STRIPE: ${env.STRIPE_SECRET_KEY ? '✅' : '⚠️'}`);
-console.log(`  RAZORPAY: ${env.RAZORPAY_KEY_ID ? '✅' : '⚠️'}`);
 
 export default env;

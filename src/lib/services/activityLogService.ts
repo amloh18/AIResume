@@ -47,7 +47,7 @@ export interface LogActivityParams {
   paymentMetadata?: {
     amount?: number;
     currency?: string;
-    provider?: 'stripe' | 'razorpay';
+    provider?: 'polar' | 'stripe';
     transactionId?: string;
     planKey?: string;
   };
@@ -416,7 +416,7 @@ export class ActivityLogService {
     userEmail?: string;
     amount: number;
     currency: string;
-    provider: 'stripe' | 'razorpay';
+    provider: 'polar' | 'stripe';
     transactionId: string;
     planKey: string;
     status: LogStatus;

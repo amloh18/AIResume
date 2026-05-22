@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthModalStore } from '@/lib/stores/authModalStore';
 import { signIn, useSession } from 'next-auth/react';
+import posthog from 'posthog-js';
 import { Mail, Lock, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // import { useConsoleLoggerContext } from '@/contexts/ConsoleLoggerProvider';
@@ -162,6 +163,18 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
       if (result?.ok) {
         setSuccess('Sign in successful! Redirecting...');
+        // Identify and track sign-in
+        if (verifyResult.user) {
+          const u = verifyResult.user;
+          posthog.identify(u.id || u._id, {
+            email: u.email,
+            name: u.name || `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || undefined,
+          });
+          posthog.capture('user_signed_in', {
+            auth_method: 'password',
+            email: u.email,
+          });
+        }
         // Determine redirect URL based on user role
         const redirectUrl = await determineRedirectUrl(verifyResult.user, callbackUrl);
         setTimeout(() => {
@@ -395,6 +408,10 @@ export function UnifiedAuthPageContent({ initialMode = 'signin', isModal = false
 
             if ((signInResult as any)?.ok) {
               setSuccess('Authentication successful, redirecting...');
+              posthog.capture('user_signed_in', {
+                auth_method: 'passwordless',
+                email,
+              });
               setTimeout(() => {
                 if (!isModal) {
                   window.location.href = callbackUrl;

@@ -28,8 +28,7 @@ interface HealthCheckResult {
     externalServices: {
       gemini: 'healthy' | 'unhealthy' | 'unknown';
       email: 'healthy' | 'unhealthy' | 'unknown';
-      stripe: 'healthy' | 'unhealthy' | 'unknown';
-      razorpay: 'healthy' | 'unhealthy' | 'unknown';
+      polar: 'healthy' | 'unhealthy' | 'unknown';
     };
   };
 }
@@ -88,60 +87,50 @@ function checkMemory(): { status: 'healthy' | 'degraded' | 'unhealthy'; used: nu
 }
 
 async function checkExternalServices(): Promise<{
-  gemini: 'healthy' | 'unhealthy' | 'unknown';
-  email: 'healthy' | 'unhealthy' | 'unknown';
-  stripe: 'healthy' | 'unhealthy' | 'unknown';
-  razorpay: 'healthy' | 'unhealthy' | 'unknown';
-}> {
-  const services: {
-    gemini: 'healthy' | 'unhealthy' | 'unknown';
-    email: 'healthy' | 'unhealthy' | 'unknown';
-    stripe: 'healthy' | 'unhealthy' | 'unknown';
-    razorpay: 'healthy' | 'unhealthy' | 'unknown';
-  } = {
-    gemini: 'unknown',
-    email: 'unknown',
-    stripe: 'unknown',
-    razorpay: 'unknown'
-  };
+   gemini: 'healthy' | 'unhealthy' | 'unknown';
+   email: 'healthy' | 'unhealthy' | 'unknown';
+   polar: 'healthy' | 'unhealthy' | 'unknown';
+ }> {
+   const services: {
+     gemini: 'healthy' | 'unhealthy' | 'unknown';
+     email: 'healthy' | 'unhealthy' | 'unknown';
+     polar: 'healthy' | 'unhealthy' | 'unknown';
+   } = {
+     gemini: 'unknown',
+     email: 'unknown',
+     polar: 'unknown'
+   };
 
-  // Check Gemini API
-  if (process.env.GEMINI_API_KEY) {
-    try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
-        headers: {
-          'X-Goog-Api-Key': process.env.GEMINI_API_KEY
-        }
-      });
-      services.gemini = response.ok ? 'healthy' : 'unhealthy';
-    } catch {
-      services.gemini = 'unhealthy';
+   // Check Gemini API
+   if (process.env.GEMINI_API_KEY) {
+     try {
+       const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+         headers: {
+           'X-Goog-Api-Key': process.env.GEMINI_API_KEY
+         }
+       });
+       services.gemini = response.ok ? 'healthy' : 'unhealthy';
+     } catch {
+       services.gemini = 'unhealthy';
+     }
+   }
+
+   // Check Email Service (basic validation)
+   if (process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD) {
+     services.email = 'healthy';
+   } else {
+     services.email = 'unhealthy';
+   }
+
+    // Check Polar
+    if (process.env.POLAR_ACCESS_TOKEN) {
+      services.polar = 'healthy';
+    } else {
+      services.polar = 'unhealthy';
     }
-  }
 
-  // Check Email Service (basic validation)
-  if (process.env.EMAIL_SERVER_HOST && process.env.EMAIL_SERVER_USER && process.env.EMAIL_SERVER_PASSWORD) {
-    services.email = 'healthy';
-  } else {
-    services.email = 'unhealthy';
-  }
-
-  // Check Stripe (basic validation)
-  if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PUBLISHABLE_KEY) {
-    services.stripe = 'healthy';
-  } else {
-    services.stripe = 'unhealthy';
-  }
-
-  // Check Razorpay (basic validation)
-  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
-    services.razorpay = 'healthy';
-  } else {
-    services.razorpay = 'unhealthy';
-  }
-
-  return services;
-}
+   return services;
+ }
 
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
@@ -207,12 +196,11 @@ export async function GET(request: NextRequest) {
         database: { status: 'unhealthy', responseTime: 0, error: 'Health check failed' },
         environment: { status: 'unhealthy', missingVars: [], errors: ['Health check failed'] },
         memory: { status: 'unhealthy', used: 0, total: 0, percentage: 0 },
-        externalServices: {
-          gemini: 'unhealthy',
-          email: 'unhealthy',
-          stripe: 'unhealthy',
-          razorpay: 'unhealthy'
-        }
+         externalServices: {
+            gemini: 'unhealthy',
+            email: 'unhealthy',
+            polar: 'unhealthy'
+         }
       }
     };
 

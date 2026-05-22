@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         planKey: 'free',
         status: 'inactive',
         startDate: new Date(),
-        provider: 'stripe',
+        provider: 'polar',
         interval: 'monthly',
         seats: 3,
         storageUsed: 0
@@ -217,6 +217,28 @@ export async function POST(request: NextRequest) {
 
     // Reset rate limit on successful registration
     registrationAttempts.delete(`register_${clientIP}`);
+
+    // Track successful registration server-side
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user._id.toString(),
+        event: 'user_registered',
+        properties: {
+          email: user.email,
+          auth_provider: 'local',
+          $set: {
+            email: user.email,
+            first_name: user.firstName,
+            last_name: user.lastName,
+            plan: 'free',
+          },
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog capture error (register):', phError);
+    }
 
     return NextResponse.json({
       success: true,

@@ -132,23 +132,6 @@ export default function SidebarMembershipCard() {
   const hasCredits = isUnlimited || remaining > 0;
   const nextReset = credits?.nextResetDate ? new Date(credits.nextResetDate) : null;
 
-  // Day pass countdown (matches dashboard sidebar logic)
-  const timeRemaining = (() => {
-    if (planKey !== 'day_pass') return null;
-    const accessExpiresAt = subscription?.accessExpiresAt;
-    if (!accessExpiresAt) return null;
-    const expiryDate = new Date(accessExpiresAt);
-    const diffTime = expiryDate.getTime() - currentTime.getTime();
-    if (diffTime <= 0) return { hours: 0, minutes: 0 };
-    const hours = Math.floor(diffTime / (1000 * 60 * 60));
-    const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
-    return { hours, minutes };
-  })();
-
-  const isDayPass = planKey === 'day_pass';
-  const isExpired = isDayPass && timeRemaining && timeRemaining.hours === 0 && timeRemaining.minutes === 0;
-  const isUrgent = isDayPass && timeRemaining && timeRemaining.hours < 3;
-
   // Loading placeholder (keeps layout stable)
   if (loading) {
     return (
@@ -214,7 +197,7 @@ export default function SidebarMembershipCard() {
               whileTap={{ scale: 0.97 }}
             >
               <Star className="w-3 h-3" />
-              Buy Day Pass
+              Upgrade to Pro
             </motion.button>
 
             <motion.button
@@ -239,77 +222,6 @@ export default function SidebarMembershipCard() {
           triggerContext="sidebar-view-all-plans"
         />
       </>
-    );
-  }
-
-  // --- Day Pass (orange/red) ---
-  if (planKey === 'day_pass') {
-    return (
-      <motion.div
-        className={`bg-gradient-to-r ${isUrgent ? 'from-red-500 to-red-600' : 'from-orange-500 to-orange-600'} rounded-2xl p-3 text-white shadow-sm shadow-black/20 dark:shadow-black/40`}
-        animate={isUrgent ? {
-          boxShadow: ['0 0 0px rgba(239, 68, 68, 0.4)', '0 0 12px rgba(239, 68, 68, 0.6)', '0 0 0px rgba(239, 68, 68, 0.4)']
-        } : {}}
-        transition={{ duration: 2, repeat: Infinity }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            {isUrgent && <AlertCircle className="w-3.5 h-3.5 animate-pulse" />}
-            <div className="text-sm font-semibold">Day Pass</div>
-          </div>
-          {timeRemaining && (
-            <div className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${isUrgent ? 'bg-red-400/30' : 'bg-white/20'}`}>
-              <Clock className="w-3 h-3" />
-              <span>{isExpired ? 'Expired' : `${timeRemaining.hours}h ${timeRemaining.minutes}m`}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="text-xs text-white/95 mb-2 leading-relaxed">
-          <span>We have created tailored CVs for <span className="font-bold">{totalCreated}</span> {totalCreated === 1 ? 'job' : 'jobs'} for you.</span>
-        </div>
-
-        {!isUnlimited && limit > 0 && (
-          <div className="mb-3">
-            <div className="flex items-center justify-between text-[11px] text-white/85 mb-1">
-              <span>Credits used</span>
-              <span>{used}/{limit}</span>
-            </div>
-            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.5 }}
-                className="h-2 bg-white rounded-full"
-              />
-            </div>
-          </div>
-        )}
-
-        {!hasCredits && !isExpired && (
-          <div className="text-xs text-yellow-200 mb-2 font-medium">
-            ⚠️ Feature limit reached. Upgrade to continue.
-          </div>
-        )}
-
-        <div className="text-xs text-white/95 mb-2.5 leading-relaxed">
-          {isUrgent ? (
-            <span className="font-medium">Need your plan to last for a month? Monthly or quarterly plans keep you covered.</span>
-          ) : (
-            <span>Job searching was never easier. Upgrade to monthly or quarterly plans for longer access.</span>
-          )}
-        </div>
-
-        <motion.button
-          onClick={openMembership}
-          className={`w-full text-white text-xs font-semibold py-2 px-3 rounded-xl transition-all flex items-center justify-center gap-1.5 ${isUrgent ? 'bg-white text-red-600 hover:bg-red-50 shadow-lg' : 'bg-white/20 hover:bg-white/30'}`}
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
-        >
-          <Zap className="w-3 h-3" />
-          {isUrgent ? 'Upgrade Now' : 'Upgrade'}
-        </motion.button>
-      </motion.div>
     );
   }
 
@@ -376,6 +288,35 @@ export default function SidebarMembershipCard() {
 
         <div className="text-xs text-white/90 leading-relaxed">
           <span>Quarterly plan • Unlimited job creation & CV/CL generation</span>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Pro Yearly (indigo) ---
+  if (planKey === 'pro_yearly') {
+    return (
+      <div className="rounded-2xl p-3 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-sm shadow-black/20 dark:shadow-black/40">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <div className="text-sm font-semibold">Yearly Plan</div>
+            <div className="text-xs text-white/80">Pro subscriber</div>
+          </div>
+          {nextReset && (
+            <div className="text-[10px] text-white/70 bg-white/10 px-2 py-1 rounded-full">
+              Renews {nextReset.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-white/15 rounded-xl p-3 mb-2">
+          <div className="text-xs text-white/80 mb-0.5">Jobs created this year</div>
+          <div className="text-xl font-bold">{totalCreated}</div>
+          <div className="text-[10px] text-white/70 mt-0.5">Unlimited access</div>
+        </div>
+
+        <div className="text-xs text-white/90 leading-relaxed">
+          <span>Yearly plan • Unlimited job creation & CV/CL generation</span>
         </div>
       </div>
     );

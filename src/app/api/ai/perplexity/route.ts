@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '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';
+const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY || '';
 const PERPLEXITY_API_URL = 'https://api.perplexity.ai/chat/completions';
 
 interface PerplexityRequest {
@@ -16,6 +17,10 @@ interface PerplexityResponse {
       content: string;
     };
   }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -83,6 +88,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Make request to Perplexity API
+    const callStart = Date.now();
     const response = await fetch(PERPLEXITY_API_URL, {
       method: 'POST',
       headers: {
@@ -125,9 +131,31 @@ export async function POST(request: NextRequest) {
     }
 
     const generatedText = data.choices[0].message.content;
+    const latencySeconds = (Date.now() - callStart) / 1000;
 
     // Log successful request (without sensitive data)
     console.log(`Perplexity AI request completed - Type: ${type}, Section: ${section || 'general'}`);
+
+    // Capture $ai_generation event for PostHog LLM analytics
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: 'anonymous',
+        event: '$ai_generation',
+        properties: {
+          $ai_trace_id: randomUUID(),
+          $ai_provider: 'perplexity',
+          $ai_model: perplexityRequest.model,
+          $ai_input_tokens: data.usage?.prompt_tokens ?? null,
+          $ai_output_tokens: data.usage?.completion_tokens ?? null,
+          $ai_latency: latencySeconds,
+          $ai_span_name: `perplexity_${type}`,
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog $ai_generation capture error (perplexity):', phError);
+    }
 
     return NextResponse.json({
       success: true,

@@ -84,7 +84,7 @@ export function usePromotionContext(): PromotionContextData {
     }
 
     // Check user subscription status
-    const paidPlans = ['pro_monthly', 'pro_quarterly', 'pro_lifetime', 'day_pass'];
+    const paidPlans = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
     if (user?.currentPlanKey) {
       isFreeUser = user.currentPlanKey === 'free';
       isPaidUser = paidPlans.includes(user.currentPlanKey);

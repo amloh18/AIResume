@@ -39,9 +39,6 @@ interface EnvConfig {
   STRIPE_SECRET_KEY: string;
   STRIPE_PUBLISHABLE_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
-  RAZORPAY_KEY_ID: string;
-  RAZORPAY_KEY_SECRET: string;
-  RAZORPAY_WEBHOOK_SECRET: string;
   
   // Firebase
   NEXT_PUBLIC_FIREBASE_API_KEY: string;
@@ -93,9 +90,6 @@ const REQUIRED_VARS: (keyof EnvConfig)[] = [
   'STRIPE_SECRET_KEY',
   'STRIPE_PUBLISHABLE_KEY',
   'STRIPE_WEBHOOK_SECRET',
-  'RAZORPAY_KEY_ID',
-  'RAZORPAY_KEY_SECRET',
-  'RAZORPAY_WEBHOOK_SECRET',
   'NEXT_PUBLIC_FIREBASE_API_KEY',
   'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
   'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
@@ -127,8 +121,6 @@ const PRODUCTION_VARS: (keyof EnvConfig)[] = [
   'PERPLEXITY_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
-  'RAZORPAY_KEY_SECRET',
-  'RAZORPAY_WEBHOOK_SECRET',
   'FIREBASE_PRIVATE_KEY'
 ];
 
@@ -142,8 +134,6 @@ const SENSITIVE_VARS: (keyof EnvConfig)[] = [
   'PERPLEXITY_API_KEY',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
-  'RAZORPAY_KEY_SECRET',
-  'RAZORPAY_WEBHOOK_SECRET',
   'FIREBASE_PRIVATE_KEY',
   'SENDGRID_API_KEY',
   'MAILGUN_API_KEY',
@@ -191,10 +181,7 @@ export function validateEnvironment(): EnvValidationResult {
       'your-hostinger-email-password',
       'sk_test_your_stripe_secret_key',
       'pk_test_your_stripe_publishable_key',
-      'whsec_your_webhook_secret',
-      'rzp_test_your_razorpay_key_id',
-      'your_razorpay_key_secret',
-      'your_razorpay_webhook_secret'
+      'whsec_your_webhook_secret'
     ];
 
     for (const varName of SENSITIVE_VARS) {
@@ -225,10 +212,6 @@ export function validateEnvironment(): EnvValidationResult {
     result.warnings.push('STRIPE_SECRET_KEY format may be invalid');
   }
 
-  if (env.RAZORPAY_KEY_ID && !env.RAZORPAY_KEY_ID.startsWith('rzp_')) {
-    result.warnings.push('RAZORPAY_KEY_ID format may be invalid');
-  }
-
   // Check for development values in production
   if (isProduction) {
     if (env.NEXTAUTH_URL?.includes('localhost')) {
@@ -238,10 +221,6 @@ export function validateEnvironment(): EnvValidationResult {
 
     if (env.STRIPE_SECRET_KEY?.includes('test')) {
       result.warnings.push('Using Stripe test keys in production - ensure this is intentional');
-    }
-
-    if (env.RAZORPAY_KEY_ID?.includes('test')) {
-      result.warnings.push('Using Razorpay test keys in production - ensure this is intentional');
     }
   }
 

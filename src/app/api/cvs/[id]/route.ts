@@ -366,7 +366,9 @@ export async function PUT(
 
     // Prepare update data (excluding legacy fields)
     const allowedFields = [
-      'title', 'cvData', 'templateId', 'cvType', 'status', 'isMaster', 'metadata', 'journeyId'
+      'title', 'cvData', 'templateId', 'cvType', 'status', 'isMaster', 'metadata', 'journeyId',
+      // Central Score Manager fields — persisted by auto-save from Step3BuilderSurgeon
+      'cv_score_master', 'cv_score_ats', 'score_breakdown', 'active_issues_json'
     ];
 
     const updateData: Record<string, any> = {};
@@ -462,6 +464,25 @@ export async function PUT(
           updateData[field] = body[field];
         }
       }
+    }
+
+    // SCORE SYNC: Mirror root-level score fields into metadata for legacy component compatibility.
+    // Components like Canvas.tsx, CVListView.tsx, and JourneyTimelineCard.tsx read from
+    // metadata.atsScore / metadata.cvScore / metadata.atsScoreBreakdown.
+    if (body.cv_score_ats !== undefined && typeof body.cv_score_ats === 'number') {
+      if (!updateData.metadata) updateData.metadata = { ...cv.metadata };
+      updateData.metadata.atsScore = body.cv_score_ats;
+      updateData.metadata.atsScoreDate = new Date();
+      console.log('📊 CV UPDATE API - Syncing cv_score_ats to metadata.atsScore:', body.cv_score_ats);
+    }
+    if (body.cv_score_master !== undefined && typeof body.cv_score_master === 'number') {
+      if (!updateData.metadata) updateData.metadata = { ...cv.metadata };
+      updateData.metadata.cvScore = body.cv_score_master;
+      console.log('📊 CV UPDATE API - Syncing cv_score_master to metadata.cvScore:', body.cv_score_master);
+    }
+    if (body.score_breakdown !== undefined && typeof body.score_breakdown === 'object') {
+      if (!updateData.metadata) updateData.metadata = { ...cv.metadata };
+      updateData.metadata.atsScoreBreakdown = body.score_breakdown;
     }
 
     // Validate templateId if provided
@@ -695,6 +716,34 @@ export async function PUT(
       }
     }
 
+    // JOURNEY SCORE SYNC: Propagate updated cv_score_ats into ApplicationJourney.atsScore
+    // so Tracker job cards, Canvas table, and CVListView always display the latest score.
+    const effectiveJourneyId = body.journeyId || cv.journeyId?.toString();
+    if (
+      body.cv_score_ats !== undefined &&
+      typeof body.cv_score_ats === 'number' &&
+      effectiveJourneyId
+    ) {
+      try {
+        const { ApplicationJourneyRelationshipService } = await import('@/lib/services/cvJourneyRelationshipService');
+        const scoreUpdated = await ApplicationJourneyRelationshipService.updateJourneyATSScore(
+          effectiveJourneyId,
+          body.cv_score_ats,
+          body.jobId || undefined,          // optional jobId from request body
+          body.score_breakdown || undefined, // factor breakdown for history
+          cv._id?.toString()                 // cvVersion hash
+        );
+        if (scoreUpdated) {
+          console.log('✅ CV UPDATE API - Journey ATS score synced:', { journeyId: effectiveJourneyId, atsScore: body.cv_score_ats });
+        } else {
+          console.warn('⚠️ CV UPDATE API - Journey ATS score sync skipped (journey not found):', effectiveJourneyId);
+        }
+      } catch (journeyScoreError) {
+        console.error('❌ CV UPDATE API - Error syncing journey ATS score (non-critical):', journeyScoreError);
+        // Non-critical: don't fail the save if journey sync fails
+      }
+    }
+
     // Log CV update activity
     try {
       const { ActivityLogService } = await import('@/lib/services/activityLogService');
@@ -866,6 +915,23 @@ export async function DELETE(
     } catch (logError) {
       console.error('Failed to log CV deletion:', logError);
       // Don't fail the request if logging fails
+    }
+
+    // Track CV deletion server-side
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: session.user.id,
+        event: 'cv_deleted',
+        properties: {
+          cv_id: cvId.toString(),
+          cv_title: cvTitle,
+          template_id: cvTemplateId,
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog capture error (cv_deleted):', phError);
     }
 
     return NextResponse.json({

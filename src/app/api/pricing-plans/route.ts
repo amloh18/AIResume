@@ -451,8 +451,7 @@ export async function GET(request: NextRequest) {
               currencySymbol: pricingSource.currencySymbol,
               price: monthlyPrice,
               displayPrice: `${pricingSource.currencySymbol}${monthlyPrice}`,
-              stripePriceId: pricingSource.stripePriceIds?.monthly,
-              razorpayPlanId: pricingSource.razorpayPlanIds?.monthly
+              polarPriceId: pricingSource.polarPriceIds?.monthly
             };
           } else {
             // Fallback to region info (should rarely happen if CountryPricing is properly set up)

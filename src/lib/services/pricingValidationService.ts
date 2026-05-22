@@ -2,7 +2,7 @@
 import { getConnection } from '@/lib/database';
 import Coupon from '@/models/Coupon';
 import { getAdminPricingPlan } from '@/models/admin-models';
-import { countryPricingService } from './countryPricingService';
+import { getCountryPricing } from './countryPricingService';
 import { taxService } from './taxService';
 
 export interface CouponValidationResult {
@@ -136,13 +136,13 @@ class PricingValidationService {
    * Validate plan availability for a specific region
    */
   async validatePlanAvailability(
-    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
+    planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
     region: string
   ): Promise<PlanValidationResult> {
     try {
       await getConnection();
 
-      const validPlanKeys = ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'];
+      const validPlanKeys = ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
       if (!validPlanKeys.includes(planKey)) {
         return {
           valid: false,
@@ -165,7 +165,7 @@ class PricingValidationService {
       }
 
       // Check if plan is available for the region
-      const countryPricing = await countryPricingService.getCountryPricing(region);
+      const countryPricing = await getCountryPricing(region);
       if (!countryPricing) {
         return {
           valid: false,
@@ -195,7 +195,7 @@ class PricingValidationService {
    * Validate pricing for a plan in a specific region with optional coupon
    */
   async validatePricing(
-    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime',
+    planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
     region: string,
     currency: string,
     couponCode?: string,
@@ -217,7 +217,7 @@ class PricingValidationService {
       }
 
       // Get country pricing
-      const countryPricing = await countryPricingService.getCountryPricing(region);
+      const countryPricing = await getCountryPricing(region);
       if (!countryPricing) {
         return {
           valid: false,
@@ -241,25 +241,18 @@ class PricingValidationService {
         };
       }
 
+      // Get base price based on plan
+      const planKeyMap: Record<string, 'free' | 'monthly' | 'quarterly' | 'yearly' | 'lifetime'> = {
+        'free': 'free',
+        'pro_monthly': 'monthly',
+        'pro_quarterly': 'quarterly',
+        'pro_yearly': 'yearly',
+        'pro_lifetime': 'lifetime'
+      };
+      const priceKey = planKeyMap[planKey];
       let basePrice = 0;
-      if (planKey === 'pro_monthly') {
-        basePrice = (plan as any).price_monthly || 0;
-      } else if (planKey === 'pro_quarterly') {
-        basePrice = (plan as any).price_quarterly || 0;
-      } else if (planKey === 'pro_lifetime') {
-        basePrice = (plan as any).price_yearly || 0;
-      } else if (planKey === 'day_pass') {
-        basePrice = (plan as any).price_one_time || 0;
-      }
-
-      // Apply regional pricing if available
-      const regionalPrice = countryPricingService.getRegionalPriceForPlan(
-        countryPricing,
-        planKey,
-        interval
-      );
-      if (regionalPrice) {
-        basePrice = regionalPrice.price;
+      if (priceKey && countryPricing.planPrices[priceKey]) {
+        basePrice = countryPricing.planPrices[priceKey].price;
       }
 
       // Validate and apply coupon if provided

@@ -109,12 +109,11 @@ class CreditResetService {
     switch (planKey) {
       case 'free':
         return 'monthly';
-      case 'day_pass':
-        return 'never'; // Day pass credits expire with the pass
       case 'pro_monthly':
         return 'monthly';
       case 'pro_quarterly':
         return 'quarterly';
+      case 'pro_yearly':
       case 'pro_lifetime':
         return 'yearly';
       default:

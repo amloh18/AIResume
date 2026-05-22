@@ -30,10 +30,7 @@ export function TimeRemainingBanner() {
     return null;
   }
 
-  const isDayPass = subscription.planKey === 'day_pass';
-  const isUrgent = isDayPass 
-    ? (timeRemaining.hours || 0) < 3 
-    : (timeRemaining.days || 0) < 7;
+  const isUrgent = (timeRemaining.days || 0) < 7;
 
   const handleUpgrade = () => {
     router.push('/dashboard/settings?tab=membership');
@@ -48,8 +45,6 @@ export function TimeRemainingBanner() {
         className={`w-full ${
           isUrgent
             ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white'
-            : isDayPass
-            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white'
             : 'bg-gradient-to-r from-lime-500 to-green-500 text-white'
         } shadow-lg`}
       >
@@ -63,22 +58,14 @@ export function TimeRemainingBanner() {
               )}
               <div className="flex flex-col tablet:flex-row tablet:items-center tablet:gap-2">
                 <span className="font-medium">
-                  {isDayPass ? 'Day Pass' : 'Pro Subscription'} 
+                  Pro Subscription 
                   {timeAccess?.isInGracePeriod && ' (Grace Period)'}
                 </span>
                 <span className="text-sm opacity-90">
                   {isUrgent ? (
-                    <>
-                      {isDayPass 
-                        ? `Expires in ${timeRemaining.formatted}!` 
-                        : `Expires in ${timeRemaining.formatted}!`}
-                    </>
+                    `Expires in ${timeRemaining.formatted}!`
                   ) : (
-                    <>
-                      {isDayPass 
-                        ? `Expires in ${timeRemaining.formatted}` 
-                        : `Renews in ${timeRemaining.formatted}`}
-                    </>
+                    `Renews in ${timeRemaining.formatted}`
                   )}
                 </span>
               </div>
@@ -91,11 +78,11 @@ export function TimeRemainingBanner() {
                   className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg font-medium transition-colors backdrop-blur-sm"
                 >
                   <Crown className="w-4 h-4" />
-                  {isDayPass ? 'Upgrade to Pro' : 'Renew Now'}
+                  Renew Now
                   <ArrowRight className="w-4 h-4" />
                 </button>
               )}
-              {!isDayPass && subscription.autoRenew && !isUrgent && (
+              {subscription.autoRenew && !isUrgent && (
                 <span className="text-sm opacity-90">
                   Auto-renewal enabled
                 </span>

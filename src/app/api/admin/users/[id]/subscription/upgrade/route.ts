@@ -72,12 +72,13 @@ export async function POST(
     } else if (interval === 'quarterly' || planKey === 'pro_quarterly') {
       endDate.setMonth(endDate.getMonth() + 3);
       currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 3);
-    } else if (interval === 'yearly' || planKey === 'pro_lifetime') {
+    } else if (interval === 'yearly' || planKey === 'pro_yearly') {
       endDate.setFullYear(endDate.getFullYear() + 1);
       currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
-    } else if (planKey === 'day_pass') {
-      endDate.setHours(endDate.getHours() + (plan.dayPassDuration || 24));
-      currentPeriodEnd.setHours(currentPeriodEnd.getHours() + (plan.dayPassDuration || 24));
+    } else if (planKey === 'pro_lifetime') {
+      // Lifetime plan lasts essentially forever
+      endDate = new Date('2099-12-31');
+      currentPeriodEnd = new Date('2099-12-31');
     } else if (planKey === 'free') {
       // Free plan doesn't expire
       endDate = new Date('2099-12-31');
@@ -97,7 +98,7 @@ export async function POST(
           currentPeriodStart: startDate,
           currentPeriodEnd: currentPeriodEnd,
           provider: 'admin',
-          interval: interval || (planKey === 'day_pass' ? 'one-time' : 'monthly'),
+          interval: interval || (planKey === 'pro_lifetime' ? 'one-time' : 'monthly'),
           seats: plan.maxCVs === -1 ? 1 : plan.maxCVs,
           storageUsed: 0
         }
@@ -144,7 +145,7 @@ export async function POST(
           status: 'paid',
           planName: plan.name,
           planId: plan._id,
-          billingCycle: interval || (planKey === 'day_pass' ? 'one-time' : 'monthly'),
+          billingCycle: interval || (planKey === 'pro_lifetime' ? 'one-time' : 'monthly'),
           paymentMethodType: 'admin',
           paymentMethodLast4: 'ADMIN',
           paidAt: new Date(),

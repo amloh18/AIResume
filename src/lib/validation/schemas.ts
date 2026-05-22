@@ -85,13 +85,6 @@ export const createPaymentIntentSchema = z.object({
   couponCode: z.string().optional(),
 });
 
-export const razorpayPaymentSchema = z.object({
-  planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
-  razorpay_payment_id: z.string().min(1),
-  razorpay_order_id: z.string().min(1),
-  razorpay_signature: z.string().min(1),
-});
-
 export const applyCouponSchema = z.object({
   couponCode: z.string().min(1, 'Coupon code is required'),
   planKey: z.enum(['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']),
@@ -206,10 +199,10 @@ export const deleteCountryMappingSchema = z.object({
 
 // Pricing Region Schemas
 export const pricingPlansSchema = z.object({
-  dayPass: z.number().min(0, 'Day pass price must be non-negative'),
   monthly: z.number().min(0, 'Monthly price must be non-negative'),
   quarterly: z.number().min(0, 'Quarterly price must be non-negative'),
   yearly: z.number().min(0, 'Yearly price must be non-negative'),
+  lifetime: z.number().min(0, 'Lifetime price must be non-negative'),
 });
 
 export const createPriceRegionSchema = z.object({

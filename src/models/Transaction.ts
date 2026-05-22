@@ -5,8 +5,8 @@ export interface ITransaction extends Document {
   paymentMethodId?: mongoose.Types.ObjectId;
   amount: number; // Can be negative for refunds
   status: 'success' | 'failed' | 'refunded' | 'pending' | 'chargeback' | 'dispute';
-  gatewayReferenceId: string; // Stripe/Razorpay transaction ID
-  gateway: 'stripe' | 'razorpay' | 'admin';
+  gatewayReferenceId: string; // Stripe/Polar transaction ID
+  gateway: 'stripe' | 'polar' | 'admin';
   failureReason?: string;
   metadata?: Record<string, any>;
   createdAt: Date;
@@ -41,7 +41,7 @@ const transactionSchema = new Schema<ITransaction>({
   gateway: {
     type: String,
     required: [true, 'Gateway is required'],
-    enum: ['stripe', 'razorpay', 'admin']
+    enum: ['stripe', 'polar', 'admin']
   },
   failureReason: {
     type: String,

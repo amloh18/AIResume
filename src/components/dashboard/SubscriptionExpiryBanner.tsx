@@ -117,10 +117,10 @@ export default function SubscriptionExpiryBanner({
   };
 
   const styles = getBannerStyles();
-  const planName = planKey === 'day_pass' ? 'Day Pass' : 
-                   planKey === 'pro_monthly' ? 'Pro Monthly' :
+  const planName = planKey === 'pro_monthly' ? 'Pro Monthly' :
                    planKey === 'pro_quarterly' ? 'Pro Quarterly' :
-                   planKey === 'pro_lifetime' ? 'Pro Yearly' : 'Subscription';
+                   planKey === 'pro_yearly' ? 'Pro Yearly' :
+                   planKey === 'pro_lifetime' ? 'Pro Lifetime' : 'Subscription';
 
   return (
     <AnimatePresence>

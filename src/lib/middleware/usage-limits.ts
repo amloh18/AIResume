@@ -27,10 +27,10 @@ export interface LimitCheckResult {
  * Free tier limits
  */
 const FREE_TIER_LIMITS = {
-  journeyCVs: 3,           // Max Journey CVs
+  journeyCVs: -1,           // Max Journey CVs
   surgeonRuns: 10,         // AI Surgeon runs per month
-  downloads: 5,            // PDF downloads per month
-  premiumTemplates: false  // No premium template access
+  downloads: -1,            // PDF downloads per month
+  premiumTemplates: true   // Access to ALL templates
 };
 
 /**
@@ -61,7 +61,7 @@ function shouldResetMonthlyLimits(resetDate?: Date): boolean {
  * Get limits for a user based on their plan
  */
 function getLimitsForPlan(planKey: string): typeof FREE_TIER_LIMITS {
-  const proPlanKeys = ['pro_monthly', 'pro_quarterly', 'pro_lifetime', 'day_pass'];
+  const proPlanKeys = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
   
   if (proPlanKeys.includes(planKey)) {
     return PRO_TIER_LIMITS;

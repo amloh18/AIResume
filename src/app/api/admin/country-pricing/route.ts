@@ -34,8 +34,7 @@ export const POST = withAdminAuth(async (request: NextRequest) => {
     currencySymbol,
     regionId,
     planPrices,
-    stripePriceIds,
-    razorpayPlanIds
+    polarPriceIds,
   } = body;
 
   if (!countryCode || !countryName || !currency || !currencySymbol || !regionId || !planPrices) {
@@ -43,9 +42,9 @@ export const POST = withAdminAuth(async (request: NextRequest) => {
   }
 
   // Validate planPrices structure
-  const requiredPlans = ['free', 'dayPass', 'monthly', 'quarterly', 'yearly'];
+  const requiredPlans = ['free', 'monthly', 'quarterly', 'yearly', 'lifetime'];
   for (const planKey of requiredPlans) {
-    if (!planPrices[planKey] || !planPrices[planKey].price || !planPrices[planKey].planId) {
+    if (!planPrices[planKey] || planPrices[planKey].price === undefined || !planPrices[planKey].planId) {
       return errorResponse('VALIDATION_ERROR', `Missing required plan price for ${planKey}`, undefined, 400);
     }
   }
@@ -63,10 +62,6 @@ export const POST = withAdminAuth(async (request: NextRequest) => {
           price: planPrices.free.price,
           planId: planPrices.free.planId
         },
-        dayPass: {
-          price: planPrices.dayPass.price,
-          planId: planPrices.dayPass.planId
-        },
         monthly: {
           price: planPrices.monthly.price,
           planId: planPrices.monthly.planId
@@ -78,10 +73,13 @@ export const POST = withAdminAuth(async (request: NextRequest) => {
         yearly: {
           price: planPrices.yearly.price,
           planId: planPrices.yearly.planId
+        },
+        lifetime: {
+          price: planPrices.lifetime.price,
+          planId: planPrices.lifetime.planId
         }
       },
-      stripePriceIds: stripePriceIds || {},
-      razorpayPlanIds: razorpayPlanIds || {}
+      polarPriceIds: polarPriceIds || {}
     },
     { upsert: true, new: true }
   );

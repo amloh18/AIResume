@@ -15,22 +15,16 @@ export interface CountryPricingData {
   regionId: string;
   planPrices: {
     free: { price: number; planId: string };
-    dayPass: { price: number; planId: string };
     monthly: { price: number; planId: string };
     quarterly: { price: number; planId: string };
     yearly: { price: number; planId: string };
+    lifetime: { price: number; planId: string };
   };
-  stripePriceIds?: {
-    dayPass?: string;
+  polarPriceIds?: {
     monthly?: string;
     quarterly?: string;
     yearly?: string;
-  };
-  razorpayPlanIds?: {
-    dayPass?: string;
-    monthly?: string;
-    quarterly?: string;
-    yearly?: string;
+    lifetime?: string;
   };
 }
 
@@ -73,10 +67,6 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
           price: countryPricing.planPrices.free.price,
           planId: countryPricing.planPrices.free.planId.toString()
         },
-        dayPass: {
-          price: countryPricing.planPrices.dayPass.price,
-          planId: countryPricing.planPrices.dayPass.planId.toString()
-        },
         monthly: {
           price: countryPricing.planPrices.monthly.price,
           planId: countryPricing.planPrices.monthly.planId.toString()
@@ -88,10 +78,13 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
         yearly: {
           price: countryPricing.planPrices.yearly.price,
           planId: countryPricing.planPrices.yearly.planId.toString()
+        },
+        lifetime: {
+          price: countryPricing.planPrices.lifetime.price,
+          planId: countryPricing.planPrices.lifetime.planId.toString()
         }
       },
-      stripePriceIds: countryPricing.stripePriceIds,
-      razorpayPlanIds: countryPricing.razorpayPlanIds
+      polarPriceIds: countryPricing.polarPriceIds
     };
 
     // Cache the result
@@ -112,15 +105,15 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
  */
 export async function getPricingForPlan(
   countryCode: string,
-  planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'
+  planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime'
 ): Promise<{ price: number; currency: string; currencySymbol: string; planId: string } | null> {
   try {
     let countryPricing = await getCountryPricing(countryCode);
     
-    // For non-India countries, if pricing not found, fallback to GB (Stripe-compatible)
-    // This ensures Stripe works for all eligible countries
+    // For non-India countries, if pricing not found, fallback to GB (Polar-compatible)
+    // This ensures Polar works for all eligible countries
     if (!countryPricing && countryCode !== 'IN') {
-      console.log('No pricing found for non-India country, falling back to GB (Stripe-compatible):', {
+      console.log('No pricing found for non-India country, falling back to GB (Polar-compatible):', {
         countryCode,
         planKey,
         fallbackTo: 'GB'
@@ -135,10 +128,10 @@ export async function getPricingForPlan(
     // Map planKey to planPrices key
     const planKeyMap: Record<string, keyof typeof countryPricing.planPrices> = {
       'free': 'free',
-      'day_pass': 'dayPass',
       'pro_monthly': 'monthly',
       'pro_quarterly': 'quarterly',
-      'pro_lifetime': 'yearly'
+      'pro_yearly': 'yearly',
+      'pro_lifetime': 'lifetime'
     };
 
     const planPricesKey = planKeyMap[planKey];
@@ -189,10 +182,6 @@ export async function getCountryPricingById(
           price: countryPricing.planPrices.free.price,
           planId: countryPricing.planPrices.free.planId.toString()
         },
-        dayPass: {
-          price: countryPricing.planPrices.dayPass.price,
-          planId: countryPricing.planPrices.dayPass.planId.toString()
-        },
         monthly: {
           price: countryPricing.planPrices.monthly.price,
           planId: countryPricing.planPrices.monthly.planId.toString()
@@ -204,10 +193,13 @@ export async function getCountryPricingById(
         yearly: {
           price: countryPricing.planPrices.yearly.price,
           planId: countryPricing.planPrices.yearly.planId.toString()
+        },
+        lifetime: {
+          price: countryPricing.planPrices.lifetime.price,
+          planId: countryPricing.planPrices.lifetime.planId.toString()
         }
       },
-      stripePriceIds: countryPricing.stripePriceIds,
-      razorpayPlanIds: countryPricing.razorpayPlanIds
+      polarPriceIds: countryPricing.polarPriceIds
     };
     
     return pricingData;
@@ -237,10 +229,6 @@ export async function getAllCountryPricing(): Promise<CountryPricingData[]> {
           price: cp.planPrices.free.price,
           planId: cp.planPrices.free.planId.toString()
         },
-        dayPass: {
-          price: cp.planPrices.dayPass.price,
-          planId: cp.planPrices.dayPass.planId.toString()
-        },
         monthly: {
           price: cp.planPrices.monthly.price,
           planId: cp.planPrices.monthly.planId.toString()
@@ -252,10 +240,13 @@ export async function getAllCountryPricing(): Promise<CountryPricingData[]> {
         yearly: {
           price: cp.planPrices.yearly.price,
           planId: cp.planPrices.yearly.planId.toString()
+        },
+        lifetime: {
+          price: cp.planPrices.lifetime.price,
+          planId: cp.planPrices.lifetime.planId.toString()
         }
       },
-      stripePriceIds: cp.stripePriceIds,
-      razorpayPlanIds: cp.razorpayPlanIds
+      polarPriceIds: cp.polarPriceIds
     }));
   } catch (error) {
     console.error('Error fetching all country pricing:', error);

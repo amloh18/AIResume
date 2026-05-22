@@ -154,7 +154,7 @@ export class UserRepository extends BaseRepository<IUser> {
    * Find users by plan
    */
   async findByPlan(
-    planKey: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'
+    planKey: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime'
   ): Promise<IUser[]> {
     return this.find(
       { currentPlanKey: planKey } as FilterQuery<IUser>,

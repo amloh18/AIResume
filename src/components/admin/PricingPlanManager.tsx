@@ -67,13 +67,10 @@ interface PricingPlan {
   isPopular: boolean;
   isBestValue: boolean;
   sortOrder: number;
-  stripePriceId_monthly?: string;
-  stripePriceId_quarterly?: string;
-  stripePriceId_yearly?: string;
-  stripePriceId_one_time?: string;
-  razorpayPlanId_monthly?: string;
-  razorpayPlanId_quarterly?: string;
-  razorpayPlanId_yearly?: string;
+  polarPriceId_monthly?: string;
+  polarPriceId_quarterly?: string;
+  polarPriceId_yearly?: string;
+  polarPriceId_one_time?: string;
   dayPassDuration?: number;
 }
 
@@ -381,39 +378,25 @@ const PricingPlanManager: React.FC = () => {
 
   const getProviderReadiness = (plan: PricingPlan) => {
     const readiness = {
-      stripe: false,
-      razorpay: false,
-      stripeDetails: '',
-      razorpayDetails: ''
+      polar: false,
+      polarDetails: ''
     };
 
     if (plan.key === DEFAULT_PLAN_KEY) {
-      readiness.stripe = true;
-      readiness.razorpay = true;
-      readiness.stripeDetails = 'Free plan';
-      readiness.razorpayDetails = 'Free plan';
+      readiness.polar = true;
+      readiness.polarDetails = 'Free plan';
     } else if (plan.key === 'pro_lifetime') {
-      readiness.stripe = !!plan.stripePriceId_one_time;
-      readiness.razorpay = true; // Uses Order
-      readiness.stripeDetails = plan.stripePriceId_one_time || 'Missing one-time price ID';
-      readiness.razorpayDetails = 'Uses Order (no plan ID needed)';
+      readiness.polar = !!plan.polarPriceId_one_time;
+      readiness.polarDetails = plan.polarPriceId_one_time || 'Missing one-time price ID';
     } else {
-      // Pro plans
-      readiness.stripe = !!(plan.stripePriceId_monthly || plan.stripePriceId_quarterly || plan.stripePriceId_yearly);
-      readiness.razorpay = !!(plan.razorpayPlanId_monthly || plan.razorpayPlanId_quarterly || plan.razorpayPlanId_yearly);
+      readiness.polar = !!(plan.polarPriceId_monthly || plan.polarPriceId_quarterly || plan.polarPriceId_yearly);
 
-      const stripeIds = [];
-      if (plan.stripePriceId_monthly) stripeIds.push('Monthly');
-      if (plan.stripePriceId_quarterly) stripeIds.push('Quarterly');
-      if (plan.stripePriceId_yearly) stripeIds.push('Yearly');
+      const polarIds: string[] = [];
+      if (plan.polarPriceId_monthly) polarIds.push('Monthly');
+      if (plan.polarPriceId_quarterly) polarIds.push('Quarterly');
+      if (plan.polarPriceId_yearly) polarIds.push('Yearly');
 
-      const razorpayIds = [];
-      if (plan.razorpayPlanId_monthly) razorpayIds.push('Monthly');
-      if (plan.razorpayPlanId_quarterly) razorpayIds.push('Quarterly');
-      if (plan.razorpayPlanId_yearly) razorpayIds.push('Yearly');
-
-      readiness.stripeDetails = stripeIds.length > 0 ? stripeIds.join(', ') : 'No price IDs';
-      readiness.razorpayDetails = razorpayIds.length > 0 ? razorpayIds.join(', ') : 'No plan IDs';
+      readiness.polarDetails = polarIds.length > 0 ? polarIds.join(', ') : 'No price IDs';
     }
 
     return readiness;

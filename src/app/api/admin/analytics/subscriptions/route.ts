@@ -174,24 +174,12 @@ export async function GET(request: NextRequest) {
     const totalRevenue = revenueStats[0]?.totalRevenue || 0;
     const avgRevenue = revenueStats[0]?.avgRevenue || 0;
 
-    // Day pass statistics
-    const dayPassStats = await User.aggregate([
-      { $match: { 'subscription.planKey': 'day_pass' } },
-      {
-        $project: {
-          dayPassCount: { $size: { $ifNull: ['$dayPassPurchases', []] } },
-          purchasePrice: '$subscription.purchasePrice'
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalDayPasses: { $sum: '$dayPassCount' },
-          totalRevenue: { $sum: { $ifNull: ['$purchasePrice', 0] } },
-          uniqueUsers: { $sum: 1 }
-        }
-      }
-    ]);
+    // Day pass statistics (deprecated)
+    const dayPassStats = {
+      totalDayPasses: 0,
+      totalRevenue: 0,
+      uniqueUsers: 0
+    };
 
     return NextResponse.json({
       success: true,
@@ -202,11 +190,7 @@ export async function GET(request: NextRequest) {
         expiredSubscriptions,
         totalRevenue,
         averageRevenue: avgRevenue,
-        dayPassStats: dayPassStats[0] || {
-          totalDayPasses: 0,
-          totalRevenue: 0,
-          uniqueUsers: 0
-        }
+        dayPassStats
       },
       dateRange: {
         from: dateFrom || null,

@@ -11,10 +11,6 @@ export interface ICountryPricing extends Document {
       price: number; // Always 0
       planId: mongoose.Types.ObjectId; // Reference to free plan
     };
-    dayPass: {
-      price: number;
-      planId: mongoose.Types.ObjectId; // Reference to day_pass plan
-    };
     monthly: {
       price: number;
       planId: mongoose.Types.ObjectId; // Reference to pro_monthly plan
@@ -25,20 +21,18 @@ export interface ICountryPricing extends Document {
     };
     yearly: {
       price: number;
+      planId: mongoose.Types.ObjectId; // Reference to pro_yearly plan
+    };
+    lifetime: {
+      price: number;
       planId: mongoose.Types.ObjectId; // Reference to pro_lifetime plan
     };
   };
-  stripePriceIds?: {
-    dayPass?: string;
+  polarPriceIds?: {
     monthly?: string;
     quarterly?: string;
     yearly?: string;
-  };
-  razorpayPlanIds?: {
-    dayPass?: string;
-    monthly?: string;
-    quarterly?: string;
-    yearly?: string;
+    lifetime?: string;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -88,18 +82,6 @@ const countryPricingSchema = new Schema<ICountryPricing>(
           required: true
         }
       },
-      dayPass: {
-        price: {
-          type: Number,
-          required: true,
-          min: [0, 'Day pass price cannot be negative']
-        },
-        planId: {
-          type: Schema.Types.ObjectId,
-          ref: 'PricingPlan',
-          required: true
-        }
-      },
       monthly: {
         price: {
           type: Number,
@@ -135,19 +117,25 @@ const countryPricingSchema = new Schema<ICountryPricing>(
           ref: 'PricingPlan',
           required: true
         }
+      },
+      lifetime: {
+        price: {
+          type: Number,
+          required: true,
+          min: [0, 'Lifetime price cannot be negative']
+        },
+        planId: {
+          type: Schema.Types.ObjectId,
+          ref: 'PricingPlan',
+          required: true
+        }
       }
     },
-    stripePriceIds: {
-      dayPass: String,
+    polarPriceIds: {
       monthly: String,
       quarterly: String,
-      yearly: String
-    },
-    razorpayPlanIds: {
-      dayPass: String,
-      monthly: String,
-      quarterly: String,
-      yearly: String
+      yearly: String,
+      lifetime: String
     }
   },
   {

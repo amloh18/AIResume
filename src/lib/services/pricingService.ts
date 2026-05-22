@@ -9,10 +9,10 @@ import { getCountryPricing } from './countryPricingService';
 export interface RegionalPricingData {
   currency: string;
   currencySymbol: string;
-  dayPass: number;
   monthly: number;
   quarterly: number;
   yearly: number;
+  lifetime: number;
 }
 
 /**
@@ -30,10 +30,10 @@ export async function getRegionalPricingFromDB(countryCode: string): Promise<Reg
     return {
       currency: countryPricing.currency,
       currencySymbol: countryPricing.currencySymbol,
-      dayPass: countryPricing.planPrices.dayPass.price,
       monthly: countryPricing.planPrices.monthly.price,
       quarterly: countryPricing.planPrices.quarterly.price,
       yearly: countryPricing.planPrices.yearly.price,
+      lifetime: countryPricing.planPrices.lifetime.price,
     };
   } catch (error) {
     console.error('Error fetching regional pricing from database:', error);

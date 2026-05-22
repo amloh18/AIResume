@@ -13,7 +13,7 @@ export interface IPaymentMethod extends Document {
   email?: string; // For PayPal
   accountName?: string;
   // Gateway integration fields
-  gatewayCustomerId?: string; // Stripe customer ID / Razorpay customer ID
+  gatewayCustomerId?: string; // Gateway customer ID
   gatewayPaymentMethodId?: string; // Tokenized payment method ID from gateway
   createdAt: Date;
   updatedAt: Date;

@@ -14,7 +14,6 @@ export interface UsageLimits {
     maxExports: number;
     storageLimit: number;
   };
-  dayPassExpiry?: Date;
 }
 
 export interface TimeAccessInfo {
@@ -199,20 +198,6 @@ export function useUsageLimits() {
     return usageLimits.planLimits.maxCVs === -1 && usageLimits.planLimits.maxExports === -1;
   }, [usageLimits]);
 
-  // Check if day pass is expired
-  const isDayPassExpired = useCallback((): boolean => {
-    if (!usageLimits?.dayPassExpiry) return false;
-    return new Date() > usageLimits.dayPassExpiry;
-  }, [usageLimits]);
-
-  // Get time until day pass expires
-  const getTimeUntilDayPassExpiry = useCallback((): number | null => {
-    if (!usageLimits?.dayPassExpiry) return null;
-    const now = new Date();
-    const expiry = usageLimits.dayPassExpiry;
-    return Math.max(0, expiry.getTime() - now.getTime());
-  }, [usageLimits]);
-
   // Calculate time remaining with formatted display
   const timeRemaining = useMemo(() => {
     if (!timeAccess) return null;
@@ -319,8 +304,6 @@ export function useUsageLimits() {
     canPerformATSCheck,
     getRemainingUsage,
     hasUnlimitedAccess,
-    isDayPassExpired,
-    getTimeUntilDayPassExpiry,
     generateDeviceFingerprint
   };
 }

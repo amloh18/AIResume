@@ -52,7 +52,7 @@ const PrivacyPolicyContent: React.FC = () => {
               <li>Professional information (work experience, education, skills, certifications)</li>
               <li>CV content, cover letters, and job application data stored in our secure database</li>
               <li>Job application tracking and career journey analytics</li>
-              <li>Payment and billing information (processed securely through Stripe and Razorpay)</li>
+              <li>Payment and billing information (processed securely through Polar.sh)</li>
               <li>Authentication data (NextAuth.js session tokens and Firebase authentication)</li>
               <li>User preferences, settings, and template selections</li>
               <li>Email verification status and security tokens</li>
@@ -130,7 +130,7 @@ const PrivacyPolicyContent: React.FC = () => {
         <ul className="list-disc list-inside space-y-3 text-white/80 ml-4">
           <li><strong>Service Providers:</strong> We share information with trusted third-party service providers who assist us in operating our platform:
             <ul className="list-disc list-inside space-y-1 ml-6 mt-2">
-              <li><strong>Payment Processors:</strong> Stripe and Razorpay for secure payment processing</li>
+              <li><strong>Payment Processors:</strong> Polar.sh for secure payment processing</li>
               <li><strong>Cloud Storage:</strong> AWS S3 for secure document storage</li>
               <li><strong>AI Services:</strong> OpenAI for CV optimization and content generation</li>
               <li><strong>Email Services:</strong> Hostinger SMTP for transactional emails</li>
@@ -251,8 +251,7 @@ const PrivacyPolicyContent: React.FC = () => {
               We use secure payment processors for subscription management:
             </p>
             <ul className="list-disc list-inside space-y-2 text-white/80 ml-4">
-              <li><strong>Stripe:</strong> For international payments (handles card data securely, PCI-DSS compliant)</li>
-              <li><strong>Razorpay:</strong> For Indian payments (handles UPI, cards, netbanking securely)</li>
+              <li><strong>Polar.sh</strong> securely processes all subscription payments (PCI-DSS compliant)</li>
               <li>Payment information is processed directly by these providers - we do not store full card details</li>
               <li>Billing information is stored securely for invoice generation</li>
             </ul>

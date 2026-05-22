@@ -47,7 +47,7 @@ const FAQ = () => {
     {
       id: 7,
       question: "What payment methods do you accept?",
-      answer: "We accept all major international Credit and Debit Cards, UPI (including Google Pay, PhonePe, etc.), and Net Banking from all major Bank worldwide. Our payment gateway RAZORPAY and STRIPE is secure and encrypted."
+      answer: "We accept all major international Credit and Debit Cards, UPI (including Google Pay, PhonePe, etc.), and Net Banking from all major Bank worldwide. Our payment gateway Polar.sh is secure and encrypted."
     },
     {
       id: 8,

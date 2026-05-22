@@ -55,23 +55,6 @@ export const handleFreeTierEdgeCases = {
   })
 };
 
-// Category B: Day Pass Mechanics
-export const handleDayPassEdgeCases = {
-  // EC-11: Day Pass timing (24h from purchase, not calendar day)
-  checkExpiry: (purchasedAt: Date) => {
-    const expiresAt = new Date(purchasedAt);
-    expiresAt.setHours(expiresAt.getHours() + 24);
-    return { expiresAt, isExpired: new Date() > expiresAt };
-  },
-  
-  // EC-12: Grace period for active sessions
-  checkGracePeriod: (expiresAt: Date) => {
-    const GRACE_MINUTES = 30;
-    const graceEnd = new Date(expiresAt);
-    graceEnd.setMinutes(graceEnd.getMinutes() + GRACE_MINUTES);
-    return { inGrace: new Date() <= graceEnd, graceEnd };
-  }
-};
 
 // Category C: Subscription Management
 export const handleSubscriptionEdgeCases = {

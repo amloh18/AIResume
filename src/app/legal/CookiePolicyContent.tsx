@@ -177,11 +177,10 @@ const CookiePolicyContent: React.FC = () => {
           <div>
             <h4 className="text-lg font-medium mb-2 text-lime-400">Payment Processors</h4>
             <p className="text-white/80 mb-2">
-              Our payment processors (Stripe and Razorpay) may use cookies to ensure secure payment processing and fraud prevention:
+              Our payment processor (Polar.sh) may use cookies to ensure secure payment processing and fraud prevention:
             </p>
             <ul className="list-disc list-inside space-y-1 text-white/80 ml-4">
-              <li><strong>Stripe:</strong> Uses cookies for payment security and fraud detection</li>
-              <li><strong>Razorpay:</strong> Uses cookies for secure payment processing and session management</li>
+              <li><strong>Polar.sh:</strong> Uses cookies for payment security and fraud detection</li>
             </ul>
             <p className="text-white/60 text-sm mt-2">
               <strong>Privacy:</strong> Payment processors handle data according to their privacy policies and PCI-DSS compliance standards.

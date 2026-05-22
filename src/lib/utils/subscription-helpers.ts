@@ -54,67 +54,27 @@ export interface PlanLimits {
  */
 export const PLAN_LIMITS: Record<string, PlanLimits> = {
   free: {
-    journeyCVs: 0,              // No Journey CVs for free
-    activeJourneyCVs: 0,        // No active journeys
-    surgeonRuns: 10,
-    downloads: 5,
-    premiumTemplates: false,
-    maxCVs: 1,                  // Only 1 Master CV
-    maxJobs: 0,                 // No Job Tracker
-    standaloneCVs: false,       // Cannot create standalone CVs
+    journeyCVs: -1,              // Unlimited CV editing
+    activeJourneyCVs: -1,        // Unlimited active journeys
+    surgeonRuns: 10,             // Limited AI surgeon runs
+    downloads: -1,               // Unlimited CV/Cover Letter editing and exporting
+    premiumTemplates: true,      // Access to ALL templates
+    maxCVs: -1,                  // Unlimited CVs
+    maxJobs: -1,                 // Full Kanban/tracker access
+    standaloneCVs: true,         // Unlimited CV editing
     aiSurgeonMode: 'spelling_only',
-    coverLetterAI: false,       // No cover letter generator
-    docxExport: false,          // PDF only
-    interviewCoach: true,       // Gated inside feature (1 job, 1 question)
-    jobTracker: false,          // No Job Tracker
-    jobParsing: false,          // Cannot parse job descriptions
+    coverLetterAI: false,        // AI cover letter generator is Pro feature
+    docxExport: false,          // PDF download only
+    interviewCoach: false,       // Mock simulator is Pro feature
+    jobTracker: true,            // Full job tracker access
+    jobParsing: true,            // Can parse JDs
     prioritySupport: false,
     advancedAnalytics: false,
-    linkedinToneChange: false,  // No tone change in LinkedIn Enhancer
-    linkedinCVSelection: false  // No CV selection - uses Master CV only
-  },
-  day_pass: {
-    journeyCVs: 0,              // No Journey CVs for day pass
-    activeJourneyCVs: 0,        // No active journeys
-    surgeonRuns: -1,
-    downloads: -1,
-    premiumTemplates: true,
-    maxCVs: -1,                 // Unlimited CVs
-    maxJobs: 0,                 // No Job Tracker
-    standaloneCVs: true,        // Can create unlimited standalone CVs
-    aiSurgeonMode: 'full',      // Full AI rewrite
-    coverLetterAI: true,        // Cover letter generator included
-    docxExport: true,
-    interviewCoach: false,      // No Interview Coach
-    jobTracker: false,          // No Job Tracker
-    jobParsing: false,          // Cannot parse job descriptions
-    prioritySupport: false,
-    advancedAnalytics: false,
-    linkedinToneChange: true,   // Can change tone in LinkedIn Enhancer
-    linkedinCVSelection: true   // Can select different CVs
+    linkedinToneChange: false,  // Tone customization is Pro feature
+    linkedinCVSelection: false  // CV selection in extension is Pro feature
   },
   pro_monthly: {
-    journeyCVs: -1,             // Unlimited
-    activeJourneyCVs: -1,
-    surgeonRuns: -1,
-    downloads: -1,
-    premiumTemplates: true,
-    maxCVs: -1,
-    maxJobs: -1,                // Unlimited jobs
-    standaloneCVs: true,
-    aiSurgeonMode: 'full',
-    coverLetterAI: true,
-    docxExport: true,
-    interviewCoach: true,
-    jobTracker: true,           // Full Job Tracker
-    jobParsing: true,           // Can parse job descriptions
-    prioritySupport: false,
-    advancedAnalytics: true,
-    linkedinToneChange: true,
-    linkedinCVSelection: true
-  },
-  pro_quarterly: {
-    journeyCVs: -1,             // Unlimited
+    journeyCVs: -1,
     activeJourneyCVs: -1,
     surgeonRuns: -1,
     downloads: -1,
@@ -128,13 +88,14 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     interviewCoach: true,
     jobTracker: true,
     jobParsing: true,
-    prioritySupport: true,      // Priority Support
+    prioritySupport: false,
     advancedAnalytics: true,
     linkedinToneChange: true,
-    linkedinCVSelection: true
+    linkedinCVSelection: true,
+    hasVault: true
   },
-  pro_lifetime: {
-    journeyCVs: -1,             // Unlimited
+  pro_quarterly: {
+    journeyCVs: -1,
     activeJourneyCVs: -1,
     surgeonRuns: -1,
     downloads: -1,
@@ -150,13 +111,54 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     jobParsing: true,
     prioritySupport: true,
     advancedAnalytics: true,
-    hasVault: true,             // Career Vault feature
+    linkedinToneChange: true,
+    linkedinCVSelection: true,
+    hasVault: true
+  },
+  pro_yearly: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    jobParsing: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    linkedinToneChange: true,
+    linkedinCVSelection: true,
+    hasVault: true
+  },
+  pro_lifetime: {
+    journeyCVs: -1,
+    activeJourneyCVs: -1,
+    surgeonRuns: -1,
+    downloads: -1,
+    premiumTemplates: true,
+    maxCVs: -1,
+    maxJobs: -1,
+    standaloneCVs: true,
+    aiSurgeonMode: 'full',
+    coverLetterAI: true,
+    docxExport: true,
+    interviewCoach: true,
+    jobTracker: true,
+    jobParsing: true,
+    prioritySupport: true,
+    advancedAnalytics: true,
+    hasVault: true,
     linkedinToneChange: true,
     linkedinCVSelection: true
   },
-
   pro: {
-    journeyCVs: -1,             // Default to monthly limits for generic pro
+    journeyCVs: -1,
     activeJourneyCVs: -1,
     surgeonRuns: -1,
     downloads: -1,
@@ -173,7 +175,8 @@ export const PLAN_LIMITS: Record<string, PlanLimits> = {
     prioritySupport: false,
     advancedAnalytics: true,
     linkedinToneChange: true,
-    linkedinCVSelection: true
+    linkedinCVSelection: true,
+    hasVault: true
   }
 };
 
@@ -567,16 +570,6 @@ export async function checkJourneyCVLimit(
 }> {
   const limits = getPlanLimits(planKey);
 
-  // Day Pass: Check if within 24h window
-  if (planKey === 'day_pass' && subscription?.accessExpiresAt) {
-    const expiresAt = new Date(subscription.accessExpiresAt);
-    if (new Date() <= expiresAt) {
-      return { allowed: true, currentActiveCount: -1, limit: -1 };
-    }
-    // Expired day pass reverts to free limits
-    return checkJourneyCVLimit(userId, 'free');
-  }
-
   // Unlimited plans
   if (limits.activeJourneyCVs === -1) {
     return { allowed: true, currentActiveCount: -1, limit: -1 };
@@ -646,31 +639,8 @@ export async function checkJobLimit(
   message?: string;
   upgradeRequired?: boolean;
 }> {
-  // Determine the effective limit
-  let limit = 3; // Default fallback (Free)
-
-  if (planKey === 'day_pass') {
-    // Check for day pass expiry
-    if (subscription?.accessExpiresAt) {
-      const expiresAt = new Date(subscription.accessExpiresAt);
-      if (new Date() <= expiresAt) {
-        // Active day pass
-        limit = PLAN_LIMITS.day_pass.maxJobs;
-        console.log(`✅ Job Limit Check - Active Day Pass: Limit is ${limit}`);
-      } else {
-        // Expired day pass reverts to free limits
-        limit = PLAN_LIMITS.free.maxJobs;
-        console.log(`⚠️ Job Limit Check - Expired Day Pass, reverting to free limit: ${limit}`);
-      }
-    } else {
-      // Fallback for invalid day pass subscription
-      limit = PLAN_LIMITS.free.maxJobs;
-    }
-  } else {
-    // Standard plans (Free, Pro Monthly/Quarterly/Yearly)
-    const planLimits = getPlanLimits(planKey);
-    limit = planLimits.maxJobs;
-  }
+  const planLimits = getPlanLimits(planKey);
+  const limit = planLimits.maxJobs;
 
   // If unlimited (-1), early return
   if (limit === -1) {
@@ -683,7 +653,7 @@ export async function checkJobLimit(
   const activeJobCount = await JobApplication.countDocuments({
     userId,
     $or: [
-      { isArchived: { $exists: false } }, // Old jobs without isArchived field
+      { isArchived: { $exists: false } },
       { isArchived: false }
     ]
   });
