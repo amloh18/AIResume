@@ -97,8 +97,9 @@ export default function FeaturePromotionProvider({ children }: { children: React
   return (
     <ContextProvider>
       {children}
-      <PromotionRenderer />
+      <React.Suspense fallback={null}>
+        <PromotionRenderer />
+      </React.Suspense>
     </ContextProvider>
   );
 }
-
