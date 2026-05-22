@@ -1,20 +1,20 @@
 export interface LocationData {
-  country: string;
-  countryCode: string;
-  currency: string;
-  currencySymbol: string;
-  paymentPartner: 'polar' | 'razorpay';
-  exchangeRate: number;
-}
-
-export interface PricingData {
-  originalPrice: number;
-  originalCurrency: string;
-  convertedPrice: number;
-  convertedCurrency: string;
-  exchangeRate: number;
-  paymentPartner: 'polar' | 'razorpay';
-}
+   country: string;
+   countryCode: string;
+   currency: string;
+   currencySymbol: string;
+   paymentPartner: 'polar';
+   exchangeRate: number;
+ }
+ 
+ export interface PricingData {
+   originalPrice: number;
+   originalCurrency: string;
+   convertedPrice: number;
+   convertedCurrency: string;
+   exchangeRate: number;
+   paymentPartner: 'polar';
+ }
 
 // Exchange rates (simplified - in production, use a real API)
 const EXCHANGE_RATES: Record<string, number> = {
@@ -137,47 +137,47 @@ const EXCHANGE_RATES: Record<string, number> = {
 };
 
 // Country to payment partner mapping
-const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar' | 'razorpay'> = {
-  'IN': 'razorpay', // India
-  'US': 'polar',   // United States
-  'CA': 'polar',   // Canada
-  'GB': 'polar',   // United Kingdom
-  'AU': 'polar',   // Australia
-  'DE': 'polar',   // Germany
-  'FR': 'polar',   // France
-  'IT': 'polar',   // Italy
-  'ES': 'polar',   // Spain
-  'NL': 'polar',   // Netherlands
-  'BE': 'polar',   // Belgium
-  'AT': 'polar',   // Austria
-  'CH': 'polar',   // Switzerland
-  'SE': 'polar',   // Sweden
-  'NO': 'polar',   // Norway
-  'DK': 'polar',   // Denmark
-  'FI': 'polar',   // Finland
-  'PL': 'polar',   // Poland
-  'CZ': 'polar',   // Czech Republic
-  'HU': 'polar',   // Hungary
-  'RO': 'polar',   // Romania
-  'BG': 'polar',   // Bulgaria
-  'HR': 'polar',   // Croatia
-  'SI': 'polar',   // Slovenia
-  'SK': 'polar',   // Slovakia
-  'LT': 'polar',   // Lithuania
-  'LV': 'polar',   // Latvia
-  'EE': 'polar',   // Estonia
-  'IE': 'polar',   // Ireland
-  'PT': 'polar',   // Portugal
-  'GR': 'polar',   // Greece
-  'CY': 'polar',   // Cyprus
-  'MT': 'polar',   // Malta
-  'LU': 'polar',   // Luxembourg
-  'IS': 'polar',   // Iceland
-  'LI': 'polar',   // Liechtenstein
-  'MC': 'polar',   // Monaco
-  'SM': 'polar',   // San Marino
-  'VA': 'polar',   // Vatican City
-  'AD': 'polar',   // Andorra
+const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar'> = {
+  'IN': 'polar',
+  'US': 'polar',
+  'CA': 'polar',
+  'GB': 'polar',
+  'AU': 'polar',
+  'DE': 'polar',
+  'FR': 'polar',
+  'IT': 'polar',
+  'ES': 'polar',
+  'NL': 'polar',
+  'BE': 'polar',
+  'AT': 'polar',
+  'CH': 'polar',
+  'SE': 'polar',
+  'NO': 'polar',
+  'DK': 'polar',
+  'FI': 'polar',
+  'PL': 'polar',
+  'CZ': 'polar',
+  'HU': 'polar',
+  'RO': 'polar',
+  'BG': 'polar',
+  'HR': 'polar',
+  'SI': 'polar',
+  'SK': 'polar',
+  'LT': 'polar',
+  'LV': 'polar',
+  'EE': 'polar',
+  'IE': 'polar',
+  'PT': 'polar',
+  'GR': 'polar',
+  'CY': 'polar',
+  'MT': 'polar',
+  'LU': 'polar',
+  'IS': 'polar',
+  'LI': 'polar',
+  'MC': 'polar',
+  'SM': 'polar',
+  'VA': 'polar',
+  'AD': 'polar',
   'default': 'polar'
 };
 
@@ -357,44 +357,44 @@ export class LocationService {
   }
 
   static convertPrice(originalPrice: number, originalCurrency: string, targetCurrency: string): PricingData {
-    const originalRate = EXCHANGE_RATES[originalCurrency] || 1.0;
-    const targetRate = EXCHANGE_RATES[targetCurrency] || 1.0;
-    const exchangeRate = targetRate / originalRate;
-    const convertedPrice = originalPrice * exchangeRate;
-
-    // Determine payment partner based on target currency
-    const paymentPartner = targetCurrency === 'INR' ? 'razorpay' : 'polar';
-
-    return {
-      originalPrice,
-      originalCurrency,
-      convertedPrice: Math.round(convertedPrice * 100) / 100, // Round to 2 decimal places
-      convertedCurrency: targetCurrency,
-      exchangeRate,
-      paymentPartner
-    };
-  }
-
-  static getSupportedCurrencies() {
-    return [
-      { code: 'EUR', symbol: '€', name: 'Euro' },
-      { code: 'USD', symbol: '$', name: 'US Dollar' },
-      { code: 'GBP', symbol: '£', name: 'British Pound' },
-      { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
-      { code: 'CAD', symbol: '$', name: 'Canadian Dollar' },
-      { code: 'AUD', symbol: '$', name: 'Australian Dollar' },
-      { code: 'SGD', symbol: '$', name: 'Singapore Dollar' },
-      { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
-      { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc' },
-      { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
-      { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
-      { code: 'DKK', symbol: 'kr', name: 'Danish Krone' }
-    ];
-  }
-
-  static getPaymentPartnerForCurrency(currency: string): 'polar' | 'razorpay' {
-    return currency === 'INR' ? 'razorpay' : 'polar';
-  }
+     const originalRate = EXCHANGE_RATES[originalCurrency] || 1.0;
+     const targetRate = EXCHANGE_RATES[targetCurrency] || 1.0;
+     const exchangeRate = targetRate / originalRate;
+     const convertedPrice = originalPrice * exchangeRate;
+ 
+     // Always use Polar as payment partner
+     const paymentPartner: 'polar' = 'polar';
+ 
+     return {
+       originalPrice,
+       originalCurrency,
+       convertedPrice: Math.round(convertedPrice * 100) / 100, // Round to 2 decimal places
+       convertedCurrency: targetCurrency,
+       exchangeRate,
+       paymentPartner
+     };
+   }
+ 
+   static getSupportedCurrencies() {
+     return [
+       { code: 'EUR', symbol: '€', name: 'Euro' },
+       { code: 'USD', symbol: '$', name: 'US Dollar' },
+       { code: 'GBP', symbol: '£', name: 'British Pound' },
+       { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+       { code: 'CAD', symbol: '$', name: 'Canadian Dollar' },
+       { code: 'AUD', symbol: '$', name: 'Australian Dollar' },
+       { code: 'SGD', symbol: '$', name: 'Singapore Dollar' },
+       { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+       { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc' },
+       { code: 'SEK', symbol: 'kr', name: 'Swedish Krona' },
+       { code: 'NOK', symbol: 'kr', name: 'Norwegian Krone' },
+       { code: 'DKK', symbol: 'kr', name: 'Danish Krone' }
+     ];
+   }
+ 
+   static getPaymentPartnerForCurrency(currency: string): 'polar' {
+     return 'polar';
+   }
 
   static formatPrice(price: number, currency: string, symbol?: string): string {
     const currencySymbol = symbol || this.getCurrencySymbol(currency);

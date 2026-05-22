@@ -172,17 +172,6 @@ export default function RevenueManager() {
             <span className="hidden tablet:inline">Stripe</span>
           </a>
 
-          <a
-            href="https://dashboard.razorpay.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-4 py-2 bg-[#3395FF] hover:bg-[#2E86E5] text-white rounded-lg flex items-center gap-2 transition-colors font-medium"
-            title="Open Razorpay Dashboard"
-          >
-            <CreditCard className="h-4 w-4" />
-            <span className="hidden tablet:inline">Razorpay</span>
-          </a>
-
           <Select value={period} onValueChange={(value: any) => setPeriod(value)}>
             <SelectTrigger className={`w-48 ${ADMIN_THEME.input.base}`}>
               <Calendar className="h-4 w-4 mr-2" />

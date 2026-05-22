@@ -14,7 +14,7 @@ export interface CreateTransactionParams {
   amount: number;
   status: 'success' | 'failed' | 'refunded' | 'pending' | 'chargeback' | 'dispute';
   gatewayReferenceId: string;
-  gateway: 'stripe' | 'razorpay' | 'admin';
+  gateway: 'stripe' | 'polar' | 'admin';
   failureReason?: string;
   metadata?: Record<string, any>;
 }
@@ -163,7 +163,7 @@ export async function getTransactionsByUser(
  */
 export async function getTransactionByGatewayRef(
   gatewayReferenceId: string,
-  gateway: 'stripe' | 'razorpay'
+  gateway: 'stripe' | 'polar'
 ): Promise<Transaction | null> {
   try {
     await getConnection();

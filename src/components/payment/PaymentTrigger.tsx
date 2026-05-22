@@ -58,7 +58,6 @@ const PaymentTrigger: React.FC<PaymentTriggerProps> = ({
   };
 
   const getIcon = () => {
-    if (preselectedPlanKey === 'day_pass') return <Zap className={getIconSize()} />;
     if (preselectedPlanKey?.includes('pro')) return <Crown className={getIconSize()} />;
     return <Star className={getIconSize()} />;
   };

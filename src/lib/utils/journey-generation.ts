@@ -176,7 +176,7 @@ export async function getJourneyGenerationEntitlement(userId: string): Promise<J
   const timeAccess = await usageLimitsService.checkTimeBasedAccess(userId);
   const aiCreditCheck = await creditService.checkCreditAvailability(userId, 'ai_generation');
 
-  const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime', 'day_pass'].includes(planKey);
+  const isUnlimitedPlan = ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(planKey);
   const hasTailoredAccess = (isUnlimitedPlan && timeAccess.hasAccess) || aiCreditCheck.available;
 
   if (hasTailoredAccess) {

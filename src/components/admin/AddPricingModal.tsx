@@ -24,10 +24,10 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
         countryCode: '',
         currency: 'USD',
         currencySymbol: '$',
-        dayPass: '',
         monthly: '',
         quarterly: '',
-        yearly: ''
+        yearly: '',
+        lifetime: ''
     });
 
     // Sort country code options by name
@@ -52,10 +52,6 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                         price: 0,
                         planId: findPlanId(DEFAULT_PLAN_KEY)
                     },
-                    dayPass: {
-                        price: parseFloat(formData.dayPass) || 0,
-                        planId: findPlanId('day_pass')
-                    },
                     monthly: {
                         price: parseFloat(formData.monthly) || 0,
                         planId: findPlanId('pro_monthly')
@@ -66,6 +62,10 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                     },
                     yearly: {
                         price: parseFloat(formData.yearly) || 0,
+                        planId: findPlanId('pro_yearly')
+                    },
+                    lifetime: {
+                        price: parseFloat(formData.lifetime) || 0,
                         planId: findPlanId('pro_lifetime')
                     }
                 }
@@ -93,10 +93,10 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                 countryCode: '',
                 currency: 'USD',
                 currencySymbol: '$',
-                dayPass: '',
                 monthly: '',
                 quarterly: '',
-                yearly: ''
+                yearly: '',
+                lifetime: ''
             });
 
         } catch (error) {
@@ -162,25 +162,14 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                     <div className="space-y-2">
                         <Label>Currency Symbol</Label>
                         <Input
-                            value={formData.currencySymbol}
-                            onChange={(e) => setFormData(prev => ({ ...prev, currencySymbol: e.target.value }))}
-                            placeholder="$"
-                            className="w-20"
+                             value={formData.currencySymbol}
+                             onChange={(e) => setFormData(prev => ({ ...prev, currencySymbol: e.target.value }))}
+                             placeholder="$"
+                             className="w-20"
                         />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>Professional Yearly Price</Label>
-                            <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={formData.dayPass}
-                                onChange={(e) => setFormData(prev => ({ ...prev, dayPass: e.target.value }))}
-                                required
-                            />
-                        </div>
                         <div className="space-y-2">
                             <Label>Monthly</Label>
                             <Input
@@ -211,6 +200,17 @@ export default function AddPricingModal({ isOpen, onClose, onSuccess, plans }: A
                                 min="0"
                                 value={formData.yearly}
                                 onChange={(e) => setFormData(prev => ({ ...prev, yearly: e.target.value }))}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Lifetime</Label>
+                            <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={formData.lifetime}
+                                onChange={(e) => setFormData(prev => ({ ...prev, lifetime: e.target.value }))}
                                 required
                             />
                         </div>

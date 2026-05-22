@@ -74,41 +74,6 @@ class UsageLimitsService {
       const GRACE_PERIOD_DAYS = 3;
       const GRACE_PERIOD_MS = GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000;
 
-      // For day pass: check accessExpiresAt
-      if (user.currentPlanKey === 'day_pass' && subscription.accessExpiresAt) {
-        const expiresAt = new Date(subscription.accessExpiresAt);
-        const hoursRemaining = Math.max(0, (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60));
-
-        if (now > expiresAt) {
-          // Check grace period
-          const gracePeriodEndsAt = new Date(expiresAt.getTime() + GRACE_PERIOD_MS);
-          if (now <= gracePeriodEndsAt) {
-            return {
-              hasAccess: true,
-              isInGracePeriod: true,
-              gracePeriodEndsAt,
-              hoursRemaining: 0,
-              subscription,
-              reason: 'Day pass expired, in grace period'
-            };
-          }
-          return {
-            hasAccess: false,
-            reason: 'Day pass has expired',
-            expiredAt: expiresAt,
-            hoursRemaining: 0,
-            requiresRenewal: true
-          };
-        }
-
-        return {
-          hasAccess: true,
-          hoursRemaining: Math.round(hoursRemaining * 10) / 10,
-          subscription,
-          expiredAt: expiresAt
-        };
-      }
-
       // For quarterly/yearly (one-time payments): check accessExpiresAt
       if ((user.currentPlanKey === 'pro_quarterly' || user.currentPlanKey === 'pro_lifetime' || user.currentPlanKey === 'pro_lifetime') && subscription.accessExpiresAt) {
         const expiresAt = new Date(subscription.accessExpiresAt);
@@ -257,19 +222,6 @@ class UsageLimitsService {
         };
       }
 
-      // For day pass, also check using accessExpiresAt (more accurate than lastResetDate)
-      if (user.currentPlanKey === 'day_pass' && user.subscription?.accessExpiresAt) {
-        const expiresAt = new Date(user.subscription.accessExpiresAt);
-        if (new Date() > expiresAt) {
-          return {
-            allowed: false,
-            reason: 'Day pass has expired',
-            currentUsage: 0,
-            limit: 0
-          };
-        }
-      }
-
       // Check job creation credits
       const creditCheck = await creditService.checkCreditAvailability(context.userId, 'job_create');
 
@@ -282,7 +234,7 @@ class UsageLimitsService {
         reason: allowed ? undefined : `Plan limit exceeded. You have used ${currentUsage}/${limit === -1 ? 'unlimited' : limit} ${context.action.replace('_', ' ')}s`,
         currentUsage,
         limit,
-        resetTime: user.currentPlanKey === 'day_pass' && user.subscription?.accessExpiresAt
+        resetTime: user.subscription?.accessExpiresAt
           ? new Date(user.subscription.accessExpiresAt)
           : user.subscription?.currentPeriodEnd
             ? new Date(user.subscription.currentPeriodEnd)
@@ -319,35 +271,6 @@ class UsageLimitsService {
   }
 
   /**
-   * Reset usage for day pass users when their pass expires
-   */
-  async resetDayPassUsage(userId: string): Promise<boolean> {
-    try {
-      await connectToDatabase();
-
-      const user = await User.findById(userId);
-      if (!user || user.currentPlanKey !== 'day_pass') {
-        return false;
-      }
-
-      await User.findByIdAndUpdate(userId, {
-        $set: {
-          'usage.cvJourneyCount': 0,
-          'usage.cvCreatedCount': 0,
-          'usage.exportCount': 0,
-          'usage.atsCheckCount': 0,
-          'usage.lastResetDate': new Date()
-        }
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Error resetting day pass usage:', error);
-      return false;
-    }
-  }
-
-  /**
    * Get current usage statistics for a user
    */
   async getUserUsage(userId: string): Promise<{
@@ -360,7 +283,6 @@ class UsageLimitsService {
       maxExports: number;
       storageLimit: number;
     };
-    dayPassExpiry?: Date;
   } | null> {
     try {
       await connectToDatabase();
@@ -377,9 +299,8 @@ class UsageLimitsService {
       const maxCVs = plan ? plan.maxCVs : (user.currentPlanKey === 'free' ? 1 : -1);
       const maxExports = plan ? plan.maxExports : (user.currentPlanKey === 'free' ? 5 : -1);
       const storageLimit = plan ? plan.storageLimit : (user.currentPlanKey === 'free' ? 50 : -1);
-      const dayPassDuration = plan ? plan.dayPassDuration : (user.currentPlanKey === 'day_pass' ? 24 : null);
 
-      const result = {
+      return {
         cvJourneyCount: user.usage.cvJourneyCount,
         cvCreatedCount: user.usage.cvCreatedCount,
         exportCount: user.usage.exportCount,
@@ -390,14 +311,6 @@ class UsageLimitsService {
           storageLimit
         }
       };
-
-      // Add day pass expiry if applicable
-      if (user.currentPlanKey === 'day_pass' && dayPassDuration) {
-        const dayPassExpiry = new Date(user.usage.lastResetDate.getTime() + (dayPassDuration * 60 * 60 * 1000));
-        return { ...result, dayPassExpiry };
-      }
-
-      return result;
     } catch (error) {
       console.error('Error getting user usage:', error);
       return null;

@@ -1,12 +1,12 @@
 import { LocationService, LocationData } from '@/lib/payment/locationService';
 
 export interface RegionInfo {
-  countryCode: string;
-  countryName: string;
-  currency: string;
-  currencySymbol: string;
-  paymentPartner: 'polar' | 'razorpay';
-}
+   countryCode: string;
+   countryName: string;
+   currency: string;
+   currencySymbol: string;
+   paymentPartner: 'polar';
+ }
 
 // Import currency and payment partner mappings from locationService
 // These are used for server-side region detection
@@ -54,8 +54,8 @@ const COUNTRY_CURRENCIES: Record<string, { currency: string; symbol: string }> =
   'default': { currency: 'USD', symbol: '$' }
 };
 
-const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar' | 'razorpay'> = {
-  'IN': 'razorpay',
+const COUNTRY_PAYMENT_PARTNERS: Record<string, 'polar'> = {
+  'IN': 'polar',
   'US': 'polar',
   'CA': 'polar',
   'GB': 'polar',
@@ -223,7 +223,7 @@ function getCurrencySymbolForCountry(countryCode: string): string {
 /**
  * Helper to get payment partner for country code with fallback
  */
-function getPaymentPartnerForCountry(countryCode: string): 'polar' | 'razorpay' {
+function getPaymentPartnerForCountry(countryCode: string): 'polar' {
   return COUNTRY_PAYMENT_PARTNERS[countryCode] || COUNTRY_PAYMENT_PARTNERS['default'] || 'polar';
 }
 
@@ -370,21 +370,21 @@ async function detectRegionFromIP(ip: string): Promise<RegionInfo> {
 export async function getPricingForRegion(
   plan: any,
   region: string
-): Promise<{ price: number; currency: string; displayPrice: string; stripePriceId?: string; razorpayPlanId?: string } | null> {
+): Promise<{ price: number; currency: string; displayPrice: string; polarPriceId?: string } | null> {
+  // Map plan key
+  const planKeyMap: Record<string, 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime'> = {
+    'free': 'free',
+    'pro_monthly': 'pro_monthly',
+    'pro_quarterly': 'pro_quarterly',
+    'pro_yearly': 'pro_yearly',
+    'pro_lifetime': 'pro_lifetime'
+  };
+  
+  const planKey = planKeyMap[plan.key] || 'pro_monthly';
+
   try {
     // Use CountryPricing service
     const { getPricingForPlan } = await import('@/lib/services/countryPricingService');
-    
-    // Map plan key
-    const planKeyMap: Record<string, 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime'> = {
-      'free': 'free',
-      'day_pass': 'day_pass',
-      'pro_monthly': 'pro_monthly',
-      'pro_quarterly': 'pro_quarterly',
-      'pro_lifetime': 'pro_lifetime'
-    };
-    
-    const planKey = planKeyMap[plan.key] || 'pro_monthly';
     const countryPricing = await getPricingForPlan(region, planKey);
     
     if (countryPricing) {
@@ -392,8 +392,7 @@ export async function getPricingForRegion(
         price: countryPricing.price,
         currency: countryPricing.currency,
         displayPrice: `${countryPricing.currencySymbol}${countryPricing.price}`,
-        stripePriceId: undefined, // Would need to get from CountryPricing if needed
-        razorpayPlanId: undefined // Would need to get from CountryPricing if needed
+        polarPriceId: undefined // Would need to get from CountryPricing if needed
       };
     }
   } catch (error) {
@@ -403,7 +402,7 @@ export async function getPricingForRegion(
   // Fallback: Try to get default CountryPricing for GB (our default)
   try {
     const { getPricingForPlan } = await import('@/lib/services/countryPricingService');
-    const defaultPricing = await getPricingForPlan('GB', plan.key || 'pro_monthly');
+    const defaultPricing = await getPricingForPlan('GB', planKey);
     if (defaultPricing) {
       return {
         price: defaultPricing.price,

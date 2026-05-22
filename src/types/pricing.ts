@@ -36,14 +36,10 @@ export interface PricingPlan {
   storageLimit?: number;
   status?: 'active' | 'inactive';
   sortOrder?: number;
-  stripePriceId_monthly?: string;
-  stripePriceId_quarterly?: string;
-  stripePriceId_yearly?: string;
-  stripePriceId_one_time?: string;
-  razorpayPlanId_monthly?: string;
-  razorpayPlanId_quarterly?: string;
-  razorpayPlanId_yearly?: string;
-  dayPassDuration?: number;
+  polarPriceId_monthly?: string;
+  polarPriceId_quarterly?: string;
+  polarPriceId_yearly?: string;
+  polarPriceId_one_time?: string;
 }
 
 export interface PricingData {
@@ -52,6 +48,6 @@ export interface PricingData {
   convertedPrice: number;
   convertedCurrency: string;
   exchangeRate: number;
-  paymentPartner: 'polar' | 'razorpay';
+  paymentPartner: 'polar';
 }
 

@@ -27,16 +27,18 @@ export async function GET(request: NextRequest) {
       const countryPricing = await getCountryPricing(targetCountryCode);
       
       if (countryPricing) {
-        // Convert CountryPricing to RegionalPricing format for backward compatibility
+        // Convert CountryPricing to RegionalPricing format
         pricingData = {
           currency: countryPricing.currency,
           currencySymbol: countryPricing.currencySymbol,
-          dayPass: `${countryPricing.currencySymbol}${countryPricing.planPrices.dayPass.price}`,
           monthly: `${countryPricing.currencySymbol}${countryPricing.planPrices.monthly.price}`,
           quarterly: `${countryPricing.currencySymbol}${countryPricing.planPrices.quarterly.price}`,
           yearly: `${countryPricing.currencySymbol}${countryPricing.planPrices.yearly.price >= 1000 
             ? countryPricing.planPrices.yearly.price.toLocaleString() 
             : countryPricing.planPrices.yearly.price}`,
+          lifetime: `${countryPricing.currencySymbol}${countryPricing.planPrices.lifetime.price >= 1000 
+            ? countryPricing.planPrices.lifetime.price.toLocaleString() 
+            : countryPricing.planPrices.lifetime.price}`,
           // Include additional data for new structure
           countryCode: countryPricing.countryCode,
           countryName: countryPricing.countryName,
@@ -68,16 +70,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Format response to match the expected RegionalPricing interface
-    // pricingData already has formatted strings if from CountryPricing
-    // or numeric values if from old service
     const responseData: any = {
       success: true,
       pricing: {
         currency: pricingData.currency,
         currencySymbol: pricingData.currencySymbol,
-        dayPass: typeof pricingData.dayPass === 'string' 
-          ? pricingData.dayPass 
-          : `${pricingData.currencySymbol}${pricingData.dayPass}`,
         monthly: typeof pricingData.monthly === 'string' 
           ? pricingData.monthly 
           : `${pricingData.currencySymbol}${pricingData.monthly}`,
@@ -89,6 +86,11 @@ export async function GET(request: NextRequest) {
           : `${pricingData.currencySymbol}${pricingData.yearly >= 1000 
             ? pricingData.yearly.toLocaleString() 
             : pricingData.yearly}`,
+        lifetime: typeof pricingData.lifetime === 'string' 
+          ? pricingData.lifetime 
+          : `${pricingData.currencySymbol}${pricingData.lifetime >= 1000 
+            ? pricingData.lifetime.toLocaleString() 
+            : pricingData.lifetime}`,
       }
     };
 
@@ -107,10 +109,10 @@ export async function GET(request: NextRequest) {
       responseData.raw = {
         currency: pricingData.currency,
         currencySymbol: pricingData.currencySymbol,
-        dayPass: pricingData.planPrices.dayPass.price,
         monthly: pricingData.planPrices.monthly.price,
         quarterly: pricingData.planPrices.quarterly.price,
-        yearly: pricingData.planPrices.yearly.price
+        yearly: pricingData.planPrices.yearly.price,
+        lifetime: pricingData.planPrices.lifetime.price
       };
     } else {
       responseData.raw = pricingData;

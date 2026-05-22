@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import posthog from 'posthog-js';
 import Logo from '@/components/ui/Logo';
 import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
@@ -69,16 +70,14 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(null);
   const [discountError, setDiscountError] = useState<string | null>(null);
-  const [paymentProvider, setPaymentProvider] = useState<'polar' | 'razorpay'>('polar');
   const [currentUserPlan, setCurrentUserPlan] = useState<string>(propCurrentUserPlan || 'free');
   const [userCurrentPlan, setUserCurrentPlan] = useState<any>(null);
   const [showPromotionalPricing, setShowPromotionalPricing] = useState(false);
+  const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
   const [providerHealth, setProviderHealth] = useState<{
     polar: boolean | null;
-    razorpay: boolean | null;
-  }>({ polar: null, razorpay: null });
+  }>({ polar: null });
   const [providerHealthLoading, setProviderHealthLoading] = useState(false);
-  const [userChangedPlan, setUserChangedPlan] = useState(false); // Track if user manually changed plan
 
   // Use the shared pricing hook only if props are not provided
   // Hooks must be called unconditionally at top level
@@ -152,6 +151,17 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
       });
     }
   }, [isOpen, propPlans, hookResult.plans, pricingPlansRaw, pricingPlans, plansLoading, plansError]);
+
+  // Track modal open events
+  useEffect(() => {
+    if (isOpen) {
+      posthog.capture('payment_modal_opened', {
+        preselected_plan: preselectedPlanKey ?? null,
+        trigger_context: triggerContext ?? null,
+        admin_mode: adminMode,
+      });
+    }
+  }, [isOpen]);
 
   // Reset selected plan when modal closes
   useEffect(() => {
@@ -327,24 +337,16 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     fetchUserData();
   }, [isOpen, adminMode]);
 
-  // Set payment provider based on location data from hook
+  // Check Polar health when modal opens
   useEffect(() => {
-    if (locationData) {
-      setPaymentProvider(locationData.paymentPartner);
-    }
-  }, [locationData]);
-
-  // Check provider health when modal opens
-  useEffect(() => {
-    const checkProviderHealth = async (provider: 'polar' | 'razorpay') => {
+    const checkProviderHealth = async (provider: 'polar') => {
       try {
-        // Add timeout to prevent hanging requests
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         const response = await fetch(`/api/payment/${provider}/health`, {
           signal: controller.signal,
-          cache: 'no-store', // Prevent caching of health check results
+          cache: 'no-store',
         });
 
         clearTimeout(timeoutId);
@@ -371,24 +373,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
       setProviderHealthLoading(true);
       try {
-        const [polarHealthy, razorpayHealthy] = await Promise.all([
+        const [polarHealthy] = await Promise.all([
           checkProviderHealth('polar'),
-          checkProviderHealth('razorpay')
         ]);
 
         setProviderHealth({
           polar: polarHealthy,
-          razorpay: razorpayHealthy
         });
-
-        // Auto-switch to healthy provider if current provider is down
-        if (paymentProvider === 'polar' && !polarHealthy && razorpayHealthy) {
-          console.warn('Polar is down, switching to Razorpay');
-          setPaymentProvider('razorpay');
-        } else if (paymentProvider === 'razorpay' && !razorpayHealthy && polarHealthy) {
-          console.warn('Razorpay is down, switching to Polar');
-          setPaymentProvider('polar');
-        }
       } catch (error) {
         console.error('Error checking provider health:', error);
       } finally {
@@ -397,7 +388,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     };
 
     checkAllProviders();
-  }, [isOpen, paymentProvider]);
+  }, [isOpen]);
 
   const applyDiscountCode = async () => {
     if (!discountCode.trim() || !selectedPlan) return;
@@ -439,247 +430,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     setDiscountError(null);
   };
 
-  // Load Razorpay Checkout script
-  useEffect(() => {
-    if (paymentProvider === 'razorpay' && typeof window !== 'undefined') {
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      document.body.appendChild(script);
-
-      return () => {
-        // Cleanup script on unmount
-        const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
-        if (existingScript) {
-          document.body.removeChild(existingScript);
-        }
-      };
-    }
-  }, [paymentProvider]);
-
-  const handleRazorpayCheckout = async (checkoutData: any) => {
-    try {
-      // Get user information for prefill (if available)
-      let userName = '';
-      let userEmail = '';
-      let userContact = '';
-
-      try {
-        const userResponse = await fetch('/api/user/current');
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          if (userData.user) {
-            userName = `${userData.user.firstName || ''} ${userData.user.lastName || ''}`.trim() || userData.user.email || '';
-            userEmail = userData.user.email || '';
-            userContact = userData.user.phone || '';
-          }
-        }
-      } catch (err) {
-        console.warn('Could not fetch user info for prefill:', err);
-      }
-
-      // According to Razorpay docs: amount should be in currency subunits (paise for INR)
-      // The amount from server is already in paise, ensure it's a number
-      const amount = typeof checkoutData.amount === 'string'
-        ? parseInt(checkoutData.amount, 10)
-        : Math.round(checkoutData.amount);
-
-      if (!amount || amount <= 0) {
-        setLoading(false);
-        alert('No payment is required for this coupon. Your plan should be active shortly.');
-        return;
-      }
-
-      // Razorpay checkout.js expects uppercase currency code (ISO 4217 format)
-      const currency = (checkoutData.currency || 'INR').toUpperCase();
-
-      // For subscriptions, use subscription_id; for orders, use order_id
-      const isSubscription = !!checkoutData.subscription_id;
-
-      const options: any = {
-        key: checkoutData.key_id || '',
-        name: 'CV Circle',
-        description: `${selectedPlan?.name} Subscription`,
-        theme: {
-          color: '#84cc16' // lime-500
-        },
-        modal: {
-          ondismiss: function () {
-            setLoading(false);
-          }
-        },
-        // Handle payment failure
-        'onPayment.failed': function (response: any) {
-          console.error('Payment failed:', response);
-          setLoading(false);
-          alert(`Payment failed: ${response.error?.description || response.error?.reason || 'Unknown error'}. Please try again.`);
-        },
-        handler: async function (response: any) {
-          // Payment successful - verify signature and poll for subscription activation
-          try {
-            setLoading(true);
-
-            // Step 1: Verify payment signature
-            // For subscriptions, use subscription_id; for orders, use order_id
-            const verifyBody: any = {
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              planKey: selectedPlan?.key,
-              interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
-              couponId: checkoutData.coupon?.id
-            };
-
-            if (isSubscription) {
-              verifyBody.razorpay_subscription_id = response.razorpay_subscription_id || checkoutData.subscription_id;
-            } else {
-              verifyBody.razorpay_order_id = response.razorpay_order_id || checkoutData.order_id;
-            }
-
-            const verifyResponse = await fetch('/api/payment/razorpay/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify(verifyBody)
-            });
-
-            const verifyData = await verifyResponse.json();
-
-            if (!verifyData.success) {
-              throw new Error(verifyData.error || 'Payment verification failed');
-            }
-
-            // Step 2: If already processed, return immediately
-            if (verifyData.alreadyProcessed && verifyData.subscription) {
-              onSuccess?.(verifyData.subscription);
-              setLoading(false);
-              return;
-            }
-
-            // Step 3: If pending, poll for subscription activation (webhook processes it)
-            if (verifyData.pending) {
-              console.log('Payment verified, waiting for webhook to activate subscription...');
-
-              // Poll for subscription status (webhook should activate within 1-2 seconds)
-              const maxAttempts = 20; // 20 attempts = ~60 seconds max wait
-              const pollInterval = 3000; // Poll every 3 seconds
-              let attempts = 0;
-
-              const pollSubscription = async (): Promise<any> => {
-                attempts++;
-
-                try {
-                  const subscriptionResponse = await fetch('/api/user/subscription', {
-                    credentials: 'include',
-                    cache: 'no-store'
-                  });
-
-                  if (subscriptionResponse.ok) {
-                    const subscriptionData = await subscriptionResponse.json();
-
-                    if (subscriptionData.success && subscriptionData.subscription) {
-                      const currentPlanKey = subscriptionData.subscription.planKey;
-                      const expectedPlanKey = selectedPlan?.key;
-
-                      // Check if the plan has been activated
-                      if (currentPlanKey === expectedPlanKey && currentPlanKey !== 'free') {
-                        console.log('Subscription activated!', subscriptionData.subscription);
-                        return subscriptionData.subscription;
-                      }
-                    }
-                  }
-
-                  // If not activated yet and haven't exceeded max attempts, continue polling
-                  if (attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, pollInterval));
-                    return pollSubscription();
-                  } else {
-                    // Timeout - subscription not activated yet
-                    throw new Error('Subscription activation is taking longer than expected. Please refresh the page in a few moments.');
-                  }
-                } catch (pollError) {
-                  if (attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, pollInterval));
-                    return pollSubscription();
-                  }
-                  throw pollError;
-                }
-              };
-
-              try {
-                const activatedSubscription = await pollSubscription();
-                onSuccess?.(activatedSubscription);
-              } catch (pollError) {
-                console.error('Error polling for subscription:', pollError);
-                // Show user-friendly message
-                alert('Payment verified successfully! Your subscription is being activated. Please refresh the page in a few moments to see your updated plan.');
-                // Still call onSuccess to close the modal
-                onSuccess?.({ planKey: selectedPlan?.key, status: 'pending' });
-              }
-            } else {
-              // Already processed case (shouldn't reach here, but handle it)
-              onSuccess?.(verifyData.subscription || { planKey: selectedPlan?.key });
-            }
-
-            setLoading(false);
-          } catch (error) {
-            console.error('Payment verification error:', error);
-            setLoading(false);
-            const errorMsg = error instanceof Error ? error.message : 'Payment verification failed';
-            alert(`Payment Error: ${errorMsg}. Please contact support if the issue persists.`);
-          }
-        },
-        prefill: {
-          name: userName,
-          email: userEmail,
-          contact: userContact, // Phone number improves conversion rates per Razorpay docs
-        }
-      };
-
-      // Set subscription_id or order_id based on what's available
-      if (isSubscription) {
-        options.subscription_id = checkoutData.subscription_id;
-        // For subscriptions, amount and currency come from the subscription plan
-        // But we can still set them for display purposes
-        if (amount > 0) {
-          options.amount = amount;
-          options.currency = currency;
-        }
-      } else {
-        options.order_id = checkoutData.order_id; // Mandatory: Order ID from server
-        options.amount = amount; // Amount in currency subunits (paise for INR)
-        options.currency = currency; // Razorpay checkout expects uppercase currency (e.g., 'INR')
-      }
-
-      // Validate required fields per Razorpay documentation
-      if (!options.key) {
-        console.error('Razorpay key ID is missing from checkout response:', checkoutData);
-        throw new Error('Razorpay key ID is missing. Please contact support or try again.');
-      }
-      if (!isSubscription && !options.order_id) {
-        throw new Error('Order ID is missing');
-      }
-      if (isSubscription && !options.subscription_id) {
-        throw new Error('Subscription ID is missing');
-      }
-      // For orders, amount and currency are required; for subscriptions, they're optional
-      if (!isSubscription) {
-        if (!amount || amount <= 0) {
-          throw new Error('Invalid payment amount');
-        }
-        if (!options.currency || options.currency.length !== 3) {
-          throw new Error('Invalid currency code');
-        }
-      }
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
-    } catch (error) {
-      console.error('Razorpay checkout error:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Failed to open Razorpay checkout';
-      alert(`Payment Error: ${errorMsg}`);
-      throw new Error(errorMsg);
-    }
-  };
+  // Helper function to extract numeric value from price string
 
   // Helper function to extract numeric value from price string
   const extractNumericPrice = (priceString: string): number => {
@@ -883,13 +634,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           alert(`Error: Network error while granting plan. Please try again.`);
         }
       } else {
-        // Regular payment flow
+        // Regular payment flow — Polar-only redirect
         const body = {
           planKey: selectedPlan.key,
           interval: getBillingInterval(selectedPlan),
           discountCode: appliedDiscount?.code || undefined,
           couponCode: appliedDiscount?.code || undefined,
-          provider: paymentProvider,
           returnUrl: returnUrl || window.location.href,
           triggerContext
         };
@@ -899,7 +649,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
           headers: {
             'Content-Type': 'application/json',
           },
-          credentials: 'include', // Include cookies for authentication
+          credentials: 'include',
           body: JSON.stringify(body)
         });
 
@@ -918,32 +668,23 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
             return;
           }
 
-          if (data.redirect_url) {
-            // Polar Checkout - redirect to Polar
-            window.location.href = data.redirect_url;
-          } else if (data.provider === 'razorpay' && data.checkout && (data.order_id || data.subscription_id)) {
-            // Razorpay Checkout - open embedded form (supports both orders and subscriptions)
-            await handleRazorpayCheckout(data);
+          // Polar Checkout — always redirect
+          if (data.url) {
+            window.location.href = data.url;
           }
         } else {
+          // Handle error response
           let errorMessage = 'Failed to create checkout session';
-          let shouldRetryWithPolar = false;
 
-          // Clone the response to read it multiple times if needed
-          const responseClone = response.clone();
           const contentType = response.headers.get('content-type');
-          let errorData: any = {};
 
           try {
             if (contentType && contentType.includes('application/json')) {
-              errorData = await response.json();
-
-              // Only log if errorData has meaningful content
+              const errorData = await response.json();
               if (errorData && Object.keys(errorData).length > 0) {
                 console.error('Checkout session error:', errorData);
                 errorMessage = errorData.error || errorData.details || errorData.message || errorMessage;
               } else {
-                // Empty object response
                 console.error('Checkout session error - Empty response:', {
                   status: response.status,
                   statusText: response.statusText,
@@ -952,7 +693,6 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 errorMessage = `Server error (${response.status}): ${response.statusText || 'Empty response received'}`;
               }
             } else {
-              // Not JSON, try to get text
               const errorText = await response.text();
               errorMessage = `Server error (${response.status}): ${errorText || response.statusText || 'Unknown error'}`;
               console.error('Checkout session error - Non-JSON response:', {
@@ -961,65 +701,12 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                 body: errorText.substring(0, 200)
               });
             }
-
-            // If currency is not supported by Razorpay, automatically retry with Polar
-            if (errorData && errorData.unsupportedCurrency && errorData.suggestedProvider === 'polar' && paymentProvider === 'razorpay') {
-              console.log('Currency not supported by Razorpay, switching to Polar');
-              shouldRetryWithPolar = true;
-              setPaymentProvider('polar');
-
-              // Retry the payment with Polar
-              const retryBody = {
-                planKey: selectedPlan?.key,
-                interval: selectedPlan ? getBillingInterval(selectedPlan) : 'monthly',
-                discountCode: appliedDiscount?.code || undefined,
-                couponCode: appliedDiscount?.code || undefined,
-                provider: 'polar',
-                returnUrl: returnUrl || window.location.href,
-                triggerContext
-              };
-
-              const retryResponse = await fetch('/api/checkout/session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include', // Include cookies for authentication
-                body: JSON.stringify(retryBody)
-              });
-
-              if (retryResponse.ok) {
-                const retryData = await retryResponse.json();
-                if (retryData.redirect_url) {
-                  window.location.href = retryData.redirect_url;
-                  return; // Exit early, redirecting to Polar
-                }
-              }
-            }
           } catch (parseError) {
-            // If we can't parse the response, try to get text from clone
-            try {
-              const errorText = await responseClone.text();
-              console.error('Failed to parse error response:', {
-                status: response.status,
-                statusText: response.statusText,
-                body: errorText.substring(0, 200),
-                parseError
-              });
-              errorMessage = `Server error (${response.status}): ${errorText.substring(0, 100) || response.statusText || 'Failed to parse response'}`;
-            } catch (textError) {
-              // Last resort - use status only
-              console.error('Failed to read error response:', {
-                status: response.status,
-                statusText: response.statusText,
-                parseError,
-                textError
-              });
-              errorMessage = `Server error (${response.status}): ${response.statusText || 'Unknown error'}`;
-            }
+            console.error('Failed to parse error response:', parseError);
+            errorMessage = `Server error (${response.status}): ${response.statusText || 'Unknown error'}`;
           }
 
-          if (!shouldRetryWithPolar) {
-            throw new Error(errorMessage);
-          }
+          throw new Error(errorMessage);
         }
       }
     } catch (error) {
@@ -1313,7 +1000,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                       {/* Unified Plans Container with Header & Current Plan */}
                       {(() => {
                         const availablePlans = Array.isArray(pricingPlans) && pricingPlans.length > 0
-                          ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan) && plan.key !== 'day_pass')
+                          ? pricingPlans.filter(plan => plan.key !== 'free' && !isCurrentPlan(plan))
                           : [];
 
                         const currentPlan = pricingPlans.find((plan: PricingPlan) => isCurrentPlan(plan));
@@ -1701,34 +1388,26 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                               </div>
                             ) : (
                               <>
-                                {providerHealth[paymentProvider] === false && (
+                                {providerHealth.polar === false && (
                                   <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
                                     <div className="flex items-start gap-2">
                                       <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                                       <div className="flex-1">
                                         <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                                          {paymentProvider === 'polar' ? 'Polar' : 'Razorpay'} is currently unavailable
+                                          Payment is temporarily unavailable
                                         </p>
                                         <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                                          {providerHealth.polar && providerHealth.razorpay ? (
-                                            'Both providers are available. Please try again.'
-                                          ) : providerHealth.polar ? (
-                                            'Switched to Polar. Please try again.'
-                                          ) : providerHealth.razorpay ? (
-                                            'Switched to Razorpay. Please try again.'
-                                          ) : (
-                                            'Payment processing is temporarily unavailable. Please try again later.'
-                                          )}
+                                          Payment processing is temporarily unavailable. Please try again later.
                                         </p>
                                       </div>
                                     </div>
                                   </div>
                                 )}
-                                {providerHealth[paymentProvider] === true && (
+                                {providerHealth.polar === true && (
                                   <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-lg">
                                     <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
                                       <Check className="w-4 h-4" />
-                                      <span>Payment via {paymentProvider === 'polar' ? 'Polar' : 'Razorpay'} is available</span>
+                                      <span>Payment is available</span>
                                     </div>
                                   </div>
                                 )}
@@ -1738,7 +1417,7 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             {/* Proceed to Payment Button */}
                             <button
                               onClick={handlePayment}
-                              disabled={loading || providerHealth[paymentProvider] === false || providerHealthLoading}
+                              disabled={loading || providerHealth.polar === false || providerHealthLoading}
                               className="w-full py-3 tablet:py-3.5 bg-blue-600 dark:bg-lime-500 hover:bg-blue-700 dark:hover:bg-lime-600 text-white dark:text-black font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
                             >
                               {loading ? (

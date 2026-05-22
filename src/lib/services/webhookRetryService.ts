@@ -11,7 +11,7 @@ export interface RetryResult {
 
 export interface FailedWebhook {
   _id: string;
-  provider: 'stripe' | 'razorpay';
+  provider: 'stripe' | 'polar';
   eventType: string;
   payload: any;
   status: string;
@@ -133,8 +133,6 @@ class WebhookRetryService {
       // Re-process the webhook based on provider
       if (webhookLog.provider === 'stripe') {
         await this.retryStripeWebhook(webhookLog);
-      } else if (webhookLog.provider === 'razorpay') {
-        await this.retryRazorpayWebhook(webhookLog);
       } else {
         throw new Error(`Unknown provider: ${webhookLog.provider}`);
       }
@@ -181,8 +179,6 @@ class WebhookRetryService {
 
   /**
    * Retry Stripe webhook
-   * Note: This re-processes the webhook by making an internal API call
-   * In production, you might want to extract processing logic into a shared service
    */
   private async retryStripeWebhook(webhookLog: any): Promise<void> {
     // For now, we'll mark it for manual review or implement a simpler retry
@@ -201,25 +197,7 @@ class WebhookRetryService {
     // Process based on event type - simplified version
     // In a full implementation, you'd extract the handler logic here
     console.log(`Retrying Stripe webhook: ${webhookLog.eventType}`, event);
-    
-    // For now, throw an error to indicate retry is needed
-    // This will be enhanced when processing logic is extracted
-    throw new Error('Webhook retry processing not yet fully implemented. Manual review required.');
-  }
 
-  /**
-   * Retry Razorpay webhook
-   * Note: This re-processes the webhook by making an internal API call
-   */
-  private async retryRazorpayWebhook(webhookLog: any): Promise<void> {
-    // Reconstruct the webhook payload
-    const event = {
-      event: webhookLog.eventType,
-      payload: webhookLog.payload
-    };
-
-    console.log(`Retrying Razorpay webhook: ${webhookLog.eventType}`, event);
-    
     // For now, throw an error to indicate retry is needed
     // This will be enhanced when processing logic is extracted
     throw new Error('Webhook retry processing not yet fully implemented. Manual review required.');

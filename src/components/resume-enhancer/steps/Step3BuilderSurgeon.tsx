@@ -38,6 +38,7 @@ import toast from 'react-hot-toast';
 import FloatingFormEditor from '@/components/resume-enhancer/FloatingFormEditor';
 import FloatingPulsePill, { type FloatingPulsePillHandle } from '@/components/resume-enhancer/FloatingPulsePill';
 import ATSMeterPanel from '@/components/resume-enhancer/panels/ATSMeterPanel';
+import { usePillEngine } from '@/hooks/usePillEngine';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ITemplate } from '@/types/template';
 import { gsap } from 'gsap';
@@ -185,20 +186,42 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       }
     };
 
-    // Auto-Save Effect
+    // ── Live score engine ──
+    // usePillEngine must be declared before the auto-save useEffect so its return values
+    // (pillMasterScore, pillAtsScore, etc.) are in scope for the dependency array.
+    // suppressAutoAnalysis=state.isAnalyzing prevents double-scoring during CV Surgeon scans.
+    const isJourneyCV = state.cvType === 'journey' && (state.jobData || state.journeyId);
+    const {
+      scoreResult: pillScoreResult,
+      masterScore: pillMasterScore,
+      atsScore: pillAtsScore,
+      issues: pillIssues,
+    } = usePillEngine(
+      state.cvData,
+      state.cvType,
+      state.keywordGapAnalysis,
+      { quietMode: true },
+      state.isAnalyzing  // suppress during surgeon scan to avoid score thrashing
+    );
+
+    // Auto-Save Effect: persists cvData AND freshly computed scores on every meaningful change.
+    // Scores are computed by usePillEngine (debounced 3 s); this effect fires 2 s after
+    // any of the tracked values change, giving ~5 s total latency to DB write.
     useEffect(() => {
       if (!state.cvData || !state.cvId) return;
 
+      // Build a composite key that captures both content and score changes
       const currentCvDataStr = JSON.stringify(state.cvData);
-      
-      // Initialize on first load to prevent immediate save
+      const currentSaveKey = `${currentCvDataStr}|${pillMasterScore}|${pillAtsScore}`;
+
+      // Initialize on first load to prevent an immediate save
       if (!lastSavedCvDataStrRef.current) {
-        lastSavedCvDataStrRef.current = currentCvDataStr;
+        lastSavedCvDataStrRef.current = currentSaveKey;
         return;
       }
 
-      // If data hasn't changed, don't save
-      if (currentCvDataStr === lastSavedCvDataStrRef.current) {
+      // If nothing changed, skip
+      if (currentSaveKey === lastSavedCvDataStrRef.current) {
         return;
       }
 
@@ -210,15 +233,30 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
       // Set new debounce timer
       autoSaveTimerRef.current = setTimeout(async () => {
         try {
+          // Determine which score to store as the ATS score:
+          // Journey CVs -> ATS keyword-match score; standalone/master -> CV quality score
+          const scoreForATS = isJourneyCV ? pillAtsScore : pillMasterScore;
+
           const response = await fetch(`/api/cvs/${state.cvId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cvData: state.cvData })
+            body: JSON.stringify({
+              cvData: state.cvData,
+              // Persist computed scores so Tracker cards, Canvas, and CVListView stay fresh
+              cv_score_master: pillMasterScore,
+              cv_score_ats: scoreForATS,
+              score_breakdown: {
+                structural: pillScoreResult?.cvScore?.completeness ?? 0,
+                industry:   pillScoreResult?.cvScore?.impactVerbs  ?? 0,
+                semantic:   pillScoreResult?.atsScore?.keywordMatch ?? 0,
+              },
+              active_issues_json: pillIssues ?? [],
+            })
           });
-          
+
           if (response.ok) {
-            lastSavedCvDataStrRef.current = currentCvDataStr;
-            console.log('CV Auto-saved successfully');
+            lastSavedCvDataStrRef.current = currentSaveKey;
+            console.log('CV Auto-saved successfully (with scores: master=%d, ats=%d)', pillMasterScore, scoreForATS);
           }
         } catch (err) {
           console.error('CV Auto-save failed:', err);
@@ -230,7 +268,9 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
           clearTimeout(autoSaveTimerRef.current);
         }
       };
-    }, [state.cvData, state.cvId]);
+      // Depend on cvData AND pill scores so an updated score triggers a re-save even
+      // when the user has stopped typing.
+    }, [state.cvData, state.cvId, pillMasterScore, pillAtsScore, pillScoreResult, pillIssues, isJourneyCV]);
 
     useEffect(() => {
       if (hasLoadedUserSectionTitlesRef.current) return;
@@ -401,9 +441,6 @@ const Step3BuilderSurgeon = forwardRef<Step3BuilderSurgeonRef, Step3BuilderSurge
     // ATS Context for scores
     const { atsScore, atsAnalysis, isATSLoading, refreshATSScore, updateATSScore } = useATS();
 
-    // Journey CVs use job description for analysis - don't require targetRole/seniorityLevel
-    // Only standalone/master CVs need targetRole/seniorityLevel
-    const isJourneyCV = state.cvType === 'journey' && (state.jobData || state.journeyId);
     const isRoleReady = isJourneyCV || Boolean(state.targetRole && state.seniorityLevel);
 
     // Get current analysis mode information

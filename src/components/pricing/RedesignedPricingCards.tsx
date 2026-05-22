@@ -3,6 +3,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import posthog from 'posthog-js';
 import {
   CheckCircle,
   Star,
@@ -35,14 +36,10 @@ interface PricingPlan {
   isPopular: boolean;
   isBestValue: boolean;
   sortOrder: number;
-  stripePriceId_monthly?: string;
-  stripePriceId_quarterly?: string;
-  stripePriceId_yearly?: string;
-  stripePriceId_one_time?: string;
-  razorpayPlanId_monthly?: string;
-  razorpayPlanId_quarterly?: string;
-  razorpayPlanId_yearly?: string;
-  dayPassDuration?: number;
+  polarPriceId_monthly?: string;
+  polarPriceId_quarterly?: string;
+  polarPriceId_yearly?: string;
+  polarPriceId_one_time?: string;
 }
 
 interface RedesignedPricingCardsProps {
@@ -236,7 +233,17 @@ const RedesignedPricingCards: React.FC<RedesignedPricingCardsProps> = ({
             </div>
           ) : (
             <button
-              onClick={() => onCheckout?.(plan)}
+              onClick={() => {
+                posthog.capture('pricing_plan_selected', {
+                  plan_key: plan.key,
+                  plan_name: plan.name,
+                  plan_price: getPlanPrice(plan),
+                  plan_currency: plan.currency,
+                  is_popular: plan.isPopular,
+                  is_best_value: plan.isBestValue,
+                });
+                onCheckout?.(plan);
+              }}
               className={`w-full py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${plan.isBestValue || plan.isPopular
                 ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 shadow-lg'
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'

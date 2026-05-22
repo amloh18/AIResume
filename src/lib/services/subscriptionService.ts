@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/database';
 import User from '@/models/User';
 import { getAdminPricingPlan } from '@/models/admin-models';
@@ -19,123 +20,115 @@ export interface SubscriptionActivationResult {
  */
 class SubscriptionService {
   /**
-   * Activate day pass (24-hour access)
-   * Note: Quarterly and yearly are also one-time payments, handled similarly
+   * Create a new subscription document and update the user's plan inside a transaction session
    */
-  async activateDayPass(
-    userId: string,
-    paymentId: string,
-    region: string,
+  async createSubscription(
+    userId: string | mongoose.Types.ObjectId,
+    planId: string | mongoose.Types.ObjectId,
+    billingCycle: 'monthly' | 'quarterly' | 'yearly' | 'one-time',
+    amount: number,
     currency: string,
-    price: number
-  ): Promise<SubscriptionActivationResult> {
-    try {
-      await connectToDatabase();
+    paymentMethod: 'polar' | 'stripe',
+    paymentProviderId: string,
+    discountCodeId: string | mongoose.Types.ObjectId | null,
+    discountAmount: number,
+    metadata: any = {},
+    session?: any
+  ): Promise<any> {
+    await connectToDatabase();
 
-      // STATE VERIFICATION: Check user state before activation
-      const stateBefore = await this.verifyUserState(userId);
-      console.log('🔍 SubscriptionService - State before day pass activation:', {
-        userId,
-        currentPlan: stateBefore.currentPlan,
-        subscriptionStatus: stateBefore.currentSubscriptionStatus,
-        warnings: stateBefore.warnings,
-        errors: stateBefore.errors
-      });
-
-      if (!stateBefore.valid) {
-        return { 
-          success: false, 
-          error: `Invalid user state: ${stateBefore.errors?.join(', ')}` 
-        };
-      }
-
-      const user = await User.findById(userId);
-      if (!user) {
-        return { success: false, error: 'User not found' };
-      }
-
-      const PricingPlan = await getAdminPricingPlan();
-      const plan = await PricingPlan.findOne({ key: 'day_pass', status: 'active' });
-      if (!plan) {
-        return { success: false, error: 'Day pass plan not found' };
-      }
-
-      const now = new Date();
-      const durationHours = plan.dayPassDuration || 24;
-      const expiresAt = new Date(now.getTime() + durationHours * 60 * 60 * 1000);
-      const documentsAllowed = plan.maxCVs || 5; // Typically 5 documents per day pass
-
-      // Find the latest expiry from existing active passes
-      let latestExpiry = expiresAt;
-      if (user.dayPassPurchases && Array.isArray(user.dayPassPurchases)) {
-        const activePasses = user.dayPassPurchases.filter((pass: any) => {
-          const passExpiry = new Date(pass.expiresAt);
-          return passExpiry > now;
-        });
-        
-        if (activePasses.length > 0) {
-          const existingExpiries = activePasses.map((pass: any) => new Date(pass.expiresAt).getTime());
-          const latestExisting = new Date(Math.max(...existingExpiries));
-          latestExpiry = expiresAt > latestExisting ? expiresAt : latestExisting;
-        }
-      }
-
-      // Add new day pass purchase to array (don't reset usage counters)
-      // This allows cumulative usage across multiple day passes
-      await User.findByIdAndUpdate(userId, {
-        $set: {
-          currentPlanKey: 'day_pass',
-          'subscription.planKey': 'day_pass',
-          'subscription.status': 'active',
-          'subscription.startDate': now,
-          'subscription.accessExpiresAt': latestExpiry, // Set to latest expiry across all passes
-          'subscription.currentPeriodStart': now,
-          'subscription.currentPeriodEnd': latestExpiry,
-          'subscription.usageResetDate': latestExpiry,
-          'subscription.provider': region === 'IN' ? 'razorpay' : 'polar',
-          'subscription.interval': 'one-time',
-          'subscription.purchaseRegion': region,
-          'subscription.purchaseCurrency': currency,
-          'subscription.purchasePrice': price,
-          'subscription.autoRenew': false
-        },
-        $push: {
-          dayPassPurchases: {
-            purchaseDate: now,
-            expiresAt: expiresAt,
-            paymentId: paymentId,
-            region: region,
-            currency: currency,
-            price: price,
-            documentsAllowed: documentsAllowed
-          }
-        }
-      });
-
-      // Initialize credits for day pass
-      await creditService.initializeCredits(userId, 'day_pass');
-
-      // STATE VERIFICATION: Check user state after activation
-      const stateAfter = await this.verifyUserState(userId);
-      console.log('✅ SubscriptionService - State after day pass activation:', {
-        userId,
-        currentPlan: stateAfter.currentPlan,
-        subscriptionStatus: stateAfter.currentSubscriptionStatus,
-        warnings: stateAfter.warnings
-      });
-
-      const hoursRemaining = durationHours;
-
-      return {
-        success: true,
-        expiresAt,
-        hoursRemaining
-      };
-    } catch (error) {
-      console.error('Error activating day pass:', error);
-      return { success: false, error: 'Failed to activate day pass' };
+    const PricingPlan = await getAdminPricingPlan();
+    const pricingPlan = await PricingPlan.findById(planId).session(session);
+    if (!pricingPlan) {
+      throw new Error(`Pricing plan not found for ID: ${planId}`);
     }
+
+    const planKey = pricingPlan.key;
+    const now = new Date();
+    let expiresAt = new Date(now);
+    let autoRenew = false;
+
+    // Calculate expiry date based on plan type
+    if (planKey === 'pro_monthly') {
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+      autoRenew = true;
+    } else if (planKey === 'pro_quarterly') {
+      expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    } else if (planKey === 'pro_yearly') {
+      expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
+      autoRenew = billingCycle === 'yearly';
+    } else if (planKey === 'pro_lifetime') {
+      expiresAt = new Date(now.getTime() + 36500 * 24 * 60 * 60 * 1000);
+    } else {
+      // Fallback
+      expiresAt.setMonth(expiresAt.getMonth() + 1);
+    }
+
+    const usageResetDate = planKey === 'pro_monthly'
+      ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+      : expiresAt;
+
+    // Retrieve user inside the transaction to get cumulative access end time if applicable
+    const user = await User.findById(userId).session(session);
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
+    }
+
+    const Subscription = await import('@/models/Subscription').then(m => m.default);
+    const subDocs = await Subscription.create([{
+      userId,
+      planId,
+      status: 'active',
+      startDate: now,
+      endDate: expiresAt,
+      billingCycle,
+      amount: amount + discountAmount, // Gross amount
+      currency: currency.toUpperCase(),
+      paymentMethod,
+      paymentProviderId,
+      discountCodeId: discountCodeId || undefined,
+      discountAmount,
+      finalAmount: amount, // Net amount paid
+      nextBillingDate: autoRenew ? expiresAt : undefined,
+      metadata: {
+        polarCustomerId: metadata.polarCustomerId,
+        invoiceUrl: metadata.invoiceUrl,
+        receiptUrl: metadata.receiptUrl
+      }
+    }], { session });
+
+    const subscription = subDocs[0];
+
+    // Build the user update data
+    const userUpdate: any = {
+      $set: {
+        currentPlanKey: planKey,
+        'subscription.planKey': planKey,
+        'subscription.status': 'active',
+        'subscription.startDate': now,
+        'subscription.accessExpiresAt': expiresAt,
+        'subscription.currentPeriodStart': now,
+        'subscription.currentPeriodEnd': expiresAt,
+        'subscription.usageResetDate': usageResetDate,
+        'subscription.provider': paymentMethod,
+        'subscription.interval': billingCycle,
+        'subscription.purchaseRegion': metadata.region || 'US',
+        'subscription.purchaseCurrency': currency,
+        'subscription.purchasePrice': amount,
+        'subscription.autoRenew': autoRenew,
+        'subscription.providerSubscriptionId': paymentProviderId,
+        'subscription.providerCustomerId': metadata.polarCustomerId
+      }
+    };
+
+    await User.findByIdAndUpdate(userId, userUpdate, { session });
+
+    // Initialize credits inside the session transaction
+    await creditService.initializeCredits(userId.toString(), planKey, session);
+
+    return subscription;
   }
+
 
   /**
    * Activate Pro plan (monthly/quarterly/yearly)
@@ -144,7 +137,7 @@ class SubscriptionService {
   async activateProPlan(
     userId: string,
     planKey: 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime',
-    interval: 'monthly' | 'quarterly' | 'yearly',
+    interval: 'monthly' | 'quarterly' | 'yearly' | 'lifetime' | 'one-time',
     paymentId: string,
     region: string,
     currency: string,
@@ -231,7 +224,7 @@ class SubscriptionService {
         'subscription.currentPeriodStart': now,
         'subscription.currentPeriodEnd': expiresAt,
         'subscription.usageResetDate': usageResetDate,
-        'subscription.provider': region === 'IN' ? 'razorpay' : 'polar',
+        'subscription.provider': 'polar',
         'subscription.interval': interval,
         'subscription.purchaseRegion': region,
         'subscription.purchaseCurrency': currency,

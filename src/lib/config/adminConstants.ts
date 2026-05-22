@@ -28,7 +28,7 @@ export type SupportedCurrency = typeof SUPPORTED_CURRENCIES[number];
 /**
  * Payment providers
  */
-export const PAYMENT_PROVIDERS = ['polar', 'razorpay', 'admin', 'none'] as const;
+export const PAYMENT_PROVIDERS = ['polar', 'admin', 'none'] as const;
 export type PaymentProvider = typeof PAYMENT_PROVIDERS[number];
 
 /**

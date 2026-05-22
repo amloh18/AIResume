@@ -25,8 +25,7 @@ class CreditService {
    * Get credit allocation for a specific plan
    * Reads from database plan, falls back to hardcoded values if plan not found
    * Free: 1 job credit per month
-   * Day Pass: Unlimited (-1) for 24 hours
-   * Monthly/Quarterly/Yearly: Unlimited (-1) as long as subscription is active
+   * Monthly/Quarterly/Yearly/Lifetime: Unlimited (-1) as long as subscription is active
    */
   async getPlanCredits(planKey: string): Promise<PlanCreditAllocation> {
     try {
@@ -47,8 +46,6 @@ class CreditService {
       switch (planKey) {
         case 'free':
           return { jobCredits: 1, aiCredits: 3 }; // 1 job credit, 3 AI credits for free
-        case 'day_pass':
-          return { jobCredits: -1, aiCredits: -1 }; // Unlimited for 24 hours
         case 'pro_monthly':
         case 'pro_quarterly':
         case 'pro_yearly':
@@ -60,9 +57,6 @@ class CreditService {
     } catch (error) {
       console.error('Error getting plan credits:', error);
       // Fallback on error
-      if (planKey === 'day_pass') {
-        return { jobCredits: -1, aiCredits: -1 }; // Unlimited for day pass
-      }
       return { jobCredits: 1, aiCredits: 3 }; // Default to free plan on error
     }
   }
@@ -70,7 +64,7 @@ class CreditService {
   /**
    * Initialize credits for a user based on their plan
    */
-  async initializeCredits(userId: string, planKey: string): Promise<boolean> {
+  async initializeCredits(userId: string, planKey: string, session?: any): Promise<boolean> {
     try {
       await connectToDatabase();
 
@@ -85,7 +79,7 @@ class CreditService {
           'credits.lastResetDate': now,
           'credits.resetSchedule': resetSchedule
         }
-      });
+      }, { session });
 
       return true;
     } catch (error) {
@@ -110,7 +104,7 @@ class CreditService {
       }
 
       // For paid plans (monthly/quarterly/yearly/lifetime), check subscription status
-      if (['pro_monthly', 'pro_quarterly', 'pro_lifetime', 'pro_lifetime'].includes(user.currentPlanKey)) {
+      if (['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(user.currentPlanKey)) {
         // Check if user actually has an active subscription
         const subscription = user.subscription;
         const hasActiveSubscription = subscription &&
@@ -144,24 +138,6 @@ class CreditService {
 
         // Unlimited for active paid plans with valid subscription
         return { available: true, creditsRemaining: -1, limit: -1 };
-      }
-
-      // For day pass, check if expired
-      if (user.currentPlanKey === 'day_pass') {
-        // Dynamic import to avoid circular dependency
-        const { default: usageLimitsService } = await import('./usageLimitsService');
-        const timeCheck = await usageLimitsService.checkTimeBasedAccess(userId);
-        if (!timeCheck.hasAccess) {
-          return { available: false, creditsRemaining: 0, limit: 0 };
-        }
-
-        // Day pass is unlimited - return unlimited regardless of stored credits
-        const planCredits = await this.getPlanCredits('day_pass');
-        return {
-          available: true,
-          creditsRemaining: planCredits.jobCredits === -1 ? -1 : planCredits.jobCredits,
-          limit: planCredits.jobCredits
-        };
       }
 
       // For free plan, check credits based on action type
@@ -403,10 +379,9 @@ class CreditService {
     switch (planKey) {
       case 'free':
         return 'monthly'; // Resets on 1st of month
-      case 'day_pass':
-        return 'never'; // No reset, expires with pass
       case 'pro_monthly':
       case 'pro_quarterly':
+      case 'pro_yearly':
       case 'pro_lifetime':
         return 'never'; // Unlimited, no reset needed
       default:

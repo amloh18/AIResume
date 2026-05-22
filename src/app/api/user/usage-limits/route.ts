@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       let remaining: number | undefined = creditStatus.jobCredits;
       let limit: number | undefined = creditStatus.jobCredits;
 
-      if (planKey === 'free' || planKey === 'day_pass') {
+      if (planKey === 'free') {
         const creditCheck = await creditService.checkCreditAvailability(userId, 'job_create');
         remaining = creditCheck.creditsRemaining;
         limit = creditCheck.limit;
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       let aiCreditsRemaining: number | undefined = creditStatus.aiCredits;
       let aiCreditsLimit: number | undefined = creditStatus.aiCredits;
       
-      if (planKey === 'free' || planKey === 'day_pass') {
+      if (planKey === 'free') {
         const aiCreditCheck = await creditService.checkCreditAvailability(userId, 'ai_generation');
         aiCreditsRemaining = aiCreditCheck.creditsRemaining;
         aiCreditsLimit = aiCreditCheck.limit;

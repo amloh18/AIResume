@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { getConnection } from '@/lib/database';
 import { User } from '@/models';
 import PolarService from '@/lib/payment/polar';
-import RazorpayService from '@/lib/payment/razorpay';
 import { LocationService } from '@/lib/payment/locationService';
 
 export async function POST(request: NextRequest) {
@@ -37,7 +36,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const partner = currency === 'INR' ? 'razorpay' : 'polar';
+    const partner = 'polar';
+
+    // Track checkout initiation server-side
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user._id.toString(),
+        event: 'checkout_initiated',
+        properties: {
+          plan_name: planName,
+          billing_cycle: billingCycle || 'one-time',
+          amount,
+          currency,
+          payment_provider: partner,
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog capture error (checkout_initiated):', phError);
+    }
 
     if (partner === 'polar') {
       if (!productPriceId) {
@@ -66,40 +84,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      return NextResponse.json({
+return NextResponse.json({
         success: true,
         checkoutId: polarResult.checkoutId,
         checkoutUrl: polarResult.checkoutUrl,
         paymentMethod: 'polar'
       });
-
-    } else {
-      const razorpayResult = await RazorpayService.createOrder({
-        amount: amount,
-        currency: currency,
-        receipt: `cv_circle_${Date.now()}`,
-        notes: {
-          userId: user._id.toString(),
-          planName: planName,
-          billingCycle: billingCycle || 'one-time'
-        }
-      });
-
-      if (!razorpayResult.success) {
-        return NextResponse.json(
-          { success: false, error: razorpayResult.error },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json({
-        success: true,
-        orderId: razorpayResult.orderId,
-        amount: razorpayResult.amount,
-        currency: razorpayResult.currency,
-        paymentMethod: 'razorpay'
-      });
     }
+
+    return NextResponse.json({
+      success: false,
+      error: 'No valid payment provider available'
+    }, { status: 500 });
 
   } catch (error) {
     console.error('Error creating payment intent:', error);

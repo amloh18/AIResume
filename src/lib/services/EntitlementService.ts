@@ -43,18 +43,11 @@ export interface GateResult extends EntitlementResult {
 // Meter limits by plan (per month unless otherwise specified)
 const METER_LIMITS: Record<string, Record<string, number>> = {
     free: {
-        JOB_ACTIVATION: 1,      // 1 job activation per month (meter, not quota)
-        PDF_DOWNLOAD: 5,
-        AI_FIX: 10,
-        CV_CREATION: 5,
-        COVER_LETTER_AI: 0      // Not available for free
-    },
-    pro_yearly: {
-        JOB_ACTIVATION: -1,     // Unlimited
-        PDF_DOWNLOAD: -1,
-        AI_FIX: -1,
-        CV_CREATION: -1,
-        COVER_LETTER_AI: -1
+        JOB_ACTIVATION: -1,      // Unlimited
+        PDF_DOWNLOAD: -1,       // Unlimited
+        AI_FIX: 10,             // Limited AI surgeon runs
+        CV_CREATION: -1,        // Unlimited CV creation
+        COVER_LETTER_AI: 0      // Pro only feature
     },
     pro_monthly: {
         JOB_ACTIVATION: -1,
@@ -89,19 +82,14 @@ const METER_LIMITS: Record<string, Record<string, number>> = {
 // Quota limits by plan (concurrent inventory)
 const QUOTA_LIMITS: Record<string, Record<string, number>> = {
     free: {
-        ACTIVE_JOBS: 3,         // 3 active (non-archived) jobs
-        DRAFTS: 10,             // 10 draft CVs
-        JOURNEY_CVS: 1          // 1 active journey CV
-    },
-    pro_yearly: {
-        ACTIVE_JOBS: -1,         // No Job Tracker for Day Pass
-        DRAFTS: -1,
-        JOURNEY_CVS: -1
+        ACTIVE_JOBS: -1,         // Unlimited jobs
+        DRAFTS: -1,              // Unlimited drafts
+        JOURNEY_CVS: -1          // Unlimited journey CVs
     },
     pro_monthly: {
         ACTIVE_JOBS: -1,
         DRAFTS: -1,
-        JOURNEY_CVS: -1         // Unlimited for all pro plans
+        JOURNEY_CVS: -1
     },
     pro_quarterly: {
         ACTIVE_JOBS: -1,
@@ -447,10 +435,10 @@ class EntitlementService {
                     if (masterCount >= 1) shouldFreeze = true;
                     masterCount++;
                 } else if (cv.cvType === 'journey') {
-                    if (journeyCount >= quotaLimits.JOURNEY_CVS) shouldFreeze = true;
+                    if (quotaLimits.JOURNEY_CVS !== -1 && journeyCount >= quotaLimits.JOURNEY_CVS) shouldFreeze = true;
                     journeyCount++;
                 } else {
-                    if (standaloneCount >= 1) shouldFreeze = true;
+                    // Standalone CVs are unlimited under current Free plan limits
                     standaloneCount++;
                 }
 

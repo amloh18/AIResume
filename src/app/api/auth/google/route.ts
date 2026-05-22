@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
           planKey: 'free',
           status: 'inactive',
           startDate: new Date(),
-          provider: 'stripe',
+          provider: 'polar',
           interval: 'monthly',
           seats: 3,
           storageUsed: 0,

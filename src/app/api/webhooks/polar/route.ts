@@ -166,20 +166,26 @@ async function handleCheckoutCompleted(checkout: any) {
   }
 
   const userId = user._id.toString();
-  const planName = metadata.planName || 'Unknown Plan';
-  const billingCycle = metadata.billingCycle || 'one-time';
-
   const PricingPlan = await getAdminPricingPlan();
-  let pricingPlan = await PricingPlan.findOne({ name: planName });
+  let pricingPlan = null;
 
-  if (!pricingPlan && metadata.planId) {
+  if (metadata.planId) {
     pricingPlan = await PricingPlan.findById(metadata.planId);
+  }
+  if (!pricingPlan && metadata.planKey) {
+    pricingPlan = await PricingPlan.findOne({ key: metadata.planKey });
+  }
+  if (!pricingPlan && metadata.planName) {
+    pricingPlan = await PricingPlan.findOne({ name: metadata.planName });
   }
 
   if (!pricingPlan) {
-    console.error(`Pricing plan not found: ${planName}`);
-    throw new Error(`Pricing plan not found: ${planName}`);
+    console.error(`Pricing plan not found: ID=${metadata.planId}, Key=${metadata.planKey}, Name=${metadata.planName}`);
+    throw new Error(`Pricing plan not found for checkout metadata`);
   }
+
+  const finalPlanName = pricingPlan.name || metadata.planName || 'Unknown Plan';
+  const billingCycle = metadata.interval || metadata.billingCycle || 'one-time';
 
   const Coupon = await import('@/models/Coupon').then(m => m.default);
   let discountAmount = 0;
@@ -212,6 +218,7 @@ async function handleCheckoutCompleted(checkout: any) {
       discountAmount,
       {
         polarCustomerId: customerId,
+        region: metadata.region
       },
       session
     );
@@ -237,11 +244,11 @@ async function handleCheckoutCompleted(checkout: any) {
 
     const invoiceItem = await InvoiceItem.create([{
       invoiceId: invoice[0]._id,
-      description: `${planName} Subscription`,
+      description: `${finalPlanName} Subscription`,
       amount: finalAmount + discountAmount,
       quantity: 1,
       metadata: {
-        planName: planName,
+        planName: finalPlanName,
         billingCycle: billingCycle,
       }
     }], { session });
@@ -252,27 +259,48 @@ async function handleCheckoutCompleted(checkout: any) {
       amount: finalAmount,
       currency: currency.toUpperCase(),
       status: 'completed',
-      description: `Subscription payment for ${planName}`,
+      description: `Subscription payment for ${finalPlanName}`,
       paymentProvider: 'polar',
       metadata: {
         checkoutId: checkoutId,
         subscriptionId: subscription._id.toString(),
         invoiceId: invoice[0]._id.toString(),
-        planName: planName,
+        planName: finalPlanName,
       },
       session
     });
-
-    user.currentPlanKey = pricingPlan.planKey;
-    await user.save({ session });
 
     console.log('Polar checkout completed processing successful:', {
       userId,
       subscriptionId: subscription._id,
       invoiceId: invoice[0]._id,
-      planName
+      planName: finalPlanName
     });
   });
+
+  // Track payment completion server-side (outside transaction to avoid blocking)
+  try {
+    const { getPostHogClient } = await import('@/lib/posthog-server');
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: userId,
+      event: 'subscription_payment_completed',
+      properties: {
+        plan_name: finalPlanName,
+        billing_cycle: billingCycle,
+        amount: finalAmount,
+        currency: currency.toUpperCase(),
+        payment_provider: 'polar',
+        checkout_id: checkoutId,
+        $set: {
+          plan: finalPlanName,
+          billing_cycle: billingCycle,
+        },
+      },
+    });
+  } catch (phError) {
+    console.error('PostHog capture error (subscription_payment_completed):', phError);
+  }
 }
 
 async function handleCheckoutExpired(checkout: any) {
@@ -322,11 +350,36 @@ async function handleChargeRefunded(charge: any) {
     }
 
     const user = await User.findById(invoice.userId);
-    if (user && user.currentPlanKey !== 'free') {
+    if (user) {
       user.currentPlanKey = 'free';
+      if (user.subscription) {
+        user.subscription.planKey = 'free';
+        user.subscription.status = 'expired';
+      }
       await user.save();
     }
 
     console.log('Refund processed successfully for checkout:', checkoutId);
+
+    // Track refund server-side
+    if (user) {
+      try {
+        const { getPostHogClient } = await import('@/lib/posthog-server');
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: user._id.toString(),
+          event: 'subscription_payment_refunded',
+          properties: {
+            checkout_id: checkoutId,
+            payment_provider: 'polar',
+            $set: {
+              plan: 'free',
+            },
+          },
+        });
+      } catch (phError) {
+        console.error('PostHog capture error (subscription_payment_refunded):', phError);
+      }
+    }
   }
 }

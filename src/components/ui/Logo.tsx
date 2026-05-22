@@ -10,7 +10,7 @@ const Logo = ({ className = '', size = 'md' }: LogoProps) => {
   const sizeMap = {
     sm: { img: 64 },
     md: { img: 88 },
-    lg: { img: 128 }
+    lg: { img: 132 }
   };
 
   return (

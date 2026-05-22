@@ -31,7 +31,6 @@ export interface MembershipInfo {
     planKey: string;
     planName: string;
     isFreePlan: boolean;
-    isDayPass: boolean;
     isProMember: boolean;
     isLifetimeMember: boolean;
     limits: PlanLimits;
@@ -61,9 +60,9 @@ export interface UseMembershipReturn {
  */
 const PLAN_NAMES: Record<string, string> = {
     free: 'Free',
-    day_pass: 'Day Pass',
     pro_monthly: 'Pro Monthly',
     pro_quarterly: 'Pro Quarterly',
+    pro_yearly: 'Pro Yearly',
     pro_lifetime: 'Pro Lifetime',
 };
 
@@ -104,7 +103,6 @@ export function useMembership(): UseMembershipReturn {
                     planKey: 'free',
                     planName: 'Free',
                     isFreePlan: true,
-                    isDayPass: false,
                     isProMember: false,
                     isLifetimeMember: false,
                     limits: PLAN_LIMITS.free,
@@ -122,25 +120,15 @@ export function useMembership(): UseMembershipReturn {
                 const limits = getPlanLimits(planKey);
                 const isActive = data.subscription?.status === 'active' || planKey === 'free';
 
-                // Check day pass expiry
-                let isDayPassActive = false;
-                if (planKey === 'day_pass' && data.subscription?.accessExpiresAt) {
-                    const expiresAt = new Date(data.subscription.accessExpiresAt);
-                    isDayPassActive = expiresAt > new Date();
-                }
-
                 setMembership({
                     planKey,
                     planName: PLAN_NAMES[planKey] || planKey,
                     isFreePlan: planKey === 'free',
-                    isDayPass: planKey === 'day_pass' && isDayPassActive,
-                    isProMember: ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(planKey) && isActive,
+                    isProMember: ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(planKey) && isActive,
                     isLifetimeMember: planKey === 'pro_lifetime' && isActive,
                     limits,
-                    isSubscriptionActive: isActive || isDayPassActive,
-                    expiresAt: data.subscription?.accessExpiresAt
-                        ? new Date(data.subscription.accessExpiresAt)
-                        : data.subscription?.endDate
+                    isSubscriptionActive: isActive,
+                    expiresAt: data.subscription?.endDate
                             ? new Date(data.subscription.endDate)
                             : null,
                 });
@@ -150,7 +138,6 @@ export function useMembership(): UseMembershipReturn {
                     planKey: 'free',
                     planName: 'Free',
                     isFreePlan: true,
-                    isDayPass: false,
                     isProMember: false,
                     isLifetimeMember: false,
                     limits: PLAN_LIMITS.free,
@@ -167,7 +154,6 @@ export function useMembership(): UseMembershipReturn {
                 planKey: 'free',
                 planName: 'Free',
                 isFreePlan: true,
-                isDayPass: false,
                 isProMember: false,
                 isLifetimeMember: false,
                 limits: PLAN_LIMITS.free,
@@ -215,9 +201,9 @@ export function useMembership(): UseMembershipReturn {
             case 'unlimitedJobs':
                 return limits.maxJobs === -1;
             case 'linkedinToneChange':
-                return limits.linkedinToneChange;  // Day Pass + Pro can change tone
+                return limits.linkedinToneChange;  // Pro can change tone
             case 'linkedinCVSelection':
-                return limits.linkedinCVSelection; // Day Pass + Pro can select CVs
+                return limits.linkedinCVSelection; // Pro can select CVs
             default:
                 return false;
         }
@@ -235,15 +221,15 @@ export function useMembership(): UseMembershipReturn {
             case 'journeyCVs':
                 return 'Journey CVs require a Pro membership. Upgrade to tailor your CV for specific jobs.';
             case 'standaloneCVs':
-                return 'Creating standalone CVs requires a Day Pass or Pro membership.';
+                return 'Creating standalone CVs requires a Pro membership.';
             case 'premiumTemplates':
-                return 'Premium templates require a Day Pass or Pro membership.';
+                return 'Premium templates require a Pro membership.';
             case 'aiSurgeonFull':
-                return 'Full AI rewrite requires a Day Pass or Pro membership. Free users get spelling corrections only.';
+                return 'Full AI rewrite requires a Pro membership. Free users get spelling corrections only.';
             case 'coverLetterAI':
-                return 'Cover Letter Generator requires a Day Pass or Pro membership.';
+                return 'Cover Letter Generator requires a Pro membership.';
             case 'docxExport':
-                return 'DOCX export requires a Day Pass or Pro membership. Free users can download as PDF.';
+                return 'DOCX export requires a Pro membership. Free users can download as PDF.';
             case 'interviewCoach':
                 return 'Interview Coach requires a Pro membership.';
             case 'jobTracker':
@@ -251,17 +237,17 @@ export function useMembership(): UseMembershipReturn {
             case 'jobParsing':
                 return 'Job parsing requires a Pro membership. Upgrade to parse and track jobs.';
             case 'prioritySupport':
-                return 'Priority support is available with Pro Quarterly or Lifetime membership.';
+                return 'Priority support is available with Pro Yearly or Lifetime membership.';
             case 'advancedAnalytics':
                 return 'Advanced analytics require a Pro membership.';
             case 'careerVault':
-                return 'Career Vault is exclusive to Pro Lifetime members.';
+                return 'Career Vault is exclusive to Pro members.';
             case 'unlimitedJobs':
                 return 'Unlimited job tracking requires a Pro membership.';
             case 'linkedinToneChange':
-                return 'Tone customization requires a Day Pass or Pro membership.';
+                return 'Tone customization requires a Pro membership.';
             case 'linkedinCVSelection':
-                return 'CV selection requires a Day Pass or Pro membership. Free users use the Master CV only.';
+                return 'CV selection requires a Pro membership. Free users use the Master CV only.';
             default:
                 return 'This feature requires a Pro membership.';
         }
@@ -269,7 +255,7 @@ export function useMembership(): UseMembershipReturn {
 
     // Derived state
     const isPaidMember = useMemo(() => {
-        return membership?.isProMember || membership?.isDayPass || false;
+        return membership?.isProMember || false;
     }, [membership]);
 
     // Initial fetch
@@ -292,7 +278,7 @@ export function useMembership(): UseMembershipReturn {
  * Helper to check if a subscription plan is a pro plan
  */
 export function isProPlan(planKey: string): boolean {
-    return ['pro_monthly', 'pro_quarterly', 'pro_lifetime'].includes(planKey);
+    return ['pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'].includes(planKey);
 }
 
 /**
@@ -301,7 +287,6 @@ export function isProPlan(planKey: string): boolean {
 export function isSubscriptionActive(subscription: {
     status?: string;
     endDate?: Date | string;
-    accessExpiresAt?: Date | string;
 }): boolean {
     if (subscription.status === 'inactive' || subscription.status === 'cancelled') {
         return false;
@@ -313,12 +298,6 @@ export function isSubscriptionActive(subscription: {
     if (subscription.endDate) {
         const endDate = new Date(subscription.endDate);
         if (endDate < now) return false;
-    }
-
-    // Check access expiry (for day passes)
-    if (subscription.accessExpiresAt) {
-        const expiresAt = new Date(subscription.accessExpiresAt);
-        if (expiresAt < now) return false;
     }
 
     return true;

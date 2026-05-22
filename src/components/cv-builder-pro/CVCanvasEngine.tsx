@@ -2,7 +2,7 @@
 
 
 import React, { useState, useEffect, useImperativeHandle, forwardRef, useMemo, useCallback } from 'react';
-import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles } from 'lucide-react';
+import { GripVertical, Download, Plus, LayoutTemplate, Save, RefreshCw, Layers, Check, Search, Filter, Briefcase, PlusCircle, Trash2, ChevronUp, ChevronDown, ImageIcon, ArrowRight, Loader2, PlayCircle, Eye, MousePointer2, Wand2, Quote, FileText, Palette, FileJson, X, Sparkles, Copy, CopyCheck } from 'lucide-react';
 import { CANVAS_TEMPLATES, TEMPLATE_CATEGORIES, SNIPPETS, TITLE_STYLES, SNIPPET_FAMILIES, ATS_SNIPPETS } from './registry';
 import { EditableField, CanvasSnippet, CanvasZone, StaticLayoutRenderer, FloatingToolbar, CanvasContext } from './components/CoreUI';
 import { JSONSidebarViewer } from './components/JSONSidebarViewer';
@@ -11,6 +11,7 @@ import { generateId, setNestedValue, getNestedValue, escapeRegExp } from './help
 import { usePaymentModal } from '@/contexts/PaymentModalContext';
 import { analyzeText } from '@/lib/grammar/engine';
 import { computeCanvasLayoutMetrics } from './layout-utils';
+import { DEFAULT_UNIFIED_CV_DATA } from '@/types/unified-cv-schema';
 
 const ReadOnlyWrapper = (props: any) => <EditableField {...props} readOnly={true} />;
 const EditableWrapper = EditableField;
@@ -306,6 +307,20 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
   const brandGreen = isDarkUI ? 'text-[#7EE787]' : 'text-emerald-600';
   const brandGreenBg = isDarkUI ? 'bg-[#7EE787] text-black' : 'bg-emerald-600 text-white';
   const btnSecondary = isDarkUI ? 'bg-[#222] text-gray-300 hover:bg-[#333] border-[#333]' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-200';
+
+  // Copy the JSON template (DEFAULT_UNIFIED_CV_DATA) to the user's clipboard
+  const handleCopyJsonTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2));
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = JSON.stringify(DEFAULT_UNIFIED_CV_DATA, null, 2);
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+  };
   const layoutMetrics = useMemo(() => computeCanvasLayoutMetrics({
     pageSize: design.pageSize,
     pageMargin: design.pageMargin,
@@ -990,9 +1005,24 @@ const CVCanvasEngine = forwardRef<CVCanvasBuilderRef, CVCanvasBuilderProps>(({ c
 
         {!readOnly && activeSidebar === 'data' && (
           <div className={`w-[600px] border-r flex flex-col shadow-2xl z-20 shrink-0 ${bgPanel}`}>
-            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}><h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}><FileJson size={18} className={brandGreen}/> Raw JSON</h3><button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18}/></button></div>
+            <div className={`p-5 border-b flex items-center justify-between ${bgNav}`}>
+              <h3 className={`font-bold flex items-center gap-2 ${textPrimary}`}>
+                <FileJson size={18} className={brandGreen} /> Raw JSON
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleCopyJsonTemplate}
+                  title="Copy JSON Template"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${brandGreenBg} hover:opacity-90`}
+                >
+                  <Copy size={13} />
+                  Copy JSON Template
+                </button>
+                <button onClick={() => setActiveSidebar(null)} className={textMuted}><X size={18} /></button>
+              </div>
+            </div>
             <div className="flex-1 overflow-hidden relative flex flex-col">
-              <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} onChange={(newData) => onDataChange(newData)} />
+              <JSONSidebarViewer data={cvData} focusedPath={focusedNode ? focusedNode.getAttribute('data-path') : null} onChange={(newData) => onDataChange(newData)} rainbowHighlight={true} />
             </div>
           </div>
         )}

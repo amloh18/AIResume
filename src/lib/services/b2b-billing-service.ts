@@ -1,13 +1,21 @@
 // @ts-nocheck
-import Stripe from 'stripe';
 import Tenant from '@/models/b2b/Tenant';
 import { log } from '@/lib/edge-logger';
 
-// Initialize Stripe instance
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
-export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: '2025-01-27.acacia' as any, // use compatible version
-});
+// Dynamically require stripe so the build doesn't fail when the package is absent
+let Stripe: any = null;
+let stripe: any = null;
+try {
+  Stripe = require('stripe'); // eslint-disable-line @typescript-eslint/no-var-requires
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
+  if (Stripe && typeof Stripe.default === 'function') {
+    stripe = new Stripe.default(stripeSecretKey, {
+      apiVersion: '2025-01-27.acacia' as any,
+    });
+  }
+} catch {
+  // stripe package not installed or not configured — runtime guards below
+}
 
 export class B2BBillingService {
   /**

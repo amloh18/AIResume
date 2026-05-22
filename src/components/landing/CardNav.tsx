@@ -98,7 +98,7 @@ const CardNav = ({
             type="button"
           >
             <div className="logo-image-wrapper relative">
-              <Logo size="md" showBoth={true} />
+              <Logo size="lg" showBoth={true} />
               {isBusinessRoute && (
                 <sup className="absolute -top-2 -right-4 text-[10px] font-bold text-[#80FF00]">HR</sup>
               )}

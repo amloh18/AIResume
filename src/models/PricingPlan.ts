@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPricingPlan extends Document {
-  key: 'free' | 'day_pass' | 'pro_monthly' | 'pro_quarterly' | 'pro_lifetime';
+  key: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
   name: string;
   description: string;
 
@@ -39,13 +39,10 @@ export interface IPricingPlan extends Document {
   promotionValidUntil?: Date;
   promotionDescription?: string;
   // Provider IDs
-  stripePriceId_monthly?: string;
-  stripePriceId_quarterly?: string;
-  stripePriceId_yearly?: string;
-  stripePriceId_one_time?: string;
-  razorpayPlanId_monthly?: string;
-  razorpayPlanId_quarterly?: string;
-  razorpayPlanId_yearly?: string;
+  polarPriceId_monthly?: string;
+  polarPriceId_quarterly?: string;
+  polarPriceId_yearly?: string;
+  polarPriceId_one_time?: string;
   // Day Pass specific
   dayPassDuration?: number; // in hours
   // Time-based fields
@@ -59,14 +56,13 @@ export interface IPricingPlan extends Document {
   // Format: { 'GB': ObjectId, 'US': ObjectId, 'IN': ObjectId, ... }
   countryPricingMap?: Map<string, mongoose.Types.ObjectId>;
 
-  regionalPricing?: Array<{
+  regionalPricing: Array<{
     region: string;
     currency: string;
     billingCycle?: 'monthly' | 'quarterly' | 'yearly' | 'one-time';
     price: number;
     displayPrice: string;
-    stripePriceId?: string;
-    razorpayPlanId?: string;
+    polarPriceId?: string;
   }>;
   createdAt: Date;
   updatedAt: Date;
@@ -76,7 +72,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   key: {
     type: String,
     required: [true, 'Plan key is required'],
-    enum: ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime']
+    enum: ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']
   },
   name: {
     type: String,
@@ -219,13 +215,10 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
     maxlength: [200, 'Promotion description cannot exceed 200 characters']
   },
   // Provider IDs
-  stripePriceId_monthly: String,
-  stripePriceId_quarterly: String,
-  stripePriceId_yearly: String,
-  stripePriceId_one_time: String,
-  razorpayPlanId_monthly: String,
-  razorpayPlanId_quarterly: String,
-  razorpayPlanId_yearly: String,
+  polarPriceId_monthly: String,
+  polarPriceId_quarterly: String,
+  polarPriceId_yearly: String,
+  polarPriceId_one_time: String,
   // Day Pass specific
   dayPassDuration: {
     type: Number,
@@ -283,8 +276,7 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
       required: true,
       trim: true
     },
-    stripePriceId: String,
-    razorpayPlanId: String
+    polarPriceId: String
   }]
 }, {
   timestamps: true,

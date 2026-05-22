@@ -58,7 +58,7 @@ export interface IActivityLog extends Document {
   paymentMetadata?: {
     amount?: number;
     currency?: string;
-    provider?: 'stripe' | 'razorpay';
+    provider?: 'stripe' | 'polar';
     transactionId?: string;
     planKey?: string;
   };
@@ -147,7 +147,7 @@ const activityLogSchema = new Schema<IActivityLog>({
     currency: String,
     provider: {
       type: String,
-      enum: ['stripe', 'razorpay']
+      enum: ['stripe', 'polar']
     },
     transactionId: String,
     planKey: String

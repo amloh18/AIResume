@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Trash2, Move } from 'lucide-react';
+import { GripVertical, Trash2 } from 'lucide-react';
 
 interface DraggableSectionProps {
     /** Unique section ID from cvData.structure.sections */
@@ -30,10 +30,16 @@ interface DraggableSectionProps {
 
 /**
  * DraggableSection - A wrapper that makes CV sections draggable
- * 
+ *
  * Uses @dnd-kit/sortable for drag-and-drop functionality.
- * Shows a centered overlay with drag icon on hover.
- * The entire section area is draggable.
+ * IMPORTANT: drag is ONLY activated when the user grabs the dedicated GripVertical
+ * handle in the section toolbar — clicking anywhere else on the section does NOT
+ * initiate a drag. This is achieved by:
+ *   1. Passing `activationConstraint: undefined` to useSortable (no auto-activation).
+ *   2. Spreading `{...listeners}` exclusively onto the drag-handle `<button>`.
+ *   3. Keeping `{...attributes}` on the wrapper for a11y (aria-roledescription etc.)
+ *      but NOT the pointer listeners that trigger dragging.
+ *
  * All editor UI is hidden in print/PDF via CSS.
  */
 export const DraggableSection: React.FC<DraggableSectionProps> = ({
@@ -54,13 +60,14 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
         attributes,
         listeners,
         setNodeRef,
+        setActivatorNodeRef,
         transform,
         transition,
         isDragging,
         isOver,
     } = useSortable({
         id: sectionId,
-        disabled: isDragDisabled || !showEditorUI || isLocked, // Locked sections cannot be dragged
+        disabled: isDragDisabled || !showEditorUI || isLocked,
         data: {
             type: 'section',
             sectionType,
@@ -70,15 +77,15 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
     const style: React.CSSProperties = {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.5 : 1,
+        opacity: isDragging ? 0.4 : 1,
         position: 'relative' as const,
     };
 
     const handleClick = (e: React.MouseEvent) => {
-        // Don't trigger click if clicking on overlay controls
+        // Don't trigger click if clicking on section toolbar buttons
         const target = e.target as HTMLElement;
         if (
-            target.closest('.cv-drag-overlay') ||
+            target.closest('.cv-section-toolbar') ||
             target.closest('.section-hover-controls')
         ) {
             return;
@@ -92,20 +99,14 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
         onDelete?.(sectionId);
     };
 
-    const handleOverlayClick = (e: React.MouseEvent) => {
-        // Let the overlay handle drag, but clicking the overlay itself opens editor
-        const target = e.target as HTMLElement;
-        if (target.closest('.cv-drag-icon-container')) {
-            return; // Don't open editor when clicking drag icon
-        }
-        // Otherwise, clicking overlay opens the section editor
-        onSectionClick?.(sectionId, e);
-    };
+    const canDrag = showEditorUI && !isLocked && !isDragDisabled;
 
     return (
         <div
             ref={setNodeRef}
             style={style}
+            // Only a11y attributes go on the wrapper — NO pointer listeners here
+            {...attributes}
             className={`cv-draggable-section ${className} ${isDragging ? 'is-dragging' : ''} ${isOver ? 'is-drop-target' : ''}`}
             data-draggable-section
             data-section-id={sectionId}
@@ -114,39 +115,47 @@ export const DraggableSection: React.FC<DraggableSectionProps> = ({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Centered Drag Overlay - appears on hover, hidden in print/PDF */}
-            {/* Don't show overlay for locked sections */}
+            {/* ── Section toolbar — only visible on hover, hidden in print ── */}
             {showEditorUI && !isLocked && (
                 <div
-                    className={`cv-drag-overlay cv-editor-only ${isHovered && !isDragging ? 'visible' : ''}`}
-                    onClick={handleOverlayClick}
+                    className={`cv-section-toolbar cv-editor-only absolute top-1 right-1 flex items-center gap-0.5 z-50 transition-opacity duration-150 ${
+                        isHovered && !isDragging ? 'opacity-100' : 'opacity-0 pointer-events-none'
+                    }`}
                 >
-                    {/* Centered Drag Icon Container */}
-                    <div
-                        className="cv-drag-icon-container"
-                        {...attributes}
-                        {...listeners}
-                        title="Drag to reorder section"
-                    >
-                        <Move size={20} className="cv-drag-icon" />
-                        <span className="cv-drag-label">Drag to reorder</span>
-                    </div>
+                    {/* ── Drag handle — the ONLY element with dnd-kit listeners ── */}
+                    {canDrag && (
+                        <button
+                            ref={setActivatorNodeRef}
+                            // Spread listeners ONLY here — this is the sole drag trigger
+                            {...listeners}
+                            type="button"
+                            title="Drag to reorder section"
+                            className="cv-drag-handle flex items-center gap-1 px-1.5 py-1 rounded-md bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-400 dark:hover:border-white/30 shadow-sm cursor-grab active:cursor-grabbing touch-none select-none"
+                            style={{ backdropFilter: 'blur(4px)' }}
+                        >
+                            <GripVertical size={13} />
+                            <span className="text-[10px] font-semibold tracking-wide leading-none hidden sm:inline">
+                                Drag
+                            </span>
+                        </button>
+                    )}
 
-                    {/* Delete Button in Overlay */}
+                    {/* ── Delete button ── */}
                     {canDelete && (
                         <button
-                            className="cv-delete-btn"
+                            type="button"
                             onClick={handleDelete}
                             title="Remove section"
-                            type="button"
+                            className="flex items-center justify-center w-6 h-6 rounded-md bg-white/90 dark:bg-gray-800/90 border border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:border-red-300 dark:hover:border-red-500/40 shadow-sm"
+                            style={{ backdropFilter: 'blur(4px)' }}
                         >
-                            <Trash2 size={16} />
+                            <Trash2 size={11} />
                         </button>
                     )}
                 </div>
             )}
 
-            {/* Drop Zone Indicator - shows when dragging over this position */}
+            {/* Drop zone indicator */}
             {isOver && !isDragging && (
                 <div className="cv-drop-zone-indicator cv-editor-only" />
             )}

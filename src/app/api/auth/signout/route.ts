@@ -52,6 +52,21 @@ export async function POST(request: NextRequest) {
       }
       
       await UnifiedAuthService.invalidateUserCache(session.user.id as string);
+
+      // Track sign-out server-side
+      try {
+        const { getPostHogClient } = await import('@/lib/posthog-server');
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: session.user.id as string,
+          event: 'user_signed_out',
+          properties: {
+            email: session.user.email ?? undefined,
+          },
+        });
+      } catch (phError) {
+        console.error('PostHog capture error (user_signed_out):', phError);
+      }
     }
 
     // Create response

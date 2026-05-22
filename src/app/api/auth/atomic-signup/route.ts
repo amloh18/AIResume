@@ -131,6 +131,21 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ Created one-time session token for NextAuth sign-in');
 
+    // Track email verification server-side
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user._id.toString(),
+        event: 'email_verified',
+        properties: {
+          email: user.email,
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog capture error (email_verified):', phError);
+    }
+
     // Return success with session token
     // The client will use this to sign in via NextAuth's passwordless provider
     return NextResponse.json({

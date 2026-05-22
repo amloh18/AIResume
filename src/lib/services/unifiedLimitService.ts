@@ -608,34 +608,6 @@ class UnifiedLimitService {
             console.error('Error handling plan upgrade:', error);
         }
     }
-
-    async handleDayPassExpiration(userId: string): Promise<void> {
-        try {
-            console.log(`⏰ Handling Day Pass expiration for user ${userId}`);
-
-            // Freeze excess documents (keep 1 Master, 1 Journey, 1 Standalone)
-            await this.freezeExcessDocuments(userId, 'pass_expired');
-
-            // Set 48-hour grace period for downloads
-            const gracePeriodEnd = new Date();
-            gracePeriodEnd.setHours(gracePeriodEnd.getHours() + 48);
-
-            await User.findByIdAndUpdate(userId, {
-                $set: {
-                    'gracePeriod.isActive': true,
-                    'gracePeriod.reason': 'day_pass_download_window',
-                    'gracePeriod.expiresAt': gracePeriodEnd,
-                    'currentPlanKey': 'free', // Revert to free plan
-                    'credits.aiCredits': 5,
-                    'credits.jobCredits': 5
-                }
-            });
-
-            console.log(`✅ Day Pass expiration handled for user ${userId}`);
-        } catch (error) {
-            console.error('Error handling Day Pass expiration:', error);
-        }
-    }
 }
 
 export default new UnifiedLimitService();

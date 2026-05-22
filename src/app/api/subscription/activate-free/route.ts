@@ -53,6 +53,24 @@ export async function POST(request: NextRequest) {
       { new: true }
     );
 
+    // Track free plan activation server-side
+    try {
+      const { getPostHogClient } = await import('@/lib/posthog-server');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: user._id.toString(),
+        event: 'free_plan_activated',
+        properties: {
+          plan_key: planKey,
+          $set: {
+            plan: planKey,
+          },
+        },
+      });
+    } catch (phError) {
+      console.error('PostHog capture error (free_plan_activated):', phError);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Free plan activated successfully',

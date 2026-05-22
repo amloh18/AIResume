@@ -43,10 +43,9 @@ export function RegionalPricingCard({
     switch (plan.key) {
       case 'free':
         return null;
-      case 'day_pass':
-        return <Zap className="w-6 h-6" />;
       case 'pro_monthly':
       case 'pro_quarterly':
+      case 'pro_yearly':
       case 'pro_lifetime':
         return <Crown className="w-6 h-6" />;
       default:
@@ -58,10 +57,9 @@ export function RegionalPricingCard({
     switch (plan.key) {
       case 'free':
         return 'text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-800';
-      case 'day_pass':
-        return 'text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-900/20';
       case 'pro_monthly':
       case 'pro_quarterly':
+      case 'pro_yearly':
       case 'pro_lifetime':
         return 'text-lime-600 bg-lime-100 dark:text-lime-300 dark:bg-lime-900/20';
       default:
@@ -134,7 +132,7 @@ export function RegionalPricingCard({
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
                 {displayPrice}
               </div>
-              {plan.billingCycle !== 'one-time' && plan.key !== 'day_pass' && (
+              {plan.billingCycle !== 'one-time' && (
                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   per {plan.billingCycle}
                 </div>

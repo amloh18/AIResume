@@ -47,7 +47,7 @@ if [ $? -eq 0 ]; then
     echo "1. Set up environment variables in Vercel dashboard"
     echo "2. Configure MongoDB Atlas connection"
     echo "3. Set up Firebase project"
-    echo "4. Configure payment providers (Stripe/Razorpay)"
+    echo "4. Configure payment providers (Stripe/Polar)"
     echo "5. Test all functionality"
     echo ""
     echo "📚 See DEPLOYMENT_READY_FINAL.md for detailed instructions"

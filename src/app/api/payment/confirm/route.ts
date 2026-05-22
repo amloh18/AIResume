@@ -8,7 +8,7 @@ import Invoice from '@/models/Invoice';
 import InvoiceItem from '@/models/InvoiceItem';
 import { getAdminPricingPlan, getAdminDiscountCode, getAdminSubscription } from '@/models/admin-models';
 import PolarService from '@/lib/payment/polar';
-import RazorpayService from '@/lib/payment/razorpay';
+
 import { createTransaction } from '@/lib/services/transactionService';
 import mongoose from 'mongoose';
 
@@ -22,15 +22,12 @@ export async function POST(request: NextRequest) {
     await getConnection();
 
     const body = await request.json();
-    const {
-      paymentMethod,
-      checkoutId, // For Polar
-      orderId, // For Razorpay
-      paymentId, // For Razorpay
-      signature, // For Razorpay verification
-      planId,
-      discountCodeId
-    } = body;
+     const {
+       paymentMethod,
+       checkoutId, // For Polar
+       planId,
+       discountCodeId
+     } = body;
 
     // Validate required fields
     if (!paymentMethod || !planId) {
@@ -41,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // For development/testing, allow simulation without full payment verification
-    const isSimulation = process.env.NODE_ENV === 'development' && !checkoutId && !orderId;
+    const isSimulation = process.env.NODE_ENV === 'development' && !checkoutId;
 
     // Get the pricing plan
     const PricingPlan = await getAdminPricingPlan();
@@ -129,43 +126,6 @@ export async function POST(request: NextRequest) {
         metadata: checkout.metadata || {}
       };
 
-    } else if (paymentMethod === 'razorpay') {
-      if (!orderId || !paymentId || !signature) {
-        return NextResponse.json(
-          { error: 'Order ID, payment ID, and signature are required for Razorpay' },
-          { status: 400 }
-        );
-      }
-
-      // Verify Razorpay payment signature
-      const verificationResult = RazorpayService.verifyPaymentSignature(
-        orderId,
-        paymentId,
-        signature
-      );
-
-      if (!verificationResult.success) {
-        return NextResponse.json(
-          { error: 'Payment verification failed' },
-          { status: 400 }
-        );
-      }
-
-      // Get payment details from Razorpay
-      const paymentResult = await RazorpayService.getPayment(paymentId);
-      if (!paymentResult.success) {
-        return NextResponse.json(
-          { error: 'Failed to get payment details' },
-          { status: 500 }
-        );
-      }
-
-      paymentDetails = {
-        paymentProviderId: paymentResult.payment?.id || '',
-        amount: Number(paymentResult.payment?.amount || 0) / 100, // Convert from paise
-        currency: paymentResult.payment?.currency || '',
-        metadata: paymentResult.payment?.notes || {}
-      };
     } else {
       return NextResponse.json(
         { error: 'Unsupported payment method' },
@@ -215,12 +175,11 @@ export async function POST(request: NextRequest) {
       discountCodeId: discountCodeId || undefined,
       discountAmount,
       finalAmount: paymentDetails.amount,
-      metadata: {
-        polarCustomerId: paymentMethod === 'polar' ? paymentDetails.metadata?.polarCustomerId : undefined,
-        razorpayCustomerId: paymentMethod === 'razorpay' ? paymentDetails.metadata?.razorpayCustomerId : undefined,
-        invoiceUrl: paymentDetails.metadata?.invoiceUrl,
-        receiptUrl: paymentDetails.metadata?.receiptUrl
-      }
+metadata: {
+         polarCustomerId: paymentDetails.metadata?.polarCustomerId,
+         invoiceUrl: paymentDetails.metadata?.invoiceUrl,
+         receiptUrl: paymentDetails.metadata?.receiptUrl
+       }
     });
 
     await subscription.save();
@@ -237,7 +196,7 @@ export async function POST(request: NextRequest) {
         planName: plan.name,
         planId: plan._id,
         billingCycle: plan.billingCycle,
-        paymentMethodType: paymentMethod === 'polar' ? 'polar' : paymentMethod === 'razorpay' ? 'razorpay' : 'unknown',
+        paymentMethodType: 'polar',
         paymentMethodLast4: '****',
         paidAt: new Date(),
         invoiceDate: new Date(),
@@ -278,7 +237,7 @@ export async function POST(request: NextRequest) {
         amount: paymentDetails.amount,
         status: 'success',
         gatewayReferenceId: paymentDetails.paymentProviderId,
-        gateway: paymentMethod === 'polar' ? 'polar' : 'razorpay',
+        gateway: 'polar',
         metadata: {
           subscriptionId: subscription._id.toString(),
           discountCodeId: discountCodeId || null,

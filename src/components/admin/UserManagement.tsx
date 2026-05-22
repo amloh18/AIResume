@@ -357,8 +357,6 @@ const UserManagement: React.FC = () => {
     switch (provider) {
       case 'stripe':
         return <CreditCard size={14} className="text-blue-400" />;
-      case 'razorpay':
-        return <ExternalLink size={14} className="text-orange-400" />;
       case 'none':
         return <Crown size={14} className="text-gray-400" />;
       default:

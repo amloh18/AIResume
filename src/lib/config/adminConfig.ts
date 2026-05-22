@@ -36,7 +36,7 @@ export async function getPlanKeys(): Promise<string[]> {
   } catch (error) {
     console.error('Error fetching plan keys:', error);
     // Fallback to default plans
-    return ['free', 'day_pass', 'pro_monthly', 'pro_quarterly', 'pro_lifetime'];
+    return ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
   }
 }
 
@@ -61,9 +61,9 @@ export async function getPlanDisplayNames(): Promise<Record<string, string>> {
     // Fallback display names
     return {
       'free': 'Free',
-      'day_pass': 'Day Pass',
       'pro_monthly': 'Monthly Pro',
       'pro_quarterly': 'Quarterly Pro',
+      'pro_yearly': 'Yearly Pro',
       'pro_lifetime': 'Lifetime'
     };
   }

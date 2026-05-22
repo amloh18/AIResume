@@ -75,10 +75,10 @@ export async function processRenewals(): Promise<{
         }
 
         // Attempt to charge the payment method
-        // This would integrate with Stripe/Razorpay to charge the customer
+        // This would integrate with Stripe to charge the customer
         // For now, we'll just log and update the subscription
         // In production, you would:
-        // 1. Call Stripe/Razorpay API to charge the customer
+        // 1. Call Stripe API to charge the customer
         // 2. Create Transaction record
         // 3. Create Invoice record
         // 4. Update subscription nextBillingDate

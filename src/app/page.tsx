@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { signOut } from 'next-auth/react';
-import { FileText, Sparkles, PenTool, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard } from 'lucide-react';
+import { FileText, Sparkles, PenTool, CheckCircle, Briefcase, Chrome, Globe, LayoutDashboard, BookOpen } from 'lucide-react';
 import Hero from '@/components/landing/Hero';
 import Features from '@/components/landing/Features';
 import ProductVideo from '@/components/landing/ProductVideo';
@@ -10,6 +10,7 @@ import ChromeExtension from '@/components/landing/ChromeExtension';
 import Testimonials from '@/components/landing/Testimonials';
 import HowItWorks from '@/components/landing/HowItWorks';
 import Pricing from '@/components/landing/Pricing';
+import BlogSection from '@/components/landing/BlogSection';
 import FAQ from '@/components/landing/FAQ';
 import Footer from '@/components/landing/Footer';
 import CardNav from '@/components/landing/CardNav';
@@ -117,12 +118,19 @@ function LandingPageContent() {
       href: '#how-it-works', 
       ariaLabel: 'View resources',
       submenu: [
-        { 
-          label: 'How it Works', 
-          description: 'Step-by-step guide to building your master CV and landing your dream job.', 
-          href: '#how-it-works', 
+        {
+          label: 'How it Works',
+          description: 'Step-by-step guide to building your master CV and landing your dream job.',
+          href: '#how-it-works',
           ariaLabel: 'Learn how to create a resume',
           icon: <LayoutDashboard className="w-5 h-5 text-gray-400" />
+        },
+        {
+          label: 'Blog',
+          description: 'Research-backed career guides, ATS tips, and resume tutorials from CVCircle.',
+          href: '/blog',
+          ariaLabel: 'Read the CVCircle blog',
+          icon: <BookOpen className="w-5 h-5 text-gray-400" />
         },
         { 
           label: 'Interview Prep', 
@@ -222,6 +230,8 @@ function LandingPageContent() {
               window.location.href = `/sign-up?plan=${encodeURIComponent(plan.name)}`;
             }} />
           </div>
+
+          <BlogSection />
 
           <FAQ />
           <Footer />
