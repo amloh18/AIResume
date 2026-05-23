@@ -22,6 +22,8 @@ interface DashboardDataContextType {
     applicationsThisMonth: number;
     cvsCreatedThisMonth: number;
     coverLettersCreatedThisMonth: number;
+    cvGoal?: number;
+    interviewGoal?: number;
   };
   activities: any[];
   aiInsights: any[];
@@ -113,11 +115,15 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
     applicationsThisMonth: number;
     cvsCreatedThisMonth: number;
     coverLettersCreatedThisMonth: number;
+    cvGoal?: number;
+    interviewGoal?: number;
   }>({
     monthlyGoal: 20,
     applicationsThisMonth: 0,
     cvsCreatedThisMonth: 0,
-    coverLettersCreatedThisMonth: 0
+    coverLettersCreatedThisMonth: 0,
+    cvGoal: 5,
+    interviewGoal: 10
   });
   const [activities, setActivities] = useState<any[]>([]);
   const [aiInsights, setAiInsights] = useState<any[]>([]);
@@ -420,7 +426,9 @@ export const DashboardDataProvider: React.FC<{ children: React.ReactNode }> = ({
               monthlyGoal: result.data.monthlyGoal || 20,
               applicationsThisMonth: result.data.applicationsThisMonth || 0,
               cvsCreatedThisMonth: result.data.cvsCreatedThisMonth || 0,
-              coverLettersCreatedThisMonth: result.data.coverLettersCreatedThisMonth || 0
+              coverLettersCreatedThisMonth: result.data.coverLettersCreatedThisMonth || 0,
+              cvGoal: result.data.cvGoal || 5,
+              interviewGoal: result.data.interviewGoal || 10
             });
           }
         } else {

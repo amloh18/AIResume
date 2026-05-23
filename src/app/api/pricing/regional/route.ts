@@ -24,30 +24,56 @@ export async function GET(request: NextRequest) {
 
     try {
       const targetCountryCode = countryCode || 'US'; // Default to US if no country code provided
-      const countryPricing = await getCountryPricing(targetCountryCode);
+      let countryPricing = await getCountryPricing(targetCountryCode);
+      
+      // Fallback if not found
+      if (!countryPricing) {
+        countryPricing = await getCountryPricing('US');
+      }
       
       if (countryPricing) {
-        // Convert CountryPricing to RegionalPricing format
-        const monthlyVal = countryPricing.planPrices?.monthly?.price || 0;
-        const quarterlyVal = countryPricing.planPrices?.quarterly?.price || 0;
-        // In the database records:
-        // - pro_yearly maps to dayPass (typically 1999 INR, 109.99 EUR, etc.)
-        // - pro_lifetime maps to yearly (typically 4999 INR, etc.)
-        const yearlyVal = countryPricing.planPrices?.dayPass?.price || countryPricing.planPrices?.yearly?.price || 0;
-        const lifetimeVal = countryPricing.planPrices?.lifetime?.price || countryPricing.planPrices?.yearly?.price || 0;
+        const currency = countryPricing.currency;
+        const currencySymbol = countryPricing.currencySymbol;
+        const isUSD = currency === 'USD';
+
+        const baseUSDPrice = {
+          monthly: 12.99,
+          quarterly: 34.99,
+          yearly: 99.00,
+          lifetime: 199.00
+        };
+
+        let monthlyVal = baseUSDPrice.monthly;
+        let quarterlyVal = baseUSDPrice.quarterly;
+        let yearlyVal = baseUSDPrice.yearly;
+        let lifetimeVal = baseUSDPrice.lifetime;
+
+        if (!isUSD) {
+          const { LocationService } = await import('@/lib/payment/locationService');
+          monthlyVal = Math.round(LocationService.convertPrice(baseUSDPrice.monthly, 'USD', currency).convertedPrice);
+          quarterlyVal = Math.round(LocationService.convertPrice(baseUSDPrice.quarterly, 'USD', currency).convertedPrice);
+          yearlyVal = Math.round(LocationService.convertPrice(baseUSDPrice.yearly, 'USD', currency).convertedPrice);
+          lifetimeVal = Math.round(LocationService.convertPrice(baseUSDPrice.lifetime, 'USD', currency).convertedPrice);
+        }
 
         pricingData = {
-          currency: countryPricing.currency,
-          currencySymbol: countryPricing.currencySymbol,
-          monthly: `${countryPricing.currencySymbol}${monthlyVal}`,
-          quarterly: `${countryPricing.currencySymbol}${quarterlyVal}`,
-          yearly: `${countryPricing.currencySymbol}${yearlyVal >= 1000 ? yearlyVal.toLocaleString() : yearlyVal}`,
-          lifetime: `${countryPricing.currencySymbol}${lifetimeVal >= 1000 ? lifetimeVal.toLocaleString() : lifetimeVal}`,
+          currency: currency,
+          currencySymbol: currencySymbol,
+          monthly: isUSD ? `${currencySymbol}${monthlyVal.toFixed(2)}` : `${currencySymbol}${monthlyVal}`,
+          quarterly: isUSD ? `${currencySymbol}${quarterlyVal.toFixed(2)}` : `${currencySymbol}${quarterlyVal}`,
+          yearly: isUSD ? `${currencySymbol}${yearlyVal.toFixed(2)}` : `${currencySymbol}${yearlyVal >= 1000 ? yearlyVal.toLocaleString() : yearlyVal}`,
+          lifetime: isUSD ? `${currencySymbol}${lifetimeVal.toFixed(2)}` : `${currencySymbol}${lifetimeVal >= 1000 ? lifetimeVal.toLocaleString() : lifetimeVal}`,
           // Include additional data for new structure
           countryCode: countryPricing.countryCode,
           countryName: countryPricing.countryName,
           regionId: countryPricing.regionId,
-          planPrices: countryPricing.planPrices
+          planPrices: {
+            free: { price: 0, planId: countryPricing.planPrices?.free?.planId?.toString() || '' },
+            monthly: { price: monthlyVal, planId: countryPricing.planPrices?.monthly?.planId?.toString() || '' },
+            quarterly: { price: quarterlyVal, planId: countryPricing.planPrices?.quarterly?.planId?.toString() || '' },
+            yearly: { price: yearlyVal, planId: countryPricing.planPrices?.yearly?.planId?.toString() || '' },
+            lifetime: { price: lifetimeVal, planId: countryPricing.planPrices?.lifetime?.planId?.toString() || '' }
+          }
         };
       }
     } catch (dbError) {

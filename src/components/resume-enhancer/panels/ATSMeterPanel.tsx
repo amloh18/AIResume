@@ -109,7 +109,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
 
   // Skills
   const extractedSkills = useMemo(() => {
-    if (atsAnalysis?.extractedKeywords?.length > 0) return atsAnalysis.extractedKeywords.slice(0, 12) as string[];
+    if (atsAnalysis && atsAnalysis.extractedKeywords && atsAnalysis.extractedKeywords.length > 0) return atsAnalysis.extractedKeywords.slice(0, 12) as string[];
     try {
       if (Array.isArray(state.cvData?.skills)) {
         const s = state.cvData.skills.flatMap((c: any) => c.keywords || c.skills || []);
@@ -120,7 +120,7 @@ export const ATSMeterPanel: React.FC<ATSMeterPanelProps> = () => {
   }, [atsAnalysis, state.cvData]);
 
   const missingSkills = useMemo(() => {
-    if (atsAnalysis?.missingKeywords?.length > 0) return atsAnalysis.missingKeywords.slice(0, 8) as string[];
+    if (atsAnalysis && atsAnalysis.missingKeywords && atsAnalysis.missingKeywords.length > 0) return atsAnalysis.missingKeywords.slice(0, 8) as string[];
     return [];
   }, [atsAnalysis]);
 

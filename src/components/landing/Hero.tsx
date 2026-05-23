@@ -69,7 +69,7 @@ const Hero = () => {
           transition={{ duration: 0.6, delay: 0.4, ease: "easeOut" }}
         >
           <button
-            onClick={() => router.push('/sign-in')}
+            onClick={() => router.push('/welcome')}
             className="inline-flex items-center gap-3 bg-[#81ff00] hover:bg-[#6dd600] text-black px-8 py-4 tablet:px-10 tablet:py-5 rounded-full font-bold text-sm tablet:text-base shadow-lg transition-all hover:scale-105 uppercase tracking-wide"
           >
             START FREE

@@ -192,7 +192,7 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
     // Priority 1: Plan-specific regional data (pre-calculated by API)
     if (regionalData?.displayPrice) {
       const display = regionalData.displayPrice;
-      return (isUSD || !isApprox) ? display : `${display} (approx.)`;
+      return (isUSD || !isApprox) ? display : `${display}*`;
     }
 
     // Priority 2: Use global regionalPricing object
@@ -207,13 +207,13 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
         default:
           priceStr = `${symbol}${(plan as any).price || 0}`;
       }
-      return (isUSD || !isApprox) ? priceStr : `${priceStr} (approx.)`;
+      return (isUSD || !isApprox) ? priceStr : `${priceStr}*`;
     }
 
     // Fallback
     const fallbackPrice = (plan as any).price || 0;
     const baseDisplay = `${symbol}${fallbackPrice}`;
-    return (isUSD || !isApprox) ? baseDisplay : `${baseDisplay} (approx.)`;
+    return (isUSD || !isApprox) ? baseDisplay : `${baseDisplay}*`;
   };
 
   // Get monthly equivalent price
@@ -228,16 +228,19 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
       return num >= 1000 ? Math.round(num).toLocaleString() : Math.round(num).toString();
     };
 
-    if (plan.key === 'pro_quarterly' || plan.key === 'pro_yearly') {
+    const isQuarterly = plan.key === 'pro_quarterly' || plan.key === 'smart_quaterly' || plan.key.includes('quarterly') || plan.key.includes('quaterly');
+    const isYearly = plan.key === 'pro_yearly' || plan.key === 'starter_yealry' || plan.key === 'focused_yearly' || plan.key === 'smart_yearly' || plan.key.includes('yearly') || plan.key.includes('yealry');
+
+    if (isQuarterly || isYearly) {
       const totalPrice = regionalData?.price || (plan as any).price || 0;
-      const divisor = plan.key === 'pro_quarterly' ? 3 : 12;
+      const divisor = isQuarterly ? 3 : 12;
       
       if (totalPrice > 0) {
         const monthlyNum = totalPrice / divisor;
         const formattedMonthly = formatMonthlyPrice(monthlyNum);
         const basePrice = `${symbol}${formattedMonthly}/month`;
         return {
-          price: (isUSD || !isApprox) ? basePrice : `${basePrice} (approx.)`,
+          price: (isUSD || !isApprox) ? basePrice : `${basePrice}*`,
           showMonthly: true
         };
       }
@@ -252,15 +255,17 @@ export function usePricingPlans(options: UsePricingPlansOptions = {}): UsePricin
 
   const getEffectivePrice = (plan: DatabasePricingPlan): number => {
     if (plan.isPromotionActive && plan.effectivePrice) {
-      return plan.effectivePrice.oneTime || plan.effectivePrice.monthly || plan.price_one_time || plan.price_monthly || 0;
+      return plan.effectivePrice.yearly || plan.effectivePrice.quarterly || plan.effectivePrice.monthly || plan.effectivePrice.oneTime || plan.price_yearly || plan.price_quarterly || plan.price_monthly || plan.price_one_time || 0;
     }
-    return plan.price_one_time || plan.price_monthly || 0;
+    return plan.price_yearly || plan.price_quarterly || plan.price_monthly || plan.price_one_time || 0;
   };
 
   const hasPromotionalPricing = (plan: DatabasePricingPlan): boolean => {
     return Boolean(plan.isPromotionActive && plan.effectivePrice &&
       ((plan.effectivePrice.oneTime && plan.effectivePrice.oneTime < (plan.price_one_time || 0)) ||
-        (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0))));
+        (plan.effectivePrice.monthly && plan.effectivePrice.monthly < (plan.price_monthly || 0)) ||
+        (plan.effectivePrice.quarterly && plan.effectivePrice.quarterly < (plan.price_quarterly || 0)) ||
+        (plan.effectivePrice.yearly && plan.effectivePrice.yearly < (plan.price_yearly || 0))));
   };
 
   return {

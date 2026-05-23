@@ -17,9 +17,9 @@ async function tryServer(server: 'sandbox' | 'production') {
             server
         });
 
-        const response = await polar.products.list({
+        const response = (await polar.products.list({
             limit: 100
-        });
+        })) as any;
 
         console.log(`✅ Success for ${server}! Found ${response.items?.length || 0} products:`);
         if (response.items) {

@@ -22,7 +22,17 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
   const [selectedCategory, setSelectedCategory] = useState('professional'); // 'essential' or 'professional'
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<DatabasePricingPlan | null>(null);
-  const [selectedMobilePlanKey, setSelectedMobilePlanKey] = useState('pro_quarterly');
+  const [selectedMobilePlanKey, setSelectedMobilePlanKey] = useState('focused_yearly');
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('yearly');
+
+  const handleIntervalChange = (interval: 'monthly' | 'yearly') => {
+    setBillingInterval(interval);
+    if (interval === 'monthly') {
+      setSelectedMobilePlanKey('focused_monthly');
+    } else {
+      setSelectedMobilePlanKey('focused_yearly');
+    }
+  };
 
   // Use the shared pricing hook
   const {
@@ -85,22 +95,26 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
     }
   };
 
-  // Remove filter plans by category since we show all now
+  // Filter plans based on Monthly/Yearly toggle
   const filteredPlans = useMemo(() => {
     // Ensure pricingPlans is always an array
     const safePlans = Array.isArray(pricingPlans) ? pricingPlans : [];
-    // Sort plans by price or a predefined order
-    const order = ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'];
     
-    return [...safePlans].sort((a, b) => {
-      const indexA = order.indexOf(a.key);
-      const indexB = order.indexOf(b.key);
-      // If a key isn't in our predefined order, put it at the end
-      if (indexA === -1) return 1;
-      if (indexB === -1) return -1;
-      return indexA - indexB;
-    });
-  }, [pricingPlans]);
+    // Select plans based on active toggle interval
+    const activeKeys = billingInterval === 'monthly'
+      ? ['starter_monthly', 'focused_monthly', 'smart_quaterly']
+      : ['starter_yealry', 'focused_yearly', 'smart_yearly'];
+      
+    return safePlans
+      .filter(plan => activeKeys.includes(plan.key))
+      .sort((a, b) => {
+        const indexA = activeKeys.indexOf(a.key);
+        const indexB = activeKeys.indexOf(b.key);
+        if (indexA === -1) return 1;
+        if (indexB === -1) return -1;
+        return indexA - indexB;
+      });
+  }, [pricingPlans, billingInterval]);
 
   if (loading) {
     return (
@@ -202,50 +216,104 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
           </p>
         </motion.div>
 
-
-
+        {/* Toggle Switcher */}
+        <div className="flex justify-center mb-12 relative z-20">
+          <div className="relative flex p-1 bg-white/80 dark:bg-black/40 backdrop-blur-md border border-gray-200 dark:border-white/10 rounded-full shadow-lg">
+            <button
+              onClick={() => handleIntervalChange('monthly')}
+              className={`relative z-10 px-6 py-2.5 text-xs tablet:text-sm font-bold rounded-full transition-colors duration-300 ${
+                billingInterval === 'monthly'
+                  ? 'text-black font-extrabold'
+                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              Monthly billing
+              {billingInterval === 'monthly' && (
+                <motion.div
+                  layoutId="billing-active-pill"
+                  className="absolute inset-0 bg-[#81ff00] rounded-full -z-10 shadow-md"
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                />
+              )}
+            </button>
+            <button
+              onClick={() => handleIntervalChange('yearly')}
+              className={`relative z-10 px-6 py-2.5 text-xs tablet:text-sm font-bold rounded-full transition-colors duration-300 flex items-center gap-1.5 ${
+                billingInterval === 'yearly'
+                  ? 'text-black font-extrabold'
+                  : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Yearly billing</span>
+              <span className="inline-flex px-1.5 py-0.5 text-[9px] font-extrabold rounded-full bg-red-500 text-white animate-pulse">
+                Save up to 50%
+              </span>
+              {billingInterval === 'yearly' && (
+                <motion.div
+                  layoutId="billing-active-pill"
+                  className="absolute inset-0 bg-[#81ff00] rounded-full -z-10 shadow-md"
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                />
+              )}
+            </button>
+          </div>
+        </div>
 
         {/* Comparison Table Data */}
         {(() => {
           const comparisonFeatures = [
-            { name: 'Access to All Templates', free: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Kanban Application Tracker', free: '✓ (Basic)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
-            { name: 'Browser Extension Sync', free: 'Basic Save', pro_monthly: 'One-Click Save & Autofill', pro_quarterly: 'One-Click Save & Autofill', pro_yearly: 'One-Click Save & Autofill', pro_lifetime: 'One-Click Save & Autofill' },
-            { name: 'AI Writing & Rephrasing', free: 'Limited Credits', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
-            { name: 'Real-time ATS Scoring & Editor', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'AI Cover Letter Generator', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'LinkedIn Profile Optimizer', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Interview Coach Mock Simulator', free: '✗', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
-            { name: 'Max Job Tracks', free: '3 Active Jobs', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
-            { name: 'Permanent Career Vault', free: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
-            { name: 'Customer Support Level', free: 'Standard', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
+            { name: 'Access to All Templates', free: '✓', starter_monthly: '✓', starter_yealry: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'CV & Cover Letter Editing', free: 'Unlimited', starter_monthly: 'Unlimited', starter_yealry: 'Unlimited', focused_monthly: 'Unlimited', focused_yearly: 'Unlimited', smart_quaterly: 'Unlimited', smart_yearly: 'Unlimited', pro_monthly: 'Unlimited', pro_quarterly: 'Unlimited', pro_yearly: 'Unlimited', pro_lifetime: 'Unlimited' },
+            { name: 'Real-time ATS Scoring & Editor', free: 'Spelling Only', starter_monthly: 'Spelling Only', starter_yealry: '✓ (Live ATS)', focused_monthly: '✓ (Live ATS)', focused_yearly: '✓ (Live ATS)', smart_quaterly: '✓ (Live ATS)', smart_yearly: '✓ (Live ATS)', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'AI Cover Letter Generator', free: '✗', starter_monthly: '✗', starter_yealry: '✓', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'LinkedIn Enhancer (Optimizer)', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'AI Interview Coach Simulator', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✓', focused_yearly: '✓', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✓', pro_quarterly: '✓', pro_yearly: '✓', pro_lifetime: '✓' },
+            { name: 'Job Application Tracker', free: '✓ (Basic)', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✓ (Full)', focused_yearly: '✓ (Full)', smart_quaterly: '✓ (Full)', smart_yearly: '✓ (Full)', pro_monthly: '✓ (Full)', pro_quarterly: '✓ (Full)', pro_yearly: '✓ (Full)', pro_lifetime: '✓ (Full)' },
+            { name: 'Auto Job Application Bot', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quaterly: '✓', smart_yearly: '✓', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✗' },
+            { name: 'Permanent Career Vault', free: '✗', starter_monthly: '✗', starter_yealry: '✗', focused_monthly: '✗', focused_yearly: '✗', smart_quaterly: '✗', smart_yearly: '✗', pro_monthly: '✗', pro_quarterly: '✗', pro_yearly: '✗', pro_lifetime: '✓' },
+            { name: 'Customer Support Level', free: 'Standard', starter_monthly: 'Standard', starter_yealry: 'Standard', focused_monthly: 'Priority', focused_yearly: 'Priority', smart_quaterly: 'VIP 24/7 Support', smart_yearly: 'VIP 24/7 Support', pro_monthly: 'Standard', pro_quarterly: 'Priority Support', pro_yearly: 'Priority Support', pro_lifetime: 'VIP 24/7 Support' },
           ];
 
-          const freePlan = filteredPlans.find(p => p.key === 'free');
+          const leftPlan = billingInterval === 'monthly'
+            ? filteredPlans.find(p => p.key === 'starter_monthly')
+            : filteredPlans.find(p => p.key === 'starter_yealry');
           const selectedProPlan = filteredPlans.find(p => p.key === selectedMobilePlanKey);
 
           const getMobilePlanPriceDisplay = (plan: DatabasePricingPlan) => {
-            const monthlyEquivalent = getMonthlyEquivalent(plan);
             const regionalPrice = getRegionalPrice(plan);
+            if (plan.key === 'starter_yealry') {
+              return regionalPrice.endsWith('*')
+                ? `${regionalPrice.slice(0, -1)} (Save 50%)*`
+                : `${regionalPrice} (Save 50%)`;
+            }
+            const monthlyEquivalent = getMonthlyEquivalent(plan);
             return monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
           };
 
           const getMobilePlanSubtext = (plan: DatabasePricingPlan) => {
+            if (plan.key === 'starter_yealry') {
+              return (
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] text-gray-500 line-through font-normal">$39.99 total</span>
+                  <span className="text-[8px] text-gray-400 font-normal mt-0.5">billed annually</span>
+                </div>
+              );
+            }
             const monthlyEquivalent = getMonthlyEquivalent(plan);
             const regionalPrice = getRegionalPrice(plan);
             return (
               <div className="flex flex-col items-center">
                 {monthlyEquivalent.showMonthly && (
                   <span className="text-[8px] text-gray-500 dark:text-white/60 font-normal">
-                    {regionalPrice} total
+                    {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)} total*` : `${regionalPrice} total`}
                   </span>
                 )}
                 <span className="text-[8px] text-gray-400 font-normal mt-0.5">
-                  {plan.key === 'pro_monthly'
+                  {plan.key.includes('monthly')
                     ? 'recurring monthly'
-                    : plan.key === 'pro_quarterly'
+                    : plan.key.includes('quarterly') || plan.key.includes('quaterly')
                       ? 'billed quarterly'
-                      : plan.key === 'pro_yearly'
+                      : plan.key.includes('yearly') || plan.key.includes('yealry')
                         ? 'billed annually'
                         : 'one-time'}
                 </span>
@@ -310,7 +378,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                                 </span>
                               )}
                               {!isPopular && !isBestValue && <div className="h-[19px] mb-1.5" />}
-                              <h3 className="text-sm font-bold text-gray-900 dark:text-white">{plan.name}</h3>
+                               <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                                 {plan.name.replace(/\s*(Monthly|Yearly|Quarterly|Quaterly)/gi, '')}
+                               </h3>
                             </div>
                           </th>
                         );
@@ -371,25 +441,37 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             }`}
                           >
                             <div className="flex flex-col items-center justify-start min-h-[64px]">
-                              {plan.key === 'free' ? (
-                                <div className="text-sm font-bold text-gray-900 dark:text-white">Free</div>
+                              {plan.key === 'free' || plan.key === 'starter_monthly' ? (
+                                <div className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white">Free</div>
+                              ) : plan.key === 'starter_yealry' ? (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-xs text-gray-400 line-through font-normal mb-0.5">$39.99</span>
+                                  <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">$19.99</span>
+                                  <span className="text-[9px] text-gray-400 mt-0.5 font-normal">billed annually</span>
+                                </div>
                               ) : (
                                 <div className="flex flex-col items-center">
-                                  <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                                    {monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice}
-                                    {plan.key === 'pro_monthly' ? '/month' : ''}
+                                  <span className="text-xl tablet:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight">
+                                    {(() => {
+                                      const basePriceStr = monthlyEquivalent.showMonthly ? monthlyEquivalent.price : regionalPrice;
+                                      const suffix = plan.key.includes('monthly') ? '/month' : '';
+                                      if (basePriceStr.endsWith('*')) {
+                                        return `${basePriceStr.slice(0, -1)}${suffix}*`;
+                                      }
+                                      return `${basePriceStr}${suffix}`;
+                                    })()}
                                   </span>
                                   {monthlyEquivalent.showMonthly && (
                                     <span className="text-[9px] text-gray-500 dark:text-white/60 mt-0.5 font-normal">
-                                      {regionalPrice} total
+                                      {regionalPrice.endsWith('*') ? `${regionalPrice.slice(0, -1)} total*` : `${regionalPrice} total`}
                                     </span>
                                   )}
                                   <span className="text-[9px] text-gray-400 mt-0.5 font-normal">
-                                    {plan.key === 'pro_monthly'
+                                    {plan.key.includes('monthly')
                                       ? 'recurring monthly'
-                                      : plan.key === 'pro_quarterly'
+                                      : plan.key.includes('quarterly') || plan.key.includes('quaterly')
                                         ? 'billed quarterly'
-                                        : plan.key === 'pro_yearly'
+                                        : plan.key.includes('yearly') || plan.key.includes('yealry')
                                           ? 'billed annually'
                                           : 'one-time'}
                                   </span>
@@ -416,14 +498,14 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             <motion.button
                               onClick={() => handlePlanSelect(plan)}
                               className={`w-full py-2 px-3 text-xs font-bold rounded-lg transition-all duration-300 ${
-                                plan.key === 'free'
+                                plan.key === 'starter_monthly'
                                   ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
                                   : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-md hover:shadow-lime-400/20'
                               }`}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
                             >
-                              {plan.key === 'free' ? 'Get Started' : 'Choose Plan'}
+                              {plan.key === 'starter_monthly' ? 'Get Started' : 'Choose Plan'}
                             </motion.button>
                           </td>
                         );
@@ -438,18 +520,22 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                 {/* Pro Plan Selector */}
                 <div className="flex justify-center my-4 px-2">
                   <div className="inline-flex p-1 rounded-xl bg-gray-100 dark:bg-black/30 border border-gray-200 dark:border-white/5 backdrop-blur-sm">
-                    {[
-                      { key: 'pro_monthly', label: 'Monthly' },
-                      { key: 'pro_quarterly', label: 'Quarterly' },
-                      { key: 'pro_yearly', label: 'Yearly' },
-                      { key: 'pro_lifetime', label: 'Lifetime' }
-                    ].map((interval) => {
+                    {(billingInterval === 'monthly'
+                      ? [
+                          { key: 'focused_monthly', label: 'Focused Mo' },
+                          { key: 'smart_quaterly', label: 'Smart Qtr' }
+                        ]
+                      : [
+                          { key: 'focused_yearly', label: 'Focused Yr' },
+                          { key: 'smart_yearly', label: 'Smart Yr' }
+                        ]
+                    ).map((interval) => {
                       const isActive = selectedMobilePlanKey === interval.key;
                       return (
                         <button
                           key={interval.key}
                           onClick={() => setSelectedMobilePlanKey(interval.key)}
-                          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 ${
+                          className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all duration-200 ${
                             isActive
                               ? 'bg-[#81ff00] text-black shadow-md'
                               : 'text-gray-600 dark:text-white/60 hover:text-gray-900 dark:hover:text-white'
@@ -471,7 +557,9 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                         <span className="text-[10px] font-bold text-gray-900 dark:text-white">Features</span>
                       </th>
                       <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%]">
-                        <span className="text-xs font-bold text-gray-900 dark:text-white">Free</span>
+                        <span className="text-xs font-bold text-gray-900 dark:text-white">
+                          {leftPlan ? leftPlan.name.replace(/\s*(Monthly|Yearly|Quarterly|Quaterly)/gi, '') : 'Starter'}
+                        </span>
                       </th>
                       <th className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20">
                         <div className="flex flex-col items-center">
@@ -479,7 +567,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             Pro Choice
                           </span>
                           <span className="text-xs font-bold text-gray-900 dark:text-white text-center leading-tight">
-                            {selectedProPlan?.name || 'Pro'}
+                            {selectedProPlan ? selectedProPlan.name.replace(/\s*(Monthly|Yearly|Quarterly|Quaterly)/gi, '') : 'Pro'}
                           </span>
                         </div>
                       </th>
@@ -487,8 +575,8 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                   </thead>
                   <tbody>
                     {comparisonFeatures.map((row, rowIndex) => {
-                      const freeVal = row.free;
-                      const proVal = (row as any)[selectedMobilePlanKey];
+                      const leftVal = leftPlan ? (row as any)[leftPlan.key] : '✗';
+                      const proVal = selectedProPlan ? (row as any)[selectedProPlan.key] : '✗';
 
                       return (
                         <tr
@@ -499,7 +587,7 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                             {row.name}
                           </td>
                           <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 text-[10px] font-medium text-gray-600 dark:text-white/70 w-[30%]">
-                            {renderFeatureVal(freeVal)}
+                            {renderFeatureVal(leftVal)}
                           </td>
                           <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 text-[10px] font-medium text-gray-600 dark:text-white/70 bg-lime-500/[0.015] dark:bg-lime-400/[0.01] border-x border-lime-500/20 w-[30%]">
                             {renderFeatureVal(proVal)}
@@ -515,12 +603,19 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                         Price
                       </td>
                       <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] align-top">
-                        <div className="text-sm font-bold text-gray-900 dark:text-white">Free</div>
+                        {leftPlan && (
+                          <div className="flex flex-col items-center min-h-[48px]">
+                            <span className="text-sm font-extrabold tablet:text-base text-gray-900 dark:text-white text-center">
+                              {leftPlan.key === 'starter_monthly' ? 'Free' : getMobilePlanPriceDisplay(leftPlan)}
+                            </span>
+                            {getMobilePlanSubtext(leftPlan)}
+                          </div>
+                        )}
                       </td>
                       <td className="p-3 text-center border-b border-gray-200 dark:border-white/10 w-[30%] bg-lime-500/[0.03] dark:bg-lime-400/[0.02] border-x border-lime-500/20 align-top">
                         {selectedProPlan && (
                           <div className="flex flex-col items-center min-h-[48px]">
-                            <span className="text-xs font-bold text-gray-900 dark:text-white text-center">
+                            <span className="text-sm font-extrabold tablet:text-base text-gray-900 dark:text-white text-center">
                               {getMobilePlanPriceDisplay(selectedProPlan)}
                             </span>
                             {getMobilePlanSubtext(selectedProPlan)}
@@ -533,14 +628,18 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
                     <tr className="bg-gray-50/30 dark:bg-black/10">
                       <td className="p-2 border-b border-gray-200 dark:border-white/10 w-[40%]" />
                       <td className="p-2 text-center border-b border-gray-200 dark:border-white/10 w-[30%] align-middle">
-                        {freePlan && (
+                        {leftPlan && (
                           <motion.button
-                            onClick={() => handlePlanSelect(freePlan)}
-                            className="w-full py-1.5 px-2 text-[10px] font-bold rounded-md bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white"
+                            onClick={() => handlePlanSelect(leftPlan)}
+                            className={`w-full py-1.5 px-2 text-[10px] font-bold rounded-md transition-all duration-300 ${
+                              leftPlan.key === 'starter_monthly'
+                                ? 'bg-gray-200 hover:bg-gray-300 dark:bg-white/10 dark:hover:bg-white/20 text-gray-900 dark:text-white'
+                                : 'bg-[#81ff00] hover:bg-lime-400 text-black shadow-sm hover:shadow-lime-400/20'
+                            }`}
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                           >
-                            Get Started
+                            {leftPlan.key === 'starter_monthly' ? 'Get Started' : 'Choose Plan'}
                           </motion.button>
                         )}
                       </td>
@@ -563,6 +662,17 @@ const Pricing: React.FC<PricingProps> = ({ onPlanSelect, onSuccess }) => {
             </motion.div>
           );
         })()}
+
+        {/* Disclaimer for non-USD currencies */}
+        <motion.div
+          className="max-w-4xl mx-auto mt-8 text-center text-[10px] tablet:text-xs text-gray-500 dark:text-white/40 leading-relaxed px-4"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.5 }}
+          viewport={{ once: true }}
+        >
+          * Prices shown in non-USD currencies are calculated using live exchange rates from the base USD plan price (e.g. Starter Yearly: $39.99/yr, Focused Monthly: $9.99/mo, Focused Yearly: $79.99/yr, Smart Quarterly: $59.99/qtr, Smart Yearly: $199.00/yr) and converted using live exchange values. Actual billing amounts at checkout may vary slightly depending on real-time conversions and payment processing options.
+        </motion.div>
 
         {/* Bottom CTA */}
         <motion.div

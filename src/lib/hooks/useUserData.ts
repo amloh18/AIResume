@@ -27,6 +27,9 @@ export interface UserData {
   settings?: any;
   createdAt?: string;
   updatedAt?: string;
+  location?: string;
+  region?: string;
+  jobTitle?: string;
 }
 
 export interface UseUserDataReturn {

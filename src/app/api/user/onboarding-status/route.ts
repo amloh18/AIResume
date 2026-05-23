@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
         isNewUser,
         hasMasterCV,
         hasSeenWelcome,
-        subscription: user.subscription
+        subscription: user.subscription,
+        onboarding: user.onboarding || {}
       }
     });
   } catch (error) {
@@ -70,12 +71,31 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     await getConnection();
 
+    const updateFields: any = {};
+    if (body.hasSeenWelcome !== undefined) {
+      updateFields['settings.hasSeenWelcome'] = body.hasSeenWelcome;
+    }
+
+    if (body.onboarding) {
+      if (body.onboarding.primary_goal !== undefined) updateFields['onboarding.primary_goal'] = body.onboarding.primary_goal;
+      if (body.onboarding.confidence_score !== undefined) updateFields['onboarding.confidence_score'] = body.onboarding.confidence_score;
+      if (body.onboarding.recommended_plan !== undefined) updateFields['onboarding.recommended_plan'] = body.onboarding.recommended_plan;
+      if (body.onboarding.activation_status !== undefined) updateFields['onboarding.activation_status'] = body.onboarding.activation_status;
+      if (body.onboarding.activation_route !== undefined) updateFields['onboarding.activation_route'] = body.onboarding.activation_route;
+      if (body.onboarding.dashboard_layout_type !== undefined) updateFields['onboarding.dashboard_layout_type'] = body.onboarding.dashboard_layout_type;
+    } else {
+      if (body.primary_goal !== undefined) updateFields['onboarding.primary_goal'] = body.primary_goal;
+      if (body.confidence_score !== undefined) updateFields['onboarding.confidence_score'] = body.confidence_score;
+      if (body.recommended_plan !== undefined) updateFields['onboarding.recommended_plan'] = body.recommended_plan;
+      if (body.activation_status !== undefined) updateFields['onboarding.activation_status'] = body.activation_status;
+      if (body.activation_route !== undefined) updateFields['onboarding.activation_route'] = body.activation_route;
+      if (body.dashboard_layout_type !== undefined) updateFields['onboarding.dashboard_layout_type'] = body.dashboard_layout_type;
+    }
+
     await User.findByIdAndUpdate(
       session.user.id,
       {
-        $set: {
-          'settings.hasSeenWelcome': body.hasSeenWelcome !== undefined ? body.hasSeenWelcome : true
-        }
+        $set: updateFields
       }
     );
 

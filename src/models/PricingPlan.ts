@@ -1,11 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IPricingPlan extends Document {
-  key: 'free' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
+  key: 'free' | 'starter_monthly' | 'starter_yealry' | 'focused_monthly' | 'focused_yearly' | 'smart_quaterly' | 'smart_yearly' | 'pro_monthly' | 'pro_quarterly' | 'pro_yearly' | 'pro_lifetime';
   name: string;
   description: string;
 
-  // KEEP: billingCycle - this is plan structure metadata, not pricing
+  // KEEP: billingCycle - this plan structure metadata, not pricing
   billingCycle: 'one-time' | 'monthly' | 'quarterly' | 'yearly';
   // Credit-based system (replaces maxCVs, maxJobs, maxJourneys, maxExports, maxCoverLetters)
   credits: {
@@ -72,7 +72,12 @@ const pricingPlanSchema = new Schema<IPricingPlan>({
   key: {
     type: String,
     required: [true, 'Plan key is required'],
-    enum: ['free', 'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime']
+    enum: [
+      'free', 'starter_monthly', 'starter_yealry', 
+      'focused_monthly', 'focused_yearly', 
+      'smart_quaterly', 'smart_yearly',
+      'pro_monthly', 'pro_quarterly', 'pro_yearly', 'pro_lifetime'
+    ]
   },
   name: {
     type: String,
