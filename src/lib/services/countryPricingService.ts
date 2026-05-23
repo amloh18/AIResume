@@ -64,24 +64,24 @@ export async function getCountryPricing(countryCode: string): Promise<CountryPri
       regionId: countryPricing.regionId,
       planPrices: {
         free: {
-          price: countryPricing.planPrices.free.price,
-          planId: countryPricing.planPrices.free.planId.toString()
+          price: countryPricing.planPrices?.free?.price ?? 0,
+          planId: countryPricing.planPrices?.free?.planId?.toString() ?? ''
         },
         monthly: {
-          price: countryPricing.planPrices.monthly.price,
-          planId: countryPricing.planPrices.monthly.planId.toString()
+          price: countryPricing.planPrices?.monthly?.price ?? 0,
+          planId: countryPricing.planPrices?.monthly?.planId?.toString() ?? ''
         },
         quarterly: {
-          price: countryPricing.planPrices.quarterly.price,
-          planId: countryPricing.planPrices.quarterly.planId.toString()
+          price: countryPricing.planPrices?.quarterly?.price ?? 0,
+          planId: countryPricing.planPrices?.quarterly?.planId?.toString() ?? ''
         },
         yearly: {
-          price: countryPricing.planPrices.yearly.price,
-          planId: countryPricing.planPrices.yearly.planId.toString()
+          price: countryPricing.planPrices?.yearly?.price ?? 0,
+          planId: countryPricing.planPrices?.yearly?.planId?.toString() ?? ''
         },
         lifetime: {
-          price: countryPricing.planPrices.lifetime.price,
-          planId: countryPricing.planPrices.lifetime.planId.toString()
+          price: countryPricing.planPrices?.lifetime?.price ?? countryPricing.planPrices?.dayPass?.price ?? 0,
+          planId: countryPricing.planPrices?.lifetime?.planId?.toString() ?? countryPricing.planPrices?.dayPass?.planId?.toString() ?? ''
         }
       },
       polarPriceIds: countryPricing.polarPriceIds
@@ -179,24 +179,24 @@ export async function getCountryPricingById(
       regionId: countryPricing.regionId,
       planPrices: {
         free: {
-          price: countryPricing.planPrices.free.price,
-          planId: countryPricing.planPrices.free.planId.toString()
+          price: countryPricing.planPrices?.free?.price ?? 0,
+          planId: countryPricing.planPrices?.free?.planId?.toString() ?? ''
         },
         monthly: {
-          price: countryPricing.planPrices.monthly.price,
-          planId: countryPricing.planPrices.monthly.planId.toString()
+          price: countryPricing.planPrices?.monthly?.price ?? 0,
+          planId: countryPricing.planPrices?.monthly?.planId?.toString() ?? ''
         },
         quarterly: {
-          price: countryPricing.planPrices.quarterly.price,
-          planId: countryPricing.planPrices.quarterly.planId.toString()
+          price: countryPricing.planPrices?.quarterly?.price ?? 0,
+          planId: countryPricing.planPrices?.quarterly?.planId?.toString() ?? ''
         },
         yearly: {
-          price: countryPricing.planPrices.yearly.price,
-          planId: countryPricing.planPrices.yearly.planId.toString()
+          price: countryPricing.planPrices?.yearly?.price ?? 0,
+          planId: countryPricing.planPrices?.yearly?.planId?.toString() ?? ''
         },
         lifetime: {
-          price: countryPricing.planPrices.lifetime.price,
-          planId: countryPricing.planPrices.lifetime.planId.toString()
+          price: countryPricing.planPrices?.lifetime?.price ?? countryPricing.planPrices?.dayPass?.price ?? 0,
+          planId: countryPricing.planPrices?.lifetime?.planId?.toString() ?? countryPricing.planPrices?.dayPass?.planId?.toString() ?? ''
         }
       },
       polarPriceIds: countryPricing.polarPriceIds
@@ -226,24 +226,24 @@ export async function getAllCountryPricing(): Promise<CountryPricingData[]> {
       regionId: cp.regionId,
       planPrices: {
         free: {
-          price: cp.planPrices.free.price,
-          planId: cp.planPrices.free.planId.toString()
+          price: cp.planPrices?.free?.price ?? 0,
+          planId: cp.planPrices?.free?.planId?.toString() ?? ''
         },
         monthly: {
-          price: cp.planPrices.monthly.price,
-          planId: cp.planPrices.monthly.planId.toString()
+          price: cp.planPrices?.monthly?.price ?? 0,
+          planId: cp.planPrices?.monthly?.planId?.toString() ?? ''
         },
         quarterly: {
-          price: cp.planPrices.quarterly.price,
-          planId: cp.planPrices.quarterly.planId.toString()
+          price: cp.planPrices?.quarterly?.price ?? 0,
+          planId: cp.planPrices?.quarterly?.planId?.toString() ?? ''
         },
         yearly: {
-          price: cp.planPrices.yearly.price,
-          planId: cp.planPrices.yearly.planId.toString()
+          price: cp.planPrices?.yearly?.price ?? 0,
+          planId: cp.planPrices?.yearly?.planId?.toString() ?? ''
         },
         lifetime: {
-          price: cp.planPrices.lifetime.price,
-          planId: cp.planPrices.lifetime.planId.toString()
+          price: cp.planPrices?.lifetime?.price ?? cp.planPrices?.dayPass?.price ?? 0,
+          planId: cp.planPrices?.lifetime?.planId?.toString() ?? cp.planPrices?.dayPass?.planId?.toString() ?? ''
         }
       },
       polarPriceIds: cp.polarPriceIds

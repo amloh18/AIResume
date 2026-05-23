@@ -4,6 +4,39 @@ import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import mongoose from 'mongoose';
 import User from '@/models/User';
 
+export async function GET(request: NextRequest) {
+  try {
+    await getConnection();
+
+    const authResult = await getAuthenticatedUser();
+    if (!authResult) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { userId } = authResult;
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        monthlyGoal: user.monthlyGoal || 10,
+        cvGoal: user.settings?.goals?.cvGoal || 5,
+        interviewGoal: user.settings?.goals?.interviewGoal || 2
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Fetch goals error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'Failed to fetch goals' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     await getConnection();

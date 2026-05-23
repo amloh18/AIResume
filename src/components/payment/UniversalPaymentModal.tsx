@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import posthog from 'posthog-js';
 import Logo from '@/components/ui/Logo';
-import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Check, CreditCard, Zap, Star, Shield, Crown, Gift, Brain, Users, Globe, ArrowRight, Target, BarChart3, Download, FileText, CheckCircle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { PricingPlan } from '@/types/pricing';
 import { usePricingPlans, DatabasePricingPlan } from '@/lib/hooks/usePricingPlans';
 
@@ -510,6 +510,43 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
     return Math.max(0, basePrice - discountAmount);
   };
 
+  const getUSDPlanPrice = (plan: PricingPlan) => {
+    if (plan.key === 'free') return 0;
+    const dbPlan = plan as unknown as DatabasePricingPlan;
+    
+    // Check if there is promotional pricing active for the user
+    const promotional = getPromotionalPricing(plan);
+    const hasPromo = promotional && promotional.pricing;
+    
+    if (plan.key === 'pro_monthly') {
+      return (hasPromo && promotional.pricing.monthly) ? promotional.pricing.monthly : (dbPlan.price_monthly || 0);
+    } else if (plan.key === 'pro_quarterly') {
+      return (hasPromo && promotional.pricing.quarterly) ? promotional.pricing.quarterly : (dbPlan.price_quarterly || 0);
+    } else if (plan.key === 'pro_yearly') {
+      return (hasPromo && promotional.pricing.yearly) ? promotional.pricing.yearly : (dbPlan.price_yearly || 0);
+    } else if (plan.key === 'pro_lifetime') {
+      return (hasPromo && promotional.pricing.oneTime) ? promotional.pricing.oneTime : (dbPlan.price_one_time || 0);
+    } else {
+      return getEffectivePrice(dbPlan) || 0;
+    }
+  };
+
+  const getUSDFinalPrice = () => {
+    if (!selectedPlan) return 0;
+
+    const basePrice = getUSDPlanPrice(selectedPlan);
+    if (!appliedDiscount) return basePrice;
+
+    let discountAmount = 0;
+    if (appliedDiscount.discountType === 'percentage') {
+      discountAmount = (basePrice * appliedDiscount.discountValue) / 100;
+    } else {
+      discountAmount = appliedDiscount.discountValue;
+    }
+
+    return Math.max(0, basePrice - discountAmount);
+  };
+
   const getBillingInterval = (plan: PricingPlan) => {
     if (plan.key === 'free') return 'free';
     // Determine interval from plan key first, then fallback to billingCycle
@@ -876,12 +913,13 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
               className="relative flex bg-white dark:bg-[#141810] rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* Close Button - Moved to outer container */}
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 p-2 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-lg transition-colors flex-shrink-0 z-20"
+                className="absolute top-4 right-4 tablet:top-6 tablet:right-6 p-2 bg-white/80 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 rounded-full transition-all flex-shrink-0 z-[100] shadow-sm hover:shadow-md active:scale-95"
                 aria-label="Close"
               >
-                <X className="w-5 h-5 text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white" />
+                <X className="w-5 h-5 text-gray-800 dark:text-white" />
               </button>
 
               {/* Left Side - Features & Info */}
@@ -1283,7 +1321,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   if (!selectedPlan) return 'N/A';
                                   const regionalPrice = (selectedPlan as any).regionalPricing;
                                   const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                  return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
+                                  const price = getPlanPrice(selectedPlan).toFixed(2);
+                                  const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                  const isUSD = currency === 'USD';
+                                  return isUSD ? `${currencySymbol}${price}` : `$${getUSDPlanPrice(selectedPlan).toFixed(2)} (~${currencySymbol}${price})`;
                                 })()}
                               </div>
                             </div>
@@ -1340,7 +1381,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   {(() => {
                                     const regionalPrice = (selectedPlan as any).regionalPricing;
                                     const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                    return `${currencySymbol}${getPlanPrice(selectedPlan).toFixed(2)}`;
+                                    const price = getPlanPrice(selectedPlan).toFixed(2);
+                                    const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                    const isUSD = currency === 'USD';
+                                    return isUSD ? `${currencySymbol}${price}` : `$${getUSDPlanPrice(selectedPlan).toFixed(2)} (~${currencySymbol}${price})`;
                                   })()}
                                 </span>
                               </div>
@@ -1350,19 +1394,28 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                 <span className={appliedDiscount ? 'text-green-600 dark:text-lime-400' : 'text-gray-600 dark:text-white/60'}>
                                   {appliedDiscount ? (
                                     <>
-                                      -{(() => {
+                                      {(() => {
                                         const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
                                         const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
                                         const discountAmount = getPlanPrice(selectedPlan) - getFinalPrice();
-                                        return `${currencySymbol}${discountAmount.toFixed(2)}`;
+                                        const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                        const isUSD = currency === 'USD';
+                                        if (isUSD) {
+                                          return `-${currencySymbol}${discountAmount.toFixed(2)}`;
+                                        } else {
+                                          const usdDiscountAmount = getUSDPlanPrice(selectedPlan) - getUSDFinalPrice();
+                                          return `-$${usdDiscountAmount.toFixed(2)} (~${currencySymbol}${discountAmount.toFixed(2)})`;
+                                        }
                                       })()}
                                     </>
                                   ) : (
                                     <>
-                                      -{(() => {
+                                      {(() => {
                                         const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
                                         const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                        return `${currencySymbol}0.00`;
+                                        const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                        const isUSD = currency === 'USD';
+                                        return isUSD ? `-${currencySymbol}0.00` : `-$0.00 (~${currencySymbol}0.00)`;
                                       })()}
                                     </>
                                   )}
@@ -1375,7 +1428,10 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                                   {(() => {
                                     const regionalPrice = selectedPlan ? (selectedPlan as any).regionalPricing : null;
                                     const currencySymbol = regionalPrice?.currencySymbol || regionalPricing?.currencySymbol || getCurrencySymbol();
-                                    return `${currencySymbol}${getFinalPrice().toFixed(2)}`;
+                                    const price = getFinalPrice().toFixed(2);
+                                    const currency = regionalPrice?.currency || regionalPricing?.currency || 'USD';
+                                    const isUSD = currency === 'USD';
+                                    return isUSD ? `${currencySymbol}${price}` : `$${getUSDFinalPrice().toFixed(2)} (~${currencySymbol}${price})`;
                                   })()}
                                 </span>
                               </div>
@@ -1383,31 +1439,24 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
 
                             {/* Provider Health Status */}
                             {providerHealthLoading ? (
-                              <div className="mb-4 p-3 bg-gray-100 dark:bg-[#1a2e1a] rounded-lg text-sm text-gray-600 dark:text-white/60">
-                                Checking payment provider status...
+                              <div className="mb-4 p-3 bg-gray-100 dark:bg-white/5 rounded-lg text-sm text-gray-500 dark:text-white/40 flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400"></div>
+                                Checking system status...
                               </div>
                             ) : (
                               <>
                                 {providerHealth.polar === false && (
-                                  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-500/30 rounded-lg">
+                                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-500/30 rounded-lg">
                                     <div className="flex items-start gap-2">
-                                      <Shield className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                                      <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
                                       <div className="flex-1">
-                                        <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
-                                          Payment is temporarily unavailable
+                                        <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                                          External System Check
                                         </p>
-                                        <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-1">
-                                          Payment processing is temporarily unavailable. Please try again later.
+                                        <p className="text-xs text-blue-700 dark:text-blue-400 mt-1 leading-relaxed">
+                                          Our automated check is taking longer than expected. You can still try to proceed, or try again in a few moments.
                                         </p>
                                       </div>
-                                    </div>
-                                  </div>
-                                )}
-                                {providerHealth.polar === true && (
-                                  <div className="mb-4 p-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-500/30 rounded-lg">
-                                    <div className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
-                                      <Check className="w-4 h-4" />
-                                      <span>Payment is available</span>
                                     </div>
                                   </div>
                                 )}
@@ -1417,24 +1466,21 @@ const UniversalPaymentModal: React.FC<UniversalPaymentModalProps> = ({
                             {/* Proceed to Payment Button */}
                             <button
                               onClick={handlePayment}
-                              disabled={loading || providerHealth.polar === false || providerHealthLoading}
-                              className="w-full py-3 tablet:py-3.5 bg-blue-600 dark:bg-lime-500 hover:bg-blue-700 dark:hover:bg-lime-600 text-white dark:text-black font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 mt-auto text-sm tablet:text-base"
+                              disabled={loading}
+                              className="w-full py-4 tablet:py-4 bg-gray-900 dark:bg-[#80FF00] hover:bg-gray-800 dark:hover:bg-[#99ff33] text-white dark:text-black font-black uppercase tracking-tighter italic rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-3 mt-auto text-base shadow-xl shadow-lime-500/10 active:scale-95"
                             >
                               {loading ? (
                                 <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>
-                                  <span className="hidden tablet:inline">Processing...</span>
-                                  <span className="tablet:hidden">Processing</span>
+                                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-current"></div>
+                                  <span>Securing Session...</span>
                                 </>
                               ) : (
                                 <>
-                                  <span className="hidden tablet:inline">Proceed to Payment</span>
-                                  <span className="tablet:hidden">Proceed</span>
-                                  <ArrowRight className="w-4 h-4" />
+                                  <span>Secure Checkout</span>
+                                  <ArrowRight className="w-5 h-5" />
                                 </>
                               )}
                             </button>
-
                             {/* Terms and Conditions */}
                             <div className="mt-4 text-center">
                               <p className="text-xs text-gray-600 dark:text-white/60">

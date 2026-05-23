@@ -9,7 +9,6 @@ import ApplicationTrackerCard from '@/components/dashboard/cards/ApplicationTrac
 import InterviewCoachCard from '@/components/dashboard/cards/InterviewCoachCard';
 import ProgressOverviewChart from '@/components/dashboard/charts/ProgressOverviewChart';
 import ApplicationFunnel from '@/components/dashboard/charts/ApplicationFunnel';
-import ActivityFeed from '@/components/dashboard/feeds/ActivityFeed';
 import AIInsightsWidget from '@/components/dashboard/widgets/AIInsightsWidget';
 import TopSkillsWidget from '@/components/dashboard/widgets/TopSkillsWidget';
 import JobRecommendationsWidget from '@/components/dashboard/widgets/JobRecommendationsWidget';
@@ -65,10 +64,6 @@ function DashboardContent() {
         <JobRecommendationsWidget />
       </div>
 
-      {/* Activity Row */}
-      <div className="grid grid-cols-1 gap-4 md:gap-6">
-        <ActivityFeed />
-      </div>
     </div>
   );
 }

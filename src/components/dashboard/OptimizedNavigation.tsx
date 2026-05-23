@@ -8,7 +8,7 @@ import Image from 'next/image';
 import Logo from '@/components/ui/Logo';
 import {
   BarChart3, Target, FileText,
-  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin
+  Bell, Sun, Moon, Menu, X, Shield, Settings, LogOut, User, ChevronDown, ChevronRight, ChevronLeft, Clock, Zap, AlertCircle, Briefcase, ExternalLink, Star, PenTool, Wand2, Mic, Linkedin, Lock
 } from 'lucide-react';
 import { useTheme } from '@/lib/contexts/ThemeContext';
 import { useMobileSidebar } from '@/contexts/MobileSidebarContext';
@@ -470,6 +470,7 @@ const OptimizedNavigation: React.FC = () => {
               <div className={`flex-1 min-w-0 ${!isDesktopExpanded ? 'lg:hidden' : ''}`}>
                 <div className="text-base lg:text-sm font-medium truncate flex items-baseline gap-1">
                   {section.name}
+                  {section.id === 'jobs-dashboard' && <Lock className="w-3 h-3 opacity-60 ml-1" />}
                   {isExternal && <ExternalLink className="w-3 h-3 opacity-60" />}
                 </div>
                 <div className={`text-sm lg:text-[11px] truncate mt-0.5 ${isActive

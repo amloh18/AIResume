@@ -6,6 +6,7 @@ import { useUnifiedAuth, getUserIdForAPI } from '@/lib/hooks/useUnifiedAuth';
 import { ResumeEnhancerProvider } from '@/contexts/ResumeEnhancerContext';
 import { JobJourneyProvider } from '@/contexts/JobJourneyContext';
 import { ATSProvider } from '@/contexts/ATSContext';
+import { DashboardDataProvider } from '@/contexts/DashboardDataContext';
 import ResumeEnhancerContainer from '@/components/resume-enhancer/ResumeEnhancerContainer';
 import RouteGuard from '@/components/auth/RouteGuard';
 import LoadingAnimation from '@/components/ui/LoadingAnimation';
@@ -94,15 +95,17 @@ if (isGuestMode) {
     <JobJourneyProvider>
       <ResumeEnhancerProvider>
         <ATSProvider>
-          <ResumeEnhancerContainer
-            userId="guest"
-            mode={mode}
-            cvId={cvId}
-            clId={clId}
-            journeyId={journeyId}
-            isGuestMode={true}
-            restoreDraft={restoreDraft}
-          />
+          <DashboardDataProvider>
+            <ResumeEnhancerContainer
+              userId="guest"
+              mode={mode}
+              cvId={cvId}
+              clId={clId}
+              journeyId={journeyId}
+              isGuestMode={true}
+              restoreDraft={restoreDraft}
+            />
+          </DashboardDataProvider>
         </ATSProvider>
       </ResumeEnhancerProvider>
     </JobJourneyProvider>
@@ -111,25 +114,27 @@ if (isGuestMode) {
 
 // For authenticated users or editing existing CVs, require auth
 // We let RouteGuard handle the unauthenticated state so it pops the Auth Modal
-return (
-  <RouteGuard requireAuth={true}>
-    <JobJourneyProvider>
-      <ResumeEnhancerProvider>
-        <ATSProvider>
-          <ResumeEnhancerContainer
-            userId={user?.id || ''}
-            mode={mode}
-            cvId={cvId}
-            clId={clId}
-            journeyId={journeyId}
-            isGuestMode={false}
-            restoreDraft={restoreDraft}
-          />
-        </ATSProvider>
-      </ResumeEnhancerProvider>
-    </JobJourneyProvider>
-  </RouteGuard>
-);
+  return (
+    <RouteGuard requireAuth={true}>
+      <JobJourneyProvider>
+        <ResumeEnhancerProvider>
+          <ATSProvider>
+            <DashboardDataProvider>
+              <ResumeEnhancerContainer
+                userId={user?.id || ''}
+                mode={mode}
+                cvId={cvId}
+                clId={clId}
+                journeyId={journeyId}
+                isGuestMode={false}
+                restoreDraft={restoreDraft}
+              />
+            </DashboardDataProvider>
+          </ATSProvider>
+        </ResumeEnhancerProvider>
+      </JobJourneyProvider>
+    </RouteGuard>
+  );
 }
 
 export default function ResumeEnhancerPage() {
